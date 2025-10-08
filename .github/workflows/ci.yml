@@ -1,3 +1,10 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
 jobs:
   backend:
     name: Backend (FastAPI) – Lint/Type/Test
@@ -37,3 +44,38 @@ jobs:
         if: ${{ hashFiles('backend/tests/**/*.py') != '' }}
         run: pytest -q
         continue-on-error: true
+
+  frontend:
+    name: Frontend (Next.js) – Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if frontend exists
+        id: has_frontend
+        run: |
+          if [ -f package.json ]; then
+            echo "present=true" >> $GITHUB_OUTPUT
+          else
+            echo "present=false" >> $GITHUB_OUTPUT
+          fi
+
+      - uses: actions/setup-node@v4
+        if: ${{ steps.has_frontend.outputs.present == 'true' }}
+        with:
+          node-version: 'lts/*'
+          cache: 'pnpm'
+
+      - name: Enable Corepack
+        if: ${{ steps.has_frontend.outputs.present == 'true' }}
+        run: corepack enable
+
+      - name: Install
+        if: ${{ steps.has_frontend.outputs.present == 'true' }}
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm install --frozen-lock
