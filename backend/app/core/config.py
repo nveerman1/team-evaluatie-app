@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 
+
 class Settings(BaseSettings):
     APP_NAME: str = "Team Evaluatie App"
     APP_ENV: str = "dev"
@@ -11,5 +12,6 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+
 
 settings = Settings()
