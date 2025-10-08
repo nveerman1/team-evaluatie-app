@@ -1,21 +1,57 @@
-# .github/workflows/ci.yml  (alleen backend-job getoond)
-backend:
-  name: Backend (FastAPI) – Lint/Type/Test
-  runs-on: ubuntu-latest
-  defaults:
-    run:
-      working-directory: backend
+name: CI
 
-  steps:
-    - uses: actions/checkout@v4
+on:
+  push:
+    branches: [ main ]
+  pull_request:
 
-    - uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
-        cache: 'pip'
-        cache-dependency-path: backend/requirements-ci.txt  # <<-- BELANGRIJK
+jobs:
+  backend:
+    name: Backend (FastAPI) – Lint/Type/Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
 
-    - name: Install deps
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements-ci.txt
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure CI requirements file exists
+        run: |
+          if [ ! -f requirements-ci.txt ]; then
+            cat > requirements-ci.txt << 'EOF'
+fastapi
+uvicorn[standard]
+pydantic-settings
+python-multipart
+sqlalchemy
+psycopg2-binary
+alembic
+passlib[argon2]
+pyjwt
+python-jose[cryptography]
+redis
+rq
+boto3
+pydantic[email]
+email-validator
+ruff
+black
+mypy
+pytest
+EOF
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements-ci.txt
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-ci.txt
+
+      - name: Ruff (lint)
+        if: ${{ ha
