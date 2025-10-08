@@ -45,6 +45,14 @@ jobs:
         run: pytest -q
         continue-on-error: true
 
+      - name: Bandit (security lint)
+        if: ${{ hashFiles('backend/**/*.py') != '' }}
+        run: bandit -r app -q || true
+
+      - name: pip-audit (dependency vulns)
+        run: pip-audit -r requirements-ci.txt || true
+
+
   frontend:
     name: Frontend (Next.js) – Build
     runs-on: ubuntu-latest
