@@ -7,7 +7,7 @@ psycopg2-binary
 alembic
 passlib[argon2]
 pyjwt
-python-jose[cryptography]
+cryptography
 redis
 rq
 boto3
@@ -17,3 +17,5 @@ ruff
 black
 mypy
 pytest
+bandit
+pip-audit
