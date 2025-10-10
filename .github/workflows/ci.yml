@@ -47,10 +47,11 @@ jobs:
 
       - name: Bandit (security lint)
         if: ${{ hashFiles('backend/**/*.py') != '' }}
-        run: bandit -r app -q || true
+        run: bandit -r app -x tests,migrations -q
 
-      - name: pip-audit (dependency vulns)
-        run: pip-audit -r requirements-ci.txt || true
+
+      - name: pip-audit (dependency vulnerabilities)
+        run: pip-audit -r requirements-ci.txt --strict --progress-spinner off
 
 
   frontend:
