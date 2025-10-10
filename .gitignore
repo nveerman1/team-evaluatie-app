@@ -18,3 +18,14 @@ out/
 # OS
 .DS_Store
 Thumbs.db
+# Python
+backend/.env
+backend/venv/
+__pycache__/
+# Node/Next
+frontend/.env*
+!frontend/.env.example
+frontend/node_modules/
+# OS/IDE
+.DS_Store
+.vscode/
