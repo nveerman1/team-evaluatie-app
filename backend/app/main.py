@@ -1,6 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
+from fastapi import APIRouter
+
+from app.api.v1.routers import rubrics as rubrics_router
+from app.api.v1.routers import evaluations as evaluations_router
+from app.api.v1.routers import allocations as allocations_router
+from app.api.v1.routers import scores as scores_router
 
 app = FastAPI(title=settings.APP_NAME)
 
@@ -16,3 +22,12 @@ app.add_middleware(
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+# Mount v1
+api_v1 = APIRouter(prefix=settings.API_V1_PREFIX)
+api_v1.include_router(rubrics_router.router)
+api_v1.include_router(evaluations_router.router)
+api_v1.include_router(allocations_router.router)
+api_v1.include_router(scores_router.router)
+app.include_router(api_v1)
