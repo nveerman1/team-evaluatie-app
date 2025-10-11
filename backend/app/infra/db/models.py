@@ -273,3 +273,34 @@ class Grade(Base):
         UniqueConstraint("evaluation_id", "user_id", name="uq_grade_once"),
         Index("ix_grade_eval", "evaluation_id"),
     )
+
+
+class PublishedGrade(Base):
+    __tablename__ = "published_grades"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # scope
+    school_id: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
+
+    # relaties
+    evaluation_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("evaluations.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+
+    # data
+    grade: Mapped[float] = mapped_column(Float, nullable=False)  # 1..10
+    reason: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    meta: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "school_id", "evaluation_id", "user_id", name="uq_published_grade_once"
+        ),
+    )
+
+    # relaties (optioneel, alleen als je ze gebruikt)
+    evaluation = relationship("Evaluation")
+    user = relationship("User")
