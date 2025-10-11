@@ -7,6 +7,9 @@ from app.api.v1.routers import rubrics as rubrics_router
 from app.api.v1.routers import evaluations as evaluations_router
 from app.api.v1.routers import allocations as allocations_router
 from app.api.v1.routers import scores as scores_router
+from app.api.v1.routers import grades as grades_router
+from app.api.v1.routers import dashboard as dashboard_router
+
 
 app = FastAPI(title=settings.APP_NAME)
 
@@ -30,4 +33,6 @@ api_v1.include_router(rubrics_router.router)
 api_v1.include_router(evaluations_router.router)
 api_v1.include_router(allocations_router.router)
 api_v1.include_router(scores_router.router)
+api_v1.include_router(grades_router.router)
+api_v1.include_router(dashboard_router.router)
 app.include_router(api_v1)
