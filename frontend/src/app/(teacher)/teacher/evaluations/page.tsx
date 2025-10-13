@@ -108,7 +108,7 @@ export default function EvaluationsListPage() {
     // optimistisch updaten
     setRows((r) => r.map((x) => (x.id === id ? { ...x, status: next } : x)));
     try {
-      await api.put(`/evaluations/${id}`, { status: next });
+      await api.patch(`/evaluations/${id}/status`, { status: next });
       setToast(`Status aangepast naar “${STATUS_LABEL[next]}”.`);
       setTimeout(() => setToast(null), 1500);
     } catch (e: any) {
@@ -224,22 +224,28 @@ export default function EvaluationsListPage() {
                 </div>
 
                 {/* Status + inline switcher */}
-                <div className="flex items-center gap-2">
-                  <StatusBadge status={e.status} />
-                  <select
-                    className="px-2 py-1 border rounded-lg text-xs"
-                    value={e.status}
-                    disabled={savingId === e.id}
-                    onChange={(ev) =>
-                      changeStatus(e.id, ev.target.value as EvalStatus)
-                    }
-                    title="Wijzig status"
-                  >
-                    <option value="draft">→ draft</option>
-                    <option value="open">→ open</option>
-                    <option value="closed">→ closed</option>
-                  </select>
-                </div>
+                <select
+                  className="appearance-none bg-gray-50 border border-gray-300 text-gray-700 text-xs rounded-md px-2 py-1 pr-5
+                            hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
+                            cursor-pointer transition-all w-[110px]"
+                  style={{
+                    backgroundImage:
+                      "url(\"data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='none' stroke='%23666' stroke-width='1.5' d='M1 1l4 4 4-4'/%3E%3C/svg%3E\")",
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "right 0.4rem center",
+                    backgroundSize: "10px 6px",
+                  }}
+                  value={e.status}
+                  disabled={savingId === e.id}
+                  onChange={(ev) =>
+                    changeStatus(e.id, ev.target.value as EvalStatus)
+                  }
+                  title="Wijzig status"
+                >
+                  <option value="draft">Draft</option>
+                  <option value="open">Open</option>
+                  <option value="closed">Closed</option>
+                </select>
 
                 {/* Deadlines */}
                 <div className="text-gray-600">
