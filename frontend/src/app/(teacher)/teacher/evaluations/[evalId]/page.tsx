@@ -1,6 +1,7 @@
 "use client";
-import { useParams } from "next/navigation";
+
 import { useEffect, useMemo, useState } from "react";
+import { useNumericEvalId } from "@/lib/id";
 import api from "@/lib/api";
 import {
   DashboardResponse,
@@ -9,75 +10,113 @@ import {
 } from "@/lib/types";
 
 export default function TeacherDashboard() {
-  const { evaluationId } = useParams<{ evaluationId: string }>();
+  const evaluationId = useNumericEvalId(); // null op create/ongeldig
   const [dash, setDash] = useState<DashboardResponse | undefined>();
   const [flags, setFlags] = useState<FlagsResponse | undefined>();
   const [preview, setPreview] = useState<GradePreviewResponse | undefined>();
+  const [error, setError] = useState<string | null>(null);
+
+  const apiBase = process.env.NEXT_PUBLIC_API_URL;
   const csvUrl = useMemo(
     () =>
-      `${process.env.NEXT_PUBLIC_API_URL}/dashboard/evaluation/${evaluationId}/export.csv`,
-    [evaluationId],
+      evaluationId != null
+        ? `${apiBase}/dashboard/evaluation/${evaluationId}/export.csv`
+        : undefined,
+    [evaluationId, apiBase],
   );
   const flagsCsv = useMemo(
     () =>
-      `${process.env.NEXT_PUBLIC_API_URL}/flags/evaluation/${evaluationId}/export.csv`,
-    [evaluationId],
+      evaluationId != null
+        ? `${apiBase}/flags/evaluation/${evaluationId}/export.csv`
+        : undefined,
+    [evaluationId, apiBase],
   );
 
   useEffect(() => {
+    setError(null);
+    // Alleen calls doen als er een geldig numeriek ID is
+    if (evaluationId == null) return;
+
     api
       .get<DashboardResponse>(`/dashboard/evaluation/${evaluationId}`)
-      .then((r) => setDash(r.data));
+      .then((r) => setDash(r.data))
+      .catch(() => {
+        /* stil houden of setError(...) */
+      });
+
     api
       .get<FlagsResponse>(`/flags/evaluation/${evaluationId}`)
-      .then((r) => setFlags(r.data));
+      .then((r) => setFlags(r.data))
+      .catch(() => {
+        /* stil houden of setError(...) */
+      });
+
+    // grades/preview verwacht body → POST met evaluation_id
     api
-      .get<GradePreviewResponse>(`/grades/preview`, {
-        params: { evaluation_id: evaluationId },
+      .post<GradePreviewResponse>(`/grades/preview`, {
+        evaluation_id: evaluationId,
       })
-      .then((r) => setPreview(r.data));
+      .then((r) => setPreview(r.data))
+      .catch(() => {
+        /* stil houden of setError(...) */
+      });
   }, [evaluationId]);
 
   async function publishSuggested() {
-    if (!preview) return;
-    // overrides leeg → backend gebruikt suggested (zie publish-logica in fase 3). :contentReference[oaicite:5]{index=5}
-    const overrides = Object.fromEntries(
-      preview.items.map((it) => [it.user_id, {}]),
-    );
-    const res = await api.post(`/grades/publish`, {
-      evaluation_id: Number(evaluationId),
-      overrides,
-    });
-    alert(`Gepubliceerd: ${Array.isArray(res.data) ? res.data.length : "OK"}`);
+    if (!preview || evaluationId == null) return;
+    try {
+      // overrides leeg → backend gebruikt suggested
+      const overrides = Object.fromEntries(
+        preview.items.map((it) => [it.user_id, {}]),
+      );
+      const res = await api.post(`/grades/publish`, {
+        evaluation_id: evaluationId,
+        overrides,
+      });
+      alert(
+        `Gepubliceerd: ${Array.isArray(res.data) ? res.data.length : "OK"}`,
+      );
+    } catch (e: any) {
+      alert(e?.response?.data?.detail || e?.message || "Publiceren mislukt");
+    }
   }
 
   return (
     <main className="p-6 max-w-6xl mx-auto space-y-6">
       <header className="flex items-center gap-3">
         <h1 className="text-2xl font-bold">
-          Dashboard — Evaluatie #{evaluationId}
+          Dashboard — Evaluatie #{evaluationId != null ? evaluationId : "—"}
         </h1>
-        <a
-          className="ml-auto px-3 py-2 rounded-xl border"
-          href={csvUrl}
-          target="_blank"
-        >
-          Export CSV
-        </a>
-        <a
-          className="px-3 py-2 rounded-xl border"
-          href={flagsCsv}
-          target="_blank"
-        >
-          Flags CSV
-        </a>
+        {csvUrl && (
+          <a
+            className="ml-auto px-3 py-2 rounded-xl border"
+            href={csvUrl}
+            target="_blank"
+          >
+            Export CSV
+          </a>
+        )}
+        {flagsCsv && (
+          <a
+            className="px-3 py-2 rounded-xl border"
+            href={flagsCsv}
+            target="_blank"
+          >
+            Flags CSV
+          </a>
+        )}
         <button
-          className="px-3 py-2 rounded-xl bg-black text-white"
+          className="px-3 py-2 rounded-xl bg-black text-white disabled:opacity-60"
           onClick={publishSuggested}
+          disabled={evaluationId == null || !preview}
         >
           Publish suggested
         </button>
       </header>
+
+      {error && (
+        <div className="p-3 rounded-lg bg-red-50 text-red-700">{error}</div>
+      )}
 
       {dash && (
         <div className="overflow-x-auto border rounded-xl">
@@ -151,6 +190,14 @@ export default function TeacherDashboard() {
             ))}
           </ul>
         </section>
+      )}
+
+      {/* Geen calls op create/ongeldig ID → laat een hint zien */}
+      {evaluationId == null && (
+        <p className="text-sm text-gray-500">
+          Geen geldige evaluatie gekozen. Open dit dashboard via een bestaande
+          evaluatie.
+        </p>
       )}
     </main>
   );

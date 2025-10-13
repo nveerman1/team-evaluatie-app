@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useMemo, useState } from "react";
 import api from "@/lib/api";
 import {
@@ -7,13 +8,15 @@ import {
   ScoreItem,
   DashboardResponse,
 } from "@/lib/types";
-import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useNumericEvalId } from "@/lib/id";
 
 export default function StudentWizard() {
-  const { evaluationId } = useParams<{ evaluationId: string }>();
+  const evaluationIdNum = useNumericEvalId(); // null op /create of ongeldige id
   const sp = useSearchParams();
   const step = Number(sp.get("step") ?? 1);
   const router = useRouter();
+
   const [allocs, setAllocs] = useState<MyAllocation[]>([]);
   const [criteria, setCriteria] = useState<Record<number, Criterion>>({});
   const [rubricId, setRubricId] = useState<number | undefined>();
@@ -22,35 +25,74 @@ export default function StudentWizard() {
   // stap 3 data: ontvangen feedback (peer-avg uit dashboard)
   const [dash, setDash] = useState<DashboardResponse | undefined>();
 
-  useEffect(() => {
-    api
-      .get<
-        MyAllocation[]
-      >(`/allocations/my`, { params: { evaluation_id: evaluationId } })
-      .then(async (r) => {
-        setAllocs(r.data || []);
-        const rid = r.data?.[0]?.rubric_id;
-        setRubricId(rid);
-        if (rid) {
-          const res = await api.get<Criterion[]>(`/rubrics/${rid}/criteria`);
-          const map: Record<number, Criterion> = {};
-          res.data.forEach((c) => {
-            map[c.id] = c;
-          });
-          setCriteria(map);
-        }
-      });
-  }, [evaluationId]);
+  const [error, setError] = useState<string | null>(null);
+  const [loadingAlloc, setLoadingAlloc] = useState(false);
+  const [loadingDash, setLoadingDash] = useState(false);
 
+  // Handige string weergave voor routes/headers:
+  const evaluationId = evaluationIdNum != null ? String(evaluationIdNum) : "—";
+
+  // ---- 1) Allocations + criteria ophalen (alleen bij geldig evalId) ----
   useEffect(() => {
-    if (step === 3) {
-      api
-        .get<DashboardResponse>(`/dashboard/evaluation/${evaluationId}`, {
-          params: { include_breakdown: true },
-        })
-        .then((r) => setDash(r.data));
+    setError(null);
+
+    if (evaluationIdNum == null) {
+      setAllocs([]);
+      setCriteria({});
+      setRubricId(undefined);
+      return;
     }
-  }, [evaluationId, step]);
+
+    setLoadingAlloc(true);
+    api
+      .get<MyAllocation[]>("/allocations/my", {
+        params: { evaluation_id: evaluationIdNum },
+      })
+      .then(async (r) => {
+        const data = Array.isArray(r.data) ? r.data : [];
+        setAllocs(data);
+
+        const rid = data?.[0]?.rubric_id;
+        setRubricId(rid);
+
+        if (rid) {
+          try {
+            const res = await api.get<Criterion[]>(`/rubrics/${rid}/criteria`);
+            const map: Record<number, Criterion> = {};
+            (res.data || []).forEach((c) => {
+              if (c && typeof c.id === "number") map[c.id] = c;
+            });
+            setCriteria(map);
+          } catch (e: any) {
+            // criteria laden mag stille fout zijn (student kan nog steeds slider invullen)
+          }
+        } else {
+          setCriteria({});
+        }
+      })
+      .catch((e) => {
+        setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
+      })
+      .finally(() => setLoadingAlloc(false));
+  }, [evaluationIdNum]);
+
+  // ---- 2) Dashboard-overzicht (stap 3) ----
+  useEffect(() => {
+    if (evaluationIdNum == null || step !== 3) {
+      setDash(undefined);
+      return;
+    }
+    setLoadingDash(true);
+    api
+      .get<DashboardResponse>(`/dashboard/evaluation/${evaluationIdNum}`, {
+        params: { include_breakdown: true },
+      })
+      .then((r) => setDash(r.data))
+      .catch(() => {
+        // stil houden; student kan verder zonder overzicht
+      })
+      .finally(() => setLoadingDash(false));
+  }, [evaluationIdNum, step]);
 
   const selfAlloc = useMemo(() => allocs.find((a) => a.is_self), [allocs]);
   const peerAllocs = useMemo(() => allocs.filter((a) => !a.is_self), [allocs]);
@@ -60,13 +102,17 @@ export default function StudentWizard() {
     try {
       await api.post("/scores", { allocation_id: allocationId, items });
       alert("Ingeleverd ✔");
+    } catch (e: any) {
+      alert(e?.response?.data?.detail || e?.message || "Inleveren mislukt");
     } finally {
       setSending(false);
     }
   }
 
   function goStep(n: number) {
-    router.replace(`/student/${evaluationId}?step=${n}`);
+    // Alleen navigeren als we een geldig id hebben (anders blijft het “—”)
+    if (evaluationIdNum == null) return;
+    router.replace(`/student/${evaluationIdNum}?step=${n}`);
   }
 
   return (
@@ -80,7 +126,11 @@ export default function StudentWizard() {
             <button
               key={n}
               onClick={() => goStep(n)}
-              className={`px-3 py-1 rounded-lg border ${step === n ? "bg-black text-white" : "bg-white"}`}
+              className={`px-3 py-1 rounded-lg border ${
+                step === n ? "bg-black text-white" : "bg-white"
+              }`}
+              disabled={evaluationIdNum == null}
+              title={evaluationIdNum == null ? "Geen geldige evaluatie" : ""}
             >
               Stap {n}
             </button>
@@ -88,38 +138,69 @@ export default function StudentWizard() {
         </nav>
       </header>
 
-      {step === 1 && selfAlloc && (
-        <SectionScore
-          title="Stap 1 — Zelfbeoordeling"
-          allocationId={selfAlloc.allocation_id}
-          criteria={selfAlloc.criterion_ids
-            .map((id) => criteria[id])
-            .filter(Boolean)}
-          onSubmit={submitScores}
-          sending={sending}
-        />
+      {error && (
+        <div className="p-3 rounded-lg bg-red-50 text-red-700">{error}</div>
       )}
 
-      {step === 2 && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Stap 2 — Peer-reviews</h2>
-          {peerAllocs.length === 0 && <p>Geen peers toegewezen.</p>}
-          {peerAllocs.map((a) => (
+      {/* Stap 1 — Zelfbeoordeling */}
+      {step === 1 && (
+        <>
+          {loadingAlloc && <div className="text-gray-500">Laden…</div>}
+          {!loadingAlloc && evaluationIdNum == null && (
+            <div className="text-gray-500">
+              Geen geldige evaluatie. Open deze wizard via een bestaande
+              evaluatie.
+            </div>
+          )}
+          {!loadingAlloc && evaluationIdNum != null && !selfAlloc && (
+            <div className="text-gray-500">
+              Geen zelfbeoordeling toegewezen.
+            </div>
+          )}
+          {!loadingAlloc && evaluationIdNum != null && selfAlloc && (
             <SectionScore
-              key={a.allocation_id}
-              title={`Beoordeel ${a.reviewee_name}`}
-              allocationId={a.allocation_id}
-              criteria={a.criterion_ids
-                .map((id) => criteria[id])
-                .filter(Boolean)}
+              title="Stap 1 — Zelfbeoordeling"
+              allocationId={selfAlloc.allocation_id}
+              criteria={
+                selfAlloc.criterion_ids
+                  .map((id) => criteria[id])
+                  .filter(Boolean) as Criterion[]
+              }
               onSubmit={submitScores}
               sending={sending}
             />
-          ))}
+          )}
+        </>
+      )}
+
+      {/* Stap 2 — Peer-reviews */}
+      {step === 2 && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Stap 2 — Peer-reviews</h2>
+          {loadingAlloc && <div className="text-gray-500">Laden…</div>}
+          {!loadingAlloc && peerAllocs.length === 0 && (
+            <p>Geen peers toegewezen.</p>
+          )}
+          {!loadingAlloc &&
+            peerAllocs.map((a) => (
+              <SectionScore
+                key={a.allocation_id}
+                title={`Beoordeel ${a.reviewee_name}`}
+                allocationId={a.allocation_id}
+                criteria={
+                  a.criterion_ids
+                    .map((id) => criteria[id])
+                    .filter(Boolean) as Criterion[]
+                }
+                onSubmit={submitScores}
+                sending={sending}
+              />
+            ))}
         </div>
       )}
 
-      {step === 3 && dash && (
+      {/* Stap 3 — Overzicht ontvangen feedback */}
+      {step === 3 && (
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">
             Stap 3 — Overzicht ontvangen feedback
@@ -127,35 +208,41 @@ export default function StudentWizard() {
           <p className="text-sm text-gray-600">
             Samenvatting uit dashboard (peer-gemiddeld, self, SPR/GCF).
           </p>
-          <table className="w-full text-sm border rounded-xl overflow-hidden">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="p-2 text-left">Naam</th>
-                <th className="p-2">Peer-avg</th>
-                <th className="p-2">Self-avg</th>
-                <th className="p-2">SPR</th>
-                <th className="p-2">GCF</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dash.items.map((r) => (
-                <tr key={r.user_id} className="border-t">
-                  <td className="p-2">{r.user_name}</td>
-                  <td className="p-2 text-center">
-                    {r.peer_avg_overall.toFixed(2)}
-                  </td>
-                  <td className="p-2 text-center">
-                    {r.self_avg_overall ?? "-"}
-                  </td>
-                  <td className="p-2 text-center">{r.spr.toFixed(2)}</td>
-                  <td className="p-2 text-center">{r.gcf.toFixed(2)}</td>
+
+          {loadingDash && <div className="text-gray-500">Laden…</div>}
+
+          {!loadingDash && dash && (
+            <table className="w-full text-sm border rounded-xl overflow-hidden">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="p-2 text-left">Naam</th>
+                  <th className="p-2">Peer-avg</th>
+                  <th className="p-2">Self-avg</th>
+                  <th className="p-2">SPR</th>
+                  <th className="p-2">GCF</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {dash.items.map((r) => (
+                  <tr key={r.user_id} className="border-t">
+                    <td className="p-2">{r.user_name}</td>
+                    <td className="p-2 text-center">
+                      {r.peer_avg_overall.toFixed(2)}
+                    </td>
+                    <td className="p-2 text-center">
+                      {r.self_avg_overall ?? "-"}
+                    </td>
+                    <td className="p-2 text-center">{r.spr.toFixed(2)}</td>
+                    <td className="p-2 text-center">{r.gcf.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
+      {/* Stap 4 — Reflectie (MVP lokaal) */}
       {step === 4 && <Reflection />}
     </main>
   );
@@ -204,7 +291,7 @@ function SectionScore({
       ))}
       <button
         disabled={sending}
-        className="px-4 py-2 rounded-xl bg-black text-white"
+        className="px-4 py-2 rounded-xl bg-black text-white disabled:opacity-60"
         onClick={() =>
           onSubmit(
             allocationId,

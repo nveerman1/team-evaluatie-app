@@ -53,7 +53,9 @@ class User(Base):
     auth_provider: Mapped[Optional[str]] = mapped_column(String(50), default="local")
     password_hash: Mapped[Optional[str]] = mapped_column(String(255))
     archived: Mapped[bool] = mapped_column(Boolean, default=False)
-
+    class_name: Mapped[Optional[str]] = mapped_column(
+        String(50), index=True, nullable=True
+    )
     school: Mapped["School"] = relationship(back_populates="users")
 
     __table_args__ = (

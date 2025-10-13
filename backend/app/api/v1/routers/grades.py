@@ -1,8 +1,11 @@
 from __future__ import annotations
-from typing import Dict, Any, List
-from fastapi import APIRouter, Depends, HTTPException, status
+
+from typing import Dict, Any, List, Optional, Iterable
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from statistics import mean
+
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import Evaluation, Allocation, Score, User, PublishedGrade
 from app.api.v1.schemas.grades import (
@@ -15,14 +18,20 @@ from app.api.v1.schemas.grades import (
 router = APIRouter(prefix="/grades", tags=["grades"])
 
 
-def _safe_mean(values):
+def _safe_mean(values: Iterable[Optional[float]]) -> float:
+    """Gemiddelde zonder None-waarden; accepteert ook puur floats."""
     vals = [v for v in values if v is not None]
     return mean(vals) if vals else 0.0
 
 
 @router.get("/preview", response_model=GradePreviewResponse)
 def preview_grades(
-    evaluation_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)
+    evaluation_id: int,
+    group_grade: Optional[float] = Query(
+        default=None, description="Groepscijfer in %, bijv. 80.0"
+    ),
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
 ):
     ev = (
         db.query(Evaluation)
@@ -32,7 +41,7 @@ def preview_grades(
     if not ev:
         raise HTTPException(status_code=404, detail="Evaluation not found")
 
-    # alle allocations + scores
+    # ── Allocations ophalen ──────────────────────────────────────────────────────
     allocs = (
         db.query(Allocation)
         .filter(
@@ -43,9 +52,12 @@ def preview_grades(
     if not allocs:
         return GradePreviewResponse(evaluation_id=ev.id, items=[])
 
-    # scores per reviewee
-    scores_by_reviewee: dict[int, list[float]] = {}
-    self_scores: dict[int, float] = {}
+    # ── Scores verzamelen ────────────────────────────────────────────────────────
+    scores_by_reviewee: Dict[int, List[float]] = {}
+    self_scores: Dict[int, float] = {}
+
+    # ✅ mapping: user_id → group_id (teamnummer)
+    group_by_user: Dict[int, Optional[int]] = {}
 
     for a in allocs:
         rows = (
@@ -56,26 +68,71 @@ def preview_grades(
         vals = [r.score for r in rows]
         if not vals:
             continue
-        avg = _safe_mean(vals)
-        scores_by_reviewee.setdefault(a.reviewee_id, []).append(avg)
+        avg_alloc = _safe_mean(vals)
+        scores_by_reviewee.setdefault(a.reviewee_id, []).append(avg_alloc)
         if a.is_self:
-            self_scores[a.reviewee_id] = avg
+            self_scores[a.reviewee_id] = avg_alloc
 
-    out: list[GradePreviewItem] = []
+        # ✅ probeer teamnummer te lezen uit Allocation.group_id (indien aanwezig)
+        gid = getattr(a, "group_id", None)
+        if gid is not None:
+            group_by_user[a.reviewee_id] = gid
+
+    # ── Gemiddelden per leerling en per groep ───────────────────────────────────
+    per_user_avg: Dict[int, float] = {
+        uid: _safe_mean(avgs) for uid, avgs in scores_by_reviewee.items()
+    }
+    global_avg = _safe_mean(list(per_user_avg.values()))
+
+    def group_avg_for(uid: int) -> float:
+        gid = group_by_user.get(uid)
+        if gid is None:
+            return global_avg
+        members = [u for u, g in group_by_user.items() if g == gid]
+        return (
+            _safe_mean(
+                [
+                    per_user_avg.get(u)
+                    for u in members
+                    if per_user_avg.get(u) is not None
+                ]
+            )
+            or global_avg
+        )
+
+    # ── Users ophalen (voor naam + klasveld) ─────────────────────────────────────
     users = {
         u.id: u for u in db.query(User).filter(User.school_id == user.school_id).all()
     }
 
-    all_avgs = [mean(v) for v in scores_by_reviewee.values()]
-    global_avg = _safe_mean(all_avgs)
-    for uid, scores in scores_by_reviewee.items():
-        avg_score = _safe_mean(scores)
+    def team_number_for(uid: int) -> Optional[int]:
+        tn = group_by_user.get(uid)
+        return int(tn) if isinstance(tn, int) else None
+
+    def class_name_for(uid: int) -> Optional[str]:
+        u = users.get(uid)
+        # ✅ als je User.class_name veld hebt:
+        if u is not None and hasattr(u, "class_name"):
+            return getattr(u, "class_name")  # type: ignore
+        # Heb je een Class-tabel? Doe hier je lookup, bijv.:
+        # cls = db.query(Class).get(u.class_id); return cls.name if cls else None
+        return None
+
+    # ── Output vullen ───────────────────────────────────────────────────────────
+    items: List[GradePreviewItem] = []
+    for uid, avg_score in per_user_avg.items():
+        grp_avg = group_avg_for(uid)
+        gcf = (avg_score / grp_avg) ** 0.5 if grp_avg > 0 else 1.0
         self_avg = self_scores.get(uid, avg_score)
-        gcf = 1 - abs(avg_score - global_avg) / global_avg if global_avg else 1
-        spr = self_avg / avg_score if avg_score else 1
-        # simpel voorstel: schaal 1–10
-        suggested = round((avg_score / 5) * 9 + 1, 1)
-        out.append(
+        spr = self_avg / avg_score if avg_score else 1.0
+
+        if group_grade is not None:
+            suggested = round(group_grade * gcf, 1)
+        else:
+            # fallback 1–10
+            suggested = round((avg_score / 5.0) * 9.0 + 1.0, 1)
+
+        items.append(
             GradePreviewItem(
                 user_id=uid,
                 user_name=users[uid].name if uid in users else f"id:{uid}",
@@ -83,10 +140,13 @@ def preview_grades(
                 gcf=round(gcf, 2),
                 spr=round(spr, 2),
                 suggested_grade=suggested,
+                # ✅ nieuw:
+                team_number=team_number_for(uid),
+                class_name=class_name_for(uid),
             )
         )
 
-    return GradePreviewResponse(evaluation_id=ev.id, items=out)
+    return GradePreviewResponse(evaluation_id=ev.id, items=items)
 
 
 @router.post(
@@ -97,6 +157,11 @@ def publish_grades(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
+    """
+    Publiceert cijfers.
+    - Bouwt eerst een preview mét dezelfde group_grade voor consistente suggested waarden.
+    - Past per user overrides toe: overrides[user_id] = {"grade": float | None, "reason": str | None}
+    """
     ev = (
         db.query(Evaluation)
         .filter(
@@ -108,14 +173,21 @@ def publish_grades(
     if not ev:
         raise HTTPException(status_code=404, detail="Evaluation not found")
 
-    # Bereken eerst een actuele preview, zodat we meta kunnen meeleveren
-    preview = preview_grades(evaluation_id=ev.id, db=db, user=user)  # type: ignore
+    # Consistente preview (zelfde group_grade als in de UI)
+    preview = preview_grades(
+        evaluation_id=ev.id,
+        group_grade=payload.group_grade,
+        db=db,
+        user=user,
+    )  # type: ignore
+
     meta_by_uid: Dict[int, Dict[str, Any]] = {
         item.user_id: {
             "avg_score": item.avg_score,
             "gcf": item.gcf,
             "spr": item.spr,
             "suggested": item.suggested_grade,
+            "group_grade": payload.group_grade,
         }
         for item in preview.items
     }
@@ -124,9 +196,8 @@ def publish_grades(
         u.id: u for u in db.query(User).filter(User.school_id == user.school_id).all()
     }
 
-    out: List[PublishedGrade] = []
+    out_rows: List[PublishedGrade] = []
     for uid, override in payload.overrides.items():
-        # grade pick: override.grade of fallback suggested
         override_grade = override.get("grade")
         suggested = meta_by_uid.get(uid, {}).get("suggested")
         final_grade = float(
@@ -159,12 +230,13 @@ def publish_grades(
             row.reason = reason
             row.meta = meta_by_uid.get(uid, {})
 
-        out.append(row)
+        out_rows.append(row)
 
     db.commit()
-    # refresh + output
+
+    # refresh + output payload
     out_payload: List[PublishedGradeOut] = []
-    for row in out:
+    for row in out_rows:
         db.refresh(row)
         uname = users[row.user_id].name if row.user_id in users else f"id:{row.user_id}"
         out_payload.append(
@@ -185,6 +257,9 @@ def publish_grades(
 def list_grades(
     evaluation_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)
 ):
+    """
+    Geeft gepubliceerde cijfers terug (ná publish).
+    """
     ev = (
         db.query(Evaluation)
         .filter(Evaluation.id == evaluation_id, Evaluation.school_id == user.school_id)
