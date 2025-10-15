@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useNumericEvalId } from "@/lib/id";
+import Link from "next/link";
 
 // ---------- Types ----------
 type PreviewItem = {
@@ -12,7 +13,7 @@ type PreviewItem = {
   avg_score: number; // peer %
   gcf: number; // individuele factor
   spr: number;
-  suggested_grade: number; // server-suggestie obv group_grade
+  suggested_grade: number; // server-suggestie (1–10)
   team_number?: number | null;
   class_name?: string | null;
 };
@@ -24,10 +25,10 @@ type Row = {
   className?: string | null;
   gcf: number;
   peerPct: number;
-  serverSuggested: number;
+  serverSuggested: number; // 1–10
   // UI invoer
-  rowGroupGrade?: number | null;
-  override?: number | null;
+  rowGroupGrade?: number | null; // per-rij groepscijfer (optioneel)
+  override?: number | null; // handmatige correctie (1–10 of null)
   comment?: string;
 };
 
@@ -35,11 +36,10 @@ type SortKey = "team" | "class" | "name" | "final";
 
 // ---------- Page ----------
 export default function GradesPage() {
-  const evalIdNum = useNumericEvalId(); // null op /create of ongeldige id
+  const evalIdNum = useNumericEvalId();
   const evalIdStr = evalIdNum != null ? String(evalIdNum) : "—";
   const router = useRouter();
 
-  const [globalGroupGrade, setGlobalGroupGrade] = useState<number>(80);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -52,10 +52,23 @@ export default function GradesPage() {
   const [sortBy, setSortBy] = useState<SortKey>("team");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
-  // ---------- Data load (guarded + POST /grades/preview) ----------
+  // ---------- Helpers ----------
+  const round1 = (n: number) => Math.round(n * 10) / 10;
+  function autoSuggestion(r: Row): number {
+    // Alleen per-rij groepscijfer; anders serverSuggested
+    return r.rowGroupGrade != null
+      ? round1(r.rowGroupGrade * r.gcf)
+      : round1(r.serverSuggested);
+  }
+  function finalGrade(r: Row): number {
+    return round1(r.override != null ? r.override : autoSuggestion(r));
+  }
+
+  // ---------- Data load ----------
+  // 1) Probeer eerst /grades (geeft gepubliceerde + concept + meta terug, nu voor ALLE studenten, zie backend fix)
+  // 2) Als leeg, fallback naar /grades/preview
   useEffect(() => {
     setError(null);
-
     if (evalIdNum == null) {
       setRows([]);
       return;
@@ -64,14 +77,36 @@ export default function GradesPage() {
     (async () => {
       setLoading(true);
       try {
-        const res = await api.post<{ items: PreviewItem[] }>(
-          `/grades/preview`,
-          {
-            evaluation_id: evalIdNum,
-            group_grade: globalGroupGrade,
-          },
-        );
-        const items = Array.isArray(res.data?.items) ? res.data.items : [];
+        const res = await api.get(`/grades?evaluation_id=${evalIdNum}`);
+        const existing: any[] = Array.isArray(res.data) ? res.data : [];
+
+        if (existing.length > 0) {
+          setRows(
+            existing.map((g: any) => ({
+              user_id: g.user_id,
+              name: g.user_name,
+              teamNumber: g.meta?.team_number ?? null,
+              className: g.meta?.class_name ?? null,
+              gcf: g.meta?.gcf ?? 1,
+              peerPct: g.meta?.avg_score ?? 0,
+              serverSuggested: g.meta?.suggested ?? 0, // 1–10
+              override: g.grade ?? null, // kan null zijn
+              comment: g.reason ?? "",
+              rowGroupGrade: g.meta?.group_grade ?? null, // per-rij (optioneel)
+            })),
+          );
+          return;
+        }
+
+        // Fallback naar preview
+        const q = new URLSearchParams({ evaluation_id: String(evalIdNum) });
+        const preview = await api.get<{
+          evaluation_id: number;
+          items: PreviewItem[];
+        }>(`/grades/preview?${q.toString()}`);
+        const items = Array.isArray(preview.data?.items)
+          ? preview.data.items
+          : [];
         setRows(
           items.map((i) => ({
             user_id: i.user_id,
@@ -80,7 +115,7 @@ export default function GradesPage() {
             className: i.class_name ?? null,
             gcf: i.gcf,
             peerPct: i.avg_score,
-            serverSuggested: i.suggested_grade,
+            serverSuggested: i.suggested_grade, // 1–10
             rowGroupGrade: null,
             override: null,
             comment: "",
@@ -92,20 +127,43 @@ export default function GradesPage() {
         setLoading(false);
       }
     })();
-  }, [evalIdNum, globalGroupGrade]);
+  }, [evalIdNum]);
 
-  // ---------- Helpers ----------
-  const round1 = (n: number) => Math.round(n * 10) / 10;
+  // ---------- Concept opslaan (herbruikbaar door autosave + knop) ----------
+  async function handleDraftSave() {
+    if (evalIdNum == null || rows.length === 0) return;
 
-  function autoSuggestion(r: Row): number {
-    const gg = r.rowGroupGrade ?? globalGroupGrade;
-    return r.rowGroupGrade != null
-      ? round1(gg * r.gcf)
-      : round1(r.serverSuggested);
+    // Alleen jouw handmatige overrides opslaan (geen global group grade)
+    const overrides = Object.fromEntries(
+      rows.map((r) => [
+        r.user_id,
+        { grade: r.override ?? null, reason: (r.comment ?? "").trim() || null },
+      ]),
+    );
+
+    try {
+      await api.post("/grades/draft", {
+        evaluation_id: Number(evalIdNum),
+        group_grade: null, // geen globaal cijfer
+        overrides,
+      });
+    } catch (err: any) {
+      console.warn(
+        "Concept opslaan mislukt:",
+        err?.response?.data ?? err?.message ?? err,
+      );
+    }
   }
-  function finalGrade(r: Row): number {
-    return round1(r.override != null ? r.override : autoSuggestion(r));
-  }
+
+  // ---------- Autosave ----------
+  useEffect(() => {
+    if (evalIdNum == null) return;
+    const timer = setInterval(() => {
+      handleDraftSave();
+      console.log("Draft opgeslagen");
+    }, 30000);
+    return () => clearInterval(timer);
+  }, [rows, evalIdNum]);
 
   // ---------- Filters ----------
   const teamOptions = useMemo(() => {
@@ -179,7 +237,7 @@ export default function GradesPage() {
       );
       await api.post("/grades/publish", {
         evaluation_id: evalIdNum,
-        group_grade: globalGroupGrade,
+        group_grade: null, // geen globaal cijfer
         overrides,
       });
       alert("Cijfers gepubliceerd!");
@@ -209,6 +267,15 @@ export default function GradesPage() {
             Terug naar dashboard
           </button>
           <button
+            onClick={async () => {
+              await handleDraftSave();
+              alert("Concept opgeslagen!");
+            }}
+            className="px-4 py-2 rounded-2xl border"
+          >
+            Concept opslaan
+          </button>
+          <button
             onClick={handlePublish}
             disabled={saving || loading || evalIdNum == null}
             className="px-4 py-2 rounded-2xl bg-black text-white disabled:opacity-60"
@@ -220,23 +287,6 @@ export default function GradesPage() {
 
       <section className="bg-white p-4 rounded-2xl border space-y-4">
         <div className="flex flex-wrap items-center gap-3">
-          <label className="font-medium">Groepscijfer (globaal) %</label>
-          <input
-            type="number"
-            className="w-24 border rounded-lg px-2 py-1"
-            value={globalGroupGrade}
-            onChange={(e) => setGlobalGroupGrade(Number(e.target.value))}
-            min={0}
-            max={100}
-          />
-          <button
-            className="px-3 py-1 border rounded-lg"
-            onClick={() => setGlobalGroupGrade((v) => Number(v))}
-            title="Herbereken op basis van het globale groepscijfer"
-          >
-            Automatisch berekenen
-          </button>
-
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <input
               placeholder="Zoek op naam…"
@@ -309,7 +359,7 @@ export default function GradesPage() {
                     active={sortBy === "team"}
                     dir={sortDir}
                   >
-                    Teamnummer
+                    Team#
                   </Th>
                   <Th
                     onClick={() => toggleSort("name")}
@@ -325,7 +375,7 @@ export default function GradesPage() {
                   >
                     Klas
                   </Th>
-                  <th className="text-left py-2 px-2">Groepscijfer (%)</th>
+                  <th className="text-left py-2 px-2">Groepscijfer (1–10)</th>
                   <th className="text-left py-2 px-2">Individuele factor</th>
                   <Th
                     onClick={() => toggleSort("final")}
@@ -343,16 +393,25 @@ export default function GradesPage() {
                 {filteredSorted.map((r) => (
                   <tr key={r.user_id} className="border-t align-top">
                     <td className="py-2 px-2">{r.teamNumber ?? "–"}</td>
-                    <td className="py-2 px-2">{r.name}</td>
+                    <td className="py-2 px-2">
+                      <Link
+                        href={`/teacher/evaluations/${evalIdStr}/students/${r.user_id}`}
+                        className="text-blue-600 hover:underline"
+                        title="Bekijk leerlingoverzicht"
+                      >
+                        {r.name}
+                      </Link>
+                    </td>
                     <td className="py-2 px-2">{r.className ?? "–"}</td>
                     <td className="py-2 px-2">
                       <input
                         type="number"
                         className="w-24 border rounded-lg px-2 py-1"
-                        placeholder={String(globalGroupGrade)}
+                        placeholder="bijv. 7.5"
                         value={r.rowGroupGrade ?? ""}
-                        min={0}
-                        max={100}
+                        min={1}
+                        max={10}
+                        step={0.1}
                         onChange={(e) => {
                           const val = e.target.value;
                           setRows((all) =>
@@ -367,7 +426,7 @@ export default function GradesPage() {
                             ),
                           );
                         }}
-                        title="Leeg laten om het globale groepscijfer te gebruiken"
+                        title="Leeg laten om het servervoorstel te gebruiken"
                       />
                     </td>
                     <td className="py-2 px-2">{r.gcf.toFixed(2)}</td>
@@ -379,11 +438,13 @@ export default function GradesPage() {
                         type="number"
                         className="w-24 border rounded-lg px-2 py-1"
                         value={r.override ?? ""}
+                        min={1}
+                        max={10}
+                        step={0.1}
                         onChange={(e) => {
+                          const str = e.target.value;
                           const num =
-                            e.target.value === ""
-                              ? null
-                              : e.target.valueAsNumber;
+                            str === "" ? null : e.target.valueAsNumber;
                           setRows((all) =>
                             all.map((x) =>
                               x.user_id === r.user_id

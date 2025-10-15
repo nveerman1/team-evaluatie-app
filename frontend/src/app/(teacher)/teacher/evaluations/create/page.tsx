@@ -2,13 +2,15 @@
 
 import api from "@/lib/api";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { RubricListResponse, RubricListItem } from "@/lib/rubric-types";
+
+type CourseLite = { id: number; name: string };
 
 type EvalCreateBase = {
   title: string;
-  course_id: number | null;
-  rubric_id: number | null;
+  course_id: number; // verplicht
+  rubric_id: number; // verplicht
 };
 
 type EvalSettings = {
@@ -22,7 +24,7 @@ type EvalSettings = {
     review: string | null;
     reflection: string | null;
   };
-  // legacy sleutels voor oudere backends (schadeloos als genegeerd)
+  // legacy sleutels (schadeloos als backend ze negeert)
   review_deadline?: string | null;
   reflection_deadline?: string | null;
   deadline_reviews?: string | null;
@@ -34,16 +36,19 @@ export default function CreateEvaluationPage() {
   const sp = useSearchParams();
   const preRubricId = sp.get("rubric_id");
 
-  // ---- Data/UI ----
+  // ---- Data ----
   const [rubrics, setRubrics] = useState<RubricListItem[]>([]);
+  const [clusters, setClusters] = useState<CourseLite[]>([]);
+
+  // ---- UI ----
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
-  // ---- Form (zelfde velden als settings) ----
+  // ---- Form ----
   const [title, setTitle] = useState("");
-  const [courseId, setCourseId] = useState<number | "">("");
+  const [clusterId, setClusterId] = useState<number | "">("");
   const [rubricId, setRubricId] = useState<number | "">(
     preRubricId ? Number(preRubricId) : "",
   );
@@ -60,21 +65,31 @@ export default function CreateEvaluationPage() {
   const [smoothing, setSmoothing] = useState<boolean>(true);
   const [reviewerRating, setReviewerRating] = useState<boolean>(true);
 
-  // Rubrics laden
+  // Data laden (rubrics + clusters)
   useEffect(() => {
     let mounted = true;
     (async () => {
       setLoading(true);
       setError(null);
       try {
-        const r = await api.get<RubricListResponse>("/rubrics");
+        const [rubRes, clustersRes] = await Promise.all([
+          api.get<RubricListResponse>("/rubrics"),
+          api.get<CourseLite[]>("/students/courses"),
+        ]);
         if (!mounted) return;
-        const list = Array.isArray(r.data?.items) ? r.data.items : [];
+
+        const list = Array.isArray(rubRes.data?.items) ? rubRes.data.items : [];
         setRubrics(list);
         if (!preRubricId && list.length === 1) setRubricId(list[0].id);
+
+        const cls = Array.isArray(clustersRes.data) ? clustersRes.data : [];
+        setClusters(cls);
+        if (cls.length === 1) setClusterId(cls[0].id);
       } catch (e: any) {
         setError(
-          e?.response?.data?.detail || e?.message || "Kon rubrics niet laden",
+          e?.response?.data?.detail ||
+            e?.message ||
+            "Kon rubrics/clusters niet laden",
         );
       } finally {
         setLoading(false);
@@ -85,31 +100,35 @@ export default function CreateEvaluationPage() {
     };
   }, [preRubricId]);
 
+  const selectedRubric = useMemo(
+    () => rubrics.find((r) => r.id === rubricId),
+    [rubrics, rubricId],
+  );
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setInfo(null);
 
-    // simpele checks
     if (!title.trim()) return setError("Vul een titel in.");
+    if (clusterId === "" || clusterId == null)
+      return setError("Kies een cluster.");
     if (rubricId === "" || rubricId == null)
       return setError("Kies een rubric.");
-    if (courseId === "" || courseId == null)
-      return setError("Vul een course_id in.");
 
     setSubmitting(true);
     try {
-      // 1) eerst basis record aanmaken
+      // 1) Basis evaluatie aanmaken (met cluster verplicht)
       const base: EvalCreateBase = {
         title: title.trim(),
-        course_id: Number(courseId),
+        course_id: Number(clusterId),
         rubric_id: Number(rubricId),
       };
       const createRes = await api.post("/evaluations", base);
       const newId = createRes.data?.id;
       if (!newId) throw new Error("Geen ID ontvangen na aanmaken.");
 
-      // 2) daarna settings bijwerken (zelfde shape als settings-page)
+      // 2) Settings opslaan
       const settings: EvalSettings = {
         anonymity,
         min_words: Number(minWords) || 0,
@@ -121,7 +140,7 @@ export default function CreateEvaluationPage() {
           review: reviewDeadline || "",
           reflection: reflectionDeadline || "",
         },
-        // legacy aliasen (veilig)
+        // legacy aliasen
         review_deadline: reviewDeadline || "",
         reflection_deadline: reflectionDeadline || "",
         deadline_reviews: reviewDeadline || "",
@@ -129,8 +148,7 @@ export default function CreateEvaluationPage() {
       };
       await api.put(`/evaluations/${newId}`, { settings });
 
-      setInfo("Aangemaakt ✔");
-      // 3) terug naar de lijst
+      setInfo("Evaluatie aangemaakt ✔");
       router.replace("/teacher/evaluations");
     } catch (e: any) {
       const detail = e?.response?.data?.detail;
@@ -159,7 +177,7 @@ export default function CreateEvaluationPage() {
           </a>
           <button
             onClick={handleSubmit as any}
-            disabled={submitting}
+            disabled={submitting || loading}
             className="px-4 py-2 rounded-xl bg-black text-white disabled:opacity-60"
           >
             {submitting ? "Aanmaken…" : "Aanmaken"}
@@ -192,20 +210,31 @@ export default function CreateEvaluationPage() {
           />
         </div>
 
-        {/* Course & Rubric */}
+        {/* Cluster & Rubric */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="block text-sm font-medium">Vak / Course ID</label>
-            <input
-              type="number"
-              className="w-full border rounded-lg px-3 py-2"
-              value={courseId}
+            <label className="block text-sm font-medium">Cluster</label>
+            <select
+              className="w-full px-3 py-2 border rounded-lg"
+              value={clusterId === "" ? "" : Number(clusterId)}
               onChange={(e) =>
-                setCourseId(e.target.value === "" ? "" : Number(e.target.value))
+                setClusterId(
+                  e.target.value === "" ? "" : Number(e.target.value),
+                )
               }
-              placeholder="Bijv. 101"
               required
-            />
+              disabled={loading}
+            >
+              <option value="">— Kies cluster —</option>
+              {clusters.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name ?? `Course #${c.id}`}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500">
+              Bepaalt welke leerlingen in reviews/cijfers komen.
+            </p>
           </div>
 
           <div className="space-y-1">
@@ -226,10 +255,19 @@ export default function CreateEvaluationPage() {
                 </option>
               ))}
             </select>
+            {useMemo(
+              () => rubrics.find((r) => r.id === rubricId),
+              [rubrics, rubricId],
+            ) && (
+              <p className="text-xs text-gray-500 mt-1">
+                Gekozen: {rubrics.find((r) => r.id === rubricId)?.title} (id:{" "}
+                {rubricId || "—"})
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Deadlines (zelfde inputs als settings) */}
+        {/* Deadlines */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
             <label className="block text-sm font-medium">
@@ -255,7 +293,7 @@ export default function CreateEvaluationPage() {
           </div>
         </div>
 
-        {/* Overige instellingen (exact zoals settings) */}
+        {/* Overige instellingen */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="space-y-1">
             <label className="block text-sm font-medium">Anonimiteit</label>
@@ -264,15 +302,15 @@ export default function CreateEvaluationPage() {
               value={anonymity}
               onChange={(e) => setAnonymity(e.target.value as any)}
             >
-              <option value="none">Geen (alles zichtbaar)</option>
-              <option value="pseudonym">Pseudoniemen (aanbevolen)</option>
+              <option value="none">Geen</option>
+              <option value="pseudonym">Pseudoniem (aanbevolen)</option>
               <option value="full">Volledig anoniem</option>
             </select>
           </div>
 
           <div className="space-y-1">
             <label className="block text-sm font-medium">
-              Minimum woorden per review
+              Minimum woorden/review
             </label>
             <input
               type="number"
@@ -317,7 +355,6 @@ export default function CreateEvaluationPage() {
             />
             <span className="text-sm">Smoothing (stabiliseer cijfers)</span>
           </label>
-
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -332,7 +369,7 @@ export default function CreateEvaluationPage() {
         <div className="flex items-center gap-3">
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || loading}
             className="px-4 py-2 rounded-xl bg-black text-white disabled:opacity-60"
           >
             {submitting ? "Aanmaken…" : "Aanmaken"}

@@ -5,41 +5,43 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { RubricListResponse, RubricListItem } from "@/lib/rubric-types";
 
-// ---- Types (pas aan als je al centrale types hebt) ----
 type EvaluationOut = {
   id: number;
   title: string;
-  course_id?: number | null;
+  course_id: number | null;
   rubric_id?: number | null;
   settings?: any;
 };
 
 type SavePayload = {
-  title?: string;
-  course_id?: number | null;
-  rubric_id?: number | null;
-  settings?: any;
+  title: string;
+  course_id: number; // verplicht
+  rubric_id: number;
+  settings: any;
 };
+
+type CourseLite = { id: number; name: string };
 
 export default function EvaluationSettingsPage() {
   const { evalId } = useParams<{ evalId: string }>();
   const router = useRouter();
 
-  // Data state
+  // Data
   const [evaluation, setEvaluation] = useState<EvaluationOut | null>(null);
   const [rubrics, setRubrics] = useState<RubricListItem[]>([]);
+  const [clusters, setClusters] = useState<CourseLite[]>([]);
 
-  // UI state
+  // UI
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
-  // Form state
+  // Form
   const [title, setTitle] = useState("");
-  const [courseId, setCourseId] = useState<number | "">("");
+  const [clusterId, setClusterId] = useState<number | "">("");
   const [rubricId, setRubricId] = useState<number | "">("");
-  const [reviewDeadline, setReviewDeadline] = useState(""); // ISO string (yyyy-mm-ddThh:mm)
+  const [reviewDeadline, setReviewDeadline] = useState("");
   const [reflectionDeadline, setReflectionDeadline] = useState("");
   const [anonymity, setAnonymity] = useState<"none" | "pseudonym" | "full">(
     "pseudonym",
@@ -50,35 +52,37 @@ export default function EvaluationSettingsPage() {
   const [smoothing, setSmoothing] = useState<boolean>(true);
   const [reviewerRating, setReviewerRating] = useState<boolean>(true);
 
-  // -------- Load evaluation + rubrics --------
+  // Load eval + rubrics + clusters
   useEffect(() => {
     let mounted = true;
-    async function load() {
+    (async () => {
       setLoading(true);
       setError(null);
       try {
-        const [evRes, rubRes] = await Promise.all([
+        const [evRes, rubRes, clustersRes] = await Promise.all([
           api.get<EvaluationOut>(`/evaluations/${evalId}`),
           api.get<RubricListResponse>(`/rubrics`),
+          api.get<CourseLite[]>(`/students/courses`), // lijst van clusters (courses)
         ]);
 
         if (!mounted) return;
+
         const ev = evRes.data;
         setEvaluation(ev);
 
         const list = Array.isArray(rubRes.data?.items) ? rubRes.data.items : [];
         setRubrics(list);
 
-        // init form from evaluation
-        setTitle(ev.title ?? "");
-        setCourseId(ev.course_id ?? "");
-        setRubricId(ev.rubric_id ?? "");
+        const cls = Array.isArray(clustersRes.data) ? clustersRes.data : [];
+        setClusters(cls);
 
+        // Init form vanuit evaluatie
+        setTitle(ev.title ?? "");
+        setClusterId(ev.course_id ?? ""); // verplicht maken in UI
+        setRubricId(ev.rubric_id ?? "");
         const s = ev.settings || {};
         setAnonymity(s.anonymity ?? "pseudonym");
         setMinWords(Number.isFinite(s.min_words) ? s.min_words : 50);
-
-        // Deadlines: accepteer verschillende sleutels
         const r1 =
           s.deadlines?.review ?? s.review_deadline ?? s.deadline_reviews;
         const r2 =
@@ -87,7 +91,6 @@ export default function EvaluationSettingsPage() {
           s.deadline_reflection;
         setReviewDeadline(r1 || "");
         setReflectionDeadline(r2 || "");
-
         setMinCf(Number.isFinite(s.min_cf) ? s.min_cf : 0.6);
         setMaxCf(Number.isFinite(s.max_cf) ? s.max_cf : 1.4);
         setSmoothing(Boolean(s.smoothing ?? true));
@@ -97,8 +100,7 @@ export default function EvaluationSettingsPage() {
       } finally {
         setLoading(false);
       }
-    }
-    load();
+    })();
     return () => {
       mounted = false;
     };
@@ -109,7 +111,6 @@ export default function EvaluationSettingsPage() {
     [rubrics, rubricId],
   );
 
-  // -------- Save --------
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -117,7 +118,10 @@ export default function EvaluationSettingsPage() {
     setInfo(null);
 
     try {
-      // Bouw settings consistent op
+      if (clusterId === "" || rubricId === "") {
+        throw new Error("Kies een cluster én een rubric.");
+      }
+
       const settings = {
         anonymity,
         min_words: Number(minWords) || 0,
@@ -132,15 +136,15 @@ export default function EvaluationSettingsPage() {
       };
 
       const payload: SavePayload = {
-        title: title?.trim() || "",
-        course_id: courseId === "" ? null : Number(courseId),
-        rubric_id: rubricId === "" ? null : Number(rubricId),
+        title: (title || "").trim(),
+        course_id: Number(clusterId), // cluster verplicht
+        rubric_id: Number(rubricId),
         settings,
       };
 
       await api.put(`/evaluations/${evalId}`, payload);
       setInfo("Opgeslagen ✔");
-      setTimeout(() => setInfo(null), 1800);
+      setTimeout(() => setInfo(null), 1500);
     } catch (e: any) {
       setError(e?.response?.data?.detail || e?.message || "Opslaan mislukt");
     } finally {
@@ -168,7 +172,7 @@ export default function EvaluationSettingsPage() {
           </a>
           <button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || clusterId === "" || rubricId === ""}
             className="px-4 py-2 rounded-xl bg-black text-white disabled:opacity-60"
           >
             {saving ? "Opslaan…" : "Opslaan"}
@@ -198,24 +202,33 @@ export default function EvaluationSettingsPage() {
           />
         </div>
 
-        {/* Course (optioneel — als je courses gebruikt) */}
+        {/* Cluster (verplicht) + Rubric */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="block text-sm font-medium">
-              Vak / Course ID (optioneel)
-            </label>
-            <input
-              type="number"
-              className="w-full border rounded-lg px-3 py-2"
-              value={courseId === "" ? "" : Number(courseId)}
+            <label className="block text-sm font-medium">Cluster</label>
+            <select
+              className="w-full px-3 py-2 border rounded-lg"
+              value={clusterId === "" ? "" : Number(clusterId)}
               onChange={(e) =>
-                setCourseId(e.target.value === "" ? "" : Number(e.target.value))
+                setClusterId(
+                  e.target.value === "" ? "" : Number(e.target.value),
+                )
               }
-              placeholder="Bijv. 101 (mag leeg)"
-            />
+              required
+            >
+              <option value="">— Kies cluster —</option>
+              {clusters.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name ?? `Course #${c.id}`}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500">
+              Dit bepaalt welke leerlingen in de cijfers‐/reviewpagina’s
+              verschijnen.
+            </p>
           </div>
 
-          {/* Rubric selectie */}
           <div className="space-y-1">
             <label className="block text-sm font-medium">Rubric</label>
             <select
@@ -276,15 +289,14 @@ export default function EvaluationSettingsPage() {
               value={anonymity}
               onChange={(e) => setAnonymity(e.target.value as any)}
             >
-              <option value="none">Geen (alles zichtbaar)</option>
-              <option value="pseudonym">Pseudoniemen (aanbevolen)</option>
+              <option value="none">Geen</option>
+              <option value="pseudonym">Pseudoniem</option>
               <option value="full">Volledig anoniem</option>
             </select>
           </div>
-
           <div className="space-y-1">
             <label className="block text-sm font-medium">
-              Minimum woorden per review
+              Minimum woorden/review
             </label>
             <input
               type="number"
@@ -294,7 +306,6 @@ export default function EvaluationSettingsPage() {
               min={0}
             />
           </div>
-
           <div className="space-y-1">
             <label className="block text-sm font-medium">
               Correctiefactor-range
@@ -329,7 +340,6 @@ export default function EvaluationSettingsPage() {
             />
             <span className="text-sm">Smoothing (stabiliseer cijfers)</span>
           </label>
-
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -344,7 +354,7 @@ export default function EvaluationSettingsPage() {
         <div className="flex items-center gap-2">
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || clusterId === "" || rubricId === ""}
             className="px-4 py-2 rounded-xl bg-black text-white disabled:opacity-60"
           >
             {saving ? "Opslaan…" : "Opslaan"}

@@ -1,21 +1,28 @@
 from __future__ import annotations
 from typing import Optional
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr
+
+
+# …bovenaan ongewijzigd…
 
 
 class StudentCreate(BaseModel):
-    name: str = Field(min_length=1)
+    name: str
     email: EmailStr
-    class_name: Optional[str] = None  # alleen gebruikt als kolom bestaat
-    team_id: Optional[int] = None  # indien Group/Team modellen aanwezig
+    class_name: Optional[str] = None
+    # optional “free form”:
+    cluster_name: Optional[str] = None  # bv. "GA2"
+    team_number: Optional[int] = None  # bv. 1
 
 
 class StudentUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[EmailStr] = None
     class_name: Optional[str] = None
-    team_id: Optional[int] = None
-    active: Optional[bool] = None  # True = niet-archived, False = archived
+    active: Optional[bool] = None
+    # wijziging via vrije velden:
+    cluster_name: Optional[str] = None
+    team_number: Optional[int] = None
 
 
 class StudentOut(BaseModel):
@@ -23,9 +30,14 @@ class StudentOut(BaseModel):
     name: str
     email: EmailStr
     class_name: Optional[str] = None
+    # bestaande:
     team_id: Optional[int] = None
-    team_name: Optional[str] = None  # aanwezig voor volledigheid
-    status: str  # "active" | "inactive"
+    team_name: Optional[str] = None
+    cluster_id: Optional[int] = None
+    cluster_name: Optional[str] = None
+    # nieuw, handig voor UI:
+    team_number: Optional[int] = None
+    status: str
 
     class Config:
         from_attributes = True

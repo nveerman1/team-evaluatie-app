@@ -460,3 +460,18 @@ def export_reflections_csv(
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.get("/courses")
+def list_courses_for_eval(
+    db: Session = Depends(get_db), user=Depends(get_current_user)
+):
+    from app.infra.db.models import Course
+
+    rows = (
+        db.query(Course)
+        .filter(Course.school_id == user.school_id)
+        .order_by(Course.name.asc(), Course.id.asc())
+        .all()
+    )
+    return [{"id": c.id, "name": getattr(c, "name", f"Course {c.id}")} for c in rows]

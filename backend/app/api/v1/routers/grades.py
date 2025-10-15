@@ -1,299 +1,329 @@
-from __future__ import annotations
-
-from typing import Dict, Any, List, Optional, Iterable
-
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from typing import Dict, List, Optional
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from statistics import mean
 
-from app.api.v1.deps import get_db, get_current_user
-from app.infra.db.models import Evaluation, Allocation, Score, User, PublishedGrade
+from app.api.v1.deps import get_db
+from app.infra.db.models import User, Grade
 from app.api.v1.schemas.grades import (
-    GradePreviewResponse,
     GradePreviewItem,
+    GradePreviewResponse,
+    GradeDraftRequest,
     GradePublishRequest,
     PublishedGradeOut,
 )
 
-router = APIRouter(prefix="/grades", tags=["grades"])
+router = APIRouter()
 
 
-def _safe_mean(values: Iterable[Optional[float]]) -> float:
-    """Gemiddelde zonder None-waarden; accepteert ook puur floats."""
-    vals = [v for v in values if v is not None]
-    return mean(vals) if vals else 0.0
+def clamp(x: float, lo: float, hi: float) -> float:
+    return max(lo, min(hi, x))
 
 
-@router.get("/preview", response_model=GradePreviewResponse)
+# Probeer group/evaluation te importeren; val veilig terug als de modellen anders heten/ontbreken
+try:
+    from app.infra.db.models import GroupMember, Group, Evaluation
+
+    HAS_GROUP_MODELS = True
+except Exception:
+    GroupMember = Group = Evaluation = None  # type: ignore
+    HAS_GROUP_MODELS = False
+
+
+# ------------------------------------------------------------
+# Hulpfunctie: bepaal course_id (cluster) voor deze evaluatie
+# ------------------------------------------------------------
+def resolve_course_id(
+    db: Session, evaluation_id: int, explicit_course_id: Optional[int]
+) -> Optional[int]:
+    if explicit_course_id is not None:
+        return explicit_course_id
+    if HAS_GROUP_MODELS:
+        try:
+            ev = db.get(Evaluation, evaluation_id)
+            if ev is not None and hasattr(ev, "course_id"):
+                return getattr(ev, "course_id")
+        except Exception:
+            pass
+    return None
+
+
+# ------------------------------------------------------------
+# PREVIEW: alle studenten in de cluster (course) + team 1..N
+# ------------------------------------------------------------
+@router.get("/grades/preview", response_model=GradePreviewResponse)
 def preview_grades(
     evaluation_id: int,
-    group_grade: Optional[float] = Query(
-        default=None, description="Groepscijfer in %, bijv. 80.0"
-    ),
+    group_grade: Optional[float] = None,
+    course_id: Optional[int] = Query(default=None),  # optionele override
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
 ):
-    ev = (
-        db.query(Evaluation)
-        .filter(Evaluation.id == evaluation_id, Evaluation.school_id == user.school_id)
-        .first()
-    )
-    if not ev:
-        raise HTTPException(status_code=404, detail="Evaluation not found")
+    """
+    Voor de gegeven evaluatie (of expliciete course_id):
+    - Neem ALLE studenten die in deze cluster (course) een ACTIEVE membership hebben
+      (group_members.active = true) en zelf niet gearchiveerd zijn (users.archived = false).
+    - Nummer teams 1..N binnen de cluster (course) op basis van alle groups(course_id).
+    - Géén fallback die inactieven terugbrengt.
+    """
+    course = resolve_course_id(db, evaluation_id, course_id)
 
-    # ── Allocations ophalen ──────────────────────────────────────────────────────
-    allocs = (
-        db.query(Allocation)
-        .filter(
-            Allocation.school_id == user.school_id, Allocation.evaluation_id == ev.id
-        )
-        .all()
-    )
-    if not allocs:
-        return GradePreviewResponse(evaluation_id=ev.id, items=[])
-
-    # ── Scores verzamelen ────────────────────────────────────────────────────────
-    scores_by_reviewee: Dict[int, List[float]] = {}
-    self_scores: Dict[int, float] = {}
-
-    # ✅ mapping: user_id → group_id (teamnummer)
-    group_by_user: Dict[int, Optional[int]] = {}
-
-    for a in allocs:
-        rows = (
-            db.query(Score)
-            .filter(Score.school_id == user.school_id, Score.allocation_id == a.id)
-            .all()
-        )
-        vals = [r.score for r in rows]
-        if not vals:
-            continue
-        avg_alloc = _safe_mean(vals)
-        scores_by_reviewee.setdefault(a.reviewee_id, []).append(avg_alloc)
-        if a.is_self:
-            self_scores[a.reviewee_id] = avg_alloc
-
-        # ✅ probeer teamnummer te lezen uit Allocation.group_id (indien aanwezig)
-        gid = getattr(a, "group_id", None)
-        if gid is not None:
-            group_by_user[a.reviewee_id] = gid
-
-    # ── Gemiddelden per leerling en per groep ───────────────────────────────────
-    per_user_avg: Dict[int, float] = {
-        uid: _safe_mean(avgs) for uid, avgs in scores_by_reviewee.items()
-    }
-    global_avg = _safe_mean(list(per_user_avg.values()))
-
-    def group_avg_for(uid: int) -> float:
-        gid = group_by_user.get(uid)
-        if gid is None:
-            return global_avg
-        members = [u for u, g in group_by_user.items() if g == gid]
-        return (
-            _safe_mean(
-                [
-                    per_user_avg.get(u)
-                    for u in members
-                    if per_user_avg.get(u) is not None
-                ]
+    # 1) Bouw team-index 1..N binnen de course
+    team_index_by_gid: Dict[int, int] = {}
+    if HAS_GROUP_MODELS and course is not None:
+        try:
+            groups_for_course = (
+                db.query(Group.id, Group.name)
+                .filter(Group.course_id == course)
+                .order_by(
+                    Group.name.asc(), Group.id.asc()
+                )  # pas volgorde aan naar wens
+                .all()
             )
-            or global_avg
-        )
+            for idx, (gid, _name) in enumerate(groups_for_course, start=1):
+                team_index_by_gid[gid] = idx
+        except Exception as e:
+            print(f"[grades.preview] groups for course failed: {e!r}")
+            team_index_by_gid = {}
 
-    # ── Users ophalen (voor naam + klasveld) ─────────────────────────────────────
-    users = {
-        u.id: u for u in db.query(User).filter(User.school_id == user.school_id).all()
-    }
+    # 2) Haal ALLE studenten in deze cluster met actieve membership (en niet-archived)
+    students: List[User] = []
+    team_gid_by_uid: Dict[int, Optional[int]] = {}
+    if HAS_GROUP_MODELS and course is not None:
+        try:
+            gm_rows = (
+                db.query(GroupMember.user_id, GroupMember.group_id, GroupMember.active)
+                .join(Group, GroupMember.group_id == Group.id)
+                .filter(Group.course_id == course)
+                .all()
+            )
+            active_uid_set = {uid for uid, _gid, gm_active in gm_rows if gm_active}
+            for uid, gid, gm_active in gm_rows:
+                if gm_active:
+                    team_gid_by_uid[uid] = gid
 
-    def team_number_for(uid: int) -> Optional[int]:
-        tn = group_by_user.get(uid)
-        return int(tn) if isinstance(tn, int) else None
+            if active_uid_set:
+                students = (
+                    db.query(User)
+                    .filter(
+                        User.role == "student",
+                        User.archived.is_(False),  # uitsluitend niet-gearchiveerd
+                        User.id.in_(active_uid_set),
+                    )
+                    .order_by(User.name.asc())
+                    .all()
+                )
+        except Exception as e:
+            print(f"[grades.preview] course-membership join failed: {e!r}")
 
-    def class_name_for(uid: int) -> Optional[str]:
-        u = users.get(uid)
-        # ✅ als je User.class_name veld hebt:
-        if u is not None and hasattr(u, "class_name"):
-            return getattr(u, "class_name")  # type: ignore
-        # Heb je een Class-tabel? Doe hier je lookup, bijv.:
-        # cls = db.query(Class).get(u.class_id); return cls.name if cls else None
-        return None
+    # 3) Laatste fallback (geen course of geen actieve memberships): leeg of alle niet-archived studenten
+    if not students:
+        # We kiezen hier voor: géén willekeurige fallback die inactieven of buiten-cluster terugbrengt.
+        # Wil je hier wél "alle niet-archived studenten" tonen, haal dan het comment-blok hieronder weg.
+        #
+        # students = (
+        #     db.query(User)
+        #     .filter(User.role == "student", User.archived == False)
+        #     .order_by(User.name.asc())
+        #     .all()
+        # )
+        students = []
 
-    # ── Output vullen ───────────────────────────────────────────────────────────
+    # 4) Defaults (tot je echte berekeningen zijn aangesloten)
+    DEFAULT_GROUP = group_grade if group_grade is not None else 7.0
+
     items: List[GradePreviewItem] = []
-    for uid, avg_score in per_user_avg.items():
-        grp_avg = group_avg_for(uid)
-        gcf = (avg_score / grp_avg) ** 0.5 if grp_avg > 0 else 1.0
-        self_avg = self_scores.get(uid, avg_score)
-        spr = self_avg / avg_score if avg_score else 1.0
+    for u in students:
+        gcf = 1.0
+        spr = 0.0
+        avg_score = 0.0
+        suggested = clamp(round(DEFAULT_GROUP * gcf, 1), 1.0, 10.0)
 
-        if group_grade is not None:
-            suggested = round(group_grade * gcf, 1)
-        else:
-            # fallback 1–10
-            suggested = round((avg_score / 5.0) * 9.0 + 1.0, 1)
+        raw_gid = team_gid_by_uid.get(u.id)
+        neat_team = team_index_by_gid.get(raw_gid) if raw_gid is not None else None
 
         items.append(
             GradePreviewItem(
-                user_id=uid,
-                user_name=users[uid].name if uid in users else f"id:{uid}",
-                avg_score=round(avg_score, 2),
-                gcf=round(gcf, 2),
-                spr=round(spr, 2),
-                suggested_grade=suggested,
-                # ✅ nieuw:
-                team_number=team_number_for(uid),
-                class_name=class_name_for(uid),
+                user_id=u.id,
+                user_name=u.name,
+                avg_score=avg_score,  # 0..100 (placeholder)
+                gcf=gcf,  # placeholder
+                spr=spr,  # placeholder
+                suggested_grade=suggested,  # 1–10
+                team_number=neat_team,  # 1..N binnen cluster of None -> "–"
+                class_name=getattr(u, "class_name", None),
             )
         )
 
-    return GradePreviewResponse(evaluation_id=ev.id, items=items)
+    return GradePreviewResponse(evaluation_id=evaluation_id, items=items)
 
 
-@router.post(
-    "/publish", response_model=List[PublishedGradeOut], status_code=status.HTTP_200_OK
-)
-def publish_grades(
-    payload: GradePublishRequest,
-    db: Session = Depends(get_db),
-    user=Depends(get_current_user),
-):
-    """
-    Publiceert cijfers.
-    - Bouwt eerst een preview mét dezelfde group_grade voor consistente suggested waarden.
-    - Past per user overrides toe: overrides[user_id] = {"grade": float | None, "reason": str | None}
-    """
-    ev = (
-        db.query(Evaluation)
-        .filter(
-            Evaluation.id == payload.evaluation_id,
-            Evaluation.school_id == user.school_id,
-        )
-        .first()
-    )
-    if not ev:
-        raise HTTPException(status_code=404, detail="Evaluation not found")
-
-    # Consistente preview (zelfde group_grade als in de UI)
+# ------------------------------------------------------------
+# CONCEPT OPSLAAN: upsert in Grade (grade kan None zijn)
+# ------------------------------------------------------------
+@router.post("/grades/draft")
+def save_draft(payload: GradeDraftRequest, db: Session = Depends(get_db)):
     preview = preview_grades(
-        evaluation_id=ev.id,
+        evaluation_id=payload.evaluation_id,
         group_grade=payload.group_grade,
+        course_id=None,  # evaluatie bepaalt course; je mag hier ook een course_id doorgeven
         db=db,
-        user=user,
-    )  # type: ignore
+    )
+    preview_by_uid: Dict[int, GradePreviewItem] = {i.user_id: i for i in preview.items}
 
-    meta_by_uid: Dict[int, Dict[str, Any]] = {
-        item.user_id: {
+    for uid, ov in payload.overrides.items():
+        item = preview_by_uid.get(uid)
+        if not item:
+            # uid zit niet in de (actieve) clusterlijst -> sla over
+            continue
+
+        u = db.get(User, uid)
+        if not u:
+            continue
+
+        meta = {
             "avg_score": item.avg_score,
             "gcf": item.gcf,
             "spr": item.spr,
             "suggested": item.suggested_grade,
             "group_grade": payload.group_grade,
+            "team_number": item.team_number,  # nette 1..N
+            "class_name": item.class_name,
         }
-        for item in preview.items
-    }
 
-    users: Dict[int, User] = {
-        u.id: u for u in db.query(User).filter(User.school_id == user.school_id).all()
-    }
-
-    out_rows: List[PublishedGrade] = []
-    for uid, override in payload.overrides.items():
-        override_grade = override.get("grade")
-        suggested = meta_by_uid.get(uid, {}).get("suggested")
-        final_grade = float(
-            override_grade if override_grade is not None else (suggested or 0.0)
+        row: Optional[Grade] = (
+            db.query(Grade)
+            .filter(Grade.evaluation_id == payload.evaluation_id, Grade.user_id == uid)
+            .one_or_none()
         )
-        reason = override.get("reason")
-
-        row = (
-            db.query(PublishedGrade)
-            .filter(
-                PublishedGrade.school_id == user.school_id,
-                PublishedGrade.evaluation_id == ev.id,
-                PublishedGrade.user_id == uid,
-            )
-            .first()
-        )
-
         if row is None:
-            row = PublishedGrade(
-                school_id=user.school_id,
-                evaluation_id=ev.id,
+            row = Grade(
+                school_id=u.school_id,
+                evaluation_id=payload.evaluation_id,
                 user_id=uid,
-                grade=final_grade,
-                reason=reason,
-                meta=meta_by_uid.get(uid, {}),
             )
-            db.add(row)
-        else:
-            row.grade = final_grade
-            row.reason = reason
-            row.meta = meta_by_uid.get(uid, {})
 
-        out_rows.append(row)
+        row.grade = ov.grade  # mag None zijn (concept)
+        row.override_reason = ov.reason
+        row.meta = meta
+        db.add(row)
 
     db.commit()
-
-    # refresh + output payload
-    out_payload: List[PublishedGradeOut] = []
-    for row in out_rows:
-        db.refresh(row)
-        uname = users[row.user_id].name if row.user_id in users else f"id:{row.user_id}"
-        out_payload.append(
-            PublishedGradeOut(
-                id=row.id,
-                evaluation_id=row.evaluation_id,
-                user_id=row.user_id,
-                user_name=uname,
-                grade=row.grade,
-                reason=row.reason,
-                meta=row.meta,
-            )
-        )
-    return out_payload
+    return {"status": "ok"}
 
 
-@router.get("", response_model=List[PublishedGradeOut])
-def list_grades(
-    evaluation_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)
-):
-    """
-    Geeft gepubliceerde cijfers terug (ná publish).
-    """
-    ev = (
-        db.query(Evaluation)
-        .filter(Evaluation.id == evaluation_id, Evaluation.school_id == user.school_id)
-        .first()
+# ------------------------------------------------------------
+# PUBLICEREN: upsert met definitieve grade (1–10)
+# ------------------------------------------------------------
+@router.post("/grades/publish")
+def publish_grades(payload: GradePublishRequest, db: Session = Depends(get_db)):
+    preview = preview_grades(
+        evaluation_id=payload.evaluation_id,
+        group_grade=payload.group_grade,
+        course_id=None,
+        db=db,
     )
-    if not ev:
-        raise HTTPException(status_code=404, detail="Evaluation not found")
+    preview_by_uid: Dict[int, GradePreviewItem] = {i.user_id: i for i in preview.items}
 
-    users: Dict[int, User] = {
-        u.id: u for u in db.query(User).filter(User.school_id == user.school_id).all()
-    }
+    for uid, ov in payload.overrides.items():
+        item = preview_by_uid.get(uid)
+        if not item:
+            continue
 
-    rows = (
-        db.query(PublishedGrade)
-        .filter(
-            PublishedGrade.school_id == user.school_id,
-            PublishedGrade.evaluation_id == ev.id,
+        u = db.get(User, uid)
+        if not u:
+            continue
+
+        meta = {
+            "avg_score": item.avg_score,
+            "gcf": item.gcf,
+            "spr": item.spr,
+            "suggested": item.suggested_grade,
+            "group_grade": payload.group_grade,
+            "team_number": item.team_number,  # nette 1..N
+            "class_name": item.class_name,
+        }
+
+        row: Optional[Grade] = (
+            db.query(Grade)
+            .filter(Grade.evaluation_id == payload.evaluation_id, Grade.user_id == uid)
+            .one_or_none()
         )
-        .order_by(PublishedGrade.user_id.asc())
+        if row is None:
+            row = Grade(
+                school_id=u.school_id,
+                evaluation_id=payload.evaluation_id,
+                user_id=uid,
+            )
+
+        row.grade = ov.grade  # definitief 1–10
+        row.override_reason = ov.reason
+        row.meta = meta
+        db.add(row)
+
+    db.commit()
+    return {"status": "ok"}
+
+
+# ------------------------------------------------------------
+# LIST: merge preview (actieve cluster) + opgeslagen gegevens
+# ------------------------------------------------------------
+@router.get("/grades", response_model=List[PublishedGradeOut])
+def list_grades(
+    evaluation_id: int,
+    course_id: Optional[int] = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    # Altijd leidend: preview (actieve leerlingen in de cluster)
+    preview = preview_grades(
+        evaluation_id=evaluation_id, group_grade=None, course_id=course_id, db=db
+    )
+    by_uid = {i.user_id: i for i in preview.items}
+
+    # Alleen grade-rows voor deze evaluatie, maar we nemen uitsluitend uids die in de preview zitten
+    rows: List[Grade] = (
+        db.query(Grade)
+        .filter(
+            Grade.evaluation_id == evaluation_id, Grade.user_id.in_(list(by_uid.keys()))
+        )
         .all()
     )
+    rows_by_uid = {g.user_id: g for g in rows}
 
     out: List[PublishedGradeOut] = []
-    for r in rows:
-        uname = users[r.user_id].name if r.user_id in users else f"id:{r.user_id}"
+    for uid, item in by_uid.items():
+        g: Optional[Grade] = rows_by_uid.get(uid)
+        u: Optional[User] = db.get(User, uid)
+
+        raw_meta = (g.meta if (g and getattr(g, "meta", None)) else {}) or {}
+        has_saved = g is not None and (g.grade is not None or g.override_reason)
+
+        meta = {
+            "avg_score": item.avg_score,
+            "gcf": item.gcf,
+            "spr": item.spr,
+            "suggested": item.suggested_grade,
+            "group_grade": raw_meta.get("group_grade"),
+            "team_number": item.team_number,  # al 1..N binnen cluster
+            "class_name": (
+                item.class_name
+                if item.class_name is not None
+                else getattr(u, "class_name", None)
+            ),
+            **raw_meta,
+            "has_saved": has_saved,
+            "status": "saved" if has_saved else "preview_only",
+        }
+
         out.append(
             PublishedGradeOut(
-                id=r.id,
-                evaluation_id=r.evaluation_id,
-                user_id=r.user_id,
-                user_name=uname,
-                grade=r.grade,
-                reason=r.reason,
-                meta=r.meta,
+                evaluation_id=evaluation_id,
+                user_id=uid,
+                user_name=item.user_name,
+                grade=(g.grade if g else None),
+                reason=(g.override_reason if g else None),
+                meta=meta,
             )
         )
+
+    # Belangrijk: géén extra DB-rows toevoegen die niet in preview zitten (voorkomt inactief/andere course)
+    out.sort(key=lambda x: x.user_name.lower())
     return out

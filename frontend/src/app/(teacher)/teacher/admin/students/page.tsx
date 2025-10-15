@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 /** Types in sync with backend */
 type Student = {
@@ -11,11 +11,13 @@ type Student = {
   email: string;
   class_name?: string | null;
   team_id?: number | null;
-  team_name?: string | null; // aanwezig maar we tonen team_id
+  team_name?: string | null;
+  team_number?: number | null;
+  cluster_id?: number | null;
+  cluster_name?: string | null;
   status: "active" | "inactive" | string;
 };
 
-/** Small UI helpers */
 function Button(
   props: React.ButtonHTMLAttributes<HTMLButtonElement> & {
     variant?: "primary" | "ghost" | "danger" | "outline";
@@ -56,9 +58,12 @@ function TextInput(
 }
 
 function Select(
-  props: React.SelectHTMLAttributes<HTMLSelectElement> & { label?: string },
+  props: React.SelectHTMLAttributes<HTMLSelectElement> & {
+    label?: string;
+    hint?: string;
+  },
 ) {
-  const { label, className = "", children, ...rest } = props;
+  const { label, hint, className = "", children, ...rest } = props;
   return (
     <label className="block space-y-1">
       {label && <span className="text-sm font-medium">{label}</span>}
@@ -68,19 +73,20 @@ function Select(
       >
         {children}
       </select>
+      {hint && <span className="text-xs text-gray-500">{hint}</span>}
     </label>
   );
 }
 
-/** URL state helper (let op: class_name) */
+/** URL state helper */
 function useUrlState() {
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
 
   const q = sp.get("q") ?? "";
-  const className = sp.get("class_name") ?? "";
-  const status = sp.get("status") ?? ""; // active|inactive|""
+  const klassOrCluster = sp.get("klass_or_cluster") ?? ""; // ← één veld
+  const status = sp.get("status") ?? "active"; // standaard alleen actieve leerlingen
   const page = Number(sp.get("page") ?? 1);
   const limit = Number(sp.get("limit") ?? 25);
 
@@ -93,7 +99,7 @@ function useUrlState() {
     router.replace(`${pathname}?${params.toString()}`);
   }
 
-  return { q, className, status, page, limit, setParams };
+  return { q, klassOrCluster, status, page, limit, setParams };
 }
 
 /** CSV import dialog */
@@ -104,33 +110,15 @@ function ImportCsvDialog({
 }: {
   open: boolean;
   onClose: () => void;
-  onImported: (added: number) => void;
+  onImported: () => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
+  const [allowUpdate, setAllowUpdate] = useState(true);
   const [dryRun, setDryRun] = useState(false);
-  const [allowUpdate, setAllowUpdate] = useState(false);
-  const [defaultClass, setDefaultClass] = useState("");
-  const [defaultTeamId, setDefaultTeamId] = useState<string>("");
-  const [activate, setActivate] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [report, setReport] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (open) {
-      setFile(null);
-      setDryRun(false);
-      setAllowUpdate(false);
-      setDefaultClass("");
-      setDefaultTeamId("");
-      setActivate(true);
-      setSaving(false);
-      setReport(null);
-      setError(null);
-    }
-  }, [open]);
-
-  async function submit(e: React.FormEvent) {
+  async function handleImport(e: React.FormEvent) {
     e.preventDefault();
     if (!file) return;
     setSaving(true);
@@ -138,17 +126,17 @@ function ImportCsvDialog({
     try {
       const fd = new FormData();
       fd.append("file", file);
-      fd.append("dry_run", String(dryRun));
       fd.append("allow_update", String(allowUpdate));
-      if (defaultClass) fd.append("default_class_name", defaultClass);
-      if (defaultTeamId) fd.append("default_team_id", defaultTeamId);
-      fd.append("activate", String(activate));
-
+      fd.append("dry_run", String(dryRun));
       const resp = await api.post("/students/import.csv", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      setReport(resp.data);
-      if (!dryRun) onImported(resp.data?.created_count ?? 0);
+      if (dryRun) {
+        alert(`Dry-run voltooid:\n${JSON.stringify(resp.data, null, 2)}`);
+      } else {
+        onImported();
+        onClose();
+      }
     } catch (e: any) {
       setError(e?.response?.data?.detail || e?.message || "Import mislukt");
     } finally {
@@ -156,151 +144,61 @@ function ImportCsvDialog({
     }
   }
 
-  async function downloadTemplate() {
-    const resp = await api.get("/students/template.csv", {
-      responseType: "blob",
-    });
-    const blob = new Blob([resp.data], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "students_template.csv";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }
-
   if (!open) return null;
-
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
       <form
-        onSubmit={submit}
-        className="w-full max-w-2xl bg-white rounded-2xl border p-5 space-y-4 shadow-xl"
+        onSubmit={handleImport}
+        className="w-full max-w-lg bg-white rounded-2xl border p-5 space-y-4 shadow-xl"
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">CSV importeren</h3>
+          <h3 className="text-lg font-semibold">Importeer CSV</h3>
           <button type="button" className="text-gray-500" onClick={onClose}>
             ✕
           </button>
         </div>
-
         {error && (
-          <div className="p-2 rounded-lg bg-red-50 text-red-700 text-sm">
+          <div className="p-2 rounded bg-red-50 text-red-700 text-sm">
             {error}
           </div>
         )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <label className="block space-y-1">
-            <span className="text-sm font-medium">CSV-bestand</span>
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            />
-            <span className="text-xs text-gray-500">
-              Kolommen: name,email,class,team_id,active
-            </span>
-          </label>
-          <div className="flex items-end gap-2">
-            <Button type="button" onClick={downloadTemplate}>
-              Download template
-            </Button>
-          </div>
-
-          <TextInput
-            label="Standaard klas (optioneel)"
-            value={defaultClass}
-            onChange={(e) => setDefaultClass(e.target.value)}
+        <div className="space-y-2">
+          <input
+            type="file"
+            accept=".csv"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           />
-          <TextInput
-            label="Standaard team_id (optioneel)"
-            value={defaultTeamId}
-            onChange={(e) => setDefaultTeamId(e.target.value)}
-            inputMode="numeric"
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-4 items-center">
-          <label className="inline-flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={dryRun}
-              onChange={(e) => setDryRun(e.target.checked)}
-            />
-            Proefimport (dry-run)
-          </label>
           <label className="inline-flex items-center gap-2 text-sm">
             <input
               type="checkbox"
               checked={allowUpdate}
               onChange={(e) => setAllowUpdate(e.target.checked)}
             />
-            Bestaande e-mails bijwerken
+            Bestaanden bijwerken
           </label>
           <label className="inline-flex items-center gap-2 text-sm">
             <input
               type="checkbox"
-              checked={activate}
-              onChange={(e) => setActivate(e.target.checked)}
+              checked={dryRun}
+              onChange={(e) => setDryRun(e.target.checked)}
             />
-            Activeren bij import
+            Dry-run (geen writes)
           </label>
         </div>
-
-        <div className="flex items-center gap-3">
-          <Button type="submit" variant="primary" disabled={saving || !file}>
-            {saving ? "Importeren…" : dryRun ? "Valideren" : "Importeren"}
+        <div className="flex items-center gap-2">
+          <Button type="submit" variant="primary" disabled={!file || saving}>
+            {saving ? "Bezig…" : dryRun ? "Dry-run" : "Importeer"}
           </Button>
           <Button type="button" onClick={onClose}>
-            Sluiten
+            Annuleer
           </Button>
         </div>
-
-        {report && (
-          <div className="mt-2 border rounded-xl p-3 bg-gray-50 text-sm">
-            <div className="font-medium mb-1">Resultaat</div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>Gelezen: {report.total_rows}</div>
-              <div>Toegevoegd: {report.created_count}</div>
-              <div>Bijgewerkt: {report.updated_count}</div>
-              <div>Overgeslagen: {report.skipped_count}</div>
-              <div>Fouten: {report.error_count}</div>
-            </div>
-            {Array.isArray(report.rows) && report.rows.length > 0 && (
-              <div className="mt-2 max-h-48 overflow-auto bg-white border rounded-lg">
-                <table className="w-full text-xs">
-                  <thead className="bg-gray-100 sticky top-0">
-                    <tr>
-                      <th className="text-left p-2">rij</th>
-                      <th className="text-left p-2">email</th>
-                      <th className="text-left p-2">status</th>
-                      <th className="text-left p-2">opmerking</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {report.rows.map((r: any, i: number) => (
-                      <tr key={i} className="border-t">
-                        <td className="p-2">{r.row}</td>
-                        <td className="p-2">{r.email}</td>
-                        <td className="p-2">{r.status}</td>
-                        <td className="p-2">{r.message}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
       </form>
     </div>
   );
 }
 
-/** Add/Edit dialog */
+/** Add/Edit dialog — vrije velden Cluster + Teamnummer */
 function StudentDialog({
   open,
   onClose,
@@ -316,22 +214,29 @@ function StudentDialog({
   const [name, setName] = useState(initial?.name ?? "");
   const [email, setEmail] = useState(initial?.email ?? "");
   const [className, setClassName] = useState(initial?.class_name ?? "");
-  const [teamId, setTeamId] = useState<string>(
-    initial?.team_id != null ? String(initial.team_id) : "",
-  );
   const [active, setActive] = useState(initial?.status !== "inactive");
+
+  const [clusterName, setClusterName] = useState<string>(
+    initial?.cluster_name ?? "",
+  );
+  const [teamNumber, setTeamNumber] = useState<string>(
+    initial?.team_number != null ? String(initial.team_number) : "",
+  );
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (open) {
-      setName(initial?.name ?? "");
-      setEmail(initial?.email ?? "");
-      setClassName(initial?.class_name ?? "");
-      setTeamId(initial?.team_id != null ? String(initial.team_id) : "");
-      setActive(initial?.status !== "inactive");
-      setError(null);
-    }
+    if (!open) return;
+    setName(initial?.name ?? "");
+    setEmail(initial?.email ?? "");
+    setClassName(initial?.class_name ?? "");
+    setActive(initial?.status !== "inactive");
+    setClusterName(initial?.cluster_name ?? "");
+    setTeamNumber(
+      initial?.team_number != null ? String(initial.team_number) : "",
+    );
+    setError(null);
   }, [open, initial]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -343,8 +248,9 @@ function StudentDialog({
         name,
         email,
         class_name: className || null,
-        team_id: teamId ? Number(teamId) : null,
         active,
+        cluster_name: clusterName || null,
+        team_number: teamNumber === "" ? null : Number(teamNumber),
       };
       let resp;
       if (isEdit && initial?.id) {
@@ -367,7 +273,7 @@ function StudentDialog({
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-lg bg-white rounded-2xl border p-5 space-y-4 shadow-xl"
+        className="w-full max-w-xl bg-white rounded-2xl border p-5 space-y-4 shadow-xl"
       >
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">
@@ -403,22 +309,30 @@ function StudentDialog({
             value={className ?? ""}
             onChange={(e) => setClassName(e.target.value)}
           />
-          <TextInput
-            label="Team ID (optioneel)"
-            inputMode="numeric"
-            value={teamId}
-            onChange={(e) => setTeamId(e.target.value)}
-          />
-        </div>
 
-        <label className="inline-flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={active}
-            onChange={(e) => setActive(e.target.checked)}
+          <TextInput
+            label="Cluster"
+            value={clusterName}
+            onChange={(e) => setClusterName(e.target.value)}
+            placeholder="bijv. GA2"
           />
-          Actief
-        </label>
+          <TextInput
+            label="Teamnummer"
+            inputMode="numeric"
+            value={teamNumber}
+            onChange={(e) => setTeamNumber(e.target.value)}
+            placeholder="bijv. 1"
+          />
+
+          <label className="inline-flex items-center gap-2 text-sm mt-2">
+            <input
+              type="checkbox"
+              checked={active}
+              onChange={(e) => setActive(e.target.checked)}
+            />
+            Actief
+          </label>
+        </div>
 
         <div className="flex items-center gap-3">
           <Button type="submit" variant="primary" disabled={saving}>
@@ -434,7 +348,7 @@ function StudentDialog({
 }
 
 export default function StudentsAdminPage() {
-  const { q, className, status, page, limit, setParams } = useUrlState();
+  const { q, klassOrCluster, status, page, limit, setParams } = useUrlState();
   const [rows, setRows] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -446,7 +360,7 @@ export default function StudentsAdminPage() {
   // Fetch list
   useEffect(() => {
     const params: any = { q, page, limit };
-    if (className) params.class_name = className; // <— FIXED
+    if (klassOrCluster) params.klass_or_cluster = klassOrCluster;
     if (status) params.status = status;
 
     setLoading(true);
@@ -458,7 +372,7 @@ export default function StudentsAdminPage() {
         setError(e?.response?.data?.detail || e?.message || "Laden mislukt"),
       )
       .finally(() => setLoading(false));
-  }, [q, className, status, page, limit]);
+  }, [q, klassOrCluster, status, page, limit]);
 
   function openCreate() {
     setEditItem(undefined);
@@ -483,7 +397,7 @@ export default function StudentsAdminPage() {
     try {
       const params = new URLSearchParams();
       if (q) params.set("q", q);
-      if (className) params.set("class_name", className); // <— FIXED
+      if (klassOrCluster) params.set("klass_or_cluster", klassOrCluster); // ← i.p.v. class_name
       if (status) params.set("status", status);
       const resp = await api.get(`/students/export.csv?${params.toString()}`, {
         responseType: "blob",
@@ -499,6 +413,26 @@ export default function StudentsAdminPage() {
       URL.revokeObjectURL(url);
     } catch (e: any) {
       alert(e?.response?.data?.detail || e?.message || "Export mislukt");
+    }
+  }
+
+  // Inline team-nummer wijziging
+  async function saveInlineTeamNumber(
+    id: number,
+    nextTeamNumber: number | null,
+  ) {
+    try {
+      const payload: any = { team_number: nextTeamNumber };
+      const resp = await api.put(`/students/${id}`, payload);
+      setRows((all) =>
+        all.map((s) => (s.id === id ? (resp.data as Student) : s)),
+      );
+    } catch (e: any) {
+      alert(
+        e?.response?.data?.detail ||
+          e?.message ||
+          "Teamnummer wijzigen mislukt",
+      );
     }
   }
 
@@ -533,7 +467,7 @@ export default function StudentsAdminPage() {
         <div>
           <h1 className="text-2xl font-semibold">Leerlingen</h1>
           <p className="text-gray-600">
-            Beheer leerlingen, klas en team. Import/Export als CSV.
+            Beheer leerlingen, klas, cluster en team. Import/Export als CSV.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -557,10 +491,12 @@ export default function StudentsAdminPage() {
         </div>
         <div className="w-48">
           <TextInput
-            label="Klas"
-            placeholder="Bijv. 2V2"
-            defaultValue={className}
-            onChange={(e) => setParams({ class_name: e.target.value, page: 1 })}
+            label="Klas/Cluster"
+            placeholder="Bijv. A2a of GA2"
+            defaultValue={klassOrCluster}
+            onChange={(e) =>
+              setParams({ klass_or_cluster: e.target.value, page: 1 })
+            }
           />
         </div>
         <div className="w-48">
@@ -579,10 +515,11 @@ export default function StudentsAdminPage() {
 
       {/* Table */}
       <section className="bg-white border rounded-2xl overflow-hidden">
-        <div className="grid grid-cols-[1.2fr_1.6fr_0.7fr_0.6fr_0.6fr_0.8fr] gap-0 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">
+        <div className="grid grid-cols-[1.2fr_1.6fr_0.7fr_0.9fr_0.6fr_0.6fr_0.9fr] gap-0 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">
           <div>Naam</div>
           <div>E-mail</div>
           <div>Klas</div>
+          <div>Cluster</div>
           <div>Team #</div>
           <div>Status</div>
           <div className="text-right pr-2">Acties</div>
@@ -601,7 +538,7 @@ export default function StudentsAdminPage() {
           rows.map((s) => (
             <div
               key={s.id}
-              className="grid grid-cols-[1.2fr_1.6fr_0.7fr_0.6fr_0.6fr_0.8fr] items-center gap-0 px-4 py-3 border-t text-sm"
+              className="grid grid-cols-[1.2fr_1.6fr_0.7fr_0.9fr_0.6fr_0.6fr_0.9fr] items-center gap-0 px-4 py-3 border-t text-sm"
             >
               <div className="truncate" title={s.name}>
                 {s.name}
@@ -614,9 +551,44 @@ export default function StudentsAdminPage() {
               </div>
               <div
                 className="truncate"
-                title={s.team_id ? String(s.team_id) : "—"}
+                title={
+                  s.cluster_name ??
+                  (s.cluster_id != null ? `Course ${s.cluster_id}` : "—")
+                }
               >
-                {s.team_id ?? "—"}
+                {s.cluster_name ??
+                  (s.cluster_id != null ? `Course ${s.cluster_id}` : "—")}
+              </div>
+              <div className="truncate">
+                <input
+                  className="w-20 px-2 py-1 border rounded-lg"
+                  inputMode="numeric"
+                  defaultValue={s.team_number ?? ""}
+                  placeholder="—"
+                  onBlur={(e) => {
+                    const val = e.target.value.trim();
+                    const next = val === "" ? null : Number(val);
+                    if (val === "" || Number.isFinite(next)) {
+                      if ((next ?? null) !== (s.team_number ?? null)) {
+                        saveInlineTeamNumber(s.id, next as number | null);
+                      }
+                    } else {
+                      e.currentTarget.value =
+                        s.team_number != null ? String(s.team_number) : "";
+                      alert("Teamnummer moet een getal zijn");
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter")
+                      (e.target as HTMLInputElement).blur();
+                    if (e.key === "Escape") {
+                      (e.target as HTMLInputElement).value =
+                        s.team_number != null ? String(s.team_number) : "";
+                      (e.target as HTMLInputElement).blur();
+                    }
+                  }}
+                  title="Wijzig teamnummer snel; leeg laten om team te verwijderen"
+                />
               </div>
               <div>
                 {s.status === "inactive" ? (
@@ -663,9 +635,8 @@ export default function StudentsAdminPage() {
         open={importOpen}
         onClose={() => setImportOpen(false)}
         onImported={() => {
-          // herladen na import
           const params: any = { q, page, limit };
-          if (className) params.class_name = className;
+          if (klassOrCluster) params.klass_or_cluster = klassOrCluster;
           if (status) params.status = status;
           api
             .get<Student[]>("/students", { params })

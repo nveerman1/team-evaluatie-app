@@ -1,6 +1,29 @@
-from __future__ import annotations
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, field_validator
-from typing import Dict, Optional, Any, List
+
+
+class GradeOverrideIn(BaseModel):
+    grade: Optional[float] = None  # 1–10 of null (concept zonder override)
+    reason: Optional[str] = None
+
+
+class GradeDraftRequest(BaseModel):
+    evaluation_id: int
+    group_grade: Optional[float] = None  # 1–10
+    overrides: Dict[int, GradeOverrideIn] = Field(default_factory=dict)
+
+    @field_validator("group_grade")
+    @classmethod
+    def _check_group_grade(cls, v: Optional[float]) -> Optional[float]:
+        if v is None:
+            return v
+        if not (1.0 <= v <= 10.0):
+            raise ValueError("group_grade must be between 1.0 and 10.0")
+        return v
+
+
+class GradePublishRequest(GradeDraftRequest):
+    pass
 
 
 class GradePreviewItem(BaseModel):
@@ -9,7 +32,7 @@ class GradePreviewItem(BaseModel):
     avg_score: float
     gcf: float
     spr: float
-    suggested_grade: float
+    suggested_grade: float  # 1–10
     team_number: Optional[int] = None
     class_name: Optional[str] = None
 
@@ -19,31 +42,10 @@ class GradePreviewResponse(BaseModel):
     items: List[GradePreviewItem]
 
 
-class GradePublishRequest(BaseModel):
-    evaluation_id: int
-    overrides: Dict[int, Dict[str, Any]] = Field(
-        default_factory=dict
-    )  # {user_id: {"grade": 8.0, "reason": "participatie"}}
-    group_grade: Optional[float] = None  # bv. 80.0 => % groepscijfer
-
-    @field_validator("group_grade")
-    @classmethod
-    def _check_group_grade(cls, v: Optional[float]) -> Optional[float]:
-        if v is None:
-            return v
-        if not (0.0 <= v <= 100.0):
-            raise ValueError("group_grade must be between 0 and 100")
-        return v
-
-
 class PublishedGradeOut(BaseModel):
-    id: int
     evaluation_id: int
     user_id: int
     user_name: str
-    grade: float
+    grade: Optional[float] = None  # 1–10 of null (concept)
     reason: Optional[str] = None
     meta: Dict[str, Any] = Field(default_factory=dict)
-
-    class Config:
-        from_attributes = True

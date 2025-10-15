@@ -13,11 +13,12 @@ type Evaluation = {
   title: string;
   status: EvalStatus;
   rubric_id?: number | null;
-  course_id?: number | null;
+  course_id?: number | null; // cluster id
   deadlines?: { review?: string | null; reflection?: string | null } | null;
 };
 
 type ApiListResponse = Evaluation[];
+type CourseLite = { id: number; name: string };
 
 /** UI helpers **/
 const STATUSES_FILTER = [
@@ -76,11 +77,27 @@ export default function EvaluationsListPage() {
   const [rows, setRows] = useState<Evaluation[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  // clusters map
+  const [clusters, setClusters] = useState<CourseLite[]>([]);
+  const clusterNameById = useMemo(() => {
+    const m = new Map<number, string>();
+    clusters.forEach((c) => m.set(c.id, c.name ?? `Course #${c.id}`));
+    return m;
+  }, [clusters]);
+
   // inline saving state (per id)
   const [savingId, setSavingId] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
-  // Fetch with current filters
+  // Fetch clusters once
+  useEffect(() => {
+    api
+      .get<CourseLite[]>("/students/courses")
+      .then((r) => setClusters(Array.isArray(r.data) ? r.data : []))
+      .catch(() => setClusters([]));
+  }, []);
+
+  // Fetch evaluations with current filters
   useEffect(() => {
     const params = new URLSearchParams();
     if (query) params.set("q", query);
@@ -99,7 +116,7 @@ export default function EvaluationsListPage() {
       .finally(() => setLoading(false));
   }, [query, status, courseId]);
 
-  const filtered = useMemo(() => rows, [rows]); // server doet filter; hier evt. extra client-filter
+  const filtered = useMemo(() => rows, [rows]); // server filtert al
 
   async function changeStatus(id: number, next: EvalStatus) {
     const prev = rows.find((x) => x.id === id)?.status;
@@ -159,14 +176,19 @@ export default function EvaluationsListPage() {
             </option>
           ))}
         </select>
-        <input
-          type="text"
-          inputMode="numeric"
-          placeholder="Klas/Course ID"
-          defaultValue={courseId}
+        <select
+          value={courseId}
           onChange={(e) => setParams({ course_id: e.target.value })}
-          className="px-3 py-2 rounded-lg border w-40"
-        />
+          className="px-3 py-2 rounded-lg border w-56"
+          title="Filter op cluster"
+        >
+          <option value="">Alle clusters</option>
+          {clusters.map((c) => (
+            <option key={c.id} value={String(c.id)}>
+              {c.name ?? `Course #${c.id}`}
+            </option>
+          ))}
+        </select>
         {(query || status || courseId) && (
           <button
             onClick={() => setParams({ q: "", status: "", course_id: "" })}
@@ -211,6 +233,11 @@ export default function EvaluationsListPage() {
               ? new Date(e.deadlines.reflection).toLocaleDateString()
               : "—";
 
+            const clusterName =
+              e.course_id != null
+                ? (clusterNameById.get(e.course_id) ?? `Course #${e.course_id}`)
+                : "—";
+
             return (
               <div
                 key={e.id}
@@ -218,9 +245,7 @@ export default function EvaluationsListPage() {
               >
                 <div>
                   <div className="font-medium">{e.title}</div>
-                  <div className="text-gray-500">
-                    rubric: {e.rubric_id ?? "—"} · course: {e.course_id ?? "—"}
-                  </div>
+                  <div className="text-gray-500">cluster: {clusterName}</div>
                 </div>
 
                 {/* Status + inline switcher */}

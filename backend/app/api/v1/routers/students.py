@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, List
+from typing import Optional, List, Dict, Tuple
 from fastapi import (
     APIRouter,
     Depends,
@@ -12,26 +12,50 @@ from fastapi import (
     Form,
 )
 from fastapi.responses import PlainTextResponse
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, and_, or_, exists
 from sqlalchemy.orm import Session, aliased
 import csv
 import io
+import re
 
 from app.api.v1.deps import get_db, get_current_user
 from app.api.v1.schemas.students import StudentCreate, StudentUpdate, StudentOut
 from app.infra.db.models import (
     User,
-)  # heeft school_id, name, email, (archived), (class_name), (role)
+)  # school_id, name, email, (archived), (class_name), (role)
 
 router = APIRouter(prefix="/students", tags=["students"])
 
-# --- Optionele team-modellen ---
+# -------------------- helpers --------------------
+
+TEAM_RX = re.compile(r"(\d+)$")  # pakt het laatste getal uit "Team 12" of "12"
+
+
+def extract_team_number(name: Optional[str]) -> Optional[int]:
+    if not name:
+        return None
+    m = TEAM_RX.search(name.strip())
+    if not m:
+        return None
+    try:
+        return int(m.group(1))
+    except ValueError:
+        return None
+
+
+def team_name_for_number(n: int) -> str:
+    return f"Team {n}"
+
+
+# --- Optionele team/cluster (course) modellen ---
 try:
     from app.infra.db.models import Group as Team
     from app.infra.db.models import GroupMember as TeamMember
+    from app.infra.db.models import Course  # kolommen: id, name, school_id
 except Exception:  # pragma: no cover
     Team = None  # type: ignore
     TeamMember = None  # type: ignore
+    Course = None  # type: ignore
 
 
 def _supports_attr(model, attr: str) -> bool:
@@ -49,7 +73,10 @@ def _to_out_row(
     class_name: Optional[str],
     team_id: Optional[int],
     team_name: Optional[str],
+    cluster_id: Optional[int],
+    cluster_name: Optional[str],
 ) -> StudentOut:
+    tnum = extract_team_number(team_name)
     return StudentOut(
         id=u.id,
         name=u.name,
@@ -57,8 +84,14 @@ def _to_out_row(
         class_name=class_name,
         team_id=team_id,
         team_name=team_name,
+        team_number=tnum,
+        cluster_id=cluster_id,
+        cluster_name=cluster_name,
         status="inactive" if getattr(u, "archived", False) else "active",
     )
+
+
+# -------------------- list --------------------
 
 
 @router.get("", response_model=List[StudentOut])
@@ -66,18 +99,26 @@ def list_students(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
     q: Optional[str] = Query(None, description="Zoek in naam of e-mail"),
-    class_name: Optional[str] = Query(None, description="Filter op klas"),
-    team_id: Optional[int] = Query(None, description="Filter op team-id"),
+    klass_or_cluster: Optional[str] = Query(
+        None,
+        description="Vrij filter: match op klas (user.class_name) of clusternaam (course.name)",
+    ),
+    class_name: Optional[str] = Query(
+        None, description="(legacy) puur op klas (ILIKE)"
+    ),
+    team_id: Optional[int] = Query(None, description="(optioneel) filter op team id"),
     status: Optional[str] = Query(None, pattern="^(active|inactive)$"),
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=500),
 ):
     """
-    Lijst leerlingen binnen de school met filters & eenvoudige paginatie.
+    Lijst leerlingen binnen de school met filters & paginatie.
     - q: zoekt in name/email (ILIKE)
-    - class_name: match op User.class_name ALS kolom bestaat
-    - team_id: filter via TeamMember als team-modellen bestaan
+    - klass_or_cluster: OR filter op User.class_name of Course.name
+    - class_name: (extra) AND filter puur op klas (ILIKE)
+    - team_id: filter via TeamMember
     - status: active/inactive => mapped op User.archived
+    Retourneert ook cluster (course) info en afgeleid team_number.
     """
     stmt = select(User).where(
         and_(
@@ -94,16 +135,39 @@ def list_students(
             stmt = stmt.where(User.archived == True)  # noqa: E712
 
     if q:
-        stmt = stmt.where(
-            or_(
-                User.name.ilike(f"%{q}%"),
-                User.email.ilike(f"%{q}%"),
-            )
+        stmt = stmt.where(or_(User.name.ilike(f"%{q}%"), User.email.ilike(f"%{q}%")))
+
+    # Vrije OR-filter: klas of clusternaam
+    if klass_or_cluster:
+        val = f"%{klass_or_cluster}%"
+        class_match = (
+            User.class_name.ilike(val) if _supports_attr(User, "class_name") else None
         )
+        course_match = None
+        if TeamMember and Team and Course:
+            course_match = exists().where(
+                and_(
+                    TeamMember.user_id == User.id,
+                    TeamMember.school_id == current_user.school_id,
+                    TeamMember.group_id == Team.id,
+                    Team.school_id == current_user.school_id,
+                    getattr(Team, "course_id") == Course.id,
+                    Course.school_id == current_user.school_id,
+                    Course.name.ilike(val),
+                )
+            )
+        if class_match is not None and course_match is not None:
+            stmt = stmt.where(or_(class_match, course_match))
+        elif class_match is not None:
+            stmt = stmt.where(class_match)
+        elif course_match is not None:
+            stmt = stmt.where(course_match)
 
+    # Extra (legacy) klasfilter (AND)
     if class_name and _supports_attr(User, "class_name"):
-        stmt = stmt.where(User.class_name == class_name)
+        stmt = stmt.where(User.class_name.ilike(f"%{class_name}%"))
 
+    # Team filter
     if team_id is not None and Team and TeamMember:
         tm_alias = aliased(TeamMember)
         stmt = stmt.join(tm_alias, tm_alias.user_id == User.id).where(
@@ -113,33 +177,58 @@ def list_students(
     stmt = stmt.order_by(User.name.asc()).limit(limit).offset((page - 1) * limit)
     users: list[User] = db.execute(stmt).scalars().all()
 
-    out: list[StudentOut] = []
-    team_name_map: dict[int, str] = {}
+    # ---- Maps om team/cluster namen op te halen ----
+    team_name_map: Dict[int, str] = {}
+    cluster_name_map: Dict[int, str] = {}
+
     if Team:
         for t in db.execute(select(Team)).scalars().all():
             team_name_map[t.id] = getattr(t, "name", f"Team {t.id}")
 
-    user_to_team_id: dict[int, Optional[int]] = {}
-    if TeamMember and users:
-        uids = [u.id for u in users]
-        for tm in (
-            db.execute(select(TeamMember).where(TeamMember.user_id.in_(uids)))
-            .scalars()
-            .all()
-        ):
-            user_to_team_id.setdefault(tm.user_id, tm.group_id)
+    if Course:
+        for c in db.execute(select(Course)).scalars().all():
+            cluster_name_map[c.id] = getattr(c, "name", None) or f"Course {c.id}"
 
+    # Koppel per user -> team_id en cluster_id (via group -> course)
+    user_to_team_and_cluster: Dict[int, Tuple[Optional[int], Optional[int]]] = {}
+    if TeamMember and Team:
+        uids = [u.id for u in users] if users else []
+        if uids:
+            rows = (
+                db.query(
+                    TeamMember.user_id, TeamMember.group_id, Team.school_id, Team.id
+                )
+                .join(Team, TeamMember.group_id == Team.id)
+                .filter(TeamMember.user_id.in_(uids))
+                .all()
+            )
+            group_to_course: Dict[int, Optional[int]] = {}
+            if Team and hasattr(Team, "course_id"):
+                for gid, course_id in db.query(
+                    Team.id, getattr(Team, "course_id")
+                ).all():
+                    group_to_course[gid] = course_id  # type: ignore
+
+            for uid, gid, _school_id, _group_id in rows:
+                if uid not in user_to_team_and_cluster:
+                    user_to_team_and_cluster[uid] = (gid, group_to_course.get(gid))
+
+    out: list[StudentOut] = []
     for u in users:
         cn = (
             getattr(u, "class_name", None)
             if _supports_attr(User, "class_name")
             else None
         )
-        tid = user_to_team_id.get(u.id) if user_to_team_id else None
+        tid, cid = user_to_team_and_cluster.get(u.id, (None, None))
         tname = team_name_map.get(tid) if tid else None
-        out.append(_to_out_row(u, cn, tid, tname))
+        cname = cluster_name_map.get(cid) if cid else None
+        out.append(_to_out_row(u, cn, tid, tname, cid, cname))
 
     return out
+
+
+# -------------------- create --------------------
 
 
 @router.post("", response_model=StudentOut, status_code=status.HTTP_201_CREATED)
@@ -175,9 +264,14 @@ def create_student(
     db.commit()
     db.refresh(u)
 
+    # 2 paden: (A) legacy team_id of (B) vrije cluster_name + team_number
     team_id = None
     team_name = None
-    if payload.team_id is not None and Team and TeamMember:
+    cluster_id = None
+    cluster_name = None
+
+    # (A) legacy
+    if getattr(payload, "team_id", None) is not None and Team and TeamMember:
         t = db.get(Team, payload.team_id)
         if not t:
             raise HTTPException(status_code=404, detail="Team not found")
@@ -186,13 +280,86 @@ def create_student(
         )
         db.commit()
         team_id, team_name = t.id, getattr(t, "name", f"Team {t.id}")
+        if hasattr(t, "course_id"):
+            cluster_id = getattr(t, "course_id")
+            if Course and cluster_id is not None:
+                c = db.get(Course, cluster_id)
+                if c:
+                    cluster_name = getattr(c, "name", None) or f"Course {c.id}"
+
+    # (B) vrije velden
+    cluster_name_in: Optional[str] = getattr(payload, "cluster_name", None)
+    team_number_in: Optional[int] = getattr(payload, "team_number", None)
+
+    if (cluster_name_in or team_number_in is not None) and Team and TeamMember:
+        # 1) Course upsert
+        course = None
+        if cluster_name_in and Course:
+            course = (
+                db.query(Course)
+                .filter(
+                    and_(
+                        Course.school_id == current_user.school_id,
+                        Course.name == cluster_name_in.strip(),
+                    )
+                )
+                .first()
+            )
+            if not course:
+                course = Course(school_id=current_user.school_id, name=cluster_name_in.strip())  # type: ignore
+                db.add(course)
+                db.commit()
+                db.refresh(course)
+
+        # 2) Team op nummer
+        grp = None
+        if team_number_in is not None:
+            if not course:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Geef ook een cluster (naam) op bij teamnummer.",
+                )
+            wanted = team_name_for_number(team_number_in)
+            grp = (
+                db.query(Team)
+                .filter(
+                    and_(
+                        Team.school_id == current_user.school_id,
+                        getattr(Team, "course_id") == course.id,  # type: ignore
+                        Team.name == wanted,
+                    )
+                )
+                .first()
+            )
+            if not grp:
+                grp = Team(school_id=current_user.school_id, course_id=course.id, name=wanted)  # type: ignore
+                db.add(grp)
+                db.commit()
+                db.refresh(grp)
+
+            db.add(
+                TeamMember(
+                    user_id=u.id, group_id=grp.id, school_id=current_user.school_id
+                )
+            )
+            db.commit()
+
+        team_id = grp.id if grp else team_id
+        team_name = grp.name if grp else team_name
+        cluster_id = course.id if course else cluster_id
+        cluster_name = course.name if course else cluster_name
 
     return _to_out_row(
         u,
         getattr(u, "class_name", None) if _supports_attr(User, "class_name") else None,
         team_id,
         team_name,
+        cluster_id,
+        cluster_name,
     )
+
+
+# -------------------- update --------------------
 
 
 @router.put("/{student_id}", response_model=StudentOut)
@@ -238,9 +405,14 @@ def update_student(
     db.commit()
     db.refresh(u)
 
+    # ---------------- team/cluster wijzigen ----------------
     team_id = None
     team_name = None
-    if Team and TeamMember:
+    cluster_id = None
+    cluster_name = None
+
+    # legacy pad: expliciet team_id doorgegeven
+    if getattr(payload, "team_id", None) is not None and Team and TeamMember:
         tm = (
             db.query(TeamMember)
             .filter(
@@ -249,32 +421,142 @@ def update_student(
             )
             .first()
         )
-        if payload.team_id is not None:
-            t = db.get(Team, payload.team_id)
-            if not t:
-                raise HTTPException(status_code=404, detail="Team not found")
+        t = db.get(Team, payload.team_id)
+        if not t:
+            raise HTTPException(status_code=404, detail="Team not found")
+        if tm:
+            tm.group_id = t.id
+            db.add(tm)
+        else:
+            db.add(
+                TeamMember(
+                    user_id=u.id, group_id=t.id, school_id=current_user.school_id
+                )
+            )
+        team_id, team_name = t.id, getattr(t, "name", f"Team {t.id}")
+        if hasattr(t, "course_id"):
+            cluster_id = getattr(t, "course_id")
+            if Course and cluster_id is not None:
+                c = db.get(Course, cluster_id)
+                cluster_name = getattr(c, "name", None) if c else None
+        db.commit()
+
+    # nieuw pad: vrije cluster_name / team_number
+    cluster_name_in: Optional[str] = getattr(payload, "cluster_name", None)
+    team_number_in: Optional[int] = getattr(payload, "team_number", None)
+
+    if (cluster_name_in is not None) or (team_number_in is not None):
+        if not (Team and TeamMember):
+            raise HTTPException(status_code=400, detail="Team modellen ontbreken.")
+
+        tm = (
+            db.query(TeamMember)
+            .filter(
+                TeamMember.user_id == u.id,
+                TeamMember.school_id == current_user.school_id,
+            )
+            .first()
+        )
+
+        # 1) cluster upsert/verwijderen
+        course = None
+        if cluster_name_in is not None:
+            if not Course:
+                raise HTTPException(status_code=400, detail="Course model ontbreekt.")
+            cname = cluster_name_in.strip()
+            if cname == "":
+                if tm:
+                    db.delete(tm)
+                    db.commit()
+                    tm = None
+            else:
+                course = (
+                    db.query(Course)
+                    .filter(
+                        and_(
+                            Course.school_id == current_user.school_id,
+                            Course.name == cname,
+                        )
+                    )
+                    .first()
+                )
+                if not course:
+                    course = Course(school_id=current_user.school_id, name=cname)  # type: ignore
+                    db.add(course)
+                    db.commit()
+                    db.refresh(course)
+
+        # 2) teamnummer binnen (nieuwe/huidige) cluster
+        if team_number_in is not None:
+            if not course:
+                if tm:
+                    grp = db.get(Team, tm.group_id)
+                    if grp and hasattr(grp, "course_id") and Course:
+                        course = db.get(Course, getattr(grp, "course_id"))
+            if not course:
+                raise HTTPException(
+                    status_code=400, detail="Geef een cluster op bij teamnummer."
+                )
+
+            wanted = team_name_for_number(team_number_in)
+            grp = (
+                db.query(Team)
+                .filter(
+                    and_(
+                        Team.school_id == current_user.school_id,
+                        getattr(Team, "course_id") == course.id,  # type: ignore
+                        Team.name == wanted,
+                    )
+                )
+                .first()
+            )
+            if not grp:
+                grp = Team(school_id=current_user.school_id, course_id=course.id, name=wanted)  # type: ignore
+                db.add(grp)
+                db.commit()
+                db.refresh(grp)
+
             if tm:
-                tm.group_id = t.id
+                tm.group_id = grp.id
                 db.add(tm)
             else:
                 db.add(
                     TeamMember(
-                        user_id=u.id, group_id=t.id, school_id=current_user.school_id
+                        user_id=u.id, group_id=grp.id, school_id=current_user.school_id
                     )
                 )
-            team_id, team_name = t.id, getattr(t, "name", f"Team {t.id}")
             db.commit()
-        else:
-            if tm:
-                db.delete(tm)
-                db.commit()
+
+        # responsevelden opnieuw bepalen
+        tm_now = (
+            db.query(TeamMember)
+            .filter(
+                TeamMember.user_id == u.id,
+                TeamMember.school_id == current_user.school_id,
+            )
+            .first()
+        )
+        if tm_now:
+            grp = db.get(Team, tm_now.group_id)
+            team_id = grp.id if grp else None
+            team_name = grp.name if grp else None
+            if grp and hasattr(grp, "course_id") and Course:
+                c = db.get(Course, getattr(grp, "course_id"))
+                if c:
+                    cluster_id = c.id
+                    cluster_name = getattr(c, "name", None)
 
     return _to_out_row(
         u,
         getattr(u, "class_name", None) if _supports_attr(User, "class_name") else None,
         team_id,
         team_name,
+        cluster_id,
+        cluster_name,
     )
+
+
+# -------------------- archive --------------------
 
 
 @router.delete("/{student_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -296,7 +578,7 @@ def archive_student(
             status_code=400, detail="Archiving not supported by User model"
         )
 
-    if u.archived:  # type: ignore[attr-defined]
+    if getattr(u, "archived", False):
         return
 
     u.archived = True  # type: ignore[attr-defined]
@@ -304,11 +586,15 @@ def archive_student(
     db.commit()
 
 
+# -------------------- export --------------------
+
+
 @router.get("/export.csv", response_class=PlainTextResponse)
 def export_students_csv(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
     q: Optional[str] = None,
+    klass_or_cluster: Optional[str] = None,
     class_name: Optional[str] = None,
     team_id: Optional[int] = None,
     status: Optional[str] = Query(None, pattern="^(active|inactive)$"),
@@ -318,6 +604,7 @@ def export_students_csv(
         db=db,
         current_user=current_user,
         q=q,
+        klass_or_cluster=klass_or_cluster,
         class_name=class_name,
         team_id=team_id,
         status=status,
@@ -325,7 +612,9 @@ def export_students_csv(
         limit=10_000,
     )
 
-    lines = ["id,name,email,class,team_id,team_name,status"]
+    lines = [
+        "id,name,email,class,team_id,team_name,team_number,cluster_id,cluster_name,status"
+    ]
 
     def esc(v: Optional[str | int]) -> str:
         if v is None:
@@ -345,6 +634,9 @@ def export_students_csv(
                     esc(s.class_name),
                     esc(s.team_id),
                     esc(s.team_name),
+                    esc(s.team_number),
+                    esc(s.cluster_id),
+                    esc(s.cluster_name),
                     esc(s.status),
                 ]
             )
@@ -363,7 +655,6 @@ def export_students_csv(
 
 @router.get("/template.csv", response_class=PlainTextResponse)
 def template_students_csv():
-    """Voorbeeld CSV-kop + 3 rijen."""
     content = (
         "name,email,class,team_id,active\n"
         "Alice Example,alice@example.com,2V2,1,true\n"
@@ -389,13 +680,6 @@ def import_students_csv(
     default_team_id: Optional[int] = Form(None),
     activate: bool = Form(True),
 ):
-    """
-    Importeer leerlingen uit CSV (separator=','):
-    - Unieke sleutel: email binnen school
-    - Kolommen: name,email,class,team_id,active (boolean)
-    - Flags: dry_run (geen writes), allow_update (naam/klas/team bijwerken voor bestaande)
-    - Defaults: default_class_name, default_team_id, activate
-    """
     raw = file.file.read()
     try:
         text = raw.decode("utf-8-sig")
@@ -413,7 +697,7 @@ def import_students_csv(
     rows_report: list[dict] = []
     created = updated = skipped = errors = total = 0
 
-    for idx, row in enumerate(rdr, start=2):  # start=2 vanwege header
+    for idx, row in enumerate(rdr, start=2):
         total += 1
         name = (row.get("name") or "").strip()
         email = (row.get("email") or "").strip().lower()
@@ -542,11 +826,7 @@ def import_students_csv(
 
         # nieuw
         if not dry_run:
-            kwargs = {
-                "school_id": current_user.school_id,
-                "name": name,
-                "email": email,
-            }
+            kwargs = {"school_id": current_user.school_id, "name": name, "email": email}
             if _supports_attr(User, "role"):
                 kwargs["role"] = "student"
             if _supports_attr(User, "class_name"):
@@ -595,3 +875,49 @@ def import_students_csv(
         "rows": rows_report,
         "dry_run": dry_run,
     }
+
+
+# ------ Optionele lijst-endpoints voor Cluster/Teams dropdowns ------
+
+
+@router.get("/courses")
+def list_courses(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    try:
+        from app.infra.db.models import Course
+    except Exception:
+        return []
+    rows = (
+        db.query(Course)
+        .filter(Course.school_id == current_user.school_id)
+        .order_by(Course.name.asc(), Course.id.asc())
+        .all()
+    )
+    return [
+        {"id": c.id, "name": getattr(c, "name", None) or f"Course {c.id}"} for c in rows
+    ]
+
+
+@router.get("/teams")
+def list_teams(
+    course_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    try:
+        from app.infra.db.models import Group as Team
+    except Exception:
+        return []
+    q = db.query(Team).filter(Team.school_id == current_user.school_id)
+    if course_id is not None and hasattr(Team, "course_id"):
+        q = q.filter(Team.course_id == course_id)
+    rows = q.order_by(Team.name.asc(), Team.id.asc()).all()
+    return [
+        {
+            "id": t.id,
+            "name": getattr(t, "name", None) or f"Team {t.id}",
+            "course_id": (
+                getattr(t, "course_id", None) if hasattr(t, "course_id") else None
+            ),
+        }
+        for t in rows
+    ]

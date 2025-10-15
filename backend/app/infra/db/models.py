@@ -15,6 +15,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
+import sqlalchemy as sa
+from sqlalchemy.dialects.postgresql import JSONB
 
 
 # ============ Helpers ============
@@ -262,7 +264,8 @@ class Grade(Base):
         ForeignKey("evaluations.id", ondelete="CASCADE")
     )
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-
+    grade = sa.Column(sa.Numeric(5, 2), nullable=True)  # 1–10, mag NULL
+    meta = sa.Column(JSONB, server_default=sa.text("'{}'::jsonb"), nullable=False)
     group_grade: Mapped[Optional[float]] = mapped_column()
     gcf: Mapped[Optional[float]] = mapped_column()
     spr: Mapped[Optional[float]] = mapped_column()
