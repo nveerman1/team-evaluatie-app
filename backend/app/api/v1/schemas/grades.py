@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, field_validator
 class GradeOverrideIn(BaseModel):
     grade: Optional[float] = None  # 1–10 of null (concept zonder override)
     reason: Optional[str] = None
+    rowGroupGrade: Optional[float] = None
 
 
 class GradeDraftRequest(BaseModel):

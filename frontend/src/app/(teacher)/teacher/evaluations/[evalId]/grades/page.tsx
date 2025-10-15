@@ -51,17 +51,24 @@ export default function GradesPage() {
   const [searchName, setSearchName] = useState<string>("");
   const [sortBy, setSortBy] = useState<SortKey>("team");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [groupGrade, setGroupGrade] = useState<number | "">("");
 
   // ---------- Helpers ----------
   const round1 = (n: number) => Math.round(n * 10) / 10;
   function autoSuggestion(r: Row): number {
-    // Alleen per-rij groepscijfer; anders serverSuggested
-    return r.rowGroupGrade != null
-      ? round1(r.rowGroupGrade * r.gcf)
-      : round1(r.serverSuggested);
+    // Gebruik het backend-voorstel (Peer × SPR) voor consistentie met student_overview.
+    return round1(r.serverSuggested ?? 0);
   }
+
   function finalGrade(r: Row): number {
-    return round1(r.override != null ? r.override : autoSuggestion(r));
+    // 1) Handmatige correctie heeft altijd voorrang
+    if (r.override != null) return round1(r.override);
+
+    // 2) Als Groepscijfer (per leerling) is ingevuld → Groepscijfer × GCF
+    if (r.rowGroupGrade != null) return round1(r.rowGroupGrade * r.gcf);
+
+    // 3) Anders het voorstel uit de backend (1–10, al berekend als 75% peer + 25% self)
+    return round1(r.serverSuggested ?? 0);
   }
 
   // ---------- Data load ----------
@@ -114,6 +121,7 @@ export default function GradesPage() {
             teamNumber: i.team_number ?? null,
             className: i.class_name ?? null,
             gcf: i.gcf,
+            spr: i.spr ?? null,
             peerPct: i.avg_score,
             serverSuggested: i.suggested_grade, // 1–10
             rowGroupGrade: null,
@@ -137,14 +145,18 @@ export default function GradesPage() {
     const overrides = Object.fromEntries(
       rows.map((r) => [
         r.user_id,
-        { grade: r.override ?? null, reason: (r.comment ?? "").trim() || null },
+        {
+          grade: r.override ?? null,
+          reason: (r.comment ?? "").trim() || null,
+          rowGroupGrade: r.rowGroupGrade ?? null,
+        },
       ]),
     );
 
     try {
       await api.post("/grades/draft", {
         evaluation_id: Number(evalIdNum),
-        group_grade: null, // geen globaal cijfer
+        group_grade: groupGrade === "" ? null : Number(groupGrade),
         overrides,
       });
     } catch (err: any) {
@@ -237,7 +249,7 @@ export default function GradesPage() {
       );
       await api.post("/grades/publish", {
         evaluation_id: evalIdNum,
-        group_grade: null, // geen globaal cijfer
+        group_grade: groupGrade === "" ? null : Number(groupGrade),
         overrides,
       });
       alert("Cijfers gepubliceerd!");
@@ -252,7 +264,7 @@ export default function GradesPage() {
     <main className="max-w-7xl mx-auto p-6 space-y-6">
       <header className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">
-          Cijfers — Evaluatie #{evalIdStr}
+          Cijfers — Evaluatie {evalIdStr}
         </h1>
         <div className="flex items-center gap-2">
           <button
@@ -351,7 +363,7 @@ export default function GradesPage() {
 
         {!loading && rows.length > 0 && (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse min-w-[1100px]">
+            <table className="w-full text-sm border-collapse min-w-[1000px]">
               <thead className="border-b text-gray-600 select-none">
                 <tr>
                   <Th
@@ -375,24 +387,26 @@ export default function GradesPage() {
                   >
                     Klas
                   </Th>
-                  <th className="text-left py-2 px-2">Groepscijfer (1–10)</th>
-                  <th className="text-left py-2 px-2">Individuele factor</th>
                   <Th
                     onClick={() => toggleSort("final")}
                     active={sortBy === "final"}
                     dir={sortDir}
                   >
-                    Automatisch voorstel
+                    Voorstel
                   </Th>
+                  <th className="text-left py-2 px-2">Groepscijfer (1–10)</th>
+                  <th className="text-left py-2 px-2">GCF</th>
                   <th className="text-left py-2 px-2">Handmatige correctie</th>
                   <th className="text-left py-2 px-2">Eindcijfer</th>
                   <th className="text-left py-2 px-2">Opmerking docent</th>
                 </tr>
               </thead>
+
               <tbody>
                 {filteredSorted.map((r) => (
                   <tr key={r.user_id} className="border-t align-top">
                     <td className="py-2 px-2">{r.teamNumber ?? "–"}</td>
+
                     <td className="py-2 px-2">
                       <Link
                         href={`/teacher/evaluations/${evalIdStr}/students/${r.user_id}`}
@@ -402,7 +416,17 @@ export default function GradesPage() {
                         {r.name}
                       </Link>
                     </td>
+
                     <td className="py-2 px-2">{r.className ?? "–"}</td>
+
+                    {/* Voorstel van team (1-10) */}
+                    <td className="py-2 px-2 font-medium">
+                      {r.serverSuggested != null
+                        ? Number(r.serverSuggested).toFixed(1)
+                        : "–"}
+                    </td>
+
+                    {/* Groepscijfer (per leerling optioneel invullen) */}
                     <td className="py-2 px-2">
                       <input
                         type="number"
@@ -429,10 +453,11 @@ export default function GradesPage() {
                         title="Leeg laten om het servervoorstel te gebruiken"
                       />
                     </td>
+
+                    {/* GCF */}
                     <td className="py-2 px-2">{r.gcf.toFixed(2)}</td>
-                    <td className="py-2 px-2">
-                      {autoSuggestion(r).toFixed(1)}
-                    </td>
+
+                    {/* Handmatige correctie */}
                     <td className="py-2 px-2">
                       <input
                         type="number"
@@ -455,9 +480,13 @@ export default function GradesPage() {
                         }}
                       />
                     </td>
+
+                    {/* Eindcijfer */}
                     <td className="py-2 px-2 font-medium">
                       {finalGrade(r).toFixed(1)}
                     </td>
+
+                    {/* Opmerking docent */}
                     <td className="py-2 px-2">
                       <AutoTextarea
                         value={r.comment ?? ""}

@@ -166,10 +166,10 @@ export default function StudentOverviewPage() {
                 value={g?.gcf != null ? Number(g.gcf).toFixed(2) : "—"}
               />
               <Stat
-                label="Peer % (avg)"
+                label="Peer (1–10)"
                 value={
                   g?.avg_score != null
-                    ? Number(g.avg_score).toFixed(0) + "%"
+                    ? (Math.round(g.avg_score) / 10).toFixed(1)
                     : "—"
                 }
               />
@@ -203,7 +203,7 @@ export default function StudentOverviewPage() {
                       </div>
                       <div className="text-sm text-gray-600">
                         {f.score_pct != null
-                          ? `${Math.round(f.score_pct)}%`
+                          ? (Math.round(f.score_pct) / 10).toFixed(1)
                           : "—"}
                       </div>
                     </div>
@@ -239,7 +239,7 @@ export default function StudentOverviewPage() {
                       </div>
                       <div className="text-sm text-gray-600">
                         {f.score_pct != null
-                          ? `${Math.round(f.score_pct)}%`
+                          ? (Math.round(f.score_pct) / 10).toFixed(1)
                           : "—"}
                       </div>
                     </div>
