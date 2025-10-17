@@ -242,8 +242,8 @@ export default function StudentWizard() {
         </div>
       )}
 
-      {/* Stap 4 — Reflectie (MVP lokaal) */}
-      {step === 4 && <Reflection />}
+      {/* Stap 4 — Reflectie (nu mét backend opslaan) */}
+      {step === 4 && <Reflection evaluationIdNum={evaluationIdNum} />}
     </main>
   );
 }
@@ -309,20 +309,84 @@ function SectionScore({
   );
 }
 
-function Reflection() {
+/**
+ * Reflectie-component is nu self-contained:
+ * - Laadt eigen reflectie bij mount
+ * - Opslaan (concept) en Indienen (submit=true) via backend
+ */
+function Reflection({ evaluationIdNum }: { evaluationIdNum: number | null }) {
+  const [reflection, setReflection] = useState<string>("");
+  const [refSaving, setRefSaving] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
+
+  // Als geen geldig id, toon lege staat
+  useEffect(() => {
+    if (evaluationIdNum == null) return;
+    api
+      .get(`/evaluations/${evaluationIdNum}/reflections/me`)
+      .then((r) => setReflection(r.data?.text || ""))
+      .catch(() => {
+        // stil houden
+      });
+  }, [evaluationIdNum]);
+
+  async function saveReflection(submit = false) {
+    if (evaluationIdNum == null) return;
+    try {
+      setRefSaving("saving");
+      await api.post(`/evaluations/${evaluationIdNum}/reflections/me`, {
+        text: reflection,
+        submit,
+      });
+      setRefSaving("saved");
+      setTimeout(() => setRefSaving("idle"), 1200);
+    } catch (e) {
+      setRefSaving("error");
+    }
+  }
+
+  if (evaluationIdNum == null) {
+    return (
+      <section className="rounded-2xl border p-4 space-y-3">
+        <h2 className="text-xl font-semibold">Stap 4 — Reflectie</h2>
+        <p className="text-gray-500">
+          Geen geldige evaluatie. Open deze wizard via een bestaande evaluatie.
+        </p>
+      </section>
+    );
+  }
+
   return (
-    <section className="p-4 border rounded-xl space-y-3">
-      <h2 className="text-xl font-semibold">Stap 4 — Reflectie</h2>
-      <p className="text-sm text-gray-600">
-        MVP: lokale notities (bewaren in backend kan later).
-      </p>
+    <section className="rounded-2xl border p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold">Stap 4 — Reflectie</h2>
+        <div className="text-sm opacity-70">
+          {refSaving === "saving" && "Opslaan..."}
+          {refSaving === "saved" && "Alles opgeslagen ✓"}
+          {refSaving === "error" && "Fout bij opslaan"}
+        </div>
+      </div>
       <textarea
         className="w-full border rounded p-2 min-h-[140px]"
         placeholder="Wat ga je behouden/verbeteren?"
-      ></textarea>
-      <button className="px-4 py-2 rounded-xl bg-black text-white">
-        Opslaan (lokaal)
-      </button>
+        value={reflection}
+        onChange={(e) => setReflection(e.target.value)}
+      />
+      <div className="flex gap-2">
+        <button
+          className="px-4 py-2 rounded-xl border"
+          onClick={() => saveReflection(false)}
+        >
+          Opslaan (concept)
+        </button>
+        <button
+          className="px-4 py-2 rounded-xl bg-black text-white"
+          onClick={() => saveReflection(true)}
+        >
+          Indienen
+        </button>
+      </div>
     </section>
   );
 }
