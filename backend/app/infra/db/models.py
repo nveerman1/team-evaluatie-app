@@ -6,17 +6,17 @@ from sqlalchemy import (
     Integer,
     ForeignKey,
     Boolean,
-    Text,
     JSON,
     UniqueConstraint,
     Index,
     SmallInteger,
     Float,
+    Text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from .base import Base
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
+from app.infra.db.base import Base
 
 
 # ============ Helpers ============
@@ -43,6 +43,7 @@ class School(Base):
 
 class User(Base):
     __tablename__ = "users"
+
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = mapped_column(
         ForeignKey("schools.id", ondelete="CASCADE"), index=True
@@ -55,9 +56,20 @@ class User(Base):
     auth_provider: Mapped[Optional[str]] = mapped_column(String(50), default="local")
     password_hash: Mapped[Optional[str]] = mapped_column(String(255))
     archived: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # ✅ Klas
     class_name: Mapped[Optional[str]] = mapped_column(
         String(50), index=True, nullable=True
     )
+
+    # ✅ Cluster
+    cluster: Mapped[Optional[str]] = mapped_column(
+        String(50), index=True, nullable=True
+    )
+
+    # ✅ Teamnummer
+    team_number: Mapped[Optional[int]] = mapped_column(nullable=True, index=True)
+
     school: Mapped["School"] = relationship(back_populates="users")
 
     __table_args__ = (

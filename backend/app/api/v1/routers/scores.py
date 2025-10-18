@@ -2,6 +2,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import Allocation, Evaluation, Rubric, RubricCriterion, Score
 from app.api.v1.schemas.scores import SubmitScoresRequest, ScoreOut
@@ -130,3 +131,38 @@ def get_scores_by_allocation(
         .all()
     )
     return rows
+
+
+@router.get("/my")
+def get_my_scores(
+    allocation_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """
+    Prefill voor student (reviewer) voor een specifieke allocation.
+    Response: [{criterion_id, score, comment}]
+    """
+    # autorisatie: student moet reviewer zijn op deze allocation
+    alloc = db.query(Allocation).filter(Allocation.id == allocation_id).first()
+    if not alloc:
+        raise HTTPException(status_code=404, detail="Allocation not found")
+    if alloc.reviewer_id != user.id:
+        raise HTTPException(status_code=403, detail="Not your allocation")
+
+    items = (
+        db.query(Score)
+        .filter(
+            Score.allocation_id == allocation_id,
+            Score.reviewer_id == user.id,
+        )
+        .all()
+    )
+    return [
+        {
+            "criterion_id": s.criterion_id,
+            "score": s.score,
+            "comment": s.comment or "",
+        }
+        for s in items
+    ]

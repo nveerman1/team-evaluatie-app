@@ -177,23 +177,32 @@ export default function StudentWizard() {
       {step === 2 && (
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">Stap 2 — Peer-reviews</h2>
+
           {loadingAlloc && <div className="text-gray-500">Laden…</div>}
           {!loadingAlloc && peerAllocs.length === 0 && (
             <p>Geen peers toegewezen.</p>
           )}
+
+          {/* Voortgang teller */}
+          {!loadingAlloc && peerAllocs.length > 0 && (
+            <div className="text-sm text-gray-700">
+              Peer-voortgang:{" "}
+              <strong>
+                {peerAllocs.filter((p) => p.completed).length}/
+                {peerAllocs.length}
+              </strong>
+            </div>
+          )}
+
           {!loadingAlloc &&
             peerAllocs.map((a) => (
-              <SectionScore
+              <PeerPanel
                 key={a.allocation_id}
-                title={`Beoordeel ${a.reviewee_name}`}
-                allocationId={a.allocation_id}
-                criteria={
-                  a.criterion_ids
-                    .map((id) => criteria[id])
-                    .filter(Boolean) as Criterion[]
-                }
+                alloc={a}
+                criteria={a.criterion_ids
+                  .map((id) => criteria[id])
+                  .filter(Boolean)}
                 onSubmit={submitScores}
-                sending={sending}
               />
             ))}
         </div>
@@ -388,5 +397,147 @@ function Reflection({ evaluationIdNum }: { evaluationIdNum: number | null }) {
         </button>
       </div>
     </section>
+  );
+}
+
+function PeerPanel({
+  alloc,
+  criteria,
+  onSubmit,
+}: {
+  alloc: MyAllocation;
+  criteria: Criterion[];
+  onSubmit: (allocationId: number, items: ScoreItem[]) => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [values, setValues] = useState<Record<number, number>>({});
+  const [comments, setComments] = useState<Record<number, string>>({});
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  // 1) Init: zodra het paneel open gaat, zet default 3 voor alle criteria
+  useEffect(() => {
+    if (!open) return;
+    const init: Record<number, number> = {};
+    criteria.forEach((c) => {
+      init[c.id] = 3;
+    });
+    // behoud bestaande (of later prefilled) waarden
+    setValues((prev) => ({ ...init, ...prev }));
+  }, [open, criteria]);
+
+  // 2) Prefill: laad bestaande scores zodra open + allocation_id beschikbaar
+  useEffect(() => {
+    if (!open) return;
+    if (!alloc?.allocation_id) return;
+
+    setLoading(true);
+    api
+      .get<ScoreItem[]>("/scores/my", {
+        params: { allocation_id: alloc.allocation_id },
+      })
+      .then((r) => {
+        const mapV: Record<number, number> = {};
+        const mapC: Record<number, string> = {};
+        (r.data || []).forEach((it) => {
+          mapV[it.criterion_id] = it.score;
+          if (it.comment) mapC[it.criterion_id] = it.comment;
+        });
+        // overschrijf defaults met prefill
+        setValues((s) => ({ ...s, ...mapV }));
+        setComments((s) => ({ ...s, ...mapC }));
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [open, alloc?.allocation_id]);
+
+  // 3) Validatie: beschouw default 3 als 'ingevuld'
+  const allScored = criteria.every((c) => {
+    const v = values[c.id] ?? 3;
+    return v >= 1 && v <= 5;
+  });
+
+  async function handleSubmit() {
+    try {
+      setSending(true);
+      await onSubmit(
+        alloc.allocation_id,
+        criteria.map((c) => ({
+          criterion_id: c.id,
+          score: values[c.id] ?? 3,
+          comment: comments[c.id] || "",
+        })),
+      );
+      // optimistic: markeer klaar
+      alloc.completed = true;
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <details
+      className="rounded-xl border p-3"
+      open={open}
+      onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}
+    >
+      <summary className="flex items-center justify-between cursor-pointer">
+        <span>Beoordeel {alloc.reviewee_name}</span>
+        <span
+          className={`text-xs px-2 py-1 rounded-full ${
+            alloc.completed
+              ? "bg-green-100 text-green-700"
+              : "bg-amber-100 text-amber-700"
+          }`}
+        >
+          {alloc.completed ? "Klaar" : "Nog open"}
+        </span>
+      </summary>
+
+      {loading ? (
+        <div className="text-gray-500 mt-3">Prefill laden…</div>
+      ) : (
+        <div className="mt-3 space-y-3">
+          {criteria.map((c) => (
+            <div key={c.id} className="grid md:grid-cols-3 gap-2 items-center">
+              <div className="font-medium">{c.name}</div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="range"
+                  min={1}
+                  max={5}
+                  value={values[c.id] ?? 3}
+                  onChange={(e) =>
+                    setValues((s) => ({ ...s, [c.id]: Number(e.target.value) }))
+                  }
+                  aria-label={`Score ${c.name}`}
+                />
+                <span className="w-6 text-center">{values[c.id] ?? 3}</span>
+              </div>
+              <input
+                className="border rounded px-2 py-1"
+                placeholder="Opmerking (optioneel)"
+                value={comments[c.id] || ""}
+                onChange={(e) =>
+                  setComments((s) => ({ ...s, [c.id]: e.target.value }))
+                }
+                aria-label={`Opmerking ${c.name}`}
+              />
+            </div>
+          ))}
+
+          <div className="flex justify-end">
+            <button
+              className="px-4 py-2 rounded-xl bg-black text-white disabled:opacity-50"
+              onClick={handleSubmit}
+              disabled={!allScored || sending}
+              title={!allScored ? "Scoor eerst alle criteria" : ""}
+            >
+              {sending ? "Bezig…" : "Inleveren"}
+            </button>
+          </div>
+        </div>
+      )}
+    </details>
   );
 }

@@ -1,18 +1,25 @@
 import axios from "axios";
 
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+const instance = axios.create({
+  baseURL: "http://localhost:8000/api/v1", // ends with /api/v1
+  timeout: 15000,
 });
 
-api.interceptors.request.use((cfg) => {
-  if (typeof window !== "undefined") {
-    const email = localStorage.getItem("x_user_email");
-    if (email) {
-      cfg.headers = cfg.headers ?? {};
-      cfg.headers["X-User-Email"] = email;
-    }
-  }
-  return cfg;
+instance.interceptors.request.use((config) => {
+  config.headers = config.headers ?? {};
+  config.headers["X-User-Email"] =
+    config.headers["X-User-Email"] ?? "docent@example.com";
+  config.headers["Content-Type"] =
+    config.headers["Content-Type"] ?? "application/json";
+  return config;
 });
 
-export default api;
+instance.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    console.error("[API NETWORK ERROR]", err?.message || err);
+    return Promise.reject(err);
+  },
+);
+
+export default instance;
