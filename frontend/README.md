@@ -1,5 +1,14 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Architecture
+
+This frontend follows a well-organized architecture with clear separation of concerns. See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed information about:
+
+- Directory structure (DTOs, Services, Hooks, Components, Utils)
+- Architectural patterns and best practices
+- Import conventions and barrel exports
+- Migration guide for updating pages
+
 ## Getting Started
 
 First, run the development server:
@@ -19,6 +28,19 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Project Structure
+
+```
+src/
+├── app/           # Next.js pages (App Router)
+├── dtos/          # Type definitions (Data Transfer Objects)
+├── services/      # API service layer
+├── hooks/         # Custom React hooks
+├── components/    # Reusable UI components
+├── utils/         # Helper/utility functions
+└── lib/           # Core utilities (API client)
+```
 
 ## Learn More
 
