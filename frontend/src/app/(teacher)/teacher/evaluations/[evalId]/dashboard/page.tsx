@@ -1,98 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import api from "@/lib/api";
-import { useNumericEvalId } from "@/lib/id";
 import Link from "next/link";
+import { useNumericEvalId } from "@/utils";
+import { useDashboardData } from "@/hooks";
+import { Tile, Loading, ErrorMessage } from "@/components";
 
-/** Helpers & types **/
-function toArray<T = any>(x: any): T[] {
-  if (Array.isArray(x)) return x;
-  if (x?.items && Array.isArray(x.items)) return x.items;
-  return [];
-}
-
-type Kpis = {
-  self_count: number;
-  peer_count: number; // som van reviewers_count
-  reflection_count: number; // nu 0 (geen veld in API)
-  total_students: number;
-};
-
-function computeKpisFromItems(items: any[]): Kpis {
-  const total_students = items.length;
-  const self_count = items.filter(
-    (it) => it.self_avg_overall !== null && it.self_avg_overall !== undefined,
-  ).length;
-  const peer_count = items.reduce(
-    (acc, it) => acc + (Number(it.reviewers_count) || 0),
-    0,
-  );
-  const reflection_count = 0; // nog geen reflecties in deze endpoint
-  return { self_count, peer_count, reflection_count, total_students };
-}
-
-type UiFlag = { type: string; message: string; student?: string };
-
-function flattenFlags(flagResData: any): UiFlag[] {
-  const out: UiFlag[] = [];
-  const items = toArray<any>(flagResData);
-  for (const it of items) {
-    const student = it.user_name || it.name || `#${it.user_id ?? "?"}`;
-    const fs = Array.isArray(it.flags) ? it.flags : [];
-    for (const f of fs) {
-      out.push({
-        type: f.code || f.severity || "flag",
-        message: f.message || JSON.stringify(f),
-        student,
-      });
-    }
-  }
-  return out;
-}
-
-/** Page **/
 export default function EvaluationDashboardPage() {
-  const evalIdNum = useNumericEvalId(); // null op /create of ongeldige id
-
-  const [kpis, setKpis] = useState<Kpis | null>(null);
-  const [flags, setFlags] = useState<UiFlag[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
-
-  useEffect(() => {
-    setErr(null);
-    setLoading(true);
-
-    // Geen requests doen zonder geldig numeriek ID
-    if (evalIdNum == null) {
-      setKpis(null);
-      setFlags([]);
-      setLoading(false);
-      return;
-    }
-
-    (async () => {
-      try {
-        const [kpiRes, flagRes] = await Promise.all([
-          api.get(`/dashboard/evaluation/${evalIdNum}`),
-          api.get(`/flags/evaluation/${evalIdNum}`),
-          // preview: POST met body, maar we negeren het resultaat hier
-          api
-            .post(`/grades/preview`, { evaluation_id: evalIdNum })
-            .catch(() => null),
-        ]);
-
-        const items = toArray<any>(kpiRes.data);
-        setKpis(computeKpisFromItems(items));
-        setFlags(flattenFlags(flagRes.data));
-      } catch (e: any) {
-        setErr(e?.response?.data?.detail || e?.message || "Laden mislukt");
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [evalIdNum]);
+  const evalIdNum = useNumericEvalId();
+  const { kpis, flags, loading, error } = useDashboardData(evalIdNum);
 
   const evalId = evalIdNum?.toString() ?? "";
 
@@ -147,12 +62,10 @@ export default function EvaluationDashboardPage() {
         </div>
       </header>
 
-      {loading && <div className="text-gray-500">Laden…</div>}
-      {err && (
-        <div className="p-3 rounded-lg bg-red-50 text-red-700">{err}</div>
-      )}
+      {loading && <Loading />}
+      {error && <ErrorMessage message={error} />}
 
-      {!loading && !err && (
+      {!loading && !error && (
         <>
           {/* KPI tiles */}
           <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -193,14 +106,5 @@ export default function EvaluationDashboardPage() {
         </p>
       )}
     </main>
-  );
-}
-
-function Tile({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="p-4 border rounded-2xl bg-white">
-      <div className="text-sm text-gray-500">{label}</div>
-      <div className="text-2xl font-semibold">{value}</div>
-    </div>
   );
 }
