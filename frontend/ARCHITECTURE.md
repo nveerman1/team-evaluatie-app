@@ -156,6 +156,22 @@ import { useEvaluations } from '@/hooks';
 // ... all complex logic here
 ```
 
+#### Pages Using This Pattern
+The following complex pages have been reorganized with the `page.tsx` + `_inner.tsx` pattern:
+- `/teacher/evaluations/page.tsx` - Evaluations list (with filters and status updates)
+- `/teacher/rubrics/page.tsx` - Rubrics list
+- `/teacher/admin/students/page.tsx` - Student administration (652 lines)
+- `/teacher/evaluations/[evalId]/grades/page.tsx` - Grade management (579 lines)
+- `/student/[evaluationId]/page.tsx` - Student evaluation wizard (543 lines)
+- `/teacher/rubrics/[rubricId]/page.tsx` - Rubric details and edit (418 lines)
+- `/teacher/evaluations/create/page.tsx` - Create new evaluation (387 lines)
+- `/teacher/rubrics/[rubricId]/edit/page.tsx` - Edit rubric criteria (374 lines)
+- `/teacher/evaluations/[evalId]/settings/page.tsx` - Evaluation settings (372 lines)
+- `/teacher/evaluations/[evalId]/students/[userId]/page.tsx` - Student overview (355 lines)
+- `/teacher/evaluations/[evalId]/reflections/page.tsx` - Student reflections (307 lines)
+- `/teacher/evaluations/[evalId]/feedback/page.tsx` - Peer feedback overview (289 lines)
+- `/teacher/evaluations/[evalId]/page.tsx` - Evaluation dashboard legacy (204 lines)
+
 ## Import Patterns
 
 ### Barrel Exports
