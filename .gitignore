@@ -32,3 +32,4 @@ frontend/node_modules/
 
 # Ignore generated CSV exports
 *.csv
+*:Zone.Identifier
