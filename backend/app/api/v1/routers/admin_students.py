@@ -9,7 +9,7 @@ from io import StringIO, TextIOWrapper
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import User
-from app.api.v1.schemas.admin_students import AdminStudentOut, AdminStudentUpdate
+from app.api.v1.schemas.admin_students import AdminStudentOut, AdminStudentUpdate, AdminStudentCreate
 
 router = APIRouter(prefix="/admin/students", tags=["admin-students"])
 
@@ -92,6 +92,57 @@ def list_admin_students(
         )
         for u in rows
     ]
+
+
+@router.post("", response_model=AdminStudentOut, status_code=201)
+def create_admin_student(
+    payload: AdminStudentCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    if current_user is None or getattr(current_user, "school_id", None) is None:
+        raise HTTPException(
+            status_code=http_status.HTTP_401_UNAUTHORIZED,
+            detail="Niet ingelogd",
+        )
+
+    # Check if email already exists
+    existing = (
+        db.query(User)
+        .filter(
+            User.school_id == current_user.school_id,
+            User.email == payload.email,
+        )
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=409, detail="Email bestaat al")
+
+    # Create new student
+    new_student = User(
+        school_id=current_user.school_id,
+        email=payload.email,
+        name=payload.name,
+        role="student",
+        class_name=payload.class_name or None,
+        cluster=payload.cluster or None,
+        team_number=payload.team_number,
+        archived=payload.status == "inactive",
+        auth_provider="local",
+    )
+    db.add(new_student)
+    db.commit()
+    db.refresh(new_student)
+
+    return AdminStudentOut(
+        id=new_student.id,
+        name=new_student.name,
+        email=new_student.email,
+        class_name=getattr(new_student, "class_name", None),
+        cluster=getattr(new_student, "cluster", None),
+        team_number=getattr(new_student, "team_number", None),
+        status="inactive" if getattr(new_student, "archived", False) else "active",
+    )
 
 
 @router.put("/{student_id}", response_model=AdminStudentOut)
