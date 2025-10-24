@@ -1,10 +1,16 @@
 import axios from "axios";
 
+// Gebruik de env-variabele als die bestaat, anders fallback
+const baseURL =
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ||
+  "http://localhost:8000/api/v1";
+
 const instance = axios.create({
-  baseURL: "http://localhost:8000/api/v1", // ends with /api/v1
+  baseURL,
   timeout: 15000,
 });
 
+// Request interceptor – standaard headers instellen
 instance.interceptors.request.use((config) => {
   config.headers = config.headers ?? {};
   config.headers["X-User-Email"] =
@@ -14,6 +20,7 @@ instance.interceptors.request.use((config) => {
   return config;
 });
 
+// Response interceptor – nette foutmelding
 instance.interceptors.response.use(
   (res) => res,
   (err) => {

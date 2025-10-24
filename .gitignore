@@ -33,3 +33,11 @@ frontend/node_modules/
 # Ignore generated CSV exports
 *.csv
 *:Zone.Identifier
+
+# Virtual environments
+.venv/
+backend/.venv/
+# Windows zone identifiers
+*.Zone.Identifier
+# Backup files
+*.bak
