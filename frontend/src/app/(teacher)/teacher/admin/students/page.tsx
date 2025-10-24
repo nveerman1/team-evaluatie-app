@@ -131,7 +131,7 @@ export default function StudentsAdminPage() {
             </Button>
           </label>
           <Button onClick={onExport}>Exporteer CSV</Button>
-          <Link href="/admin/students/create">
+          <Link href="/teacher/admin/students/create">
             <Button variant="primary">+ Nieuwe leerling</Button>
           </Link>
         </div>
