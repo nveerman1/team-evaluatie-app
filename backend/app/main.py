@@ -18,14 +18,18 @@ from app.api.v1.routers import reflections_me as reflections_me_router
 from app.api.v1.routers import admin_students as admin_students_router
 
 
-app = FastAPI(title=settings.APP_NAME)
+app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*", "X-User-Email", "Content-Type"],
+    expose_headers=["*"],
 )
 
 

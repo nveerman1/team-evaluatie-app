@@ -1,8 +1,8 @@
-# Force LF for bash/make
-Makefile           text eol=lf
-*.sh               text eol=lf
-backend/**         text eol=lf
-frontend/**        text eol=lf
-
-# PowerShell mag CRLF houden (Windows-vriendelijk)
-*.ps1              text eol=crlf
+* text=auto eol=lf
+*.ts   text eol=lf
+*.tsx  text eol=lf
+*.js   text eol=lf
+*.jsx  text eol=lf
+*.css  text eol=lf
+*.md   text eol=lf
+*.sh   text eol=lf

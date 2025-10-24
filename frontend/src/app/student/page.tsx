@@ -1,23 +1,18 @@
 "use client";
-import api from "@/lib/api";
 import { useEffect, useState } from "react";
-
-type Evaluation = {
-  id: number;
-  title: string;
-  status: string;
-  rubric_id: number;
-  course_id: number;
-};
+import { evaluationService } from "@/services";
+import { Evaluation } from "@/dtos";
 
 export default function StudentStart() {
   const [evals, setEvals] = useState<Evaluation[]>([]);
+
   useEffect(() => {
-    api.get<Evaluation[]>("/evaluations").then((r) => {
+    evaluationService.getEvaluations().then((data) => {
       // simpele MVP: toon alleen OPEN evaluaties
-      setEvals((r.data || []).filter((e) => e.status === "open"));
+      setEvals(data.filter((e) => e.status === "open"));
     });
   }, []);
+
   return (
     <main className="p-6 max-w-3xl mx-auto space-y-4">
       <h2 className="text-xl font-semibold">Kies je evaluatie</h2>
