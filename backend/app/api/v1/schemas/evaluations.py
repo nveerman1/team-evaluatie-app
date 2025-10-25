@@ -1,16 +1,15 @@
 from __future__ import annotations
+from datetime import datetime
 from pydantic import BaseModel, Field
 from typing import Any, Dict, Optional
 
 
 # ---------- Input ----------
 class EvaluationCreate(BaseModel):
-    course_id: int
+    cluster: str
     rubric_id: int
     title: str
-    settings: Dict[str, Any] = Field(
-        default_factory=dict
-    )  # min_words, min_cf, max_cf, etc.
+    settings: Dict[str, Any] = Field(default_factory=dict)  # deadlines etc.
 
 
 class EvaluationUpdateStatus(BaseModel):
@@ -19,7 +18,7 @@ class EvaluationUpdateStatus(BaseModel):
 
 class EvaluationUpdate(BaseModel):
     title: Optional[str] = None
-    course_id: Optional[int] = None
+    cluster: Optional[str] = None
     rubric_id: Optional[int] = None
     settings: Optional[Dict[str, Any]] = None
 
@@ -27,12 +26,13 @@ class EvaluationUpdate(BaseModel):
 # ---------- Output ----------
 class EvaluationOut(BaseModel):
     id: int
-    course_id: int
+    cluster: str
     rubric_id: int
     title: str
     status: str
+    created_at: datetime
     settings: Dict[str, Any]
-    deadlines: Optional[dict] = None  # <- toegevoegd veld voor frontend (afgeleid)
+    deadlines: Optional[dict] = None  # afgeleid veld voor frontend
 
     class Config:
         from_attributes = True

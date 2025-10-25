@@ -12,6 +12,7 @@ from sqlalchemy import (
     SmallInteger,
     Float,
     Text,
+    Column,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import sqlalchemy as sa
@@ -149,15 +150,21 @@ class RubricCriterion(Base):
 
 class Evaluation(Base):
     __tablename__ = "evaluations"
+
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
-    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"))
+    cluster = Column(String(50), nullable=False)
+
+    course_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("courses.id", ondelete="CASCADE"),
+        nullable=True,  # ← aangepast
+    )
+
     rubric_id: Mapped[int] = mapped_column(
         ForeignKey("rubrics.id", ondelete="RESTRICT")
     )
     title: Mapped[str] = mapped_column(String(200), nullable=False)
 
-    # settings: anonimiteit, deadlines, #peers, min_words, min_cf, max_cf, smoothing, reviewer_rating, etc.
     settings: Mapped[dict] = mapped_column(JSON, default=dict)
     status: Mapped[str] = mapped_column(
         String(30), default="draft"

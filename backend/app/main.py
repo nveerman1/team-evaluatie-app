@@ -16,6 +16,7 @@ from app.api.v1.routers import student_overview as student_overview_router
 from app.api.v1.routers import students as students_router
 from app.api.v1.routers import reflections_me as reflections_me_router
 from app.api.v1.routers import admin_students as admin_students_router
+from app.api.v1.routers import clusters as clusters_router
 
 
 app = FastAPI()
@@ -53,4 +54,5 @@ api_v1.include_router(student_overview_router.router)
 api_v1.include_router(students_router.router)
 api_v1.include_router(reflections_me_router.router)
 api_v1.include_router(admin_students_router.router)
+api_v1.include_router(clusters_router.router)
 app.include_router(api_v1)

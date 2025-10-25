@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useUrlState, useEvaluations, useCourses } from "@/hooks";
+import { useUrlState, useEvaluations, useClusters } from "@/hooks";
 import { evaluationService } from "@/services";
-import { Evaluation, EvalStatus } from "@/dtos";
+import type { Evaluation, EvalStatus } from "@/dtos/evaluation.dto";
 import { Loading, ErrorMessage, Toast } from "@/components";
 import { formatDate } from "@/utils";
 
@@ -22,16 +22,33 @@ const STATUS_LABEL: Record<EvalStatus, string> = {
 };
 
 export default function EvaluationsListInner() {
-  const { query, status, courseId, setParams } = useUrlState();
+  // URL state (q, status, cluster) <— cluster is string
+  const { q: query, status, cluster, setParams } = useUrlState();
+
+  // Evaluations met filters
   const { evaluations, loading, error, setEvaluations } = useEvaluations({
     query,
     status,
-    courseId,
+    cluster,
   });
-  const { courses, courseNameById } = useCourses();
 
+  // Clusters via hook (met cache)
+  const {
+    clusters,
+    loading: clustersLoading,
+    error: clustersError,
+  } = useClusters();
+
+  // UI state
   const [savingId, setSavingId] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+
+  // Klein UX: als er precies 1 cluster is en geen filter gezet, preselecteer die
+  useEffect(() => {
+    if (!cluster && clusters.length === 1) {
+      setParams({ cluster: clusters[0].value });
+    }
+  }, [cluster, clusters, setParams]);
 
   async function changeStatus(id: number, next: EvalStatus) {
     const prev = evaluations.find((x) => x.id === id)?.status;
@@ -42,7 +59,6 @@ export default function EvaluationsListInner() {
     setEvaluations((r: Evaluation[]) =>
       r.map((x) => (x.id === id ? { ...x, status: next } : x)),
     );
-
     try {
       await evaluationService.updateStatus(id, next);
       setToast(`Status aangepast naar "${STATUS_LABEL[next]}".`);
@@ -97,22 +113,26 @@ export default function EvaluationsListInner() {
             </option>
           ))}
         </select>
+
+        {/* Cluster-filter (string) via hook */}
         <select
-          value={courseId}
-          onChange={(e) => setParams({ course_id: e.target.value })}
+          value={cluster || ""}
+          onChange={(e) => setParams({ cluster: e.target.value })}
           className="px-3 py-2 rounded-lg border w-56"
           title="Filter op cluster"
+          disabled={clustersLoading}
         >
           <option value="">Alle clusters</option>
-          {courses.map((c) => (
-            <option key={c.id} value={String(c.id)}>
-              {c.name ?? `Course #${c.id}`}
+          {clusters.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
             </option>
           ))}
         </select>
-        {(query || status || courseId) && (
+
+        {(query || status || cluster) && (
           <button
-            onClick={() => setParams({ q: "", status: "", course_id: "" })}
+            onClick={() => setParams({ q: "", status: "", cluster: "" })}
             className="px-3 py-2 rounded-lg border"
           >
             Reset
@@ -120,10 +140,17 @@ export default function EvaluationsListInner() {
         )}
       </section>
 
+      {/* Eventuele cluster-fout */}
+      {clustersError && (
+        <div className="p-3 rounded-lg bg-yellow-50 text-yellow-700">
+          Kon clusters niet laden: {clustersError}
+        </div>
+      )}
+
       {/* Toast */}
       {toast && <Toast message={toast} />}
 
-      {/* Table */}
+      {/* Tabel */}
       <section className="bg-white border rounded-2xl overflow-hidden">
         <div className="grid grid-cols-[1fr_220px_220px_minmax(280px,1fr)] gap-0 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">
           <div>Titel</div>
@@ -154,11 +181,6 @@ export default function EvaluationsListInner() {
             const deadlineReview = formatDate(e?.deadlines?.review);
             const deadlineReflection = formatDate(e?.deadlines?.reflection);
 
-            const clusterName =
-              e.course_id != null
-                ? (courseNameById.get(e.course_id) ?? `Course #${e.course_id}`)
-                : "—";
-
             return (
               <div
                 key={e.id}
@@ -166,7 +188,9 @@ export default function EvaluationsListInner() {
               >
                 <div>
                   <div className="font-medium">{e.title}</div>
-                  <div className="text-gray-500">cluster: {clusterName}</div>
+                  <div className="text-gray-500">
+                    cluster: {e.cluster ?? "—"}
+                  </div>
                 </div>
 
                 {/* Status + inline switcher */}
@@ -199,7 +223,7 @@ export default function EvaluationsListInner() {
                   <div>reflectie: {deadlineReflection}</div>
                 </div>
 
-                {/* Actions */}
+                {/* Acties */}
                 <div className="flex justify-end gap-2 pr-2 shrink-0 whitespace-nowrap">
                   <Link
                     href={`/teacher/evaluations/${e.id}/dashboard`}

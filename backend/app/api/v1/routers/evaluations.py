@@ -1,18 +1,17 @@
 from __future__ import annotations
 
 from typing import Optional, List, Dict, Any
+import io
+import csv
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, aliased
-import io
-import csv
 from starlette.responses import StreamingResponse
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import (
     Evaluation,
-    Course,
     Rubric,
     User,
     Allocation,
@@ -20,7 +19,6 @@ from app.infra.db.models import (
     Reflection,
     RubricCriterion,
 )
-
 from app.api.v1.schemas.evaluations import (
     EvaluationCreate,
     EvaluationOut,
@@ -49,10 +47,11 @@ def _to_out(ev: Evaluation) -> EvaluationOut:
     return EvaluationOut.model_validate(
         {
             "id": ev.id,
-            "course_id": ev.course_id,
+            "cluster": ev.cluster,
             "rubric_id": ev.rubric_id,
             "title": ev.title,
             "status": ev.status,
+            "created_at": ev.created_at,
             "settings": ev.settings or {},
             "deadlines": _extract_deadlines(ev.settings),
         }
@@ -65,26 +64,42 @@ def create_evaluation(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    course = (
-        db.query(Course)
-        .filter(Course.id == payload.course_id, Course.school_id == user.school_id)
-        .first()
-    )
+    if not user or not getattr(user, "school_id", None):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Niet ingelogd"
+        )
+
+    # valideer rubric binnen school
     rubric = (
         db.query(Rubric)
         .filter(Rubric.id == payload.rubric_id, Rubric.school_id == user.school_id)
         .first()
     )
-    if not course or not rubric:
-        raise HTTPException(status_code=404, detail="Course or Rubric not found")
+    if not rubric:
+        raise HTTPException(status_code=404, detail="Rubric not found")
+
+    # valideer cluster bestaat binnen school (minstens 1 student)
+    cluster_exists = (
+        db.query(User.id)
+        .filter(
+            User.school_id == user.school_id,
+            User.role == "student",
+            User.archived.is_(False),
+            User.cluster == payload.cluster,
+        )
+        .first()
+    )
+    if not cluster_exists:
+        raise HTTPException(status_code=422, detail="Onbekend cluster voor deze school")
 
     ev = Evaluation(
         school_id=user.school_id,
-        course_id=course.id,
         rubric_id=rubric.id,
         title=payload.title,
-        settings=payload.settings,
         status="draft",
+        cluster=payload.cluster,
+        settings=payload.settings or {},
+        # GEEN start_at / end_at / notes hier doorgeven
     )
     db.add(ev)
     db.commit()
@@ -113,20 +128,20 @@ def list_evaluations(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
     q: Optional[str] = Query(None, description="Zoek in titel"),
-    status: Optional[str] = Query(
+    status_: Optional[str] = Query(
         None, pattern="^(draft|open|closed)$", description="Filter op status"
     ),
-    course_id: Optional[int] = Query(None, description="Filter op course/klas ID"),
+    cluster: Optional[str] = Query(None, description="Filter op cluster"),
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
 ):
     stmt = select(Evaluation).where(Evaluation.school_id == user.school_id)
     if q:
         stmt = stmt.where(Evaluation.title.ilike(f"%{q}%"))
-    if status:
-        stmt = stmt.where(Evaluation.status == status)
-    if course_id:
-        stmt = stmt.where(Evaluation.course_id == course_id)
+    if status_:
+        stmt = stmt.where(Evaluation.status == status_)
+    if cluster:
+        stmt = stmt.where(Evaluation.cluster == cluster)
     stmt = stmt.order_by(Evaluation.id.desc()).limit(limit).offset((page - 1) * limit)
     rows = db.execute(stmt).scalars().all()
     return [_to_out(ev) for ev in rows]
@@ -173,15 +188,22 @@ def update_evaluation(
     if payload.title is not None:
         ev.title = payload.title
 
-    if payload.course_id is not None:
-        course = (
-            db.query(Course)
-            .filter(Course.id == payload.course_id, Course.school_id == user.school_id)
+    if payload.cluster is not None:
+        cluster_exists = (
+            db.query(User.id)
+            .filter(
+                User.school_id == user.school_id,
+                User.role == "student",
+                User.archived.is_(False),
+                User.cluster == payload.cluster,
+            )
             .first()
         )
-        if not course:
-            raise HTTPException(status_code=404, detail="Course not found")
-        ev.course_id = course.id
+        if not cluster_exists:
+            raise HTTPException(
+                status_code=422, detail="Onbekend cluster voor deze school"
+            )
+        ev.cluster = payload.cluster
 
     if payload.rubric_id is not None:
         rubric = (
@@ -261,7 +283,7 @@ def get_feedback_by_evaluation(
             {
                 "to_student_id": to_id,
                 "to_student_name": r.to_name,
-                "from_student_id": int(r.from_id) if r.from_id is not None else None,
+                "from_student_id": (int(r.from_id) if r.from_id is not None else None),
                 "from_student_name": r.from_name,
                 "criterion_id": (
                     int(r.criterion_id) if r.criterion_id is not None else None
@@ -334,7 +356,6 @@ def export_feedback_csv(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    # zelfde scope/joins als JSON-feedback
     ev = (
         db.query(Evaluation)
         .filter(Evaluation.id == evaluation_id, Evaluation.school_id == user.school_id)
@@ -460,18 +481,3 @@ def export_reflections_csv(
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
-
-
-@router.get("/courses")
-def list_courses_for_eval(
-    db: Session = Depends(get_db), user=Depends(get_current_user)
-):
-    from app.infra.db.models import Course
-
-    rows = (
-        db.query(Course)
-        .filter(Course.school_id == user.school_id)
-        .order_by(Course.name.asc(), Course.id.asc())
-        .all()
-    )
-    return [{"id": c.id, "name": getattr(c, "name", f"Course {c.id}")} for c in rows]

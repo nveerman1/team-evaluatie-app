@@ -2,3 +2,4 @@
 // Re-exporting for backward compatibility
 export * from "@/dtos/allocation.dto";
 export * from "@/dtos/dashboard.dto";
+export * from "@/dtos/cluster.dto";

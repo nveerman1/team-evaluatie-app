@@ -4,31 +4,24 @@ import api from "@/lib/api";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { RubricListResponse, RubricListItem } from "@/lib/rubric-types";
+import { useClusters } from "@/hooks";
 
-type CourseLite = { id: number; name: string };
-
-type EvalCreateBase = {
+type EvalCreatePayload = {
   title: string;
-  course_id: number; // verplicht
-  rubric_id: number; // verplicht
-};
-
-type EvalSettings = {
-  anonymity: "none" | "pseudonym" | "full";
-  min_words: number;
-  min_cf: number;
-  max_cf: number;
-  smoothing: boolean;
-  reviewer_rating: boolean;
-  deadlines: {
-    review: string | null;
-    reflection: string | null;
+  rubric_id: number;
+  cluster: string; // verplicht
+  settings?: {
+    deadlines?: {
+      review?: string | null; // "YYYY-MM-DD"
+      reflection?: string | null; // "YYYY-MM-DD"
+    };
+    anonymity?: "none" | "pseudonym" | "full";
+    min_words?: number;
+    min_cf?: number;
+    max_cf?: number;
+    smoothing?: boolean;
+    reviewer_rating?: boolean;
   };
-  // legacy sleutels (schadeloos als backend ze negeert)
-  review_deadline?: string | null;
-  reflection_deadline?: string | null;
-  deadline_reviews?: string | null;
-  deadline_reflection?: string | null;
 };
 
 export default function CreateEvaluationPageInner() {
@@ -38,7 +31,11 @@ export default function CreateEvaluationPageInner() {
 
   // ---- Data ----
   const [rubrics, setRubrics] = useState<RubricListItem[]>([]);
-  const [clusters, setClusters] = useState<CourseLite[]>([]);
+  const {
+    clusters,
+    loading: clustersLoading,
+    error: clustersError,
+  } = useClusters();
 
   // ---- UI ----
   const [loading, setLoading] = useState(true);
@@ -48,14 +45,16 @@ export default function CreateEvaluationPageInner() {
 
   // ---- Form ----
   const [title, setTitle] = useState("");
-  const [clusterId, setClusterId] = useState<number | "">("");
+  const [cluster, setCluster] = useState<string>(""); // string i.p.v. id
   const [rubricId, setRubricId] = useState<number | "">(
     preRubricId ? Number(preRubricId) : "",
   );
 
+  // Voor de UI laten we datetime toe, maar sturen alleen "YYYY-MM-DD"
   const [reviewDeadline, setReviewDeadline] = useState(""); // yyyy-MM-ddTHH:mm
   const [reflectionDeadline, setReflectionDeadline] = useState("");
 
+  // Optionele instellingen
   const [anonymity, setAnonymity] = useState<"none" | "pseudonym" | "full">(
     "pseudonym",
   );
@@ -65,31 +64,22 @@ export default function CreateEvaluationPageInner() {
   const [smoothing, setSmoothing] = useState<boolean>(true);
   const [reviewerRating, setReviewerRating] = useState<boolean>(true);
 
-  // Data laden (rubrics + clusters)
+  // Rubrics laden
   useEffect(() => {
     let mounted = true;
     (async () => {
       setLoading(true);
       setError(null);
       try {
-        const [rubRes, clustersRes] = await Promise.all([
-          api.get<RubricListResponse>("/rubrics"),
-          api.get<CourseLite[]>("/evaluations/courses"),
-        ]);
+        const rubRes = await api.get<RubricListResponse>("/rubrics");
         if (!mounted) return;
 
         const list = Array.isArray(rubRes.data?.items) ? rubRes.data.items : [];
         setRubrics(list);
         if (!preRubricId && list.length === 1) setRubricId(list[0].id);
-
-        const cls = Array.isArray(clustersRes.data) ? clustersRes.data : [];
-        setClusters(cls);
-        if (cls.length === 1) setClusterId(cls[0].id);
       } catch (e: any) {
         setError(
-          e?.response?.data?.detail ||
-            e?.message ||
-            "Kon rubrics/clusters niet laden",
+          e?.response?.data?.detail || e?.message || "Kon rubrics niet laden",
         );
       } finally {
         setLoading(false);
@@ -100,10 +90,23 @@ export default function CreateEvaluationPageInner() {
     };
   }, [preRubricId]);
 
+  // Als er precies één cluster is, preselecteer
+  useEffect(() => {
+    if (!cluster && clusters.length === 1) {
+      setCluster(clusters[0].value);
+    }
+  }, [cluster, clusters]);
+
   const selectedRubric = useMemo(
     () => rubrics.find((r) => r.id === rubricId),
     [rubrics, rubricId],
   );
+
+  function toDateOnly(s: string) {
+    if (!s) return "";
+    const i = s.indexOf("T");
+    return i > 0 ? s.slice(0, i) : s;
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -111,43 +114,31 @@ export default function CreateEvaluationPageInner() {
     setInfo(null);
 
     if (!title.trim()) return setError("Vul een titel in.");
-    if (clusterId === "" || clusterId == null)
-      return setError("Kies een cluster.");
+    if (!cluster) return setError("Kies een cluster.");
     if (rubricId === "" || rubricId == null)
       return setError("Kies een rubric.");
 
     setSubmitting(true);
     try {
-      // 1) Basis evaluatie aanmaken (met cluster verplicht)
-      const base: EvalCreateBase = {
+      const payload: EvalCreatePayload = {
         title: title.trim(),
-        course_id: Number(clusterId),
         rubric_id: Number(rubricId),
-      };
-      const createRes = await api.post("/evaluations", base);
-      const newId = createRes.data?.id;
-      if (!newId) throw new Error("Geen ID ontvangen na aanmaken.");
-
-      // 2) Settings opslaan
-      const settings: EvalSettings = {
-        anonymity,
-        min_words: Number(minWords) || 0,
-        min_cf: Number(minCf) || 0,
-        max_cf: Number(maxCf) || 0,
-        smoothing: Boolean(smoothing),
-        reviewer_rating: Boolean(reviewerRating),
-        deadlines: {
-          review: reviewDeadline || "",
-          reflection: reflectionDeadline || "",
+        cluster,
+        settings: {
+          deadlines: {
+            review: toDateOnly(reviewDeadline) || null,
+            reflection: toDateOnly(reflectionDeadline) || null,
+          },
+          anonymity,
+          min_words: Number(minWords) || 0,
+          min_cf: Number(minCf) || 0,
+          max_cf: Number(maxCf) || 0,
+          smoothing: Boolean(smoothing),
+          reviewer_rating: Boolean(reviewerRating),
         },
-        // legacy aliasen
-        review_deadline: reviewDeadline || "",
-        reflection_deadline: reflectionDeadline || "",
-        deadline_reviews: reviewDeadline || "",
-        deadline_reflection: reflectionDeadline || "",
       };
-      await api.put(`/evaluations/${newId}`, { settings });
 
+      await api.post("/evaluations", payload);
       setInfo("Evaluatie aangemaakt ✔");
       router.replace("/teacher/evaluations");
     } catch (e: any) {
@@ -164,6 +155,9 @@ export default function CreateEvaluationPageInner() {
     }
   }
 
+  // Verzamel states voor disabled
+  const anyLoading = loading || clustersLoading;
+
   return (
     <main className="max-w-5xl mx-auto p-6 space-y-6">
       <header className="flex items-center justify-between gap-3">
@@ -177,7 +171,7 @@ export default function CreateEvaluationPageInner() {
           </a>
           <button
             onClick={handleSubmit as any}
-            disabled={submitting || loading}
+            disabled={submitting || anyLoading}
             className="px-4 py-2 rounded-xl bg-black text-white disabled:opacity-60"
           >
             {submitting ? "Aanmaken…" : "Aanmaken"}
@@ -185,9 +179,9 @@ export default function CreateEvaluationPageInner() {
         </div>
       </header>
 
-      {error && (
+      {(error || clustersError) && (
         <div className="p-3 rounded-lg bg-red-50 text-red-700 break-words">
-          {error}
+          {error || clustersError}
         </div>
       )}
       {info && (
@@ -216,19 +210,15 @@ export default function CreateEvaluationPageInner() {
             <label className="block text-sm font-medium">Cluster</label>
             <select
               className="w-full px-3 py-2 border rounded-lg"
-              value={clusterId === "" ? "" : Number(clusterId)}
-              onChange={(e) =>
-                setClusterId(
-                  e.target.value === "" ? "" : Number(e.target.value),
-                )
-              }
+              value={cluster}
+              onChange={(e) => setCluster(e.target.value)}
               required
-              disabled={loading}
+              disabled={anyLoading}
             >
               <option value="">— Kies cluster —</option>
               {clusters.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name ?? `Course #${c.id}`}
+                <option key={c.value} value={c.value}>
+                  {c.label}
                 </option>
               ))}
             </select>
@@ -245,7 +235,7 @@ export default function CreateEvaluationPageInner() {
               onChange={(e) =>
                 setRubricId(e.target.value ? Number(e.target.value) : "")
               }
-              disabled={loading}
+              disabled={anyLoading}
               required
             >
               <option value="">— Kies rubric —</option>
@@ -255,13 +245,9 @@ export default function CreateEvaluationPageInner() {
                 </option>
               ))}
             </select>
-            {useMemo(
-              () => rubrics.find((r) => r.id === rubricId),
-              [rubrics, rubricId],
-            ) && (
+            {selectedRubric && (
               <p className="text-xs text-gray-500 mt-1">
-                Gekozen: {rubrics.find((r) => r.id === rubricId)?.title} (id:{" "}
-                {rubricId || "—"})
+                Gekozen: {selectedRubric.title} (id: {selectedRubric.id})
               </p>
             )}
           </div>
@@ -369,7 +355,7 @@ export default function CreateEvaluationPageInner() {
         <div className="flex items-center gap-3">
           <button
             type="submit"
-            disabled={submitting || loading}
+            disabled={submitting || anyLoading}
             className="px-4 py-2 rounded-xl bg-black text-white disabled:opacity-60"
           >
             {submitting ? "Aanmaken…" : "Aanmaken"}

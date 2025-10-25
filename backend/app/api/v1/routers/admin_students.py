@@ -9,7 +9,11 @@ from io import StringIO, TextIOWrapper
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import User
-from app.api.v1.schemas.admin_students import AdminStudentOut, AdminStudentUpdate
+from app.api.v1.schemas.admin_students import (
+    AdminStudentOut,
+    AdminStudentUpdate,
+    AdminStudentCreate,
+)
 
 router = APIRouter(prefix="/admin/students", tags=["admin-students"])
 
@@ -314,3 +318,56 @@ def import_students_csv(
 
     db.commit()
     return {"created": created, "updated": updated, "skipped": skipped}
+
+
+@router.post(
+    "", response_model=AdminStudentOut, status_code=http_status.HTTP_201_CREATED
+)
+def create_admin_student(
+    payload: AdminStudentCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    if current_user is None or getattr(current_user, "school_id", None) is None:
+        raise HTTPException(
+            status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Niet ingelogd"
+        )
+
+    # email uniek binnen school
+    dup = (
+        db.query(User)
+        .filter(
+            User.school_id == current_user.school_id,
+            User.email == payload.email,
+        )
+        .first()
+    )
+    if dup:
+        raise HTTPException(status_code=409, detail="Email bestaat al")
+
+    archived = (payload.status or "active") == "inactive"
+
+    u = User(
+        school_id=current_user.school_id,
+        role="student",
+        name=payload.name,
+        email=payload.email,
+        class_name=payload.class_name,
+        cluster=payload.cluster,
+        team_number=payload.team_number,
+        archived=archived,
+        auth_provider="local",
+    )
+    db.add(u)
+    db.commit()
+    db.refresh(u)
+
+    return AdminStudentOut(
+        id=u.id,
+        name=u.name,
+        email=u.email,
+        class_name=getattr(u, "class_name", None),
+        cluster=getattr(u, "cluster", None),
+        team_number=getattr(u, "team_number", None),
+        status="inactive" if getattr(u, "archived", False) else "active",
+    )

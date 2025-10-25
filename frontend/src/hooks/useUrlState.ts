@@ -1,25 +1,47 @@
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
+"use client";
 
-/**
- * Hook to manage URL search parameters with type-safe setter
- */
-export function useUrlState() {
-  const sp = useSearchParams();
+import { useCallback, useMemo } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
+type UrlState = {
+  q: string;
+  status: string;
+  cluster: string;
+  setParams: (
+    p: Partial<{ q: string; status: string; cluster: string }>,
+  ) => void;
+};
+
+export function useUrlState(): UrlState {
   const router = useRouter();
   const pathname = usePathname();
+  const sp = useSearchParams();
 
-  const query = sp.get("q") ?? "";
+  const q = sp.get("q") ?? "";
   const status = sp.get("status") ?? "";
-  const courseId = sp.get("course_id") ?? "";
+  const cluster = sp.get("cluster") ?? "";
 
-  function setParams(next: Record<string, string | number | undefined>) {
-    const params = new URLSearchParams(sp.toString());
-    Object.entries(next).forEach(([k, v]) => {
-      if (v === undefined || v === "") params.delete(k);
-      else params.set(k, String(v));
-    });
-    router.replace(`${pathname}?${params.toString()}`);
-  }
+  const setParams = useCallback(
+    (update: Partial<{ q: string; status: string; cluster: string }>) => {
+      const current = new URLSearchParams(sp?.toString() ?? "");
+      const entries = Object.entries(update) as [string, string | undefined][];
+      for (const [key, val] of entries) {
+        if (val == null) continue;
+        const trimmed = typeof val === "string" ? val.trim() : val;
+        if (trimmed === "") current.delete(key);
+        else current.set(key, String(trimmed));
+      }
+      const search = current.toString();
+      const next = search ? `${pathname}?${search}` : pathname;
+      router.replace(next);
+    },
+    [router, pathname, sp],
+  );
 
-  return { query, status, courseId, setParams };
+  return useMemo(
+    () => ({ q, status, cluster, setParams }),
+    [q, status, cluster, setParams],
+  );
 }
+
+export default useUrlState;

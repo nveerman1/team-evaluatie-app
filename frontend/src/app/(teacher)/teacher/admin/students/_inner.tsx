@@ -35,7 +35,7 @@ export default function StudentsAdminInner() {
     try {
       const params: Record<string, any> = { page, limit, sort, dir };
       if (q) params.q = q;
-      if (status) params.status = status;
+      params.status_filter = status;
 
       const r = await api.get("/admin/students", { params });
       const data = Array.isArray(r.data) ? r.data : (r.data.items ?? []);
@@ -131,7 +131,7 @@ export default function StudentsAdminInner() {
             </Button>
           </label>
           <Button onClick={onExport}>Exporteer CSV</Button>
-          <Link href="/admin/students/create">
+          <Link href="/teacher/admin/students/create">
             <Button variant="primary">+ Nieuwe leerling</Button>
           </Link>
         </div>
