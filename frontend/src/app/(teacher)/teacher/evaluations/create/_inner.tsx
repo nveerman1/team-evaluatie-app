@@ -74,7 +74,7 @@ export default function CreateEvaluationPageInner() {
       try {
         const [rubRes, clustersRes] = await Promise.all([
           api.get<RubricListResponse>("/rubrics"),
-          api.get<CourseLite[]>("/students/courses"),
+          api.get<CourseLite[]>("/evaluations/courses"),
         ]);
         if (!mounted) return;
 
