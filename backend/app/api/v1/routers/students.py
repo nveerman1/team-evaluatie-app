@@ -889,7 +889,7 @@ def list_courses(db: Session = Depends(get_db), current_user=Depends(get_current
         from app.infra.db.models import Course
     except Exception:
         return []
-    
+
     # Check if we have the models needed to filter by active students
     if not (Team and TeamMember):
         # Fallback: return all courses if models not available
@@ -900,9 +900,10 @@ def list_courses(db: Session = Depends(get_db), current_user=Depends(get_current
             .all()
         )
         return [
-            {"id": c.id, "name": getattr(c, "name", None) or f"Course {c.id}"} for c in rows
+            {"id": c.id, "name": getattr(c, "name", None) or f"Course {c.id}"}
+            for c in rows
         ]
-    
+
     # Query courses that have at least one active student
     # Join: Course -> Group -> GroupMember -> User (where archived=False and role='student')
     rows = (
