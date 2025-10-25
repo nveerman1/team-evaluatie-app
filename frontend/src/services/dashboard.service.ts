@@ -33,12 +33,24 @@ export const dashboardService = {
   },
 
   /**
-   * Get grade preview
+   * Get grade preview (POST is primair; bij 405 fallback naar GET)
    */
   async getGradePreview(evaluationId: number): Promise<GradePreviewResponse> {
-    const response = await api.post<GradePreviewResponse>(`/grades/preview`, {
-      evaluation_id: evaluationId,
-    });
-    return response.data;
+    try {
+      // ✅ Jouw backend: GET met ?evaluation_id=...
+      const res = await api.get<GradePreviewResponse>("/grades/preview", {
+        params: { evaluation_id: evaluationId },
+      });
+      return res.data;
+    } catch (e: any) {
+      // Sommige branches hadden POST; alleen bij 405 proberen we POST
+      if (e?.response?.status === 405) {
+        const res = await api.post<GradePreviewResponse>("/grades/preview", {
+          evaluation_id: evaluationId,
+        });
+        return res.data;
+      }
+      throw e;
+    }
   },
 };

@@ -421,11 +421,18 @@ def list_grades(
     )
     by_uid = {i.user_id: i for i in preview.items}
 
+    # ✅ Belangrijk: als de preview leeg is, voorkom een SQL 'IN ()' en geef meteen leeg terug.
+    # Dit voorkomt een 500 (Postgres vindt 'IN ()' ongeldig).
+    if not by_uid:
+        return []
+
     # Alleen grade-rows voor deze evaluatie, maar we nemen uitsluitend uids die in de preview zitten
+    # (Door de early return hierboven is de lijst keys hier gegarandeerd niet leeg.)
     rows: List[Grade] = (
         db.query(Grade)
         .filter(
-            Grade.evaluation_id == evaluation_id, Grade.user_id.in_(list(by_uid.keys()))
+            Grade.evaluation_id == evaluation_id,
+            Grade.user_id.in_(list(by_uid.keys())),
         )
         .all()
     )
