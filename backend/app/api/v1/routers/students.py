@@ -882,13 +882,40 @@ def import_students_csv(
 
 @router.get("/courses")
 def list_courses(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    """
+    Return courses (clusters) that have at least one active student.
+    """
     try:
         from app.infra.db.models import Course
     except Exception:
         return []
+    
+    # Check if we have the models needed to filter by active students
+    if not (Team and TeamMember):
+        # Fallback: return all courses if models not available
+        rows = (
+            db.query(Course)
+            .filter(Course.school_id == current_user.school_id)
+            .order_by(Course.name.asc(), Course.id.asc())
+            .all()
+        )
+        return [
+            {"id": c.id, "name": getattr(c, "name", None) or f"Course {c.id}"} for c in rows
+        ]
+    
+    # Query courses that have at least one active student
+    # Join: Course -> Group -> GroupMember -> User (where archived=False and role='student')
     rows = (
         db.query(Course)
-        .filter(Course.school_id == current_user.school_id)
+        .join(Team, Team.course_id == Course.id)
+        .join(TeamMember, TeamMember.group_id == Team.id)
+        .join(User, User.id == TeamMember.user_id)
+        .filter(
+            Course.school_id == current_user.school_id,
+            User.archived == False,  # noqa: E712
+            User.role == "student",
+        )
+        .distinct()
         .order_by(Course.name.asc(), Course.id.asc())
         .all()
     )
