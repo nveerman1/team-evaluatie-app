@@ -13,17 +13,17 @@ export const evaluationService = {
    * Lijst van evaluaties met optionele filters
    * - q?: string
    * - status?: string ('draft' | 'open' | 'closed' | 'archived')
-   * - cluster?: string (bv 'GA2')
+   * - course_id?: number
    */
   async getEvaluations(params?: {
     q?: string;
     status?: string;
-    cluster?: string;
+    course_id?: number;
   }): Promise<EvaluationListResponse> {
     const sp = new URLSearchParams();
     if (params?.q) sp.set("q", params.q);
     if (params?.status) sp.set("status", params.status);
-    if (params?.cluster) sp.set("cluster", params.cluster);
+    if (params?.course_id) sp.set("course_id", String(params.course_id));
 
     const { data } = await api.get<EvaluationListResponse>(
       `/evaluations${sp.size ? `?${sp.toString()}` : ""}`,
@@ -33,7 +33,7 @@ export const evaluationService = {
 
   /**
    * Maak een nieuwe evaluatie aan
-   * Backend accepteert: { title, rubric_id, cluster, settings?: { deadlines?: { review, reflection } } }
+   * Backend accepteert: { title, rubric_id, course_id, settings?: { deadlines?: { review, reflection } } }
    */
   async createEvaluation(payload: EvaluationCreateDto): Promise<Evaluation> {
     const { data } = await api.post<Evaluation>("/evaluations", payload);
@@ -41,13 +41,13 @@ export const evaluationService = {
   },
 
   /**
-   * Update een bestaande evaluatie (titel/cluster/rubric/settings)
+   * Update een bestaande evaluatie (titel/course_id/rubric/settings)
    * Als je een eigen DTO hebt, vervang 'payload' door EvaluationUpdateDto.
    */
   async updateEvaluation(
     id: number,
     payload: Partial<
-      Pick<Evaluation, "title" | "rubric_id" | "cluster" | "settings">
+      Pick<Evaluation, "title" | "rubric_id" | "course_id" | "settings">
     >,
   ): Promise<Evaluation> {
     const { data } = await api.put<Evaluation>(`/evaluations/${id}`, payload);

@@ -4,4 +4,3 @@ export * from "./rubric.service";
 export * from "./allocation.service";
 export * from "./dashboard.service";
 export * from "./course.service";
-export * as clusterService from "./cluster.service";

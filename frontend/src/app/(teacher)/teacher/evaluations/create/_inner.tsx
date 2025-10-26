@@ -4,12 +4,12 @@ import api from "@/lib/api";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { RubricListResponse, RubricListItem } from "@/lib/rubric-types";
-import { useClusters } from "@/hooks";
+import { useCourses } from "@/hooks";
 
 type EvalCreatePayload = {
   title: string;
   rubric_id: number;
-  cluster: string; // verplicht
+  course_id: number; // verplicht
   settings?: {
     deadlines?: {
       review?: string | null; // "YYYY-MM-DD"
@@ -31,11 +31,7 @@ export default function CreateEvaluationPageInner() {
 
   // ---- Data ----
   const [rubrics, setRubrics] = useState<RubricListItem[]>([]);
-  const {
-    clusters,
-    loading: clustersLoading,
-    error: clustersError,
-  } = useClusters();
+  const { courses, courseNameById } = useCourses();
 
   // ---- UI ----
   const [loading, setLoading] = useState(true);
@@ -45,7 +41,7 @@ export default function CreateEvaluationPageInner() {
 
   // ---- Form ----
   const [title, setTitle] = useState("");
-  const [cluster, setCluster] = useState<string>(""); // string i.p.v. id
+  const [courseId, setCourseId] = useState<number | "">("");
   const [rubricId, setRubricId] = useState<number | "">(
     preRubricId ? Number(preRubricId) : "",
   );
@@ -90,12 +86,12 @@ export default function CreateEvaluationPageInner() {
     };
   }, [preRubricId]);
 
-  // Als er precies één cluster is, preselecteer
+  // Als er precies één course is, preselecteer
   useEffect(() => {
-    if (!cluster && clusters.length === 1) {
-      setCluster(clusters[0].value);
+    if (!courseId && courses.length === 1) {
+      setCourseId(courses[0].id);
     }
-  }, [cluster, clusters]);
+  }, [courseId, courses]);
 
   const selectedRubric = useMemo(
     () => rubrics.find((r) => r.id === rubricId),
@@ -114,7 +110,7 @@ export default function CreateEvaluationPageInner() {
     setInfo(null);
 
     if (!title.trim()) return setError("Vul een titel in.");
-    if (!cluster) return setError("Kies een cluster.");
+    if (!courseId) return setError("Kies een course.");
     if (rubricId === "" || rubricId == null)
       return setError("Kies een rubric.");
 
@@ -123,7 +119,7 @@ export default function CreateEvaluationPageInner() {
       const payload: EvalCreatePayload = {
         title: title.trim(),
         rubric_id: Number(rubricId),
-        cluster,
+        course_id: Number(courseId),
         settings: {
           deadlines: {
             review: toDateOnly(reviewDeadline) || null,
@@ -156,7 +152,7 @@ export default function CreateEvaluationPageInner() {
   }
 
   // Verzamel states voor disabled
-  const anyLoading = loading || clustersLoading;
+  const anyLoading = loading;
 
   return (
     <main className="max-w-5xl mx-auto p-6 space-y-6">
@@ -179,9 +175,9 @@ export default function CreateEvaluationPageInner() {
         </div>
       </header>
 
-      {(error || clustersError) && (
+      {(error) && (
         <div className="p-3 rounded-lg bg-red-50 text-red-700 break-words">
-          {error || clustersError}
+          {error}
         </div>
       )}
       {info && (
@@ -204,21 +200,21 @@ export default function CreateEvaluationPageInner() {
           />
         </div>
 
-        {/* Cluster & Rubric */}
+        {/* Course & Rubric */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="block text-sm font-medium">Cluster</label>
+            <label className="block text-sm font-medium">Course</label>
             <select
               className="w-full px-3 py-2 border rounded-lg"
-              value={cluster}
-              onChange={(e) => setCluster(e.target.value)}
+              value={courseId === "" ? "" : Number(courseId)}
+              onChange={(e) => setCourseId(e.target.value ? Number(e.target.value) : "")}
               required
               disabled={anyLoading}
             >
-              <option value="">— Kies cluster —</option>
-              {clusters.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
+              <option value="">— Kies course —</option>
+              {courses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
                 </option>
               ))}
             </select>
