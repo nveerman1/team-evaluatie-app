@@ -5,7 +5,8 @@ export type Evaluation = {
   id: number;
   title: string;
   rubric_id: number;
-  cluster: string; // <-- BELANGRIJK: string, bv "GA2"
+  course_id: number;
+  cluster: string; // kept for backward compatibility (populated from course_name)
   status: EvalStatus;
   created_at: string; // ISO
   settings?: {
@@ -24,7 +25,7 @@ export type Evaluation = {
 export type EvaluationCreateDto = {
   title: string;
   rubric_id: number;
-  cluster: string; // bv "GA2"
+  course_id: number;
   settings?: {
     deadlines?: {
       review?: string;

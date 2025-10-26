@@ -6,9 +6,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 type UrlState = {
   q: string;
   status: string;
-  cluster: string;
+  course_id: string;
   setParams: (
-    p: Partial<{ q: string; status: string; cluster: string }>,
+    p: Partial<{ q: string; status: string; course_id: string }>,
   ) => void;
 };
 
@@ -19,10 +19,10 @@ export function useUrlState(): UrlState {
 
   const q = sp.get("q") ?? "";
   const status = sp.get("status") ?? "";
-  const cluster = sp.get("cluster") ?? "";
+  const course_id = sp.get("course_id") ?? "";
 
   const setParams = useCallback(
-    (update: Partial<{ q: string; status: string; cluster: string }>) => {
+    (update: Partial<{ q: string; status: string; course_id: string }>) => {
       const current = new URLSearchParams(sp?.toString() ?? "");
       const entries = Object.entries(update) as [string, string | undefined][];
       for (const [key, val] of entries) {
@@ -39,8 +39,8 @@ export function useUrlState(): UrlState {
   );
 
   return useMemo(
-    () => ({ q, status, cluster, setParams }),
-    [q, status, cluster, setParams],
+    () => ({ q, status, course_id, setParams }),
+    [q, status, course_id, setParams],
   );
 }
 

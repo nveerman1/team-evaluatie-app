@@ -17,7 +17,6 @@ export default function AdminStudentForm({
   const [name, setName] = useState(initial?.name ?? "");
   const [email, setEmail] = useState(initial?.email ?? "");
   const [className, setClassName] = useState(initial?.class_name ?? "");
-  const [cluster, setCluster] = useState(initial?.cluster ?? "");
   const [teamNumber, setTeamNumber] = useState(
     initial?.team_number?.toString() ?? "",
   );
@@ -34,7 +33,6 @@ export default function AdminStudentForm({
       name: name.trim(),
       email: email.trim().toLowerCase(),
       class_name: className.trim() || null,
-      cluster: cluster.trim() || null,
       team_number: teamNumber.trim() ? Number(teamNumber.trim()) : null,
       status,
     };
@@ -73,14 +71,6 @@ export default function AdminStudentForm({
             className="w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-300"
           />
         </Field>
-        <Field label="Cluster (optioneel)">
-          <input
-            value={cluster}
-            onChange={(e) => setCluster(e.target.value)}
-            placeholder="bijv. GA2"
-            className="w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-300"
-          />
-        </Field>
         <Field label="Team # (optioneel)">
           <input
             inputMode="numeric"
@@ -90,6 +80,8 @@ export default function AdminStudentForm({
             className="w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-300"
           />
         </Field>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
         <Field label="Status">
           <select
             value={status}

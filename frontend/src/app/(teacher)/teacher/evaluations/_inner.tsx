@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useUrlState, useEvaluations, useClusters } from "@/hooks";
+import { useUrlState, useEvaluations, useCourses } from "@/hooks";
 import { evaluationService } from "@/services";
 import type { Evaluation, EvalStatus } from "@/dtos/evaluation.dto";
 import { Loading, ErrorMessage, Toast } from "@/components";
@@ -22,33 +22,30 @@ const STATUS_LABEL: Record<EvalStatus, string> = {
 };
 
 export default function EvaluationsListInner() {
-  // URL state (q, status, cluster) <— cluster is string
-  const { q: query, status, cluster, setParams } = useUrlState();
+  // URL state (q, status, course_id)
+  const { q: query, status, course_id: courseIdStr, setParams } = useUrlState();
+  const courseIdNum = courseIdStr ? Number(courseIdStr) : undefined;
 
   // Evaluations met filters
   const { evaluations, loading, error, setEvaluations } = useEvaluations({
     query,
     status,
-    cluster,
+    course_id: courseIdNum,
   });
 
-  // Clusters via hook (met cache)
-  const {
-    clusters,
-    loading: clustersLoading,
-    error: clustersError,
-  } = useClusters();
+  // Courses via hook
+  const { courses, courseNameById } = useCourses();
 
   // UI state
   const [savingId, setSavingId] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
-  // Klein UX: als er precies 1 cluster is en geen filter gezet, preselecteer die
+  // Klein UX: als er precies 1 course is en geen filter gezet, preselecteer die
   useEffect(() => {
-    if (!cluster && clusters.length === 1) {
-      setParams({ cluster: clusters[0].value });
+    if (!courseIdStr && courses.length === 1) {
+      setParams({ course_id: String(courses[0].id) });
     }
-  }, [cluster, clusters, setParams]);
+  }, [courseIdStr, courses, setParams]);
 
   async function changeStatus(id: number, next: EvalStatus) {
     const prev = evaluations.find((x) => x.id === id)?.status;
@@ -114,38 +111,30 @@ export default function EvaluationsListInner() {
           ))}
         </select>
 
-        {/* Cluster-filter (string) via hook */}
+        {/* Course-filter */}
         <select
-          value={cluster || ""}
-          onChange={(e) => setParams({ cluster: e.target.value })}
+          value={courseIdStr || ""}
+          onChange={(e) => setParams({ course_id: e.target.value })}
           className="px-3 py-2 rounded-lg border w-56"
-          title="Filter op cluster"
-          disabled={clustersLoading}
+          title="Filter op course"
         >
-          <option value="">Alle clusters</option>
-          {clusters.map((c) => (
-            <option key={c.value} value={c.value}>
-              {c.label}
+          <option value="">Alle courses</option>
+          {courses.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
             </option>
           ))}
         </select>
 
-        {(query || status || cluster) && (
+        {(query || status || courseIdStr) && (
           <button
-            onClick={() => setParams({ q: "", status: "", cluster: "" })}
+            onClick={() => setParams({ q: "", status: "", course_id: "" })}
             className="px-3 py-2 rounded-lg border"
           >
             Reset
           </button>
         )}
       </section>
-
-      {/* Eventuele cluster-fout */}
-      {clustersError && (
-        <div className="p-3 rounded-lg bg-yellow-50 text-yellow-700">
-          Kon clusters niet laden: {clustersError}
-        </div>
-      )}
 
       {/* Toast */}
       {toast && <Toast message={toast} />}
@@ -189,7 +178,7 @@ export default function EvaluationsListInner() {
                 <div>
                   <div className="font-medium">{e.title}</div>
                   <div className="text-gray-500">
-                    cluster: {e.cluster ?? "—"}
+                    course: {e.cluster ?? "—"}
                   </div>
                 </div>
 
