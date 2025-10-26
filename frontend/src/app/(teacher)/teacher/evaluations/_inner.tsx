@@ -87,9 +87,9 @@ export default function EvaluationsListInner() {
       setToast("Evaluatie succesvol verwijderd.");
       setTimeout(() => setToast(null), 1500);
     } catch (e: any) {
-      setToast(
-        e?.response?.data?.detail || e?.message || "Evaluatie verwijderen mislukt",
-      );
+      const errorMsg = e?.response?.data?.detail || e?.message || "Evaluatie verwijderen mislukt";
+      setToast(errorMsg);
+      setTimeout(() => setToast(null), 3000);
     } finally {
       setDeletingId(null);
     }

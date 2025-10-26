@@ -504,7 +504,7 @@ def delete_evaluation(
     )
     if not ev:
         raise HTTPException(status_code=404, detail="Evaluation not found")
-    
+
     db.delete(ev)
     db.commit()
     return None
