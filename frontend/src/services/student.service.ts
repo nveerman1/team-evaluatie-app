@@ -20,10 +20,10 @@ export const studentService = {
     
     // For each evaluation, fetch allocations to calculate progress
     const evaluations = await Promise.all(
-      data.map(async (eval) => {
+      data.map(async (evaluation) => {
         try {
           const allocsRes = await api.get<MyAllocation[]>("/allocations/my", {
-            params: { evaluation_id: eval.id },
+            params: { evaluation_id: evaluation.id },
           });
           const allocs = allocsRes.data || [];
           
@@ -38,7 +38,7 @@ export const studentService = {
           let reflectionCompleted = false;
           try {
             const refRes = await api.get(
-              `/evaluations/${eval.id}/reflections/me`
+              `/evaluations/${evaluation.id}/reflections/me`
             );
             reflectionCompleted = !!refRes.data?.submitted_at;
           } catch {
@@ -64,7 +64,7 @@ export const studentService = {
           }
           
           return {
-            ...eval,
+            ...evaluation,
             progress,
             selfCompleted,
             peersCompleted,
@@ -77,7 +77,7 @@ export const studentService = {
         } catch (error) {
           // If allocations fail, return basic evaluation
           return {
-            ...eval,
+            ...evaluation,
             progress: 0,
             selfCompleted: false,
             peersCompleted: 0,
