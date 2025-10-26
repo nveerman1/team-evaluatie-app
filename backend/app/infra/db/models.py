@@ -12,7 +12,6 @@ from sqlalchemy import (
     SmallInteger,
     Float,
     Text,
-    Column,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import sqlalchemy as sa
@@ -52,7 +51,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(320), nullable=False)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     role: Mapped[str] = mapped_column(
-        String(20), nullable=False
+        String(20), nullable=False, default="student"
     )  # "student" | "teacher" | "admin"
     auth_provider: Mapped[Optional[str]] = mapped_column(String(50), default="local")
     password_hash: Mapped[Optional[str]] = mapped_column(String(255))
@@ -60,11 +59,6 @@ class User(Base):
 
     # ✅ Klas
     class_name: Mapped[Optional[str]] = mapped_column(
-        String(50), index=True, nullable=True
-    )
-
-    # ✅ Cluster
-    cluster: Mapped[Optional[str]] = mapped_column(
         String(50), index=True, nullable=True
     )
 
@@ -153,7 +147,6 @@ class Evaluation(Base):
 
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
-    cluster = Column(String(50), nullable=False)
 
     course_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("courses.id", ondelete="CASCADE"),

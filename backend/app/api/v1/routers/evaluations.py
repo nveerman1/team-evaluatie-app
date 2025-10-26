@@ -18,6 +18,8 @@ from app.infra.db.models import (
     Score,
     Reflection,
     RubricCriterion,
+    Course,
+    Group,
 )
 from app.api.v1.schemas.evaluations import (
     EvaluationCreate,
@@ -44,10 +46,13 @@ def _extract_deadlines(settings: Any) -> Optional[Dict[str, Any]]:
 
 
 def _to_out(ev: Evaluation) -> EvaluationOut:
+    # compat: 'cluster' in schema blijft tijdelijk bestaan als label = course.name
     return EvaluationOut.model_validate(
         {
             "id": ev.id,
-            "cluster": ev.cluster,
+            "course_id": ev.course_id,
+            "cluster": getattr(ev.course, "name", None)
+            or "",  # compat voor oude frontend
             "rubric_id": ev.rubric_id,
             "title": ev.title,
             "status": ev.status,
@@ -78,28 +83,36 @@ def create_evaluation(
     if not rubric:
         raise HTTPException(status_code=404, detail="Rubric not found")
 
-    # valideer cluster bestaat binnen school (minstens 1 student)
-    cluster_exists = (
+    # valideer course binnen school (en minstens 1 actief student-lid via group_members)
+    course = (
+        db.query(Course)
+        .filter(Course.id == payload.course_id, Course.school_id == user.school_id)
+        .first()
+    )
+    if not course:
+        raise HTTPException(status_code=422, detail="Onbekende course voor deze school")
+
+    has_active_member = (
         db.query(User.id)
+        .join(Group, Group.course_id == course.id)
         .filter(
             User.school_id == user.school_id,
             User.role == "student",
             User.archived.is_(False),
-            User.cluster == payload.cluster,
         )
         .first()
     )
-    if not cluster_exists:
-        raise HTTPException(status_code=422, detail="Onbekend cluster voor deze school")
+    if not has_active_member:
+        # we staan het alsnog toe; je kunt later teams toevoegen
+        pass
 
     ev = Evaluation(
         school_id=user.school_id,
         rubric_id=rubric.id,
         title=payload.title,
         status="draft",
-        cluster=payload.cluster,
+        course_id=course.id,
         settings=payload.settings or {},
-        # GEEN start_at / end_at / notes hier doorgeven
     )
     db.add(ev)
     db.commit()
@@ -131,7 +144,7 @@ def list_evaluations(
     status_: Optional[str] = Query(
         None, pattern="^(draft|open|closed)$", description="Filter op status"
     ),
-    cluster: Optional[str] = Query(None, description="Filter op cluster"),
+    course_id: Optional[int] = Query(None, description="Filter op course_id"),
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
 ):
@@ -140,8 +153,8 @@ def list_evaluations(
         stmt = stmt.where(Evaluation.title.ilike(f"%{q}%"))
     if status_:
         stmt = stmt.where(Evaluation.status == status_)
-    if cluster:
-        stmt = stmt.where(Evaluation.cluster == cluster)
+    if course_id is not None:
+        stmt = stmt.where(Evaluation.course_id == course_id)
     stmt = stmt.order_by(Evaluation.id.desc()).limit(limit).offset((page - 1) * limit)
     rows = db.execute(stmt).scalars().all()
     return [_to_out(ev) for ev in rows]
@@ -188,22 +201,17 @@ def update_evaluation(
     if payload.title is not None:
         ev.title = payload.title
 
-    if payload.cluster is not None:
-        cluster_exists = (
-            db.query(User.id)
-            .filter(
-                User.school_id == user.school_id,
-                User.role == "student",
-                User.archived.is_(False),
-                User.cluster == payload.cluster,
-            )
+    if payload.course_id is not None:
+        course = (
+            db.query(Course)
+            .filter(Course.id == payload.course_id, Course.school_id == user.school_id)
             .first()
         )
-        if not cluster_exists:
+        if not course:
             raise HTTPException(
-                status_code=422, detail="Onbekend cluster voor deze school"
+                status_code=422, detail="Onbekende course voor deze school"
             )
-        ev.cluster = payload.cluster
+        ev.course_id = course.id
 
     if payload.rubric_id is not None:
         rubric = (
