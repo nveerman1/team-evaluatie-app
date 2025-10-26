@@ -9,7 +9,7 @@ export interface AdminStudentsQuery {
   page?: number; // 1-based
   page_size?: number; // default per jouw backend
   q?: string; // search
-  class_or_cluster?: string; // als je daarop filtert in de BE
+  course?: string; // filter by course name
   status?: "active" | "inactive" | "all";
 }
 
