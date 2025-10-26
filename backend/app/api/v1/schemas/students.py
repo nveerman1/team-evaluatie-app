@@ -3,16 +3,17 @@ from typing import Optional
 from pydantic import BaseModel, EmailStr
 
 
-# …bovenaan ongewijzigd…
-
-
+# Aanmaken: je kunt óf direct naar een bestaand team koppelen via team_id,
+# óf (makkelijker) naar een course + team_number (maakt team aan als nodig).
 class StudentCreate(BaseModel):
     name: str
     email: EmailStr
     class_name: Optional[str] = None
-    # optional “free form”:
-    cluster_name: Optional[str] = None  # bv. "GA2"
-    team_number: Optional[int] = None  # bv. 1
+    # Koppelen via course + team_number (optioneel, samen gebruikt):
+    course_id: Optional[int] = None  # koppel aan course
+    team_number: Optional[int] = None  # bv. 1 -> "Team 1" binnen course
+    # Alternatief: legacy pad via direct team_id (optioneel):
+    team_id: Optional[int] = None
 
 
 class StudentUpdate(BaseModel):
@@ -20,9 +21,10 @@ class StudentUpdate(BaseModel):
     email: Optional[EmailStr] = None
     class_name: Optional[str] = None
     active: Optional[bool] = None
-    # wijziging via vrije velden:
-    cluster_name: Optional[str] = None
+    # Wijzigen van membership:
+    course_id: Optional[int] = None
     team_number: Optional[int] = None
+    team_id: Optional[int] = None
 
 
 class StudentOut(BaseModel):
@@ -30,14 +32,15 @@ class StudentOut(BaseModel):
     name: str
     email: EmailStr
     class_name: Optional[str] = None
-    # bestaande:
+
+    # Primair (actief) membership samengevat:
     team_id: Optional[int] = None
     team_name: Optional[str] = None
-    cluster_id: Optional[int] = None
-    cluster_name: Optional[str] = None
-    # nieuw, handig voor UI:
     team_number: Optional[int] = None
-    status: str
+    course_id: Optional[int] = None
+    course_name: Optional[str] = None
+
+    status: str  # "active" | "inactive"
 
     class Config:
         from_attributes = True

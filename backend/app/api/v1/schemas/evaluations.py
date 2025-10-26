@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 
 # ---------- Input ----------
 class EvaluationCreate(BaseModel):
-    cluster: str
+    course_id: int
     rubric_id: int
     title: str
     settings: Dict[str, Any] = Field(default_factory=dict)  # deadlines etc.
@@ -18,7 +18,7 @@ class EvaluationUpdateStatus(BaseModel):
 
 class EvaluationUpdate(BaseModel):
     title: Optional[str] = None
-    cluster: Optional[str] = None
+    course_id: Optional[int] = None
     rubric_id: Optional[int] = None
     settings: Optional[Dict[str, Any]] = None
 
@@ -26,6 +26,8 @@ class EvaluationUpdate(BaseModel):
 # ---------- Output ----------
 class EvaluationOut(BaseModel):
     id: int
+    course_id: int
+    # compat: oude frontend-veldnaam als label (gevuld met course.name)
     cluster: str
     rubric_id: int
     title: str

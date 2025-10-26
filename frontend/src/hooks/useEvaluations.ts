@@ -7,7 +7,7 @@ import { evaluationService } from "@/services";
 type UseEvaluationsArgs = {
   query?: string;
   status?: string;
-  cluster?: string;
+  course_id?: number;
 };
 
 export function useEvaluations(filters?: UseEvaluationsArgs) {
@@ -15,7 +15,7 @@ export function useEvaluations(filters?: UseEvaluationsArgs) {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { query, status, cluster } = filters ?? {};
+  const { query, status, course_id } = filters ?? {};
 
   useEffect(() => {
     let mounted = true;
@@ -26,7 +26,7 @@ export function useEvaluations(filters?: UseEvaluationsArgs) {
         const data = await evaluationService.getEvaluations({
           q: query?.trim() ? query.trim() : undefined,
           status: status?.trim() ? status.trim() : undefined,
-          cluster: cluster?.trim() ? cluster.trim() : undefined,
+          course_id: course_id,
         });
         if (!mounted) return;
         setEvaluations(Array.isArray(data) ? data : []);
@@ -44,7 +44,7 @@ export function useEvaluations(filters?: UseEvaluationsArgs) {
     return () => {
       mounted = false;
     };
-  }, [query, status, cluster]);
+  }, [query, status, course_id]);
 
   return { evaluations, loading, error, setEvaluations };
 }

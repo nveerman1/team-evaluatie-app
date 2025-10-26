@@ -2,21 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import api from "@/lib/api";
-import { useNumericEvalId } from "@/lib/id";
 import Link from "next/link";
 
-// ---------- Types ----------
-type PreviewItem = {
-  user_id: number;
-  user_name: string;
-  avg_score: number; // peer %
-  gcf: number; // individuele factor
-  spr: number;
-  suggested_grade: number; // server-suggestie (1–10)
-  team_number?: number | null;
-  class_name?: string | null;
-};
+import { useNumericEvalId } from "@/lib/id";
+import { gradesService } from "@/services/grades.service";
+import type { GradePreviewItem, PublishedGradeOut } from "@/dtos/grades.dto";
 
 type Row = {
   user_id: number;
@@ -25,16 +15,14 @@ type Row = {
   className?: string | null;
   gcf: number;
   peerPct: number;
-  serverSuggested: number; // 1–10
-  // UI invoer
-  rowGroupGrade?: number | null; // per-rij groepscijfer (optioneel)
-  override?: number | null; // handmatige correctie (1–10 of null)
+  serverSuggested: number;
+  rowGroupGrade?: number | null;
+  override?: number | null;
   comment?: string;
 };
 
 type SortKey = "team" | "class" | "name" | "final";
 
-// ---------- Page ----------
 export default function GradesPageInner() {
   const evalIdNum = useNumericEvalId();
   const evalIdStr = evalIdNum != null ? String(evalIdNum) : "—";
@@ -45,75 +33,49 @@ export default function GradesPageInner() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Filters & sort
   const [filterTeam, setFilterTeam] = useState<string>("all");
   const [filterClass, setFilterClass] = useState<string>("all");
   const [searchName, setSearchName] = useState<string>("");
   const [sortBy, setSortBy] = useState<SortKey>("team");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const [groupGrade, setGroupGrade] = useState<number | "">("");
 
-  // ---------- Helpers ----------
   const round1 = (n: number) => Math.round(n * 10) / 10;
-  function autoSuggestion(r: Row): number {
-    // Gebruik het backend-voorstel (Peer × SPR) voor consistentie met student_overview.
-    return round1(r.serverSuggested ?? 0);
-  }
-
   function finalGrade(r: Row): number {
-    // 1) Handmatige correctie heeft altijd voorrang
     if (r.override != null) return round1(r.override);
-
-    // 2) Als Groepscijfer (per leerling) is ingevuld → Groepscijfer × GCF
     if (r.rowGroupGrade != null) return round1(r.rowGroupGrade * r.gcf);
-
-    // 3) Anders het voorstel uit de backend (1–10, al berekend als 75% peer + 25% self)
     return round1(r.serverSuggested ?? 0);
   }
 
-  // ---------- Data load ----------
-  // 1) Probeer eerst /grades (geeft gepubliceerde + concept + meta terug, nu voor ALLE studenten, zie backend fix)
-  // 2) Als leeg, fallback naar /grades/preview
+  // --------- load data ----------
   useEffect(() => {
     setError(null);
     if (evalIdNum == null) {
       setRows([]);
       return;
     }
-
     (async () => {
       setLoading(true);
       try {
-        const res = await api.get(`/grades?evaluation_id=${evalIdNum}`);
-        const existing: any[] = Array.isArray(res.data) ? res.data : [];
-
+        const existing = await gradesService.listGrades(evalIdNum);
         if (existing.length > 0) {
           setRows(
-            existing.map((g: any) => ({
+            existing.map((g) => ({
               user_id: g.user_id,
               name: g.user_name,
               teamNumber: g.meta?.team_number ?? null,
               className: g.meta?.class_name ?? null,
               gcf: g.meta?.gcf ?? 1,
               peerPct: g.meta?.avg_score ?? 0,
-              serverSuggested: g.meta?.suggested ?? 0, // 1–10
-              override: g.grade ?? null, // kan null zijn
+              serverSuggested: g.meta?.suggested ?? 0,
+              override: g.grade ?? null,
               comment: g.reason ?? "",
-              rowGroupGrade: g.meta?.group_grade ?? null, // per-rij (optioneel)
+              rowGroupGrade: g.meta?.group_grade ?? null,
             })),
           );
           return;
         }
-
-        // Fallback naar preview
-        const q = new URLSearchParams({ evaluation_id: String(evalIdNum) });
-        const preview = await api.get<{
-          evaluation_id: number;
-          items: PreviewItem[];
-        }>(`/grades/preview?${q.toString()}`);
-        const items = Array.isArray(preview.data?.items)
-          ? preview.data.items
-          : [];
+        const preview = await gradesService.previewGrades(evalIdNum);
+        const items: GradePreviewItem[] = preview?.items ?? [];
         setRows(
           items.map((i) => ({
             user_id: i.user_id,
@@ -121,9 +83,8 @@ export default function GradesPageInner() {
             teamNumber: i.team_number ?? null,
             className: i.class_name ?? null,
             gcf: i.gcf,
-            spr: i.spr ?? null,
             peerPct: i.avg_score,
-            serverSuggested: i.suggested_grade, // 1–10
+            serverSuggested: i.suggested_grade,
             rowGroupGrade: null,
             override: null,
             comment: "",
@@ -137,11 +98,8 @@ export default function GradesPageInner() {
     })();
   }, [evalIdNum]);
 
-  // ---------- Concept opslaan (herbruikbaar door autosave + knop) ----------
   async function handleDraftSave() {
     if (evalIdNum == null || rows.length === 0) return;
-
-    // Alleen jouw handmatige overrides opslaan (geen global group grade)
     const overrides = Object.fromEntries(
       rows.map((r) => [
         r.user_id,
@@ -152,22 +110,17 @@ export default function GradesPageInner() {
         },
       ]),
     );
-
     try {
-      await api.post("/grades/draft", {
+      await gradesService.saveDraft({
         evaluation_id: Number(evalIdNum),
-        group_grade: groupGrade === "" ? null : Number(groupGrade),
+        group_grade: null,
         overrides,
       });
     } catch (err: any) {
-      console.warn(
-        "Concept opslaan mislukt:",
-        err?.response?.data ?? err?.message ?? err,
-      );
+      console.warn("Concept opslaan mislukt:", err?.message ?? err);
     }
   }
 
-  // ---------- Autosave ----------
   useEffect(() => {
     if (evalIdNum == null) return;
     const timer = setInterval(() => {
@@ -177,7 +130,6 @@ export default function GradesPageInner() {
     return () => clearInterval(timer);
   }, [rows, evalIdNum]);
 
-  // ---------- Filters ----------
   const teamOptions = useMemo(() => {
     const set = new Set<number | string>();
     rows.forEach((r) => set.add(r.teamNumber ?? "–"));
@@ -190,7 +142,6 @@ export default function GradesPageInner() {
     return Array.from(set);
   }, [rows]);
 
-  // ---------- Derived rows (filter + sort) ----------
   const filteredSorted = useMemo(() => {
     const q = searchName.trim().toLowerCase();
     let list = rows.filter((r) => {
@@ -201,11 +152,9 @@ export default function GradesPageInner() {
       const nameMatch = q === "" || r.name.toLowerCase().includes(q);
       return teamMatch && classMatch && nameMatch;
     });
-
     const cmp = (a: Row, b: Row) => {
       let va: string | number = 0;
       let vb: string | number = 0;
-
       if (sortBy === "team") {
         va = a.teamNumber ?? -1;
         vb = b.teamNumber ?? -1;
@@ -223,20 +172,9 @@ export default function GradesPageInner() {
       if (va > vb) return sortDir === "asc" ? 1 : -1;
       return 0;
     };
-
     return list.sort(cmp);
   }, [rows, filterTeam, filterClass, searchName, sortBy, sortDir]);
 
-  // ---------- Sort via header ----------
-  function toggleSort(key: SortKey) {
-    if (sortBy === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else {
-      setSortBy(key);
-      setSortDir("asc");
-    }
-  }
-
-  // ---------- Publish ----------
   async function handlePublish() {
     if (evalIdNum == null) return;
     setSaving(true);
@@ -247,9 +185,9 @@ export default function GradesPageInner() {
           { grade: finalGrade(r), reason: (r.comment ?? "").trim() || null },
         ]),
       );
-      await api.post("/grades/publish", {
+      await gradesService.publish({
         evaluation_id: evalIdNum,
-        group_grade: groupGrade === "" ? null : Number(groupGrade),
+        group_grade: null,
         overrides,
       });
       alert("Cijfers gepubliceerd!");
@@ -274,10 +212,10 @@ export default function GradesPageInner() {
             }
             className="px-4 py-2 rounded-2xl border"
             disabled={evalIdNum == null}
-            title={evalIdNum == null ? "Geen geldige evaluatie" : ""}
           >
             Terug naar dashboard
           </button>
+
           <button
             onClick={async () => {
               await handleDraftSave();
@@ -287,6 +225,7 @@ export default function GradesPageInner() {
           >
             Concept opslaan
           </button>
+
           <button
             onClick={handlePublish}
             disabled={saving || loading || evalIdNum == null}
@@ -343,7 +282,7 @@ export default function GradesPageInner() {
                 setSortBy(k);
                 setSortDir(d);
               }}
-              title="Sorteer"
+              title="Sorteer kolommen"
             >
               <option value="team:asc">Team ↑</option>
               <option value="team:desc">Team ↓</option>
@@ -364,7 +303,7 @@ export default function GradesPageInner() {
         {!loading && rows.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse min-w-[1000px]">
-              <thead className="border-b text-gray-600 select-none">
+              <thead className="border-b text-gray-600">
                 <tr>
                   <Th
                     onClick={() => toggleSort("team")}
@@ -394,7 +333,7 @@ export default function GradesPageInner() {
                   >
                     Voorstel
                   </Th>
-                  <th className="text-left py-2 px-2">Groepscijfer (1–10)</th>
+                  <th className="text-left py-2 px-2">Groepscijfer</th>
                   <th className="text-left py-2 px-2">GCF</th>
                   <th className="text-left py-2 px-2">Handmatige correctie</th>
                   <th className="text-left py-2 px-2">Eindcijfer</th>
@@ -406,32 +345,24 @@ export default function GradesPageInner() {
                 {filteredSorted.map((r) => (
                   <tr key={r.user_id} className="border-t align-top">
                     <td className="py-2 px-2">{r.teamNumber ?? "–"}</td>
-
                     <td className="py-2 px-2">
                       <Link
                         href={`/teacher/evaluations/${evalIdStr}/students/${r.user_id}`}
                         className="text-blue-600 hover:underline"
-                        title="Bekijk leerlingoverzicht"
                       >
                         {r.name}
                       </Link>
                     </td>
-
                     <td className="py-2 px-2">{r.className ?? "–"}</td>
-
-                    {/* Voorstel van team (1-10) */}
                     <td className="py-2 px-2 font-medium">
-                      {r.serverSuggested != null
-                        ? Number(r.serverSuggested).toFixed(1)
-                        : "–"}
+                      {r.serverSuggested?.toFixed(1) ?? "–"}
                     </td>
-
-                    {/* Groepscijfer (per leerling optioneel invullen) */}
                     <td className="py-2 px-2">
                       <input
                         type="number"
                         className="w-24 border rounded-lg px-2 py-1"
                         placeholder="bijv. 7.5"
+                        title="Optioneel: per leerling een aangepast groepscijfer"
                         value={r.rowGroupGrade ?? ""}
                         min={1}
                         max={10}
@@ -450,18 +381,15 @@ export default function GradesPageInner() {
                             ),
                           );
                         }}
-                        title="Leeg laten om het servervoorstel te gebruiken"
                       />
                     </td>
-
-                    {/* GCF */}
                     <td className="py-2 px-2">{r.gcf.toFixed(2)}</td>
-
-                    {/* Handmatige correctie */}
                     <td className="py-2 px-2">
                       <input
                         type="number"
                         className="w-24 border rounded-lg px-2 py-1"
+                        placeholder="bijv. 8.0"
+                        title="Handmatig aangepast eindcijfer (1–10)"
                         value={r.override ?? ""}
                         min={1}
                         max={10}
@@ -480,13 +408,9 @@ export default function GradesPageInner() {
                         }}
                       />
                     </td>
-
-                    {/* Eindcijfer */}
                     <td className="py-2 px-2 font-medium">
                       {finalGrade(r).toFixed(1)}
                     </td>
-
-                    {/* Opmerking docent */}
                     <td className="py-2 px-2">
                       <AutoTextarea
                         value={r.comment ?? ""}
@@ -509,17 +433,19 @@ export default function GradesPageInner() {
           </div>
         )}
       </section>
-
-      {evalIdNum == null && (
-        <p className="text-sm text-gray-500">
-          Geen geldige evaluatie. Open deze pagina via een bestaande evaluatie.
-        </p>
-      )}
     </main>
   );
+
+  function toggleSort(key: SortKey) {
+    if (sortBy === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortBy(key);
+      setSortDir("asc");
+    }
+  }
 }
 
-// ---------- UI helpers ----------
+// --- UI helpers ---
 function Th({
   children,
   onClick,
@@ -535,7 +461,6 @@ function Th({
     <th
       className="text-left py-2 px-2 cursor-pointer select-none"
       onClick={onClick}
-      title="Sorteren"
     >
       <span className="inline-flex items-center gap-1">
         {children}
@@ -566,8 +491,8 @@ function AutoTextarea({
     <textarea
       ref={ref}
       className="w-full border rounded-lg px-2 py-1 leading-snug"
-      value={value}
       placeholder={placeholder}
+      value={value}
       onChange={(e) => {
         onChange(e.target.value);
         if (ref.current) resize(ref.current);

@@ -8,7 +8,6 @@ from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import Allocation, Score, RubricCriterion, User, Reflection
 from app.infra.db.models import Grade  # kernmodel
 
-
 router = APIRouter(prefix="/evaluations", tags=["student-overview"])
 
 
@@ -17,7 +16,6 @@ def _supports_attr(model: object, attr: str) -> bool:
 
 
 def _extract_team_number(team_name: Optional[str]) -> Optional[int]:
-    """Haal een teamnummer uit een naam als 'Team 1' of een string die eindigt op een getal."""
     if not team_name:
         return None
     import re
@@ -26,7 +24,6 @@ def _extract_team_number(team_name: Optional[str]) -> Optional[int]:
     return int(m.group(1)) if m else None
 
 
-# -------- Helpers: veilige float casting (voor mypy & runtime) --------
 Floatish = Optional[Union[str, float, int, SupportsFloat, SupportsIndex]]
 
 
@@ -48,7 +45,6 @@ def student_overview(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    # ---- 1) User ophalen (school-scope) ----
     u: Optional[User] = (
         db.query(User)
         .filter(User.id == user_id, User.school_id == current_user.school_id)
@@ -57,13 +53,11 @@ def student_overview(
     if not u:
         raise HTTPException(status_code=404, detail="Student niet gevonden")
 
-    # ---- 2) Team/cluster bepalen (via membership -> group -> course) ----
     team_id: Optional[int] = None
     team_name: Optional[str] = None
-    cluster_id: Optional[int] = None
-    cluster_name: Optional[str] = None
+    course_id: Optional[int] = None
+    course_name: Optional[str] = None
 
-    # TeamMember / Team / Course kunnen in sommige implementaties ontbreken of andere veldnamen hebben
     try:
         from app.infra.db.models import Group as Team
         from app.infra.db.models import GroupMember as TeamMember
@@ -90,16 +84,15 @@ def student_overview(
                     f"Team {getattr(t, 'id', '')}".strip()
                 )
                 if hasattr(t, "course_id"):
-                    cluster_id = getattr(t, "course_id")
-                    if Course and cluster_id is not None:
-                        c = db.get(Course, cluster_id)
+                    course_id = getattr(t, "course_id")
+                    if Course and course_id is not None:
+                        c = db.get(Course, course_id)
                         if c:
-                            cluster_name = (
+                            course_name = (
                                 getattr(c, "name", None)
                                 or f"Course {getattr(c, 'id', '')}".strip()
                             )
 
-    # ---- 3) Grade ophalen (gepubliceerd of concept) ----
     g: Optional[Grade] = (
         db.query(Grade)
         .filter(
@@ -117,11 +110,6 @@ def student_overview(
     gcf = _to_float(raw_meta.get("gcf"))
     suggested = _to_float(raw_meta.get("suggested"))
 
-    # ➜ Zelfde volgorde als de grades-tabel / UI:
-    # 1) handmatige/definitieve grade
-    # 2) groepscijfer × GCF
-    # 3) suggested
-    final_val: Optional[float]
     if grade_val is not None:
         final_val = grade_val
     elif group_grade is not None and gcf is not None:
@@ -132,8 +120,8 @@ def student_overview(
         final_val = None
 
     grade_obj: Dict[str, Any] = {
-        "grade": grade_val,  # ruwe (handmatige/definitieve) grade
-        "final": _round1(final_val),  # ✅ eindcijfer zoals in grades-tabel
+        "grade": grade_val,
+        "final": _round1(final_val),
         "reason": getattr(g, "override_reason", None) if g else None,
         "meta": raw_meta or None,
         "suggested": _round1(suggested) if suggested is not None else None,
@@ -143,9 +131,7 @@ def student_overview(
         "avg_score": raw_meta.get("avg_score"),
     }
 
-    # ---- 4) Feedback ONTVANGEN (peers -> deze student) ----
     U_from = aliased(User)
-
     rows_recv = (
         db.query(
             Allocation.reviewer_id.label("from_id"),
@@ -168,7 +154,6 @@ def student_overview(
         .order_by(U_from.name.asc(), RubricCriterion.id.asc(), Allocation.id.asc())
         .all()
     )
-
     rec_by_from: Dict[int, Dict[str, Any]] = {}
     for r in rows_recv:
         fid = int(r.from_id) if r.from_id is not None else -1
@@ -177,7 +162,7 @@ def student_overview(
             gdict = {
                 "reviewer_id": (fid if fid != -1 else None),
                 "reviewer_name": r.from_name or "—",
-                "score_pct": None,  # je kunt hier later het gewogen % invullen
+                "score_pct": None,
                 "comments": [],
             }
             rec_by_from[fid] = gdict
@@ -189,12 +174,9 @@ def student_overview(
                 "text": (r.text or "").strip(),
             }
         )
-
     received = list(rec_by_from.values())
 
-    # ---- 5) Feedback GEGEVEN (deze student -> peers) ----
     U_to = aliased(User)
-
     rows_given = (
         db.query(
             Allocation.reviewee_id.label("to_id"),
@@ -217,7 +199,6 @@ def student_overview(
         .order_by(U_to.name.asc(), RubricCriterion.id.asc(), Allocation.id.asc())
         .all()
     )
-
     giv_by_to: Dict[int, Dict[str, Any]] = {}
     for r in rows_given:
         tid = int(r.to_id) if r.to_id is not None else -1
@@ -226,7 +207,7 @@ def student_overview(
             gdict = {
                 "reviewee_id": (tid if tid != -1 else None),
                 "reviewee_name": r.to_name or "—",
-                "score_pct": None,  # idem
+                "score_pct": None,
                 "score": int(r.score) if r.score is not None else None,
                 "comments": [],
             }
@@ -238,10 +219,9 @@ def student_overview(
                 "text": (r.text or "").strip(),
             }
         )
-
     given = list(giv_by_to.values())
 
-    # ---- 6) Reflectie ----
+    # Reflectie
     ref_q: Optional[Reflection] = (
         db.query(Reflection)
         .filter(
@@ -260,7 +240,6 @@ def student_overview(
         else None
     )
 
-    # ---- 7) Response samenstellen ----
     user_info = {
         "id": u.id,
         "name": u.name,
@@ -269,8 +248,12 @@ def student_overview(
         "team_id": team_id,
         "team_name": team_name,
         "team_number": _extract_team_number(team_name),
-        "cluster_id": cluster_id,
-        "cluster_name": cluster_name,
+        # nieuw
+        "course_id": course_id,
+        "course_name": course_name,
+        # compat alias voor bestaande frontend
+        "cluster_id": course_id,
+        "cluster_name": course_name,
     }
 
     return {
