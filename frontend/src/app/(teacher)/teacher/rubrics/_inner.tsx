@@ -116,10 +116,10 @@ export default function RubricsListInner() {
               </div>
               <div className="flex justify-end gap-2 pr-2">
                 <Link
-                  href={`/teacher/rubrics/${r.id}`}
+                  href={`/teacher/evaluations/create?rubric_id=${r.id}`}
                   className="px-2 py-1 rounded-lg border hover:bg-gray-50"
                 >
-                  Bekijken
+                  Gebruiken
                 </Link>
                 <Link
                   href={`/teacher/rubrics/${r.id}/edit`}
