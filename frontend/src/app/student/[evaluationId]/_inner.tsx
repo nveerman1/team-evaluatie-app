@@ -7,9 +7,17 @@ import {
   Criterion,
   ScoreItem,
   DashboardResponse,
-} from "@/lib/types";
+} from "@/dtos";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useNumericEvalId } from "@/lib/id";
+import {
+  WizardProgress,
+  SelfEvaluationStep,
+  PeerReviewStep,
+  ReflectionStep,
+} from "@/components/student";
+import { Loading, ErrorMessage } from "@/components";
+import { studentService } from "@/services";
 
 export default function StudentWizardInner() {
   const evaluationIdNum = useNumericEvalId(); // null op /create of ongeldige id

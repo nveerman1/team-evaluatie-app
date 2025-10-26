@@ -4,3 +4,6 @@ export * from "./useEvaluations";
 export * from "./useCourses";
 export * from "./useDashboardData";
 export * from "./useAdminStudents";
+export * from "./useStudentDashboard";
+export * from "./useStudentEvaluations";
+export * from "./useStudentResults";
