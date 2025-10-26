@@ -38,6 +38,7 @@ export default function EvaluationsListInner() {
 
   // UI state
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   // Klein UX: als er precies 1 course is en geen filter gezet, preselecteer die
@@ -70,6 +71,27 @@ export default function EvaluationsListInner() {
       );
     } finally {
       setSavingId(null);
+    }
+  }
+
+  async function deleteEvaluation(id: number) {
+    const evalTitle = evaluations.find((x) => x.id === id)?.title;
+    if (!confirm(`Weet je zeker dat je de evaluatie "${evalTitle}" wilt verwijderen?`)) {
+      return;
+    }
+
+    setDeletingId(id);
+    try {
+      await evaluationService.deleteEvaluation(id);
+      setEvaluations((r: Evaluation[]) => r.filter((x) => x.id !== id));
+      setToast("Evaluatie succesvol verwijderd.");
+      setTimeout(() => setToast(null), 1500);
+    } catch (e: any) {
+      setToast(
+        e?.response?.data?.detail || e?.message || "Evaluatie verwijderen mislukt",
+      );
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -232,6 +254,14 @@ export default function EvaluationsListInner() {
                   >
                     Instellingen
                   </Link>
+                  <button
+                    onClick={() => deleteEvaluation(e.id)}
+                    disabled={deletingId === e.id}
+                    className="px-2 py-1 rounded-lg border hover:bg-red-50 hover:text-red-600 hover:border-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Verwijder evaluatie"
+                  >
+                    {deletingId === e.id ? "..." : "Verwijderen"}
+                  </button>
                 </div>
               </div>
             );

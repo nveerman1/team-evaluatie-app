@@ -489,3 +489,22 @@ def export_reflections_csv(
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.delete("/{evaluation_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_evaluation(
+    evaluation_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    ev = (
+        db.query(Evaluation)
+        .filter(Evaluation.id == evaluation_id, Evaluation.school_id == user.school_id)
+        .first()
+    )
+    if not ev:
+        raise HTTPException(status_code=404, detail="Evaluation not found")
+    
+    db.delete(ev)
+    db.commit()
+    return None

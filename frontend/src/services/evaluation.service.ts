@@ -68,4 +68,11 @@ export const evaluationService = {
     const { data } = await api.get<Evaluation>(`/evaluations/${id}`);
     return data;
   },
+
+  /**
+   * Verwijder een evaluatie
+   */
+  async deleteEvaluation(id: number): Promise<void> {
+    await api.delete(`/evaluations/${id}`);
+  },
 };
