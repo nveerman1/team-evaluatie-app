@@ -211,6 +211,73 @@ def list_admin_students(
     return out
 
 
+@router.post("", response_model=dict, status_code=http_status.HTTP_201_CREATED)
+def create_admin_student(
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    if current_user is None or getattr(current_user, "school_id", None) is None:
+        raise HTTPException(
+            status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Niet ingelogd"
+        )
+
+    name = (payload.get("name") or "").strip()
+    email = (payload.get("email") or "").strip().lower()
+    if not name or not email:
+        raise HTTPException(status_code=400, detail="name en email zijn verplicht")
+
+    # unieke email binnen school
+    dup = (
+        db.query(User)
+        .filter(User.school_id == current_user.school_id, User.email == email)
+        .first()
+    )
+    if dup:
+        raise HTTPException(status_code=409, detail="Email bestaat al")
+
+    class_name = (payload.get("class_name") or None) or None
+    team_number = payload.get("team_number", None)
+    status_val = (payload.get("status") or "active").strip().lower()
+    archived = status_val == "inactive"
+
+    u = User(
+        school_id=current_user.school_id,
+        role="student",
+        name=name,
+        email=email,
+        class_name=class_name,
+        team_number=team_number,
+        archived=archived,
+        auth_provider="local",
+    )
+    db.add(u)
+    db.flush()  # krijgt id
+
+    # optioneel: course_name -> membership zetten
+    course_name = (payload.get("course_name") or "").strip() or None
+    if course_name:
+        _set_user_course_membership(db, current_user.school_id, u.id, course_name)
+
+    db.commit()
+    db.refresh(u)
+
+    # course_name voor response bepalen via subquery (zelfde als list/update)
+    csub = _course_name_subquery(db, current_user.school_id)
+    row = db.query(csub.c.course_name).filter(csub.c.user_id == u.id).first()
+    course_name_out = row[0] if row else None
+
+    return {
+        "id": u.id,
+        "name": u.name,
+        "email": u.email,
+        "class_name": getattr(u, "class_name", None),
+        "course_name": course_name_out,
+        "team_number": getattr(u, "team_number", None),
+        "status": "inactive" if getattr(u, "archived", False) else "active",
+    }
+
+
 @router.put("/{student_id}", response_model=dict)
 def update_admin_student(
     student_id: int,

@@ -10,7 +10,7 @@ type Student = {
   name: string;
   email: string;
   class_name?: string | null;
-  cluster?: string | null;
+  course_name?: string | null; // <— nieuw, vervangt cluster
   status?: "active" | "inactive" | null;
   team_number?: number | null;
 };
@@ -24,7 +24,7 @@ export default function StudentsAdminInner() {
   const [limit, setLimit] = useState(25);
   const [total, setTotal] = useState(0);
   const [sort, setSort] = useState<
-    "name" | "class_name" | "cluster" | "team_number"
+    "name" | "class_name" | "course_name" | "team_number"
   >("name");
   const [dir, setDir] = useState<"asc" | "desc">("asc");
   const [edit, setEdit] = useState<Student | null>(null);
@@ -40,7 +40,15 @@ export default function StudentsAdminInner() {
       const r = await api.get("/admin/students", { params });
       const data = Array.isArray(r.data) ? r.data : (r.data.items ?? []);
       setRows(data);
-      setTotal(Array.isArray(r.data) ? r.data.length : (r.data.total ?? 0));
+      // probeer X-Total-Count header, val terug op lengte
+      const headerTotal = Number(r.headers?.["x-total-count"]);
+      setTotal(
+        Number.isFinite(headerTotal)
+          ? headerTotal
+          : Array.isArray(r.data)
+            ? r.data.length
+            : (r.data.total ?? data.length),
+      );
     } catch (e) {
       console.error(e);
     } finally {
@@ -140,7 +148,7 @@ export default function StudentsAdminInner() {
       {/* Filterbalk */}
       <div className="flex flex-wrap items-end gap-3 bg-white border rounded-2xl p-3">
         <TextInput
-          label="Zoek (naam/email/klas/cluster)"
+          label="Zoek (naam/email/klas/course)"
           value={q}
           onChange={(e) => {
             setPage(1);
@@ -165,7 +173,7 @@ export default function StudentsAdminInner() {
 
       {/* Tabel */}
       <div className="overflow-hidden border rounded-2xl bg-white">
-        <table className="w-full table-fixed border-collapse">
+        <table className="w-full table-auto border-collapse">
           <thead className="bg-gray-50">
             <tr>
               <SortableTh
@@ -174,18 +182,18 @@ export default function StudentsAdminInner() {
                 sort={sort}
                 dir={dir}
                 onClick={toggleSort}
-                className="w-[26%]"
+                className="w-[18%]"
               />
-              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 w-[26%]">
+              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 w-[20%]">
                 Email
               </th>
               <SortableTh
-                label="Cluster"
-                col="cluster"
+                label="Vak/Course"
+                col="course_name"
                 sort={sort}
                 dir={dir}
                 onClick={toggleSort}
-                className="w-[8%]"
+                className="w-[12%]"
               />
               <SortableTh
                 label="Klas"
@@ -193,7 +201,7 @@ export default function StudentsAdminInner() {
                 sort={sort}
                 dir={dir}
                 onClick={toggleSort}
-                className="w-[8%]"
+                className="w-[10%]"
               />
               <SortableTh
                 label="Team #"
@@ -204,10 +212,10 @@ export default function StudentsAdminInner() {
                 className="w-[8%]"
                 center
               />
-              <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 w-[8%]">
+              <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 w-[10%]">
                 Status
               </th>
-              <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 w-[22%]">
+              <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 w-[18%]">
                 Acties
               </th>
             </tr>
@@ -247,7 +255,9 @@ export default function StudentsAdminInner() {
                       {s.email}
                     </a>
                   </td>
-                  <td className="px-4 py-2 text-left">{s.cluster || "-"}</td>
+                  <td className="px-4 py-2 text-left">
+                    {s.course_name || "-"}
+                  </td>
                   <td className="px-4 py-2 text-left">{s.class_name || "-"}</td>
 
                   {/* Inline Team # edit */}
@@ -327,7 +337,7 @@ export default function StudentsAdminInner() {
           student={edit}
           onClose={() => setEdit(null)}
           onSaved={async () => {
-            await fetchRows(); // force reload zodat Cluster/Klas direct zichtbaar zijn
+            await fetchRows(); // reload zodat Vak/Course direct zichtbaar is
           }}
         />
       )}
@@ -555,7 +565,7 @@ function EditStudentModal({
   const [name, setName] = useState(student.name ?? "");
   const [email, setEmail] = useState(student.email ?? "");
   const [className, setClassName] = useState(student.class_name ?? "");
-  const [cluster, setCluster] = useState(student.cluster ?? "");
+  const [courseName, setCourseName] = useState(student.course_name ?? ""); // <— nieuw
   const [status, setStatus] = useState<"active" | "inactive">(
     student.status === "inactive" ? "inactive" : "active",
   );
@@ -571,11 +581,11 @@ function EditStudentModal({
         name,
         email,
         class_name: className,
-        cluster,
+        course_name: courseName.trim() || null, // <— stuur course_name mee
         status,
         team_number: teamNumber.trim() === "" ? null : Number(teamNumber),
       });
-      await onSaved(); // wacht op reload
+      await onSaved(); // reload
       onClose();
     } catch (e: any) {
       alert(e?.response?.data?.detail || e?.message || "Opslaan mislukt");
@@ -584,7 +594,7 @@ function EditStudentModal({
     }
   }, [
     className,
-    cluster,
+    courseName,
     email,
     name,
     onSaved,
@@ -617,10 +627,11 @@ function EditStudentModal({
             onChange={(e) => setEmail(e.target.value)}
           />
           <TextInput
-            label="Cluster"
-            value={cluster}
-            onChange={(e) => setCluster(e.target.value)}
+            label="Vak/Course"
+            value={courseName}
+            onChange={(e) => setCourseName(e.target.value)}
           />
+          {/* vervangt Cluster */}
           <TextInput
             label="Klas"
             value={className}
