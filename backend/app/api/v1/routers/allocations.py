@@ -325,17 +325,18 @@ def my_allocations(
     # 2a) Als er geen self-allocation bestaat, maak deze aan
     has_self_alloc = any(alloc.is_self for alloc, _ in rows)
     if not has_self_alloc:
-        # Ensure allocation has required field
+        # Get school_id for the new allocation to maintain multi-tenant isolation.
+        # Try user.school_id first, fallback to evaluation.school_id if needed.
         school_id = getattr(user, "school_id", None)
         if school_id is None:
-            # Fallback: get school_id from evaluation
             school_id = ev.school_id if hasattr(ev, "school_id") else None
         
         if school_id is not None:
             self_alloc = _ensure_allocation(
                 db, evaluation_id, user.id, user.id, is_self=True
             )
-            if hasattr(self_alloc, "school_id") and self_alloc.school_id is None:
+            # Set school_id if it wasn't set by _ensure_allocation
+            if self_alloc.school_id is None:
                 self_alloc.school_id = school_id
             db.commit()
             db.refresh(self_alloc)
