@@ -7,6 +7,7 @@ export type MyAllocation = {
   is_self: boolean;
   rubric_id: number;
   criterion_ids: number[];
+  completed?: boolean;
 };
 
 export type Criterion = {
