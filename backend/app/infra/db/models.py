@@ -87,17 +87,38 @@ class Course(Base):
 
 class Group(Base):
     __tablename__ = "groups"
+
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
-    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"))
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
 
-    course: Mapped["Course"] = relationship()
-    members: Mapped[list["GroupMember"]] = relationship(
-        back_populates="group", cascade="all,delete-orphan"
+    # Elke groep hoort bij één course/vak
+    course_id: Mapped[int] = mapped_column(
+        ForeignKey("courses.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
 
-    __table_args__ = (Index("ix_group_course", "course_id"),)
+    # Vrije groepsnaam (bijv. "Team 1", "GA2 - Team Alpha")
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+
+    # ✅ Teamnummer — zelfde type & stijl als in User
+    team_number: Mapped[Optional[int]] = mapped_column(
+        nullable=True,
+        index=True,
+    )
+
+    # Relaties
+    course: Mapped["Course"] = relationship()
+    members: Mapped[list["GroupMember"]] = relationship(
+        back_populates="group",
+        cascade="all,delete-orphan",
+    )
+
+    __table_args__ = (
+        # Indexen
+        Index("ix_group_course", "course_id"),
+        Index("ix_groups_course_team", "course_id", "team_number"),
+    )
 
 
 class GroupMember(Base):
