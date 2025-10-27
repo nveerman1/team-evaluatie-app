@@ -304,6 +304,8 @@ def my_allocations(
     """
     Alle allocations voor de ingelogde student (als reviewer) binnen deze evaluatie.
     Geeft per allocation een `completed`-vlag: True als alle criteria zijn gescoord.
+    
+    Als er nog geen self-allocation bestaat, wordt deze automatisch aangemaakt.
     """
     # 1) Evaluatie & rubric
     ev = _get_eval_or_404(db, evaluation_id)
@@ -319,6 +321,28 @@ def my_allocations(
         .order_by(Allocation.is_self.desc(), User.name.asc())
         .all()
     )
+    
+    # 2a) Als er geen self-allocation bestaat, maak deze aan
+    has_self_alloc = any(alloc.is_self for alloc, _ in rows)
+    if not has_self_alloc:
+        # Get school_id for the new allocation to maintain multi-tenant isolation.
+        # Try user.school_id first, fallback to evaluation.school_id if needed.
+        school_id = getattr(user, "school_id", None)
+        if school_id is None:
+            school_id = ev.school_id if hasattr(ev, "school_id") else None
+        
+        if school_id is not None:
+            self_alloc = _ensure_allocation(
+                db, evaluation_id, user.id, user.id, is_self=True
+            )
+            # Set school_id if it wasn't set by _ensure_allocation
+            if self_alloc.school_id is None:
+                self_alloc.school_id = school_id
+            db.commit()
+            db.refresh(self_alloc)
+            
+            # Add to rows
+            rows = [(self_alloc, user)] + rows
 
     # 3) Criteria van deze evaluatie (op basis van rubric)
     crit_ids: List[int] = [
