@@ -50,12 +50,12 @@ def _has_access_to_evaluation(db: Session, evaluation_id: int, user_id: int) -> 
     )
     if has_alloc:
         return True
-    
+
     # Check if user is in a group for the evaluation's course
     ev = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
     if not ev or not ev.course_id:
         return False
-    
+
     is_member = (
         db.query(GroupMember.id)
         .join(Group, Group.id == GroupMember.group_id)
@@ -67,7 +67,7 @@ def _has_access_to_evaluation(db: Session, evaluation_id: int, user_id: int) -> 
         .scalar()
         is not None
     )
-    
+
     return is_member
 
 
