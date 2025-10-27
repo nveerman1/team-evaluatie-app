@@ -10,7 +10,9 @@ from app.infra.db.models import (
     Evaluation,
     Reflection,
     Allocation,
-)  # <-- Allocation toegevoegd
+    Group,
+    GroupMember,
+)
 
 router = APIRouter(prefix="/evaluations", tags=["reflections"])
 
@@ -35,34 +37,34 @@ def _has_access_to_evaluation(db: Session, evaluation_id: int, user_id: int) -> 
     - User has an allocation for this evaluation (as reviewer), OR
     - User is a member of a group in the evaluation's course
     """
-    # Check for allocation
+    # Check for allocation using exists() for better performance
     has_alloc = (
-        db.query(Allocation)
+        db.query(Allocation.id)
         .filter(
             Allocation.evaluation_id == evaluation_id,
             Allocation.reviewer_id == user_id,
         )
-        .first()
+        .limit(1)
+        .scalar()
         is not None
     )
     if has_alloc:
         return True
     
     # Check if user is in a group for the evaluation's course
-    from app.infra.db.models import Group, GroupMember
-    
     ev = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
     if not ev or not ev.course_id:
         return False
     
     is_member = (
-        db.query(GroupMember)
+        db.query(GroupMember.id)
         .join(Group, Group.id == GroupMember.group_id)
         .filter(
             Group.course_id == ev.course_id,
             GroupMember.user_id == user_id,
         )
-        .first()
+        .limit(1)
+        .scalar()
         is not None
     )
     
