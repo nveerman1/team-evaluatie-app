@@ -34,6 +34,8 @@ export type StudentDashboard = {
   pendingReviews: number;
   pendingReflections: number;
   hasAnyEvaluations: boolean; // true if student has at least one evaluation (any status)
+  canReviewPeers: boolean; // false if student needs to complete self-assessment first
+  needsSelfAssessment: boolean; // true if student has not completed self-assessment yet
 };
 
 /**

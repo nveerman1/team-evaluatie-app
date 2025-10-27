@@ -42,6 +42,46 @@ src/
 └── lib/           # Core utilities (API client)
 ```
 
+## Error Handling
+
+### API Authentication Errors
+
+The application uses a custom `ApiAuthError` class (defined in `src/lib/api.ts`) to handle authentication and authorization errors (401/403) from the API. This allows the application to:
+
+1. **Distinguish between auth errors and other API errors** - Auth errors are thrown as `ApiAuthError` with a status code and friendly message
+2. **Handle business-case 403 responses gracefully** - Some 403 responses are expected business cases (e.g., "student has not completed self-assessment yet") and are handled without logging error stacks
+3. **Provide user-friendly error messages** - Auth errors include a `friendlyMessage` property that can be shown to users
+
+#### Example Usage
+
+In services (e.g., `student.service.ts`):
+```typescript
+try {
+  const data = await api.get('/some-endpoint');
+  return data;
+} catch (error) {
+  if (error instanceof ApiAuthError && error.status === 403) {
+    // Handle business case 403 (e.g., return empty data with flag)
+    return { data: [], needsSelfAssessment: true };
+  }
+  // Re-throw other errors (e.g., 401 for redirect to login)
+  throw error;
+}
+```
+
+In hooks (e.g., `useStudentDashboard.ts`):
+```typescript
+try {
+  const data = await studentService.getDashboard();
+  setDashboard(data);
+} catch (e) {
+  if (e instanceof ApiAuthError) {
+    setError(e.friendlyMessage);
+    // Optionally redirect to /login for 401
+  }
+}
+```
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

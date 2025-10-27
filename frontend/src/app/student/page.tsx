@@ -6,7 +6,7 @@ import { Loading, ErrorMessage } from "@/components";
 import Link from "next/link";
 
 export default function StudentDashboard() {
-  const { dashboard, loading, error } = useStudentDashboard();
+  const { dashboard, loading, error, needsSelfAssessment } = useStudentDashboard();
 
   if (loading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
@@ -23,6 +23,23 @@ export default function StudentDashboard() {
           Overzicht van jouw evaluaties en resultaten
         </p>
       </div>
+
+      {/* Self-Assessment Required Message */}
+      {needsSelfAssessment && (
+        <div className="p-6 border rounded-xl bg-amber-50 border-amber-200">
+          <div className="flex items-start gap-3">
+            <div className="text-amber-600 text-xl">⚠️</div>
+            <div>
+              <h3 className="text-lg font-semibold text-amber-900 mb-1">
+                Zelfbeoordeling Vereist
+              </h3>
+              <p className="text-amber-700">
+                Voltooi eerst je zelfbeoordeling voordat je peers kunt beoordelen.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Notifications / Summary Cards */}
       <div className="grid md:grid-cols-3 gap-4">

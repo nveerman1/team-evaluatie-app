@@ -1,4 +1,4 @@
-import api from "@/lib/api";
+import api, { ApiAuthError } from "@/lib/api";
 import {
   StudentEvaluation,
   StudentDashboard,
@@ -15,116 +15,148 @@ export const studentService = {
    * @param status - Optional status filter: "open", "closed", or undefined for all
    */
   async getMyEvaluations(status?: "open" | "closed"): Promise<StudentEvaluation[]> {
-    const params: { status?: string } = {};
-    if (status) {
-      params.status = status;
-    }
-    const { data } = await api.get<any[]>("/evaluations", { params });
-    
-    // For each evaluation, fetch allocations to calculate progress
-    const evaluations = await Promise.all(
-      data.map(async (evaluation) => {
-        try {
-          const allocsRes = await api.get<MyAllocation[]>("/allocations/my", {
-            params: { evaluation_id: evaluation.id },
-          });
-          const allocs = allocsRes.data || [];
-          
-          const selfAlloc = allocs.find((a) => a.is_self);
-          const peerAllocs = allocs.filter((a) => !a.is_self);
-          
-          const selfCompleted = selfAlloc?.completed ?? false;
-          const peersCompleted = peerAllocs.filter((a) => a.completed).length;
-          const peersTotal = peerAllocs.length;
-          
-          // Check reflection status
-          let reflectionCompleted = false;
+    try {
+      const params: { status?: string } = {};
+      if (status) {
+        params.status = status;
+      }
+      const { data } = await api.get<any[]>("/evaluations", { params });
+      
+      // For each evaluation, fetch allocations to calculate progress
+      const evaluations = await Promise.all(
+        data.map(async (evaluation) => {
           try {
-            const refRes = await api.get(
-              `/evaluations/${evaluation.id}/reflections/me`
-            );
-            reflectionCompleted = !!refRes.data?.submitted_at;
+            const allocsRes = await api.get<MyAllocation[]>("/allocations/my", {
+              params: { evaluation_id: evaluation.id },
+            });
+            const allocs = allocsRes.data || [];
+            
+            const selfAlloc = allocs.find((a) => a.is_self);
+            const peerAllocs = allocs.filter((a) => !a.is_self);
+            
+            const selfCompleted = selfAlloc?.completed ?? false;
+            const peersCompleted = peerAllocs.filter((a) => a.completed).length;
+            const peersTotal = peerAllocs.length;
+            
+            // Check reflection status
+            let reflectionCompleted = false;
+            try {
+              const refRes = await api.get(
+                `/evaluations/${evaluation.id}/reflections/me`
+              );
+              reflectionCompleted = !!refRes.data?.submitted_at;
+            } catch {
+              // No reflection yet
+            }
+            
+            // Calculate overall progress
+            const totalSteps = 4; // self, peers, overview, reflection
+            let completedSteps = 0;
+            if (selfCompleted) completedSteps++;
+            if (peersTotal === 0 || peersCompleted === peersTotal) completedSteps++;
+            completedSteps++; // overview is just a view, always "complete"
+            if (reflectionCompleted) completedSteps++;
+            
+            const progress = Math.round((completedSteps / totalSteps) * 100);
+            
+            // Determine next step
+            let nextStep = 1;
+            if (selfCompleted) {
+              if (peersCompleted < peersTotal) nextStep = 2;
+              else if (!reflectionCompleted) nextStep = 4;
+              else nextStep = 3; // all done, show overview
+            }
+            
+            return {
+              ...evaluation,
+              progress,
+              selfCompleted,
+              peersCompleted,
+              peersTotal,
+              reflectionCompleted,
+              canStartPeers: selfCompleted,
+              canSubmitReflection: selfCompleted && peersCompleted === peersTotal,
+              nextStep,
+            } as StudentEvaluation;
           } catch {
-            // No reflection yet
+            // If allocations fail, return basic evaluation
+            return {
+              ...evaluation,
+              progress: 0,
+              selfCompleted: false,
+              peersCompleted: 0,
+              peersTotal: 0,
+              reflectionCompleted: false,
+              canStartPeers: false,
+              canSubmitReflection: false,
+              nextStep: 1,
+            } as StudentEvaluation;
           }
-          
-          // Calculate overall progress
-          const totalSteps = 4; // self, peers, overview, reflection
-          let completedSteps = 0;
-          if (selfCompleted) completedSteps++;
-          if (peersTotal === 0 || peersCompleted === peersTotal) completedSteps++;
-          completedSteps++; // overview is just a view, always "complete"
-          if (reflectionCompleted) completedSteps++;
-          
-          const progress = Math.round((completedSteps / totalSteps) * 100);
-          
-          // Determine next step
-          let nextStep = 1;
-          if (selfCompleted) {
-            if (peersCompleted < peersTotal) nextStep = 2;
-            else if (!reflectionCompleted) nextStep = 4;
-            else nextStep = 3; // all done, show overview
-          }
-          
-          return {
-            ...evaluation,
-            progress,
-            selfCompleted,
-            peersCompleted,
-            peersTotal,
-            reflectionCompleted,
-            canStartPeers: selfCompleted,
-            canSubmitReflection: selfCompleted && peersCompleted === peersTotal,
-            nextStep,
-          } as StudentEvaluation;
-        } catch (error) {
-          // If allocations fail, return basic evaluation
-          return {
-            ...evaluation,
-            progress: 0,
-            selfCompleted: false,
-            peersCompleted: 0,
-            peersTotal: 0,
-            reflectionCompleted: false,
-            canStartPeers: false,
-            canSubmitReflection: false,
-            nextStep: 1,
-          } as StudentEvaluation;
-        }
-      })
-    );
-    
-    return evaluations;
+        })
+      );
+      
+      return evaluations;
+    } catch (error) {
+      // Handle ApiAuthError separately
+      if (error instanceof ApiAuthError) {
+        // For 403, this could be a business case (e.g., no self-assessment yet)
+        // We'll let the caller (getDashboard) handle this appropriately
+        throw error;
+      }
+      // Re-throw other errors
+      throw error;
+    }
   },
 
   /**
    * Get dashboard summary for student
    */
   async getDashboard(): Promise<StudentDashboard> {
-    // Fetch all evaluations to check if student has any
-    const allEvaluations = await this.getMyEvaluations();
-    const openEvaluations = allEvaluations.filter((e) => e.status === "open");
-    
-    const completedEvaluations = allEvaluations.filter(
-      (e) => e.progress === 100
-    ).length;
-    
-    const pendingReviews = openEvaluations.reduce(
-      (sum, e) => sum + (e.peersTotal - e.peersCompleted),
-      0
-    );
-    
-    const pendingReflections = openEvaluations.filter(
-      (e) => !e.reflectionCompleted && e.canSubmitReflection
-    ).length;
-    
-    return {
-      openEvaluations,
-      completedEvaluations,
-      pendingReviews,
-      pendingReflections,
-      hasAnyEvaluations: allEvaluations.length > 0,
-    };
+    try {
+      // Fetch all evaluations to check if student has any
+      const allEvaluations = await this.getMyEvaluations();
+      const openEvaluations = allEvaluations.filter((e) => e.status === "open");
+      
+      const completedEvaluations = allEvaluations.filter(
+        (e) => e.progress === 100
+      ).length;
+      
+      const pendingReviews = openEvaluations.reduce(
+        (sum, e) => sum + (e.peersTotal - e.peersCompleted),
+        0
+      );
+      
+      const pendingReflections = openEvaluations.filter(
+        (e) => !e.reflectionCompleted && e.canSubmitReflection
+      ).length;
+      
+      return {
+        openEvaluations,
+        completedEvaluations,
+        pendingReviews,
+        pendingReflections,
+        hasAnyEvaluations: allEvaluations.length > 0,
+        canReviewPeers: true,
+        needsSelfAssessment: false,
+      };
+    } catch (error) {
+      // Handle ApiAuthError for business cases
+      if (error instanceof ApiAuthError && error.status === 403) {
+        // Business case: student needs to complete self-assessment first
+        // Return a dashboard indicating they need to complete self-assessment
+        return {
+          openEvaluations: [],
+          completedEvaluations: 0,
+          pendingReviews: 0,
+          pendingReflections: 0,
+          hasAnyEvaluations: false,
+          canReviewPeers: false,
+          needsSelfAssessment: true,
+        };
+      }
+      // Re-throw auth errors (401) or other errors for higher-level handling
+      throw error;
+    }
   },
 
   /**
@@ -187,12 +219,9 @@ export const studentService = {
       if (error?.response?.status === 404) {
         return { text: "", submitted_at: undefined };
       }
-      // For 401/403, show friendly auth message
-      if (error?.response?.status === 401 || error?.response?.status === 403) {
-        throw new Error(
-          error?.response?.data?.friendlyMessage || 
-          "Geen toegang of sessie verlopen. Log opnieuw in."
-        );
+      // For ApiAuthError, throw with friendly message
+      if (error instanceof ApiAuthError) {
+        throw error;
       }
       // Re-throw other errors
       throw error;
@@ -256,7 +285,7 @@ export const studentService = {
           : undefined,
         criteria_summary: [], // Will be calculated from feedback if needed
       };
-    } catch (error) {
+    } catch {
       return null;
     }
   },
