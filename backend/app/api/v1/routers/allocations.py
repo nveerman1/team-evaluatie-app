@@ -33,6 +33,47 @@ def _get_eval_or_404(db: Session, evaluation_id: int) -> Evaluation:
     return ev
 
 
+def _has_access_to_evaluation(db: Session, evaluation_id: int, user_id: int) -> bool:
+    """
+    Check if user has access to evaluation.
+    Returns True if:
+    - User has an allocation for this evaluation (as reviewer), OR
+    - User is a member of a group in the evaluation's course
+    """
+    # Check for allocation using exists() for better performance
+    has_alloc = (
+        db.query(Allocation.id)
+        .filter(
+            Allocation.evaluation_id == evaluation_id,
+            Allocation.reviewer_id == user_id,
+        )
+        .limit(1)
+        .scalar()
+        is not None
+    )
+    if has_alloc:
+        return True
+
+    # Check if user is in a group for the evaluation's course
+    ev = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
+    if not ev or not ev.course_id:
+        return False
+
+    is_member = (
+        db.query(GroupMember.id)
+        .join(Group, Group.id == GroupMember.group_id)
+        .filter(
+            Group.course_id == ev.course_id,
+            GroupMember.user_id == user_id,
+        )
+        .limit(1)
+        .scalar()
+        is not None
+    )
+
+    return is_member
+
+
 def _ensure_allocation(
     db: Session,
     evaluation_id: int,
@@ -304,7 +345,7 @@ def my_allocations(
     """
     Alle allocations voor de ingelogde student (als reviewer) binnen deze evaluatie.
     Geeft per allocation een `completed`-vlag: True als alle criteria zijn gescoord.
-    
+
     Als er nog geen self-allocation bestaat, wordt deze automatisch aangemaakt.
     """
     # 1) Evaluatie & rubric
@@ -321,16 +362,23 @@ def my_allocations(
         .order_by(Allocation.is_self.desc(), User.name.asc())
         .all()
     )
-    
+
     # 2a) Als er geen self-allocation bestaat, maak deze aan
+    # maar alleen als de gebruiker toegang heeft tot deze evaluatie
     has_self_alloc = any(alloc.is_self for alloc, _ in rows)
     if not has_self_alloc:
+        # Verify user has access to this evaluation before creating self-allocation
+        if not _has_access_to_evaluation(db, evaluation_id, user.id):
+            # User is not part of this evaluation, return empty list
+            # instead of creating unauthorized allocation
+            return []
+
         # Get school_id for the new allocation to maintain multi-tenant isolation.
         # Try user.school_id first, fallback to evaluation.school_id if needed.
         school_id = getattr(user, "school_id", None)
         if school_id is None:
             school_id = ev.school_id if hasattr(ev, "school_id") else None
-        
+
         if school_id is not None:
             self_alloc = _ensure_allocation(
                 db, evaluation_id, user.id, user.id, is_self=True
@@ -340,7 +388,7 @@ def my_allocations(
                 self_alloc.school_id = school_id
             db.commit()
             db.refresh(self_alloc)
-            
+
             # Add to rows
             rows = [(self_alloc, user)] + rows
 
