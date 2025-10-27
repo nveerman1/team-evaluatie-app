@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Criterion, ScoreItem } from "@/dtos";
+import { studentService } from "@/services";
 
 type SelfEvaluationStepProps = {
   allocationId: number;
@@ -34,6 +35,29 @@ export function SelfEvaluationStep({
     return init;
   });
 
+  const [loading, setLoading] = useState(false);
+
+  // Load existing scores when component mounts
+  useEffect(() => {
+    setLoading(true);
+    studentService
+      .getScores(allocationId)
+      .then((scores) => {
+        const mapV: Record<number, number> = {};
+        const mapC: Record<number, string> = {};
+        scores.forEach((item) => {
+          mapV[item.criterion_id] = item.score;
+          if (item.comment) mapC[item.criterion_id] = item.comment;
+        });
+        setValues((s) => ({ ...s, ...mapV }));
+        setComments((s) => ({ ...s, ...mapC }));
+      })
+      .catch(() => {
+        // No existing scores, use defaults
+      })
+      .finally(() => setLoading(false));
+  }, [allocationId]);
+
   const handleSubmit = async () => {
     const items: ScoreItem[] = criteria.map((c) => ({
       criterion_id: c.id,
@@ -56,53 +80,57 @@ export function SelfEvaluationStep({
         </p>
       </div>
 
-      <div className="space-y-4">
-        {criteria.map((criterion) => (
-          <div
-            key={criterion.id}
-            className="p-4 border rounded-lg bg-white space-y-3"
-          >
-            <div className="flex items-center justify-between">
-              <h4 className="font-medium">{criterion.name}</h4>
-              <span className="text-lg font-semibold text-gray-700">
-                {values[criterion.id] ?? 3}
-              </span>
+      {loading ? (
+        <div className="text-center py-4 text-gray-500">Laden...</div>
+      ) : (
+        <div className="space-y-4">
+          {criteria.map((criterion) => (
+            <div
+              key={criterion.id}
+              className="p-4 border rounded-lg bg-white space-y-3"
+            >
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium">{criterion.name}</h4>
+                <span className="text-lg font-semibold text-gray-700">
+                  {values[criterion.id] ?? 3}
+                </span>
+              </div>
+
+              <input
+                type="range"
+                min={1}
+                max={5}
+                value={values[criterion.id] ?? 3}
+                onChange={(e) =>
+                  setValues((s) => ({ ...s, [criterion.id]: Number(e.target.value) }))
+                }
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"
+              />
+
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>1 - Zwak</span>
+                <span>3 - Voldoende</span>
+                <span>5 - Uitstekend</span>
+              </div>
+
+              <textarea
+                className="w-full border rounded-lg p-2 text-sm"
+                placeholder="Optionele toelichting..."
+                value={comments[criterion.id] || ""}
+                onChange={(e) =>
+                  setComments((s) => ({ ...s, [criterion.id]: e.target.value }))
+                }
+                rows={2}
+              />
             </div>
-
-            <input
-              type="range"
-              min={1}
-              max={5}
-              value={values[criterion.id] ?? 3}
-              onChange={(e) =>
-                setValues((s) => ({ ...s, [criterion.id]: Number(e.target.value) }))
-              }
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"
-            />
-
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>1 - Zwak</span>
-              <span>3 - Voldoende</span>
-              <span>5 - Uitstekend</span>
-            </div>
-
-            <textarea
-              className="w-full border rounded-lg p-2 text-sm"
-              placeholder="Optionele toelichting..."
-              value={comments[criterion.id] || ""}
-              onChange={(e) =>
-                setComments((s) => ({ ...s, [criterion.id]: e.target.value }))
-              }
-              rows={2}
-            />
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       <div className="flex justify-end gap-3">
         <button
           onClick={handleSubmit}
-          disabled={!allScored || sending}
+          disabled={!allScored || sending || loading}
           className="px-6 py-3 rounded-xl bg-black text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-800 transition-colors"
         >
           {sending ? "Bezig..." : "Opslaan & Volgende"}

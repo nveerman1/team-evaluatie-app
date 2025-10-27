@@ -154,7 +154,6 @@ def get_my_scores(
         db.query(Score)
         .filter(
             Score.allocation_id == allocation_id,
-            Score.reviewer_id == user.id,
         )
         .all()
     )
