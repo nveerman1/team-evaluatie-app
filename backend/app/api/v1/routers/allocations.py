@@ -336,7 +336,7 @@ def my_allocations(
                 db, evaluation_id, user.id, user.id, is_self=True
             )
             # Set school_id if it wasn't set by _ensure_allocation
-            if hasattr(self_alloc, "school_id") and self_alloc.school_id is None:
+            if self_alloc.school_id is None:
                 self_alloc.school_id = school_id
             db.commit()
             db.refresh(self_alloc)
