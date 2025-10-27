@@ -33,8 +33,19 @@ export function PeerReviewStep({
       </div>
 
       {peerAllocations.length === 0 && (
-        <div className="text-center p-8 text-gray-500">
-          Geen peers toegewezen.
+        <div className="text-center py-8">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
+            <h3 className="text-lg font-medium text-yellow-900 mb-2">
+              Geen teamgenoten toegewezen
+            </h3>
+            <p className="text-sm text-yellow-800 mb-2">
+              Er zijn nog geen peer-reviews voor je klaargezet.
+            </p>
+            <p className="text-sm text-yellow-700">
+              Neem contact op met je docent als je denkt dat dit niet klopt, of
+              wacht tot de peer-reviews zijn ingesteld.
+            </p>
+          </div>
         </div>
       )}
 
