@@ -13,16 +13,13 @@ export function useStudentDashboard() {
   const [dashboard, setDashboard] = useState<StudentDashboard | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [needsSelfAssessment, setNeedsSelfAssessment] = useState<boolean>(false);
 
   const refresh = async () => {
     setLoading(true);
     setError(null);
-    setNeedsSelfAssessment(false);
     try {
       const data = await studentService.getDashboard();
       setDashboard(data);
-      setNeedsSelfAssessment(data.needsSelfAssessment);
     } catch (e: any) {
       // Handle ApiAuthError with friendly message
       if (e instanceof ApiAuthError) {
@@ -45,5 +42,5 @@ export function useStudentDashboard() {
     refresh();
   }, []);
 
-  return { dashboard, loading, error, needsSelfAssessment, refresh };
+  return { dashboard, loading, error, refresh };
 }

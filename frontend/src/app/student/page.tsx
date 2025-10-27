@@ -6,7 +6,7 @@ import { Loading, ErrorMessage } from "@/components";
 import Link from "next/link";
 
 export default function StudentDashboard() {
-  const { dashboard, loading, error, needsSelfAssessment } = useStudentDashboard();
+  const { dashboard, loading, error } = useStudentDashboard();
 
   if (loading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
@@ -25,7 +25,7 @@ export default function StudentDashboard() {
       </div>
 
       {/* Self-Assessment Required Message */}
-      {needsSelfAssessment && (
+      {dashboard.needsSelfAssessment && (
         <div className="p-6 border rounded-xl bg-amber-50 border-amber-200">
           <div className="flex items-start gap-3">
             <div className="text-amber-600 text-xl">⚠️</div>
