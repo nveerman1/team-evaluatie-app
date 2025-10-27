@@ -28,29 +28,58 @@ class ReflectionOut(BaseModel):
     submitted_at: Optional[datetime]
 
 
-def _has_allocation(db: Session, evaluation_id: int, user_id: int) -> bool:
-    return (
+def _has_access_to_evaluation(db: Session, evaluation_id: int, user_id: int) -> bool:
+    """
+    Check if user has access to evaluation.
+    Returns True if:
+    - User has an allocation for this evaluation (as reviewer), OR
+    - User is a member of a group in the evaluation's course
+    """
+    # Check for allocation
+    has_alloc = (
         db.query(Allocation)
         .filter(
             Allocation.evaluation_id == evaluation_id,
-            Allocation.reviewer_id
-            == user_id,  # of reviewee_id als dat in jouw model hoort
+            Allocation.reviewer_id == user_id,
         )
         .first()
         is not None
     )
+    if has_alloc:
+        return True
+    
+    # Check if user is in a group for the evaluation's course
+    from app.infra.db.models import Group, GroupMember
+    
+    ev = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
+    if not ev or not ev.course_id:
+        return False
+    
+    is_member = (
+        db.query(GroupMember)
+        .join(Group, Group.id == GroupMember.group_id)
+        .filter(
+            Group.course_id == ev.course_id,
+            GroupMember.user_id == user_id,
+        )
+        .first()
+        is not None
+    )
+    
+    return is_member
 
 
 @router.get("/{evaluation_id}/reflections/me", response_model=ReflectionOut)
 def get_my_reflection(
     evaluation_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)
 ):
-    # Authorisatie via allocation i.p.v. school_id
-    if not _has_allocation(db, evaluation_id, user.id):
-        # fallback: bestaat de evaluatie überhaupt?
+    # Check if user has access to this evaluation
+    if not _has_access_to_evaluation(db, evaluation_id, user.id):
+        # Check if evaluation exists
         ev = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
         if not ev:
             raise HTTPException(status_code=404, detail="Evaluation not found")
+        # User is authenticated but doesn't have access to this evaluation
         raise HTTPException(status_code=403, detail="No access to this evaluation")
 
     ref = (
@@ -95,7 +124,7 @@ def upsert_my_reflection(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    if not _has_allocation(db, evaluation_id, user.id):
+    if not _has_access_to_evaluation(db, evaluation_id, user.id):
         ev = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
         if not ev:
             raise HTTPException(status_code=404, detail="Evaluation not found")
@@ -114,6 +143,7 @@ def upsert_my_reflection(
 
     if ref is None:
         ref = Reflection(
+            school_id=user.school_id,
             evaluation_id=evaluation_id,
             user_id=user.id,
             text=text,
