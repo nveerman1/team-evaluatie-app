@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { MyAllocation, Criterion, ScoreItem } from "@/dtos";
 import { studentService } from "@/services";
+import { RubricRating } from "./RubricRating";
 
 type PeerReviewStepProps = {
   peerAllocations: MyAllocation[];
@@ -167,46 +168,20 @@ function PeerPanel({
           {loading ? (
             <div className="text-center py-4 text-gray-500">Laden...</div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {criteria.map((criterion) => (
-                <div
+                <RubricRating
                   key={criterion.id}
-                  className="p-3 bg-white border rounded-lg space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-sm">{criterion.name}</span>
-                    <span className="text-lg font-semibold text-gray-700">
-                      {values[criterion.id] ?? 3}
-                    </span>
-                  </div>
-
-                  <input
-                    type="range"
-                    min={1}
-                    max={5}
-                    value={values[criterion.id] ?? 3}
-                    onChange={(e) =>
-                      setValues((s) => ({
-                        ...s,
-                        [criterion.id]: Number(e.target.value),
-                      }))
-                    }
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"
-                  />
-
-                  <textarea
-                    className="w-full border rounded-lg p-2 text-sm"
-                    placeholder="Optionele opmerking..."
-                    value={comments[criterion.id] || ""}
-                    onChange={(e) =>
-                      setComments((s) => ({
-                        ...s,
-                        [criterion.id]: e.target.value,
-                      }))
-                    }
-                    rows={2}
-                  />
-                </div>
+                  criterion={criterion}
+                  value={values[criterion.id] ?? 3}
+                  comment={comments[criterion.id] || ""}
+                  onChange={(newValue) =>
+                    setValues((s) => ({ ...s, [criterion.id]: newValue }))
+                  }
+                  onCommentChange={(newComment) =>
+                    setComments((s) => ({ ...s, [criterion.id]: newComment }))
+                  }
+                />
               ))}
 
               <div className="flex justify-end pt-2">

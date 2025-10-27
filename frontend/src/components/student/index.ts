@@ -4,3 +4,4 @@ export * from "./SelfEvaluationStep";
 export * from "./PeerReviewStep";
 export * from "./ReflectionStep";
 export * from "./ResultsView";
+export * from "./RubricRating";
