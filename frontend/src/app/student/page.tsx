@@ -95,7 +95,7 @@ export default function StudentDashboard() {
       </section>
 
       {/* Results Section */}
-      {dashboard.completedEvaluations > 0 && (
+      {dashboard.hasAnyEvaluations && (
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-semibold">Resultaten</h2>
@@ -108,11 +108,19 @@ export default function StudentDashboard() {
           </div>
 
           <div className="p-6 border rounded-xl bg-gray-50">
-            <p className="text-gray-600">
-              Je hebt {dashboard.completedEvaluations} voltooide evaluatie
-              {dashboard.completedEvaluations !== 1 ? "s" : ""}. Klik op "Bekijk
-              alle resultaten" om je cijfers en feedback te zien.
-            </p>
+            {dashboard.completedEvaluations > 0 ? (
+              <p className="text-gray-600">
+                Je hebt {dashboard.completedEvaluations} voltooide evaluatie
+                {dashboard.completedEvaluations !== 1 ? "s" : ""}. Klik op "Bekijk
+                alle resultaten" om je cijfers en feedback te zien.
+              </p>
+            ) : (
+              <p className="text-gray-600">
+                Je hebt evaluaties toegewezen, maar er zijn nog geen voltooide
+                resultaten beschikbaar. Resultaten worden zichtbaar zodra evaluaties
+                zijn afgesloten.
+              </p>
+            )}
           </div>
         </section>
       )}

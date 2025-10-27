@@ -24,7 +24,23 @@ instance.interceptors.request.use((config) => {
 instance.interceptors.response.use(
   (res) => res,
   (err) => {
-    console.error("[API NETWORK ERROR]", err?.message || err);
+    const status = err?.response?.status;
+    
+    if (status === 401 || status === 403) {
+      const friendlyMessage = "Geen toegang of sessie verlopen. Log opnieuw in.";
+      console.error(`[API AUTH ERROR ${status}]`, friendlyMessage);
+      
+      // Enhance error with friendly message
+      if (err.response) {
+        err.response.data = {
+          ...err.response.data,
+          friendlyMessage,
+        };
+      }
+    } else {
+      console.error("[API NETWORK ERROR]", err?.message || err);
+    }
+    
     return Promise.reject(err);
   },
 );

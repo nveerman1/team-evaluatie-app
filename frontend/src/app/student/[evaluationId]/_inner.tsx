@@ -210,8 +210,27 @@ export default function StudentWizardInner() {
               Stap 1: Zelfbeoordeling
             </h2>
             {!selfAlloc && (
-              <div className="text-center py-8 text-gray-500">
-                Geen zelfbeoordeling toegewezen.
+              <div className="text-center py-8">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
+                  <p className="text-yellow-800 mb-4">
+                    Je zelfbeoordeling wordt klaargezet. Probeer het zo opnieuw.
+                  </p>
+                  <button
+                    onClick={() => {
+                      if (evaluationIdNum) {
+                        setLoadingAlloc(true);
+                        studentService
+                          .getAllocations(evaluationIdNum)
+                          .then((data) => setAllocs(data))
+                          .catch((e) => setError(e?.message || "Laden mislukt"))
+                          .finally(() => setLoadingAlloc(false));
+                      }
+                    }}
+                    className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                  >
+                    Opnieuw proberen
+                  </button>
+                </div>
               </div>
             )}
             {selfAlloc && selfCriteria.length > 0 && (

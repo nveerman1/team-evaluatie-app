@@ -33,6 +33,7 @@ export type StudentDashboard = {
   completedEvaluations: number;
   pendingReviews: number;
   pendingReflections: number;
+  hasAnyEvaluations: boolean; // true if student has at least one evaluation (any status)
 };
 
 /**

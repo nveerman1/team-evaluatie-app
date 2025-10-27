@@ -12,11 +12,14 @@ import {
 export const studentService = {
   /**
    * Get all evaluations allocated to the current student
+   * @param status - Optional status filter: "open", "closed", or undefined for all
    */
-  async getMyEvaluations(): Promise<StudentEvaluation[]> {
-    const { data } = await api.get<any[]>("/evaluations", {
-      params: { status: "open" },
-    });
+  async getMyEvaluations(status?: "open" | "closed"): Promise<StudentEvaluation[]> {
+    const params: { status?: string } = {};
+    if (status) {
+      params.status = status;
+    }
+    const { data } = await api.get<any[]>("/evaluations", { params });
     
     // For each evaluation, fetch allocations to calculate progress
     const evaluations = await Promise.all(
@@ -98,10 +101,11 @@ export const studentService = {
    * Get dashboard summary for student
    */
   async getDashboard(): Promise<StudentDashboard> {
-    const evaluations = await this.getMyEvaluations();
+    // Fetch all evaluations to check if student has any
+    const allEvaluations = await this.getMyEvaluations();
+    const openEvaluations = allEvaluations.filter((e) => e.status === "open");
     
-    const openEvaluations = evaluations.filter((e) => e.status === "open");
-    const completedEvaluations = evaluations.filter(
+    const completedEvaluations = allEvaluations.filter(
       (e) => e.progress === 100
     ).length;
     
@@ -119,6 +123,7 @@ export const studentService = {
       completedEvaluations,
       pendingReviews,
       pendingReflections,
+      hasAnyEvaluations: allEvaluations.length > 0,
     };
   },
 
@@ -177,8 +182,20 @@ export const studentService = {
         `/evaluations/${evaluationId}/reflections/me`
       );
       return data;
-    } catch {
-      return null;
+    } catch (error: any) {
+      // Handle 404 as empty reflection (not created yet)
+      if (error?.response?.status === 404) {
+        return { text: "", submitted_at: undefined };
+      }
+      // For 401/403, show friendly auth message
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        throw new Error(
+          error?.response?.data?.friendlyMessage || 
+          "Geen toegang of sessie verlopen. Log opnieuw in."
+        );
+      }
+      // Re-throw other errors
+      throw error;
     }
   },
 
@@ -248,6 +265,7 @@ export const studentService = {
    * Get all results for the student (all evaluations)
    */
   async getAllResults(userId: number): Promise<StudentResult[]> {
+    // Fetch all evaluations (not just open ones) to get closed evaluations with results
     const evaluations = await this.getMyEvaluations();
     const results: StudentResult[] = [];
     

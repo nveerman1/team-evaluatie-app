@@ -12,7 +12,10 @@ export function WizardProgress({
   onStepClick,
 }: WizardProgressProps) {
   return (
-    <div className="flex items-center justify-center gap-2">
+    <nav 
+      className="flex items-center justify-center gap-2"
+      aria-label="Wizard voortgang"
+    >
       {steps.map((step, index) => (
         <div key={step.number} className="flex items-center">
           <button
@@ -27,22 +30,25 @@ export function WizardProgress({
                     : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
               }
             `}
-            title={step.label}
+            aria-label={`${step.label} - Stap ${step.number} van ${steps.length}${step.completed ? " (voltooid)" : ""}${currentStep === step.number ? " (actief)" : ""}`}
+            aria-current={currentStep === step.number ? "step" : undefined}
           >
             <span className="flex items-center gap-2">
               {step.completed && currentStep !== step.number && (
-                <span className="text-green-600">✓</span>
+                <span className="text-green-600" aria-hidden="true">✓</span>
               )}
-              <span className="hidden sm:inline">{step.label}</span>
-              <span className="sm:hidden">Stap {step.number}</span>
+              <span className="font-medium">{step.label}</span>
             </span>
           </button>
           
           {index < steps.length - 1 && (
-            <div className="w-8 h-0.5 bg-gray-300 mx-1" />
+            <div 
+              className="w-8 h-0.5 bg-gray-300 mx-1" 
+              aria-hidden="true"
+            />
           )}
         </div>
       ))}
-    </div>
+    </nav>
   );
 }
