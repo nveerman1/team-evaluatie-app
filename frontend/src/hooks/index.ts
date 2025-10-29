@@ -7,3 +7,4 @@ export * from "./useAdminStudents";
 export * from "./useStudentDashboard";
 export * from "./useStudentEvaluations";
 export * from "./useStudentResults";
+export * from "./useStudentProjectAssessments";
