@@ -3,6 +3,8 @@ import {
   DashboardResponse,
   FlagsResponse,
   GradePreviewResponse,
+  StudentProgressResponse,
+  StudentProgressKPIs,
 } from "@/dtos/dashboard.dto";
 
 export const dashboardService = {
@@ -52,5 +54,63 @@ export const dashboardService = {
       }
       throw e;
     }
+  },
+
+  /**
+   * Get student progress for an evaluation
+   */
+  async getStudentProgress(
+    evaluationId: number,
+  ): Promise<StudentProgressResponse> {
+    const response = await api.get<StudentProgressResponse>(
+      `/dashboard/evaluation/${evaluationId}/progress`,
+    );
+    return response.data;
+  },
+
+  /**
+   * Get KPIs for an evaluation
+   */
+  async getKPIs(evaluationId: number): Promise<StudentProgressKPIs> {
+    const response = await api.get<StudentProgressKPIs>(
+      `/dashboard/evaluation/${evaluationId}/kpis`,
+    );
+    return response.data;
+  },
+
+  /**
+   * Export student progress as CSV
+   */
+  async exportProgressCSV(evaluationId: number): Promise<Blob> {
+    const response = await api.get(
+      `/dashboard/evaluation/${evaluationId}/progress/export.csv`,
+      {
+        responseType: "blob",
+      },
+    );
+    return response.data;
+  },
+
+  /**
+   * Send reminder emails to students with incomplete tasks
+   */
+  async sendReminders(
+    evaluationId: number,
+  ): Promise<{
+    evaluation_id: number;
+    reminders_sent: number;
+    students: Array<{
+      user_id: number;
+      user_name: string;
+      email: string;
+      tasks_incomplete: string[];
+      progress_percent: number;
+    }>;
+    message: string;
+  }> {
+    const response = await api.post(
+      `/dashboard/evaluation/${evaluationId}/send-reminders`,
+    );
+    return response.data;
   },
 };

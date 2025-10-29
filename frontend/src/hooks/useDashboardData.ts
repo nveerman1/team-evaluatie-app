@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { errorMsg } from "@/lib/errors";
 import { dashboardService } from "@/services/dashboard.service";
+import {
+  StudentProgressResponse,
+  StudentProgressKPIs,
+} from "@/dtos/dashboard.dto";
 
 /** Shapes afgeleid van jouw routers (dashboard.py, flags.py, grades.py) */
 type CriterionBreakdown = {
@@ -80,11 +84,13 @@ type DashboardState = {
   /** Array i.p.v. full response, zodat page.tsx gewoon flags.map(...) kan doen */
   flags: FlagRow[];
   preview: GradePreviewResponse | null;
+  studentProgress: StudentProgressResponse | null;
 
   kpis: {
     students_total: number;
     reviewers_total: number;
     selfreviews_present: number;
+    reflections_count: number;
   };
 
   refresh: () => void;
@@ -94,6 +100,9 @@ export function useDashboardData(evaluationId?: number): DashboardState {
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
   const [flagsArr, setFlagsArr] = useState<FlagRow[]>([]);
   const [preview, setPreview] = useState<GradePreviewResponse | null>(null);
+  const [studentProgress, setStudentProgress] =
+    useState<StudentProgressResponse | null>(null);
+  const [kpisData, setKpisData] = useState<StudentProgressKPIs | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [err, setErr] = useState<string | null>(null);
 
@@ -101,20 +110,26 @@ export function useDashboardData(evaluationId?: number): DashboardState {
     setLoading(true);
     setErr(null);
     try {
-      const [dash, flagsRes, prv] = await Promise.all([
+      const [dash, flagsRes, prv, progress, kpis] = await Promise.all([
         dashboardService.getDashboard(id, true), // include_breakdown=true
         dashboardService.getFlags(id),
         dashboardService.getGradePreview(id),
+        dashboardService.getStudentProgress(id),
+        dashboardService.getKPIs(id),
       ]);
 
       setDashboard(dash as DashboardResponse);
       setFlagsArr(((flagsRes as FlagsResponse)?.items ?? []) as FlagRow[]);
       setPreview(prv as GradePreviewResponse);
+      setStudentProgress(progress);
+      setKpisData(kpis);
     } catch (e) {
       setErr(errorMsg(e, "Ophalen van dashboarddata mislukte"));
       setDashboard(null);
       setFlagsArr([]);
       setPreview(null);
+      setStudentProgress(null);
+      setKpisData(null);
     } finally {
       setLoading(false);
     }
@@ -127,12 +142,23 @@ export function useDashboardData(evaluationId?: number): DashboardState {
       setDashboard(null);
       setFlagsArr([]);
       setPreview(null);
+      setStudentProgress(null);
+      setKpisData(null);
       return;
     }
     void fetchAll(evaluationId);
   }, [evaluationId, fetchAll]);
 
   const kpis = useMemo(() => {
+    if (kpisData) {
+      return {
+        students_total: kpisData.total_students,
+        reviewers_total: kpisData.peer_reviews_total,
+        selfreviews_present: kpisData.self_reviews_completed,
+        reflections_count: kpisData.reflections_completed,
+      };
+    }
+    // Fallback to old calculation if KPIs not available
     const rows = dashboard?.items ?? [];
     const students_total = rows.length;
     const reviewers_total = rows.reduce(
@@ -144,8 +170,14 @@ export function useDashboardData(evaluationId?: number): DashboardState {
       (acc, r) => acc + (r.self_avg_overall != null ? 1 : 0),
       0,
     );
-    return { students_total, reviewers_total, selfreviews_present };
-  }, [dashboard]);
+    const reflections_count = 0;
+    return {
+      students_total,
+      reviewers_total,
+      selfreviews_present,
+      reflections_count,
+    };
+  }, [dashboard, kpisData]);
 
   const refresh = useCallback(() => {
     if (evaluationId) void fetchAll(evaluationId);
@@ -157,6 +189,7 @@ export function useDashboardData(evaluationId?: number): DashboardState {
     dashboard,
     flags: flagsArr, // ← array
     preview,
+    studentProgress,
     kpis,
     refresh,
   };

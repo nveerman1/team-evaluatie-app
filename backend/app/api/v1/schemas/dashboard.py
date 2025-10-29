@@ -1,6 +1,7 @@
 from __future__ import annotations
 from pydantic import BaseModel
 from typing import List, Optional
+from datetime import datetime
 
 
 class CriterionMeta(BaseModel):
@@ -35,3 +36,34 @@ class DashboardResponse(BaseModel):
     rubric_scale_max: int
     criteria: List[CriterionMeta]
     items: List[DashboardRow]
+
+
+class StudentProgressRow(BaseModel):
+    user_id: int
+    user_name: str
+    class_name: Optional[str] = None
+    team_number: Optional[int] = None
+    self_assessment_status: str  # "completed", "partial", "not_started"
+    peer_reviews_given: int
+    peer_reviews_received: int
+    peer_reviews_expected: int
+    reflection_status: str  # "completed", "not_started"
+    reflection_word_count: Optional[int] = None
+    total_progress_percent: float
+    last_activity: Optional[datetime] = None
+    flags: List[str] = []
+
+
+class StudentProgressResponse(BaseModel):
+    evaluation_id: int
+    total_students: int
+    items: List[StudentProgressRow]
+
+
+class StudentProgressKPIs(BaseModel):
+    evaluation_id: int
+    total_students: int
+    self_reviews_completed: int
+    peer_reviews_total: int
+    reflections_completed: int
+
