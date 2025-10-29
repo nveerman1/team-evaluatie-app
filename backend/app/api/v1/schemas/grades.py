@@ -33,7 +33,7 @@ class GradePreviewItem(BaseModel):
     avg_score: float
     gcf: float
     spr: float
-    suggested_grade: float  # 1–10
+    suggested_grade: Optional[float] = None  # 1–10 or None if no evaluations
     team_number: Optional[int] = None
     class_name: Optional[str] = None
 
