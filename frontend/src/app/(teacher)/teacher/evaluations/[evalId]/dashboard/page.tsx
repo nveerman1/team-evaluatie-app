@@ -5,6 +5,7 @@ import { useNumericEvalId } from "@/utils";
 import { useDashboardData } from "@/hooks";
 import { Tile, Loading, ErrorMessage } from "@/components";
 import { useState, useMemo } from "react";
+import { dashboardService } from "@/services/dashboard.service";
 
 function getStatusIcon(status: string): string {
   switch (status) {
@@ -137,6 +138,24 @@ export default function EvaluationDashboardPage() {
     }
   };
 
+  const handleExportCSV = async () => {
+    if (!evalIdNum) return;
+    try {
+      const blob = await dashboardService.exportProgressCSV(evalIdNum);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `evaluation_${evalIdNum}_progress.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (e) {
+      console.error("Export failed:", e);
+      alert("Export mislukte. Probeer het opnieuw.");
+    }
+  };
+
   return (
     <main className="max-w-6xl mx-auto p-6 space-y-6">
       <header className="flex items-center justify-between">
@@ -207,6 +226,12 @@ export default function EvaluationDashboardPage() {
               <h2 className="text-lg font-semibold">
                 Voortgang per leerling
               </h2>
+              <button
+                onClick={handleExportCSV}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
+              >
+                📥 Export naar CSV
+              </button>
             </div>
 
             {/* Filters */}

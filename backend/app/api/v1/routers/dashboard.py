@@ -550,3 +550,70 @@ def get_dashboard_kpis(
         reflections_completed=reflections_completed,
     )
 
+
+@router.get("/evaluation/{evaluation_id}/progress/export.csv")
+def export_student_progress_csv(
+    evaluation_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """
+    Export student progress as CSV.
+    """
+    # Reuse the progress endpoint
+    data: StudentProgressResponse = get_student_progress(
+        evaluation_id, db=db, user=user  # type: ignore
+    )
+
+    # CSV bouwen
+    buf = StringIO()
+    w = csv.writer(buf)
+    w.writerow(["evaluation_id", data.evaluation_id])
+    w.writerow(["total_students", data.total_students])
+    w.writerow([])
+    w.writerow(
+        [
+            "user_id",
+            "user_name",
+            "class_name",
+            "team_number",
+            "self_assessment_status",
+            "peer_reviews_given",
+            "peer_reviews_received",
+            "peer_reviews_expected",
+            "reflection_status",
+            "reflection_word_count",
+            "total_progress_percent",
+            "last_activity",
+            "flags",
+        ]
+    )
+
+    for item in data.items:
+        w.writerow(
+            [
+                item.user_id,
+                item.user_name,
+                item.class_name or "",
+                item.team_number or "",
+                item.self_assessment_status,
+                item.peer_reviews_given,
+                item.peer_reviews_received,
+                item.peer_reviews_expected,
+                item.reflection_status,
+                item.reflection_word_count or "",
+                f"{item.total_progress_percent:.1f}",
+                item.last_activity or "",
+                ";".join(item.flags),
+            ]
+        )
+
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="evaluation_{evaluation_id}_progress.csv"'
+        },
+    )
+

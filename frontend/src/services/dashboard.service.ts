@@ -77,4 +77,17 @@ export const dashboardService = {
     );
     return response.data;
   },
+
+  /**
+   * Export student progress as CSV
+   */
+  async exportProgressCSV(evaluationId: number): Promise<Blob> {
+    const response = await api.get(
+      `/dashboard/evaluation/${evaluationId}/progress/export.csv`,
+      {
+        responseType: "blob",
+      },
+    );
+    return response.data;
+  },
 };
