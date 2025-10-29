@@ -6,7 +6,7 @@ from sqlalchemy import and_
 from statistics import mean
 from io import StringIO
 import csv
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import (
@@ -444,8 +444,15 @@ def get_student_progress(
         if not last_activity:
             flags.append("no_activity")
         else:
-            from datetime import timedelta
-            days_since_activity = (datetime.now() - last_activity).days
+            # Handle timezone-aware or naive datetime comparison
+            current_time = datetime.now()
+            if hasattr(last_activity, 'replace'):
+                # Make both timezone-naive for safe comparison
+                last_activity_naive = last_activity.replace(tzinfo=None) if last_activity.tzinfo else last_activity
+                days_since_activity = (current_time - last_activity_naive).days
+            else:
+                days_since_activity = (current_time - last_activity).days
+            
             if days_since_activity > 7:
                 flags.append("inactive_7days")
         
