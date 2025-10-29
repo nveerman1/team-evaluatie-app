@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Criterion, ScoreItem } from "@/dtos";
 import { studentService } from "@/services";
+import { RubricRating } from "./RubricRating";
 
 type SelfEvaluationStepProps = {
   allocationId: number;
@@ -76,53 +77,27 @@ export function SelfEvaluationStep({
     <div className="space-y-6">
       <div className="bg-blue-50 p-4 rounded-lg">
         <p className="text-sm text-blue-800">
-          Beoordeel jezelf op elk criterium. Scores: 1 (zwak) tot 5 (uitstekend).
+          Beoordeel jezelf op elk criterium. Klik op het niveau dat het beste bij jouw prestatie past.
         </p>
       </div>
 
       {loading ? (
         <div className="text-center py-4 text-gray-500">Laden...</div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {criteria.map((criterion) => (
-            <div
+            <RubricRating
               key={criterion.id}
-              className="p-4 border rounded-lg bg-white space-y-3"
-            >
-              <div className="flex items-center justify-between">
-                <h4 className="font-medium">{criterion.name}</h4>
-                <span className="text-lg font-semibold text-gray-700">
-                  {values[criterion.id] ?? 3}
-                </span>
-              </div>
-
-              <input
-                type="range"
-                min={1}
-                max={5}
-                value={values[criterion.id] ?? 3}
-                onChange={(e) =>
-                  setValues((s) => ({ ...s, [criterion.id]: Number(e.target.value) }))
-                }
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"
-              />
-
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>1 - Zwak</span>
-                <span>3 - Voldoende</span>
-                <span>5 - Uitstekend</span>
-              </div>
-
-              <textarea
-                className="w-full border rounded-lg p-2 text-sm"
-                placeholder="Optionele toelichting..."
-                value={comments[criterion.id] || ""}
-                onChange={(e) =>
-                  setComments((s) => ({ ...s, [criterion.id]: e.target.value }))
-                }
-                rows={2}
-              />
-            </div>
+              criterion={criterion}
+              value={values[criterion.id] ?? 3}
+              comment={comments[criterion.id] || ""}
+              onChange={(newValue) =>
+                setValues((s) => ({ ...s, [criterion.id]: newValue }))
+              }
+              onCommentChange={(newComment) =>
+                setComments((s) => ({ ...s, [criterion.id]: newComment }))
+              }
+            />
           ))}
         </div>
       )}
