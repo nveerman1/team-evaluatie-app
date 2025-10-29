@@ -63,6 +63,7 @@ class RubricCreate(BaseModel):
     description: Optional[str] = None
     scale_min: int = 1
     scale_max: int = 5
+    scope: str = "peer"  # "peer" | "project"
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -71,6 +72,7 @@ class RubricUpdate(BaseModel):
     description: Optional[str] = None
     scale_min: Optional[int] = None
     scale_max: Optional[int] = None
+    scope: Optional[str] = None  # "peer" | "project"
     metadata_json: Optional[Dict[str, Any]] = None
 
 
@@ -80,6 +82,7 @@ class RubricOut(BaseModel):
     description: Optional[str]
     scale_min: int
     scale_max: int
+    scope: str
     metadata_json: Dict[str, Any]
 
     class Config:

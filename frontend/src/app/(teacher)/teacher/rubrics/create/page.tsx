@@ -1,20 +1,28 @@
 "use client";
 import api from "@/lib/api";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { RubricCreate } from "@/lib/rubric-types";
 
 export default function CreateRubricPage() {
   const router = useRouter();
   const sp = useSearchParams();
   const fromDupId = sp.get("duplicate_of");
+  const scopeParam = sp.get("scope") as "peer" | "project" | null;
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [scaleMin, setScaleMin] = useState(1);
   const [scaleMax, setScaleMax] = useState(5);
+  const [scope, setScope] = useState<"peer" | "project">(scopeParam || "peer");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (scopeParam) {
+      setScope(scopeParam);
+    }
+  }, [scopeParam]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,6 +34,7 @@ export default function CreateRubricPage() {
         description,
         scale_min: scaleMin,
         scale_max: scaleMax,
+        scope,
         metadata_json: {},
       };
       const res = await api.post("/rubrics", payload);
@@ -59,6 +68,18 @@ export default function CreateRubricPage() {
         {error && (
           <div className="p-3 rounded-lg bg-red-50 text-red-700">{error}</div>
         )}
+
+        <div className="space-y-1">
+          <label className="block text-sm font-medium">Type</label>
+          <select
+            className="w-full border rounded-lg px-3 py-2"
+            value={scope}
+            onChange={(e) => setScope(e.target.value as "peer" | "project")}
+          >
+            <option value="peer">Team-evaluatie (peer)</option>
+            <option value="project">Projectbeoordeling</option>
+          </select>
+        </div>
 
         <div className="space-y-1">
           <label className="block text-sm font-medium">Titel</label>

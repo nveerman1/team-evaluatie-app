@@ -7,11 +7,12 @@ import {
 
 export const rubricService = {
   /**
-   * Get list of rubrics with optional search
+   * Get list of rubrics with optional search and scope filter
    */
-  async getRubrics(query?: string): Promise<RubricListResponse> {
+  async getRubrics(query?: string, scope?: string): Promise<RubricListResponse> {
     const params = new URLSearchParams();
     if (query) params.set("q", query);
+    if (scope) params.set("scope", scope);
     const response = await api.get<RubricListResponse>(
       `/rubrics?${params.toString()}`,
     );

@@ -63,6 +63,7 @@ def _to_out_rubric(r: Rubric) -> RubricOut:
             "description": r.description,
             "scale_min": r.scale_min,
             "scale_max": r.scale_max,
+            "scope": r.scope,
             "metadata_json": r.metadata_json or {},
         }
     )
@@ -96,6 +97,7 @@ def create_rubric(
         description=payload.description,
         scale_min=payload.scale_min,
         scale_max=payload.scale_max,
+        scope=payload.scope,
         metadata_json=payload.metadata_json,
     )
     db.add(r)
@@ -109,6 +111,7 @@ def list_rubrics(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
     q: Optional[str] = Query(None, description="Zoek op titel/omschrijving"),
+    scope: Optional[str] = Query(None, description="Filter op scope: peer of project"),
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
 ):
@@ -116,6 +119,8 @@ def list_rubrics(
     if q:
         like = f"%{q}%"
         stmt = stmt.where((Rubric.title.ilike(like)) | (Rubric.description.ilike(like)))
+    if scope:
+        stmt = stmt.where(Rubric.scope == scope)
     total = db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
     stmt = stmt.order_by(Rubric.id.desc()).limit(limit).offset((page - 1) * limit)
     rows: List[Rubric] = db.execute(stmt).scalars().all()
@@ -175,6 +180,8 @@ def update_rubric(
         r.scale_min = payload.scale_min
     if payload.scale_max is not None:
         r.scale_max = payload.scale_max
+    if payload.scope is not None:
+        r.scope = payload.scope
     if payload.metadata_json is not None:
         r.metadata_json = payload.metadata_json
     db.add(r)
@@ -235,6 +242,7 @@ def duplicate_rubric(
         description=src.description,
         scale_min=src.scale_min,
         scale_max=src.scale_max,
+        scope=src.scope,
         metadata_json=src.metadata_json or {},
     )
     db.add(dup)
