@@ -156,6 +156,24 @@ export default function EvaluationDashboardPage() {
     }
   };
 
+  const handleSendReminders = async () => {
+    if (!evalIdNum) return;
+    if (!confirm("Weet je zeker dat je herinneringen wilt versturen naar alle studenten met onvolledige taken?")) {
+      return;
+    }
+    try {
+      const result = await dashboardService.sendReminders(evalIdNum);
+      alert(
+        `${result.message}\n\n` +
+        `Aantal studenten: ${result.reminders_sent}\n` +
+        `(Email functionaliteit wordt nog geïmplementeerd)`
+      );
+    } catch (e) {
+      console.error("Send reminders failed:", e);
+      alert("Versturen van herinneringen mislukt. Probeer het opnieuw.");
+    }
+  };
+
   return (
     <main className="max-w-6xl mx-auto p-6 space-y-6">
       <header className="flex items-center justify-between">
@@ -231,6 +249,12 @@ export default function EvaluationDashboardPage() {
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
               >
                 📥 Export naar CSV
+              </button>
+              <button
+                onClick={handleSendReminders}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+              >
+                ✉️ Stuur herinnering
               </button>
             </div>
 

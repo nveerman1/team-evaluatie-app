@@ -617,3 +617,80 @@ def export_student_progress_csv(
         },
     )
 
+
+@router.post("/evaluation/{evaluation_id}/send-reminders")
+def send_evaluation_reminders(
+    evaluation_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """
+    Send reminder emails to students with incomplete tasks.
+    Returns the list of students who were sent reminders.
+    """
+    # Get evaluation
+    ev = (
+        db.query(Evaluation)
+        .filter(Evaluation.id == evaluation_id, Evaluation.school_id == user.school_id)
+        .first()
+    )
+    if not ev:
+        raise HTTPException(status_code=404, detail="Evaluation not found")
+
+    # Get student progress to identify who needs reminders
+    progress_data = get_student_progress(evaluation_id, db=db, user=user)  # type: ignore
+
+    # Filter students who need reminders (progress < 100%)
+    students_needing_reminders = [
+        s for s in progress_data.items if s.total_progress_percent < 100
+    ]
+
+    # TODO: Implement actual email sending here
+    # For now, we'll just return the list of students who would receive reminders
+    
+    # Prepare reminder details
+    reminders_sent = []
+    for student in students_needing_reminders:
+        student_user = db.get(User, student.user_id)
+        if not student_user:
+            continue
+
+        # Determine what's incomplete
+        tasks_incomplete = []
+        if student.self_assessment_status != "completed":
+            tasks_incomplete.append("Zelfbeoordeling")
+        if student.peer_reviews_received < student.peer_reviews_expected:
+            tasks_incomplete.append(
+                f"Peer reviews ({student.peer_reviews_received}/{student.peer_reviews_expected})"
+            )
+        if student.reflection_status != "completed":
+            tasks_incomplete.append("Reflectie")
+
+        # TODO: Send actual email using SMTP
+        # Example: send_email(
+        #     to=student_user.email,
+        #     subject=f"Herinnering: Evaluatie '{ev.title}' nog niet afgerond",
+        #     body=f"Beste {student.user_name},\n\n"
+        #          f"Je hebt je evaluatie nog niet afgerond. De volgende onderdelen ontbreken:\n"
+        #          f"- {chr(10).join(tasks_incomplete)}\n\n"
+        #          f"Klik hier om verder te gaan: [link]\n\n"
+        #          f"Met vriendelijke groet,\nTeam Evaluatie App"
+        # )
+
+        reminders_sent.append(
+            {
+                "user_id": student.user_id,
+                "user_name": student.user_name,
+                "email": student_user.email,
+                "tasks_incomplete": tasks_incomplete,
+                "progress_percent": student.total_progress_percent,
+            }
+        )
+
+    return {
+        "evaluation_id": evaluation_id,
+        "reminders_sent": len(reminders_sent),
+        "students": reminders_sent,
+        "message": f"{len(reminders_sent)} herinnering(en) verzonden (simulatie - email functionaliteit nog niet geïmplementeerd)",
+    }
+

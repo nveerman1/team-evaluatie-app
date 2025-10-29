@@ -90,4 +90,27 @@ export const dashboardService = {
     );
     return response.data;
   },
+
+  /**
+   * Send reminder emails to students with incomplete tasks
+   */
+  async sendReminders(
+    evaluationId: number,
+  ): Promise<{
+    evaluation_id: number;
+    reminders_sent: number;
+    students: Array<{
+      user_id: number;
+      user_name: string;
+      email: string;
+      tasks_incomplete: string[];
+      progress_percent: number;
+    }>;
+    message: string;
+  }> {
+    const response = await api.post(
+      `/dashboard/evaluation/${evaluationId}/send-reminders`,
+    );
+    return response.data;
+  },
 };
