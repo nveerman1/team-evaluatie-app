@@ -142,7 +142,7 @@ export default function FeedbackPageInner() {
 
   const filteredSorted = useMemo(() => {
     const q = query.trim().toLowerCase();
-    let arr = groups
+    const arr = groups
       .map((g) => ({
         ...g,
         comments: g.comments.filter((c) => {
@@ -166,7 +166,7 @@ export default function FeedbackPageInner() {
 
   const filteredSortedComments = useMemo(() => {
     const q = query.trim().toLowerCase();
-    let arr = allComments.filter((c) => {
+    const arr = allComments.filter((c) => {
       const passType = typeFilter === "all" ? true : c.type === typeFilter;
       const passQuery =
         !q ||
