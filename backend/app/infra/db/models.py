@@ -347,3 +347,93 @@ class PublishedGrade(Base):
     # relaties (optioneel, alleen als je ze gebruikt)
     evaluation = relationship("Evaluation")
     user = relationship("User")
+
+
+class ProjectAssessment(Base):
+    """
+    Project assessment per team/group, uses rubrics with scope='project'
+    """
+    __tablename__ = "project_assessments"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = tenant_fk()
+    
+    # Relationships
+    group_id: Mapped[int] = mapped_column(
+        ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    rubric_id: Mapped[int] = mapped_column(
+        ForeignKey("rubrics.id", ondelete="RESTRICT"), nullable=False
+    )
+    teacher_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    
+    # Assessment data
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    version: Mapped[Optional[str]] = mapped_column(String(50))  # e.g., "tussentijds", "eind"
+    status: Mapped[str] = mapped_column(String(30), default="draft")  # draft|published
+    published_at: Mapped[Optional[datetime]] = mapped_column()
+    
+    # Metadata
+    metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    
+    __table_args__ = (
+        Index("ix_project_assessment_group", "group_id"),
+        Index("ix_project_assessment_teacher", "teacher_id"),
+    )
+
+
+class ProjectAssessmentScore(Base):
+    """
+    Scores for project assessment criteria
+    """
+    __tablename__ = "project_assessment_scores"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = tenant_fk()
+    
+    assessment_id: Mapped[int] = mapped_column(
+        ForeignKey("project_assessments.id", ondelete="CASCADE"), nullable=False
+    )
+    criterion_id: Mapped[int] = mapped_column(
+        ForeignKey("rubric_criteria.id", ondelete="CASCADE"), nullable=False
+    )
+    
+    score: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    comment: Mapped[Optional[str]] = mapped_column(Text)
+    
+    __table_args__ = (
+        UniqueConstraint(
+            "assessment_id", "criterion_id", name="uq_project_score_per_criterion"
+        ),
+        Index("ix_project_score_assessment", "assessment_id"),
+    )
+
+
+class ProjectAssessmentReflection(Base):
+    """
+    Student reflection on project assessment
+    """
+    __tablename__ = "project_assessment_reflections"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = tenant_fk()
+    
+    assessment_id: Mapped[int] = mapped_column(
+        ForeignKey("project_assessments.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    
+    text: Mapped[str] = mapped_column(Text)
+    word_count: Mapped[int] = mapped_column(Integer)
+    submitted_at: Mapped[Optional[datetime]] = mapped_column()
+    
+    __table_args__ = (
+        UniqueConstraint(
+            "assessment_id", "user_id", name="uq_project_reflection_once"
+        ),
+        Index("ix_project_reflection_assessment", "assessment_id"),
+    )
