@@ -35,9 +35,8 @@ export default function CreateProjectAssessmentInner() {
         const rubricResponse = await rubricService.getRubrics("", "project");
         setRubrics(rubricResponse.items || []);
 
-        // Load groups - we'll need to create an API endpoint for this
-        // For now, let's fetch from a generic endpoint
-        const groupsResponse = await api.get<Group[]>("/students/groups");
+        // Load teams from the students/teams endpoint
+        const groupsResponse = await api.get<Group[]>("/students/teams");
         setGroups(Array.isArray(groupsResponse.data) ? groupsResponse.data : []);
       } catch (e: any) {
         setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
