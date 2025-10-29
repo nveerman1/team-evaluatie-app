@@ -1,12 +1,18 @@
 "use client";
 
 import { useStudentDashboard } from "@/hooks";
+import { useStudentProjectAssessments } from "@/hooks/useStudentProjectAssessments";
 import { EvaluationCard } from "@/components/student";
 import { Loading, ErrorMessage } from "@/components";
 import Link from "next/link";
 
 export default function StudentDashboard() {
   const { dashboard, loading, error } = useStudentDashboard();
+  const {
+    assessments: projectAssessments,
+    loading: projectLoading,
+    error: projectError,
+  } = useStudentProjectAssessments();
 
   if (loading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
@@ -111,11 +117,72 @@ export default function StudentDashboard() {
         )}
       </section>
 
+      {/* Project Assessments Section */}
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-semibold">Projectbeoordelingen</h2>
+          {projectAssessments.length > 0 && (
+            <span className="text-sm text-gray-500">
+              {projectAssessments.length} beoordeling
+              {projectAssessments.length !== 1 ? "en" : ""}
+            </span>
+          )}
+        </div>
+
+        {projectLoading ? (
+          <div className="p-6 border rounded-xl bg-gray-50">
+            <Loading />
+          </div>
+        ) : projectError ? (
+          <div className="p-6 border rounded-xl bg-gray-50">
+            <ErrorMessage message={projectError} />
+          </div>
+        ) : projectAssessments.length === 0 ? (
+          <div className="p-8 border rounded-xl bg-gray-50 text-center">
+            <p className="text-gray-500">
+              Nog geen projectbeoordelingen beschikbaar.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {projectAssessments.map((assessment) => (
+              <Link
+                key={assessment.id}
+                href={`/student/project-assessments/${assessment.id}`}
+                className="block p-5 border rounded-xl bg-white hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold mb-1">
+                      {assessment.title}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Team: {assessment.group_name || "Onbekend"}
+                    </p>
+                    {assessment.version && (
+                      <p className="text-sm text-gray-500">
+                        Versie: {assessment.version}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs">
+                      Gepubliceerd
+                    </span>
+                    <span className="text-gray-400">→</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
       {/* Results Section */}
       {dashboard.hasAnyEvaluations && (
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-semibold">Resultaten</h2>
+            <h2 className="text-2xl font-semibold">Peer-feedback Resultaten</h2>
             <Link
               href="/student/results"
               className="text-sm text-blue-600 hover:text-blue-800"
