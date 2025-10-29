@@ -433,10 +433,35 @@ def get_student_progress(
                     if not last_activity or score.created_at > last_activity:
                         last_activity = score.created_at
 
-        # Flags (basic implementation)
+        # Enhanced flags system
         flags = []
+        
+        # Flag 1: Low progress
         if total_progress_percent < 30:
             flags.append("low_progress")
+        
+        # Flag 2: No activity (no last_activity or > 7 days old)
+        if not last_activity:
+            flags.append("no_activity")
+        else:
+            from datetime import timedelta
+            days_since_activity = (datetime.now() - last_activity).days
+            if days_since_activity > 7:
+                flags.append("inactive_7days")
+        
+        # Flag 3: Missing peer reviews (less than 50% received)
+        if peer_reviews_expected > 0:
+            peer_review_percentage = (peer_reviews_received / peer_reviews_expected) * 100
+            if peer_review_percentage < 50:
+                flags.append("missing_peer_reviews")
+        
+        # Flag 4: Self-assessment not started
+        if self_assessment_status == "not_started":
+            flags.append("no_self_assessment")
+        
+        # Flag 5: No reflection submitted
+        if reflection_status == "not_started":
+            flags.append("no_reflection")
 
         items.append(
             StudentProgressRow(

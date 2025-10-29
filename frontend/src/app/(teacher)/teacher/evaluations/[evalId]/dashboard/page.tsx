@@ -35,6 +35,18 @@ function formatLastActivity(dateStr?: string | null): string {
   return date.toLocaleDateString("nl-NL");
 }
 
+function getFlagDescription(flag: string): string {
+  const descriptions: Record<string, string> = {
+    low_progress: "Lage voortgang (<30%)",
+    no_activity: "Geen activiteit geregistreerd",
+    inactive_7days: "Meer dan 7 dagen inactief",
+    missing_peer_reviews: "Mist peer reviews (<50% ontvangen)",
+    no_self_assessment: "Zelfbeoordeling niet gestart",
+    no_reflection: "Reflectie niet ingeleverd",
+  };
+  return descriptions[flag] || flag;
+}
+
 type SortField =
   | "name"
   | "class"
@@ -395,10 +407,10 @@ export default function EvaluationDashboardPage() {
                         <td className="px-4 py-3 text-center text-sm">
                           {student.flags.length > 0 ? (
                             <span
-                              className="cursor-help"
-                              title={student.flags.join(", ")}
+                              className="cursor-help text-lg"
+                              title={student.flags.map(getFlagDescription).join("\n• ")}
                             >
-                              ⚠️
+                              ⚠️ {student.flags.length}
                             </span>
                           ) : (
                             "-"
