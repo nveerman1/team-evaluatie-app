@@ -2,9 +2,11 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import and_
 from statistics import mean
 from io import StringIO
 import csv
+from datetime import datetime
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import (
@@ -14,12 +16,16 @@ from app.infra.db.models import (
     Allocation,
     Score,
     User,
+    Reflection,
 )
 from app.api.v1.schemas.dashboard import (
     DashboardResponse,
     DashboardRow,
     CriterionMeta,
     CriterionBreakdown,
+    StudentProgressResponse,
+    StudentProgressRow,
+    StudentProgressKPIs,
 )
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
@@ -269,3 +275,278 @@ def dashboard_export_csv(
             "Content-Disposition": f'attachment; filename="evaluation_{evaluation_id}_dashboard.csv"'
         },
     )
+
+
+@router.get("/evaluation/{evaluation_id}/progress", response_model=StudentProgressResponse)
+def get_student_progress(
+    evaluation_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """
+    Get detailed progress for all students in an evaluation.
+    Shows self-assessment, peer reviews, reflection status, and overall progress.
+    """
+    # Get evaluation
+    ev = (
+        db.query(Evaluation)
+        .filter(Evaluation.id == evaluation_id, Evaluation.school_id == user.school_id)
+        .first()
+    )
+    if not ev:
+        raise HTTPException(status_code=404, detail="Evaluation not found")
+
+    # Get all students from the course
+    # For now, we'll get all students who have allocations in this evaluation
+    # TODO: Extend to include all students from course_id
+    allocations = (
+        db.query(Allocation)
+        .filter(
+            Allocation.school_id == user.school_id,
+            Allocation.evaluation_id == ev.id,
+        )
+        .all()
+    )
+
+    # Get unique reviewee IDs
+    student_ids = set()
+    for alloc in allocations:
+        student_ids.add(alloc.reviewee_id)
+        student_ids.add(alloc.reviewer_id)
+
+    # Get user information
+    users = {
+        u.id: u
+        for u in db.query(User)
+        .filter(User.id.in_(student_ids), User.school_id == user.school_id)
+        .all()
+    }
+
+    # Calculate progress for each student
+    items = []
+    for student_id in student_ids:
+        student = users.get(student_id)
+        if not student:
+            continue
+
+        # Self-assessment status
+        self_allocations = [
+            a for a in allocations if a.reviewee_id == student_id and a.is_self
+        ]
+        self_scores = []
+        for alloc in self_allocations:
+            scores = (
+                db.query(Score)
+                .filter(
+                    Score.school_id == user.school_id, Score.allocation_id == alloc.id
+                )
+                .all()
+            )
+            self_scores.extend(scores)
+
+        if len(self_scores) > 0:
+            self_assessment_status = "completed"
+        elif len(self_allocations) > 0:
+            self_assessment_status = "partial"
+        else:
+            self_assessment_status = "not_started"
+
+        # Peer reviews given (as reviewer)
+        peer_reviews_given = len(
+            [a for a in allocations if a.reviewer_id == student_id and not a.is_self]
+        )
+
+        # Peer reviews received (as reviewee)
+        peer_allocations_received = [
+            a for a in allocations if a.reviewee_id == student_id and not a.is_self
+        ]
+        peer_reviews_received = 0
+        for alloc in peer_allocations_received:
+            scores = (
+                db.query(Score)
+                .filter(
+                    Score.school_id == user.school_id, Score.allocation_id == alloc.id
+                )
+                .count()
+            )
+            if scores > 0:
+                peer_reviews_received += 1
+
+        # Expected peer reviews (total peer allocations for this student)
+        peer_reviews_expected = len(peer_allocations_received)
+
+        # Reflection status
+        reflection = (
+            db.query(Reflection)
+            .filter(
+                Reflection.school_id == user.school_id,
+                Reflection.evaluation_id == ev.id,
+                Reflection.user_id == student_id,
+            )
+            .first()
+        )
+        reflection_status = "completed" if reflection else "not_started"
+        reflection_word_count = reflection.word_count if reflection else None
+
+        # Total progress calculation
+        progress_parts = []
+        if self_assessment_status == "completed":
+            progress_parts.append(1.0)
+        elif self_assessment_status == "partial":
+            progress_parts.append(0.5)
+        else:
+            progress_parts.append(0.0)
+
+        if peer_reviews_expected > 0:
+            progress_parts.append(peer_reviews_received / peer_reviews_expected)
+        else:
+            progress_parts.append(0.0)
+
+        if reflection_status == "completed":
+            progress_parts.append(1.0)
+        else:
+            progress_parts.append(0.0)
+
+        total_progress_percent = round(
+            (sum(progress_parts) / len(progress_parts)) * 100, 1
+        )
+
+        # Last activity (most recent score or reflection submission)
+        last_activity = None
+        if reflection and reflection.submitted_at:
+            last_activity = reflection.submitted_at
+
+        # Get last score timestamp
+        student_allocations = [
+            a for a in allocations if a.reviewer_id == student_id or a.reviewee_id == student_id
+        ]
+        for alloc in student_allocations:
+            scores = (
+                db.query(Score)
+                .filter(
+                    Score.school_id == user.school_id, Score.allocation_id == alloc.id
+                )
+                .all()
+            )
+            for score in scores:
+                if hasattr(score, "created_at") and score.created_at:
+                    if not last_activity or score.created_at > last_activity:
+                        last_activity = score.created_at
+
+        # Flags (basic implementation)
+        flags = []
+        if total_progress_percent < 30:
+            flags.append("low_progress")
+
+        items.append(
+            StudentProgressRow(
+                user_id=student_id,
+                user_name=student.name,
+                class_name=getattr(student, "class_name", None),
+                team_number=getattr(student, "team_number", None),
+                self_assessment_status=self_assessment_status,
+                peer_reviews_given=peer_reviews_given,
+                peer_reviews_received=peer_reviews_received,
+                peer_reviews_expected=peer_reviews_expected,
+                reflection_status=reflection_status,
+                reflection_word_count=reflection_word_count,
+                total_progress_percent=total_progress_percent,
+                last_activity=last_activity,
+                flags=flags,
+            )
+        )
+
+    # Sort by name
+    items.sort(key=lambda x: x.user_name.lower())
+
+    return StudentProgressResponse(
+        evaluation_id=ev.id, total_students=len(items), items=items
+    )
+
+
+@router.get("/evaluation/{evaluation_id}/kpis", response_model=StudentProgressKPIs)
+def get_dashboard_kpis(
+    evaluation_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """
+    Get KPI summary for dashboard cards.
+    """
+    # Get evaluation
+    ev = (
+        db.query(Evaluation)
+        .filter(Evaluation.id == evaluation_id, Evaluation.school_id == user.school_id)
+        .first()
+    )
+    if not ev:
+        raise HTTPException(status_code=404, detail="Evaluation not found")
+
+    # Get all allocations
+    allocations = (
+        db.query(Allocation)
+        .filter(
+            Allocation.school_id == user.school_id,
+            Allocation.evaluation_id == ev.id,
+        )
+        .all()
+    )
+
+    # Get unique student IDs
+    student_ids = set()
+    for alloc in allocations:
+        student_ids.add(alloc.reviewee_id)
+        student_ids.add(alloc.reviewer_id)
+
+    total_students = len(student_ids)
+
+    # Count self-reviews completed
+    self_reviews_completed = 0
+    for student_id in student_ids:
+        self_allocations = [
+            a for a in allocations if a.reviewee_id == student_id and a.is_self
+        ]
+        for alloc in self_allocations:
+            scores = (
+                db.query(Score)
+                .filter(
+                    Score.school_id == user.school_id, Score.allocation_id == alloc.id
+                )
+                .count()
+            )
+            if scores > 0:
+                self_reviews_completed += 1
+                break
+
+    # Count total peer reviews
+    peer_reviews_total = 0
+    for alloc in allocations:
+        if not alloc.is_self:
+            scores = (
+                db.query(Score)
+                .filter(
+                    Score.school_id == user.school_id, Score.allocation_id == alloc.id
+                )
+                .count()
+            )
+            if scores > 0:
+                peer_reviews_total += 1
+
+    # Count reflections completed
+    reflections_completed = (
+        db.query(Reflection)
+        .filter(
+            Reflection.school_id == user.school_id,
+            Reflection.evaluation_id == ev.id,
+        )
+        .count()
+    )
+
+    return StudentProgressKPIs(
+        evaluation_id=ev.id,
+        total_students=total_students,
+        self_reviews_completed=self_reviews_completed,
+        peer_reviews_total=peer_reviews_total,
+        reflections_completed=reflections_completed,
+    )
+

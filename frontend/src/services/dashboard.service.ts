@@ -3,6 +3,8 @@ import {
   DashboardResponse,
   FlagsResponse,
   GradePreviewResponse,
+  StudentProgressResponse,
+  StudentProgressKPIs,
 } from "@/dtos/dashboard.dto";
 
 export const dashboardService = {
@@ -52,5 +54,27 @@ export const dashboardService = {
       }
       throw e;
     }
+  },
+
+  /**
+   * Get student progress for an evaluation
+   */
+  async getStudentProgress(
+    evaluationId: number,
+  ): Promise<StudentProgressResponse> {
+    const response = await api.get<StudentProgressResponse>(
+      `/dashboard/evaluation/${evaluationId}/progress`,
+    );
+    return response.data;
+  },
+
+  /**
+   * Get KPIs for an evaluation
+   */
+  async getKPIs(evaluationId: number): Promise<StudentProgressKPIs> {
+    const response = await api.get<StudentProgressKPIs>(
+      `/dashboard/evaluation/${evaluationId}/kpis`,
+    );
+    return response.data;
   },
 };

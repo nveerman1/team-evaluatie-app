@@ -45,3 +45,33 @@ export type GradePreviewResponse = {
     suggested_grade: number;
   }[];
 };
+
+export type StudentProgressRow = {
+  user_id: number;
+  user_name: string;
+  class_name?: string | null;
+  team_number?: number | null;
+  self_assessment_status: "completed" | "partial" | "not_started";
+  peer_reviews_given: number;
+  peer_reviews_received: number;
+  peer_reviews_expected: number;
+  reflection_status: "completed" | "not_started";
+  reflection_word_count?: number | null;
+  total_progress_percent: number;
+  last_activity?: string | null;
+  flags: string[];
+};
+
+export type StudentProgressResponse = {
+  evaluation_id: number;
+  total_students: number;
+  items: StudentProgressRow[];
+};
+
+export type StudentProgressKPIs = {
+  evaluation_id: number;
+  total_students: number;
+  self_reviews_completed: number;
+  peer_reviews_total: number;
+  reflections_completed: number;
+};
