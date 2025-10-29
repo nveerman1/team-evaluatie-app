@@ -147,7 +147,12 @@ class Rubric(Base):
     description: Mapped[Optional[str]] = mapped_column(Text)
     scale_min: Mapped[int] = mapped_column(SmallInteger, default=1)
     scale_max: Mapped[int] = mapped_column(SmallInteger, default=5)
+    scope: Mapped[str] = mapped_column(String(20), default="peer", nullable=False)  # "peer" | "project"
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    
+    __table_args__ = (
+        Index("ix_rubric_school_scope", "school_id", "scope"),
+    )
 
 
 class RubricCriterion(Base):
