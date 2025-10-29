@@ -256,18 +256,20 @@ export default function EvaluationDashboardPage() {
               <h2 className="text-lg font-semibold">
                 Voortgang per leerling
               </h2>
-              <button
-                onClick={handleExportCSV}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
-              >
-                📥 Export naar CSV
-              </button>
-              <button
-                onClick={handleSendReminders}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
-              >
-                ✉️ Stuur herinnering
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSendReminders}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                >
+                  ✉️ Stuur herinnering
+                </button>
+                <button
+                  onClick={handleExportCSV}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
+                >
+                  📥 Export naar CSV
+                </button>
+              </div>
             </div>
 
             {/* Filters */}
@@ -422,28 +424,6 @@ export default function EvaluationDashboardPage() {
                 </tbody>
               </table>
             </div>
-          </section>
-
-          {/* Flags */}
-          <section className="space-y-3">
-            <h2 className="text-lg font-semibold">Signalen / Flags</h2>
-            {!flags || flags.length === 0 ? (
-              <div className="text-gray-500">Geen signalen.</div>
-            ) : (
-              <ul className="space-y-2">
-                {flags.map((f, idx) => (
-                  <li key={idx} className="p-3 border rounded-xl">
-                    <div className="text-sm text-gray-500">{f.type}</div>
-                    <div className="font-medium">{f.message}</div>
-                    {f.student && (
-                      <div className="text-sm text-gray-600">
-                        Student: {f.student}
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
           </section>
         </>
       )}

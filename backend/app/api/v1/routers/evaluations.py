@@ -259,8 +259,10 @@ def get_feedback_by_evaluation(
             U_from.name.label("from_name"),
             Allocation.is_self.label("is_self"),
             Score.comment.label("text"),
+            Score.score.label("score"),
             Score.criterion_id.label("criterion_id"),
             RubricCriterion.name.label("criterion_name"),
+            Score.created_at.label("created_at"),
         )
         .join(U_to, U_to.id == Allocation.reviewee_id)
         .join(U_from, U_from.id == Allocation.reviewer_id)
@@ -298,6 +300,8 @@ def get_feedback_by_evaluation(
                 ),
                 "criterion_name": r.criterion_name,
                 "text": r.text or "",
+                "score": float(r.score) if r.score is not None else None,
+                "created_at": r.created_at.isoformat() if hasattr(r, 'created_at') and r.created_at else None,
                 "type": "self" if bool(r.is_self) else "peer",
             }
         )
@@ -383,8 +387,10 @@ def export_feedback_csv(
             U_from.name.label("from_name"),
             Allocation.is_self.label("is_self"),
             Score.comment.label("text"),
+            Score.score.label("score"),
             Score.criterion_id.label("criterion_id"),
             RubricCriterion.name.label("criterion_name"),
+            Score.created_at.label("created_at"),
         )
         .join(U_to, U_to.id == Allocation.reviewee_id)
         .join(U_from, U_from.id == Allocation.reviewer_id)
@@ -409,8 +415,10 @@ def export_feedback_csv(
             "from_student_id",
             "from_student_name",
             "type",
+            "score",
             "criterion_id",
             "criterion_name",
+            "created_at",
             "comment",
         ]
     )
@@ -422,8 +430,10 @@ def export_feedback_csv(
                 (int(r.from_id) if r.from_id is not None else ""),
                 r.from_name or "",
                 ("self" if bool(r.is_self) else "peer"),
+                (float(r.score) if r.score is not None else ""),
                 (int(r.criterion_id) if r.criterion_id is not None else ""),
                 r.criterion_name or "",
+                (r.created_at.strftime("%d-%m-%Y") if hasattr(r, 'created_at') and r.created_at else ""),
                 r.text or "",
             ]
         )

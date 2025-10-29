@@ -275,10 +275,11 @@ def preview_grades(
         elif S is not None:
             suggested_val = S
         else:
-            suggested_val = group_grade if group_grade is not None else DEFAULT_GROUP
+            # Geen peer en geen self evaluaties: geen voorstel
+            suggested_val = None
 
-        # afronden en begrenzen
-        suggested = clamp(round(suggested_val, 1), 1.0, 10.0)
+        # afronden en begrenzen (alleen als er een waarde is)
+        suggested = clamp(round(suggested_val, 1), 1.0, 10.0) if suggested_val is not None else None
 
         raw_gid = team_gid_by_uid.get(u.id)
         neat_team = team_index_by_gid.get(raw_gid) if raw_gid is not None else None

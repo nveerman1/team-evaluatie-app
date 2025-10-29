@@ -17,6 +17,8 @@ from app.infra.db.models import (
     Score,
     User,
     Reflection,
+    GroupMember,
+    Group,
 )
 from app.api.v1.schemas.dashboard import (
     DashboardResponse,
@@ -297,8 +299,6 @@ def get_student_progress(
         raise HTTPException(status_code=404, detail="Evaluation not found")
 
     # Get all students from the course
-    # For now, we'll get all students who have allocations in this evaluation
-    # TODO: Extend to include all students from course_id
     allocations = (
         db.query(Allocation)
         .filter(
@@ -308,8 +308,27 @@ def get_student_progress(
         .all()
     )
 
-    # Get unique reviewee IDs
+    # Get ALL students from the course (not just those with allocations)
     student_ids = set()
+    if ev.course_id:
+        # Get all active students in groups for this course
+        course_students = (
+            db.query(User.id)
+            .join(GroupMember, GroupMember.user_id == User.id)
+            .join(Group, Group.id == GroupMember.group_id)
+            .filter(
+                User.school_id == user.school_id,
+                User.role == "student",
+                User.archived == False,
+                Group.course_id == ev.course_id,
+                GroupMember.active == True,
+            )
+            .distinct()
+            .all()
+        )
+        student_ids = {s[0] for s in course_students}
+    
+    # Also include any students who have allocations (in case they're not in groups)
     for alloc in allocations:
         student_ids.add(alloc.reviewee_id)
         student_ids.add(alloc.reviewer_id)
@@ -318,9 +337,9 @@ def get_student_progress(
     users = {
         u.id: u
         for u in db.query(User)
-        .filter(User.id.in_(student_ids), User.school_id == user.school_id)
+        .filter(User.id.in_(student_ids) if student_ids else False, User.school_id == user.school_id)
         .all()
-    }
+    } if student_ids else {}
 
     # Calculate progress for each student
     items = []
@@ -524,8 +543,27 @@ def get_dashboard_kpis(
         .all()
     )
 
-    # Get unique student IDs
+    # Get ALL student IDs from the course (same logic as progress endpoint)
     student_ids = set()
+    if ev.course_id:
+        # Get all active students in groups for this course
+        course_students = (
+            db.query(User.id)
+            .join(GroupMember, GroupMember.user_id == User.id)
+            .join(Group, Group.id == GroupMember.group_id)
+            .filter(
+                User.school_id == user.school_id,
+                User.role == "student",
+                User.archived == False,
+                Group.course_id == ev.course_id,
+                GroupMember.active == True,
+            )
+            .distinct()
+            .all()
+        )
+        student_ids = {s[0] for s in course_students}
+    
+    # Also include any students who have allocations (in case they're not in groups)
     for alloc in allocations:
         student_ids.add(alloc.reviewee_id)
         student_ids.add(alloc.reviewer_id)
