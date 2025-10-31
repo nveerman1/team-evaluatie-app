@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { ApiAuthError } from "@/lib/api";
 import { projectAssessmentService } from "@/services";
 import { ProjectAssessmentListItem } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
@@ -21,7 +22,11 @@ export default function ProjectAssessmentsListInner() {
       );
       setData(response.items || []);
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
+      if (e instanceof ApiAuthError) {
+        setError(e.originalMessage);
+      } else {
+        setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
+      }
     } finally {
       setLoading(false);
     }
@@ -38,7 +43,11 @@ export default function ProjectAssessmentsListInner() {
       await projectAssessmentService.deleteProjectAssessment(id);
       fetchList(statusFilter === "all" ? undefined : statusFilter);
     } catch (e: any) {
-      alert(e?.response?.data?.detail || e?.message || "Verwijderen mislukt");
+      if (e instanceof ApiAuthError) {
+        alert(e.originalMessage);
+      } else {
+        alert(e?.response?.data?.detail || e?.message || "Verwijderen mislukt");
+      }
     }
   };
 

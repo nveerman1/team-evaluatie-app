@@ -1,6 +1,7 @@
 "use client";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { ApiAuthError } from "@/lib/api";
 import { projectAssessmentService } from "@/services";
 import { ProjectAssessmentDetailOut } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
@@ -30,7 +31,11 @@ export default function StudentProjectAssessmentInner() {
           setReflectionText(result.reflection.text);
         }
       } catch (e: any) {
-        setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
+        if (e instanceof ApiAuthError) {
+          setError(e.originalMessage);
+        } else {
+          setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
+        }
       } finally {
         setLoading(false);
       }
@@ -57,7 +62,11 @@ export default function StudentProjectAssessmentInner() {
         await projectAssessmentService.getProjectAssessment(assessmentId);
       setData(result);
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.message || "Opslaan mislukt");
+      if (e instanceof ApiAuthError) {
+        setError(e.originalMessage);
+      } else {
+        setError(e?.response?.data?.detail || e?.message || "Opslaan mislukt");
+      }
     } finally {
       setSaving(false);
     }
