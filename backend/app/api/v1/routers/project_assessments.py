@@ -221,10 +221,11 @@ def list_project_assessments(
 @router.get("/{assessment_id}", response_model=ProjectAssessmentDetailOut)
 def get_project_assessment(
     assessment_id: int,
+    team_number: Optional[int] = Query(None, description="Filter scores by team number"),
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    """Get detailed project assessment including scores"""
+    """Get detailed project assessment including scores for a specific team"""
     pa = db.query(ProjectAssessment).filter(
         ProjectAssessment.id == assessment_id,
         ProjectAssessment.school_id == user.school_id,
@@ -246,6 +247,10 @@ def get_project_assessment(
         ).first()
         if not is_member:
             raise HTTPException(status_code=403, detail="Not authorized to view this assessment")
+        # Students should only see their own team's scores
+        student_info = db.query(User).filter(User.id == user.id).first()
+        if student_info and student_info.team_number:
+            team_number = student_info.team_number
     elif user.role in ("teacher", "admin") and pa.teacher_id != user.id:
         raise HTTPException(status_code=403, detail="Not authorized to view this assessment")
     
@@ -259,11 +264,14 @@ def get_project_assessment(
         RubricCriterion.school_id == user.school_id,
     ).order_by(RubricCriterion.id.asc()).all()
     
-    # Get scores
-    scores = db.query(ProjectAssessmentScore).filter(
+    # Get scores - filter by team_number if provided
+    scores_query = db.query(ProjectAssessmentScore).filter(
         ProjectAssessmentScore.assessment_id == pa.id,
         ProjectAssessmentScore.school_id == user.school_id,
-    ).all()
+    )
+    if team_number is not None:
+        scores_query = scores_query.filter(ProjectAssessmentScore.team_number == team_number)
+    scores = scores_query.all()
     
     # Get reflection (if student)
     reflection = None
@@ -379,53 +387,71 @@ def get_assessment_teams_overview(
         RubricCriterion.school_id == user.school_id,
     ).scalar() or 0
     
-    # Get group info
+    # Get group (course/cluster) info
     group = db.query(Group).filter(Group.id == pa.group_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
     
-    # Get team members
-    members_data = db.query(GroupMember, User).join(
-        User, GroupMember.user_id == User.id
+    # Get all users in this course/cluster, grouped by team_number
+    # Users can be linked via GroupMember OR have the same course through their team
+    members_in_group = db.query(User).join(
+        GroupMember, GroupMember.user_id == User.id
     ).filter(
         GroupMember.group_id == group.id,
         GroupMember.school_id == user.school_id,
         GroupMember.active == True,
+        User.team_number.isnot(None),  # Only users with team numbers
     ).all()
     
-    members = [
-        TeamMemberInfo(id=u.id, name=u.name, email=u.email)
-        for _, u in members_data
-    ]
-    
-    # Get scores count
-    scores_count = db.query(func.count(ProjectAssessmentScore.id)).filter(
-        ProjectAssessmentScore.assessment_id == pa.id,
-        ProjectAssessmentScore.school_id == user.school_id,
-    ).scalar() or 0
-    
-    # Determine status
-    if scores_count == 0:
-        team_status = "not_started"
-    elif scores_count < total_criteria:
-        team_status = "in_progress"
-    else:
-        team_status = "completed"
+    # Group users by team_number
+    teams_dict: dict[int, List[User]] = {}
+    for u in members_in_group:
+        if u.team_number is not None:
+            if u.team_number not in teams_dict:
+                teams_dict[u.team_number] = []
+            teams_dict[u.team_number].append(u)
     
     # Get teacher name for updated_by
     teacher = db.query(User).filter(User.id == pa.teacher_id).first()
     teacher_name = teacher.name if teacher else None
     
-    team = TeamAssessmentStatus(
-        group_id=group.id,
-        group_name=group.name,
-        members=members,
-        scores_count=scores_count,
-        total_criteria=total_criteria,
-        status=team_status,
-        updated_at=pa.published_at if pa.status == "published" else None,
-        updated_by=teacher_name,
-    )
+    # Build team status for each team
+    teams = []
+    for team_num in sorted(teams_dict.keys()):
+        team_members = teams_dict[team_num]
+        
+        members = [
+            TeamMemberInfo(id=u.id, name=u.name, email=u.email)
+            for u in team_members
+        ]
+        
+        # Get scores count for this team
+        scores_count = db.query(func.count(ProjectAssessmentScore.id)).filter(
+            ProjectAssessmentScore.assessment_id == pa.id,
+            ProjectAssessmentScore.team_number == team_num,
+            ProjectAssessmentScore.school_id == user.school_id,
+        ).scalar() or 0
+        
+        # Determine status
+        if scores_count == 0:
+            team_status = "not_started"
+        elif scores_count < total_criteria:
+            team_status = "in_progress"
+        else:
+            team_status = "completed"
+        
+        team = TeamAssessmentStatus(
+            group_id=group.id,
+            group_name=f"Team {team_num}",
+            team_number=team_num,
+            members=members,
+            scores_count=scores_count,
+            total_criteria=total_criteria,
+            status=team_status,
+            updated_at=pa.published_at if pa.status == "published" and scores_count > 0 else None,
+            updated_by=teacher_name if scores_count > 0 else None,
+        )
+        teams.append(team)
     
     return ProjectAssessmentTeamOverview(
         assessment=_to_out_assessment(pa),
@@ -433,7 +459,7 @@ def get_assessment_teams_overview(
         rubric_scale_min=rubric.scale_min,
         rubric_scale_max=rubric.scale_max,
         total_criteria=total_criteria,
-        teams=[team],  # Currently only one team per assessment
+        teams=teams,
     )
 
 
@@ -511,10 +537,11 @@ def batch_create_update_scores(
     
     result = []
     for score_data in payload.scores:
-        # Check if score exists
+        # Check if score exists for this assessment, criterion, and team_number
         existing = db.query(ProjectAssessmentScore).filter(
             ProjectAssessmentScore.assessment_id == assessment_id,
             ProjectAssessmentScore.criterion_id == score_data.criterion_id,
+            ProjectAssessmentScore.team_number == score_data.team_number,
             ProjectAssessmentScore.school_id == user.school_id,
         ).first()
         
@@ -531,6 +558,7 @@ def batch_create_update_scores(
                 criterion_id=score_data.criterion_id,
                 score=score_data.score,
                 comment=score_data.comment,
+                team_number=score_data.team_number,
             )
             db.add(new_score)
             db.flush()

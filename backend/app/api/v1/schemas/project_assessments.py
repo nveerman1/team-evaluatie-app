@@ -59,6 +59,7 @@ class ProjectAssessmentScoreCreate(BaseModel):
     criterion_id: int
     score: int
     comment: Optional[str] = None
+    team_number: Optional[int] = None
 
 
 class ProjectAssessmentScoreUpdate(BaseModel):
@@ -72,6 +73,7 @@ class ProjectAssessmentScoreOut(BaseModel):
     criterion_id: int
     score: int
     comment: Optional[str]
+    team_number: Optional[int]
 
     class Config:
         from_attributes = True
@@ -125,6 +127,7 @@ class TeamAssessmentStatus(BaseModel):
     """Team assessment status for overview"""
     group_id: int
     group_name: str
+    team_number: Optional[int]
     members: List[TeamMemberInfo]
     scores_count: int
     total_criteria: int

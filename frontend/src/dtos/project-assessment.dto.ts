@@ -48,12 +48,14 @@ export type ProjectAssessmentScoreOut = {
   criterion_id: number;
   score: number;
   comment?: string | null;
+  team_number?: number | null;
 };
 
 export type ProjectAssessmentScoreCreate = {
   criterion_id: number;
   score: number;
   comment?: string | null;
+  team_number?: number | null;
 };
 
 export type ProjectAssessmentScoreBatchRequest = {
@@ -97,6 +99,7 @@ export type TeamMemberInfo = {
 export type TeamAssessmentStatus = {
   group_id: number;
   group_name: string;
+  team_number?: number | null;
   members: TeamMemberInfo[];
   scores_count: number;
   total_criteria: number;

@@ -35,10 +35,14 @@ export const projectAssessmentService = {
   /**
    * Get a single project assessment by ID with details
    */
-  async getProjectAssessment(id: number): Promise<ProjectAssessmentDetailOut> {
-    const response = await api.get<ProjectAssessmentDetailOut>(
-      `/project-assessments/${id}`
-    );
+  async getProjectAssessment(id: number, teamNumber?: number): Promise<ProjectAssessmentDetailOut> {
+    const params = new URLSearchParams();
+    if (teamNumber !== undefined) {
+      params.set("team_number", teamNumber.toString());
+    }
+    const queryString = params.toString();
+    const url = queryString ? `/project-assessments/${id}?${queryString}` : `/project-assessments/${id}`;
+    const response = await api.get<ProjectAssessmentDetailOut>(url);
     return response.data;
   },
 
