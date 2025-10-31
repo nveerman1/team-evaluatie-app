@@ -1,5 +1,5 @@
 "use client";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { ApiAuthError } from "@/lib/api";
@@ -8,13 +8,17 @@ import {
   ProjectAssessmentDetailOut,
   ProjectAssessmentScoreCreate,
   ProjectAssessmentUpdate,
+  ProjectAssessmentTeamOverview,
 } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
+import { RubricRating } from "@/components/teacher/RubricRating";
 
 export default function EditProjectAssessmentInner() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const assessmentId = Number(params?.assessmentId);
+  const teamNumber = searchParams.get("team") ? Number(searchParams.get("team")) : undefined;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -23,11 +27,9 @@ export default function EditProjectAssessmentInner() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const [data, setData] = useState<ProjectAssessmentDetailOut | null>(null);
-  const [title, setTitle] = useState("");
-  const [version, setVersion] = useState("");
+  const [teamsData, setTeamsData] = useState<ProjectAssessmentTeamOverview | null>(null);
   const [status, setStatus] = useState("draft");
   const [generalComment, setGeneralComment] = useState("");
-  const [expandedCriteria, setExpandedCriteria] = useState<Record<number, boolean>>({});
 
   // Scores: map criterion_id -> {score, comment}
   const [scores, setScores] = useState<
@@ -37,16 +39,37 @@ export default function EditProjectAssessmentInner() {
   // Autosave timer
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Load teams overview to get team list
   useEffect(() => {
+    async function loadTeams() {
+      try {
+        const result = await projectAssessmentService.getTeamOverview(assessmentId);
+        setTeamsData(result);
+        // If no team selected and teams exist, redirect to first team
+        if (!teamNumber && result.teams.length > 0 && result.teams[0].team_number) {
+          const firstTeam = result.teams[0].team_number;
+          router.replace(`/teacher/project-assessments/${assessmentId}/edit?team=${firstTeam}`);
+        }
+      } catch (e) {
+        console.error("Failed to load teams", e);
+      }
+    }
+    loadTeams();
+  }, [assessmentId, teamNumber, router]);
+
+  // Load assessment data for specific team
+  useEffect(() => {
+    if (teamNumber === undefined) return;
+
     async function loadData() {
       setLoading(true);
       setError(null);
       try {
-        const result =
-          await projectAssessmentService.getProjectAssessment(assessmentId);
+        const result = await projectAssessmentService.getProjectAssessment(
+          assessmentId,
+          teamNumber
+        );
         setData(result);
-        setTitle(result.assessment.title);
-        setVersion(result.assessment.version || "");
         setStatus(result.assessment.status);
 
         // Initialize scores
@@ -69,46 +92,21 @@ export default function EditProjectAssessmentInner() {
       }
     }
     loadData();
-  }, [assessmentId]);
-
-  const handleUpdateInfo = async () => {
-    setSaving(true);
-    setError(null);
-    setSuccessMsg(null);
-    try {
-      const payload: ProjectAssessmentUpdate = {
-        title,
-        version: version || undefined,
-        status,
-      };
-      await projectAssessmentService.updateProjectAssessment(
-        assessmentId,
-        payload
-      );
-      setSuccessMsg("Basisgegevens opgeslagen");
-    } catch (e: any) {
-      if (e instanceof ApiAuthError) {
-        setError(e.originalMessage);
-      } else {
-        setError(e?.response?.data?.detail || e?.message || "Opslaan mislukt");
-      }
-    } finally {
-      setSaving(false);
-    }
-  };
+  }, [assessmentId, teamNumber]);
 
   // Autosave function
   const autoSaveScores = useCallback(async () => {
-    if (!data) return;
+    if (!data || teamNumber === undefined) return;
     setAutoSaving(true);
     try {
-      const scoresPayload: ProjectAssessmentScoreCreate[] = Object.entries(
-        scores
-      ).map(([criterionId, data]) => ({
-        criterion_id: Number(criterionId),
-        score: data.score,
-        comment: data.comment || undefined,
-      }));
+      const scoresPayload: ProjectAssessmentScoreCreate[] = Object.entries(scores).map(
+        ([criterionId, data]) => ({
+          criterion_id: Number(criterionId),
+          score: data.score,
+          comment: data.comment || undefined,
+          team_number: teamNumber,
+        })
+      );
 
       await projectAssessmentService.batchUpdateScores(assessmentId, {
         scores: scoresPayload,
@@ -118,14 +116,14 @@ export default function EditProjectAssessmentInner() {
     } finally {
       setAutoSaving(false);
     }
-  }, [scores, assessmentId, data]);
+  }, [scores, assessmentId, data, teamNumber]);
 
   // Trigger autosave when scores change
   useEffect(() => {
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
     }
-    if (Object.keys(scores).length > 0) {
+    if (Object.keys(scores).length > 0 && teamNumber !== undefined) {
       autoSaveTimerRef.current = setTimeout(() => {
         autoSaveScores();
       }, 2000); // 2 seconds delay
@@ -135,20 +133,22 @@ export default function EditProjectAssessmentInner() {
         clearTimeout(autoSaveTimerRef.current);
       }
     };
-  }, [scores, autoSaveScores]);
+  }, [scores, autoSaveScores, teamNumber]);
 
   const handleSaveScores = async () => {
+    if (teamNumber === undefined) return;
     setSaving(true);
     setError(null);
     setSuccessMsg(null);
     try {
-      const scoresPayload: ProjectAssessmentScoreCreate[] = Object.entries(
-        scores
-      ).map(([criterionId, data]) => ({
-        criterion_id: Number(criterionId),
-        score: data.score,
-        comment: data.comment || undefined,
-      }));
+      const scoresPayload: ProjectAssessmentScoreCreate[] = Object.entries(scores).map(
+        ([criterionId, data]) => ({
+          criterion_id: Number(criterionId),
+          score: data.score,
+          comment: data.comment || undefined,
+          team_number: teamNumber,
+        })
+      );
 
       await projectAssessmentService.batchUpdateScores(assessmentId, {
         scores: scoresPayload,
@@ -186,21 +186,29 @@ export default function EditProjectAssessmentInner() {
       if (e instanceof ApiAuthError) {
         setError(e.originalMessage);
       } else {
-        setError(
-          e?.response?.data?.detail || e?.message || "Publiceren mislukt"
-        );
+        setError(e?.response?.data?.detail || e?.message || "Publiceren mislukt");
       }
     } finally {
       setSaving(false);
     }
   };
 
+  // Navigation functions
+  const navigateToTeam = (newTeamNumber: number) => {
+    router.push(`/teacher/project-assessments/${assessmentId}/edit?team=${newTeamNumber}`);
+  };
+
+  const currentTeamIndex = teamsData?.teams.findIndex(t => t.team_number === teamNumber) ?? -1;
+  const hasPrevTeam = currentTeamIndex > 0;
+  const hasNextTeam = teamsData ? currentTeamIndex < teamsData.teams.length - 1 : false;
+  const prevTeamNumber = hasPrevTeam && teamsData ? teamsData.teams[currentTeamIndex - 1].team_number : null;
+  const nextTeamNumber = hasNextTeam && teamsData ? teamsData.teams[currentTeamIndex + 1].team_number : null;
+
+  const currentTeam = teamsData?.teams.find(t => t.team_number === teamNumber);
+
   if (loading) return <Loading />;
   if (error && !data) return <ErrorMessage message={error} />;
-  if (!data) return <ErrorMessage message="Geen data gevonden" />;
-
-  // Get group info from assessment
-  const groupId = data.assessment.group_id;
+  if (!data || !currentTeam) return <ErrorMessage message="Geen data gevonden" />;
 
   return (
     <main className="max-w-6xl mx-auto p-6 space-y-6">
@@ -217,12 +225,14 @@ export default function EditProjectAssessmentInner() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold">
-              Rubric invullen: {data.assessment.title}
+              Rubric invullen: Team {teamNumber}
             </h1>
             <p className="text-gray-600">
-              {data.rubric_title} • Schaal: {data.rubric_scale_min}-
-              {data.rubric_scale_max}
+              {data.rubric_title} • Schaal: {data.rubric_scale_min}-{data.rubric_scale_max}
             </p>
+            <div className="mt-2 text-sm text-gray-600">
+              <strong>Teamleden:</strong> {currentTeam.members.map(m => m.name).join(", ")}
+            </div>
             {autoSaving && (
               <p className="text-sm text-blue-600">💾 Autosave actief...</p>
             )}
@@ -242,28 +252,33 @@ export default function EditProjectAssessmentInner() {
                 ✅ Gepubliceerd
               </span>
             )}
-            <button
-              onClick={() => {
-                setError(null);
-                setSuccessMsg("PDF download functie komt binnenkort beschikbaar");
-              }}
-              className="px-4 py-2 rounded-xl border hover:bg-gray-50 opacity-60 cursor-not-allowed"
-              title="Deze functie komt binnenkort beschikbaar"
-            >
-              🧾 Download PDF
-            </button>
           </div>
         </div>
-      </header>
 
-      {successMsg && (
-        <div className="p-3 rounded-lg bg-green-50 text-green-700">
-          {successMsg}
+        {/* Team Navigation */}
+        <div className="flex items-center justify-between bg-white border rounded-xl p-4">
+          <button
+            onClick={() => prevTeamNumber && navigateToTeam(prevTeamNumber)}
+            disabled={!hasPrevTeam}
+            className="px-4 py-2 rounded-lg border hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            ← Vorig team
+          </button>
+          <div className="text-center">
+            <div className="font-semibold">Team {teamNumber}</div>
+            <div className="text-sm text-gray-500">
+              {currentTeamIndex + 1} van {teamsData?.teams.length || 0}
+            </div>
+          </div>
+          <button
+            onClick={() => nextTeamNumber && navigateToTeam(nextTeamNumber)}
+            disabled={!hasNextTeam}
+            className="px-4 py-2 rounded-lg border hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Volgend team →
+          </button>
         </div>
-      )}
-      {error && (
-        <div className="p-3 rounded-lg bg-red-50 text-red-700">{error}</div>
-      )}
+      </header>
 
       {successMsg && (
         <div className="p-3 rounded-lg bg-green-50 text-green-700 flex items-center gap-2">
@@ -275,7 +290,7 @@ export default function EditProjectAssessmentInner() {
       )}
 
       {/* Rubric Categories Section */}
-      <section className="bg-white border rounded-2xl p-6 space-y-6">
+      <section className="space-y-5">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">Rubric per categorie</h2>
           <div className="text-sm text-gray-500">
@@ -287,128 +302,40 @@ export default function EditProjectAssessmentInner() {
           </div>
         </div>
 
-        {/* Categories Grid */}
-        <div className="grid gap-5">
-          {data.criteria.map((criterion, index) => (
-            <div
-              key={criterion.id}
-              className="border-2 rounded-xl p-5 hover:border-blue-300 transition-colors space-y-4"
-            >
-              {/* Category Header */}
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-800">
-                    {criterion.name}
-                  </h3>
-                  {criterion.descriptors && Object.keys(criterion.descriptors).length > 0 && (
-                    <div className="mt-1">
-                      <button
-                        type="button"
-                        className="text-sm text-blue-600 hover:text-blue-800"
-                        onClick={() => setExpandedCriteria(prev => ({
-                          ...prev,
-                          [criterion.id]: !prev[criterion.id]
-                        }))}
-                      >
-                        {expandedCriteria[criterion.id] ? "▼" : "▶"} ℹ️ Toelichting
-                      </button>
-                      {expandedCriteria[criterion.id] && (
-                        <div className="mt-2 p-3 bg-blue-50 rounded-lg text-sm text-gray-700">
-                          {Object.entries(criterion.descriptors).map(([key, value]) => (
-                            <div key={key} className="mb-2 last:mb-0">
-                              <strong>{key}:</strong> {value}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <div className="text-3xl font-bold text-blue-600">
-                      {scores[criterion.id]?.score || data.rubric_scale_min}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      / {data.rubric_scale_max}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Score Input */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Score
-                </label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="range"
-                    min={data.rubric_scale_min}
-                    max={data.rubric_scale_max}
-                    step="1"
-                    className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                    value={scores[criterion.id]?.score || data.rubric_scale_min}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
-                      setScores((prev) => ({
-                        ...prev,
-                        [criterion.id]: {
-                          score: val,
-                          comment: prev[criterion.id]?.comment || "",
-                        },
-                      }));
-                    }}
-                  />
-                  <input
-                    type="number"
-                    min={data.rubric_scale_min}
-                    max={data.rubric_scale_max}
-                    className="w-20 border rounded-lg px-3 py-2 text-center font-semibold"
-                    value={scores[criterion.id]?.score || data.rubric_scale_min}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
-                      if (val >= data.rubric_scale_min && val <= data.rubric_scale_max) {
-                        setScores((prev) => ({
-                          ...prev,
-                          [criterion.id]: {
-                            score: val,
-                            comment: prev[criterion.id]?.comment || "",
-                          },
-                        }));
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Comment Input */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Opmerking voor student
-                </label>
-                <textarea
-                  className="w-full border rounded-lg px-3 py-3 min-h-28 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Vul hier je feedback in voor deze categorie..."
-                  value={scores[criterion.id]?.comment || ""}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setScores((prev) => ({
-                      ...prev,
-                      [criterion.id]: {
-                        score: prev[criterion.id]?.score || data.rubric_scale_min,
-                        comment: val,
-                      },
-                    }));
-                  }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
+        {/* Categories using RubricRating component */}
+        {data.criteria.map((criterion) => (
+          <RubricRating
+            key={criterion.id}
+            criterionName={criterion.name}
+            criterionId={criterion.id}
+            value={scores[criterion.id]?.score || data.rubric_scale_min}
+            comment={scores[criterion.id]?.comment || ""}
+            scaleMin={data.rubric_scale_min}
+            scaleMax={data.rubric_scale_max}
+            descriptors={criterion.descriptors}
+            onChange={(newScore) => {
+              setScores((prev) => ({
+                ...prev,
+                [criterion.id]: {
+                  score: newScore,
+                  comment: prev[criterion.id]?.comment || "",
+                },
+              }));
+            }}
+            onCommentChange={(newComment) => {
+              setScores((prev) => ({
+                ...prev,
+                [criterion.id]: {
+                  score: prev[criterion.id]?.score || data.rubric_scale_min,
+                  comment: newComment,
+                },
+              }));
+            }}
+          />
+        ))}
 
         {/* General Comment Section */}
-        <div className="border-t pt-6 space-y-3">
+        <div className="bg-white border-2 rounded-xl p-5 space-y-3">
           <h3 className="text-lg font-semibold">Algemene opmerking</h3>
           <textarea
             className="w-full border rounded-lg px-3 py-3 min-h-32 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -419,7 +346,7 @@ export default function EditProjectAssessmentInner() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-between pt-4 border-t">
+        <div className="flex items-center justify-between pt-4 border-t bg-white rounded-xl p-5">
           <div className="text-sm text-gray-600">
             {autoSaving ? (
               <span className="text-blue-600">💾 Opslaan...</span>

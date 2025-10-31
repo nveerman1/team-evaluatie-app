@@ -16,6 +16,9 @@ export default function ProjectAssessmentOverviewInner() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ProjectAssessmentTeamOverview | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [sortBy, setSortBy] = useState<"team" | "status" | "progress" | "updated">("team");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   useEffect(() => {
     async function loadData() {
@@ -41,16 +44,53 @@ export default function ProjectAssessmentOverviewInner() {
   if (error && !data) return <ErrorMessage message={error} />;
   if (!data) return <ErrorMessage message="Geen data gevonden" />;
 
-  // Filter teams based on status
-  const filteredTeams =
-    statusFilter === "all"
-      ? data.teams
-      : data.teams.filter((t) => {
-          if (statusFilter === "not_started") return t.status === "not_started";
-          if (statusFilter === "in_progress") return t.status === "in_progress";
-          if (statusFilter === "completed") return t.status === "completed";
-          return true;
-        });
+  // Filter teams based on status and search
+  let filteredTeams = data.teams;
+  
+  // Apply status filter
+  if (statusFilter !== "all") {
+    filteredTeams = filteredTeams.filter((t) => {
+      if (statusFilter === "not_started") return t.status === "not_started";
+      if (statusFilter === "in_progress") return t.status === "in_progress";
+      if (statusFilter === "completed") return t.status === "completed";
+      return true;
+    });
+  }
+  
+  // Apply search filter
+  if (searchQuery.trim()) {
+    const query = searchQuery.toLowerCase();
+    filteredTeams = filteredTeams.filter((t) => {
+      const teamMatch = t.team_number?.toString().includes(query);
+      const membersMatch = t.members.some(m => m.name.toLowerCase().includes(query));
+      return teamMatch || membersMatch;
+    });
+  }
+  
+  // Apply sorting
+  const sortedTeams = [...filteredTeams].sort((a, b) => {
+    let comparison = 0;
+    switch (sortBy) {
+      case "team":
+        comparison = (a.team_number || 0) - (b.team_number || 0);
+        break;
+      case "status":
+        const statusOrder = { not_started: 0, in_progress: 1, completed: 2 };
+        comparison = statusOrder[a.status] - statusOrder[b.status];
+        break;
+      case "progress":
+        const aProgress = a.total_criteria > 0 ? a.scores_count / a.total_criteria : 0;
+        const bProgress = b.total_criteria > 0 ? b.scores_count / b.total_criteria : 0;
+        comparison = aProgress - bProgress;
+        break;
+      case "updated":
+        const aTime = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+        const bTime = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+        comparison = aTime - bTime;
+        break;
+    }
+    return sortOrder === "asc" ? comparison : -comparison;
+  });
 
   return (
     <main className="max-w-7xl mx-auto p-6 space-y-6">
@@ -95,19 +135,50 @@ export default function ProjectAssessmentOverviewInner() {
         </div>
       </header>
 
-      {/* Filters */}
-      <div className="flex items-center gap-3 bg-white p-4 rounded-2xl border">
-        <label className="text-sm font-medium">Filter op status:</label>
-        <select
-          className="border rounded-lg px-3 py-2"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="all">Alle</option>
-          <option value="not_started">⬜ Niet gestart</option>
-          <option value="in_progress">⚠️ In progress</option>
-          <option value="completed">✅ Afgerond</option>
-        </select>
+      {/* Filters and Search */}
+      <div className="flex items-center gap-4 bg-white p-4 rounded-2xl border flex-wrap">
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium">Zoeken:</label>
+          <input
+            type="text"
+            className="border rounded-lg px-3 py-2 w-64"
+            placeholder="Teamnummer of naam..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium">Status:</label>
+          <select
+            className="border rounded-lg px-3 py-2"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="all">Alle</option>
+            <option value="not_started">⬜ Niet gestart</option>
+            <option value="in_progress">⚠️ In progress</option>
+            <option value="completed">✅ Afgerond</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium">Sorteer op:</label>
+          <select
+            className="border rounded-lg px-3 py-2"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+          >
+            <option value="team">Teamnummer</option>
+            <option value="status">Status</option>
+            <option value="progress">Voortgang</option>
+            <option value="updated">Laatste bewerking</option>
+          </select>
+          <button
+            onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+            className="px-3 py-2 border rounded-lg hover:bg-gray-50"
+          >
+            {sortOrder === "asc" ? "↑" : "↓"}
+          </button>
+        </div>
       </div>
 
       {/* Teams Table */}
@@ -137,17 +208,17 @@ export default function ProjectAssessmentOverviewInner() {
               </tr>
             </thead>
             <tbody>
-              {filteredTeams.length === 0 && (
+              {sortedTeams.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                     Geen teams gevonden voor dit filter
                   </td>
                 </tr>
               )}
-              {filteredTeams.map((team) => (
-                <tr key={team.group_id} className="border-b last:border-b-0 hover:bg-gray-50">
+              {sortedTeams.map((team) => (
+                <tr key={team.team_number || team.group_id} className="border-b last:border-b-0 hover:bg-gray-50">
                   <td className="px-4 py-3">
-                    <div className="font-medium">{team.group_name}</div>
+                    <div className="font-medium">Team {team.team_number}</div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="text-sm text-gray-600">
@@ -204,7 +275,7 @@ export default function ProjectAssessmentOverviewInner() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Link
-                      href={`/teacher/project-assessments/${assessmentId}/edit`}
+                      href={`/teacher/project-assessments/${assessmentId}/edit?team=${team.team_number}`}
                       className="px-3 py-1.5 rounded-lg border hover:bg-gray-100 text-sm inline-block"
                     >
                       {team.status === "not_started"
