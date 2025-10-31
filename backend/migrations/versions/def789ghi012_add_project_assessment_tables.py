@@ -28,6 +28,18 @@ def upgrade():
         sa.Column("status", sa.String(30), nullable=False, server_default="draft"),
         sa.Column("published_at", sa.DateTime(), nullable=True),
         sa.Column("metadata_json", sa.JSON(), nullable=False, server_default="{}"),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(["group_id"], ["groups.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["rubric_id"], ["rubrics.id"], ondelete="RESTRICT"),
@@ -51,6 +63,18 @@ def upgrade():
         sa.Column("criterion_id", sa.Integer(), nullable=False),
         sa.Column("score", sa.SmallInteger(), nullable=False),
         sa.Column("comment", sa.Text(), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(
             ["assessment_id"], ["project_assessments.id"], ondelete="CASCADE"
@@ -84,6 +108,18 @@ def upgrade():
         sa.Column("text", sa.Text(), nullable=False),
         sa.Column("word_count", sa.Integer(), nullable=False),
         sa.Column("submitted_at", sa.DateTime(), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(
             ["assessment_id"], ["project_assessments.id"], ondelete="CASCADE"
