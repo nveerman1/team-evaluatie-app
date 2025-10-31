@@ -39,6 +39,11 @@ class ProjectAssessmentOut(BaseModel):
 class ProjectAssessmentListItem(ProjectAssessmentOut):
     group_name: Optional[str] = None
     teacher_name: Optional[str] = None
+    course_name: Optional[str] = None
+    course_id: Optional[int] = None
+    scores_count: int = 0
+    total_criteria: int = 0
+    updated_at: Optional[datetime] = None
 
 
 class ProjectAssessmentListResponse(BaseModel):
@@ -105,3 +110,53 @@ class ProjectAssessmentDetailOut(BaseModel):
     rubric_scale_max: int
     criteria: List[Dict[str, Any]]  # criterion details
     reflection: Optional[ProjectAssessmentReflectionOut]
+
+
+# ---------- Team member info ----------
+
+class TeamMemberInfo(BaseModel):
+    """Team member information"""
+    id: int
+    name: str
+    email: str
+
+
+class TeamAssessmentStatus(BaseModel):
+    """Team assessment status for overview"""
+    group_id: int
+    group_name: str
+    members: List[TeamMemberInfo]
+    scores_count: int
+    total_criteria: int
+    status: str  # "not_started" | "in_progress" | "completed"
+    updated_at: Optional[datetime]
+    updated_by: Optional[str]
+
+
+class ProjectAssessmentTeamOverview(BaseModel):
+    """Team overview for a project assessment"""
+    assessment: ProjectAssessmentOut
+    rubric_title: str
+    rubric_scale_min: int
+    rubric_scale_max: int
+    total_criteria: int
+    teams: List[TeamAssessmentStatus]
+
+
+# ---------- Reflections overview for teachers ----------
+
+class ReflectionInfo(BaseModel):
+    """Student reflection info for teacher view"""
+    id: int
+    user_id: int
+    user_name: str
+    text: str
+    word_count: int
+    submitted_at: Optional[datetime]
+
+
+class ProjectAssessmentReflectionsOverview(BaseModel):
+    """All reflections for a project assessment"""
+    assessment: ProjectAssessmentOut
+    group_name: str
+    reflections: List[ReflectionInfo]

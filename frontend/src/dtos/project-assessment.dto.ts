@@ -13,6 +13,11 @@ export type ProjectAssessmentOut = {
 export type ProjectAssessmentListItem = ProjectAssessmentOut & {
   group_name?: string | null;
   teacher_name?: string | null;
+  course_name?: string | null;
+  course_id?: number | null;
+  scores_count: number;
+  total_criteria: number;
+  updated_at?: string | null;
 };
 
 export type ProjectAssessmentListResponse = {
@@ -81,4 +86,45 @@ export type ProjectAssessmentDetailOut = {
     descriptors: Record<string, string>;
   }>;
   reflection?: ProjectAssessmentReflectionOut | null;
+};
+
+export type TeamMemberInfo = {
+  id: number;
+  name: string;
+  email: string;
+};
+
+export type TeamAssessmentStatus = {
+  group_id: number;
+  group_name: string;
+  members: TeamMemberInfo[];
+  scores_count: number;
+  total_criteria: number;
+  status: "not_started" | "in_progress" | "completed";
+  updated_at?: string | null;
+  updated_by?: string | null;
+};
+
+export type ProjectAssessmentTeamOverview = {
+  assessment: ProjectAssessmentOut;
+  rubric_title: string;
+  rubric_scale_min: number;
+  rubric_scale_max: number;
+  total_criteria: number;
+  teams: TeamAssessmentStatus[];
+};
+
+export type ReflectionInfo = {
+  id: number;
+  user_id: number;
+  user_name: string;
+  text: string;
+  word_count: number;
+  submitted_at?: string | null;
+};
+
+export type ProjectAssessmentReflectionsOverview = {
+  assessment: ProjectAssessmentOut;
+  group_name: string;
+  reflections: ReflectionInfo[];
 };
