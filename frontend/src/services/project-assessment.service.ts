@@ -22,9 +22,9 @@ export const projectAssessmentService = {
     const params = new URLSearchParams();
     if (groupId) params.set("group_id", groupId.toString());
     if (status) params.set("status", status);
-    const response = await api.get<ProjectAssessmentListResponse>(
-      `/project-assessments?${params.toString()}`
-    );
+    const queryString = params.toString();
+    const url = queryString ? `/project-assessments?${queryString}` : "/project-assessments";
+    const response = await api.get<ProjectAssessmentListResponse>(url);
     return response.data;
   },
 
