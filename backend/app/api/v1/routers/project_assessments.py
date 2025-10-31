@@ -58,9 +58,9 @@ def create_project_assessment(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    """Create a new project assessment for a group (teacher only)"""
-    if user.role != "teacher":
-        raise HTTPException(status_code=403, detail="Only teachers can create assessments")
+    """Create a new project assessment for a group (teacher/admin only)"""
+    if user.role not in ("teacher", "admin"):
+        raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen beoordelingen aanmaken")
     
     # Verify rubric exists and has scope='project'
     rubric = db.query(Rubric).filter(
@@ -105,11 +105,11 @@ def list_project_assessments(
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
 ):
-    """List project assessments (teachers see all, students see only their group's published assessments)"""
+    """List project assessments (teachers/admins see all, students see only their group's published assessments)"""
     stmt = select(ProjectAssessment).where(ProjectAssessment.school_id == user.school_id)
     
-    if user.role == "teacher":
-        # Teachers see all assessments they created
+    if user.role in ("teacher", "admin"):
+        # Teachers and admins see all assessments they created
         stmt = stmt.where(ProjectAssessment.teacher_id == user.id)
     else:
         # Students only see published assessments for their groups
@@ -191,7 +191,7 @@ def get_project_assessment(
         ).first()
         if not is_member:
             raise HTTPException(status_code=403, detail="Not authorized to view this assessment")
-    elif user.role == "teacher" and pa.teacher_id != user.id:
+    elif user.role in ("teacher", "admin") and pa.teacher_id != user.id:
         raise HTTPException(status_code=403, detail="Not authorized to view this assessment")
     
     # Get rubric and criteria
@@ -242,9 +242,9 @@ def update_project_assessment(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    """Update project assessment (teacher only)"""
-    if user.role != "teacher":
-        raise HTTPException(status_code=403, detail="Only teachers can update assessments")
+    """Update project assessment (teacher/admin only)"""
+    if user.role not in ("teacher", "admin"):
+        raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen beoordelingen bijwerken")
     
     pa = db.query(ProjectAssessment).filter(
         ProjectAssessment.id == assessment_id,
@@ -277,9 +277,9 @@ def delete_project_assessment(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    """Delete project assessment (teacher only)"""
-    if user.role != "teacher":
-        raise HTTPException(status_code=403, detail="Only teachers can delete assessments")
+    """Delete project assessment (teacher/admin only)"""
+    if user.role not in ("teacher", "admin"):
+        raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen beoordelingen verwijderen")
     
     pa = db.query(ProjectAssessment).filter(
         ProjectAssessment.id == assessment_id,
@@ -303,9 +303,9 @@ def batch_create_update_scores(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    """Batch create/update scores for project assessment (teacher only)"""
-    if user.role != "teacher":
-        raise HTTPException(status_code=403, detail="Only teachers can add scores")
+    """Batch create/update scores for project assessment (teacher/admin only)"""
+    if user.role not in ("teacher", "admin"):
+        raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen scores toevoegen")
     
     pa = db.query(ProjectAssessment).filter(
         ProjectAssessment.id == assessment_id,
