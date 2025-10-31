@@ -82,8 +82,12 @@ export default function ProjectAssessmentOverviewInner() {
               📝 Reflecties bekijken
             </Link>
             <button
-              onClick={() => alert("Export functionaliteit komt binnenkort")}
-              className="px-4 py-2 rounded-xl border hover:bg-gray-50"
+              onClick={() => {
+                setError(null);
+                alert("Export functionaliteit komt binnenkort");
+              }}
+              className="px-4 py-2 rounded-xl border hover:bg-gray-50 opacity-60 cursor-not-allowed"
+              title="Deze functie komt binnenkort beschikbaar"
             >
               🧾 Exporteer CSV
             </button>

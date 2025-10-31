@@ -27,6 +27,7 @@ export default function EditProjectAssessmentInner() {
   const [version, setVersion] = useState("");
   const [status, setStatus] = useState("draft");
   const [generalComment, setGeneralComment] = useState("");
+  const [expandedCriteria, setExpandedCriteria] = useState<Record<number, boolean>>({});
 
   // Scores: map criterion_id -> {score, comment}
   const [scores, setScores] = useState<
@@ -242,8 +243,12 @@ export default function EditProjectAssessmentInner() {
               </span>
             )}
             <button
-              onClick={() => alert("PDF download komt binnenkort")}
-              className="px-4 py-2 rounded-xl border hover:bg-gray-50"
+              onClick={() => {
+                setError(null);
+                setSuccessMsg("PDF download functie komt binnenkort beschikbaar");
+              }}
+              className="px-4 py-2 rounded-xl border hover:bg-gray-50 opacity-60 cursor-not-allowed"
+              title="Deze functie komt binnenkort beschikbaar"
             >
               🧾 Download PDF
             </button>
@@ -296,14 +301,26 @@ export default function EditProjectAssessmentInner() {
                     {criterion.name}
                   </h3>
                   {criterion.descriptors && Object.keys(criterion.descriptors).length > 0 && (
-                    <div className="mt-1 text-sm text-gray-600">
+                    <div className="mt-1">
                       <button
                         type="button"
-                        className="text-blue-600 hover:text-blue-800"
-                        onClick={() => alert(`Beschrijving:\n\n${Object.values(criterion.descriptors).join("\n\n")}`)}
+                        className="text-sm text-blue-600 hover:text-blue-800"
+                        onClick={() => setExpandedCriteria(prev => ({
+                          ...prev,
+                          [criterion.id]: !prev[criterion.id]
+                        }))}
                       >
-                        ℹ️ Toelichting
+                        {expandedCriteria[criterion.id] ? "▼" : "▶"} ℹ️ Toelichting
                       </button>
+                      {expandedCriteria[criterion.id] && (
+                        <div className="mt-2 p-3 bg-blue-50 rounded-lg text-sm text-gray-700">
+                          {Object.entries(criterion.descriptors).map(([key, value]) => (
+                            <div key={key} className="mb-2 last:mb-0">
+                              <strong>{key}:</strong> {value}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

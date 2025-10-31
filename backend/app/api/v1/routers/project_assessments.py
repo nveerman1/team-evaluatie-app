@@ -16,6 +16,7 @@ from app.infra.db.models import (
     Group,
     GroupMember,
     User,
+    Course,
 )
 from app.api.v1.schemas.project_assessments import (
     ProjectAssessmentCreate,
@@ -112,8 +113,6 @@ def list_project_assessments(
     limit: int = Query(50, ge=1, le=100),
 ):
     """List project assessments (teachers/admins see all, students see only their group's published assessments)"""
-    from app.infra.db.models import Course
-    
     stmt = select(ProjectAssessment).where(ProjectAssessment.school_id == user.school_id)
     
     if user.role in ("teacher", "admin"):
