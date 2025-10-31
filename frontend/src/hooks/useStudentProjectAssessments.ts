@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ApiAuthError } from "@/lib/api";
 import { ProjectAssessmentListItem } from "@/dtos";
 import { projectAssessmentService } from "@/services";
 
@@ -24,11 +25,15 @@ export function useStudentProjectAssessments() {
       );
       setAssessments(data.items || []);
     } catch (e: any) {
-      setError(
-        e?.response?.data?.detail ||
-          e?.message ||
-          "Could not load project assessments"
-      );
+      if (e instanceof ApiAuthError) {
+        setError(e.originalMessage);
+      } else {
+        setError(
+          e?.response?.data?.detail ||
+            e?.message ||
+            "Could not load project assessments"
+        );
+      }
     } finally {
       setLoading(false);
     }

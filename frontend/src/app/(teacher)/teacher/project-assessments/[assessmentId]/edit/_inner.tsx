@@ -1,6 +1,7 @@
 "use client";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { ApiAuthError } from "@/lib/api";
 import { projectAssessmentService } from "@/services";
 import {
   ProjectAssessmentDetailOut,
@@ -51,7 +52,11 @@ export default function EditProjectAssessmentInner() {
         });
         setScores(scoresMap);
       } catch (e: any) {
-        setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
+        if (e instanceof ApiAuthError) {
+          setError(e.originalMessage);
+        } else {
+          setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
+        }
       } finally {
         setLoading(false);
       }
@@ -75,7 +80,11 @@ export default function EditProjectAssessmentInner() {
       );
       setSuccessMsg("Basisgegevens opgeslagen");
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.message || "Opslaan mislukt");
+      if (e instanceof ApiAuthError) {
+        setError(e.originalMessage);
+      } else {
+        setError(e?.response?.data?.detail || e?.message || "Opslaan mislukt");
+      }
     } finally {
       setSaving(false);
     }
@@ -99,7 +108,11 @@ export default function EditProjectAssessmentInner() {
       });
       setSuccessMsg("Scores opgeslagen");
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.message || "Opslaan mislukt");
+      if (e instanceof ApiAuthError) {
+        setError(e.originalMessage);
+      } else {
+        setError(e?.response?.data?.detail || e?.message || "Opslaan mislukt");
+      }
     } finally {
       setSaving(false);
     }
@@ -123,9 +136,13 @@ export default function EditProjectAssessmentInner() {
       setStatus("published");
       setSuccessMsg("Projectbeoordeling gepubliceerd");
     } catch (e: any) {
-      setError(
-        e?.response?.data?.detail || e?.message || "Publiceren mislukt"
-      );
+      if (e instanceof ApiAuthError) {
+        setError(e.originalMessage);
+      } else {
+        setError(
+          e?.response?.data?.detail || e?.message || "Publiceren mislukt"
+        );
+      }
     } finally {
       setSaving(false);
     }
