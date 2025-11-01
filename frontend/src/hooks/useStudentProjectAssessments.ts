@@ -21,6 +21,7 @@ export function useStudentProjectAssessments() {
     try {
       const data = await projectAssessmentService.getProjectAssessments(
         undefined,
+        undefined,
         "published"
       );
       setAssessments(data.items || []);
@@ -28,11 +29,26 @@ export function useStudentProjectAssessments() {
       if (e instanceof ApiAuthError) {
         setError(e.originalMessage);
       } else {
-        setError(
-          e?.response?.data?.detail ||
-            e?.message ||
-            "Could not load project assessments"
-        );
+        // Handle validation errors (422) which may return an array of error objects
+        let errorMessage = "Could not load project assessments";
+        
+        if (e?.response?.data?.detail) {
+          const detail = e.response.data.detail;
+          // If detail is an array of validation errors, extract messages
+          if (Array.isArray(detail)) {
+            errorMessage = detail
+              .map((err: any) => err.msg || JSON.stringify(err))
+              .join(", ");
+          } else if (typeof detail === "string") {
+            errorMessage = detail;
+          } else if (typeof detail === "object") {
+            errorMessage = detail.msg || JSON.stringify(detail);
+          }
+        } else if (e?.message) {
+          errorMessage = e.message;
+        }
+        
+        setError(errorMessage);
       }
     } finally {
       setLoading(false);
