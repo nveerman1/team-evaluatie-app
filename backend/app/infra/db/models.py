@@ -399,15 +399,17 @@ class ProjectAssessmentScore(Base):
     criterion_id: Mapped[int] = mapped_column(
         ForeignKey("rubric_criteria.id", ondelete="CASCADE"), nullable=False
     )
+    team_number: Mapped[Optional[int]] = mapped_column(nullable=True)
     
     score: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     comment: Mapped[Optional[str]] = mapped_column(Text)
     
     __table_args__ = (
         UniqueConstraint(
-            "assessment_id", "criterion_id", name="uq_project_score_per_criterion"
+            "assessment_id", "criterion_id", "team_number", name="uq_project_score_per_criterion_team"
         ),
         Index("ix_project_score_assessment", "assessment_id"),
+        Index("ix_project_score_team", "assessment_id", "team_number"),
     )
 
 

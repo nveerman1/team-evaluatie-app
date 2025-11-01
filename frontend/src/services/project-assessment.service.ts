@@ -9,6 +9,8 @@ import {
   ProjectAssessmentScoreOut,
   ProjectAssessmentReflectionOut,
   ProjectAssessmentReflectionCreate,
+  ProjectAssessmentTeamOverview,
+  ProjectAssessmentReflectionsOverview,
 } from "@/dtos/project-assessment.dto";
 
 export const projectAssessmentService = {
@@ -17,10 +19,12 @@ export const projectAssessmentService = {
    */
   async getProjectAssessments(
     groupId?: number,
+    courseId?: number,
     status?: string
   ): Promise<ProjectAssessmentListResponse> {
     const params = new URLSearchParams();
     if (groupId) params.set("group_id", groupId.toString());
+    if (courseId) params.set("course_id", courseId.toString());
     if (status) params.set("status", status);
     const queryString = params.toString();
     const url = queryString ? `/project-assessments?${queryString}` : "/project-assessments";
@@ -31,10 +35,14 @@ export const projectAssessmentService = {
   /**
    * Get a single project assessment by ID with details
    */
-  async getProjectAssessment(id: number): Promise<ProjectAssessmentDetailOut> {
-    const response = await api.get<ProjectAssessmentDetailOut>(
-      `/project-assessments/${id}`
-    );
+  async getProjectAssessment(id: number, teamNumber?: number): Promise<ProjectAssessmentDetailOut> {
+    const params = new URLSearchParams();
+    if (teamNumber !== undefined) {
+      params.set("team_number", teamNumber.toString());
+    }
+    const queryString = params.toString();
+    const url = queryString ? `/project-assessments/${id}?${queryString}` : `/project-assessments/${id}`;
+    const response = await api.get<ProjectAssessmentDetailOut>(url);
     return response.data;
   },
 
@@ -96,6 +104,30 @@ export const projectAssessmentService = {
     const response = await api.post<ProjectAssessmentReflectionOut>(
       `/project-assessments/${assessmentId}/reflection`,
       data
+    );
+    return response.data;
+  },
+
+  /**
+   * Get team overview for a project assessment (teacher)
+   */
+  async getTeamOverview(
+    assessmentId: number
+  ): Promise<ProjectAssessmentTeamOverview> {
+    const response = await api.get<ProjectAssessmentTeamOverview>(
+      `/project-assessments/${assessmentId}/teams`
+    );
+    return response.data;
+  },
+
+  /**
+   * Get all reflections for a project assessment (teacher)
+   */
+  async getReflections(
+    assessmentId: number
+  ): Promise<ProjectAssessmentReflectionsOverview> {
+    const response = await api.get<ProjectAssessmentReflectionsOverview>(
+      `/project-assessments/${assessmentId}/reflections`
     );
     return response.data;
   },

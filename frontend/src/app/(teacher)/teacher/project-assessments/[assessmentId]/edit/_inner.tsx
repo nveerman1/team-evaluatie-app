@@ -1,45 +1,75 @@
 "use client";
-import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect, useCallback, useRef } from "react";
+import Link from "next/link";
 import { ApiAuthError } from "@/lib/api";
 import { projectAssessmentService } from "@/services";
 import {
   ProjectAssessmentDetailOut,
   ProjectAssessmentScoreCreate,
   ProjectAssessmentUpdate,
+  ProjectAssessmentTeamOverview,
 } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
+import { RubricRating } from "@/components/teacher/RubricRating";
 
 export default function EditProjectAssessmentInner() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const assessmentId = Number(params?.assessmentId);
+  const teamNumber = searchParams.get("team") ? Number(searchParams.get("team")) : undefined;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const [data, setData] = useState<ProjectAssessmentDetailOut | null>(null);
-  const [title, setTitle] = useState("");
-  const [version, setVersion] = useState("");
+  const [teamsData, setTeamsData] = useState<ProjectAssessmentTeamOverview | null>(null);
   const [status, setStatus] = useState("draft");
+  const [generalComment, setGeneralComment] = useState("");
 
   // Scores: map criterion_id -> {score, comment}
   const [scores, setScores] = useState<
     Record<number, { score: number; comment: string }>
   >({});
 
+  // Autosave timer
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Load teams overview to get team list
   useEffect(() => {
+    async function loadTeams() {
+      try {
+        const result = await projectAssessmentService.getTeamOverview(assessmentId);
+        setTeamsData(result);
+        // If no team selected and teams exist, redirect to first team
+        if (!teamNumber && result.teams.length > 0 && result.teams[0].team_number) {
+          const firstTeam = result.teams[0].team_number;
+          router.replace(`/teacher/project-assessments/${assessmentId}/edit?team=${firstTeam}`);
+        }
+      } catch (e) {
+        console.error("Failed to load teams", e);
+      }
+    }
+    loadTeams();
+  }, [assessmentId, teamNumber, router]);
+
+  // Load assessment data for specific team
+  useEffect(() => {
+    if (teamNumber === undefined) return;
+
     async function loadData() {
       setLoading(true);
       setError(null);
       try {
-        const result =
-          await projectAssessmentService.getProjectAssessment(assessmentId);
+        const result = await projectAssessmentService.getProjectAssessment(
+          assessmentId,
+          teamNumber
+        );
         setData(result);
-        setTitle(result.assessment.title);
-        setVersion(result.assessment.version || "");
         setStatus(result.assessment.status);
 
         // Initialize scores
@@ -62,46 +92,63 @@ export default function EditProjectAssessmentInner() {
       }
     }
     loadData();
-  }, [assessmentId]);
+  }, [assessmentId, teamNumber]);
 
-  const handleUpdateInfo = async () => {
-    setSaving(true);
-    setError(null);
-    setSuccessMsg(null);
+  // Autosave function
+  const autoSaveScores = useCallback(async () => {
+    if (!data || teamNumber === undefined) return;
+    setAutoSaving(true);
     try {
-      const payload: ProjectAssessmentUpdate = {
-        title,
-        version: version || undefined,
-        status,
-      };
-      await projectAssessmentService.updateProjectAssessment(
-        assessmentId,
-        payload
+      const scoresPayload: ProjectAssessmentScoreCreate[] = Object.entries(scores).map(
+        ([criterionId, data]) => ({
+          criterion_id: Number(criterionId),
+          score: data.score,
+          comment: data.comment || undefined,
+          team_number: teamNumber,
+        })
       );
-      setSuccessMsg("Basisgegevens opgeslagen");
+
+      await projectAssessmentService.batchUpdateScores(assessmentId, {
+        scores: scoresPayload,
+      });
     } catch (e: any) {
-      if (e instanceof ApiAuthError) {
-        setError(e.originalMessage);
-      } else {
-        setError(e?.response?.data?.detail || e?.message || "Opslaan mislukt");
-      }
+      console.error("Auto-save failed", e);
     } finally {
-      setSaving(false);
+      setAutoSaving(false);
     }
-  };
+  }, [scores, assessmentId, data, teamNumber]);
+
+  // Trigger autosave when scores change
+  useEffect(() => {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+    if (Object.keys(scores).length > 0 && teamNumber !== undefined) {
+      autoSaveTimerRef.current = setTimeout(() => {
+        autoSaveScores();
+      }, 2000); // 2 seconds delay
+    }
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [scores, autoSaveScores, teamNumber]);
 
   const handleSaveScores = async () => {
+    if (teamNumber === undefined) return;
     setSaving(true);
     setError(null);
     setSuccessMsg(null);
     try {
-      const scoresPayload: ProjectAssessmentScoreCreate[] = Object.entries(
-        scores
-      ).map(([criterionId, data]) => ({
-        criterion_id: Number(criterionId),
-        score: data.score,
-        comment: data.comment || undefined,
-      }));
+      const scoresPayload: ProjectAssessmentScoreCreate[] = Object.entries(scores).map(
+        ([criterionId, data]) => ({
+          criterion_id: Number(criterionId),
+          score: data.score,
+          comment: data.comment || undefined,
+          team_number: teamNumber,
+        })
+      );
 
       await projectAssessmentService.batchUpdateScores(assessmentId, {
         scores: scoresPayload,
@@ -139,159 +186,204 @@ export default function EditProjectAssessmentInner() {
       if (e instanceof ApiAuthError) {
         setError(e.originalMessage);
       } else {
-        setError(
-          e?.response?.data?.detail || e?.message || "Publiceren mislukt"
-        );
+        setError(e?.response?.data?.detail || e?.message || "Publiceren mislukt");
       }
     } finally {
       setSaving(false);
     }
   };
 
+  // Navigation functions
+  const navigateToTeam = (newTeamNumber: number) => {
+    router.push(`/teacher/project-assessments/${assessmentId}/edit?team=${newTeamNumber}`);
+  };
+
+  const currentTeamIndex = teamsData?.teams.findIndex(t => t.team_number === teamNumber) ?? -1;
+  const hasPrevTeam = currentTeamIndex > 0;
+  const hasNextTeam = teamsData ? currentTeamIndex < teamsData.teams.length - 1 : false;
+  const prevTeamNumber = hasPrevTeam && teamsData ? teamsData.teams[currentTeamIndex - 1].team_number : null;
+  const nextTeamNumber = hasNextTeam && teamsData ? teamsData.teams[currentTeamIndex + 1].team_number : null;
+
+  const currentTeam = teamsData?.teams.find(t => t.team_number === teamNumber);
+
   if (loading) return <Loading />;
   if (error && !data) return <ErrorMessage message={error} />;
-  if (!data) return <ErrorMessage message="Geen data gevonden" />;
+  if (!data || !currentTeam) return <ErrorMessage message="Geen data gevonden" />;
 
   return (
-    <main className="max-w-5xl mx-auto p-6 space-y-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Projectbeoordeling bewerken</h1>
-          <p className="text-gray-600">
-            {data.rubric_title} - {data.assessment.title}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {status === "draft" && (
-            <button
-              onClick={handlePublish}
-              disabled={saving}
-              className="px-4 py-2 rounded-xl bg-green-600 text-white hover:opacity-90 disabled:opacity-60"
-            >
-              Publiceer
-            </button>
-          )}
-          <a
-            href="/teacher/project-assessments"
-            className="px-4 py-2 rounded-xl border"
+    <main className="max-w-6xl mx-auto p-6 space-y-6">
+      {/* Header */}
+      <header className="space-y-2">
+        <div className="flex items-center gap-3">
+          <Link
+            href={`/teacher/project-assessments/${assessmentId}/overview`}
+            className="text-gray-500 hover:text-gray-700"
           >
-            Terug
-          </a>
+            ← Terug naar overzicht
+          </Link>
+        </div>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold">
+              Rubric invullen: Team {teamNumber}
+            </h1>
+            <p className="text-gray-600">
+              {data.rubric_title} • Schaal: {data.rubric_scale_min}-{data.rubric_scale_max}
+            </p>
+            <div className="mt-2 text-sm text-gray-600">
+              <strong>Teamleden:</strong> {currentTeam.members.map(m => m.name).join(", ")}
+            </div>
+            {autoSaving && (
+              <p className="text-sm text-blue-600">💾 Autosave actief...</p>
+            )}
+          </div>
+          <div className="flex gap-2">
+            {status === "draft" && (
+              <button
+                onClick={handlePublish}
+                disabled={saving}
+                className="px-4 py-2 rounded-xl bg-green-600 text-white hover:opacity-90 disabled:opacity-60"
+              >
+                ✅ Publiceer voor studenten
+              </button>
+            )}
+            {status === "published" && (
+              <span className="px-4 py-2 rounded-xl bg-green-100 text-green-700">
+                ✅ Gepubliceerd
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Team Navigation */}
+        <div className="flex items-center justify-between bg-white border rounded-xl p-4">
+          <button
+            onClick={() => prevTeamNumber && navigateToTeam(prevTeamNumber)}
+            disabled={!hasPrevTeam}
+            className="px-4 py-2 rounded-lg border hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            ← Vorig team
+          </button>
+          <div className="text-center">
+            <div className="font-semibold">Team {teamNumber}</div>
+            <div className="text-sm text-gray-500">
+              {currentTeamIndex + 1} van {teamsData?.teams.length || 0}
+            </div>
+          </div>
+          <button
+            onClick={() => nextTeamNumber && navigateToTeam(nextTeamNumber)}
+            disabled={!hasNextTeam}
+            className="px-4 py-2 rounded-lg border hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Volgend team →
+          </button>
         </div>
       </header>
 
       {successMsg && (
-        <div className="p-3 rounded-lg bg-green-50 text-green-700">
-          {successMsg}
+        <div className="p-3 rounded-lg bg-green-50 text-green-700 flex items-center gap-2">
+          ✅ {successMsg}
         </div>
       )}
       {error && (
         <div className="p-3 rounded-lg bg-red-50 text-red-700">{error}</div>
       )}
 
-      {/* Basic Info Section */}
-      <section className="bg-white border rounded-2xl p-5 space-y-4">
-        <h2 className="text-lg font-semibold">Basisgegevens</h2>
-        <div className="space-y-1">
-          <label className="block text-sm font-medium">Titel</label>
-          <input
-            className="w-full border rounded-lg px-3 py-2"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-        </div>
-        <div className="space-y-1">
-          <label className="block text-sm font-medium">Versie</label>
-          <input
-            className="w-full border rounded-lg px-3 py-2"
-            value={version}
-            onChange={(e) => setVersion(e.target.value)}
-          />
-        </div>
-        <div className="space-y-1">
-          <label className="block text-sm font-medium">Status</label>
-          <div className="flex items-center gap-2">
+      {/* Rubric Categories Section */}
+      <section className="space-y-5">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Rubric per categorie</h2>
+          <div className="text-sm text-gray-500">
             {status === "draft" ? (
-              <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-700">
-                Concept
-              </span>
+              "💾 Autosave: wijzigingen worden automatisch opgeslagen"
             ) : (
-              <span className="px-3 py-1 rounded-full bg-green-100 text-green-700">
-                Gepubliceerd
-              </span>
+              "✅ Gepubliceerd - studenten kunnen dit zien"
             )}
           </div>
         </div>
-        <button
-          onClick={handleUpdateInfo}
-          disabled={saving}
-          className="px-4 py-2 rounded-xl bg-black text-white disabled:opacity-60"
-        >
-          {saving ? "Opslaan…" : "Opslaan"}
-        </button>
-      </section>
 
-      {/* Scores Section */}
-      <section className="bg-white border rounded-2xl p-5 space-y-4">
-        <h2 className="text-lg font-semibold">Scores</h2>
-        <p className="text-sm text-gray-600">
-          Schaal: {data.rubric_scale_min} - {data.rubric_scale_max}
-        </p>
-
+        {/* Categories using RubricRating component */}
         {data.criteria.map((criterion) => (
-          <div key={criterion.id} className="border-t pt-4 space-y-3">
-            <h3 className="font-medium">{criterion.name}</h3>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="block text-sm font-medium">Score</label>
-                <input
-                  type="number"
-                  min={data.rubric_scale_min}
-                  max={data.rubric_scale_max}
-                  className="w-full border rounded-lg px-3 py-2"
-                  value={scores[criterion.id]?.score || data.rubric_scale_min}
-                  onChange={(e) => {
-                    const val = Number(e.target.value);
-                    setScores((prev) => ({
-                      ...prev,
-                      [criterion.id]: {
-                        score: val,
-                        comment: prev[criterion.id]?.comment || "",
-                      },
-                    }));
-                  }}
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="block text-sm font-medium">
-                  Opmerking (optioneel)
-                </label>
-                <textarea
-                  className="w-full border rounded-lg px-3 py-2 min-h-20"
-                  value={scores[criterion.id]?.comment || ""}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setScores((prev) => ({
-                      ...prev,
-                      [criterion.id]: {
-                        score: prev[criterion.id]?.score || data.rubric_scale_min,
-                        comment: val,
-                      },
-                    }));
-                  }}
-                />
-              </div>
-            </div>
-          </div>
+          <RubricRating
+            key={criterion.id}
+            criterionName={criterion.name}
+            criterionId={criterion.id}
+            value={scores[criterion.id]?.score || data.rubric_scale_min}
+            comment={scores[criterion.id]?.comment || ""}
+            scaleMin={data.rubric_scale_min}
+            scaleMax={data.rubric_scale_max}
+            descriptors={criterion.descriptors}
+            onChange={(newScore) => {
+              setScores((prev) => ({
+                ...prev,
+                [criterion.id]: {
+                  score: newScore,
+                  comment: prev[criterion.id]?.comment || "",
+                },
+              }));
+            }}
+            onCommentChange={(newComment) => {
+              setScores((prev) => ({
+                ...prev,
+                [criterion.id]: {
+                  score: prev[criterion.id]?.score || data.rubric_scale_min,
+                  comment: newComment,
+                },
+              }));
+            }}
+          />
         ))}
 
-        <button
-          onClick={handleSaveScores}
-          disabled={saving}
-          className="px-4 py-2 rounded-xl bg-black text-white disabled:opacity-60"
-        >
-          {saving ? "Opslaan…" : "Scores opslaan"}
-        </button>
+        {/* General Comment Section */}
+        <div className="bg-white border-2 rounded-xl p-5 space-y-3">
+          <h3 className="text-lg font-semibold">Algemene opmerking</h3>
+          <textarea
+            className="w-full border rounded-lg px-3 py-3 min-h-32 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Algemene feedback over het project..."
+            value={generalComment}
+            onChange={(e) => setGeneralComment(e.target.value)}
+          />
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center justify-between pt-4 border-t bg-white rounded-xl p-5">
+          <div className="text-sm text-gray-600">
+            {autoSaving ? (
+              <span className="text-blue-600">💾 Opslaan...</span>
+            ) : (
+              <span>✅ Alle wijzigingen opgeslagen</span>
+            )}
+          </div>
+          <div className="flex gap-3">
+            {status === "draft" && (
+              <>
+                <button
+                  onClick={handleSaveScores}
+                  disabled={saving}
+                  className="px-5 py-2.5 rounded-xl bg-gray-800 text-white hover:bg-gray-900 disabled:opacity-60"
+                >
+                  💾 Opslaan als concept
+                </button>
+                <button
+                  onClick={handlePublish}
+                  disabled={saving}
+                  className="px-5 py-2.5 rounded-xl bg-green-600 text-white hover:bg-green-700 disabled:opacity-60"
+                >
+                  ✅ Publiceren voor studenten
+                </button>
+              </>
+            )}
+            {status === "published" && (
+              <button
+                onClick={handleSaveScores}
+                disabled={saving}
+                className="px-5 py-2.5 rounded-xl bg-gray-800 text-white hover:bg-gray-900 disabled:opacity-60"
+              >
+                💾 Wijzigingen opslaan
+              </button>
+            )}
+          </div>
+        </div>
       </section>
     </main>
   );
