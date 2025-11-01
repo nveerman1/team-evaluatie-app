@@ -155,6 +155,9 @@ export type ScoreStatistics = {
   highest_score?: number | null;
   lowest_score?: number | null;
   pending_assessments: number;
+  average_grade?: number | null;
+  highest_grade?: number | null;
+  lowest_grade?: number | null;
 };
 
 export type ProjectAssessmentScoresOverview = {

@@ -193,6 +193,9 @@ class ScoreStatistics(BaseModel):
     highest_score: Optional[float] = None
     lowest_score: Optional[float] = None
     pending_assessments: int
+    average_grade: Optional[float] = None
+    highest_grade: Optional[float] = None
+    lowest_grade: Optional[float] = None
 
 
 class ProjectAssessmentScoresOverview(BaseModel):

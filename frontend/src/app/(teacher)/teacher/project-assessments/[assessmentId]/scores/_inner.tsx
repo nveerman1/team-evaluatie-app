@@ -703,13 +703,13 @@ export default function ScoresOverviewInner() {
               <thead className="bg-gray-50 border-b">
                 <tr>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 sticky left-0 bg-gray-50">
+                    Team
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 min-w-[200px]">
                     Leerling
                   </th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 min-w-[80px]">
                     Klas
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 sticky left-[200px] bg-gray-50">
-                    Team
                   </th>
                   {studentsData.criteria.map((criterion) => (
                     <th
@@ -746,13 +746,7 @@ export default function ScoresOverviewInner() {
                     key={student.student_id}
                     className="border-b last:border-b-0 hover:bg-gray-50"
                   >
-                    <td className="px-4 py-3 font-medium sticky left-0 bg-white">
-                      {student.student_name}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {student.class_name || "—"}
-                    </td>
-                    <td className="px-4 py-3 sticky left-[200px] bg-white">
+                    <td className="px-4 py-3 sticky left-0 bg-white">
                       {student.team_name ? (
                         <Link
                           href={`/teacher/project-assessments/${assessmentId}/edit?team=${student.team_number}`}
@@ -763,6 +757,12 @@ export default function ScoresOverviewInner() {
                       ) : (
                         "—"
                       )}
+                    </td>
+                    <td className="px-4 py-3 font-medium">
+                      {student.student_name}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {student.class_name || "—"}
                     </td>
                     {student.criterion_scores.map((cs: any) => {
                       const isEditing =
@@ -840,11 +840,11 @@ export default function ScoresOverviewInner() {
               {studentsData.student_scores.length > 0 && (
                 <tfoot className="bg-gray-50 border-t font-medium">
                   <tr>
-                    <td className="px-4 py-3 sticky left-0 bg-gray-50">
+                    <td className="px-4 py-3 sticky left-0 bg-gray-50"></td>
+                    <td className="px-4 py-3">
                       Gemiddelde
                     </td>
                     <td className="px-4 py-3"></td>
-                    <td className="px-4 py-3 sticky left-[200px] bg-gray-50"></td>
                     {studentsData.criteria.map((criterion) => (
                       <td key={criterion.id} className="px-4 py-3 text-center">
                         {studentsData.statistics.average_per_criterion[criterion.name]?.toFixed(1) || "—"}
@@ -864,28 +864,36 @@ export default function ScoresOverviewInner() {
       </section>
 
       {/* Statistics Summary */}
-      <section className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {viewMode === "teams" && data && (
           <>
             <div className="bg-white border rounded-2xl p-4">
               <h3 className="text-sm font-medium text-gray-600 mb-2">
-                Hoogste score
+                Gemiddeld cijfer
               </h3>
               <p className="text-2xl font-semibold">
-                {data.statistics.highest_score?.toFixed(1) || "—"}
+                {data.statistics.average_grade?.toFixed(1) || "—"}
               </p>
             </div>
             <div className="bg-white border rounded-2xl p-4">
               <h3 className="text-sm font-medium text-gray-600 mb-2">
-                Laagste score
+                Hoogste cijfer
               </h3>
               <p className="text-2xl font-semibold">
-                {data.statistics.lowest_score?.toFixed(1) || "—"}
+                {data.statistics.highest_grade?.toFixed(1) || "—"}
               </p>
             </div>
             <div className="bg-white border rounded-2xl p-4">
               <h3 className="text-sm font-medium text-gray-600 mb-2">
-                Openstaande beoordelingen
+                Laagste cijfer
+              </h3>
+              <p className="text-2xl font-semibold">
+                {data.statistics.lowest_grade?.toFixed(1) || "—"}
+              </p>
+            </div>
+            <div className="bg-white border rounded-2xl p-4">
+              <h3 className="text-sm font-medium text-gray-600 mb-2">
+                Aantal openstaand
               </h3>
               <p className="text-2xl font-semibold">
                 {data.statistics.pending_assessments}
@@ -925,14 +933,6 @@ export default function ScoresOverviewInner() {
               </h3>
               <p className="text-2xl font-semibold">
                 {studentsData.statistics.pending_assessments}
-              </p>
-            </div>
-            <div className="bg-white border rounded-2xl p-4">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">
-                Aantal afwijkingen
-              </h3>
-              <p className="text-2xl font-semibold">
-                {studentsData.statistics.deviating_grades}
               </p>
             </div>
           </>

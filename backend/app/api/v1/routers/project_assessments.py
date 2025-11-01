@@ -687,6 +687,7 @@ def get_assessment_scores_overview(
         GroupMember.school_id == user.school_id,
         GroupMember.active == True,
         User.team_number.isnot(None),
+        User.archived == False,
     ).all()
     
     # Group users by team_number
@@ -795,11 +796,20 @@ def get_assessment_scores_overview(
     lowest_score = min(all_total_scores) if all_total_scores else None
     pending_assessments = len([t for t in team_scores if t.total_score is None])
     
+    # Calculate grade statistics
+    all_grades = [t.grade for t in team_scores if t.grade is not None]
+    average_grade = round(sum(all_grades) / len(all_grades), 1) if all_grades else None
+    highest_grade = round(max(all_grades), 1) if all_grades else None
+    lowest_grade = round(min(all_grades), 1) if all_grades else None
+    
     statistics = ScoreStatistics(
         average_per_criterion=average_per_criterion,
         highest_score=round(highest_score, 1) if highest_score else None,
         lowest_score=round(lowest_score, 1) if lowest_score else None,
         pending_assessments=pending_assessments,
+        average_grade=average_grade,
+        highest_grade=highest_grade,
+        lowest_grade=lowest_grade,
     )
     
     return ProjectAssessmentScoresOverview(
@@ -862,6 +872,7 @@ def get_assessment_students_overview(
         GroupMember.school_id == user.school_id,
         GroupMember.active == True,
         User.role == "student",
+        User.archived == False,
     ).order_by(User.class_name, User.team_number, User.name).all()
     
     # Get all scores for this assessment
