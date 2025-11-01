@@ -289,6 +289,30 @@ def get_project_assessment(
             ProjectAssessmentReflection.school_id == user.school_id,
         ).first()
     
+    # Get teacher name
+    teacher = db.query(User).filter(User.id == pa.teacher_id).first()
+    teacher_name = teacher.name if teacher else None
+    
+    # Calculate total score and grade (weighted average)
+    total_score = None
+    grade = None
+    if scores and criteria:
+        # Create a map of criterion_id -> weight
+        weight_map = {c.id: c.weight for c in criteria}
+        total_weight = sum(weight_map.values())
+        
+        # Calculate weighted average
+        if total_weight > 0:
+            weighted_sum = sum(s.score * weight_map.get(s.criterion_id, 0) for s in scores if s.criterion_id in weight_map)
+            total_score = weighted_sum / total_weight
+            
+            # Convert to grade (1-10 scale)
+            # Map rubric scale to 1-10
+            scale_range = rubric.scale_max - rubric.scale_min
+            if scale_range > 0:
+                normalized = (total_score - rubric.scale_min) / scale_range
+                grade = 1 + (normalized * 9)  # Map to 1-10
+    
     return ProjectAssessmentDetailOut(
         assessment=_to_out_assessment(pa),
         scores=[
@@ -302,6 +326,9 @@ def get_project_assessment(
             for c in criteria
         ],
         reflection=ProjectAssessmentReflectionOut.model_validate(reflection) if reflection else None,
+        teacher_name=teacher_name,
+        total_score=total_score,
+        grade=grade,
     )
 
 
