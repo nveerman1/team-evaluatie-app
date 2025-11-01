@@ -93,7 +93,15 @@ export default function StudentProjectAssessmentInner() {
   // Calculate reflection status
   const reflectionStatus = data.reflection ? "Ingeleverd" : "Nog niet gereflecteerd";
 
+  // Generate rubric levels array once for reuse in matrix view
+  const rubricLevels = Array.from(
+    { length: data.rubric_scale_max - data.rubric_scale_min + 1 },
+    (_, i) => data.rubric_scale_min + i
+  );
+
   const handleDownloadPDF = () => {
+    // Note: Uses browser print dialog which allows user to save as PDF
+    // For dedicated PDF generation, consider using jsPDF or react-pdf library
     window.print();
   };
 
@@ -265,10 +273,7 @@ export default function StudentProjectAssessmentInner() {
             <thead>
               <tr className="bg-gray-50">
                 <th className="border p-3 text-left font-semibold">Criterium</th>
-                {Array.from(
-                  { length: data.rubric_scale_max - data.rubric_scale_min + 1 },
-                  (_, i) => data.rubric_scale_min + i
-                ).map((level) => (
+                {rubricLevels.map((level) => (
                   <th key={level} className="border p-3 text-center font-semibold min-w-[120px]">
                     Niveau {level}
                   </th>
@@ -282,10 +287,7 @@ export default function StudentProjectAssessmentInner() {
                 return (
                   <tr key={criterion.id} className="hover:bg-gray-50">
                     <td className="border p-3 font-medium">{criterion.name}</td>
-                    {Array.from(
-                      { length: data.rubric_scale_max - data.rubric_scale_min + 1 },
-                      (_, i) => data.rubric_scale_min + i
-                    ).map((level) => {
+                    {rubricLevels.map((level) => {
                       const levelKey = `level${level}`;
                       const description = criterion.descriptors[levelKey] || "";
                       const isSelected = scoreData?.score === level;

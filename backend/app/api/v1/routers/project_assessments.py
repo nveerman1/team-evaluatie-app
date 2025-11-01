@@ -290,6 +290,7 @@ def get_project_assessment(
         ).first()
     
     # Get teacher name
+    # Note: This could be optimized with eager loading/join in main query
     teacher = db.query(User).filter(User.id == pa.teacher_id).first()
     teacher_name = teacher.name if teacher else None
     
