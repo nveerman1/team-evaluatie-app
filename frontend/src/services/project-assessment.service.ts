@@ -11,6 +11,7 @@ import {
   ProjectAssessmentReflectionCreate,
   ProjectAssessmentTeamOverview,
   ProjectAssessmentReflectionsOverview,
+  ProjectAssessmentScoresOverview,
 } from "@/dtos/project-assessment.dto";
 
 export const projectAssessmentService = {
@@ -128,6 +129,18 @@ export const projectAssessmentService = {
   ): Promise<ProjectAssessmentReflectionsOverview> {
     const response = await api.get<ProjectAssessmentReflectionsOverview>(
       `/project-assessments/${assessmentId}/reflections`
+    );
+    return response.data;
+  },
+
+  /**
+   * Get scores overview for a project assessment (teacher)
+   */
+  async getScoresOverview(
+    assessmentId: number
+  ): Promise<ProjectAssessmentScoresOverview> {
+    const response = await api.get<ProjectAssessmentScoresOverview>(
+      `/project-assessments/${assessmentId}/scores-overview`
     );
     return response.data;
   },

@@ -116,21 +116,17 @@ export default function ProjectAssessmentOverviewInner() {
           </div>
           <div className="flex gap-2">
             <Link
+              href={`/teacher/project-assessments/${assessmentId}/scores`}
+              className="px-4 py-2 rounded-xl border hover:bg-gray-50 bg-blue-50 border-blue-200"
+            >
+              📊 Bekijk alle scores
+            </Link>
+            <Link
               href={`/teacher/project-assessments/${assessmentId}/reflections`}
               className="px-4 py-2 rounded-xl border hover:bg-gray-50"
             >
               📝 Reflecties bekijken
             </Link>
-            <button
-              onClick={() => {
-                setError(null);
-                alert("Export functionaliteit komt binnenkort");
-              }}
-              className="px-4 py-2 rounded-xl border hover:bg-gray-50 opacity-60 cursor-not-allowed"
-              title="Deze functie komt binnenkort beschikbaar"
-            >
-              🧾 Exporteer CSV
-            </button>
           </div>
         </div>
       </header>

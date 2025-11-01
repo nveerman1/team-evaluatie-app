@@ -131,3 +131,43 @@ export type ProjectAssessmentReflectionsOverview = {
   group_name: string;
   reflections: ReflectionInfo[];
 };
+
+export type CriterionScore = {
+  criterion_id: number;
+  criterion_name: string;
+  score?: number | null;
+  comment?: string | null;
+};
+
+export type TeamScoreOverview = {
+  team_number: number;
+  team_name: string;
+  members: TeamMemberInfo[];
+  criterion_scores: CriterionScore[];
+  total_score?: number | null;
+  grade?: number | null;
+  updated_at?: string | null;
+  updated_by?: string | null;
+};
+
+export type ScoreStatistics = {
+  average_per_criterion: Record<string, number>;
+  highest_score?: number | null;
+  lowest_score?: number | null;
+  pending_assessments: number;
+};
+
+export type ProjectAssessmentScoresOverview = {
+  assessment: ProjectAssessmentOut;
+  rubric_title: string;
+  rubric_scale_min: number;
+  rubric_scale_max: number;
+  criteria: Array<{
+    id: number;
+    name: string;
+    weight: number;
+    descriptors: Record<string, string>;
+  }>;
+  team_scores: TeamScoreOverview[];
+  statistics: ScoreStatistics;
+};
