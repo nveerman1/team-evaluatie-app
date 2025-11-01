@@ -88,6 +88,9 @@ export type ProjectAssessmentDetailOut = {
     descriptors: Record<string, string>;
   }>;
   reflection?: ProjectAssessmentReflectionOut | null;
+  teacher_name?: string | null;
+  total_score?: number | null;
+  grade?: number | null;
 };
 
 export type TeamMemberInfo = {

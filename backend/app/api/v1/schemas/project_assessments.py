@@ -112,6 +112,9 @@ class ProjectAssessmentDetailOut(BaseModel):
     rubric_scale_max: int
     criteria: List[Dict[str, Any]]  # criterion details
     reflection: Optional[ProjectAssessmentReflectionOut]
+    teacher_name: Optional[str] = None
+    total_score: Optional[float] = None
+    grade: Optional[float] = None
 
 
 # ---------- Team member info ----------
