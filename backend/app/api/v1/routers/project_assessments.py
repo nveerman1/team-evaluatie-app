@@ -39,6 +39,9 @@ from app.api.v1.schemas.project_assessments import (
     TeamScoreOverview,
     CriterionScore,
     ScoreStatistics,
+    ProjectAssessmentStudentsOverview,
+    StudentScoreOverview,
+    StudentScoreStatistics,
 )
 
 router = APIRouter(prefix="/project-assessments", tags=["project-assessments"])
@@ -684,6 +687,7 @@ def get_assessment_scores_overview(
         GroupMember.school_id == user.school_id,
         GroupMember.active == True,
         User.team_number.isnot(None),
+        User.archived == False,
     ).all()
     
     # Group users by team_number
@@ -792,11 +796,20 @@ def get_assessment_scores_overview(
     lowest_score = min(all_total_scores) if all_total_scores else None
     pending_assessments = len([t for t in team_scores if t.total_score is None])
     
+    # Calculate grade statistics
+    all_grades = [t.grade for t in team_scores if t.grade is not None]
+    average_grade = round(sum(all_grades) / len(all_grades), 1) if all_grades else None
+    highest_grade = round(max(all_grades), 1) if all_grades else None
+    lowest_grade = round(min(all_grades), 1) if all_grades else None
+    
     statistics = ScoreStatistics(
         average_per_criterion=average_per_criterion,
         highest_score=round(highest_score, 1) if highest_score else None,
         lowest_score=round(lowest_score, 1) if lowest_score else None,
         pending_assessments=pending_assessments,
+        average_grade=average_grade,
+        highest_grade=highest_grade,
+        lowest_grade=lowest_grade,
     )
     
     return ProjectAssessmentScoresOverview(
@@ -806,5 +819,176 @@ def get_assessment_scores_overview(
         rubric_scale_max=rubric.scale_max,
         criteria=criteria_list,
         team_scores=team_scores,
+        statistics=statistics,
+    )
+
+
+# ---------- Individual Students Overview ----------
+
+@router.get("/{assessment_id}/students-overview", response_model=ProjectAssessmentStudentsOverview)
+def get_assessment_students_overview(
+    assessment_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """Get individual students overview for a project assessment (teacher/admin only)"""
+    if user.role not in ("teacher", "admin"):
+        raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen leerlingenoverzicht bekijken")
+    
+    pa = db.query(ProjectAssessment).filter(
+        ProjectAssessment.id == assessment_id,
+        ProjectAssessment.school_id == user.school_id,
+        ProjectAssessment.teacher_id == user.id,
+    ).first()
+    if not pa:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    
+    # Get rubric info
+    rubric = db.query(Rubric).filter(Rubric.id == pa.rubric_id).first()
+    if not rubric:
+        raise HTTPException(status_code=404, detail="Rubric not found")
+    
+    # Get all criteria
+    criteria = db.query(RubricCriterion).filter(
+        RubricCriterion.rubric_id == rubric.id,
+        RubricCriterion.school_id == user.school_id,
+    ).order_by(RubricCriterion.id.asc()).all()
+    
+    criteria_list = [
+        {"id": c.id, "name": c.name, "weight": c.weight, "descriptors": c.descriptors}
+        for c in criteria
+    ]
+    
+    # Get group info
+    group = db.query(Group).filter(Group.id == pa.group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    # Get all students in this group
+    students = db.query(User).join(
+        GroupMember, GroupMember.user_id == User.id
+    ).filter(
+        GroupMember.group_id == group.id,
+        GroupMember.school_id == user.school_id,
+        GroupMember.active == True,
+        User.role == "student",
+        User.archived == False,
+    ).order_by(User.class_name, User.team_number, User.name).all()
+    
+    # Get all scores for this assessment
+    all_scores = db.query(ProjectAssessmentScore).filter(
+        ProjectAssessmentScore.assessment_id == pa.id,
+        ProjectAssessmentScore.school_id == user.school_id,
+    ).all()
+    
+    # Organize scores by team and criterion
+    scores_by_team = {}  # (team_number, criterion_id) -> score
+    for score in all_scores:
+        key = (score.team_number, score.criterion_id)
+        scores_by_team[key] = score
+    
+    # Get teacher name
+    teacher = db.query(User).filter(User.id == pa.teacher_id).first()
+    teacher_name = teacher.name if teacher else None
+    
+    # Build student score overview for each student
+    student_scores = []
+    all_grades = []
+    criterion_totals = {c.id: {"sum": 0, "count": 0, "name": c.name} for c in criteria}
+    pending_count = 0
+    deviating_count = 0  # Currently no mechanism to track deviations, so always 0
+    
+    for student in students:
+        # Get scores for this student's team
+        team_num = student.team_number
+        team_name = f"Team {team_num}" if team_num else None
+        
+        # Build criterion scores for this student
+        criterion_scores_list = []
+        total_score = 0.0
+        total_weight = 0.0
+        scores_count = 0
+        
+        for criterion in criteria:
+            key = (team_num, criterion.id)
+            if key in scores_by_team:
+                score_obj = scores_by_team[key]
+                criterion_scores_list.append(CriterionScore(
+                    criterion_id=criterion.id,
+                    criterion_name=criterion.name,
+                    score=score_obj.score,
+                    comment=score_obj.comment,
+                ))
+                # Use weighted average
+                total_score += score_obj.score * criterion.weight
+                total_weight += criterion.weight
+                scores_count += 1
+                criterion_totals[criterion.id]["sum"] += score_obj.score
+                criterion_totals[criterion.id]["count"] += 1
+            else:
+                criterion_scores_list.append(CriterionScore(
+                    criterion_id=criterion.id,
+                    criterion_name=criterion.name,
+                    score=None,
+                    comment=None,
+                ))
+        
+        # Calculate weighted average score
+        avg_score = total_score / total_weight if total_weight > 0 else None
+        
+        # Calculate grade (simple linear mapping: score 1-5 -> grade 1-10)
+        grade = None
+        if avg_score is not None:
+            scale_range = rubric.scale_max - rubric.scale_min
+            if scale_range > 0:
+                grade = ((avg_score - rubric.scale_min) / scale_range) * 9 + 1
+                grade = round(grade, 1)
+                all_grades.append(grade)
+        else:
+            pending_count += 1
+        
+        student_score = StudentScoreOverview(
+            student_id=student.id,
+            student_name=student.name,
+            student_email=student.email,
+            class_name=student.class_name,
+            team_number=team_num,
+            team_name=team_name,
+            criterion_scores=criterion_scores_list,
+            total_score=round(avg_score, 1) if avg_score is not None else None,
+            grade=grade,
+            updated_at=None,  # Would need to track last modification
+            updated_by=teacher_name if scores_count > 0 else None,
+        )
+        student_scores.append(student_score)
+    
+    # Calculate statistics
+    average_per_criterion = {}
+    for crit_id, data in criterion_totals.items():
+        if data["count"] > 0:
+            average_per_criterion[data["name"]] = round(data["sum"] / data["count"], 2)
+        else:
+            average_per_criterion[data["name"]] = 0.0
+    
+    average_grade = round(sum(all_grades) / len(all_grades), 1) if all_grades else None
+    highest_grade = round(max(all_grades), 1) if all_grades else None
+    lowest_grade = round(min(all_grades), 1) if all_grades else None
+    
+    statistics = StudentScoreStatistics(
+        average_per_criterion=average_per_criterion,
+        average_grade=average_grade,
+        highest_grade=highest_grade,
+        lowest_grade=lowest_grade,
+        pending_assessments=pending_count,
+        deviating_grades=deviating_count,
+    )
+    
+    return ProjectAssessmentStudentsOverview(
+        assessment=_to_out_assessment(pa),
+        rubric_title=rubric.title,
+        rubric_scale_min=rubric.scale_min,
+        rubric_scale_max=rubric.scale_max,
+        criteria=criteria_list,
+        student_scores=student_scores,
         statistics=statistics,
     )

@@ -12,6 +12,7 @@ import {
   ProjectAssessmentTeamOverview,
   ProjectAssessmentReflectionsOverview,
   ProjectAssessmentScoresOverview,
+  ProjectAssessmentStudentsOverview,
 } from "@/dtos/project-assessment.dto";
 
 export const projectAssessmentService = {
@@ -141,6 +142,18 @@ export const projectAssessmentService = {
   ): Promise<ProjectAssessmentScoresOverview> {
     const response = await api.get<ProjectAssessmentScoresOverview>(
       `/project-assessments/${assessmentId}/scores-overview`
+    );
+    return response.data;
+  },
+
+  /**
+   * Get individual students overview for a project assessment (teacher)
+   */
+  async getStudentsOverview(
+    assessmentId: number
+  ): Promise<ProjectAssessmentStudentsOverview> {
+    const response = await api.get<ProjectAssessmentStudentsOverview>(
+      `/project-assessments/${assessmentId}/students-overview`
     );
     return response.data;
   },
