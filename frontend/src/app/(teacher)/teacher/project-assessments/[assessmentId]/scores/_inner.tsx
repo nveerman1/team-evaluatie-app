@@ -114,9 +114,9 @@ export default function ScoresOverviewInner() {
   }
 
   function handleCellBlur() {
-    if (editingCell && editValue && data) {
+    if (editingCell && editValue && currentData) {
       const score = parseFloat(editValue);
-      if (!isNaN(score) && score >= data.rubric_scale_min && score <= data.rubric_scale_max) {
+      if (!isNaN(score) && score >= currentData.rubric_scale_min && score <= currentData.rubric_scale_max) {
         // Scores are stored as integers, so round the value
         const finalScore = Math.round(score);
         handleSaveScore(editingCell.teamNumber, editingCell.criterionId, finalScore);
