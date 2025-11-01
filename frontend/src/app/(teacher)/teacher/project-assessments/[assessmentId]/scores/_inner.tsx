@@ -88,10 +88,8 @@ export default function ScoresOverviewInner() {
     if (editingCell && editValue && data) {
       const score = parseFloat(editValue);
       if (!isNaN(score) && score >= data.rubric_scale_min && score <= data.rubric_scale_max) {
-        // Round to integer if rubric scale is integer-only
-        const finalScore = Number.isInteger(data.rubric_scale_min) && Number.isInteger(data.rubric_scale_max)
-          ? Math.round(score)
-          : score;
+        // Scores are stored as integers, so round the value
+        const finalScore = Math.round(score);
         handleSaveScore(editingCell.teamNumber, editingCell.criterionId, finalScore);
       } else {
         setEditingCell(null);
@@ -185,8 +183,8 @@ export default function ScoresOverviewInner() {
     XLSX.writeFile(wb, `scores-${data.assessment.title.replace(/[^a-z0-9]/gi, "_")}.xlsx`);
   }
 
-  function getScoreColor(score?: number | null, scale_min?: number, scale_max?: number): string {
-    if (score === null || score === undefined || !scale_min || !scale_max) return "";
+  function getScoreColor(score: number | null | undefined, scale_min: number, scale_max: number): string {
+    if (score === null || score === undefined) return "";
     
     const range = scale_max - scale_min;
     const normalized = (score - scale_min) / range;
@@ -231,7 +229,7 @@ export default function ScoresOverviewInner() {
       comparison = aTime - bTime;
     } else {
       // Sort by specific criterion
-      const criterionId = parseInt(sortBy.replace("criterion-", ""));
+      const criterionId = parseInt(sortBy.replace("criterion-", ""), 10);
       const aScore = a.criterion_scores.find((cs) => cs.criterion_id === criterionId)?.score || 0;
       const bScore = b.criterion_scores.find((cs) => cs.criterion_id === criterionId)?.score || 0;
       comparison = aScore - bScore;
