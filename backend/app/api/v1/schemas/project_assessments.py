@@ -204,3 +204,41 @@ class ProjectAssessmentScoresOverview(BaseModel):
     criteria: List[Dict[str, Any]]  # All rubric criteria
     team_scores: List[TeamScoreOverview]
     statistics: ScoreStatistics
+
+
+# ---------- Individual students overview for teachers ----------
+
+class StudentScoreOverview(BaseModel):
+    """Complete score overview for an individual student"""
+    student_id: int
+    student_name: str
+    student_email: str
+    class_name: Optional[str] = None
+    team_number: Optional[int] = None
+    team_name: Optional[str] = None
+    criterion_scores: List[CriterionScore]
+    total_score: Optional[float] = None
+    grade: Optional[float] = None
+    updated_at: Optional[datetime] = None
+    updated_by: Optional[str] = None
+
+
+class StudentScoreStatistics(BaseModel):
+    """Statistics for student scores"""
+    average_per_criterion: Dict[str, float]  # criterion_name -> average
+    average_grade: Optional[float] = None
+    highest_grade: Optional[float] = None
+    lowest_grade: Optional[float] = None
+    pending_assessments: int
+    deviating_grades: int  # Students with manually adjusted grades
+
+
+class ProjectAssessmentStudentsOverview(BaseModel):
+    """Complete individual students overview for a project assessment"""
+    assessment: ProjectAssessmentOut
+    rubric_title: str
+    rubric_scale_min: int
+    rubric_scale_max: int
+    criteria: List[Dict[str, Any]]  # All rubric criteria
+    student_scores: List[StudentScoreOverview]
+    statistics: StudentScoreStatistics

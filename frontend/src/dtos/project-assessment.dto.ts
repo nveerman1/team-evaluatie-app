@@ -171,3 +171,41 @@ export type ProjectAssessmentScoresOverview = {
   team_scores: TeamScoreOverview[];
   statistics: ScoreStatistics;
 };
+
+export type StudentScoreOverview = {
+  student_id: number;
+  student_name: string;
+  student_email: string;
+  class_name?: string | null;
+  team_number?: number | null;
+  team_name?: string | null;
+  criterion_scores: CriterionScore[];
+  total_score?: number | null;
+  grade?: number | null;
+  updated_at?: string | null;
+  updated_by?: string | null;
+};
+
+export type StudentScoreStatistics = {
+  average_per_criterion: Record<string, number>;
+  average_grade?: number | null;
+  highest_grade?: number | null;
+  lowest_grade?: number | null;
+  pending_assessments: number;
+  deviating_grades: number;
+};
+
+export type ProjectAssessmentStudentsOverview = {
+  assessment: ProjectAssessmentOut;
+  rubric_title: string;
+  rubric_scale_min: number;
+  rubric_scale_max: number;
+  criteria: Array<{
+    id: number;
+    name: string;
+    weight: number;
+    descriptors: Record<string, string>;
+  }>;
+  student_scores: StudentScoreOverview[];
+  statistics: StudentScoreStatistics;
+};
