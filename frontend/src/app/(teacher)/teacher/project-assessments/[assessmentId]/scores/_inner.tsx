@@ -2,7 +2,6 @@
 import { useParams } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import * as XLSX from "xlsx";
 import { ApiAuthError } from "@/lib/api";
 import { projectAssessmentService } from "@/services";
 import { ProjectAssessmentScoresOverview } from "@/dtos";
@@ -135,8 +134,11 @@ export default function ScoresOverviewInner() {
     link.click();
   }
 
-  function exportToXLSX() {
+  async function exportToXLSX() {
     if (!data) return;
+
+    // Dynamically import xlsx only when needed (client-side only)
+    const XLSX = await import("xlsx");
 
     // Prepare data for Excel
     const headers = ["Team", "Teamleden", ...data.criteria.map((c) => c.name), "Totaalscore", "Cijfer"];
