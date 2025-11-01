@@ -86,9 +86,13 @@ export default function ScoresOverviewInner() {
 
   function handleCellBlur() {
     if (editingCell && editValue && data) {
-      const score = parseInt(editValue);
+      const score = parseFloat(editValue);
       if (!isNaN(score) && score >= data.rubric_scale_min && score <= data.rubric_scale_max) {
-        handleSaveScore(editingCell.teamNumber, editingCell.criterionId, score);
+        // Round to integer if rubric scale is integer-only
+        const finalScore = Number.isInteger(data.rubric_scale_min) && Number.isInteger(data.rubric_scale_max)
+          ? Math.round(score)
+          : score;
+        handleSaveScore(editingCell.teamNumber, editingCell.criterionId, finalScore);
       } else {
         setEditingCell(null);
       }
@@ -466,9 +470,14 @@ export default function ScoresOverviewInner() {
                     </td>
                   ))}
                   <td className="px-4 py-3 text-center">
-                    {data.statistics.highest_score && data.statistics.lowest_score
-                      ? ((data.statistics.highest_score + data.statistics.lowest_score) / 2).toFixed(1)
-                      : "—"}
+                    {(() => {
+                      const validScores = data.team_scores
+                        .filter(t => t.total_score !== null && t.total_score !== undefined)
+                        .map(t => t.total_score as number);
+                      if (validScores.length === 0) return "—";
+                      const avg = validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
+                      return avg.toFixed(1);
+                    })()}
                   </td>
                   <td className="px-4 py-3"></td>
                   <td className="px-4 py-3"></td>

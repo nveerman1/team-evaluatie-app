@@ -725,9 +725,9 @@ def get_assessment_scores_overview(
         
         # Build criterion scores for this team
         criterion_scores_list = []
-        total_score = 0
+        total_score = 0.0
+        total_weight = 0.0
         scores_count = 0
-        last_updated = None
         
         for criterion in criteria:
             key = (team_num, criterion.id)
@@ -739,14 +739,12 @@ def get_assessment_scores_overview(
                     score=score_obj.score,
                     comment=score_obj.comment,
                 ))
-                total_score += score_obj.score
+                # Use weighted average
+                total_score += score_obj.score * criterion.weight
+                total_weight += criterion.weight
                 scores_count += 1
                 criterion_totals[criterion.id]["sum"] += score_obj.score
                 criterion_totals[criterion.id]["count"] += 1
-                
-                # Track last updated (we use published_at as proxy)
-                if not last_updated and pa.published_at:
-                    last_updated = pa.published_at
             else:
                 criterion_scores_list.append(CriterionScore(
                     criterion_id=criterion.id,
@@ -755,8 +753,8 @@ def get_assessment_scores_overview(
                     comment=None,
                 ))
         
-        # Calculate average score
-        avg_score = total_score / scores_count if scores_count > 0 else None
+        # Calculate weighted average score
+        avg_score = total_score / total_weight if total_weight > 0 else None
         
         # Calculate grade (simple linear mapping: score 1-5 -> grade 1-10)
         # Formula: grade = (score - scale_min) / (scale_max - scale_min) * 9 + 1
@@ -774,8 +772,8 @@ def get_assessment_scores_overview(
             criterion_scores=criterion_scores_list,
             total_score=round(avg_score, 1) if avg_score is not None else None,
             grade=grade,
-            updated_at=last_updated,
-            updated_by=teacher_name if scores_count > 0 else None,
+            updated_at=None,  # Timestamp tracking not implemented yet
+            updated_by=None,  # Would require tracking score modifications
         )
         team_scores.append(team_score)
         
