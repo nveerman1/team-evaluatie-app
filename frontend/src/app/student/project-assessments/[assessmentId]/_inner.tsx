@@ -132,23 +132,26 @@ export default function StudentProjectAssessmentInner() {
 
   return (
     <main className="max-w-6xl mx-auto p-6 space-y-6">
+      {/* Back button */}
+      <div className="flex justify-start">
+        <button
+          onClick={() => router.back()}
+          className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+        >
+          ← Terug
+        </button>
+      </div>
+
       {/* Header with project info */}
-      <div className="bg-white border rounded-2xl p-6">
+      <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">{data.assessment.title}</h1>
-        <p className="text-lg text-gray-700 mb-4">{data.rubric_title}</p>
-        <div className="flex gap-6 text-sm text-gray-600">
-          {data.teacher_name && (
-            <div>
-              <span className="font-medium">Beoordeeld door:</span> {data.teacher_name}
-            </div>
-          )}
+        <p className="text-gray-600">
+          Rubric: {data.rubric_title}
+          {data.teacher_name && <> • Beoordeeld door: {data.teacher_name}</>}
           {data.assessment.published_at && (
-            <div>
-              <span className="font-medium">Datum:</span>{" "}
-              {new Date(data.assessment.published_at).toLocaleDateString("nl-NL")}
-            </div>
+            <> • Datum: {new Date(data.assessment.published_at).toLocaleDateString("nl-NL")}</>
           )}
-        </div>
+        </p>
       </div>
 
       {successMsg && (
@@ -218,14 +221,21 @@ export default function StudentProjectAssessmentInner() {
           Beschrijf kort wat je hebt geleerd en wat je meeneemt naar het volgende project.
         </p>
 
-        {data.reflection && (
-          <div className="p-3 bg-green-50 rounded-lg text-sm text-green-700 mb-4">
-            Reflectie opgeslagen op{" "}
-            {data.reflection.submitted_at
-              ? new Date(data.reflection.submitted_at).toLocaleDateString("nl-NL")
-              : "onbekende datum"}
-          </div>
-        )}
+        {/* Reflection status */}
+        <div className="mb-4">
+          {data.reflection ? (
+            <div className="p-3 bg-green-50 rounded-lg text-sm text-green-700">
+              Status: <span className="font-semibold">Ingeleverd</span> op{" "}
+              {data.reflection.submitted_at
+                ? new Date(data.reflection.submitted_at).toLocaleDateString("nl-NL")
+                : "onbekende datum"}
+            </div>
+          ) : (
+            <div className="p-3 bg-orange-50 rounded-lg text-sm text-orange-700">
+              Status: <span className="font-semibold">Niet ingeleverd</span>
+            </div>
+          )}
+        </div>
 
         <textarea
           className="w-full border rounded-lg px-4 py-3 min-h-32 mb-2"
