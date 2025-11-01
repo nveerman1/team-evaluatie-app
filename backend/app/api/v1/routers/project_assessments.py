@@ -314,8 +314,12 @@ def get_project_assessment(
             # Map rubric scale to 1-10
             scale_range = rubric.scale_max - rubric.scale_min
             if scale_range > 0:
-                normalized = (total_score - rubric.scale_min) / scale_range
+                # Clamp total_score to rubric range
+                clamped_score = max(rubric.scale_min, min(rubric.scale_max, total_score))
+                normalized = (clamped_score - rubric.scale_min) / scale_range
                 grade = 1 + (normalized * 9)  # Map to 1-10
+                # Ensure grade is within bounds
+                grade = max(1.0, min(10.0, grade))
     
     return ProjectAssessmentDetailOut(
         assessment=_to_out_assessment(pa),

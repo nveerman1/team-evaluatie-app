@@ -83,9 +83,9 @@ export default function StudentProjectAssessmentInner() {
   });
 
   // Helper function to get level description based on score
+  // Note: This assumes descriptors are keyed like "level1", "level2", etc.
+  // which matches the rubric structure used in the system
   const getLevelDescription = (criterion: typeof data.criteria[0], score: number): string | null => {
-    // Assuming descriptors are keyed like "level1", "level2", etc.
-    // Map score to level based on rubric scale
     const levelKey = `level${score}`;
     return criterion.descriptors[levelKey] || null;
   };
@@ -171,7 +171,7 @@ export default function StudentProjectAssessmentInner() {
             <div className="text-center">
               <p className="text-sm text-gray-600 mb-1">Totaalscore</p>
               <p className="text-4xl font-bold text-blue-600">
-                {data.total_score.toFixed(1)}
+                {data.total_score?.toFixed(1)}
               </p>
               <p className="text-sm text-gray-500">
                 van {data.rubric_scale_min} - {data.rubric_scale_max}
@@ -181,7 +181,7 @@ export default function StudentProjectAssessmentInner() {
               <div className="text-center">
                 <p className="text-sm text-gray-600 mb-1">Eindcijfer</p>
                 <p className="text-4xl font-bold text-indigo-600">
-                  {data.grade.toFixed(1)}
+                  {data.grade?.toFixed(1)}
                 </p>
                 <p className="text-sm text-gray-500">schaal 1-10</p>
               </div>
