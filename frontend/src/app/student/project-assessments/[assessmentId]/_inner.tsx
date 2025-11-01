@@ -164,7 +164,7 @@ export default function StudentProjectAssessmentInner() {
       </section>
 
       {/* Total Score and Grade */}
-      {(data.total_score !== null && data.total_score !== undefined) && (
+      {data.total_score != null && (
         <section className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5">
           <h2 className="text-lg font-semibold mb-3">Eindresultaat</h2>
           <div className="flex items-center justify-around">
@@ -177,7 +177,7 @@ export default function StudentProjectAssessmentInner() {
                 van {data.rubric_scale_min} - {data.rubric_scale_max}
               </p>
             </div>
-            {data.grade !== null && data.grade !== undefined && (
+            {data.grade != null && (
               <div className="text-center">
                 <p className="text-sm text-gray-600 mb-1">Eindcijfer</p>
                 <p className="text-4xl font-bold text-indigo-600">

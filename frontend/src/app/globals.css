@@ -32,7 +32,9 @@ body {
   }
   
   /* Hide navigation and action buttons when printing */
-  button {
+  header button,
+  nav,
+  .no-print {
     display: none !important;
   }
   

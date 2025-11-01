@@ -301,9 +301,13 @@ def get_project_assessment(
         weight_map = {c.id: c.weight for c in criteria}
         total_weight = sum(weight_map.values())
         
-        # Calculate weighted average
+        # Calculate weighted average - only include scores that have matching criteria
         if total_weight > 0:
-            weighted_sum = sum(s.score * weight_map.get(s.criterion_id, 0) for s in scores if s.criterion_id in weight_map)
+            weighted_sum = 0
+            for s in scores:
+                if s.criterion_id in weight_map:
+                    weighted_sum += s.score * weight_map[s.criterion_id]
+            
             total_score = weighted_sum / total_weight
             
             # Convert to grade (1-10 scale)
