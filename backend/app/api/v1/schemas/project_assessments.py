@@ -163,3 +163,44 @@ class ProjectAssessmentReflectionsOverview(BaseModel):
     assessment: ProjectAssessmentOut
     group_name: str
     reflections: List[ReflectionInfo]
+
+
+# ---------- Scores overview for teachers ----------
+
+class CriterionScore(BaseModel):
+    """Score for a specific criterion"""
+    criterion_id: int
+    criterion_name: str
+    score: Optional[int] = None
+    comment: Optional[str] = None
+
+
+class TeamScoreOverview(BaseModel):
+    """Complete score overview for a team"""
+    team_number: int
+    team_name: str
+    members: List[TeamMemberInfo]
+    criterion_scores: List[CriterionScore]
+    total_score: Optional[float] = None
+    grade: Optional[float] = None  # Calculated school grade
+    updated_at: Optional[datetime] = None
+    updated_by: Optional[str] = None
+
+
+class ScoreStatistics(BaseModel):
+    """Statistics for the assessment"""
+    average_per_criterion: Dict[str, float]  # criterion_name -> average
+    highest_score: Optional[float] = None
+    lowest_score: Optional[float] = None
+    pending_assessments: int
+
+
+class ProjectAssessmentScoresOverview(BaseModel):
+    """Complete scores overview for a project assessment"""
+    assessment: ProjectAssessmentOut
+    rubric_title: str
+    rubric_scale_min: int
+    rubric_scale_max: int
+    criteria: List[Dict[str, Any]]  # All rubric criteria
+    team_scores: List[TeamScoreOverview]
+    statistics: ScoreStatistics

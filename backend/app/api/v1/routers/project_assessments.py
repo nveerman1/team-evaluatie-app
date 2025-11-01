@@ -35,6 +35,10 @@ from app.api.v1.schemas.project_assessments import (
     TeamMemberInfo,
     ProjectAssessmentReflectionsOverview,
     ReflectionInfo,
+    ProjectAssessmentScoresOverview,
+    TeamScoreOverview,
+    CriterionScore,
+    ScoreStatistics,
 )
 
 router = APIRouter(prefix="/project-assessments", tags=["project-assessments"])
@@ -629,3 +633,178 @@ def create_or_update_reflection(
         db.commit()
         db.refresh(reflection)
         return ProjectAssessmentReflectionOut.model_validate(reflection)
+
+
+# ---------- Scores Overview ----------
+
+@router.get("/{assessment_id}/scores-overview", response_model=ProjectAssessmentScoresOverview)
+def get_assessment_scores_overview(
+    assessment_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """Get complete scores overview for a project assessment (teacher/admin only)"""
+    if user.role not in ("teacher", "admin"):
+        raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen score overzicht bekijken")
+    
+    pa = db.query(ProjectAssessment).filter(
+        ProjectAssessment.id == assessment_id,
+        ProjectAssessment.school_id == user.school_id,
+        ProjectAssessment.teacher_id == user.id,
+    ).first()
+    if not pa:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    
+    # Get rubric info
+    rubric = db.query(Rubric).filter(Rubric.id == pa.rubric_id).first()
+    if not rubric:
+        raise HTTPException(status_code=404, detail="Rubric not found")
+    
+    # Get all criteria
+    criteria = db.query(RubricCriterion).filter(
+        RubricCriterion.rubric_id == rubric.id,
+        RubricCriterion.school_id == user.school_id,
+    ).order_by(RubricCriterion.id.asc()).all()
+    
+    criteria_list = [
+        {"id": c.id, "name": c.name, "weight": c.weight, "descriptors": c.descriptors}
+        for c in criteria
+    ]
+    
+    # Get group info
+    group = db.query(Group).filter(Group.id == pa.group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    # Get all users in this group, grouped by team_number
+    members_in_group = db.query(User).join(
+        GroupMember, GroupMember.user_id == User.id
+    ).filter(
+        GroupMember.group_id == group.id,
+        GroupMember.school_id == user.school_id,
+        GroupMember.active == True,
+        User.team_number.isnot(None),
+    ).all()
+    
+    # Group users by team_number
+    teams_dict: dict[int, List[User]] = {}
+    for u in members_in_group:
+        if u.team_number is not None:
+            if u.team_number not in teams_dict:
+                teams_dict[u.team_number] = []
+            teams_dict[u.team_number].append(u)
+    
+    # Get all scores for this assessment
+    all_scores = db.query(ProjectAssessmentScore).filter(
+        ProjectAssessmentScore.assessment_id == pa.id,
+        ProjectAssessmentScore.school_id == user.school_id,
+    ).all()
+    
+    # Organize scores by team and criterion
+    scores_map = {}  # (team_number, criterion_id) -> score
+    for score in all_scores:
+        key = (score.team_number, score.criterion_id)
+        scores_map[key] = score
+    
+    # Get teacher name
+    teacher = db.query(User).filter(User.id == pa.teacher_id).first()
+    teacher_name = teacher.name if teacher else None
+    
+    # Build team score overview for each team
+    team_scores = []
+    all_total_scores = []
+    criterion_totals = {c.id: {"sum": 0, "count": 0, "name": c.name} for c in criteria}
+    
+    for team_num in sorted(teams_dict.keys()):
+        team_members = teams_dict[team_num]
+        
+        members = [
+            TeamMemberInfo(id=u.id, name=u.name, email=u.email)
+            for u in team_members
+        ]
+        
+        # Build criterion scores for this team
+        criterion_scores_list = []
+        total_score = 0.0
+        total_weight = 0.0
+        scores_count = 0
+        
+        for criterion in criteria:
+            key = (team_num, criterion.id)
+            if key in scores_map:
+                score_obj = scores_map[key]
+                criterion_scores_list.append(CriterionScore(
+                    criterion_id=criterion.id,
+                    criterion_name=criterion.name,
+                    score=score_obj.score,
+                    comment=score_obj.comment,
+                ))
+                # Use weighted average
+                total_score += score_obj.score * criterion.weight
+                total_weight += criterion.weight
+                scores_count += 1
+                criterion_totals[criterion.id]["sum"] += score_obj.score
+                criterion_totals[criterion.id]["count"] += 1
+            else:
+                criterion_scores_list.append(CriterionScore(
+                    criterion_id=criterion.id,
+                    criterion_name=criterion.name,
+                    score=None,
+                    comment=None,
+                ))
+        
+        # Calculate weighted average score
+        avg_score = total_score / total_weight if total_weight > 0 else None
+        
+        # Calculate grade (simple linear mapping: score 1-5 -> grade 1-10)
+        # Formula: grade = (score - scale_min) / (scale_max - scale_min) * 9 + 1
+        grade = None
+        if avg_score is not None:
+            scale_range = rubric.scale_max - rubric.scale_min
+            if scale_range > 0:
+                grade = ((avg_score - rubric.scale_min) / scale_range) * 9 + 1
+                grade = round(grade, 1)
+        
+        team_score = TeamScoreOverview(
+            team_number=team_num,
+            team_name=f"Team {team_num}",
+            members=members,
+            criterion_scores=criterion_scores_list,
+            total_score=round(avg_score, 1) if avg_score is not None else None,
+            grade=grade,
+            updated_at=None,  # Timestamp tracking not implemented yet
+            updated_by=None,  # Would require tracking score modifications
+        )
+        team_scores.append(team_score)
+        
+        if avg_score is not None:
+            all_total_scores.append(avg_score)
+    
+    # Calculate statistics
+    average_per_criterion = {}
+    for crit_id, data in criterion_totals.items():
+        if data["count"] > 0:
+            average_per_criterion[data["name"]] = round(data["sum"] / data["count"], 2)
+        else:
+            average_per_criterion[data["name"]] = 0.0
+    
+    highest_score = max(all_total_scores) if all_total_scores else None
+    lowest_score = min(all_total_scores) if all_total_scores else None
+    pending_assessments = len([t for t in team_scores if t.total_score is None])
+    
+    statistics = ScoreStatistics(
+        average_per_criterion=average_per_criterion,
+        highest_score=round(highest_score, 1) if highest_score else None,
+        lowest_score=round(lowest_score, 1) if lowest_score else None,
+        pending_assessments=pending_assessments,
+    )
+    
+    return ProjectAssessmentScoresOverview(
+        assessment=_to_out_assessment(pa),
+        rubric_title=rubric.title,
+        rubric_scale_min=rubric.scale_min,
+        rubric_scale_max=rubric.scale_max,
+        criteria=criteria_list,
+        team_scores=team_scores,
+        statistics=statistics,
+    )
