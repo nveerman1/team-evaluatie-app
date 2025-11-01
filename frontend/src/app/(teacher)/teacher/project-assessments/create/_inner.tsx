@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import api from "@/lib/api";
+import api, { ApiAuthError } from "@/lib/api";
 import { projectAssessmentService, rubricService } from "@/services";
 import { RubricListItem, ProjectAssessmentCreate } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
@@ -35,9 +35,8 @@ export default function CreateProjectAssessmentInner() {
         const rubricResponse = await rubricService.getRubrics("", "project");
         setRubrics(rubricResponse.items || []);
 
-        // Load groups - we'll need to create an API endpoint for this
-        // For now, let's fetch from a generic endpoint
-        const groupsResponse = await api.get<Group[]>("/students/groups");
+        // Load teams from the students/teams endpoint
+        const groupsResponse = await api.get<Group[]>("/students/teams");
         setGroups(Array.isArray(groupsResponse.data) ? groupsResponse.data : []);
       } catch (e: any) {
         setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
@@ -70,7 +69,11 @@ export default function CreateProjectAssessmentInner() {
       );
       router.push(`/teacher/project-assessments/${result.id}/edit`);
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.message || "Opslaan mislukt");
+      if (e instanceof ApiAuthError) {
+        setError(e.originalMessage);
+      } else {
+        setError(e?.response?.data?.detail || e?.message || "Opslaan mislukt");
+      }
     } finally {
       setSaving(false);
     }
