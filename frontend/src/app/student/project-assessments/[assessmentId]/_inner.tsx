@@ -216,29 +216,36 @@ export default function StudentProjectAssessmentInner() {
 
       {/* Reflection Section */}
       <div className="bg-white border rounded-2xl p-6">
-        <h2 className="text-2xl font-bold mb-2">Jouw reflectie</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Beschrijf kort wat je hebt geleerd en wat je meeneemt naar het volgende project.
-        </p>
-
-        {/* Reflection status */}
-        <div className="mb-4">
+        <div className="flex items-start justify-between mb-2">
+          <div>
+            <h2 className="text-2xl font-bold">Jouw reflectie</h2>
+            <p className="text-sm text-gray-600 mt-2">
+              Beschrijf kort wat je hebt geleerd en wat je meeneemt naar het volgende project.
+            </p>
+          </div>
+          {/* Reflection status badge */}
           {data.reflection ? (
-            <div className="p-3 bg-green-50 rounded-lg text-sm text-green-700">
-              Status: <span className="font-semibold">Ingeleverd</span> op{" "}
-              {data.reflection.submitted_at
-                ? new Date(data.reflection.submitted_at).toLocaleDateString("nl-NL")
-                : "onbekende datum"}
-            </div>
+            <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium whitespace-nowrap">
+              Ingeleverd
+            </span>
           ) : (
-            <div className="p-3 bg-orange-50 rounded-lg text-sm text-orange-700">
-              Status: <span className="font-semibold">Niet ingeleverd</span>
-            </div>
+            <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium whitespace-nowrap">
+              Niet ingeleverd
+            </span>
           )}
         </div>
 
+        {data.reflection && (
+          <p className="text-xs text-gray-500 mb-4">
+            Opgeslagen op{" "}
+            {data.reflection.submitted_at
+              ? new Date(data.reflection.submitted_at).toLocaleDateString("nl-NL")
+              : "onbekende datum"}
+          </p>
+        )}
+
         <textarea
-          className="w-full border rounded-lg px-4 py-3 min-h-32 mb-2"
+          className="w-full border rounded-lg px-4 py-3 min-h-32 mb-2 mt-4"
           value={reflectionText}
           onChange={(e) => setReflectionText(e.target.value)}
           placeholder="Jouw reflectie..."
