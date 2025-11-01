@@ -6,6 +6,16 @@ import { ProjectAssessmentListItem } from "@/dtos";
 import { projectAssessmentService } from "@/services";
 
 /**
+ * FastAPI validation error structure
+ */
+interface ValidationError {
+  type?: string;
+  loc?: (string | number)[];
+  msg?: string;
+  input?: unknown;
+}
+
+/**
  * Hook to fetch student's project assessments
  */
 export function useStudentProjectAssessments() {
@@ -25,27 +35,33 @@ export function useStudentProjectAssessments() {
         "published"
       );
       setAssessments(data.items || []);
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (e instanceof ApiAuthError) {
         setError(e.originalMessage);
       } else {
         // Handle validation errors (422) which may return an array of error objects
         let errorMessage = "Could not load project assessments";
         
-        if (e?.response?.data?.detail) {
-          const detail = e.response.data.detail;
+        const axiosError = e as { response?: { data?: { detail?: unknown } }; message?: string };
+        
+        if (axiosError?.response?.data?.detail) {
+          const detail = axiosError.response.data.detail;
           // If detail is an array of validation errors, extract messages
           if (Array.isArray(detail)) {
-            errorMessage = detail
-              .map((err: any) => err.msg || JSON.stringify(err))
-              .join(", ");
+            const messages = detail
+              .map((err: ValidationError) => err.msg || "Validation error")
+              .filter(Boolean);
+            errorMessage = messages.length > 0 
+              ? messages.join(", ")
+              : "Validation error occurred";
           } else if (typeof detail === "string") {
             errorMessage = detail;
-          } else if (typeof detail === "object") {
-            errorMessage = detail.msg || JSON.stringify(detail);
+          } else if (detail && typeof detail === "object") {
+            const validationErr = detail as ValidationError;
+            errorMessage = validationErr.msg || "An error occurred";
           }
-        } else if (e?.message) {
-          errorMessage = e.message;
+        } else if (axiosError?.message) {
+          errorMessage = axiosError.message;
         }
         
         setError(errorMessage);
