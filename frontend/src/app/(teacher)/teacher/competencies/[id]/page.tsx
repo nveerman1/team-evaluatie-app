@@ -6,6 +6,13 @@ import { competencyService } from "@/services";
 import type { Competency, CompetencyUpdate } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
 
+interface RubricLevel {
+  id?: number;
+  level: number;
+  label?: string;
+  description: string;
+}
+
 export default function EditCompetencyPage() {
   const router = useRouter();
   const params = useParams();
@@ -13,6 +20,7 @@ export default function EditCompetencyPage() {
 
   const [competency, setCompetency] = useState<Competency | null>(null);
   const [formData, setFormData] = useState<CompetencyUpdate>({});
+  const [rubricLevels, setRubricLevels] = useState<RubricLevel[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +32,11 @@ export default function EditCompetencyPage() {
   const loadCompetency = async () => {
     try {
       setLoading(true);
-      const data = await competencyService.getCompetency(id);
+      const [data, levels] = await Promise.all([
+        competencyService.getCompetency(id),
+        competencyService.getRubricLevels(id),
+      ]);
+      
       setCompetency(data);
       setFormData({
         name: data.name,
@@ -36,11 +48,35 @@ export default function EditCompetencyPage() {
         scale_max: data.scale_max,
         scale_labels: data.scale_labels,
       });
+
+      // Initialize rubric levels
+      if (levels.length === 0) {
+        const defaultLabels = ["Startend", "Basis", "Competent", "Gevorderd", "Excellent"];
+        const initialLevels: RubricLevel[] = [];
+        for (let i = data.scale_min; i <= data.scale_max; i++) {
+          initialLevels.push({
+            level: i,
+            label: defaultLabels[i - 1] || `Niveau ${i}`,
+            description: "",
+          });
+        }
+        setRubricLevels(initialLevels);
+      } else {
+        setRubricLevels(levels);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load competency");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRubricLevelChange = (level: number, field: string, value: string) => {
+    setRubricLevels((prev) =>
+      prev.map((rl) =>
+        rl.level === level ? { ...rl, [field]: value } : rl
+      )
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,7 +90,41 @@ export default function EditCompetencyPage() {
     try {
       setSubmitting(true);
       setError(null);
+      
+      // Update competency
       await competencyService.updateCompetency(id, formData);
+
+      // Save or update rubric levels
+      for (const level of rubricLevels) {
+        if (!level.description.trim()) {
+          continue; // Skip empty levels
+        }
+
+        const data = {
+          competency_id: id,
+          level: level.level,
+          label: level.label || undefined,
+          description: level.description,
+        };
+
+        if (level.id) {
+          // Update existing
+          await competencyService.updateRubricLevel(id, level.id, {
+            label: level.label || undefined,
+            description: level.description,
+          });
+        } else {
+          // Create new
+          const created = await competencyService.createRubricLevel(id, data);
+          // Update the level with the new id
+          setRubricLevels((prev) =>
+            prev.map((rl) =>
+              rl.level === level.level ? { ...rl, id: created.id } : rl
+            )
+          );
+        }
+      }
+
       router.push("/teacher/competencies");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update competency");
@@ -201,6 +271,65 @@ export default function EditCompetencyPage() {
             <label htmlFor="active" className="text-sm font-medium">
               Actief (zichtbaar voor leerlingen)
             </label>
+          </div>
+        </div>
+
+        {/* Rubric Levels Section */}
+        <div className="p-6 border rounded-xl bg-white space-y-4">
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold mb-1">Rubric Niveaus</h2>
+            <p className="text-sm text-gray-600">
+              Definieer labels en voorbeeldgedrag voor elk niveau
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {rubricLevels.map((level) => (
+              <div
+                key={level.level}
+                className="p-4 border rounded-lg bg-gray-50 space-y-3"
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-lg font-bold text-blue-600">
+                    Niveau {level.level}
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Label
+                  </label>
+                  <input
+                    type="text"
+                    value={level.label || ""}
+                    onChange={(e) =>
+                      handleRubricLevelChange(level.level, "label", e.target.value)
+                    }
+                    placeholder="bijv. Startend, Basis, Competent, Gevorderd, Excellent"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Voorbeeldgedrag
+                  </label>
+                  <textarea
+                    value={level.description}
+                    onChange={(e) =>
+                      handleRubricLevelChange(
+                        level.level,
+                        "description",
+                        e.target.value
+                      )
+                    }
+                    placeholder="Beschrijf concreet gedrag dat bij dit niveau hoort..."
+                    rows={3}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

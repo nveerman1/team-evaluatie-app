@@ -9,6 +9,7 @@ import Link from "next/link";
 
 export default function WindowDetailPage() {
   const params = useParams();
+  const router = useRouter();
 
   const windowId = Number(params.windowId);
 
@@ -55,6 +56,24 @@ export default function WindowDetailPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!window) return;
+
+    const confirmed = confirm(
+      `Weet je zeker dat je "${window.title}" wilt verwijderen? Dit kan niet ongedaan worden gemaakt.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await competencyService.deleteWindow(windowId);
+      alert("Venster succesvol verwijderd");
+      router.push("/teacher/competencies");
+    } catch (err) {
+      alert("Failed to delete window: " + err);
+    }
+  };
+
   if (loading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
   if (!window || !heatmap) return <ErrorMessage message="Data not found" />;
@@ -78,6 +97,12 @@ export default function WindowDetailPage() {
               <option value="open">Open</option>
               <option value="closed">Gesloten</option>
             </select>
+            <button
+              onClick={handleDelete}
+              className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50"
+            >
+              Verwijderen
+            </button>
             <Link
               href="/teacher/competencies"
               className="px-4 py-2 border rounded-lg hover:bg-gray-50"

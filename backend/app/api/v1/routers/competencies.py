@@ -14,6 +14,7 @@ from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import (
     User,
     Competency,
+    CompetencyRubricLevel,
     CompetencyWindow,
     CompetencySelfScore,
     CompetencyTeacherObservation,
@@ -24,6 +25,9 @@ from app.api.v1.schemas.competencies import (
     CompetencyCreate,
     CompetencyUpdate,
     CompetencyOut,
+    CompetencyRubricLevelCreate,
+    CompetencyRubricLevelUpdate,
+    CompetencyRubricLevelOut,
     CompetencyWindowCreate,
     CompetencyWindowUpdate,
     CompetencyWindowOut,
@@ -165,21 +169,136 @@ def delete_competency(
     return None
 
 
+# ============ Competency Rubric Level CRUD ============
+
+
+@router.get("/{competency_id}/rubric-levels", response_model=List[CompetencyRubricLevelOut])
+def list_rubric_levels(
+    competency_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get all rubric levels for a competency"""
+    competency = db.get(Competency, competency_id)
+    if not competency or competency.school_id != current_user.school_id:
+        raise HTTPException(status_code=404, detail="Competency not found")
+    
+    levels = db.execute(
+        select(CompetencyRubricLevel)
+        .where(CompetencyRubricLevel.competency_id == competency_id)
+        .order_by(CompetencyRubricLevel.level)
+    ).scalars().all()
+    return levels
+
+
+@router.post("/{competency_id}/rubric-levels", response_model=CompetencyRubricLevelOut, status_code=status.HTTP_201_CREATED)
+def create_rubric_level(
+    competency_id: int,
+    data: CompetencyRubricLevelCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Create a rubric level for a competency (teacher only)"""
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(status_code=403, detail="Only teachers can create rubric levels")
+    
+    competency = db.get(Competency, competency_id)
+    if not competency or competency.school_id != current_user.school_id:
+        raise HTTPException(status_code=404, detail="Competency not found")
+    
+    # Verify the competency_id matches
+    if data.competency_id != competency_id:
+        raise HTTPException(status_code=400, detail="Competency ID mismatch")
+    
+    # Verify level is within scale
+    if data.level < competency.scale_min or data.level > competency.scale_max:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Level must be between {competency.scale_min} and {competency.scale_max}"
+        )
+    
+    rubric_level = CompetencyRubricLevel(
+        school_id=current_user.school_id,
+        competency_id=competency_id,
+        level=data.level,
+        label=data.label,
+        description=data.description,
+    )
+    db.add(rubric_level)
+    try:
+        db.commit()
+        db.refresh(rubric_level)
+        return rubric_level
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail=f"Rubric level {data.level} already exists for this competency"
+        )
+
+
+@router.patch("/{competency_id}/rubric-levels/{level_id}", response_model=CompetencyRubricLevelOut)
+def update_rubric_level(
+    competency_id: int,
+    level_id: int,
+    data: CompetencyRubricLevelUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update a rubric level (teacher only)"""
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(status_code=403, detail="Only teachers can update rubric levels")
+    
+    rubric_level = db.get(CompetencyRubricLevel, level_id)
+    if not rubric_level or rubric_level.competency_id != competency_id or rubric_level.school_id != current_user.school_id:
+        raise HTTPException(status_code=404, detail="Rubric level not found")
+    
+    for key, value in data.model_dump(exclude_unset=True).items():
+        setattr(rubric_level, key, value)
+    
+    db.commit()
+    db.refresh(rubric_level)
+    return rubric_level
+
+
+@router.delete("/{competency_id}/rubric-levels/{level_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_rubric_level(
+    competency_id: int,
+    level_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a rubric level (teacher only)"""
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(status_code=403, detail="Only teachers can delete rubric levels")
+    
+    rubric_level = db.get(CompetencyRubricLevel, level_id)
+    if not rubric_level or rubric_level.competency_id != competency_id or rubric_level.school_id != current_user.school_id:
+        raise HTTPException(status_code=404, detail="Rubric level not found")
+    
+    db.delete(rubric_level)
+    db.commit()
+    return None
+
+
 # ============ Competency Window CRUD ============
 
 
 @router.get("/windows/", response_model=List[CompetencyWindowOut])
 def list_windows(
     status_filter: Optional[str] = Query(None),
+    course_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List all competency windows"""
+    """List all competency windows, optionally filtered by status and/or course"""
     query = select(CompetencyWindow).where(
         CompetencyWindow.school_id == current_user.school_id
     )
     if status_filter:
         query = query.where(CompetencyWindow.status == status_filter)
+    if course_id:
+        query = query.where(CompetencyWindow.course_id == course_id)
     query = query.order_by(CompetencyWindow.start_date.desc())
     
     windows = db.execute(query).scalars().all()

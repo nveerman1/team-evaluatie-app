@@ -223,3 +223,26 @@ export interface StudentGrowthCard {
   windows: StudentCompetencyOverview[];
   trends: Record<number, number[]>; // competency_id -> [scores over time]
 }
+
+export interface CompetencyRubricLevel {
+  id: number;
+  school_id: number;
+  competency_id: number;
+  level: number;
+  label?: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CompetencyRubricLevelCreate {
+  competency_id: number;
+  level: number;
+  label?: string;
+  description: string;
+}
+
+export interface CompetencyRubricLevelUpdate {
+  label?: string;
+  description?: string;
+}
