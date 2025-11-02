@@ -18,41 +18,50 @@ export function Toolbar({
   showFiltersButton = true,
 }: ToolbarProps) {
   return (
-    <div className="flex flex-col sm:flex-row gap-3 mb-6">
-      {/* Search Field */}
-      <div className="flex-1 relative">
-        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-          🔍
-        </span>
-        <input
-          type="text"
-          placeholder="Zoeken..."
-          value={searchValue}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-        />
+    <div className="mb-6">
+      <div className="inline-flex gap-4 p-4 border rounded-lg bg-white">
+        {/* Search Field */}
+        <div className="flex flex-col">
+          <label className="text-sm font-medium text-gray-700 mb-1">
+            Zoek titel
+          </label>
+          <input
+            type="text"
+            placeholder="Zoeken..."
+            value={searchValue}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="w-64 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+          />
+        </div>
+
+        {/* Status Filter Dropdown */}
+        <div className="flex flex-col">
+          <label className="text-sm font-medium text-gray-700 mb-1">
+            Status
+          </label>
+          <select
+            value={statusFilter}
+            onChange={(e) => onStatusFilterChange(e.target.value)}
+            className="w-40 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black bg-white"
+          >
+            <option value="all">Alle</option>
+            <option value="open">Open</option>
+            <option value="closed">Afgesloten</option>
+          </select>
+        </div>
+
+        {/* Filters Button */}
+        {showFiltersButton && (
+          <div className="flex flex-col justify-end">
+            <button
+              onClick={onFiltersClick}
+              className="px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Filters
+            </button>
+          </div>
+        )}
       </div>
-
-      {/* Status Filter Dropdown */}
-      <select
-        value={statusFilter}
-        onChange={(e) => onStatusFilterChange(e.target.value)}
-        className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black bg-white"
-      >
-        <option value="all">Alle</option>
-        <option value="open">Open</option>
-        <option value="closed">Afgesloten</option>
-      </select>
-
-      {/* Filters Button */}
-      {showFiltersButton && (
-        <button
-          onClick={onFiltersClick}
-          className="px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          Filters
-        </button>
-      )}
     </div>
   );
 }
