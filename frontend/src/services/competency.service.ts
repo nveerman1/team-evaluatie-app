@@ -54,12 +54,44 @@ export const competencyService = {
     await api.delete(`/competencies/${id}`);
   },
 
+  // ============ Competency Rubric Level CRUD ============
+
+  async getRubricLevels(competencyId: number): Promise<any[]> {
+    const response = await api.get(`/competencies/${competencyId}/rubric-levels`);
+    return response.data;
+  },
+
+  async createRubricLevel(competencyId: number, data: any): Promise<any> {
+    const response = await api.post(
+      `/competencies/${competencyId}/rubric-levels`,
+      data
+    );
+    return response.data;
+  },
+
+  async updateRubricLevel(
+    competencyId: number,
+    levelId: number,
+    data: any
+  ): Promise<any> {
+    const response = await api.patch(
+      `/competencies/${competencyId}/rubric-levels/${levelId}`,
+      data
+    );
+    return response.data;
+  },
+
+  async deleteRubricLevel(competencyId: number, levelId: number): Promise<void> {
+    await api.delete(`/competencies/${competencyId}/rubric-levels/${levelId}`);
+  },
+
   // ============ Competency Window CRUD ============
 
-  async getWindows(statusFilter?: string): Promise<CompetencyWindow[]> {
-    const response = await api.get("/competencies/windows/", {
-      params: statusFilter ? { status_filter: statusFilter } : {},
-    });
+  async getWindows(statusFilter?: string, courseId?: number): Promise<CompetencyWindow[]> {
+    const params: any = {};
+    if (statusFilter) params.status_filter = statusFilter;
+    if (courseId) params.course_id = courseId;
+    const response = await api.get("/competencies/windows/", { params });
     return response.data;
   },
 

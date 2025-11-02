@@ -472,6 +472,28 @@ class Competency(Base):
     )
 
 
+class CompetencyRubricLevel(Base):
+    """
+    Rubric level descriptions for competencies with example behaviors
+    """
+    __tablename__ = "competency_rubric_levels"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = tenant_fk()
+    competency_id: Mapped[int] = mapped_column(
+        ForeignKey("competencies.id", ondelete="CASCADE"), nullable=False
+    )
+    
+    level: Mapped[int] = mapped_column(SmallInteger, nullable=False)  # 1-5
+    label: Mapped[Optional[str]] = mapped_column(String(100))  # e.g., "Startend", "Basis"
+    description: Mapped[str] = mapped_column(Text, nullable=False)  # Behavior examples
+    
+    __table_args__ = (
+        UniqueConstraint("competency_id", "level", name="uq_rubric_level_per_competency"),
+        Index("ix_rubric_level_competency", "competency_id"),
+    )
+
+
 class CompetencyWindow(Base):
     """
     Measurement window/period for competency scans (e.g., Startscan, Midscan, Eindscan)

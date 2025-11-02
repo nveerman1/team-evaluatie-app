@@ -27,7 +27,7 @@ export default function CreateCompetencyPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, saveAndContinue = false) => {
     e.preventDefault();
 
     if (!formData.name.trim()) {
@@ -38,8 +38,13 @@ export default function CreateCompetencyPage() {
     try {
       setSubmitting(true);
       setError(null);
-      await competencyService.createCompetency(formData);
-      router.push("/teacher/competencies");
+      const newCompetency = await competencyService.createCompetency(formData);
+      if (saveAndContinue) {
+        // Redirect to rubric levels page
+        router.push(`/teacher/competencies/${newCompetency.id}/rubrics`);
+      } else {
+        router.push("/teacher/competencies");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create competency");
     } finally {
@@ -180,9 +185,18 @@ export default function CreateCompetencyPage() {
           <button
             type="submit"
             disabled={submitting}
+            onClick={(e) => handleSubmit(e, false)}
+            className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50"
+          >
+            {submitting ? "Opslaan..." : "Opslaan"}
+          </button>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={(e) => handleSubmit(e as any, true)}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
           >
-            {submitting ? "Opslaan..." : "Competentie Aanmaken"}
+            {submitting ? "Opslaan..." : "Opslaan en Verder"}
           </button>
         </div>
       </form>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { competencyService } from "@/services";
+import { competencyService, courseService } from "@/services";
 import type { Competency, CompetencyWindow } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
 import Link from "next/link";
@@ -9,11 +9,13 @@ import Link from "next/link";
 export default function CompetenciesPage() {
   const [competencies, setCompetencies] = useState<Competency[]>([]);
   const [windows, setWindows] = useState<CompetencyWindow[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"competencies" | "windows">(
     "windows"
   );
+  const [selectedCourseFilter, setSelectedCourseFilter] = useState<number | null>(null);
 
   useEffect(() => {
     loadData();
@@ -22,18 +24,35 @@ export default function CompetenciesPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [comps, wins] = await Promise.all([
+      const [comps, wins, coursesData] = await Promise.all([
         competencyService.getCompetencies(false),
         competencyService.getWindows(),
+        courseService.getCourses(),
       ]);
       setCompetencies(comps);
       setWindows(wins);
+      setCourses(coursesData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
       setLoading(false);
     }
   };
+
+  // Group windows by course
+  const groupedWindows = windows.reduce((acc, window) => {
+    const courseId = window.course_id || 0; // 0 for uncategorized
+    if (!acc[courseId]) {
+      acc[courseId] = [];
+    }
+    acc[courseId].push(window);
+    return acc;
+  }, {} as Record<number, CompetencyWindow[]>);
+
+  // Filter windows if a course is selected
+  const filteredWindows = selectedCourseFilter !== null
+    ? windows.filter(w => w.course_id === selectedCourseFilter)
+    : windows;
 
   if (loading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
@@ -86,16 +105,58 @@ export default function CompetenciesPage() {
             </Link>
           </div>
 
-          {windows.length === 0 ? (
+          {/* Course Filter */}
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium">Filter op vak:</label>
+            <select
+              value={selectedCourseFilter ?? ""}
+              onChange={(e) =>
+                setSelectedCourseFilter(
+                  e.target.value ? Number(e.target.value) : null
+                )
+              }
+              className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Alle vakken</option>
+              {courses.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {filteredWindows.length === 0 ? (
             <div className="p-8 border rounded-xl bg-gray-50 text-center">
               <p className="text-gray-500">
-                Nog geen vensters aangemaakt. Maak je eerste venster aan om te
-                beginnen met competentiescans.
+                {selectedCourseFilter !== null
+                  ? "Geen vensters gevonden voor dit vak."
+                  : "Nog geen vensters aangemaakt. Maak je eerste venster aan om te beginnen met competentiescans."}
               </p>
             </div>
           ) : (
-            <div className="grid gap-4">
-              {windows.map((window) => (
+            <div className="space-y-6">
+              {/* Group by course */}
+              {Object.entries(groupedWindows)
+                .filter(([courseId]) =>
+                  selectedCourseFilter === null
+                    ? true
+                    : Number(courseId) === selectedCourseFilter
+                )
+                .map(([courseId, courseWindows]) => {
+                  const course = courses.find((c) => c.id === Number(courseId));
+                  const courseName =
+                    Number(courseId) === 0
+                      ? "Geen vak gekoppeld"
+                      : course?.name || "Onbekend vak";
+
+                  return (
+                    <div key={courseId} className="space-y-3">
+                      <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">
+                        {courseName}
+                      </h3>
+                      <div className="grid gap-4">
+                        {courseWindows.map((window) => (
                 <Link
                   key={window.id}
                   href={`/teacher/competencies/windows/${window.id}`}
@@ -146,6 +207,10 @@ export default function CompetenciesPage() {
                   </div>
                 </Link>
               ))}
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
           )}
         </div>

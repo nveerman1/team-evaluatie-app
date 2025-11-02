@@ -48,6 +48,35 @@ class CompetencyOut(CompetencyBase):
         from_attributes = True
 
 
+# ============ Competency Rubric Level Schemas ============
+
+
+class CompetencyRubricLevelBase(BaseModel):
+    level: int = Field(..., ge=1, le=5)
+    label: Optional[str] = Field(None, max_length=100)
+    description: str
+
+
+class CompetencyRubricLevelCreate(CompetencyRubricLevelBase):
+    competency_id: int
+
+
+class CompetencyRubricLevelUpdate(BaseModel):
+    label: Optional[str] = Field(None, max_length=100)
+    description: Optional[str] = None
+
+
+class CompetencyRubricLevelOut(CompetencyRubricLevelBase):
+    id: int
+    school_id: int
+    competency_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # ============ Competency Window Schemas ============
 
 

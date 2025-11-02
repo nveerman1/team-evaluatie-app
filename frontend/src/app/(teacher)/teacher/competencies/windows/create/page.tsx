@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { competencyService } from "@/services";
+import { competencyService, courseService } from "@/services";
 import type { CompetencyWindowCreate } from "@/dtos";
-import { ErrorMessage } from "@/components";
+import { ErrorMessage, Loading } from "@/components";
 
 export default function CreateWindowPage() {
   const router = useRouter();
@@ -12,6 +12,7 @@ export default function CreateWindowPage() {
     title: "",
     description: "",
     class_names: [],
+    course_id: undefined,
     start_date: "",
     end_date: "",
     status: "draft",
@@ -19,9 +20,26 @@ export default function CreateWindowPage() {
     require_goal: false,
     require_reflection: false,
   });
+  const [courses, setCourses] = useState<any[]>([]);
   const [classNameInput, setClassNameInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadCourses();
+  }, []);
+
+  const loadCourses = async () => {
+    try {
+      const coursesData = await courseService.getCourses();
+      setCourses(coursesData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load courses");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAddClass = () => {
     if (classNameInput.trim() && !formData.class_names?.includes(classNameInput.trim())) {
@@ -59,6 +77,8 @@ export default function CreateWindowPage() {
       setSubmitting(false);
     }
   };
+
+  if (loading) return <Loading />;
 
   return (
     <main className="p-6 max-w-4xl mx-auto space-y-6">
@@ -106,6 +126,33 @@ export default function CreateWindowPage() {
             />
           </div>
 
+          {/* Course Dropdown */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Vak/Course
+            </label>
+            <select
+              value={formData.course_id || ""}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  course_id: e.target.value ? Number(e.target.value) : undefined,
+                })
+              }
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">-- Selecteer een vak (optioneel) --</option>
+              {courses.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-sm text-gray-500 mt-1">
+              Koppel dit venster aan een specifiek vak voor betere organisatie
+            </p>
+          </div>
+
           {/* Dates */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -146,9 +193,11 @@ export default function CreateWindowPage() {
             </div>
           </div>
 
-          {/* Classes */}
+          {/* Classes (deprecated but kept for backwards compatibility) */}
           <div>
-            <label className="block text-sm font-medium mb-2">Klassen</label>
+            <label className="block text-sm font-medium mb-2">
+              Klassen (optioneel, legacy)
+            </label>
             <div className="flex gap-2 mb-2">
               <input
                 type="text"
