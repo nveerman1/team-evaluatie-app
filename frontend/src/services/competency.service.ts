@@ -1,7 +1,7 @@
 /**
  * Service for Competency Monitor API calls
  */
-import { api } from "@/lib/api";
+import api from "@/lib/api";
 import type {
   Competency,
   CompetencyCreate,
