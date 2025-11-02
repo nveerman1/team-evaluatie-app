@@ -1,14 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { competencyService, courseService } from "@/services";
-import type { CompetencyWindowCreate } from "@/dtos";
+import type { CompetencyWindowCreate, Competency } from "@/dtos";
 import { ErrorMessage, Loading } from "@/components";
 
 interface Course {
   id: number;
   name: string;
+}
+
+interface WindowSettings {
+  selected_competency_ids?: number[];
+  [key: string]: any;
 }
 
 export default function CreateWindowPage() {
@@ -24,43 +29,74 @@ export default function CreateWindowPage() {
     require_self_score: true,
     require_goal: false,
     require_reflection: false,
+    settings: {},
   });
   const [courses, setCourses] = useState<Course[]>([]);
-  const [classNameInput, setClassNameInput] = useState("");
+  const [competencies, setCompetencies] = useState<Competency[]>([]);
+  const [selectedCompetencies, setSelectedCompetencies] = useState<number[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    loadCourses();
+    loadData();
   }, []);
 
-  const loadCourses = async () => {
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const loadData = async () => {
     try {
-      const coursesData = await courseService.getCourses();
+      const [coursesData, competenciesData] = await Promise.all([
+        courseService.getCourses(),
+        competencyService.getCompetencies(true), // Only active competencies
+      ]);
       setCourses(coursesData);
+      setCompetencies(competenciesData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load courses");
+      if (err instanceof Error) {
+        setError(`Er ging iets mis bij het laden: ${err.message}`);
+      } else {
+        setError("Er ging iets mis bij het laden van vakken en competenties");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddClass = () => {
-    if (classNameInput.trim() && !formData.class_names?.includes(classNameInput.trim())) {
-      setFormData({
-        ...formData,
-        class_names: [...(formData.class_names || []), classNameInput.trim()],
-      });
-      setClassNameInput("");
-    }
+  const handleCompetencyToggle = (competencyId: number) => {
+    setSelectedCompetencies((prev) => {
+      if (prev.includes(competencyId)) {
+        return prev.filter((id) => id !== competencyId);
+      } else {
+        return [...prev, competencyId];
+      }
+    });
   };
 
-  const handleRemoveClass = (className: string) => {
-    setFormData({
-      ...formData,
-      class_names: (formData.class_names || []).filter((c) => c !== className),
-    });
+  const getSelectedCompetenciesText = () => {
+    if (selectedCompetencies.length === 0) {
+      return "Selecteer competenties...";
+    }
+    const names = selectedCompetencies
+      .map((id) => competencies.find((c) => c.id === id)?.name)
+      .filter(Boolean);
+    if (names.length <= 2) {
+      return names.join(", ");
+    }
+    return `${names.length} competenties geselecteerd`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -71,10 +107,25 @@ export default function CreateWindowPage() {
       return;
     }
 
+    if (selectedCompetencies.length === 0) {
+      setError("Selecteer minimaal één competentie");
+      return;
+    }
+
     try {
       setSubmitting(true);
       setError(null);
-      await competencyService.createWindow(formData);
+      
+      // Store selected competencies in settings
+      const dataToSubmit = {
+        ...formData,
+        settings: {
+          ...formData.settings,
+          selected_competency_ids: selectedCompetencies,
+        },
+      };
+      
+      await competencyService.createWindow(dataToSubmit);
       router.push("/teacher/competencies");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create window");
@@ -198,51 +249,64 @@ export default function CreateWindowPage() {
             </div>
           </div>
 
-          {/* Classes (deprecated but kept for backwards compatibility) */}
+          {/* Competency Selection */}
           <div>
             <label className="block text-sm font-medium mb-2">
-              Klassen (optioneel, legacy)
+              Competenties <span className="text-red-600">*</span>
             </label>
-            <div className="flex gap-2 mb-2">
-              <input
-                type="text"
-                value={classNameInput}
-                onChange={(e) => setClassNameInput(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleAddClass();
-                  }
-                }}
-                placeholder="bijv. 4A, 4B"
-                className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+            <p className="text-sm text-gray-500 mb-2">
+              Selecteer welke competenties je in dit venster wilt gebruiken
+            </p>
+            <div className="relative" ref={dropdownRef}>
               <button
                 type="button"
-                onClick={handleAddClass}
-                className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-left flex justify-between items-center"
               >
-                Toevoegen
+                <span className={selectedCompetencies.length === 0 ? "text-gray-500" : ""}>
+                  {getSelectedCompetenciesText()}
+                </span>
+                <svg
+                  className={`w-5 h-5 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </button>
+
+              {isDropdownOpen && (
+                <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                  {competencies.length === 0 ? (
+                    <div className="p-3 text-gray-500 text-sm">
+                      Geen competenties beschikbaar. Maak eerst competenties aan.
+                    </div>
+                  ) : (
+                    <div className="py-1">
+                      {competencies.map((comp) => (
+                        <label
+                          key={comp.id}
+                          className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedCompetencies.includes(comp.id)}
+                            onChange={() => handleCompetencyToggle(comp.id)}
+                            className="mr-3 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm">{comp.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-            {formData.class_names && formData.class_names.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {formData.class_names.map((className) => (
-                  <span
-                    key={className}
-                    className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm flex items-center gap-2"
-                  >
-                    {className}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveClass(className)}
-                      className="text-blue-600 hover:text-blue-800"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
+            {selectedCompetencies.length > 0 && (
+              <p className="text-sm text-gray-600 mt-2">
+                {selectedCompetencies.length} competentie(s) geselecteerd
+              </p>
             )}
           </div>
 

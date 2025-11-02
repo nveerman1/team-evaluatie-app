@@ -1,20 +1,21 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { rubricService } from "@/services";
-import { RubricListItem } from "@/dtos";
+import { rubricService, competencyService } from "@/services";
+import { RubricListItem, Competency } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
 
-type TabType = "peer" | "project";
+type TabType = "peer" | "project" | "competencies";
 
 export default function RubricsListInner() {
   const [data, setData] = useState<RubricListItem[]>([]);
+  const [competencies, setCompetencies] = useState<Competency[]>([]);
   const [q, setQ] = useState("");
   const [activeTab, setActiveTab] = useState<TabType>("peer");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  async function fetchList(query = "", scope: TabType = activeTab) {
+  async function fetchRubrics(query = "", scope: "peer" | "project") {
     setLoading(true);
     setError(null);
     try {
@@ -24,6 +25,27 @@ export default function RubricsListInner() {
       setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchCompetencies() {
+    setLoading(true);
+    setError(null);
+    try {
+      const comps = await competencyService.getCompetencies(false);
+      setCompetencies(comps);
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function fetchList(query = "", scope: TabType = activeTab) {
+    if (scope === "competencies") {
+      await fetchCompetencies();
+    } else {
+      await fetchRubrics(query, scope);
     }
   }
 
@@ -45,12 +67,14 @@ export default function RubricsListInner() {
             Beheer je beoordelingsrubrics met criteria op 5 niveaus.
           </p>
         </div>
-        <Link
-          href={`/teacher/rubrics/create?scope=${activeTab}`}
-          className="px-4 py-2 rounded-xl bg-black text-white hover:opacity-90"
-        >
-          + Nieuwe {activeTab === "peer" ? "team-evaluatie" : "projectbeoordeling"}
-        </Link>
+        {activeTab !== "competencies" && (
+          <Link
+            href={`/teacher/rubrics/create?scope=${activeTab}`}
+            className="px-4 py-2 rounded-xl bg-black text-white hover:opacity-90"
+          >
+            + Nieuwe {activeTab === "peer" ? "team-evaluatie" : "projectbeoordeling"}
+          </Link>
+        )}
       </header>
 
       {/* Tabs */}
@@ -76,42 +100,55 @@ export default function RubricsListInner() {
           >
             Projectbeoordeling
           </button>
+          <button
+            onClick={() => handleTabChange("competencies")}
+            className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === "competencies"
+                ? "border-black text-black"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Competenties
+          </button>
         </nav>
       </div>
 
-      <section className="flex items-center gap-3">
-        <input
-          className="border rounded-lg px-3 py-2 w-72"
-          placeholder="Zoek op titel/omschrijving…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              fetchList(q.trim(), activeTab);
-            }
-          }}
-        />
-        <button
-          className="px-3 py-2 rounded-lg border"
-          onClick={() => fetchList(q.trim(), activeTab)}
-        >
-          Zoek
-        </button>
-        {q && (
+      {activeTab !== "competencies" && (
+        <section className="flex items-center gap-3">
+          <input
+            className="border rounded-lg px-3 py-2 w-72"
+            placeholder="Zoek op titel/omschrijving…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                fetchList(q.trim(), activeTab);
+              }
+            }}
+          />
           <button
             className="px-3 py-2 rounded-lg border"
-            onClick={() => {
-              setQ("");
-              fetchList("", activeTab);
-            }}
+            onClick={() => fetchList(q.trim(), activeTab)}
           >
-            Reset
+            Zoek
           </button>
-        )}
-      </section>
+          {q && (
+            <button
+              className="px-3 py-2 rounded-lg border"
+              onClick={() => {
+                setQ("");
+                fetchList("", activeTab);
+              }}
+            >
+              Reset
+            </button>
+          )}
+        </section>
+      )}
 
-      <section className="bg-white border rounded-2xl overflow-hidden">
+      {activeTab !== "competencies" && (
+        <section className="bg-white border rounded-2xl overflow-hidden">
         <div className="grid grid-cols-[1fr_140px_160px_140px] gap-0 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">
           <div>Titel</div>
           <div># Criteria</div>
@@ -164,7 +201,82 @@ export default function RubricsListInner() {
               </div>
             </div>
           ))}
-      </section>
+        </section>
+      )}
+
+      {/* Competencies Tab Content */}
+      {activeTab === "competencies" && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">Competenties</h2>
+            <Link
+              href="/teacher/competencies/create"
+              className="px-4 py-2 bg-black text-white rounded-xl hover:opacity-90"
+            >
+              + Nieuwe Competentie
+            </Link>
+          </div>
+
+          {loading && (
+            <div className="p-6">
+              <Loading />
+            </div>
+          )}
+          {error && !loading && (
+            <div className="p-6">
+              <ErrorMessage message={`Fout: ${error}`} />
+            </div>
+          )}
+          {!loading && !error && competencies.length === 0 && (
+            <div className="p-8 border rounded-xl bg-gray-50 text-center">
+              <p className="text-gray-500">
+                Nog geen competenties aangemaakt. Maak je eerste competentie
+                aan om te beginnen.
+              </p>
+            </div>
+          )}
+          {!loading && !error && competencies.length > 0 && (
+            <div className="grid gap-3">
+              {competencies
+                .sort((a, b) => a.order - b.order)
+                .map((comp) => (
+                  <Link
+                    key={comp.id}
+                    href={`/teacher/competencies/${comp.id}`}
+                    className="block p-4 border rounded-lg bg-white hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-lg font-semibold">{comp.name}</h3>
+                          {!comp.active && (
+                            <span className="px-2 py-1 rounded bg-gray-100 text-gray-600 text-xs">
+                              Inactief
+                            </span>
+                          )}
+                          {comp.category && (
+                            <span className="px-2 py-1 rounded bg-blue-50 text-blue-700 text-xs">
+                              {comp.category}
+                            </span>
+                          )}
+                        </div>
+                        {comp.description && (
+                          <p className="text-sm text-gray-600 mt-1">
+                            {comp.description}
+                          </p>
+                        )}
+                        <p className="text-xs text-gray-500 mt-2">
+                          Schaal: {comp.scale_min} - {comp.scale_max}
+                        </p>
+                      </div>
+                      <span className="text-gray-400">→</span>
+                    </div>
+                  </Link>
+                ))}
+            </div>
+          )}
+        </div>
+      )}
     </main>
   );
 }
