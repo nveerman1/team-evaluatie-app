@@ -163,8 +163,8 @@ export default function WindowDetailPage() {
                       className="text-center p-3 font-semibold min-w-[120px] relative"
                       style={{ height: '150px', verticalAlign: 'bottom' }}
                     >
-                      <div className="absolute bottom-3 left-1/2" style={{ transformOrigin: 'bottom left' }}>
-                        <div className="transform -rotate-45 whitespace-nowrap text-sm" style={{ marginLeft: '10px' }}>
+                      <div className="absolute left-1/2 transform -translate-x-1/2" style={{ bottom: '20px' }}>
+                        <div className="transform -rotate-45 origin-bottom-left whitespace-nowrap text-sm" style={{ paddingLeft: '15px' }}>
                           {comp.name}
                         </div>
                       </div>
