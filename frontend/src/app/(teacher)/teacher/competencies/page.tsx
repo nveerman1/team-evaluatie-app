@@ -21,6 +21,14 @@ export default function CompetenciesPage() {
     "windows"
   );
   const [selectedCourseFilter, setSelectedCourseFilter] = useState<number | null>(null);
+  
+  // Trends filter state
+  const [trendsClassFilter, setTrendsClassFilter] = useState<number | null>(null);
+  const [trendsCompetencyFilter, setTrendsCompetencyFilter] = useState<number | null>(null);
+  const [trendsPeriod, setTrendsPeriod] = useState<string>("last3");
+  const [trendsDisplayType, setTrendsDisplayType] = useState<string>("average");
+  const [trendsChartType, setTrendsChartType] = useState<string>("line");
+  const [trendsCompareWith, setTrendsCompareWith] = useState<string>("prev");
 
   useEffect(() => {
     loadData();
@@ -238,7 +246,11 @@ export default function CompetenciesPage() {
                 <label className="block text-sm font-medium mb-2">
                   Klas/Team
                 </label>
-                <select className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <select 
+                  value={trendsClassFilter ?? ""} 
+                  onChange={(e) => setTrendsClassFilter(e.target.value ? Number(e.target.value) : null)}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
                   <option value="">Alle klassen</option>
                   {courses.map((course) => (
                     <option key={course.id} value={course.id}>
@@ -253,7 +265,11 @@ export default function CompetenciesPage() {
                 <label className="block text-sm font-medium mb-2">
                   Competentie
                 </label>
-                <select className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <select 
+                  value={trendsCompetencyFilter ?? ""} 
+                  onChange={(e) => setTrendsCompetencyFilter(e.target.value ? Number(e.target.value) : null)}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
                   <option value="">Alle competenties</option>
                   {competencies.map((comp) => (
                     <option key={comp.id} value={comp.id}>
@@ -268,7 +284,11 @@ export default function CompetenciesPage() {
                 <label className="block text-sm font-medium mb-2">
                   Periode
                 </label>
-                <select className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <select 
+                  value={trendsPeriod} 
+                  onChange={(e) => setTrendsPeriod(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
                   <option value="last3">Laatste 3 vensters</option>
                   <option value="all">Alle vensters</option>
                   <option value="custom">Custom range</option>
@@ -280,7 +300,11 @@ export default function CompetenciesPage() {
                 <label className="block text-sm font-medium mb-2">
                   Weergave
                 </label>
-                <select className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <select 
+                  value={trendsDisplayType} 
+                  onChange={(e) => setTrendsDisplayType(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
                   <option value="average">Gemiddelde scores</option>
                   <option value="delta">Δ (verschil)</option>
                   <option value="peer_vs_self">Peer vs Zelf</option>
@@ -292,7 +316,11 @@ export default function CompetenciesPage() {
                 <label className="block text-sm font-medium mb-2">
                   Grafiek type
                 </label>
-                <select className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <select 
+                  value={trendsChartType} 
+                  onChange={(e) => setTrendsChartType(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
                   <option value="line">Lijn</option>
                   <option value="radar">Radar</option>
                   <option value="heatmap">Heatmap</option>
@@ -305,7 +333,11 @@ export default function CompetenciesPage() {
                 <label className="block text-sm font-medium mb-2">
                   Vergelijk met
                 </label>
-                <select className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <select 
+                  value={trendsCompareWith} 
+                  onChange={(e) => setTrendsCompareWith(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
                   <option value="prev">Vorig venster</option>
                   <option value="first">Eerste van schooljaar</option>
                   <option value="custom">Eigen referentie</option>

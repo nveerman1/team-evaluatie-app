@@ -11,6 +11,11 @@ interface Course {
   name: string;
 }
 
+interface WindowSettings {
+  selected_competency_ids?: number[];
+  [key: string]: any;
+}
+
 export default function CreateWindowPage() {
   const router = useRouter();
   const [formData, setFormData] = useState<CompetencyWindowCreate>({
@@ -46,7 +51,11 @@ export default function CreateWindowPage() {
       setCourses(coursesData);
       setCompetencies(competenciesData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load data");
+      if (err instanceof Error) {
+        setError(`Er ging iets mis bij het laden: ${err.message}`);
+      } else {
+        setError("Er ging iets mis bij het laden van vakken en competenties");
+      }
     } finally {
       setLoading(false);
     }

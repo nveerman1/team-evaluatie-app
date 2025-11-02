@@ -15,21 +15,37 @@ export default function RubricsListInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  async function fetchList(query = "", scope: TabType = activeTab) {
+  async function fetchRubrics(query = "", scope: "peer" | "project") {
     setLoading(true);
     setError(null);
     try {
-      if (scope === "competencies") {
-        const comps = await competencyService.getCompetencies(false);
-        setCompetencies(comps);
-      } else {
-        const response = await rubricService.getRubrics(query, scope);
-        setData(response.items || []);
-      }
+      const response = await rubricService.getRubrics(query, scope);
+      setData(response.items || []);
     } catch (e: any) {
       setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchCompetencies() {
+    setLoading(true);
+    setError(null);
+    try {
+      const comps = await competencyService.getCompetencies(false);
+      setCompetencies(comps);
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function fetchList(query = "", scope: TabType = activeTab) {
+    if (scope === "competencies") {
+      await fetchCompetencies();
+    } else {
+      await fetchRubrics(query, scope);
     }
   }
 
