@@ -151,64 +151,97 @@ export default function SelfScanPage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Competencies */}
-        {competencies.map((comp) => (
-          <div key={comp.id} className="p-5 border rounded-xl bg-white">
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold mb-1">{comp.name}</h3>
-              {comp.description && (
-                <p className="text-sm text-gray-600">{comp.description}</p>
-              )}
-            </div>
+        {competencies.map((comp) => {
+          const levels = Array.from(
+            { length: comp.scale_max - comp.scale_min + 1 },
+            (_, i) => comp.scale_min + i
+          );
+          const currentScore = scores[comp.id]?.score || 3;
 
-            {/* Score Slider */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">
-                Score: {scores[comp.id]?.score || 3}
-                {scaleLabels[String(scores[comp.id]?.score || 3)] && (
-                  <span className="ml-2 text-gray-600">
-                    ({scaleLabels[String(scores[comp.id]?.score || 3)]})
-                  </span>
+          return (
+            <div key={comp.id} className="p-5 border rounded-xl bg-white space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold mb-1">{comp.name}</h3>
+                {comp.description && (
+                  <p className="text-sm text-gray-600">{comp.description}</p>
                 )}
-              </label>
-              <input
-                type="range"
-                min={comp.scale_min}
-                max={comp.scale_max}
-                value={scores[comp.id]?.score || 3}
-                onChange={(e) =>
-                  handleScoreChange(comp.id, Number(e.target.value))
-                }
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-              />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>
-                  {comp.scale_min}{" "}
-                  {scaleLabels[String(comp.scale_min)] &&
-                    `(${scaleLabels[String(comp.scale_min)]})`}
-                </span>
-                <span>
-                  {comp.scale_max}{" "}
-                  {scaleLabels[String(comp.scale_max)] &&
-                    `(${scaleLabels[String(comp.scale_max)]})`}
-                </span>
+              </div>
+
+              {/* Rubric Button Grid */}
+              <div>
+                <label className="block text-sm font-medium mb-3">
+                  Selecteer je score:
+                </label>
+                <div className="grid grid-cols-5 gap-3">
+                  {levels.map((level) => {
+                    const isSelected = currentScore === level;
+                    const label = scaleLabels[String(level)];
+
+                    return (
+                      <button
+                        key={level}
+                        type="button"
+                        onClick={() => handleScoreChange(comp.id, level)}
+                        className={`p-4 border-2 rounded-lg transition-all ${
+                          isSelected
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-300 bg-white hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className="flex flex-col items-center gap-2">
+                          {/* Check Icon or Radio Circle */}
+                          <div className="flex items-center justify-center w-6 h-6">
+                            {isSelected ? (
+                              <svg
+                                className="w-6 h-6 text-blue-600"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            ) : (
+                              <div className="w-5 h-5 border-2 border-gray-300 rounded-full" />
+                            )}
+                          </div>
+
+                          {/* Level Number */}
+                          <span className="text-2xl font-bold text-gray-900">
+                            {level}
+                          </span>
+
+                          {/* Label */}
+                          {label && (
+                            <span className="text-xs text-gray-600 text-center">
+                              {label}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Example (Optional) */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Wanneer heb je dit laten zien? (optioneel)
+                </label>
+                <textarea
+                  value={scores[comp.id]?.example || ""}
+                  onChange={(e) => handleExampleChange(comp.id, e.target.value)}
+                  placeholder="Beschrijf een concreet voorbeeld..."
+                  rows={2}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
             </div>
-
-            {/* Example (Optional) */}
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Wanneer heb je dit laten zien? (optioneel)
-              </label>
-              <textarea
-                value={scores[comp.id]?.example || ""}
-                onChange={(e) => handleExampleChange(comp.id, e.target.value)}
-                placeholder="Beschrijf een concreet voorbeeld..."
-                rows={2}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-        ))}
+          );
+        })}
 
         {/* Submit Button */}
         <div className="flex gap-3">
