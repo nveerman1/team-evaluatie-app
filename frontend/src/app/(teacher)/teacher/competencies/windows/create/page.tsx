@@ -238,27 +238,14 @@ export default function CreateWindowPage() {
                 competencies.map((comp) => (
                   <label
                     key={comp.id}
-                    className="flex items-start gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                    className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
                   >
                     <input
                       type="checkbox"
                       checked={selectedCompetencies.includes(comp.id)}
                       onChange={() => handleCompetencyToggle(comp.id)}
-                      className="mt-1"
                     />
-                    <div className="flex-1">
-                      <div className="font-medium">{comp.name}</div>
-                      {comp.description && (
-                        <div className="text-sm text-gray-600">
-                          {comp.description}
-                        </div>
-                      )}
-                      {comp.category && (
-                        <span className="inline-block px-2 py-0.5 mt-1 rounded bg-blue-50 text-blue-700 text-xs">
-                          {comp.category}
-                        </span>
-                      )}
-                    </div>
+                    <div className="font-medium">{comp.name}</div>
                   </label>
                 ))
               )}
