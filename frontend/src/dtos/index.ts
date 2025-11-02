@@ -7,3 +7,4 @@ export * from "./course.dto";
 export * from "./cluster.dto";
 export * from "./student.dto";
 export * from "./project-assessment.dto";
+export * from "./competency.dto";
