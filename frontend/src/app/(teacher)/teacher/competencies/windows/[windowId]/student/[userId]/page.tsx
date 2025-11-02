@@ -14,6 +14,7 @@ export default function StudentDetailPage() {
 
   const [overview, setOverview] = useState<StudentCompetencyOverview | null>(null);
   const [selfScores, setSelfScores] = useState<CompetencySelfScore[]>([]);
+  const [rubricLevels, setRubricLevels] = useState<Record<number, any[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,9 +31,21 @@ export default function StudentDetailPage() {
         competencyService.getMySelfScores(windowId).catch(() => []), // Fallback if not accessible
       ]);
       setOverview(data);
-      // Note: We can't get other students' self scores with examples, 
-      // but we have the scores in the overview
       setSelfScores(scores);
+
+      // Load rubric levels for each competency
+      const levelsMap: Record<number, any[]> = {};
+      await Promise.all(
+        data.scores.map(async (score) => {
+          try {
+            const levels = await competencyService.getRubricLevels(score.competency_id);
+            levelsMap[score.competency_id] = levels;
+          } catch (err) {
+            levelsMap[score.competency_id] = [];
+          }
+        })
+      );
+      setRubricLevels(levelsMap);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
@@ -43,6 +56,15 @@ export default function StudentDetailPage() {
   if (loading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
   if (!overview) return <ErrorMessage message="Student data not found" />;
+
+  // Helper function to get rubric level info for a score
+  const getRubricLevelInfo = (competencyId: number, score: number | null | undefined) => {
+    if (score === null || score === undefined) return null;
+    const levels = rubricLevels[competencyId] || [];
+    const roundedScore = Math.round(score);
+    const rubricLevel = levels.find((rl: any) => rl.level === roundedScore);
+    return rubricLevel;
+  };
 
   return (
     <main className="p-6 max-w-6xl mx-auto space-y-6">
@@ -66,50 +88,72 @@ export default function StudentDetailPage() {
       <div className="p-5 border rounded-xl bg-white">
         <h2 className="text-xl font-semibold mb-4">Competentiescores</h2>
         <div className="space-y-3">
-          {overview.scores.map((score) => (
-            <div
-              key={score.competency_id}
-              className="p-4 bg-gray-50 rounded-lg"
-            >
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="font-semibold text-lg">{score.competency_name}</h3>
-                <div className="flex items-center gap-4">
-                  {score.self_score !== null && score.self_score !== undefined && (
-                    <div className="text-center">
-                      <div className="text-xs text-gray-600 mb-1">Zelf</div>
-                      <span className="px-3 py-1 rounded bg-blue-100 text-blue-700 text-sm font-semibold">
-                        {score.self_score.toFixed(1)}
-                      </span>
-                    </div>
-                  )}
-                  {score.teacher_score !== null && score.teacher_score !== undefined && (
-                    <div className="text-center">
-                      <div className="text-xs text-gray-600 mb-1">Docent</div>
-                      <span className="px-3 py-1 rounded bg-purple-100 text-purple-700 text-sm font-semibold">
-                        {score.teacher_score.toFixed(1)}
-                      </span>
-                    </div>
-                  )}
-                  {score.final_score !== null && score.final_score !== undefined && (
-                    <div className="text-center">
-                      <div className="text-xs text-gray-600 mb-1">Totaal</div>
-                      <span
-                        className={`px-3 py-1 rounded text-sm font-semibold ${
-                          score.final_score >= 4
-                            ? "bg-green-100 text-green-700"
-                            : score.final_score >= 3
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-orange-100 text-orange-700"
-                        }`}
-                      >
-                        {score.final_score.toFixed(1)}
-                      </span>
-                    </div>
-                  )}
+          {overview.scores.map((score) => {
+            const finalRubricLevel = getRubricLevelInfo(score.competency_id, score.final_score);
+            
+            return (
+              <div
+                key={score.competency_id}
+                className="p-4 bg-gray-50 rounded-lg space-y-3"
+              >
+                <div className="flex items-start justify-between">
+                  <h3 className="font-semibold text-lg">{score.competency_name}</h3>
+                  <div className="flex items-center gap-4">
+                    {score.self_score !== null && score.self_score !== undefined && (
+                      <div className="text-center">
+                        <div className="text-xs text-gray-600 mb-1">Zelf</div>
+                        <span className="px-3 py-1 rounded bg-blue-100 text-blue-700 text-sm font-semibold">
+                          {score.self_score.toFixed(1)}
+                        </span>
+                      </div>
+                    )}
+                    {score.teacher_score !== null && score.teacher_score !== undefined && (
+                      <div className="text-center">
+                        <div className="text-xs text-gray-600 mb-1">Docent</div>
+                        <span className="px-3 py-1 rounded bg-purple-100 text-purple-700 text-sm font-semibold">
+                          {score.teacher_score.toFixed(1)}
+                        </span>
+                      </div>
+                    )}
+                    {score.final_score !== null && score.final_score !== undefined && (
+                      <div className="text-center">
+                        <div className="text-xs text-gray-600 mb-1">Totaal</div>
+                        <span
+                          className={`px-3 py-1 rounded text-sm font-semibold ${
+                            score.final_score >= 4
+                              ? "bg-green-100 text-green-700"
+                              : score.final_score >= 3
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-orange-100 text-orange-700"
+                          }`}
+                        >
+                          {score.final_score.toFixed(1)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
+
+                {/* Rubric Level Info */}
+                {finalRubricLevel && (
+                  <div className="pt-3 border-t border-gray-200">
+                    <div className="flex items-start gap-2">
+                      <div className="flex-shrink-0">
+                        <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded">
+                          {finalRubricLevel.label || `Niveau ${Math.round(score.final_score || 0)}`}
+                        </span>
+                      </div>
+                      {finalRubricLevel.description && (
+                        <p className="text-sm text-gray-600 leading-relaxed">
+                          {finalRubricLevel.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
