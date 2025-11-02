@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useStudentDashboard } from "@/hooks";
 import { useStudentProjectAssessments } from "@/hooks/useStudentProjectAssessments";
 import { EvaluationCard } from "@/components/student";
+import { CompetencyScanTab } from "@/components/student/competency/CompetencyScanTab";
 import { Loading, ErrorMessage, StatTile, Tabs, Toolbar } from "@/components";
 import Link from "next/link";
 
@@ -205,23 +206,7 @@ export default function StudentDashboard() {
           {
             id: "competentiescan",
             label: "Competentiescan",
-            content: (
-              <div>
-                <Toolbar
-                  searchValue={competentiescanSearch}
-                  onSearchChange={setCompetentiescanSearch}
-                  statusFilter={competentiescanStatus}
-                  onStatusFilterChange={setCompetentiescanStatus}
-                  showFiltersButton={false}
-                />
-
-                <div className="p-8 border rounded-xl bg-gray-50 text-center">
-                  <p className="text-gray-500">
-                    Competentiescan functionaliteit wordt binnenkort toegevoegd.
-                  </p>
-                </div>
-              </div>
-            ),
+            content: <CompetencyScanTab />,
           },
           {
             id: "projectbeoordelingen",
