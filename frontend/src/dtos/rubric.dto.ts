@@ -4,6 +4,7 @@ export type RubricListItem = {
   description?: string | null;
   scale_min: number;
   scale_max: number;
+  scope: string; // "peer" | "project"
   metadata_json: Record<string, any>;
   criteria_count: number;
 };
@@ -21,6 +22,7 @@ export type RubricOut = {
   description?: string | null;
   scale_min: number;
   scale_max: number;
+  scope: string; // "peer" | "project"
   metadata_json: Record<string, any>;
 };
 
@@ -29,6 +31,7 @@ export type RubricCreate = {
   description?: string | null;
   scale_min?: number;
   scale_max?: number;
+  scope?: string; // "peer" | "project"
   metadata_json?: Record<string, any>;
 };
 
