@@ -277,11 +277,25 @@ def my_allocations(
             rows = [(self_alloc, user)] + rows
         
         # Auto-create peer allocations for teammates if they don't exist yet
-        # Find all teammates in the same course via group membership
+        # First, find which group(s) the current user belongs to for this course
+        user_group_ids = [
+            gid for (gid,) in db.query(GroupMember.group_id)
+            .join(Group, Group.id == GroupMember.group_id)
+            .filter(
+                GroupMember.user_id == user.id,
+                Group.course_id == ev.course_id,
+                Group.school_id == school_id,
+            )
+            .distinct()
+            .all()
+        ]
+        
+        # Find all teammates in the same group(s)
         teammates = _select_members_for_course(
             db,
             school_id=school_id,
             course_id=ev.course_id,
+            group_ids=user_group_ids or None,
         )
         
         # Get existing peer allocation reviewee IDs to avoid duplicates
