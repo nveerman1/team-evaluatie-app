@@ -209,9 +209,9 @@ export default function SelfScanPage() {
                             : "border-gray-300 bg-white hover:bg-gray-50"
                         }`}
                       >
-                        <div className="flex flex-col items-center gap-2">
-                          {/* Check Icon or Radio Circle */}
-                          <div className="flex items-center justify-center w-6 h-6">
+                        <div className="flex flex-col items-center gap-2 h-full">
+                          {/* Check Icon or Radio Circle - Fixed height container */}
+                          <div className="flex items-center justify-center w-6 h-6 flex-shrink-0">
                             {isSelected ? (
                               <svg
                                 className="w-6 h-6 text-blue-600"
@@ -229,12 +229,12 @@ export default function SelfScanPage() {
                             )}
                           </div>
 
-                          {/* Label (instead of number) */}
-                          <span className="text-sm font-semibold text-gray-900 text-center">
+                          {/* Label (instead of number) - Fixed height for alignment */}
+                          <span className="text-sm font-semibold text-gray-900 text-center flex-shrink-0">
                             {label}
                           </span>
 
-                          {/* Description */}
+                          {/* Description - Allow to grow and wrap */}
                           {description && (
                             <span className="text-xs text-gray-600 text-center leading-tight">
                               {description}
