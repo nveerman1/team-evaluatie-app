@@ -44,6 +44,8 @@ from app.api.v1.schemas.competencies import (
 
 router = APIRouter(prefix="/competencies", tags=["competencies"])
 
+# Constants
+COMPETENCY_UNIQUE_NAME_CONSTRAINT = "uq_competency_name_per_school"
 
 # ============ Competency CRUD ============
 
@@ -86,7 +88,7 @@ def create_competency(
     except IntegrityError as e:
         db.rollback()
         # Check if it's a duplicate name constraint violation
-        if "uq_competency_name_per_school" in str(e.orig):
+        if COMPETENCY_UNIQUE_NAME_CONSTRAINT in str(e.orig):
             raise HTTPException(
                 status_code=409,
                 detail=f"A competency with the name '{data.name}' already exists for this school"
@@ -133,10 +135,12 @@ def update_competency(
     except IntegrityError as e:
         db.rollback()
         # Check if it's a duplicate name constraint violation
-        if "uq_competency_name_per_school" in str(e.orig):
+        if COMPETENCY_UNIQUE_NAME_CONSTRAINT in str(e.orig):
+            # Use the updated name if provided, otherwise use the existing name
+            conflicting_name = data.name if data.name is not None else competency.name
             raise HTTPException(
                 status_code=409,
-                detail=f"A competency with the name '{data.name if data.name else competency.name}' already exists for this school"
+                detail=f"A competency with the name '{conflicting_name}' already exists for this school"
             )
         # Re-raise for other integrity errors
         raise HTTPException(status_code=400, detail="Database constraint violation")
