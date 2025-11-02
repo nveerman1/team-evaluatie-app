@@ -8,6 +8,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import (
@@ -43,6 +44,8 @@ from app.api.v1.schemas.competencies import (
 
 router = APIRouter(prefix="/competencies", tags=["competencies"])
 
+# Constants
+COMPETENCY_UNIQUE_NAME_CONSTRAINT = "uq_competency_name_per_school"
 
 # ============ Competency CRUD ============
 
@@ -78,9 +81,20 @@ def create_competency(
         **data.model_dump()
     )
     db.add(competency)
-    db.commit()
-    db.refresh(competency)
-    return competency
+    try:
+        db.commit()
+        db.refresh(competency)
+        return competency
+    except IntegrityError as e:
+        db.rollback()
+        # Check if it's a duplicate name constraint violation
+        if COMPETENCY_UNIQUE_NAME_CONSTRAINT in str(e.orig):
+            raise HTTPException(
+                status_code=409,
+                detail=f"A competency with the name '{data.name}' already exists for this school"
+            )
+        # Re-raise for other integrity errors
+        raise HTTPException(status_code=400, detail="Database constraint violation")
 
 
 @router.get("/{competency_id}", response_model=CompetencyOut)
@@ -114,9 +128,22 @@ def update_competency(
     for key, value in data.model_dump(exclude_unset=True).items():
         setattr(competency, key, value)
     
-    db.commit()
-    db.refresh(competency)
-    return competency
+    try:
+        db.commit()
+        db.refresh(competency)
+        return competency
+    except IntegrityError as e:
+        db.rollback()
+        # Check if it's a duplicate name constraint violation
+        if COMPETENCY_UNIQUE_NAME_CONSTRAINT in str(e.orig):
+            # Use the updated name if provided, otherwise use the existing name
+            conflicting_name = data.name if data.name is not None else competency.name
+            raise HTTPException(
+                status_code=409,
+                detail=f"A competency with the name '{conflicting_name}' already exists for this school"
+            )
+        # Re-raise for other integrity errors
+        raise HTTPException(status_code=400, detail="Database constraint violation")
 
 
 @router.delete("/{competency_id}", status_code=status.HTTP_204_NO_CONTENT)
