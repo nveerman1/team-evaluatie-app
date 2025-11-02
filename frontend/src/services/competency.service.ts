@@ -6,6 +6,9 @@ import type {
   Competency,
   CompetencyCreate,
   CompetencyUpdate,
+  CompetencyRubricLevel,
+  CompetencyRubricLevelCreate,
+  CompetencyRubricLevelUpdate,
   CompetencyWindow,
   CompetencyWindowCreate,
   CompetencyWindowUpdate,
@@ -56,12 +59,15 @@ export const competencyService = {
 
   // ============ Competency Rubric Level CRUD ============
 
-  async getRubricLevels(competencyId: number): Promise<any[]> {
+  async getRubricLevels(competencyId: number): Promise<CompetencyRubricLevel[]> {
     const response = await api.get(`/competencies/${competencyId}/rubric-levels`);
     return response.data;
   },
 
-  async createRubricLevel(competencyId: number, data: any): Promise<any> {
+  async createRubricLevel(
+    competencyId: number,
+    data: CompetencyRubricLevelCreate
+  ): Promise<CompetencyRubricLevel> {
     const response = await api.post(
       `/competencies/${competencyId}/rubric-levels`,
       data
@@ -72,8 +78,8 @@ export const competencyService = {
   async updateRubricLevel(
     competencyId: number,
     levelId: number,
-    data: any
-  ): Promise<any> {
+    data: CompetencyRubricLevelUpdate
+  ): Promise<CompetencyRubricLevel> {
     const response = await api.patch(
       `/competencies/${competencyId}/rubric-levels/${levelId}`,
       data

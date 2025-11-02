@@ -6,6 +6,11 @@ import { competencyService, courseService } from "@/services";
 import type { CompetencyWindowCreate } from "@/dtos";
 import { ErrorMessage, Loading } from "@/components";
 
+interface Course {
+  id: number;
+  name: string;
+}
+
 export default function CreateWindowPage() {
   const router = useRouter();
   const [formData, setFormData] = useState<CompetencyWindowCreate>({
@@ -20,7 +25,7 @@ export default function CreateWindowPage() {
     require_goal: false,
     require_reflection: false,
   });
-  const [courses, setCourses] = useState<any[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [classNameInput, setClassNameInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);

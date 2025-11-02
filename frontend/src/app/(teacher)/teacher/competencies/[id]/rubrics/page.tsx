@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { competencyService } from "@/services";
 import { Loading, ErrorMessage } from "@/components";
+import type { Competency, CompetencyRubricLevel } from "@/dtos";
 
 interface RubricLevel {
   id?: number;
@@ -17,7 +18,7 @@ export default function CompetencyRubricsPage() {
   const params = useParams();
   const competencyId = Number(params.id);
 
-  const [competency, setCompetency] = useState<any>(null);
+  const [competency, setCompetency] = useState<Competency | null>(null);
   const [rubricLevels, setRubricLevels] = useState<RubricLevel[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -25,6 +26,7 @@ export default function CompetencyRubricsPage() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [competencyId]);
 
   const loadData = async () => {
@@ -79,14 +81,14 @@ export default function CompetencyRubricsPage() {
         const data = {
           competency_id: competencyId,
           level: level.level,
-          label: level.label || null,
+          label: level.label || undefined,
           description: level.description,
         };
 
         if (level.id) {
           // Update existing
           await competencyService.updateRubricLevel(competencyId, level.id, {
-            label: level.label,
+            label: level.label || undefined,
             description: level.description,
           });
         } else {

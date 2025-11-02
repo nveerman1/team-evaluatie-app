@@ -131,7 +131,7 @@ export default function StudentsAdminInner() {
               type="file"
               accept=".csv,text/csv"
               className="hidden"
-              onChange={(e) => onImport(e.target.files?.[0] ?? null)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => onImport(e.target.files?.[0] ?? null)}
               disabled={importBusy}
             />
             <Button as="span" aria-label="Importeer CSV" disabled={importBusy}>
@@ -150,7 +150,7 @@ export default function StudentsAdminInner() {
         <TextInput
           label="Zoek (naam/email/klas/course)"
           value={q}
-          onChange={(e) => {
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
             setPage(1);
             setQ(e.target.value);
           }}
@@ -159,7 +159,7 @@ export default function StudentsAdminInner() {
         <Select
           label="Status"
           value={status}
-          onChange={(e) => {
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
             setPage(1);
             setStatus(e.target.value);
           }}
@@ -312,7 +312,7 @@ export default function StudentsAdminInner() {
           </Button>
           <Select
             value={String(limit)}
-            onChange={(e) => {
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
               setLimit(Number(e.target.value));
               setPage(1);
             }}
@@ -511,9 +511,9 @@ function TeamNumberCell({
     <input
       autoFocus
       value={local}
-      onChange={(e) => setLocal(e.target.value)}
+      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocal(e.target.value)}
       onBlur={commit}
-      onKeyDown={(e) => {
+      onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === "Enter") commit();
         if (e.key === "Escape") cancel();
       }}
@@ -619,33 +619,33 @@ function EditStudentModal({
           <TextInput
             label="Naam"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
           />
           <TextInput
             label="Email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
           />
           <TextInput
             label="Vak/Course"
             value={courseName}
-            onChange={(e) => setCourseName(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCourseName(e.target.value)}
           />
           {/* vervangt Cluster */}
           <TextInput
             label="Klas"
             value={className}
-            onChange={(e) => setClassName(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setClassName(e.target.value)}
           />
           <TextInput
             label="Team #"
             value={teamNumber}
-            onChange={(e) => setTeamNumber(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTeamNumber(e.target.value)}
           />
           <Select
             label="Status"
             value={status}
-            onChange={(e) => setStatus(e.target.value as any)}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatus(e.target.value as "active" | "inactive")}
           >
             <option value="active">Actief</option>
             <option value="inactive">Inactief</option>

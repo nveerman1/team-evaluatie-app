@@ -6,10 +6,15 @@ import type { Competency, CompetencyWindow } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
 import Link from "next/link";
 
+interface Course {
+  id: number;
+  name: string;
+}
+
 export default function CompetenciesPage() {
   const [competencies, setCompetencies] = useState<Competency[]>([]);
   const [windows, setWindows] = useState<CompetencyWindow[]>([]);
-  const [courses, setCourses] = useState<any[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"competencies" | "windows">(

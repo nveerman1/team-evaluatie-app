@@ -193,7 +193,7 @@ export default function CreateCompetencyPage() {
           <button
             type="button"
             disabled={submitting}
-            onClick={(e) => handleSubmit(e as any, true)}
+            onClick={(e) => handleSubmit(e as React.FormEvent, true)}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
           >
             {submitting ? "Opslaan..." : "Opslaan en Verder"}

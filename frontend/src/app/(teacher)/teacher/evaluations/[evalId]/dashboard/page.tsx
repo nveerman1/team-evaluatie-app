@@ -61,7 +61,7 @@ type FilterType = "all" | "not_started" | "partial" | "completed";
 export default function EvaluationDashboardPage() {
   const evalIdNum = useNumericEvalId();
   const { kpis, studentProgress, loading, error } =
-    useDashboardData(evalIdNum);
+    useDashboardData(evalIdNum ?? undefined);
 
   const evalId = evalIdNum?.toString() ?? "";
 
