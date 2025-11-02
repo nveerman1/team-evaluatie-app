@@ -5,17 +5,20 @@ import { rubricService } from "@/services";
 import { RubricListItem } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
 
+type TabType = "peer" | "project";
+
 export default function RubricsListInner() {
   const [data, setData] = useState<RubricListItem[]>([]);
   const [q, setQ] = useState("");
+  const [activeTab, setActiveTab] = useState<TabType>("peer");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  async function fetchList(query = "") {
+  async function fetchList(query = "", scope: TabType = activeTab) {
     setLoading(true);
     setError(null);
     try {
-      const response = await rubricService.getRubrics(query);
+      const response = await rubricService.getRubrics(query, scope);
       setData(response.items || []);
     } catch (e: any) {
       setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
@@ -25,8 +28,13 @@ export default function RubricsListInner() {
   }
 
   useEffect(() => {
-    fetchList();
-  }, []);
+    fetchList("", activeTab);
+  }, [activeTab]);
+
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+    setQ("");
+  };
 
   return (
     <main className="max-w-5xl mx-auto p-6 space-y-6">
@@ -38,12 +46,38 @@ export default function RubricsListInner() {
           </p>
         </div>
         <Link
-          href="/teacher/rubrics/create"
+          href={`/teacher/rubrics/create?scope=${activeTab}`}
           className="px-4 py-2 rounded-xl bg-black text-white hover:opacity-90"
         >
-          + Nieuwe rubric
+          + Nieuwe {activeTab === "peer" ? "team-evaluatie" : "projectbeoordeling"}
         </Link>
       </header>
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="flex gap-8">
+          <button
+            onClick={() => handleTabChange("peer")}
+            className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === "peer"
+                ? "border-black text-black"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Team-evaluatie (peer)
+          </button>
+          <button
+            onClick={() => handleTabChange("project")}
+            className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === "project"
+                ? "border-black text-black"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Projectbeoordeling
+          </button>
+        </nav>
+      </div>
 
       <section className="flex items-center gap-3">
         <input
@@ -54,13 +88,13 @@ export default function RubricsListInner() {
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              fetchList(q.trim());
+              fetchList(q.trim(), activeTab);
             }
           }}
         />
         <button
           className="px-3 py-2 rounded-lg border"
-          onClick={() => fetchList(q.trim())}
+          onClick={() => fetchList(q.trim(), activeTab)}
         >
           Zoek
         </button>
@@ -69,7 +103,7 @@ export default function RubricsListInner() {
             className="px-3 py-2 rounded-lg border"
             onClick={() => {
               setQ("");
-              fetchList("");
+              fetchList("", activeTab);
             }}
           >
             Reset
