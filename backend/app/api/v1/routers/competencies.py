@@ -6,7 +6,7 @@ from typing import List, Optional
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_db, get_current_user
@@ -15,7 +15,6 @@ from app.infra.db.models import (
     Competency,
     CompetencyWindow,
     CompetencySelfScore,
-    CompetencyPeerLabel,
     CompetencyTeacherObservation,
     CompetencyGoal,
     CompetencyReflection,
@@ -27,24 +26,19 @@ from app.api.v1.schemas.competencies import (
     CompetencyWindowCreate,
     CompetencyWindowUpdate,
     CompetencyWindowOut,
-    CompetencySelfScoreCreate,
     CompetencySelfScoreBulkCreate,
     CompetencySelfScoreOut,
-    CompetencyPeerLabelCreate,
-    CompetencyPeerLabelOut,
     CompetencyTeacherObservationCreate,
     CompetencyTeacherObservationOut,
     CompetencyGoalCreate,
     CompetencyGoalUpdate,
     CompetencyGoalOut,
     CompetencyReflectionCreate,
-    CompetencyReflectionUpdate,
     CompetencyReflectionOut,
     ClassHeatmap,
     ClassHeatmapRow,
     CompetencyScore,
     StudentCompetencyOverview,
-    StudentGrowthCard,
 )
 
 router = APIRouter(prefix="/competencies", tags=["competencies"])

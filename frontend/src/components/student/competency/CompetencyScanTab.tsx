@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { competencyService } from "@/services";
-import type { CompetencyWindow, Competency, CompetencySelfScore } from "@/dtos";
+import type { CompetencyWindow, Competency } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
 import Link from "next/link";
 

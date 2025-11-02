@@ -34,6 +34,7 @@ export default function ReflectionPage() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [windowId]);
 
   const loadData = async () => {

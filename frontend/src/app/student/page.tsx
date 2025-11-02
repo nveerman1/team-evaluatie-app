@@ -24,8 +24,7 @@ export default function StudentDashboard() {
   const [evaluatiesStatus, setEvaluatiesStatus] = useState("all");
 
   // Filter states for Competentiescan tab
-  const [competentiescanSearch, setCompetentiescanSearch] = useState("");
-  const [competentiescanStatus, setCompetentiescanStatus] = useState("all");
+
 
   // Filter states for Projectbeoordelingen tab
   const [projectSearch, setProjectSearch] = useState("");

@@ -18,9 +18,7 @@ export default function SelfScanPage() {
 
   const [window, setWindow] = useState<CompetencyWindow | null>(null);
   const [competencies, setCompetencies] = useState<Competency[]>([]);
-  const [existingScores, setExistingScores] = useState<CompetencySelfScore[]>(
-    []
-  );
+
   const [scores, setScores] = useState<Record<number, CompetencySelfScoreInput>>(
     {}
   );
@@ -31,6 +29,7 @@ export default function SelfScanPage() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [windowId]);
 
   const loadData = async () => {
@@ -44,7 +43,6 @@ export default function SelfScanPage() {
 
       setWindow(win);
       setCompetencies(comps);
-      setExistingScores(existing);
 
       // Pre-populate with existing scores
       const scoreMap: Record<number, CompetencySelfScoreInput> = {};

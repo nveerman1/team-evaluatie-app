@@ -9,7 +9,7 @@ import Link from "next/link";
 
 export default function WindowDetailPage() {
   const params = useParams();
-  const router = useRouter();
+
   const windowId = Number(params.windowId);
 
   const [window, setWindow] = useState<CompetencyWindow | null>(null);
@@ -22,6 +22,7 @@ export default function WindowDetailPage() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [windowId, selectedClass]);
 
   const loadData = async () => {
