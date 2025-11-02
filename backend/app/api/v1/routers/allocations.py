@@ -150,6 +150,20 @@ def _has_access_to_evaluation(db: Session, evaluation_id: int, user_id: int) -> 
     return is_member
 
 
+def _fetch_allocation_rows(db: Session, evaluation_id: int, reviewer_id: int):
+    """Helper to fetch allocation rows for a given reviewer and evaluation."""
+    return (
+        db.query(Allocation, User)
+        .join(User, User.id == Allocation.reviewee_id)
+        .filter(
+            Allocation.evaluation_id == evaluation_id,
+            Allocation.reviewer_id == reviewer_id,
+        )
+        .order_by(Allocation.is_self.desc(), User.name.asc())
+        .all()
+    )
+
+
 # ---------------------------
 # Routes
 # ---------------------------
@@ -248,16 +262,7 @@ def my_allocations(
     """
     ev = _get_eval_or_404(db, evaluation_id)
 
-    rows = (
-        db.query(Allocation, User)
-        .join(User, User.id == Allocation.reviewee_id)
-        .filter(
-            Allocation.evaluation_id == evaluation_id,
-            Allocation.reviewer_id == user.id,
-        )
-        .order_by(Allocation.is_self.desc(), User.name.asc())
-        .all()
-    )
+    rows = _fetch_allocation_rows(db, evaluation_id, user.id)
 
     has_self = any(alloc.is_self for alloc, _ in rows)
     has_access = _has_access_to_evaluation(db, evaluation_id, user.id)
@@ -280,9 +285,9 @@ def my_allocations(
         # First, find which group(s) the current user belongs to for this course
         user_group_ids = [
             gid for (gid,) in db.query(GroupMember.group_id)
+            .join(Group, Group.id == GroupMember.group_id)
             .filter(
                 GroupMember.user_id == user.id,
-                GroupMember.group_id == Group.id,
                 Group.course_id == ev.course_id,
                 Group.school_id == school_id,
             )
@@ -314,16 +319,7 @@ def my_allocations(
         # Commit all changes and re-fetch if anything was created
         if needs_commit:
             db.commit()
-            rows = (
-                db.query(Allocation, User)
-                .join(User, User.id == Allocation.reviewee_id)
-                .filter(
-                    Allocation.evaluation_id == evaluation_id,
-                    Allocation.reviewer_id == user.id,
-                )
-                .order_by(Allocation.is_self.desc(), User.name.asc())
-                .all()
-            )
+            rows = _fetch_allocation_rows(db, evaluation_id, user.id)
 
     crit_ids: List[int] = [
         c.id
