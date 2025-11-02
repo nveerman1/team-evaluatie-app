@@ -403,7 +403,15 @@ def create_reflection(
     ).scalar_one_or_none()
     
     if existing:
-        raise HTTPException(status_code=400, detail="Reflection already exists for this window")
+        # Update existing reflection
+        existing.text = data.text
+        existing.goal_id = data.goal_id
+        existing.goal_achieved = data.goal_achieved
+        existing.evidence = data.evidence
+        existing.submitted_at = datetime.utcnow()
+        db.commit()
+        db.refresh(existing)
+        return existing
     
     reflection = CompetencyReflection(
         school_id=current_user.school_id,

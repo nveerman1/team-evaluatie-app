@@ -45,7 +45,7 @@ export default function WindowDetailPage() {
 
     try {
       await competencyService.updateWindow(windowId, { status: newStatus });
-      setWindow({ ...window, status: newStatus as any });
+      setWindow({ ...window, status: newStatus as "draft" | "open" | "closed" });
     } catch (err) {
       alert("Failed to update status: " + err);
     }

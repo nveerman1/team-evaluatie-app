@@ -122,7 +122,7 @@ export default function GoalPage() {
           <p className="text-sm text-blue-700">
             💡 Je hebt al een leerdoel voor deze periode. Het onderstaande
             formulier toont je huidige leerdoel. Je kunt een nieuw leerdoel
-            toevoegen door op &apos;Opslaan&apos; te klikken.
+            toevoegen door op 'Opslaan' te klikken.
           </p>
         </div>
       )}

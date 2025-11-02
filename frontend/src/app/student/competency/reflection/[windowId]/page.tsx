@@ -170,7 +170,9 @@ export default function ReflectionPage() {
                 <option value="">Selecteer een leerdoel</option>
                 {goals.map((goal) => (
                   <option key={goal.id} value={goal.id}>
-                    {goal.goal_text.substring(0, 80)}...
+                    {goal.goal_text.length > 80
+                      ? goal.goal_text.substring(0, 80) + '...'
+                      : goal.goal_text}
                   </option>
                 ))}
               </select>

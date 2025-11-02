@@ -563,7 +563,7 @@ class CompetencyPeerLabel(Base):
     )
     
     sentiment: Mapped[str] = mapped_column(String(20), default="positive")  # positive|neutral|negative
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, nullable=False)
     
     __table_args__ = (
         Index("ix_peer_label_window_to", "window_id", "to_user_id"),
@@ -595,7 +595,7 @@ class CompetencyTeacherObservation(Base):
     
     score: Mapped[int] = mapped_column(SmallInteger, nullable=False)  # 1-5
     comment: Mapped[Optional[str]] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, nullable=False)
     
     __table_args__ = (
         UniqueConstraint(
