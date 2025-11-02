@@ -154,17 +154,17 @@ export default function WindowDetailPage() {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-3 font-semibold sticky left-0 bg-white z-10">
+                  <th className="text-left p-3 font-semibold sticky left-0 bg-white z-10 align-bottom">
                     Leerling
                   </th>
                   {heatmap.competencies.map((comp) => (
                     <th
                       key={comp.id}
-                      className="text-center p-3 font-semibold min-w-[120px] align-bottom"
-                      style={{ height: '150px' }}
+                      className="text-center p-3 font-semibold min-w-[120px] relative"
+                      style={{ height: '150px', verticalAlign: 'bottom' }}
                     >
-                      <div className="flex items-end justify-center h-full pb-2">
-                        <div className="transform -rotate-45 origin-bottom whitespace-nowrap text-sm">
+                      <div className="absolute bottom-3 left-1/2" style={{ transformOrigin: 'bottom left' }}>
+                        <div className="transform -rotate-45 whitespace-nowrap text-sm" style={{ marginLeft: '10px' }}>
                           {comp.name}
                         </div>
                       </div>

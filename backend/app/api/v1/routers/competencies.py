@@ -674,10 +674,11 @@ def get_class_heatmap(
         ).order_by(Competency.order)
     ).scalars().all()
     
-    # Get students (filter by class if specified)
+    # Get students (filter by class if specified, exclude inactive)
     students_query = select(User).where(
         User.school_id == current_user.school_id,
         User.role == "student",
+        User.active == True,
     )
     if class_name:
         students_query = students_query.where(User.class_name == class_name)
