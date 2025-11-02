@@ -19,7 +19,7 @@ export function Toolbar({
 }: ToolbarProps) {
   return (
     <div className="mb-6">
-      <div className="inline-flex gap-4 p-4 border rounded-lg bg-white">
+      <div className="flex gap-4 p-4 border rounded-lg bg-white">
         {/* Search Field */}
         <div className="flex flex-col">
           <label className="text-sm font-medium text-gray-700 mb-1">
