@@ -17,7 +17,7 @@ export default function CompetenciesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"competencies" | "windows">(
+  const [activeTab, setActiveTab] = useState<"windows" | "trends">(
     "windows"
   );
   const [selectedCourseFilter, setSelectedCourseFilter] = useState<number | null>(null);
@@ -85,14 +85,14 @@ export default function CompetenciesPage() {
             Vensters
           </button>
           <button
-            onClick={() => setActiveTab("competencies")}
+            onClick={() => setActiveTab("trends")}
             className={`px-4 py-2 border-b-2 transition-colors ${
-              activeTab === "competencies"
+              activeTab === "trends"
                 ? "border-blue-600 text-blue-600 font-semibold"
                 : "border-transparent text-gray-600 hover:text-gray-800"
             }`}
           >
-            Competenties
+            Trends
           </button>
         </div>
       </div>
@@ -221,66 +221,231 @@ export default function CompetenciesPage() {
         </div>
       )}
 
-      {/* Competencies Tab */}
-      {activeTab === "competencies" && (
-        <div className="space-y-4">
+      {/* Trends Tab */}
+      {activeTab === "trends" && (
+        <div className="space-y-6">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Competenties</h2>
-            <Link
-              href="/teacher/competencies/create"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              + Nieuwe Competentie
-            </Link>
+            <h2 className="text-xl font-semibold">Competentietrends</h2>
           </div>
 
-          {competencies.length === 0 ? (
-            <div className="p-8 border rounded-xl bg-gray-50 text-center">
-              <p className="text-gray-500">
-                Nog geen competenties aangemaakt. Maak je eerste competentie
-                aan om te beginnen.
+          {/* Filters & Navigation Bar */}
+          <div className="p-6 border rounded-xl bg-white space-y-4">
+            <h3 className="text-lg font-semibold mb-4">Filters & Weergave</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Class/Team Selector */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Klas/Team
+                </label>
+                <select className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">Alle klassen</option>
+                  {courses.map((course) => (
+                    <option key={course.id} value={course.id}>
+                      {course.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Competency Filter */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Competentie
+                </label>
+                <select className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">Alle competenties</option>
+                  {competencies.map((comp) => (
+                    <option key={comp.id} value={comp.id}>
+                      {comp.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Period/Windows */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Periode
+                </label>
+                <select className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="last3">Laatste 3 vensters</option>
+                  <option value="all">Alle vensters</option>
+                  <option value="custom">Custom range</option>
+                </select>
+              </div>
+
+              {/* Display Type */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Weergave
+                </label>
+                <select className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="average">Gemiddelde scores</option>
+                  <option value="delta">Δ (verschil)</option>
+                  <option value="peer_vs_self">Peer vs Zelf</option>
+                </select>
+              </div>
+
+              {/* Chart Type */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Grafiek type
+                </label>
+                <select className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="line">Lijn</option>
+                  <option value="radar">Radar</option>
+                  <option value="heatmap">Heatmap</option>
+                  <option value="cards">Kaarten</option>
+                </select>
+              </div>
+
+              {/* Compare With */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Vergelijk met
+                </label>
+                <select className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="prev">Vorig venster</option>
+                  <option value="first">Eerste van schooljaar</option>
+                  <option value="custom">Eigen referentie</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Class Overview - Competency Sparklines */}
+          <div className="p-6 border rounded-xl bg-white space-y-4">
+            <h3 className="text-lg font-semibold">Klasoverzicht - Competentieontwikkelingen</h3>
+            <p className="text-sm text-gray-600">
+              Overzicht van gemiddelde competentiescores over tijd per competentie
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+              {competencies.slice(0, 6).map((comp) => (
+                <div key={comp.id} className="p-4 border rounded-lg hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-sm">{comp.name}</h4>
+                    <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-700">
+                      +0.3
+                    </span>
+                  </div>
+                  <div className="h-20 bg-gray-100 rounded flex items-center justify-center">
+                    <span className="text-xs text-gray-500">Sparkline grafiek (komende)</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Gemiddelde: 3.8, σ=0.5
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Heatmap */}
+          <div className="p-6 border rounded-xl bg-white space-y-4">
+            <h3 className="text-lg font-semibold">Heatmap - Δ per competentie</h3>
+            <p className="text-sm text-gray-600">
+              Kleurencodering: Groen = groei, Grijs = stabiel, Rood = achteruitgang
+            </p>
+            
+            <div className="overflow-x-auto">
+              <div className="min-w-[600px] p-4 bg-gray-50 rounded">
+                <div className="grid grid-cols-7 gap-2">
+                  <div className="font-semibold text-sm">Venster</div>
+                  {competencies.slice(0, 6).map((comp) => (
+                    <div key={comp.id} className="font-semibold text-xs text-center">
+                      {comp.name.substring(0, 10)}...
+                    </div>
+                  ))}
+                  
+                  {windows.slice(0, 3).map((window) => (
+                    <>
+                      <div key={window.id} className="text-sm py-2">
+                        {window.title}
+                      </div>
+                      {competencies.slice(0, 6).map((comp) => (
+                        <div
+                          key={`${window.id}-${comp.id}`}
+                          className="bg-green-100 p-2 rounded text-center text-xs"
+                        >
+                          +0.2
+                        </div>
+                      ))}
+                    </>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Student Trends - Top Climbers/Decliners */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Top Stijgers */}
+            <div className="p-6 border rounded-xl bg-white space-y-4">
+              <h3 className="text-lg font-semibold text-green-700">Top 5 Stijgers</h3>
+              <div className="space-y-2">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="p-3 bg-green-50 rounded-lg flex justify-between items-center">
+                    <div>
+                      <p className="font-medium text-sm">Student {i}</p>
+                      <p className="text-xs text-gray-600">Vooral op 'Samenwerken'</p>
+                    </div>
+                    <span className="text-green-700 font-semibold">+0.{9 - i}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Top Dalers */}
+            <div className="p-6 border rounded-xl bg-white space-y-4">
+              <h3 className="text-lg font-semibold text-red-700">Top 5 Dalers</h3>
+              <div className="space-y-2">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="p-3 bg-red-50 rounded-lg flex justify-between items-center">
+                    <div>
+                      <p className="font-medium text-sm">Student {i}</p>
+                      <p className="text-xs text-gray-600">Vooral op 'Plannen'</p>
+                    </div>
+                    <span className="text-red-700 font-semibold">-0.{i + 2}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Insights Box */}
+          <div className="p-6 border-2 border-blue-200 rounded-xl bg-blue-50 space-y-3">
+            <h3 className="text-lg font-semibold text-blue-900">
+              📊 Automatische Inzichten
+            </h3>
+            <div className="space-y-2 text-sm text-blue-900">
+              <p>
+                • Gemiddeld zijn leerlingen in het laatste venster met <strong>+0.5</strong> gegroeid op <strong>Samenwerken</strong>.
+              </p>
+              <p>
+                • De grootste vooruitgang werd geboekt door <strong>groep 3</strong> (+0.8).
+              </p>
+              <p>
+                • Competentie <strong>Plannen & Doorzetten</strong> vertoont een lichte daling (−0.3).
+              </p>
+              <p>
+                • <strong>85%</strong> van de leerlingen laat groei zien in minimaal 3 competenties.
               </p>
             </div>
-          ) : (
-            <div className="grid gap-3">
-              {competencies
-                .sort((a, b) => a.order - b.order)
-                .map((comp) => (
-                  <Link
-                    key={comp.id}
-                    href={`/teacher/competencies/${comp.id}`}
-                    className="block p-4 border rounded-lg bg-white hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-lg font-semibold">{comp.name}</h3>
-                          {!comp.active && (
-                            <span className="px-2 py-1 rounded bg-gray-100 text-gray-600 text-xs">
-                              Inactief
-                            </span>
-                          )}
-                          {comp.category && (
-                            <span className="px-2 py-1 rounded bg-blue-50 text-blue-700 text-xs">
-                              {comp.category}
-                            </span>
-                          )}
-                        </div>
-                        {comp.description && (
-                          <p className="text-sm text-gray-600 mt-1">
-                            {comp.description}
-                          </p>
-                        )}
-                        <p className="text-xs text-gray-500 mt-2">
-                          Schaal: {comp.scale_min} - {comp.scale_max}
-                        </p>
-                      </div>
-                      <span className="text-gray-400">→</span>
-                    </div>
-                  </Link>
-                ))}
+          </div>
+
+          {/* Individual Trend Graphs - Placeholder */}
+          <div className="p-6 border rounded-xl bg-white space-y-4">
+            <h3 className="text-lg font-semibold">Individuele Trendgrafieken</h3>
+            <p className="text-sm text-gray-600">
+              Gebruik de zoekbalk om een specifieke leerling te selecteren en hun individuele trends te bekijken.
+            </p>
+            <div className="p-8 bg-gray-50 rounded-lg text-center">
+              <p className="text-gray-500">
+                Selecteer een leerling in de filters hierboven om individuele trends te bekijken
+              </p>
             </div>
-          )}
+          </div>
         </div>
       )}
     </div>
