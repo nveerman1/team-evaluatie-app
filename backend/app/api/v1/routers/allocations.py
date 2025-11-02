@@ -244,6 +244,7 @@ def my_allocations(
     Alle allocations voor de ingelogde student (als reviewer) binnen deze evaluatie.
     Als er nog geen self-allocation bestaat maar de student hoort bij de course,
     wordt de self-allocation aangemaakt.
+    Ook worden peer-allocations automatisch aangemaakt voor alle teamgenoten.
     """
     ev = _get_eval_or_404(db, evaluation_id)
 
@@ -259,16 +260,55 @@ def my_allocations(
     )
 
     has_self = any(alloc.is_self for alloc, _ in rows)
-    if not has_self and _has_access_to_evaluation(db, evaluation_id, user.id):
+    has_access = _has_access_to_evaluation(db, evaluation_id, user.id)
+    
+    if has_access:
         school_id = getattr(ev, "school_id", None) or getattr(user, "school_id", None)
         if school_id is None:
             raise HTTPException(500, "school_id ontbreekt op evaluatie/gebruiker")
-        self_alloc = _ensure_allocation(
-            db, school_id, evaluation_id, user.id, user.id, True
+        
+        # Create self-allocation if missing
+        if not has_self:
+            self_alloc = _ensure_allocation(
+                db, school_id, evaluation_id, user.id, user.id, True
+            )
+            db.commit()
+            db.refresh(self_alloc)
+            rows = [(self_alloc, user)] + rows
+        
+        # Auto-create peer allocations for teammates if they don't exist yet
+        # Find all teammates in the same course via group membership
+        teammates = _select_members_for_course(
+            db,
+            school_id=school_id,
+            course_id=ev.course_id,
         )
-        db.commit()
-        db.refresh(self_alloc)
-        rows = [(self_alloc, user)] + rows
+        
+        # Get existing peer allocation reviewee IDs to avoid duplicates
+        existing_reviewee_ids = {alloc.reviewee_id for alloc, _ in rows if not alloc.is_self}
+        
+        # Create peer allocations for teammates not yet allocated
+        created_any = False
+        for teammate_id in teammates:
+            if teammate_id != user.id and teammate_id not in existing_reviewee_ids:
+                _ensure_allocation(
+                    db, school_id, evaluation_id, user.id, teammate_id, False
+                )
+                created_any = True
+        
+        # If we created new allocations, commit and re-fetch all rows
+        if created_any:
+            db.commit()
+            rows = (
+                db.query(Allocation, User)
+                .join(User, User.id == Allocation.reviewee_id)
+                .filter(
+                    Allocation.evaluation_id == evaluation_id,
+                    Allocation.reviewer_id == user.id,
+                )
+                .order_by(Allocation.is_self.desc(), User.name.asc())
+                .all()
+            )
 
     crit_ids: List[int] = [
         c.id
