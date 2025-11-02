@@ -51,12 +51,14 @@ export default function RubricsListInner() {
             Beheer je beoordelingsrubrics met criteria op 5 niveaus.
           </p>
         </div>
-        <Link
-          href={`/teacher/rubrics/create?scope=${activeTab}`}
-          className="px-4 py-2 rounded-xl bg-black text-white hover:opacity-90"
-        >
-          + Nieuwe {activeTab === "peer" ? "team-evaluatie" : "projectbeoordeling"}
-        </Link>
+        {activeTab !== "competencies" && (
+          <Link
+            href={`/teacher/rubrics/create?scope=${activeTab}`}
+            className="px-4 py-2 rounded-xl bg-black text-white hover:opacity-90"
+          >
+            + Nieuwe {activeTab === "peer" ? "team-evaluatie" : "projectbeoordeling"}
+          </Link>
+        )}
       </header>
 
       {/* Tabs */}
