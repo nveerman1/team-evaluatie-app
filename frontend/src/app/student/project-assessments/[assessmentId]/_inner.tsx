@@ -1,9 +1,54 @@
 "use client";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { ApiAuthError } from "@/lib/api";
 import { projectAssessmentService } from "@/services";
 import { ProjectAssessmentDetailOut } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
+
+// Component for rendering a single rubric criterion with matrix view
+function RubricMatrixRow({
+  name,
+  score,
+  levels,
+  comment,
+}: {
+  name: string;
+  score: number | null;
+  levels: string[];
+  comment?: string;
+}) {
+  return (
+    <div className="mb-8">
+      <h3 className="text-lg font-semibold mb-3">{name}</h3>
+      <div className="grid grid-cols-5 gap-2 mb-4">
+        {levels.map((levelText, index) => {
+          const levelNumber = index + 1;
+          const isSelected = score === levelNumber;
+          return (
+            <div
+              key={levelNumber}
+              className={`p-3 border rounded-lg text-sm ${
+                isSelected
+                  ? "bg-blue-100 border-blue-500 border-2 font-medium"
+                  : "bg-white border-gray-300"
+              }`}
+            >
+              <div className="font-semibold mb-1 text-center">Niveau {levelNumber}</div>
+              <div className="text-xs text-gray-700">{levelText || "—"}</div>
+            </div>
+          );
+        })}
+      </div>
+      {comment && (
+        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+          <p className="text-sm font-medium text-gray-700 mb-1">Opmerking docent:</p>
+          <p className="text-sm text-gray-600">{comment}</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function StudentProjectAssessmentInner() {
   const params = useParams();
@@ -30,7 +75,11 @@ export default function StudentProjectAssessmentInner() {
           setReflectionText(result.reflection.text);
         }
       } catch (e: any) {
-        setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
+        if (e instanceof ApiAuthError) {
+          setError(e.originalMessage);
+        } else {
+          setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
+        }
       } finally {
         setLoading(false);
       }
@@ -51,16 +100,24 @@ export default function StudentProjectAssessmentInner() {
       await projectAssessmentService.createOrUpdateReflection(assessmentId, {
         text: reflectionText,
       });
-      setSuccessMsg("Reflectie opgeslagen");
+      setSuccessMsg("Reflectie opgeslagen ✓");
       // Reload data to get updated reflection
       const result =
         await projectAssessmentService.getProjectAssessment(assessmentId);
       setData(result);
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.message || "Opslaan mislukt");
+      if (e instanceof ApiAuthError) {
+        setError(e.originalMessage);
+      } else {
+        setError(e?.response?.data?.detail || e?.message || "Opslaan mislukt");
+      }
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDownloadPDF = () => {
+    window.print();
   };
 
   if (loading) return <Loading />;
@@ -74,130 +131,147 @@ export default function StudentProjectAssessmentInner() {
   });
 
   return (
-    <main className="max-w-5xl mx-auto p-6 space-y-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">{data.assessment.title}</h1>
-          <p className="text-gray-600">{data.rubric_title}</p>
-          {data.assessment.version && (
-            <p className="text-sm text-gray-500">
-              Versie: {data.assessment.version}
-            </p>
-          )}
-        </div>
+    <main className="max-w-6xl mx-auto p-6 space-y-6">
+      {/* Back button */}
+      <div className="flex justify-start">
         <button
           onClick={() => router.back()}
-          className="px-4 py-2 rounded-xl border"
+          className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
         >
-          Terug
+          ← Terug
         </button>
-      </header>
+      </div>
+
+      {/* Header with project info */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-2">{data.assessment.title}</h1>
+        <p className="text-gray-600">
+          Rubric: {data.rubric_title}
+          {data.teacher_name && <> • Beoordeeld door: {data.teacher_name}</>}
+          {data.assessment.published_at && (
+            <> • Datum: {new Date(data.assessment.published_at).toLocaleDateString("nl-NL")}</>
+          )}
+        </p>
+      </div>
 
       {successMsg && (
-        <div className="p-3 rounded-lg bg-green-50 text-green-700">
-          {successMsg}
+        <div className="p-3 rounded-lg bg-green-50 text-green-700 flex items-center gap-2">
+          <span>✓</span>
+          <span>{successMsg}</span>
         </div>
       )}
       {error && (
         <div className="p-3 rounded-lg bg-red-50 text-red-700">{error}</div>
       )}
 
-      {/* Assessment Info */}
-      <section className="bg-white border rounded-2xl p-5">
-        <h2 className="text-lg font-semibold mb-3">Beoordeling</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Schaal: {data.rubric_scale_min} - {data.rubric_scale_max}
-        </p>
+      {/* Rubric matrices - one per criterion */}
+      <div className="bg-white border rounded-2xl p-6">
+        {data.criteria.map((criterion) => {
+          const scoreData = scoreMap[criterion.id];
+          // Get all level descriptions for this criterion
+          const levels: string[] = [];
+          for (let i = data.rubric_scale_min; i <= data.rubric_scale_max; i++) {
+            const levelKey = `level${i}`;
+            levels.push(criterion.descriptors[levelKey] || "");
+          }
+          
+          return (
+            <RubricMatrixRow
+              key={criterion.id}
+              name={criterion.name}
+              score={scoreData?.score ?? null}
+              levels={levels}
+              comment={scoreData?.comment}
+            />
+          );
+        })}
+      </div>
 
-        <div className="space-y-6">
-          {data.criteria.map((criterion) => {
-            const scoreData = scoreMap[criterion.id];
-            return (
-              <div
-                key={criterion.id}
-                className="border-t pt-4 first:border-t-0 first:pt-0"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-medium text-lg">{criterion.name}</h3>
-                  {scoreData && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold text-blue-600">
-                        {scoreData.score}
-                      </span>
-                      <span className="text-gray-500">
-                        / {data.rubric_scale_max}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                {scoreData?.comment && (
-                  <div className="mt-2 p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm font-medium text-gray-700 mb-1">
-                      Opmerking:
-                    </p>
-                    <p className="text-sm text-gray-600">{scoreData.comment}</p>
-                  </div>
-                )}
-                {!scoreData && (
-                  <p className="text-sm text-gray-400 italic">
-                    Nog geen score voor dit criterium
-                  </p>
-                )}
+      {/* Total Score and Grade */}
+      {data.total_score != null && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6">
+          <h2 className="text-2xl font-bold mb-4">Eindresultaat</h2>
+          <div className="grid grid-cols-2 gap-8">
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Totaalscore</p>
+              <p className="text-5xl font-bold text-blue-600">
+                {data.total_score?.toFixed(1)}
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                van {data.rubric_scale_min} - {data.rubric_scale_max}
+              </p>
+            </div>
+            {data.grade != null && (
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Eindcijfer</p>
+                <p className="text-5xl font-bold text-indigo-600">
+                  {data.grade?.toFixed(1)}
+                </p>
+                <p className="text-sm text-gray-500 mt-1">schaal 1-10</p>
               </div>
-            );
-          })}
+            )}
+          </div>
         </div>
-      </section>
+      )}
 
       {/* Reflection Section */}
-      <section className="bg-white border rounded-2xl p-5 space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold">Jouw reflectie</h2>
-          <p className="text-sm text-gray-600">
-            Wat ga je meenemen naar het volgende project? Wat heb je geleerd?
-          </p>
+      <div className="bg-white border rounded-2xl p-6">
+        <div className="flex items-start justify-between mb-2">
+          <div>
+            <h2 className="text-2xl font-bold">Jouw reflectie</h2>
+            <p className="text-sm text-gray-600 mt-2">
+              Beschrijf kort wat je hebt geleerd en wat je meeneemt naar het volgende project.
+            </p>
+          </div>
+          {/* Reflection status badge */}
+          {data.reflection ? (
+            <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium whitespace-nowrap">
+              Ingeleverd
+            </span>
+          ) : (
+            <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium whitespace-nowrap">
+              Niet ingeleverd
+            </span>
+          )}
         </div>
 
         {data.reflection && (
-          <div className="p-3 bg-blue-50 rounded-lg text-sm text-blue-700">
-            <p>
-              Je reflectie is opgeslagen op{" "}
-              {data.reflection.submitted_at
-                ? new Date(data.reflection.submitted_at).toLocaleString("nl-NL")
-                : "onbekende datum"}{" "}
-              ({data.reflection.word_count} woorden)
-            </p>
-          </div>
+          <p className="text-xs text-gray-500 mb-4">
+            Opgeslagen op{" "}
+            {data.reflection.submitted_at
+              ? new Date(data.reflection.submitted_at).toLocaleDateString("nl-NL")
+              : "onbekende datum"}
+          </p>
         )}
 
-        <div className="space-y-2">
-          <label className="block text-sm font-medium">
-            Reflectie{" "}
-            {!data.reflection && <span className="text-red-500">*</span>}
-          </label>
-          <textarea
-            className="w-full border rounded-lg px-3 py-2 min-h-40"
-            value={reflectionText}
-            onChange={(e) => setReflectionText(e.target.value)}
-            placeholder="Beschrijf wat je hebt geleerd en wat je meeneemt naar het volgende project..."
-          />
-          <p className="text-sm text-gray-500">
-            {reflectionText.split(/\s+/).filter((w) => w).length} woorden
-          </p>
-        </div>
+        <textarea
+          className="w-full border rounded-lg px-4 py-3 min-h-32 mb-2 mt-4"
+          value={reflectionText}
+          onChange={(e) => setReflectionText(e.target.value)}
+          placeholder="Jouw reflectie..."
+        />
+        <p className="text-sm text-gray-500 mb-4">
+          {reflectionText.split(/\s+/).filter((w) => w).length} woorden
+        </p>
 
         <button
           onClick={handleSaveReflection}
           disabled={saving || !reflectionText.trim()}
-          className="px-4 py-2 rounded-xl bg-black text-white disabled:opacity-60"
+          className="px-6 py-2 rounded-lg bg-blue-600 text-white disabled:opacity-60 hover:bg-blue-700 transition-colors"
         >
-          {saving
-            ? "Opslaan…"
-            : data.reflection
-            ? "Reflectie bijwerken"
-            : "Reflectie opslaan"}
+          {saving ? "Opslaan…" : "Reflectie opslaan"}
         </button>
-      </section>
+      </div>
+
+      {/* PDF Download Button */}
+      <div className="flex justify-center">
+        <button
+          onClick={handleDownloadPDF}
+          className="px-6 py-3 rounded-lg bg-gray-800 text-white hover:bg-gray-900 transition-colors"
+        >
+          Download beoordeling als PDF
+        </button>
+      </div>
     </main>
   );
 }
