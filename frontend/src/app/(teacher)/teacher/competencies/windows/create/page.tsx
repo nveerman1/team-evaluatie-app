@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { competencyService, courseService } from "@/services";
 import type { CompetencyWindowCreate, Competency } from "@/dtos";
@@ -37,9 +37,24 @@ export default function CreateWindowPage() {
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadData();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   const loadData = async () => {
@@ -59,6 +74,29 @@ export default function CreateWindowPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCompetencyToggle = (competencyId: number) => {
+    setSelectedCompetencies((prev) => {
+      if (prev.includes(competencyId)) {
+        return prev.filter((id) => id !== competencyId);
+      } else {
+        return [...prev, competencyId];
+      }
+    });
+  };
+
+  const getSelectedCompetenciesText = () => {
+    if (selectedCompetencies.length === 0) {
+      return "Selecteer competenties...";
+    }
+    const names = selectedCompetencies
+      .map((id) => competencies.find((c) => c.id === id)?.name)
+      .filter(Boolean);
+    if (names.length <= 2) {
+      return names.join(", ");
+    }
+    return `${names.length} competenties geselecteerd`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -217,30 +255,54 @@ export default function CreateWindowPage() {
               Competenties <span className="text-red-600">*</span>
             </label>
             <p className="text-sm text-gray-500 mb-2">
-              Selecteer welke competenties je in dit venster wilt gebruiken (houd Ctrl/Cmd ingedrukt voor meerdere selecties)
+              Selecteer welke competenties je in dit venster wilt gebruiken
             </p>
-            <select
-              multiple
-              value={selectedCompetencies.map(String)}
-              onChange={(e) => {
-                const selected = Array.from(e.target.selectedOptions).map(
-                  (option) => Number(option.value)
-                );
-                setSelectedCompetencies(selected);
-              }}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[200px]"
-              size={Math.min(competencies.length, 10)}
-            >
-              {competencies.length === 0 ? (
-                <option disabled>Geen competenties beschikbaar</option>
-              ) : (
-                competencies.map((comp) => (
-                  <option key={comp.id} value={comp.id}>
-                    {comp.name}
-                  </option>
-                ))
+            <div className="relative" ref={dropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-left flex justify-between items-center"
+              >
+                <span className={selectedCompetencies.length === 0 ? "text-gray-500" : ""}>
+                  {getSelectedCompetenciesText()}
+                </span>
+                <svg
+                  className={`w-5 h-5 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {isDropdownOpen && (
+                <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                  {competencies.length === 0 ? (
+                    <div className="p-3 text-gray-500 text-sm">
+                      Geen competenties beschikbaar. Maak eerst competenties aan.
+                    </div>
+                  ) : (
+                    <div className="py-1">
+                      {competencies.map((comp) => (
+                        <label
+                          key={comp.id}
+                          className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedCompetencies.includes(comp.id)}
+                            onChange={() => handleCompetencyToggle(comp.id)}
+                            className="mr-3 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm">{comp.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
-            </select>
+            </div>
             {selectedCompetencies.length > 0 && (
               <p className="text-sm text-gray-600 mt-2">
                 {selectedCompetencies.length} competentie(s) geselecteerd
