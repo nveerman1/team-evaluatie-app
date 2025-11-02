@@ -61,16 +61,6 @@ export default function CreateWindowPage() {
     }
   };
 
-  const handleCompetencyToggle = (competencyId: number) => {
-    setSelectedCompetencies(prev => {
-      if (prev.includes(competencyId)) {
-        return prev.filter(id => id !== competencyId);
-      } else {
-        return [...prev, competencyId];
-      }
-    });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -226,30 +216,31 @@ export default function CreateWindowPage() {
             <label className="block text-sm font-medium mb-2">
               Competenties <span className="text-red-600">*</span>
             </label>
-            <p className="text-sm text-gray-500 mb-3">
-              Selecteer welke competenties je in dit venster wilt gebruiken
+            <p className="text-sm text-gray-500 mb-2">
+              Selecteer welke competenties je in dit venster wilt gebruiken (houd Ctrl/Cmd ingedrukt voor meerdere selecties)
             </p>
-            <div className="border rounded-lg p-4 max-h-64 overflow-y-auto space-y-2">
+            <select
+              multiple
+              value={selectedCompetencies.map(String)}
+              onChange={(e) => {
+                const selected = Array.from(e.target.selectedOptions).map(
+                  (option) => Number(option.value)
+                );
+                setSelectedCompetencies(selected);
+              }}
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[200px]"
+              size={Math.min(competencies.length, 10)}
+            >
               {competencies.length === 0 ? (
-                <p className="text-gray-500 text-sm">
-                  Geen competenties beschikbaar. Maak eerst competenties aan.
-                </p>
+                <option disabled>Geen competenties beschikbaar</option>
               ) : (
                 competencies.map((comp) => (
-                  <label
-                    key={comp.id}
-                    className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedCompetencies.includes(comp.id)}
-                      onChange={() => handleCompetencyToggle(comp.id)}
-                    />
-                    <div className="font-medium">{comp.name}</div>
-                  </label>
+                  <option key={comp.id} value={comp.id}>
+                    {comp.name}
+                  </option>
                 ))
               )}
-            </div>
+            </select>
             {selectedCompetencies.length > 0 && (
               <p className="text-sm text-gray-600 mt-2">
                 {selectedCompetencies.length} competentie(s) geselecteerd
