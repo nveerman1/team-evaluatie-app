@@ -6,6 +6,7 @@ type ToolbarProps = {
   statusFilter: string;
   onStatusFilterChange: (value: string) => void;
   onFiltersClick?: () => void;
+  showFiltersButton?: boolean;
 };
 
 export function Toolbar({
@@ -14,6 +15,7 @@ export function Toolbar({
   statusFilter,
   onStatusFilterChange,
   onFiltersClick,
+  showFiltersButton = true,
 }: ToolbarProps) {
   return (
     <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -43,7 +45,7 @@ export function Toolbar({
       </select>
 
       {/* Filters Button */}
-      {onFiltersClick && (
+      {showFiltersButton && (
         <button
           onClick={onFiltersClick}
           className="px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors"

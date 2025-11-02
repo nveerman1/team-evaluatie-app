@@ -66,6 +66,9 @@ export default function StudentDashboard() {
       setEvaluatiesStatus("open");
     } else if (filter === "completed") {
       setEvaluatiesStatus("closed");
+    } else if (filter === "reflections") {
+      // For reflections, show all evaluations but user can see which need reflections
+      setEvaluatiesStatus("all");
     }
   };
 
@@ -143,7 +146,7 @@ export default function StudentDashboard() {
                   onSearchChange={setEvaluatiesSearch}
                   statusFilter={evaluatiesStatus}
                   onStatusFilterChange={setEvaluatiesStatus}
-                  onFiltersClick={() => {}}
+                  showFiltersButton={false}
                 />
 
                 {filteredEvaluations.length === 0 ? (
@@ -184,7 +187,7 @@ export default function StudentDashboard() {
                         Je hebt {dashboard.completedEvaluations} voltooide
                         evaluatie
                         {dashboard.completedEvaluations !== 1 ? "s" : ""}. Klik
-                        op &ldquo;Bekijk alle resultaten&rdquo; om je cijfers en feedback te
+                        op &apos;Bekijk alle resultaten&apos; om je cijfers en feedback te
                         zien.
                       </p>
                     ) : (
@@ -209,7 +212,7 @@ export default function StudentDashboard() {
                   onSearchChange={setCompetentiescanSearch}
                   statusFilter={competentiescanStatus}
                   onStatusFilterChange={setCompetentiescanStatus}
-                  onFiltersClick={() => {}}
+                  showFiltersButton={false}
                 />
 
                 <div className="p-8 border rounded-xl bg-gray-50 text-center">
@@ -230,7 +233,7 @@ export default function StudentDashboard() {
                   onSearchChange={setProjectSearch}
                   statusFilter={projectStatus}
                   onStatusFilterChange={setProjectStatus}
-                  onFiltersClick={() => {}}
+                  showFiltersButton={false}
                 />
 
                 {projectLoading ? (

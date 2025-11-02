@@ -4,6 +4,7 @@ type StatTileProps = {
   value: number;
   bgColor?: string;
   textColor?: string;
+  valueBoldColor?: string;
   onClick?: () => void;
 };
 
@@ -13,9 +14,11 @@ export function StatTile({
   value,
   bgColor = "bg-blue-50",
   textColor = "text-blue-700",
+  valueBoldColor,
   onClick,
 }: StatTileProps) {
   const Component = onClick ? "button" : "div";
+  const boldColor = valueBoldColor || textColor.replace("700", "900");
   
   return (
     <Component
@@ -28,7 +31,7 @@ export function StatTile({
         <span className="text-2xl">{icon}</span>
         <div className={`text-sm font-medium ${textColor}`}>{label}</div>
       </div>
-      <div className={`text-3xl font-bold ${textColor.replace("700", "900")}`}>
+      <div className={`text-3xl font-bold ${boldColor}`}>
         {value}
       </div>
     </Component>
