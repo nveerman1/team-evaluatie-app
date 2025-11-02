@@ -15,7 +15,7 @@ export default function WindowDetailPage() {
   const [window, setWindow] = useState<CompetencyWindow | null>(null);
   const [heatmap, setHeatmap] = useState<ClassHeatmap | null>(null);
   const [selectedClass, setSelectedClass] = useState<string | undefined>(
-    undefined
+    undefined,
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +46,10 @@ export default function WindowDetailPage() {
 
     try {
       await competencyService.updateWindow(windowId, { status: newStatus });
-      setWindow({ ...window, status: newStatus as "draft" | "open" | "closed" });
+      setWindow({
+        ...window,
+        status: newStatus as "draft" | "open" | "closed",
+      });
     } catch (err) {
       alert("Failed to update status: " + err);
     }
@@ -109,7 +112,9 @@ export default function WindowDetailPage() {
           <select
             value={selectedClass || "all"}
             onChange={(e) =>
-              setSelectedClass(e.target.value === "all" ? undefined : e.target.value)
+              setSelectedClass(
+                e.target.value === "all" ? undefined : e.target.value,
+              )
             }
             className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
@@ -131,19 +136,24 @@ export default function WindowDetailPage() {
         </div>
         <div className="p-4 border rounded-lg bg-purple-50">
           <div className="text-sm text-gray-600">Competenties</div>
-          <div className="text-2xl font-bold">{heatmap.competencies.length}</div>
+          <div className="text-2xl font-bold">
+            {heatmap.competencies.length}
+          </div>
         </div>
         <div className="p-4 border rounded-lg bg-green-50">
           <div className="text-sm text-gray-600">Ingevulde Scans</div>
           <div className="text-2xl font-bold">
-            {heatmap.rows.filter((r) => Object.keys(r.scores).length > 0).length}
+            {
+              heatmap.rows.filter((r) => Object.keys(r.scores).length > 0)
+                .length
+            }
           </div>
         </div>
       </div>
 
       {/* Heatmap */}
       <div className="border rounded-xl bg-white p-6">
-        <h2 className="text-xl font-semibold mb-4">Competentieheatmap</h2>
+        <h2 className="text-xl font-semibold mb-0">Competentieheatmap</h2>
 
         {heatmap.rows.length === 0 ? (
           <div className="p-8 bg-gray-50 rounded-lg text-center text-gray-500">
@@ -151,31 +161,42 @@ export default function WindowDetailPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
+            <table className="w-full table-fixed border-collapse">
+              {/* Kolombreedtes: eerste kolom breed voor namen, overige gelijk */}
+              <colgroup>
+                <col className="w-[260px]" />
+                {heatmap.competencies.map((c) => (
+                  <col key={c.id} className="w-[140px]" />
+                ))}
+              </colgroup>
+
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-3 font-semibold sticky left-0 bg-white z-10 align-bottom">
+                  <th className="sticky left-0 z-10 bg-white p-3 text-left font-semibold align-bottom">
                     Leerling
                   </th>
+
                   {heatmap.competencies.map((comp) => (
                     <th
                       key={comp.id}
-                      className="text-center p-3 font-semibold min-w-[120px] relative"
-                      style={{ height: '150px', verticalAlign: 'bottom' }}
+                      className="relative h-36 p-0 align-bottom"
                     >
-                      <div className="absolute left-1/2 transform -translate-x-1/2" style={{ bottom: '20px' }}>
-                        <div className="transform -rotate-45 origin-bottom-left whitespace-nowrap text-sm" style={{ paddingLeft: '15px' }}>
+                      {/* container om exact te centreren */}
+                      <div className="absolute inset-x-0 bottom-2 flex justify-center">
+                        {/* pivot op bottom-left, dus start van het woord blijft binnen de kolom */}
+                        <span className="block origin-bottom-left -rotate-45 whitespace-nowrap text-sm font-semibold translate-x-3">
                           {comp.name}
-                        </div>
+                        </span>
                       </div>
                     </th>
                   ))}
                 </tr>
               </thead>
+
               <tbody>
                 {heatmap.rows.map((row) => (
                   <tr key={row.user_id} className="border-b hover:bg-gray-50">
-                    <td className="p-3 font-medium sticky left-0 bg-white z-10">
+                    <td className="sticky left-0 z-10 bg-white p-3 font-medium">
                       <Link
                         href={`/teacher/competencies/windows/${windowId}/student/${row.user_id}`}
                         className="text-blue-600 hover:text-blue-800 hover:underline"
@@ -183,27 +204,33 @@ export default function WindowDetailPage() {
                         {row.user_name}
                       </Link>
                     </td>
+
                     {heatmap.competencies.map((comp) => {
                       const score = row.scores[comp.id];
                       const delta = row.deltas[comp.id];
+
                       return (
-                        <td key={comp.id} className="p-3">
+                        <td
+                          key={comp.id}
+                          className="p-3 text-center align-middle"
+                        >
                           {score !== undefined ? (
-                            <div className="flex flex-col items-center">
+                            <div className="flex flex-col items-center leading-tight">
                               <span
-                                className={`px-3 py-1 rounded text-sm font-semibold ${
+                                className={`px-2.5 py-1 rounded text-sm font-semibold ${
                                   score >= 4
                                     ? "bg-green-100 text-green-700"
                                     : score >= 3
-                                    ? "bg-blue-100 text-blue-700"
-                                    : "bg-orange-100 text-orange-700"
+                                      ? "bg-blue-100 text-blue-700"
+                                      : "bg-orange-100 text-orange-700"
                                 }`}
                               >
                                 {score.toFixed(1)}
                               </span>
+
                               {delta !== undefined && delta !== 0 && (
                                 <span
-                                  className={`text-xs mt-1 ${
+                                  className={`mt-1 text-xs ${
                                     delta > 0
                                       ? "text-green-600"
                                       : "text-red-600"
@@ -215,7 +242,7 @@ export default function WindowDetailPage() {
                               )}
                             </div>
                           ) : (
-                            <span className="text-gray-400 text-sm">-</span>
+                            <span className="text-gray-300 text-sm">–</span>
                           )}
                         </td>
                       );

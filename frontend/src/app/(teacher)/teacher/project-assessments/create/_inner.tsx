@@ -37,7 +37,9 @@ export default function CreateProjectAssessmentInner() {
 
         // Load teams from the students/teams endpoint
         const groupsResponse = await api.get<Group[]>("/students/teams");
-        setGroups(Array.isArray(groupsResponse.data) ? groupsResponse.data : []);
+        setGroups(
+          Array.isArray(groupsResponse.data) ? groupsResponse.data : [],
+        );
       } catch (e: any) {
         setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
       } finally {
@@ -64,9 +66,8 @@ export default function CreateProjectAssessmentInner() {
         version: version || undefined,
         metadata_json: {},
       };
-      const result = await projectAssessmentService.createProjectAssessment(
-        payload
-      );
+      const result =
+        await projectAssessmentService.createProjectAssessment(payload);
       router.push(`/teacher/project-assessments/${result.id}/edit`);
     } catch (e: any) {
       if (e instanceof ApiAuthError) {
@@ -86,7 +87,7 @@ export default function CreateProjectAssessmentInner() {
       <header>
         <h1 className="text-2xl font-semibold">Nieuwe projectbeoordeling</h1>
         <p className="text-gray-600">
-          Maak een projectbeoordeling aan voor een team.
+          Maak een projectbeoordeling aan voor een cluster.
         </p>
       </header>
 
@@ -138,7 +139,7 @@ export default function CreateProjectAssessmentInner() {
 
         <div className="space-y-1">
           <label className="block text-sm font-medium">
-            Team <span className="text-red-500">*</span>
+            Cluster <span className="text-red-500">*</span>
           </label>
           <select
             className="w-full border rounded-lg px-3 py-2"
@@ -146,7 +147,7 @@ export default function CreateProjectAssessmentInner() {
             onChange={(e) => setGroupId(Number(e.target.value) || "")}
             required
           >
-            <option value="">-- Selecteer team --</option>
+            <option value="">-- Selecteer cluster --</option>
             {groups.map((g) => (
               <option key={g.id} value={g.id}>
                 {g.name}
@@ -156,7 +157,7 @@ export default function CreateProjectAssessmentInner() {
           </select>
           {groups.length === 0 && (
             <p className="text-sm text-amber-600">
-              Geen teams gevonden. Maak eerst teams aan in de admin sectie.
+              Geen cluster gevonden. Maak eerst clusters aan in de admin sectie.
             </p>
           )}
         </div>
