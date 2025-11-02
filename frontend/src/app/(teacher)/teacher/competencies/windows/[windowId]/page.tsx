@@ -154,16 +154,19 @@ export default function WindowDetailPage() {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-3 font-semibold sticky left-0 bg-white">
+                  <th className="text-left p-3 font-semibold sticky left-0 bg-white z-10">
                     Leerling
                   </th>
                   {heatmap.competencies.map((comp) => (
                     <th
                       key={comp.id}
-                      className="text-left p-3 font-semibold min-w-[100px]"
+                      className="text-center p-3 font-semibold min-w-[120px] align-bottom"
+                      style={{ height: '150px' }}
                     >
-                      <div className="transform -rotate-45 origin-left whitespace-nowrap">
-                        {comp.name}
+                      <div className="flex items-end justify-center h-full pb-2">
+                        <div className="transform -rotate-45 origin-bottom whitespace-nowrap text-sm">
+                          {comp.name}
+                        </div>
                       </div>
                     </th>
                   ))}
@@ -172,8 +175,13 @@ export default function WindowDetailPage() {
               <tbody>
                 {heatmap.rows.map((row) => (
                   <tr key={row.user_id} className="border-b hover:bg-gray-50">
-                    <td className="p-3 font-medium sticky left-0 bg-white">
-                      {row.user_name}
+                    <td className="p-3 font-medium sticky left-0 bg-white z-10">
+                      <Link
+                        href={`/teacher/competencies/windows/${windowId}/student/${row.user_id}`}
+                        className="text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        {row.user_name}
+                      </Link>
                     </td>
                     {heatmap.competencies.map((comp) => {
                       const score = row.scores[comp.id];

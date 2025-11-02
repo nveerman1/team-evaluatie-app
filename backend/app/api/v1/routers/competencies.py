@@ -561,6 +561,96 @@ def get_my_window_overview(
     )
 
 
+@router.get("/windows/{window_id}/student/{user_id}/overview", response_model=StudentCompetencyOverview)
+def get_student_window_overview(
+    window_id: int,
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get a student's competency overview for a window (teacher only)"""
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(status_code=403, detail="Only teachers can view student details")
+    
+    window = db.get(CompetencyWindow, window_id)
+    if not window or window.school_id != current_user.school_id:
+        raise HTTPException(status_code=404, detail="Window not found")
+    
+    # Get the student
+    student = db.get(User, user_id)
+    if not student or student.school_id != current_user.school_id:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    # Get all competencies
+    competencies = db.execute(
+        select(Competency).where(
+            Competency.school_id == current_user.school_id,
+            Competency.active == True,
+        ).order_by(Competency.order)
+    ).scalars().all()
+    
+    # Get self scores
+    self_scores = db.execute(
+        select(CompetencySelfScore).where(
+            CompetencySelfScore.window_id == window_id,
+            CompetencySelfScore.user_id == user_id,
+        )
+    ).scalars().all()
+    
+    # Get teacher observations
+    teacher_observations = db.execute(
+        select(CompetencyTeacherObservation).where(
+            CompetencyTeacherObservation.window_id == window_id,
+            CompetencyTeacherObservation.user_id == user_id,
+        )
+    ).scalars().all()
+    
+    # Build maps
+    self_score_map = {s.competency_id: s for s in self_scores}
+    teacher_obs_map = {o.competency_id: o for o in teacher_observations}
+    
+    # Build scores list with full details
+    scores = []
+    for comp in competencies:
+        self_score_obj = self_score_map.get(comp.id)
+        teacher_obs_obj = teacher_obs_map.get(comp.id)
+        
+        scores.append(CompetencyScore(
+            competency_id=comp.id,
+            competency_name=comp.name,
+            self_score=float(self_score_obj.score) if self_score_obj else None,
+            peer_score=None,  # TODO: implement peer score calculation
+            teacher_score=float(teacher_obs_obj.score) if teacher_obs_obj else None,
+            final_score=float(self_score_obj.score) if self_score_obj else None,  # Simplified for now
+            delta=None,  # TODO: implement delta calculation
+        ))
+    
+    # Get goals
+    goals = db.execute(
+        select(CompetencyGoal).where(
+            CompetencyGoal.window_id == window_id,
+            CompetencyGoal.user_id == user_id,
+        )
+    ).scalars().all()
+    
+    # Get reflection
+    reflection = db.execute(
+        select(CompetencyReflection).where(
+            CompetencyReflection.window_id == window_id,
+            CompetencyReflection.user_id == user_id,
+        )
+    ).scalar_one_or_none()
+    
+    return StudentCompetencyOverview(
+        window_id=window_id,
+        user_id=user_id,
+        user_name=student.name,
+        scores=scores,
+        goals=goals,
+        reflection=reflection,
+    )
+
+
 @router.get("/windows/{window_id}/heatmap", response_model=ClassHeatmap)
 def get_class_heatmap(
     window_id: int,

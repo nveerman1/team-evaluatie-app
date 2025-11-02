@@ -154,6 +154,16 @@ export const competencyService = {
     return response.data;
   },
 
+  async getStudentWindowOverview(
+    windowId: number,
+    userId: number
+  ): Promise<StudentCompetencyOverview> {
+    const response = await api.get(
+      `/competencies/windows/${windowId}/student/${userId}/overview`
+    );
+    return response.data;
+  },
+
   async getClassHeatmap(
     windowId: number,
     className?: string
