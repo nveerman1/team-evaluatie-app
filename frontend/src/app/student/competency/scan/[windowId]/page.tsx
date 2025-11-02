@@ -18,6 +18,7 @@ export default function SelfScanPage() {
 
   const [window, setWindow] = useState<CompetencyWindow | null>(null);
   const [competencies, setCompetencies] = useState<Competency[]>([]);
+  const [rubricLevels, setRubricLevels] = useState<Record<number, any[]>>({});
 
   const [scores, setScores] = useState<Record<number, CompetencySelfScoreInput>>(
     {}
@@ -43,6 +44,21 @@ export default function SelfScanPage() {
 
       setWindow(win);
       setCompetencies(comps);
+
+      // Load rubric levels for each competency
+      const levelsMap: Record<number, any[]> = {};
+      await Promise.all(
+        comps.map(async (comp) => {
+          try {
+            const levels = await competencyService.getRubricLevels(comp.id);
+            levelsMap[comp.id] = levels;
+          } catch (err) {
+            // If no rubric levels exist, use empty array
+            levelsMap[comp.id] = [];
+          }
+        })
+      );
+      setRubricLevels(levelsMap);
 
       // Pre-populate with existing scores
       const scoreMap: Record<number, CompetencySelfScoreInput> = {};
@@ -119,8 +135,6 @@ export default function SelfScanPage() {
   if (error && !window) return <ErrorMessage message={error} />;
   if (!window) return <ErrorMessage message="Window not found" />;
 
-  const scaleLabels = competencies[0]?.scale_labels || {};
-
   return (
     <main className="p-6 max-w-4xl mx-auto space-y-6">
       {/* Header */}
@@ -157,6 +171,10 @@ export default function SelfScanPage() {
             (_, i) => comp.scale_min + i
           );
           const currentScore = scores[comp.id]?.score || 3;
+          const compRubricLevels = rubricLevels[comp.id] || [];
+
+          // Default labels if no rubric levels are defined
+          const defaultLabels = ["Startend", "Basis", "Competent", "Gevorderd", "Excellent"];
 
           return (
             <div key={comp.id} className="p-5 border rounded-xl bg-white space-y-4">
@@ -175,7 +193,10 @@ export default function SelfScanPage() {
                 <div className="grid grid-cols-5 gap-3">
                   {levels.map((level) => {
                     const isSelected = currentScore === level;
-                    const label = scaleLabels[String(level)];
+                    // Get rubric level data or fall back to scale_labels or defaults
+                    const rubricLevel = compRubricLevels.find((rl: any) => rl.level === level);
+                    const label = rubricLevel?.label || comp.scale_labels[String(level)] || defaultLabels[level - 1] || `Niveau ${level}`;
+                    const description = rubricLevel?.description || "";
 
                     return (
                       <button
@@ -208,15 +229,15 @@ export default function SelfScanPage() {
                             )}
                           </div>
 
-                          {/* Level Number */}
-                          <span className="text-2xl font-bold text-gray-900">
-                            {level}
+                          {/* Label (instead of number) */}
+                          <span className="text-sm font-semibold text-gray-900 text-center">
+                            {label}
                           </span>
 
-                          {/* Label */}
-                          {label && (
-                            <span className="text-xs text-gray-600 text-center">
-                              {label}
+                          {/* Description */}
+                          {description && (
+                            <span className="text-xs text-gray-600 text-center leading-tight">
+                              {description}
                             </span>
                           )}
                         </div>
