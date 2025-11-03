@@ -282,26 +282,52 @@ def my_allocations(
             needs_commit = True
         
         # Auto-create peer allocations for teammates if they don't exist yet
-        # Filter by team_number to only get students in the same team
-        if user.team_number is not None:
-            # Find all teammates in the same course and team
-            teammates = _select_members_for_course(
-                db,
-                school_id=school_id,
-                course_id=ev.course_id,
-                team_number=user.team_number,
+        # First, find which Group(s) the user belongs to for this course and their team_number(s)
+        user_groups = (
+            db.query(Group.id, Group.team_number)
+            .join(GroupMember, GroupMember.group_id == Group.id)
+            .filter(
+                GroupMember.user_id == user.id,
+                Group.course_id == ev.course_id,
+                Group.school_id == school_id,
             )
+            .all()
+        )
+        
+        if user_groups:
+            # Get unique team numbers from user's groups (filter out None values)
+            team_numbers = {team_num for _, team_num in user_groups if team_num is not None}
             
-            # Get existing peer allocation reviewee IDs to avoid duplicates
-            existing_reviewee_ids = {alloc.reviewee_id for alloc, _ in rows if not alloc.is_self}
-            
-            # Create peer allocations for teammates not yet allocated
-            for teammate_id in teammates:
-                if teammate_id != user.id and teammate_id not in existing_reviewee_ids:
-                    _ensure_allocation(
-                        db, school_id, evaluation_id, user.id, teammate_id, False
+            if team_numbers:
+                # Find all teammates in Groups with same course_id and same team_number(s)
+                teammates = (
+                    db.query(User.id)
+                    .join(GroupMember, GroupMember.user_id == User.id)
+                    .join(Group, Group.id == GroupMember.group_id)
+                    .filter(
+                        User.school_id == school_id,
+                        User.role == "student",
+                        User.archived.is_(False),
+                        Group.school_id == school_id,
+                        Group.course_id == ev.course_id,
+                        Group.team_number.in_(team_numbers),
                     )
-                    needs_commit = True
+                    .distinct()
+                    .all()
+                )
+                
+                teammate_ids = [uid for (uid,) in teammates]
+                
+                # Get existing peer allocation reviewee IDs to avoid duplicates
+                existing_reviewee_ids = {alloc.reviewee_id for alloc, _ in rows if not alloc.is_self}
+                
+                # Create peer allocations for teammates not yet allocated
+                for teammate_id in teammate_ids:
+                    if teammate_id != user.id and teammate_id not in existing_reviewee_ids:
+                        _ensure_allocation(
+                            db, school_id, evaluation_id, user.id, teammate_id, False
+                        )
+                        needs_commit = True
         
         # Commit all changes and re-fetch if anything was created
         if needs_commit:
