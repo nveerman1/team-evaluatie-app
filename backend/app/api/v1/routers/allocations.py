@@ -274,41 +274,36 @@ def my_allocations(
         if school_id is None:
             raise HTTPException(500, "school_id ontbreekt op evaluatie/gebruiker")
         
-        # Find which Group(s) the user belongs to for this course and their team_number(s)
-        user_groups = (
-            db.query(Group.id, Group.team_number)
-            .join(GroupMember, GroupMember.group_id == Group.id)
+        # Find which Group(s) the user belongs to for this course
+        user_group_ids = [
+            gid for (gid,) in db.query(GroupMember.group_id)
+            .join(Group, Group.id == GroupMember.group_id)
             .filter(
                 GroupMember.user_id == user.id,
                 Group.course_id == ev.course_id,
                 Group.school_id == school_id,
             )
+            .distinct()
             .all()
-        )
+        ]
         
-        if user_groups:
-            # Get unique team numbers from user's groups (filter out None values)
-            team_numbers = {team_num for _, team_num in user_groups if team_num is not None}
-            
-            if team_numbers:
-                # Find all teammates in Groups with same course_id and same team_number(s)
-                teammates = (
-                    db.query(User.id)
-                    .join(GroupMember, GroupMember.user_id == User.id)
-                    .join(Group, Group.id == GroupMember.group_id)
-                    .filter(
-                        User.school_id == school_id,
-                        User.role == "student",
-                        User.archived.is_(False),
-                        Group.school_id == school_id,
-                        Group.course_id == ev.course_id,
-                        Group.team_number.in_(team_numbers),
-                    )
-                    .distinct()
-                    .all()
+        if user_group_ids:
+            # Find all teammates in the same Group(s) - they share the same group membership
+            teammates = (
+                db.query(User.id)
+                .join(GroupMember, GroupMember.user_id == User.id)
+                .join(Group, Group.id == GroupMember.group_id)
+                .filter(
+                    User.school_id == school_id,
+                    User.role == "student",
+                    User.archived.is_(False),
+                    Group.id.in_(user_group_ids),
                 )
-                
-                valid_teammate_ids = {uid for (uid,) in teammates}
+                .distinct()
+                .all()
+            )
+            
+            valid_teammate_ids = {uid for (uid,) in teammates}
         
         needs_commit = False
         
