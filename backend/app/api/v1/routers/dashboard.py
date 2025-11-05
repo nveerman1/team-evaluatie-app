@@ -124,15 +124,15 @@ def dashboard_evaluation(
         )
 
     # Map voor user-info - only load valid students
-    users = {
-        u.id: u
-        for u in db.query(User)
-        .filter(
-            User.school_id == user.school_id,
-            User.id.in_(valid_student_ids) if valid_student_ids else True,
-        )
-        .all()
-    }
+    if valid_student_ids:
+        users = {
+            u.id: u
+            for u in db.query(User)
+            .filter(User.school_id == user.school_id, User.id.in_(valid_student_ids))
+            .all()
+        }
+    else:
+        users = {}
 
     # Aggregatie-bakken
     # - per reviewee: lijst van alloc_avg (alle scores op die allocatie gemiddeld)
