@@ -164,6 +164,7 @@ class RubricCriterion(Base):
     weight: Mapped[float] = mapped_column(Float, default=1.0)
     # descriptors per level, bijv. {"1": "…", "2": "…", …}
     descriptors: Mapped[dict] = mapped_column(JSON, default=dict)
+    category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)
 
     __table_args__ = (Index("ix_criterion_rubric", "rubric_id"),)
 

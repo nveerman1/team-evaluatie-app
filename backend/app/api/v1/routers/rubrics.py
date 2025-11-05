@@ -76,6 +76,7 @@ def _to_out_criterion(c: RubricCriterion) -> CriterionOut:
         "name": c.name,
         "weight": float(c.weight),
         "descriptors": _ensure5(c.descriptors),  # <-- altijd 5 niveaus naar buiten
+        "category": getattr(c, "category", None),
     }
     if hasattr(c, "order"):
         payload["order"] = getattr(c, "order")
@@ -265,6 +266,7 @@ def duplicate_rubric(
             name=c.name,
             weight=c.weight,
             descriptors=_ensure5(c.descriptors),  # <-- normalize bij dupliceren
+            category=getattr(c, "category", None),
         )
         if hasattr(c, "order"):
             setattr(nc, "order", getattr(c, "order"))
@@ -322,6 +324,7 @@ def add_criterion(
         name=payload.name,
         weight=payload.weight,
         descriptors=payload.descriptors,  # schemas normaliseert naar 5
+        category=payload.category,
     )
     _apply_order(c, payload.order)
     db.add(c)
@@ -356,6 +359,8 @@ def update_criterion(
         c.weight = payload.weight
     if payload.descriptors is not None:  # schemas normaliseert naar 5
         c.descriptors = payload.descriptors
+    if payload.category is not None:
+        c.category = payload.category
     if payload.order is not None:
         _apply_order(c, payload.order)
 
@@ -430,6 +435,7 @@ def batch_upsert_criteria(
             c.name = item.name
             c.weight = item.weight
             c.descriptors = item.descriptors  # schemas → 5 levels
+            c.category = item.category
             _apply_order(c, item.order)
             db.add(c)
             out.append(c)
@@ -440,6 +446,7 @@ def batch_upsert_criteria(
                 name=item.name,
                 weight=item.weight,
                 descriptors=item.descriptors,  # schemas → 5 levels
+                category=item.category,
             )
             _apply_order(c, item.order)
             db.add(c)
