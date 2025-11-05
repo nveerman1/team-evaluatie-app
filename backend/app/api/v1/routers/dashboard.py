@@ -97,18 +97,22 @@ def dashboard_evaluation(
         valid_student_ids = {s[0] for s in course_students}
 
     # === 3) Filter allocations to only include students from the course ===
-    query = db.query(Allocation).filter(
-        Allocation.school_id == user.school_id, Allocation.evaluation_id == ev.id
-    )
-
-    # Filter allocations at SQL level to only include valid students
-    if valid_student_ids:
-        query = query.filter(
-            Allocation.reviewee_id.in_(valid_student_ids),
-            Allocation.reviewer_id.in_(valid_student_ids),
+    if ev.course_id and not valid_student_ids:
+        # No students in the course, return empty dashboard
+        allocations = []
+    else:
+        query = db.query(Allocation).filter(
+            Allocation.school_id == user.school_id, Allocation.evaluation_id == ev.id
         )
 
-    allocations = query.all()
+        # Filter allocations at SQL level to only include valid students
+        if valid_student_ids:
+            query = query.filter(
+                Allocation.reviewee_id.in_(valid_student_ids),
+                Allocation.reviewer_id.in_(valid_student_ids),
+            )
+
+        allocations = query.all()
 
     if not allocations:
         return DashboardResponse(

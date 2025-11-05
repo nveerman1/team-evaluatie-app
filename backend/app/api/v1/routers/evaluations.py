@@ -170,8 +170,8 @@ def list_evaluations(
         if course_ids:
             stmt = stmt.where(Evaluation.course_id.in_(course_ids))
         else:
-            # Student has no courses, return empty list
-            return []
+            # Student has no courses, filter to impossible condition to return empty
+            stmt = stmt.where(Evaluation.id == -1)
 
     if q:
         stmt = stmt.where(Evaluation.title.ilike(f"%{q}%"))
