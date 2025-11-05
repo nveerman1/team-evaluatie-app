@@ -8,6 +8,7 @@ class CriterionMeta(BaseModel):
     id: int
     name: str
     weight: float
+    category: Optional[str] = None
 
 
 class CriterionBreakdown(BaseModel):
@@ -15,6 +16,12 @@ class CriterionBreakdown(BaseModel):
     peer_avg: float
     peer_count: int
     self_score: Optional[float] = None
+
+
+class CategoryAverage(BaseModel):
+    category: str
+    peer_avg: float
+    self_avg: Optional[float] = None
 
 
 class DashboardRow(BaseModel):
@@ -27,6 +34,7 @@ class DashboardRow(BaseModel):
     spr: float
     suggested_grade: float
     breakdown: List[CriterionBreakdown] = []
+    category_averages: List[CategoryAverage] = []
 
 
 class DashboardResponse(BaseModel):
