@@ -314,36 +314,17 @@ def my_allocations(
         if school_id is None:
             raise HTTPException(500, "school_id ontbreekt op evaluatie/gebruiker")
         
-        # Find which Group(s) the user belongs to for this course
-        user_group_ids = [
-            gid for (gid,) in db.query(GroupMember.group_id)
-            .join(Group, Group.id == GroupMember.group_id)
-            .filter(
-                GroupMember.user_id == user.id,
-                Group.course_id == ev.course_id,
-                Group.school_id == school_id,
-            )
-            .distinct()
-            .all()
-        ]
-        
-        if user_group_ids:
-            # Find all teammates in the same Group(s) - they share the same group membership
-            teammates = (
-                db.query(User.id)
-                .join(GroupMember, GroupMember.user_id == User.id)
-                .join(Group, Group.id == GroupMember.group_id)
-                .filter(
-                    User.school_id == school_id,
-                    User.role == "student",
-                    User.archived.is_(False),
-                    Group.id.in_(user_group_ids),
-                )
-                .distinct()
-                .all()
+        # Find teammates with same course AND same team_number
+        # Use User.team_number as the source of truth for team membership
+        if user.team_number is not None:
+            teammates = _select_members_for_course(
+                db,
+                school_id=school_id,
+                course_id=ev.course_id,
+                team_number=user.team_number,
             )
             
-            valid_teammate_ids = {uid for (uid,) in teammates}
+            valid_teammate_ids = set(teammates)
         
         needs_commit = False
         
