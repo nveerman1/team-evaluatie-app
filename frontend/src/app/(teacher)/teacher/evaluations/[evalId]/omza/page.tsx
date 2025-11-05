@@ -55,8 +55,8 @@ export default function OMZAOverviewPage() {
       dashboard.items.forEach((item) => {
         const catAvg = item.category_averages?.find((ca) => ca.category === category);
         if (catAvg) {
-          if (catAvg.peer_avg) peerAvgs.push(catAvg.peer_avg);
-          if (catAvg.self_avg) selfAvgs.push(catAvg.self_avg);
+          if (catAvg.peer_avg !== null && catAvg.peer_avg !== undefined) peerAvgs.push(catAvg.peer_avg);
+          if (catAvg.self_avg !== null && catAvg.self_avg !== undefined) selfAvgs.push(catAvg.self_avg);
         }
       });
 

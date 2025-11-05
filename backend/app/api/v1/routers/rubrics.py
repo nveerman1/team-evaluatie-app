@@ -359,7 +359,10 @@ def update_criterion(
         c.weight = payload.weight
     if payload.descriptors is not None:  # schemas normaliseert naar 5
         c.descriptors = payload.descriptors
-    if payload.category is not None:
+    # Allow updating category to None (clearing it) or to a new value
+    # We check if the field was provided in the request using model_dump
+    update_data = payload.model_dump(exclude_unset=True)
+    if 'category' in update_data:
         c.category = payload.category
     if payload.order is not None:
         _apply_order(c, payload.order)
