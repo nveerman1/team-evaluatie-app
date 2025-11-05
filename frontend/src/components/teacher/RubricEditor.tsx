@@ -104,9 +104,23 @@ export default function RubricEditor({
   };
 
   const moveCriterion = (idx: number, dir: -1 | 1) => {
+    const item = items[idx];
+    const category = item.category;
+    
+    // Get all items in the same category
+    const categoryIndices = items
+      .map((it, i) => ({ item: it, index: i }))
+      .filter(({ item: it }) => it.category === category);
+    
+    // Find position within category
+    const categoryPos = categoryIndices.findIndex(({ index }) => index === idx);
+    const targetPos = categoryPos + dir;
+    
+    if (targetPos < 0 || targetPos >= categoryIndices.length) return;
+    
+    // Swap within the category
     const newItems = [...items];
-    const targetIdx = idx + dir;
-    if (targetIdx < 0 || targetIdx >= newItems.length) return;
+    const targetIdx = categoryIndices[targetPos].index;
     [newItems[idx], newItems[targetIdx]] = [newItems[targetIdx], newItems[idx]];
     onItemsChange(newItems.map((it, i) => ({ ...it, order: i + 1 })));
   };
@@ -133,7 +147,8 @@ export default function RubricEditor({
     const item = items[draggedIndex];
     if (item.category === targetCategory) return;
     
-    const confirmed = confirm(
+    // Simple confirmation - could be replaced with a custom modal in the future
+    const confirmed = window.confirm(
       `Wil je dit criterium verplaatsen naar "${targetCategory}"?`
     );
     
@@ -332,6 +347,13 @@ function CriterionCard({
           aria-label="Sleep om te verplaatsen"
           role="button"
           tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              // Keyboard drag-drop would require complex state management
+              // For now, users can use the arrow buttons for keyboard reordering
+            }
+          }}
         >
           ⋮⋮
         </span>
