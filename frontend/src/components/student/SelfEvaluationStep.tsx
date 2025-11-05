@@ -84,21 +84,43 @@ export function SelfEvaluationStep({
       {loading ? (
         <div className="text-center py-4 text-gray-500">Laden...</div>
       ) : (
-        <div className="space-y-6">
-          {criteria.map((criterion) => (
-            <RubricRating
-              key={criterion.id}
-              criterion={criterion}
-              value={values[criterion.id] ?? 3}
-              comment={comments[criterion.id] || ""}
-              onChange={(newValue) =>
-                setValues((s) => ({ ...s, [criterion.id]: newValue }))
-              }
-              onCommentChange={(newComment) =>
-                setComments((s) => ({ ...s, [criterion.id]: newComment }))
-              }
-            />
-          ))}
+        <div className="space-y-8">
+          {(() => {
+            // Group criteria by category
+            const grouped = criteria.reduce((acc, c) => {
+              const cat = c.category || "Overig";
+              if (!acc[cat]) acc[cat] = [];
+              acc[cat].push(c);
+              return acc;
+            }, {} as Record<string, Criterion[]>);
+
+            // Render each category with its criteria
+            return Object.entries(grouped).map(([category, categoryCriteria]) => (
+              <div key={category} className="space-y-4">
+                {/* Category header */}
+                <div className="border-b-2 border-gray-300 pb-2">
+                  <h3 className="text-xl font-semibold text-gray-800">{category}</h3>
+                </div>
+                {/* Criteria in this category */}
+                <div className="space-y-6">
+                  {categoryCriteria.map((criterion) => (
+                    <RubricRating
+                      key={criterion.id}
+                      criterion={criterion}
+                      value={values[criterion.id] ?? 3}
+                      comment={comments[criterion.id] || ""}
+                      onChange={(newValue) =>
+                        setValues((s) => ({ ...s, [criterion.id]: newValue }))
+                      }
+                      onCommentChange={(newComment) =>
+                        setComments((s) => ({ ...s, [criterion.id]: newComment }))
+                      }
+                    />
+                  ))}
+                </div>
+              </div>
+            ));
+          })()}
         </div>
       )}
 

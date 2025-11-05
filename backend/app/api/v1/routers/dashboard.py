@@ -25,6 +25,7 @@ from app.api.v1.schemas.dashboard import (
     DashboardRow,
     CriterionMeta,
     CriterionBreakdown,
+    CategoryAverage,
     StudentProgressResponse,
     StudentProgressRow,
     StudentProgressKPIs,
@@ -73,8 +74,16 @@ def dashboard_evaluation(
         .order_by(RubricCriterion.id.asc())
         .all()
     )
-    criteria = [CriterionMeta(id=c.id, name=c.name, weight=c.weight) for c in crit_rows]
+    criteria = [CriterionMeta(id=c.id, name=c.name, weight=c.weight, category=getattr(c, "category", None)) for c in crit_rows]
     crit_ids = {c.id for c in crit_rows}
+    # Build category to criteria mapping
+    category_to_criteria = {}
+    for c in crit_rows:
+        cat = getattr(c, "category", None)
+        if cat:
+            if cat not in category_to_criteria:
+                category_to_criteria[cat] = []
+            category_to_criteria[cat].append(c.id)
 
     # === 2) Get valid student IDs from the evaluation's course ===
     valid_student_ids = set()
@@ -230,6 +239,28 @@ def dashboard_evaluation(
                     )
                 )
 
+        # Calculate category averages
+        category_averages: list[CategoryAverage] = []
+        if category_to_criteria:
+            crit_peers = per_reviewee_crit_peers.get(reviewee_id, {})
+            crit_selfs = per_reviewee_crit_self.get(reviewee_id, {})
+            for cat, crit_ids_in_cat in category_to_criteria.items():
+                # Collect all peer scores for criteria in this category
+                cat_peer_scores = []
+                for cid in crit_ids_in_cat:
+                    cat_peer_scores.extend(crit_peers.get(cid, []))
+                
+                # Collect all self scores for criteria in this category
+                cat_self_scores = [crit_selfs.get(cid) for cid in crit_ids_in_cat if cid in crit_selfs]
+                
+                category_averages.append(
+                    CategoryAverage(
+                        category=cat,
+                        peer_avg=round(_safe_mean(cat_peer_scores), 2) if cat_peer_scores else 0.0,
+                        self_avg=round(_safe_mean(cat_self_scores), 2) if cat_self_scores else None,
+                    )
+                )
+
         items.append(
             DashboardRow(
                 user_id=reviewee_id,
@@ -245,6 +276,7 @@ def dashboard_evaluation(
                 spr=round(spr, 2),
                 suggested_grade=suggested,
                 breakdown=breakdown,
+                category_averages=category_averages,
             )
         )
 

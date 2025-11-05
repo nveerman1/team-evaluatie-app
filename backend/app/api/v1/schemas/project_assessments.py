@@ -174,6 +174,7 @@ class CriterionScore(BaseModel):
     """Score for a specific criterion"""
     criterion_id: int
     criterion_name: str
+    category: Optional[str] = None
     score: Optional[int] = None
     comment: Optional[str] = None
 

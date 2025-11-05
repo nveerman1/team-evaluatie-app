@@ -85,6 +85,7 @@ export type ProjectAssessmentDetailOut = {
     id: number;
     name: string;
     weight: number;
+    category?: string | null;
     descriptors: Record<string, string>;
   }>;
   reflection?: ProjectAssessmentReflectionOut | null;
@@ -138,6 +139,7 @@ export type ProjectAssessmentReflectionsOverview = {
 export type CriterionScore = {
   criterion_id: number;
   criterion_name: string;
+  category?: string | null;
   score?: number | null;
   comment?: string | null;
 };
@@ -172,6 +174,7 @@ export type ProjectAssessmentScoresOverview = {
     id: number;
     name: string;
     weight: number;
+    category?: string | null;
     descriptors: Record<string, string>;
   }>;
   team_scores: TeamScoreOverview[];
@@ -210,6 +213,7 @@ export type ProjectAssessmentStudentsOverview = {
     id: number;
     name: string;
     weight: number;
+    category?: string | null;
     descriptors: Record<string, string>;
   }>;
   student_scores: StudentScoreOverview[];

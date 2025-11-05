@@ -194,6 +194,12 @@ export default function EvaluationDashboardPage() {
           {evalIdNum != null ? (
             <>
               <Link
+                href={`/teacher/evaluations/${evalId}/omza`}
+                className="px-3 py-2 rounded-xl border"
+              >
+                OMZA
+              </Link>
+              <Link
                 href={`/teacher/evaluations/${evalId}/grades`}
                 className="px-3 py-2 rounded-xl border"
               >
@@ -220,6 +226,9 @@ export default function EvaluationDashboardPage() {
             </>
           ) : (
             <>
+              <span className="px-3 py-2 rounded-xl border opacity-60 cursor-not-allowed">
+                OMZA
+              </span>
               <span className="px-3 py-2 rounded-xl border opacity-60 cursor-not-allowed">
                 Cijfers
               </span>

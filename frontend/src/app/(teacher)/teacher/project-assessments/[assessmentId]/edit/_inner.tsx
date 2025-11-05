@@ -302,37 +302,57 @@ export default function EditProjectAssessmentInner() {
           </div>
         </div>
 
-        {/* Categories using RubricRating component */}
-        {data.criteria.map((criterion) => (
-          <RubricRating
-            key={criterion.id}
-            criterionName={criterion.name}
-            criterionId={criterion.id}
-            value={scores[criterion.id]?.score || data.rubric_scale_min}
-            comment={scores[criterion.id]?.comment || ""}
-            scaleMin={data.rubric_scale_min}
-            scaleMax={data.rubric_scale_max}
-            descriptors={criterion.descriptors}
-            onChange={(newScore) => {
-              setScores((prev) => ({
-                ...prev,
-                [criterion.id]: {
-                  score: newScore,
-                  comment: prev[criterion.id]?.comment || "",
-                },
-              }));
-            }}
-            onCommentChange={(newComment) => {
-              setScores((prev) => ({
-                ...prev,
-                [criterion.id]: {
-                  score: prev[criterion.id]?.score || data.rubric_scale_min,
-                  comment: newComment,
-                },
-              }));
-            }}
-          />
-        ))}
+        {/* Criteria grouped by category */}
+        {(() => {
+          // Group criteria by category
+          const grouped = data.criteria.reduce((acc, c) => {
+            const cat = c.category || "Overig";
+            if (!acc[cat]) acc[cat] = [];
+            acc[cat].push(c);
+            return acc;
+          }, {} as Record<string, typeof data.criteria>);
+
+          // Render each category with its criteria
+          return Object.entries(grouped).map(([category, categoryCriteria]) => (
+            <div key={category} className="space-y-4 mb-8">
+              {/* Category header */}
+              <div className="border-b-2 border-gray-300 pb-2">
+                <h3 className="text-xl font-semibold text-gray-800">{category}</h3>
+              </div>
+              {/* Criteria in this category */}
+              {categoryCriteria.map((criterion) => (
+                <RubricRating
+                  key={criterion.id}
+                  criterionName={criterion.name}
+                  criterionId={criterion.id}
+                  value={scores[criterion.id]?.score || data.rubric_scale_min}
+                  comment={scores[criterion.id]?.comment || ""}
+                  scaleMin={data.rubric_scale_min}
+                  scaleMax={data.rubric_scale_max}
+                  descriptors={criterion.descriptors}
+                  onChange={(newScore) => {
+                    setScores((prev) => ({
+                      ...prev,
+                      [criterion.id]: {
+                        score: newScore,
+                        comment: prev[criterion.id]?.comment || "",
+                      },
+                    }));
+                  }}
+                  onCommentChange={(newComment) => {
+                    setScores((prev) => ({
+                      ...prev,
+                      [criterion.id]: {
+                        score: prev[criterion.id]?.score || data.rubric_scale_min,
+                        comment: newComment,
+                      },
+                    }));
+                  }}
+                />
+              ))}
+            </div>
+          ));
+        })()}
 
         {/* General Comment Section */}
         <div className="bg-white border-2 rounded-xl p-5 space-y-3">

@@ -537,33 +537,56 @@ export default function ScoresOverviewInner() {
       {/* Scores Table */}
       <section className="bg-white border rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          {viewMode === "teams" && data && (
+          {viewMode === "teams" && data && (() => {
+            // Group criteria by category
+            const grouped = data.criteria.reduce((acc, c) => {
+              const cat = c.category || "Overig";
+              if (!acc[cat]) acc[cat] = [];
+              acc[cat].push(c);
+              return acc;
+            }, {} as Record<string, typeof data.criteria>);
+            const categories = Object.keys(grouped);
+
+            return (
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
+                {/* Category header row */}
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 sticky left-0 bg-gray-50">
+                  <th rowSpan={2} className="px-4 py-3 text-left text-sm font-medium text-gray-600 sticky left-0 bg-gray-50 border-b">
                     Team
                   </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 min-w-[200px]">
+                  <th rowSpan={2} className="px-4 py-3 text-left text-sm font-medium text-gray-600 min-w-[200px] border-b">
                     Teamleden
                   </th>
+                  {categories.map((category) => (
+                    <th
+                      key={category}
+                      colSpan={grouped[category].length}
+                      className="px-4 py-2 text-center text-sm font-semibold text-gray-700 bg-gray-100 border-l border-r"
+                    >
+                      {category}
+                    </th>
+                  ))}
+                  <th rowSpan={2} className="px-4 py-3 text-center text-sm font-medium text-gray-600 border-b border-l">
+                    Totaal
+                  </th>
+                  <th rowSpan={2} className="px-4 py-3 text-center text-sm font-medium text-gray-600 border-b">
+                    Cijfer
+                  </th>
+                  <th rowSpan={2} className="px-4 py-3 text-left text-sm font-medium text-gray-600 border-b">
+                    Laatst bewerkt
+                  </th>
+                </tr>
+                {/* Criterion header row */}
+                <tr>
                   {data.criteria.map((criterion) => (
                     <th
                       key={criterion.id}
-                      className="px-4 py-3 text-center text-sm font-medium text-gray-600 min-w-[100px]"
+                      className="px-4 py-3 text-center text-xs font-medium text-gray-600 min-w-[100px] border-b"
                     >
                       {criterion.name}
                     </th>
                   ))}
-                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                    Totaal
-                  </th>
-                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                    Cijfer
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
-                    Laatst bewerkt
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -695,39 +718,63 @@ export default function ScoresOverviewInner() {
                 </tr>
               </tfoot>
             )}
-          </table>
-          )}
+            </table>
+            );
+          })()}
 
-          {viewMode === "students" && studentsData && (
+          {viewMode === "students" && studentsData && (() => {
+            // Group criteria by category
+            const grouped = studentsData.criteria.reduce((acc, c) => {
+              const cat = c.category || "Overig";
+              if (!acc[cat]) acc[cat] = [];
+              acc[cat].push(c);
+              return acc;
+            }, {} as Record<string, typeof studentsData.criteria>);
+            const categories = Object.keys(grouped);
+
+            return (
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
+                {/* Category header row */}
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 sticky left-0 bg-gray-50">
+                  <th rowSpan={2} className="px-4 py-3 text-left text-sm font-medium text-gray-600 sticky left-0 bg-gray-50 border-b">
                     Team
                   </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 min-w-[200px]">
+                  <th rowSpan={2} className="px-4 py-3 text-left text-sm font-medium text-gray-600 min-w-[200px] border-b">
                     Leerling
                   </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 min-w-[80px]">
+                  <th rowSpan={2} className="px-4 py-3 text-left text-sm font-medium text-gray-600 min-w-[80px] border-b">
                     Klas
                   </th>
+                  {categories.map((category) => (
+                    <th
+                      key={category}
+                      colSpan={grouped[category].length}
+                      className="px-4 py-2 text-center text-sm font-semibold text-gray-700 bg-gray-100 border-l border-r"
+                    >
+                      {category}
+                    </th>
+                  ))}
+                  <th rowSpan={2} className="px-4 py-3 text-center text-sm font-medium text-gray-600 border-b border-l">
+                    Totaal
+                  </th>
+                  <th rowSpan={2} className="px-4 py-3 text-center text-sm font-medium text-gray-600 border-b">
+                    Cijfer
+                  </th>
+                  <th rowSpan={2} className="px-4 py-3 text-left text-sm font-medium text-gray-600 border-b">
+                    Laatst bewerkt
+                  </th>
+                </tr>
+                {/* Criterion header row */}
+                <tr>
                   {studentsData.criteria.map((criterion) => (
                     <th
                       key={criterion.id}
-                      className="px-4 py-3 text-center text-sm font-medium text-gray-600 min-w-[100px]"
+                      className="px-4 py-3 text-center text-xs font-medium text-gray-600 min-w-[100px] border-b"
                     >
                       {criterion.name}
                     </th>
                   ))}
-                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                    Totaal
-                  </th>
-                  <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                    Cijfer
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
-                    Laatst bewerkt
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -859,7 +906,8 @@ export default function ScoresOverviewInner() {
                 </tfoot>
               )}
             </table>
-          )}
+            );
+          })()}
         </div>
       </section>
 

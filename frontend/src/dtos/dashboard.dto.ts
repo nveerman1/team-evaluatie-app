@@ -1,3 +1,9 @@
+export type CategoryAverage = {
+  category: string;
+  peer_avg: number;
+  self_avg?: number | null;
+};
+
 export type DashboardRow = {
   user_id: number;
   user_name: string;
@@ -7,6 +13,7 @@ export type DashboardRow = {
   gcf: number;
   spr: number;
   suggested_grade: number;
+  category_averages?: CategoryAverage[];
 };
 
 export type DashboardResponse = {
@@ -14,7 +21,7 @@ export type DashboardResponse = {
   rubric_id: number;
   rubric_scale_min: number;
   rubric_scale_max: number;
-  criteria: { id: number; name: string; weight: number }[];
+  criteria: { id: number; name: string; weight: number; category?: string | null }[];
   items: DashboardRow[];
 };
 
