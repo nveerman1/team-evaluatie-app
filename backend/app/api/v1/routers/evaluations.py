@@ -149,6 +149,29 @@ def list_evaluations(
     limit: int = Query(50, ge=1, le=100),
 ):
     stmt = select(Evaluation).where(Evaluation.school_id == user.school_id)
+    
+    # If user is a student, only show evaluations for courses they're enrolled in
+    if user.role == "student":
+        # Get course IDs where student is an active member
+        student_course_ids = (
+            db.query(Group.course_id)
+            .join(GroupMember, GroupMember.group_id == Group.id)
+            .filter(
+                GroupMember.user_id == user.id,
+                GroupMember.active == True,
+                Group.school_id == user.school_id,
+            )
+            .distinct()
+            .all()
+        )
+        course_ids = [cid for (cid,) in student_course_ids]
+        
+        if course_ids:
+            stmt = stmt.where(Evaluation.course_id.in_(course_ids))
+        else:
+            # Student has no courses, return empty list
+            return []
+    
     if q:
         stmt = stmt.where(Evaluation.title.ilike(f"%{q}%"))
     if status_:

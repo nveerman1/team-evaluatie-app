@@ -76,14 +76,43 @@ def dashboard_evaluation(
     criteria = [CriterionMeta(id=c.id, name=c.name, weight=c.weight) for c in crit_rows]
     crit_ids = {c.id for c in crit_rows}
 
-    # === 2) Alle allocations & scores voor deze evaluatie ===
+    # === 2) Get valid student IDs from the evaluation's course ===
+    valid_student_ids = set()
+    if ev.course_id:
+        # Get all active students in groups for this course
+        course_students = (
+            db.query(User.id)
+            .join(GroupMember, GroupMember.user_id == User.id)
+            .join(Group, Group.id == GroupMember.group_id)
+            .filter(
+                User.school_id == user.school_id,
+                User.role == "student",
+                User.archived == False,
+                Group.course_id == ev.course_id,
+                GroupMember.active == True,
+            )
+            .distinct()
+            .all()
+        )
+        valid_student_ids = {s[0] for s in course_students}
+    
+    # === 3) Filter allocations to only include students from the course ===
     allocations = (
         db.query(Allocation)
         .filter(
-            Allocation.school_id == user.school_id, Allocation.evaluation_id == ev.id
+            Allocation.school_id == user.school_id, 
+            Allocation.evaluation_id == ev.id
         )
         .all()
     )
+    
+    # Filter allocations to only include valid students
+    if valid_student_ids:
+        allocations = [
+            a for a in allocations 
+            if a.reviewee_id in valid_student_ids and a.reviewer_id in valid_student_ids
+        ]
+    
     if not allocations:
         return DashboardResponse(
             evaluation_id=ev.id,
@@ -94,9 +123,15 @@ def dashboard_evaluation(
             items=[],
         )
 
-    # Map voor user-info
+    # Map voor user-info - only load valid students
     users = {
-        u.id: u for u in db.query(User).filter(User.school_id == user.school_id).all()
+        u.id: u 
+        for u in db.query(User)
+        .filter(
+            User.school_id == user.school_id,
+            User.id.in_(valid_student_ids) if valid_student_ids else True
+        )
+        .all()
     }
 
     # Aggregatie-bakken
@@ -139,11 +174,11 @@ def dashboard_evaluation(
         if alloc.is_self:
             per_reviewee_self_avg[alloc.reviewee_id] = alloc_avg
 
-    # === 3) Globale gemiddelde voor GCF-berekening ===
+    # === 4) Globale gemiddelde voor GCF-berekening ===
     all_avgs = [_safe_mean(v) for v in per_reviewee_alloc_avgs.values() if v]
     global_avg = _safe_mean(all_avgs)
 
-    # === 4) Opbouw rows ===
+    # === 5) Opbouw rows ===
     items: list[DashboardRow] = []
     for reviewee_id, alloc_avgs in per_reviewee_alloc_avgs.items():
         # splits peers vs self

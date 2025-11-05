@@ -67,7 +67,7 @@ export default function CreateEvaluationPageInner() {
       setLoading(true);
       setError(null);
       try {
-        const rubRes = await api.get<RubricListResponse>("/rubrics");
+        const rubRes = await api.get<RubricListResponse>("/rubrics?scope=peer");
         if (!mounted) return;
 
         const list = Array.isArray(rubRes.data?.items) ? rubRes.data.items : [];

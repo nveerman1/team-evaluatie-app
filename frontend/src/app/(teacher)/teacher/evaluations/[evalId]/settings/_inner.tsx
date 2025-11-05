@@ -67,7 +67,7 @@ export default function EvaluationSettingsPageInner() {
       try {
         const [evRes, rubRes] = await Promise.all([
           api.get<EvaluationOut>(`/evaluations/${evalId}`),
-          api.get<RubricListResponse>(`/rubrics`),
+          api.get<RubricListResponse>(`/rubrics?scope=peer`),
         ]);
 
         if (!mounted) return;
