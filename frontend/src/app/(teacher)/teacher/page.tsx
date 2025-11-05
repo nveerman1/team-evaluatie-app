@@ -62,15 +62,32 @@ export default function TeacherDashboard() {
   // Get upcoming deadlines (evaluations with deadlines in the future)
   const now = new Date();
   const upcomingDeadlines = evaluations
-    .filter((e) => {
+    .map((e) => {
       const reviewDeadline = e.deadlines?.review ? new Date(e.deadlines.review) : null;
       const reflectionDeadline = e.deadlines?.reflection ? new Date(e.deadlines.reflection) : null;
-      return (reviewDeadline && reviewDeadline > now) || (reflectionDeadline && reflectionDeadline > now);
+      
+      // Get the earliest upcoming deadline
+      let nextDeadline = null;
+      let nextDeadlineType = "";
+      
+      if (reviewDeadline && reviewDeadline > now) {
+        nextDeadline = reviewDeadline;
+        nextDeadlineType = "Review";
+      }
+      
+      if (reflectionDeadline && reflectionDeadline > now) {
+        if (!nextDeadline || reflectionDeadline < nextDeadline) {
+          nextDeadline = reflectionDeadline;
+          nextDeadlineType = "Reflectie";
+        }
+      }
+      
+      return { evaluation: e, nextDeadline, nextDeadlineType };
     })
+    .filter((item) => item.nextDeadline !== null)
     .sort((a, b) => {
-      const aDate = a.deadlines?.review || a.deadlines?.reflection || "";
-      const bDate = b.deadlines?.review || b.deadlines?.reflection || "";
-      return aDate.localeCompare(bDate);
+      if (!a.nextDeadline || !b.nextDeadline) return 0;
+      return a.nextDeadline.getTime() - b.nextDeadline.getTime();
     })
     .slice(0, 5);
 
@@ -88,7 +105,8 @@ export default function TeacherDashboard() {
   const getTimeRemaining = (deadline: string | undefined): string => {
     if (!deadline) return "";
     const deadlineDate = new Date(deadline);
-    const diff = deadlineDate.getTime() - now.getTime();
+    const currentTime = new Date();
+    const diff = deadlineDate.getTime() - currentTime.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     if (days < 0) return "Verlopen";
     if (days === 0) return "Vandaag";
@@ -224,26 +242,25 @@ export default function TeacherDashboard() {
         <h2 className="text-xl font-semibold mb-4">📅 Aankomende deadlines</h2>
         {upcomingDeadlines.length > 0 ? (
           <div className="space-y-3">
-            {upcomingDeadlines.map((evaluation) => {
-              const nextDeadline = evaluation.deadlines?.review || evaluation.deadlines?.reflection;
-              const deadlineType = evaluation.deadlines?.review ? "Review" : "Reflectie";
+            {upcomingDeadlines.map((item) => {
+              const deadlineStr = item.nextDeadline?.toISOString();
               return (
                 <div
-                  key={evaluation.id}
+                  key={item.evaluation.id}
                   className="flex items-center justify-between p-4 border rounded-xl"
                 >
                   <div className="flex-1">
-                    <div className="font-medium">{evaluation.title}</div>
+                    <div className="font-medium">{item.evaluation.title}</div>
                     <div className="text-sm text-gray-600">
-                      {deadlineType}: {formatDate(nextDeadline)}
+                      {item.nextDeadlineType}: {formatDate(deadlineStr)}
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-medium text-blue-600">
-                      {getTimeRemaining(nextDeadline)}
+                      {getTimeRemaining(deadlineStr)}
                     </div>
                     <Link
-                      href={`/teacher/evaluations/${evaluation.id}/dashboard`}
+                      href={`/teacher/evaluations/${item.evaluation.id}/dashboard`}
                       className="text-xs text-gray-500 hover:underline"
                     >
                       Bekijk →
