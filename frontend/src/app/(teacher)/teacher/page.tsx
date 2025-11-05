@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { evaluationService, projectAssessmentService, competencyService, rubricService } from "@/services";
+import { evaluationService, projectAssessmentService, competencyService } from "@/services";
 import type { Evaluation } from "@/dtos/evaluation.dto";
 import type { ProjectAssessmentListItem } from "@/dtos/project-assessment.dto";
 import type { CompetencyWindow } from "@/dtos/competency.dto";
-import type { RubricListItem } from "@/dtos/rubric.dto";
 import { Loading, StatusBadge } from "@/components";
 import { formatDate } from "@/utils";
 
@@ -15,7 +14,6 @@ export default function TeacherDashboard() {
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [projectAssessments, setProjectAssessments] = useState<ProjectAssessmentListItem[]>([]);
   const [competencyWindows, setCompetencyWindows] = useState<CompetencyWindow[]>([]);
-  const [recentRubrics, setRecentRubrics] = useState<RubricListItem[]>([]);
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -32,10 +30,6 @@ export default function TeacherDashboard() {
         // Load competency windows
         const windowsData = await competencyService.getWindows("active");
         setCompetencyWindows(Array.isArray(windowsData) ? windowsData : []);
-
-        // Load rubrics
-        const rubricsData = await rubricService.getRubrics();
-        setRecentRubrics(rubricsData?.items?.slice(0, 5) || []);
       } catch (error) {
         console.error("Error loading dashboard data:", error);
       } finally {
@@ -128,16 +122,16 @@ export default function TeacherDashboard() {
         <h2 className="text-xl font-semibold mb-4">🧩 Snelle acties</h2>
         <div className="flex flex-wrap gap-3">
           <Link
-            href="/teacher/evaluations/create"
+            href="/teacher/project-assessments/create"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-black text-white hover:opacity-90"
           >
-            ➕ Nieuwe evaluatie
+            ➕ Nieuwe projectbeoordeling
           </Link>
           <Link
-            href="/teacher/rubrics/create"
+            href="/teacher/evaluations/create"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-800 text-white hover:opacity-90"
           >
-            ➕ Nieuwe rubric
+            ➕ Nieuwe peerevaluatie
           </Link>
           <Link
             href="/teacher/competencies/windows/create"
@@ -146,12 +140,56 @@ export default function TeacherDashboard() {
             ➕ Nieuw competentievenster
           </Link>
           <Link
-            href="/teacher/project-assessments/create"
+            href="/teacher/rubrics/create"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-600 text-white hover:opacity-90"
           >
-            ➕ Nieuwe projectbeoordeling
+            ➕ Nieuwe peer rubric
+          </Link>
+          <Link
+            href="/teacher/rubrics/create"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-500 text-white hover:opacity-90"
+          >
+            ➕ Nieuwe project rubric
           </Link>
         </div>
+      </section>
+
+      {/* Upcoming Deadlines */}
+      <section className="bg-white border rounded-2xl p-6">
+        <h2 className="text-xl font-semibold mb-4">📅 Aankomende deadlines</h2>
+        {upcomingDeadlines.length > 0 ? (
+          <div className="space-y-3">
+            {upcomingDeadlines.map((item) => {
+              const deadlineStr = item.nextDeadline?.toISOString();
+              return (
+                <div
+                  key={item.evaluation.id}
+                  className="flex items-center justify-between p-4 border rounded-xl"
+                >
+                  <div className="flex-1">
+                    <div className="font-medium">{item.evaluation.title}</div>
+                    <div className="text-sm text-gray-600">
+                      {item.nextDeadlineType}: {formatDate(deadlineStr)}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-blue-600">
+                      {getTimeRemaining(deadlineStr)}
+                    </div>
+                    <Link
+                      href={`/teacher/evaluations/${item.evaluation.id}/dashboard`}
+                      className="text-xs text-gray-500 hover:underline"
+                    >
+                      Bekijk →
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-gray-500 text-center py-8">Geen aankomende deadlines.</p>
+        )}
       </section>
 
       {/* Active Evaluations */}
@@ -234,44 +272,6 @@ export default function TeacherDashboard() {
           </div>
         ) : (
           <p className="text-gray-500 text-center py-8">Geen actieve evaluaties.</p>
-        )}
-      </section>
-
-      {/* Upcoming Deadlines */}
-      <section className="bg-white border rounded-2xl p-6">
-        <h2 className="text-xl font-semibold mb-4">📅 Aankomende deadlines</h2>
-        {upcomingDeadlines.length > 0 ? (
-          <div className="space-y-3">
-            {upcomingDeadlines.map((item) => {
-              const deadlineStr = item.nextDeadline?.toISOString();
-              return (
-                <div
-                  key={item.evaluation.id}
-                  className="flex items-center justify-between p-4 border rounded-xl"
-                >
-                  <div className="flex-1">
-                    <div className="font-medium">{item.evaluation.title}</div>
-                    <div className="text-sm text-gray-600">
-                      {item.nextDeadlineType}: {formatDate(deadlineStr)}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-blue-600">
-                      {getTimeRemaining(deadlineStr)}
-                    </div>
-                    <Link
-                      href={`/teacher/evaluations/${item.evaluation.id}/dashboard`}
-                      className="text-xs text-gray-500 hover:underline"
-                    >
-                      Bekijk →
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="text-gray-500 text-center py-8">Geen aankomende deadlines.</p>
         )}
       </section>
 
@@ -370,39 +370,7 @@ export default function TeacherDashboard() {
         )}
       </section>
 
-      {/* Rubrics & Templates */}
-      <section className="bg-white border rounded-2xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">📋 Snelle toegang tot templates</h2>
-          <Link
-            href="/teacher/rubrics"
-            className="text-sm text-blue-600 hover:underline"
-          >
-            Bekijk alle →
-          </Link>
-        </div>
-        {recentRubrics.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {recentRubrics.map((rubric) => (
-              <Link
-                key={rubric.id}
-                href={`/teacher/rubrics/${rubric.id}`}
-                className="p-4 border rounded-xl hover:bg-gray-50 transition-colors"
-              >
-                <div className="font-medium mb-1">{rubric.title}</div>
-                <div className="text-sm text-gray-600">
-                  {rubric.description || "Geen beschrijving"}
-                </div>
-                <div className="text-xs text-gray-500 mt-2">
-                  {rubric.criteria_count} criteria • Scope: {rubric.scope}
-                </div>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <p className="text-gray-500 text-center py-8">Geen rubrics gevonden.</p>
-        )}
-      </section>
+
     </main>
   );
 }
