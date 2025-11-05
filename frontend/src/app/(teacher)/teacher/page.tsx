@@ -28,7 +28,7 @@ export default function TeacherDashboard() {
         setProjectAssessments(projectsData?.items || []);
 
         // Load competency windows
-        const windowsData = await competencyService.getWindows("active");
+        const windowsData = await competencyService.getWindows("open");
         setCompetencyWindows(Array.isArray(windowsData) ? windowsData : []);
       } catch (error) {
         console.error("Error loading dashboard data:", error);
