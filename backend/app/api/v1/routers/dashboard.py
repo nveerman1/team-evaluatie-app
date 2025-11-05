@@ -2,11 +2,11 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
+
 from statistics import mean
 from io import StringIO
 import csv
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import (
@@ -87,32 +87,32 @@ def dashboard_evaluation(
             .filter(
                 User.school_id == user.school_id,
                 User.role == "student",
-                User.archived == False,
+                User.archived.is_(False),
                 Group.course_id == ev.course_id,
-                GroupMember.active == True,
+                GroupMember.active.is_(True),
             )
             .distinct()
             .all()
         )
         valid_student_ids = {s[0] for s in course_students}
-    
+
     # === 3) Filter allocations to only include students from the course ===
     allocations = (
         db.query(Allocation)
         .filter(
-            Allocation.school_id == user.school_id, 
-            Allocation.evaluation_id == ev.id
+            Allocation.school_id == user.school_id, Allocation.evaluation_id == ev.id
         )
         .all()
     )
-    
+
     # Filter allocations to only include valid students
     if valid_student_ids:
         allocations = [
-            a for a in allocations 
+            a
+            for a in allocations
             if a.reviewee_id in valid_student_ids and a.reviewer_id in valid_student_ids
         ]
-    
+
     if not allocations:
         return DashboardResponse(
             evaluation_id=ev.id,
@@ -125,11 +125,11 @@ def dashboard_evaluation(
 
     # Map voor user-info - only load valid students
     users = {
-        u.id: u 
+        u.id: u
         for u in db.query(User)
         .filter(
             User.school_id == user.school_id,
-            User.id.in_(valid_student_ids) if valid_student_ids else True
+            User.id.in_(valid_student_ids) if valid_student_ids else True,
         )
         .all()
     }
@@ -314,7 +314,9 @@ def dashboard_export_csv(
     )
 
 
-@router.get("/evaluation/{evaluation_id}/progress", response_model=StudentProgressResponse)
+@router.get(
+    "/evaluation/{evaluation_id}/progress", response_model=StudentProgressResponse
+)
 def get_student_progress(
     evaluation_id: int,
     db: Session = Depends(get_db),
@@ -354,27 +356,34 @@ def get_student_progress(
             .filter(
                 User.school_id == user.school_id,
                 User.role == "student",
-                User.archived == False,
+                User.archived.is_(False),
                 Group.course_id == ev.course_id,
-                GroupMember.active == True,
+                GroupMember.active.is_(True),
             )
             .distinct()
             .all()
         )
         student_ids = {s[0] for s in course_students}
-    
+
     # Also include any students who have allocations (in case they're not in groups)
     for alloc in allocations:
         student_ids.add(alloc.reviewee_id)
         student_ids.add(alloc.reviewer_id)
 
     # Get user information
-    users = {
-        u.id: u
-        for u in db.query(User)
-        .filter(User.id.in_(student_ids) if student_ids else False, User.school_id == user.school_id)
-        .all()
-    } if student_ids else {}
+    users = (
+        {
+            u.id: u
+            for u in db.query(User)
+            .filter(
+                User.id.in_(student_ids) if student_ids else False,
+                User.school_id == user.school_id,
+            )
+            .all()
+        }
+        if student_ids
+        else {}
+    )
 
     # Calculate progress for each student
     items = []
@@ -410,6 +419,7 @@ def get_student_progress(
         valid_teammate_ids = set()
         if student.team_number is not None:
             from app.api.v1.routers.allocations import _select_members_for_course
+
             teammates = _select_members_for_course(
                 db,
                 school_id=user.school_id,
@@ -419,14 +429,19 @@ def get_student_progress(
             valid_teammate_ids = set(teammates)
             # Remove self from teammates
             valid_teammate_ids.discard(student_id)
-        
+
         # Peer reviews given (as reviewer) - only count allocations for valid teammates
         peer_allocations_given = [
-            a for a in allocations 
-            if a.reviewer_id == student_id and not a.is_self and a.reviewee_id in valid_teammate_ids
+            a
+            for a in allocations
+            if a.reviewer_id == student_id
+            and not a.is_self
+            and a.reviewee_id in valid_teammate_ids
         ]
         peer_reviews_given = 0
-        peer_reviews_given_expected = len(valid_teammate_ids)  # Expected is number of valid teammates
+        peer_reviews_given_expected = len(
+            valid_teammate_ids
+        )  # Expected is number of valid teammates
         for alloc in peer_allocations_given:
             scores = (
                 db.query(Score)
@@ -440,11 +455,16 @@ def get_student_progress(
 
         # Peer reviews received (as reviewee) - only count allocations from valid teammates
         peer_allocations_received = [
-            a for a in allocations 
-            if a.reviewee_id == student_id and not a.is_self and a.reviewer_id in valid_teammate_ids
+            a
+            for a in allocations
+            if a.reviewee_id == student_id
+            and not a.is_self
+            and a.reviewer_id in valid_teammate_ids
         ]
         peer_reviews_received = 0
-        peer_reviews_expected = len(valid_teammate_ids)  # Expected is number of valid teammates
+        peer_reviews_expected = len(
+            valid_teammate_ids
+        )  # Expected is number of valid teammates
         for alloc in peer_allocations_received:
             scores = (
                 db.query(Score)
@@ -499,7 +519,9 @@ def get_student_progress(
 
         # Get last score timestamp
         student_allocations = [
-            a for a in allocations if a.reviewer_id == student_id or a.reviewee_id == student_id
+            a
+            for a in allocations
+            if a.reviewer_id == student_id or a.reviewee_id == student_id
         ]
         for alloc in student_allocations:
             scores = (
@@ -516,37 +538,43 @@ def get_student_progress(
 
         # Enhanced flags system
         flags = []
-        
+
         # Flag 1: Low progress
         if total_progress_percent < 30:
             flags.append("low_progress")
-        
+
         # Flag 2: No activity (no last_activity or > 7 days old)
         if not last_activity:
             flags.append("no_activity")
         else:
             # Handle timezone-aware or naive datetime comparison
             current_time = datetime.now()
-            if hasattr(last_activity, 'replace'):
+            if hasattr(last_activity, "replace"):
                 # Make both timezone-naive for safe comparison
-                last_activity_naive = last_activity.replace(tzinfo=None) if last_activity.tzinfo else last_activity
+                last_activity_naive = (
+                    last_activity.replace(tzinfo=None)
+                    if last_activity.tzinfo
+                    else last_activity
+                )
                 days_since_activity = (current_time - last_activity_naive).days
             else:
                 days_since_activity = (current_time - last_activity).days
-            
+
             if days_since_activity > 7:
                 flags.append("inactive_7days")
-        
+
         # Flag 3: Missing peer reviews (less than 50% received)
         if peer_reviews_expected > 0:
-            peer_review_percentage = (peer_reviews_received / peer_reviews_expected) * 100
+            peer_review_percentage = (
+                peer_reviews_received / peer_reviews_expected
+            ) * 100
             if peer_review_percentage < 50:
                 flags.append("missing_peer_reviews")
-        
+
         # Flag 4: Self-assessment not started
         if self_assessment_status == "not_started":
             flags.append("no_self_assessment")
-        
+
         # Flag 5: No reflection submitted
         if reflection_status == "not_started":
             flags.append("no_reflection")
@@ -617,15 +645,15 @@ def get_dashboard_kpis(
             .filter(
                 User.school_id == user.school_id,
                 User.role == "student",
-                User.archived == False,
+                User.archived.is_(False),
                 Group.course_id == ev.course_id,
-                GroupMember.active == True,
+                GroupMember.active.is_(True),
             )
             .distinct()
             .all()
         )
         student_ids = {s[0] for s in course_students}
-    
+
     # Also include any students who have allocations (in case they're not in groups)
     for alloc in allocations:
         student_ids.add(alloc.reviewee_id)
@@ -782,7 +810,7 @@ def send_evaluation_reminders(
 
     # TODO: Implement actual email sending here
     # For now, we'll just return the list of students who would receive reminders
-    
+
     # Prepare reminder details
     reminders_sent = []
     for student in students_needing_reminders:
@@ -828,4 +856,3 @@ def send_evaluation_reminders(
         "students": reminders_sent,
         "message": f"{len(reminders_sent)} herinnering(en) verzonden (simulatie - email functionaliteit nog niet geïmplementeerd)",
     }
-
