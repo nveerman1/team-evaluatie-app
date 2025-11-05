@@ -172,8 +172,10 @@ export default function RubricEditor({
     
     items.forEach((item, index) => {
       const cat = item.category || "";
-      if (!grouped[cat]) grouped[cat] = [];
-      grouped[cat].push({ ...item, index });
+      // Only add to grouped if category exists in our predefined categories
+      if (grouped[cat]) {
+        grouped[cat].push({ ...item, index });
+      }
     });
     
     return grouped;
@@ -343,17 +345,9 @@ function CriterionCard({
       {/* Top Row: Title, Weight, Actions */}
       <div className="flex items-center gap-3">
         <span
-          className="cursor-move text-gray-400 text-lg"
-          aria-label="Sleep om te verplaatsen"
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              // Keyboard drag-drop would require complex state management
-              // For now, users can use the arrow buttons for keyboard reordering
-            }
-          }}
+          className="cursor-move text-gray-400 text-lg select-none"
+          aria-hidden="true"
+          title="Sleep om te verplaatsen tussen categorieën"
         >
           ⋮⋮
         </span>
@@ -373,9 +367,10 @@ function CriterionCard({
             min="0"
             className="w-20 border rounded-lg px-2 py-2"
             value={Number.isFinite(item.weight) ? item.weight : 0}
-            onChange={(e) =>
-              onUpdate(index, { weight: e.target.valueAsNumber || 0 })
-            }
+            onChange={(e) => {
+              const value = e.target.valueAsNumber;
+              onUpdate(index, { weight: Number.isNaN(value) ? 0 : value });
+            }}
             aria-label="Weging"
           />
         </label>
