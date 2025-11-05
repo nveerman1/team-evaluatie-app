@@ -124,8 +124,8 @@ export default function EvaluationDashboardPage() {
                 : 0;
           break;
         case "peer_reviews":
-          aVal = a.peer_reviews_received;
-          bVal = b.peer_reviews_received;
+          aVal = a.peer_reviews_given;
+          bVal = b.peer_reviews_given;
           break;
         case "reflection":
           aVal = a.reflection_status === "completed" ? 1 : 0;
@@ -394,8 +394,8 @@ export default function EvaluationDashboardPage() {
                           {getStatusIcon(student.self_assessment_status)}
                         </td>
                         <td className="px-4 py-3 text-center text-sm">
-                          {student.peer_reviews_received}/
-                          {student.peer_reviews_expected}
+                          {student.peer_reviews_given}/
+                          {student.peer_reviews_given_expected}
                         </td>
                         <td className="px-4 py-3 text-center text-lg">
                           {getStatusIcon(student.reflection_status)}

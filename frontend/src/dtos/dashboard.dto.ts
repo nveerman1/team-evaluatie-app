@@ -53,6 +53,7 @@ export type StudentProgressRow = {
   team_number?: number | null;
   self_assessment_status: "completed" | "partial" | "not_started";
   peer_reviews_given: number;
+  peer_reviews_given_expected: number;
   peer_reviews_received: number;
   peer_reviews_expected: number;
   reflection_status: "completed" | "not_started";

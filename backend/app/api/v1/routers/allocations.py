@@ -108,6 +108,7 @@ def _select_members_for_course(
             User.school_id == school_id,
             User.role == "student",
             User.archived.is_(False),
+            GroupMember.active.is_(True),  # Only active group memberships
             Group.school_id == school_id,
             Group.course_id == course_id,
         )
@@ -150,6 +151,20 @@ def _has_access_to_evaluation(db: Session, evaluation_id: int, user_id: int) -> 
     return is_member
 
 
+def _fetch_allocation_rows(db: Session, evaluation_id: int, reviewer_id: int):
+    """Helper to fetch allocation rows for a given reviewer and evaluation."""
+    return (
+        db.query(Allocation, User)
+        .join(User, User.id == Allocation.reviewee_id)
+        .filter(
+            Allocation.evaluation_id == evaluation_id,
+            Allocation.reviewer_id == reviewer_id,
+        )
+        .order_by(Allocation.is_self.desc(), User.name.asc())
+        .all()
+    )
+
+
 # ---------------------------
 # Routes
 # ---------------------------
@@ -167,7 +182,8 @@ def auto_allocate(
     - Filter op team_number (User.team_number) of expliciet group_id(s)
     - include_self=True → self-alloc per student (wizard stap 1)
     - peers_per_student:
-        - None of >= team_size-1 → iedereen beoordeelt alle peers (geen self) (wizard stap 2)
+        - None → iedereen beoordeelt alle peers binnen hun groep
+        - 0 → geen peer-allocaties
         - k → round-robin k peers per student (geen self)
     """
     ev = _get_eval_or_404(db, payload.evaluation_id)
@@ -184,54 +200,93 @@ def auto_allocate(
     elif payload.group_id:
         target_group_ids = [payload.group_id]
 
-    members = _select_members_for_course(
-        db,
-        school_id=school_id,
-        course_id=ev.course_id,
-        team_number=payload.team_number,
-        group_ids=target_group_ids or None,
-    )
-
-    print(
-        f"[AUTO_ALLOC] eval={ev.id} course={ev.course_id} team={payload.team_number} "
-        f"group_ids={target_group_ids or None} members={members}"
-    )
-
-    if len(members) == 0:
-        raise HTTPException(400, "Geen teamleden gevonden voor deze selectie")
-    if len(members) < 2 and (
-        payload.peers_per_student is None or payload.peers_per_student > 0
-    ):
-        # bij peers heb je minimaal 2 nodig
-        raise HTTPException(400, "Te weinig teamleden (minimaal 2)")
-
-    # self
-    if payload.include_self:
-        for u in members:
-            _ensure_allocation(db, school_id, ev.id, u, u, True)
-
-    # peers
-    n = len(members)
-    if n >= 2:
+    # Helper functie om allocaties binnen een groep te maken
+    def allocate_within(ids: List[int]):
+        # self
+        if payload.include_self:
+            for u in ids:
+                _ensure_allocation(db, school_id, ev.id, u, u, True)
+        # peers
+        n = len(ids)
         k = payload.peers_per_student
-        if not k or k >= (n - 1):
-            for r in members:
-                for e in members:
-                    if r != e:
-                        _ensure_allocation(db, school_id, ev.id, r, e, False)
-        else:
-            for r, e in _round_robin_k_peers(members, int(k)):
-                _ensure_allocation(db, school_id, ev.id, r, e, False)
+        if k is None:
+            # Default: iedereen beoordeelt alle peers
+            k = n - (0 if payload.include_self else 1)
+        if k == 0:
+            pass  # geen peer-allocaties
+        elif n >= 2:
+            if k >= (n - 1):
+                for r in ids:
+                    for e in ids:
+                        if r != e:
+                            _ensure_allocation(db, school_id, ev.id, r, e, False)
+            else:
+                for r, e in _round_robin_k_peers(ids, int(k)):
+                    _ensure_allocation(db, school_id, ev.id, r, e, False)
 
-    db.commit()
-    return {
-        "status": "ok",
-        "evaluation_id": ev.id,
-        "course_id": ev.course_id,
-        "team_number": payload.team_number,
-        "group_ids": target_group_ids or None,
-        "members": members,
-    }
+    # Als geen expliciete scope is gegeven, alloceer per groep
+    if payload.team_number is None and not target_group_ids:
+        # geen expliciete scope → per group alloceren
+        group_ids_in_course = [
+            gid for (gid,) in db.query(Group.id)
+            .filter(Group.school_id == school_id, Group.course_id == ev.course_id)
+            .all()
+        ]
+        if not group_ids_in_course:
+            raise HTTPException(400, "Geen groepen gevonden voor deze evaluatie")
+
+        all_members = []
+        for gid in group_ids_in_course:
+            ids = _select_members_for_course(
+                db, school_id=school_id, course_id=ev.course_id, group_ids=[gid]
+            )
+            if ids:
+                allocate_within(ids)
+                all_members.extend(ids)
+
+        db.commit()
+        return {
+            "status": "ok",
+            "evaluation_id": ev.id,
+            "course_id": ev.course_id,
+            "team_number": None,
+            "group_ids": group_ids_in_course,
+            "members": all_members,
+        }
+    else:
+        # bestaand gedrag voor expliciete team_number/group_ids
+        members = _select_members_for_course(
+            db,
+            school_id=school_id,
+            course_id=ev.course_id,
+            team_number=payload.team_number,
+            group_ids=target_group_ids or None,
+        )
+
+        print(
+            f"[AUTO_ALLOC] eval={ev.id} course={ev.course_id} team={payload.team_number} "
+            f"group_ids={target_group_ids or None} members={members}"
+        )
+
+        if len(members) == 0:
+            raise HTTPException(400, "Geen teamleden gevonden voor deze selectie")
+        if len(members) < 2 and (
+            payload.peers_per_student is None or payload.peers_per_student > 0
+        ):
+            # bij peers heb je minimaal 2 nodig
+            raise HTTPException(400, "Te weinig teamleden (minimaal 2)")
+
+        allocate_within(members)
+
+        db.commit()
+        return {
+            "status": "ok",
+            "evaluation_id": ev.id,
+            "course_id": ev.course_id,
+            "team_number": payload.team_number,
+            "group_ids": target_group_ids or None,
+            "members": members,
+        }
 
 
 @router.get("/my", response_model=List[MyAllocationOut])
@@ -244,31 +299,67 @@ def my_allocations(
     Alle allocations voor de ingelogde student (als reviewer) binnen deze evaluatie.
     Als er nog geen self-allocation bestaat maar de student hoort bij de course,
     wordt de self-allocation aangemaakt.
+    Ook worden peer-allocations automatisch aangemaakt voor alle teamgenoten.
     """
     ev = _get_eval_or_404(db, evaluation_id)
 
-    rows = (
-        db.query(Allocation, User)
-        .join(User, User.id == Allocation.reviewee_id)
-        .filter(
-            Allocation.evaluation_id == evaluation_id,
-            Allocation.reviewer_id == user.id,
-        )
-        .order_by(Allocation.is_self.desc(), User.name.asc())
-        .all()
-    )
+    rows = _fetch_allocation_rows(db, evaluation_id, user.id)
 
     has_self = any(alloc.is_self for alloc, _ in rows)
-    if not has_self and _has_access_to_evaluation(db, evaluation_id, user.id):
+    has_access = _has_access_to_evaluation(db, evaluation_id, user.id)
+    
+    # Compute valid teammate IDs for filtering and creating allocations
+    valid_teammate_ids = set()
+    if has_access:
         school_id = getattr(ev, "school_id", None) or getattr(user, "school_id", None)
         if school_id is None:
             raise HTTPException(500, "school_id ontbreekt op evaluatie/gebruiker")
-        self_alloc = _ensure_allocation(
-            db, school_id, evaluation_id, user.id, user.id, True
-        )
-        db.commit()
-        db.refresh(self_alloc)
-        rows = [(self_alloc, user)] + rows
+        
+        # Find teammates with same course AND same team_number
+        # Use User.team_number as the source of truth for team membership
+        if user.team_number is not None:
+            teammates = _select_members_for_course(
+                db,
+                school_id=school_id,
+                course_id=ev.course_id,
+                team_number=user.team_number,
+            )
+            
+            valid_teammate_ids = set(teammates)
+        
+        needs_commit = False
+        
+        # Create self-allocation if missing
+        if not has_self:
+            self_alloc = _ensure_allocation(
+                db, school_id, evaluation_id, user.id, user.id, True
+            )
+            needs_commit = True
+        
+        # Create peer allocations for valid teammates not yet allocated
+        if valid_teammate_ids:
+            # Get existing peer allocation reviewee IDs to avoid duplicates
+            existing_reviewee_ids = {alloc.reviewee_id for alloc, _ in rows if not alloc.is_self}
+            
+            # Create peer allocations for teammates not yet allocated
+            for teammate_id in valid_teammate_ids:
+                if teammate_id != user.id and teammate_id not in existing_reviewee_ids:
+                    _ensure_allocation(
+                        db, school_id, evaluation_id, user.id, teammate_id, False
+                    )
+                    needs_commit = True
+        
+        # Commit all changes and re-fetch if anything was created
+        if needs_commit:
+            db.commit()
+            rows = _fetch_allocation_rows(db, evaluation_id, user.id)
+    
+    # Filter rows: keep self-allocation and peer allocations for valid teammates only
+    # This filters out any old allocations that don't match the current team criteria
+    filtered_rows = [
+        (alloc, reviewee) for alloc, reviewee in rows
+        if alloc.is_self or alloc.reviewee_id in valid_teammate_ids
+    ]
 
     crit_ids: List[int] = [
         c.id
@@ -284,7 +375,7 @@ def my_allocations(
     total_criteria = len(crit_ids)
 
     out: List[MyAllocationOut] = []
-    for alloc, reviewee in rows:
+    for alloc, reviewee in filtered_rows:
         scored_count = (
             db.query(func.count(Score.id))
             .filter(Score.allocation_id == alloc.id)

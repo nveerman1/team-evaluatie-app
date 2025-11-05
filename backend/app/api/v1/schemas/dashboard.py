@@ -45,6 +45,7 @@ class StudentProgressRow(BaseModel):
     team_number: Optional[int] = None
     self_assessment_status: str  # "completed", "partial", "not_started"
     peer_reviews_given: int
+    peer_reviews_given_expected: int
     peer_reviews_received: int
     peer_reviews_expected: int
     reflection_status: str  # "completed", "not_started"
