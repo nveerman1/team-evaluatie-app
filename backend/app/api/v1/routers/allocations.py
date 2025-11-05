@@ -181,7 +181,8 @@ def auto_allocate(
     - Filter op team_number (User.team_number) of expliciet group_id(s)
     - include_self=True → self-alloc per student (wizard stap 1)
     - peers_per_student:
-        - None of >= team_size-1 → iedereen beoordeelt alle peers (geen self) (wizard stap 2)
+        - None → iedereen beoordeelt alle peers binnen hun groep
+        - 0 → geen peer-allocaties
         - k → round-robin k peers per student (geen self)
     """
     ev = _get_eval_or_404(db, payload.evaluation_id)
@@ -198,54 +199,93 @@ def auto_allocate(
     elif payload.group_id:
         target_group_ids = [payload.group_id]
 
-    members = _select_members_for_course(
-        db,
-        school_id=school_id,
-        course_id=ev.course_id,
-        team_number=payload.team_number,
-        group_ids=target_group_ids or None,
-    )
-
-    print(
-        f"[AUTO_ALLOC] eval={ev.id} course={ev.course_id} team={payload.team_number} "
-        f"group_ids={target_group_ids or None} members={members}"
-    )
-
-    if len(members) == 0:
-        raise HTTPException(400, "Geen teamleden gevonden voor deze selectie")
-    if len(members) < 2 and (
-        payload.peers_per_student is None or payload.peers_per_student > 0
-    ):
-        # bij peers heb je minimaal 2 nodig
-        raise HTTPException(400, "Te weinig teamleden (minimaal 2)")
-
-    # self
-    if payload.include_self:
-        for u in members:
-            _ensure_allocation(db, school_id, ev.id, u, u, True)
-
-    # peers
-    n = len(members)
-    if n >= 2:
+    # Helper functie om allocaties binnen een groep te maken
+    def allocate_within(ids: List[int]):
+        # self
+        if payload.include_self:
+            for u in ids:
+                _ensure_allocation(db, school_id, ev.id, u, u, True)
+        # peers
+        n = len(ids)
         k = payload.peers_per_student
-        if not k or k >= (n - 1):
-            for r in members:
-                for e in members:
-                    if r != e:
-                        _ensure_allocation(db, school_id, ev.id, r, e, False)
-        else:
-            for r, e in _round_robin_k_peers(members, int(k)):
-                _ensure_allocation(db, school_id, ev.id, r, e, False)
+        if k is None:
+            # Default: iedereen beoordeelt alle peers
+            k = n - (0 if payload.include_self else 1)
+        if k == 0:
+            pass  # geen peer-allocaties
+        elif n >= 2:
+            if k >= (n - 1):
+                for r in ids:
+                    for e in ids:
+                        if r != e:
+                            _ensure_allocation(db, school_id, ev.id, r, e, False)
+            else:
+                for r, e in _round_robin_k_peers(ids, int(k)):
+                    _ensure_allocation(db, school_id, ev.id, r, e, False)
 
-    db.commit()
-    return {
-        "status": "ok",
-        "evaluation_id": ev.id,
-        "course_id": ev.course_id,
-        "team_number": payload.team_number,
-        "group_ids": target_group_ids or None,
-        "members": members,
-    }
+    # Als geen expliciete scope is gegeven, alloceer per groep
+    if payload.team_number is None and not target_group_ids:
+        # geen expliciete scope → per group alloceren
+        group_ids_in_course = [
+            gid for (gid,) in db.query(Group.id)
+            .filter(Group.school_id == school_id, Group.course_id == ev.course_id)
+            .all()
+        ]
+        if not group_ids_in_course:
+            raise HTTPException(400, "Geen groepen gevonden voor deze evaluatie")
+
+        all_members = []
+        for gid in group_ids_in_course:
+            ids = _select_members_for_course(
+                db, school_id=school_id, course_id=ev.course_id, group_ids=[gid]
+            )
+            if ids:
+                allocate_within(ids)
+                all_members.extend(ids)
+
+        db.commit()
+        return {
+            "status": "ok",
+            "evaluation_id": ev.id,
+            "course_id": ev.course_id,
+            "team_number": None,
+            "group_ids": group_ids_in_course,
+            "members": all_members,
+        }
+    else:
+        # bestaand gedrag voor expliciete team_number/group_ids
+        members = _select_members_for_course(
+            db,
+            school_id=school_id,
+            course_id=ev.course_id,
+            team_number=payload.team_number,
+            group_ids=target_group_ids or None,
+        )
+
+        print(
+            f"[AUTO_ALLOC] eval={ev.id} course={ev.course_id} team={payload.team_number} "
+            f"group_ids={target_group_ids or None} members={members}"
+        )
+
+        if len(members) == 0:
+            raise HTTPException(400, "Geen teamleden gevonden voor deze selectie")
+        if len(members) < 2 and (
+            payload.peers_per_student is None or payload.peers_per_student > 0
+        ):
+            # bij peers heb je minimaal 2 nodig
+            raise HTTPException(400, "Te weinig teamleden (minimaal 2)")
+
+        allocate_within(members)
+
+        db.commit()
+        return {
+            "status": "ok",
+            "evaluation_id": ev.id,
+            "course_id": ev.course_id,
+            "team_number": payload.team_number,
+            "group_ids": target_group_ids or None,
+            "members": members,
+        }
 
 
 @router.get("/my", response_model=List[MyAllocationOut])
