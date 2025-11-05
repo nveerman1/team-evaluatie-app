@@ -706,7 +706,7 @@ def get_assessment_scores_overview(
     ).order_by(RubricCriterion.id.asc()).all()
     
     criteria_list = [
-        {"id": c.id, "name": c.name, "weight": c.weight, "descriptors": c.descriptors}
+        {"id": c.id, "name": c.name, "weight": c.weight, "category": getattr(c, "category", None), "descriptors": c.descriptors}
         for c in criteria
     ]
     
@@ -893,7 +893,7 @@ def get_assessment_students_overview(
     ).order_by(RubricCriterion.id.asc()).all()
     
     criteria_list = [
-        {"id": c.id, "name": c.name, "weight": c.weight, "descriptors": c.descriptors}
+        {"id": c.id, "name": c.name, "weight": c.weight, "category": getattr(c, "category", None), "descriptors": c.descriptors}
         for c in criteria
     ]
     

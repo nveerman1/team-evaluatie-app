@@ -174,6 +174,7 @@ export type ProjectAssessmentScoresOverview = {
     id: number;
     name: string;
     weight: number;
+    category?: string | null;
     descriptors: Record<string, string>;
   }>;
   team_scores: TeamScoreOverview[];
@@ -212,6 +213,7 @@ export type ProjectAssessmentStudentsOverview = {
     id: number;
     name: string;
     weight: number;
+    category?: string | null;
     descriptors: Record<string, string>;
   }>;
   student_scores: StudentScoreOverview[];
