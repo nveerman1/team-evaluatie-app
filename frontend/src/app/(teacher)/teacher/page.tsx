@@ -50,12 +50,12 @@ export default function TeacherDashboard() {
 
   // Filter evaluations by status
   const activeEvaluations = evaluations.filter((e) => e.status === "open");
-  const draftEvaluations = evaluations.filter((e) => e.status === "draft");
-  const closedEvaluations = evaluations.filter((e) => e.status === "closed");
 
   // Get upcoming deadlines (evaluations with deadlines in the future)
   const now = new Date();
-  const upcomingDeadlines = evaluations
+  
+  // Collect deadlines from evaluations
+  const evaluationDeadlines = evaluations
     .map((e) => {
       const reviewDeadline = e.deadlines?.review ? new Date(e.deadlines.review) : null;
       const reflectionDeadline = e.deadlines?.reflection ? new Date(e.deadlines.reflection) : null;
@@ -76,9 +76,39 @@ export default function TeacherDashboard() {
         }
       }
       
-      return { evaluation: e, nextDeadline, nextDeadlineType };
+      return { 
+        type: "evaluation" as const,
+        id: e.id,
+        title: e.title, 
+        nextDeadline, 
+        nextDeadlineType,
+        link: `/teacher/evaluations/${e.id}/dashboard`
+      };
     })
-    .filter((item) => item.nextDeadline !== null)
+    .filter((item) => item.nextDeadline !== null);
+
+  // Collect deadlines from competency windows
+  const competencyDeadlines = competencyWindows
+    .map((w) => {
+      const endDate = w.end_date ? new Date(w.end_date) : null;
+      
+      if (endDate && endDate > now) {
+        return {
+          type: "competency" as const,
+          id: w.id,
+          title: w.title,
+          nextDeadline: endDate,
+          nextDeadlineType: "Einddatum",
+          link: `/teacher/competencies/windows/${w.id}`
+        };
+      }
+      
+      return null;
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
+
+  // Combine and sort all deadlines
+  const upcomingDeadlines = [...evaluationDeadlines, ...competencyDeadlines]
     .sort((a, b) => {
       if (!a.nextDeadline || !b.nextDeadline) return 0;
       return a.nextDeadline.getTime() - b.nextDeadline.getTime();
@@ -161,13 +191,17 @@ export default function TeacherDashboard() {
           <div className="space-y-3">
             {upcomingDeadlines.map((item) => {
               const deadlineStr = item.nextDeadline?.toISOString();
+              const typeIcon = item.type === "competency" ? "🎯" : "📝";
               return (
                 <div
-                  key={item.evaluation.id}
+                  key={`${item.type}-${item.id}`}
                   className="flex items-center justify-between p-4 border rounded-xl"
                 >
                   <div className="flex-1">
-                    <div className="font-medium">{item.evaluation.title}</div>
+                    <div className="flex items-center gap-2">
+                      <span>{typeIcon}</span>
+                      <div className="font-medium">{item.title}</div>
+                    </div>
                     <div className="text-sm text-gray-600">
                       {item.nextDeadlineType}: {formatDate(deadlineStr)}
                     </div>
@@ -177,7 +211,7 @@ export default function TeacherDashboard() {
                       {getTimeRemaining(deadlineStr)}
                     </div>
                     <Link
-                      href={`/teacher/evaluations/${item.evaluation.id}/dashboard`}
+                      href={item.link}
                       className="text-xs text-gray-500 hover:underline"
                     >
                       Bekijk →
@@ -202,21 +236,6 @@ export default function TeacherDashboard() {
           >
             Bekijk alle →
           </Link>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="p-4 border rounded-xl bg-green-50">
-            <div className="text-sm text-green-700 font-medium">Open</div>
-            <div className="text-3xl font-bold text-green-900">{activeEvaluations.length}</div>
-          </div>
-          <div className="p-4 border rounded-xl bg-yellow-50">
-            <div className="text-sm text-yellow-700 font-medium">Draft</div>
-            <div className="text-3xl font-bold text-yellow-900">{draftEvaluations.length}</div>
-          </div>
-          <div className="p-4 border rounded-xl bg-gray-50">
-            <div className="text-sm text-gray-700 font-medium">Gesloten</div>
-            <div className="text-3xl font-bold text-gray-900">{closedEvaluations.length}</div>
-          </div>
         </div>
 
         {activeEvaluations.length > 0 ? (
