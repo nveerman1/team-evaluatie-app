@@ -97,21 +97,18 @@ def dashboard_evaluation(
         valid_student_ids = {s[0] for s in course_students}
 
     # === 3) Filter allocations to only include students from the course ===
-    allocations = (
-        db.query(Allocation)
-        .filter(
-            Allocation.school_id == user.school_id, Allocation.evaluation_id == ev.id
-        )
-        .all()
+    query = db.query(Allocation).filter(
+        Allocation.school_id == user.school_id, Allocation.evaluation_id == ev.id
     )
 
-    # Filter allocations to only include valid students
+    # Filter allocations at SQL level to only include valid students
     if valid_student_ids:
-        allocations = [
-            a
-            for a in allocations
-            if a.reviewee_id in valid_student_ids and a.reviewer_id in valid_student_ids
-        ]
+        query = query.filter(
+            Allocation.reviewee_id.in_(valid_student_ids),
+            Allocation.reviewer_id.in_(valid_student_ids),
+        )
+
+    allocations = query.all()
 
     if not allocations:
         return DashboardResponse(
@@ -371,19 +368,15 @@ def get_student_progress(
         student_ids.add(alloc.reviewer_id)
 
     # Get user information
-    users = (
-        {
+    if student_ids:
+        users = {
             u.id: u
             for u in db.query(User)
-            .filter(
-                User.id.in_(student_ids) if student_ids else False,
-                User.school_id == user.school_id,
-            )
+            .filter(User.school_id == user.school_id, User.id.in_(student_ids))
             .all()
         }
-        if student_ids
-        else {}
-    )
+    else:
+        users = {}
 
     # Calculate progress for each student
     items = []
