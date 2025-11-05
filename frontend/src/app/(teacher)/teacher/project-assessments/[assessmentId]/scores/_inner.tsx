@@ -589,8 +589,6 @@ export default function ScoresOverviewInner() {
                   ))}
                 </tr>
               </thead>
-            );
-          })()}
               <tbody>
                 {filteredItems.length === 0 && (
                   <tr>
@@ -720,8 +718,9 @@ export default function ScoresOverviewInner() {
                 </tr>
               </tfoot>
             )}
-          </table>
-          )}
+            </table>
+            );
+          })()}
 
           {viewMode === "students" && studentsData && (() => {
             // Group criteria by category
@@ -778,8 +777,6 @@ export default function ScoresOverviewInner() {
                   ))}
                 </tr>
               </thead>
-            );
-          })()}
               <tbody>
                 {filteredItems.length === 0 && (
                   <tr>
@@ -909,7 +906,8 @@ export default function ScoresOverviewInner() {
                 </tfoot>
               )}
             </table>
-          )}
+            );
+          })()}
         </div>
       </section>
 
