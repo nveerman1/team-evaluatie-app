@@ -370,10 +370,22 @@ def get_student_progress(
         else:
             self_assessment_status = "not_started"
 
-        # Peer reviews given (as reviewer)
-        peer_reviews_given = len(
-            [a for a in allocations if a.reviewer_id == student_id and not a.is_self]
-        )
+        # Peer reviews given (as reviewer) - count allocations with scores
+        peer_allocations_given = [
+            a for a in allocations if a.reviewer_id == student_id and not a.is_self
+        ]
+        peer_reviews_given = 0
+        peer_reviews_given_expected = len(peer_allocations_given)
+        for alloc in peer_allocations_given:
+            scores = (
+                db.query(Score)
+                .filter(
+                    Score.school_id == user.school_id, Score.allocation_id == alloc.id
+                )
+                .count()
+            )
+            if scores > 0:
+                peer_reviews_given += 1
 
         # Peer reviews received (as reviewee)
         peer_allocations_received = [
@@ -497,6 +509,7 @@ def get_student_progress(
                 team_number=getattr(student, "team_number", None),
                 self_assessment_status=self_assessment_status,
                 peer_reviews_given=peer_reviews_given,
+                peer_reviews_given_expected=peer_reviews_given_expected,
                 peer_reviews_received=peer_reviews_received,
                 peer_reviews_expected=peer_reviews_expected,
                 reflection_status=reflection_status,
@@ -649,6 +662,7 @@ def export_student_progress_csv(
             "team_number",
             "self_assessment_status",
             "peer_reviews_given",
+            "peer_reviews_given_expected",
             "peer_reviews_received",
             "peer_reviews_expected",
             "reflection_status",
@@ -668,6 +682,7 @@ def export_student_progress_csv(
                 item.team_number or "",
                 item.self_assessment_status,
                 item.peer_reviews_given,
+                item.peer_reviews_given_expected,
                 item.peer_reviews_received,
                 item.peer_reviews_expected,
                 item.reflection_status,
