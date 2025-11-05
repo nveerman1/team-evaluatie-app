@@ -85,6 +85,7 @@ export type ProjectAssessmentDetailOut = {
     id: number;
     name: string;
     weight: number;
+    category?: string | null;
     descriptors: Record<string, string>;
   }>;
   reflection?: ProjectAssessmentReflectionOut | null;

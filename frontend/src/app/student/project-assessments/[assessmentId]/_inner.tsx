@@ -164,27 +164,47 @@ export default function StudentProjectAssessmentInner() {
         <div className="p-3 rounded-lg bg-red-50 text-red-700">{error}</div>
       )}
 
-      {/* Rubric matrices - one per criterion */}
-      <div className="bg-white border rounded-2xl p-6">
-        {data.criteria.map((criterion) => {
-          const scoreData = scoreMap[criterion.id];
-          // Get all level descriptions for this criterion
-          const levels: string[] = [];
-          for (let i = data.rubric_scale_min; i <= data.rubric_scale_max; i++) {
-            const levelKey = `level${i}`;
-            levels.push(criterion.descriptors[levelKey] || "");
-          }
-          
-          return (
-            <RubricMatrixRow
-              key={criterion.id}
-              name={criterion.name}
-              score={scoreData?.score ?? null}
-              levels={levels}
-              comment={scoreData?.comment}
-            />
-          );
-        })}
+      {/* Rubric matrices grouped by category */}
+      <div className="bg-white border rounded-2xl p-6 space-y-8">
+        {(() => {
+          // Group criteria by category
+          const grouped = data.criteria.reduce((acc, c) => {
+            const cat = c.category || "Overig";
+            if (!acc[cat]) acc[cat] = [];
+            acc[cat].push(c);
+            return acc;
+          }, {} as Record<string, typeof data.criteria>);
+
+          // Render each category with its criteria
+          return Object.entries(grouped).map(([category, categoryCriteria]) => (
+            <div key={category} className="space-y-6">
+              {/* Category header */}
+              <div className="border-b-2 border-gray-300 pb-2">
+                <h2 className="text-xl font-semibold text-gray-800">{category}</h2>
+              </div>
+              {/* Criteria in this category */}
+              {categoryCriteria.map((criterion) => {
+                const scoreData = scoreMap[criterion.id];
+                // Get all level descriptions for this criterion
+                const levels: string[] = [];
+                for (let i = data.rubric_scale_min; i <= data.rubric_scale_max; i++) {
+                  const levelKey = `level${i}`;
+                  levels.push(criterion.descriptors[levelKey] || "");
+                }
+                
+                return (
+                  <RubricMatrixRow
+                    key={criterion.id}
+                    name={criterion.name}
+                    score={scoreData?.score ?? null}
+                    levels={levels}
+                    comment={scoreData?.comment}
+                  />
+                );
+              })}
+            </div>
+          ));
+        })()}
       </div>
 
       {/* Total Score and Grade */}
