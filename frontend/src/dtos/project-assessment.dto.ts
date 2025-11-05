@@ -139,6 +139,7 @@ export type ProjectAssessmentReflectionsOverview = {
 export type CriterionScore = {
   criterion_id: number;
   criterion_name: string;
+  category?: string | null;
   score?: number | null;
   comment?: string | null;
 };

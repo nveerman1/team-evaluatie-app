@@ -331,7 +331,7 @@ def get_project_assessment(
         rubric_scale_min=rubric.scale_min,
         rubric_scale_max=rubric.scale_max,
         criteria=[
-            {"id": c.id, "name": c.name, "weight": c.weight, "descriptors": c.descriptors}
+            {"id": c.id, "name": c.name, "weight": c.weight, "category": getattr(c, "category", None), "descriptors": c.descriptors}
             for c in criteria
         ],
         reflection=ProjectAssessmentReflectionOut.model_validate(reflection) if reflection else None,
@@ -776,6 +776,7 @@ def get_assessment_scores_overview(
                 criterion_scores_list.append(CriterionScore(
                     criterion_id=criterion.id,
                     criterion_name=criterion.name,
+                    category=getattr(criterion, "category", None),
                     score=score_obj.score,
                     comment=score_obj.comment,
                 ))
@@ -789,6 +790,7 @@ def get_assessment_scores_overview(
                 criterion_scores_list.append(CriterionScore(
                     criterion_id=criterion.id,
                     criterion_name=criterion.name,
+                    category=getattr(criterion, "category", None),
                     score=None,
                     comment=None,
                 ))
@@ -952,6 +954,7 @@ def get_assessment_students_overview(
                 criterion_scores_list.append(CriterionScore(
                     criterion_id=criterion.id,
                     criterion_name=criterion.name,
+                    category=getattr(criterion, "category", None),
                     score=score_obj.score,
                     comment=score_obj.comment,
                 ))
@@ -965,6 +968,7 @@ def get_assessment_students_overview(
                 criterion_scores_list.append(CriterionScore(
                     criterion_id=criterion.id,
                     criterion_name=criterion.name,
+                    category=getattr(criterion, "category", None),
                     score=None,
                     comment=None,
                 ))
