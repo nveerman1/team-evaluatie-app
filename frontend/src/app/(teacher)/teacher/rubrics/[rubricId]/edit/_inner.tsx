@@ -10,12 +10,14 @@ type RubricOut = {
   title: string;
   scale_min: number;
   scale_max: number;
+  scope?: string;
 };
 type CriterionOut = {
   id: number;
   rubric_id: number;
   name: string;
   weight: number;
+  category?: string | null;
   order?: number | null;
   descriptors: {
     level1?: string;
@@ -29,6 +31,7 @@ type UpsertItem = {
   id?: number | null;
   name: string;
   weight: number;
+  category?: string | null;
   order?: number | null;
   descriptors: {
     level1?: string;
@@ -75,6 +78,7 @@ export default function EditRubricPageInner() {
             id: ci.id,
             name: ci.name,
             weight: ci.weight,
+            category: ci.category ?? null,
             order: ci.order ?? null,
             descriptors: { ...EMPTY_DESC, ...(ci.descriptors || {}) },
           })),
@@ -98,6 +102,7 @@ export default function EditRubricPageInner() {
       {
         name: "Nieuw criterium",
         weight: 1.0,
+        category: null,
         order: maxOrder + 1,
         descriptors: { ...EMPTY_DESC },
       },
@@ -236,10 +241,11 @@ export default function EditRubricPageInner() {
       {rubric && (
         <section className="bg-white border rounded-2xl overflow-hidden">
           {/* Table Header */}
-          <div className="grid grid-cols-[28px_1.2fr_0.6fr_1fr_1fr_1fr_1fr_1fr_120px] gap-0 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">
+          <div className="grid grid-cols-[28px_1.2fr_0.6fr_0.8fr_1fr_1fr_1fr_1fr_1fr_120px] gap-0 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">
             <div>#</div>
             <div>Criterium</div>
             <div>Weging</div>
+            <div>Categorie</div>
             <div>Niveau 1</div>
             <div>Niveau 2</div>
             <div>Niveau 3</div>
@@ -252,7 +258,7 @@ export default function EditRubricPageInner() {
           {items.map((it, idx) => (
             <div
               key={idx}
-              className="grid grid-cols-[28px_1.2fr_0.6fr_1fr_1fr_1fr_1fr_1fr_120px] items-start gap-2 px-4 py-3 border-t text-sm"
+              className="grid grid-cols-[28px_1.2fr_0.6fr_0.8fr_1fr_1fr_1fr_1fr_1fr_120px] items-start gap-2 px-4 py-3 border-t text-sm"
             >
               <div className="pt-2">{idx + 1}</div>
 
@@ -290,6 +296,39 @@ export default function EditRubricPageInner() {
                     )
                   }
                 />
+              </div>
+
+              <div>
+                <select
+                  className="w-full border rounded-lg px-2 py-1"
+                  value={it.category ?? ""}
+                  onChange={(e) =>
+                    setItems((prev) =>
+                      prev.map((x, i) =>
+                        i === idx
+                          ? { ...x, category: e.target.value || null }
+                          : x,
+                      ),
+                    )
+                  }
+                >
+                  <option value="">Geen categorie</option>
+                  {rubric.scope === "peer" && (
+                    <>
+                      <option value="Organiseren">Organiseren</option>
+                      <option value="Meedoen">Meedoen</option>
+                      <option value="Zelfvertrouwen">Zelfvertrouwen</option>
+                      <option value="Autonomie">Autonomie</option>
+                    </>
+                  )}
+                  {rubric.scope === "project" && (
+                    <>
+                      <option value="Projectproces">Projectproces</option>
+                      <option value="Eindresultaat">Eindresultaat</option>
+                      <option value="Communicatie">Communicatie</option>
+                    </>
+                  )}
+                </select>
               </div>
 
               {(
