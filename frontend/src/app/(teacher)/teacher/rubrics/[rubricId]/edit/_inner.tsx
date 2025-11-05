@@ -132,6 +132,7 @@ export default function EditRubricPageInner() {
           id: it.id ?? undefined,
           name: it.name?.trim() || `Criterium ${i + 1}`,
           weight: Number(it.weight) || 1.0,
+          category: it.category ?? null,
           order: it.order ?? i + 1,
           descriptors: {
             level1: it.descriptors?.level1 ?? "",
@@ -153,6 +154,7 @@ export default function EditRubricPageInner() {
           id: ci.id,
           name: ci.name,
           weight: ci.weight,
+          category: ci.category ?? null,
           order: ci.order ?? i + 1,
           descriptors: { ...EMPTY_DESC, ...(ci.descriptors || {}) },
         })),
