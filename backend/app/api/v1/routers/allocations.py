@@ -108,6 +108,7 @@ def _select_members_for_course(
             User.school_id == school_id,
             User.role == "student",
             User.archived.is_(False),
+            GroupMember.active.is_(True),  # Only active group memberships
             Group.school_id == school_id,
             Group.course_id == course_id,
         )
