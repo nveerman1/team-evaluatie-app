@@ -36,16 +36,18 @@ export function CompetencyScanTab() {
       setWindows(wins);
       setCompetencies(comps);
 
-      // Get current user ID from the first window overview if available
-      if (wins.length > 0) {
-        try {
-          const overview = await competencyService.getMyWindowOverview(
-            wins[0].id
-          );
-          setCurrentUserId(overview.user_id);
-        } catch (err) {
-          // User might not have completed the scan yet, that's okay
-          console.log("Could not get user ID from overview");
+      // Get current user ID from any completed window overview
+      // Try multiple windows if the first one fails
+      if (wins.length > 0 && !currentUserId) {
+        for (const win of wins) {
+          try {
+            const overview = await competencyService.getMyWindowOverview(win.id);
+            setCurrentUserId(overview.user_id);
+            break; // Successfully got user ID, exit loop
+          } catch (err) {
+            // Try next window if this one fails
+            continue;
+          }
         }
       }
     } catch (err) {

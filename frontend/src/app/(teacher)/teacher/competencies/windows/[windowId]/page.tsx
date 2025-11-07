@@ -347,17 +347,15 @@ export default function WindowDetailPage() {
             kunnen externen uitnodigen om hun competenties te beoordelen.
           </p>
 
-          {/* Filter by student */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium mb-2">
-              Filter op leerling (optioneel):
-            </label>
-            <div className="text-sm text-gray-600">
-              Gebruik de lijst hieronder om uitnodigingen per leerling te bekijken.
-            </div>
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Opmerking:</strong> Deze lijst toont alle uitnodigingen voor
+              alle leerlingen in dit venster. Gebruik de tabel om te filteren op
+              status of leerling.
+            </p>
           </div>
 
-          {/* Show invites for all students */}
+          {/* Show invites for the entire window (all students) */}
           <ExternalInviteList windowId={windowId} subjectUserId={undefined} />
         </div>
       )}

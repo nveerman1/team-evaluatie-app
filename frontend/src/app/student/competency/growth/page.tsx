@@ -122,7 +122,7 @@ export default function GrowthPage() {
                   <div className="flex-1">
                     <h3 className="font-medium">{score.competency_name}</h3>
                   </div>
-                  <div className="flex items-center gap-4 flex-wrap">
+                  <div className="flex items-center gap-4">
                     {score.self_score !== null && score.self_score !== undefined && (
                       <div className="text-sm">
                         <span className="text-gray-600">Zelf: </span>
