@@ -311,33 +311,6 @@ export default function WindowDetailPage() {
         )}
       </div>
 
-      {/* Legend */}
-      <div className="p-4 border rounded-lg bg-gray-50">
-        <h3 className="text-sm font-semibold mb-2">Legenda</h3>
-        <div className="flex gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-1 bg-green-100 text-green-700 rounded">
-              ≥ 4.0
-            </span>
-            <span>Goed</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
-              3.0 - 3.9
-            </span>
-            <span>Voldoende</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded">
-              &lt; 3.0
-            </span>
-            <span>Aandacht</span>
-          </div>
-        </div>
-      </div>
-        </div>
-      )}
-
       {/* Invitations Tab */}
       {activeTab === "invitations" && (
         <div className="border rounded-xl bg-white p-6">
