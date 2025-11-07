@@ -23,6 +23,10 @@ import type {
   CompetencyTeacherObservationCreate,
   StudentCompetencyOverview,
   ClassHeatmap,
+  ExternalInviteCreate,
+  ExternalInvite,
+  ExternalInvitePublicInfo,
+  ExternalScoreSubmit,
 } from "@/dtos";
 
 export const competencyService = {
@@ -209,6 +213,51 @@ export const competencyService = {
     const response = await api.get(`/competencies/windows/${windowId}/heatmap`, {
       params: className ? { class_name: className } : {},
     });
+    return response.data;
+  },
+
+  // ============ External Invites ============
+
+  async createExternalInvites(
+    data: ExternalInviteCreate
+  ): Promise<ExternalInvite[]> {
+    const response = await api.post("/competencies/external/invites", data);
+    return response.data;
+  },
+
+  async getExternalInvites(
+    windowId?: number,
+    subjectUserId?: number
+  ): Promise<ExternalInvite[]> {
+    const response = await api.get("/competencies/external/invites", {
+      params: {
+        window_id: windowId,
+        subject_user_id: subjectUserId,
+      },
+    });
+    return response.data;
+  },
+
+  async revokeExternalInvite(inviteId: number): Promise<void> {
+    await api.delete(`/competencies/external/invites/${inviteId}`);
+  },
+
+  // ============ Public External Endpoints (no auth) ============
+
+  async getPublicInviteInfo(token: string): Promise<ExternalInvitePublicInfo> {
+    const response = await api.get(
+      `/competencies/external/public/invite/${token}`
+    );
+    return response.data;
+  },
+
+  async submitExternalScores(
+    data: ExternalScoreSubmit
+  ): Promise<{ message: string; invite_id: number }> {
+    const response = await api.post(
+      "/competencies/external/public/submit",
+      data
+    );
     return response.data;
   },
 };
