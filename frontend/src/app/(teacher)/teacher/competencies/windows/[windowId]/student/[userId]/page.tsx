@@ -115,6 +115,16 @@ export default function StudentDetailPage() {
                         </span>
                       </div>
                     )}
+                    {score.external_score !== null && score.external_score !== undefined && (
+                      <div className="text-center">
+                        <div className="text-xs text-gray-600 mb-1">
+                          Extern ({score.external_count})
+                        </div>
+                        <span className="px-3 py-1 rounded bg-green-100 text-green-700 text-sm font-semibold">
+                          {score.external_score.toFixed(1)}
+                        </span>
+                      </div>
+                    )}
                     {score.final_score !== null && score.final_score !== undefined && (
                       <div className="text-center">
                         <div className="text-xs text-gray-600 mb-1">Totaal</div>

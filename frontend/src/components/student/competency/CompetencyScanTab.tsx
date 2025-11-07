@@ -5,12 +5,22 @@ import { competencyService } from "@/services";
 import type { CompetencyWindow, Competency } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
 import Link from "next/link";
+import {
+  ExternalInviteModal,
+  ExternalInviteList,
+} from "@/components/competency/ExternalInviteComponents";
 
 export function CompetencyScanTab() {
   const [windows, setWindows] = useState<CompetencyWindow[]>([]);
   const [competencies, setCompetencies] = useState<Competency[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [showInviteModal, setShowInviteModal] = useState<{
+    windowId: number;
+    userId: number;
+  } | null>(null);
+  const [expandedWindow, setExpandedWindow] = useState<number | null>(null);
 
   useEffect(() => {
     loadData();
@@ -25,12 +35,34 @@ export function CompetencyScanTab() {
       ]);
       setWindows(wins);
       setCompetencies(comps);
+
+      // Get current user ID from the first window overview if available
+      if (wins.length > 0) {
+        try {
+          const overview = await competencyService.getMyWindowOverview(
+            wins[0].id
+          );
+          setCurrentUserId(overview.user_id);
+        } catch (err) {
+          // User might not have completed the scan yet, that's okay
+          console.log("Could not get user ID from overview");
+        }
+      }
     } catch (err) {
       console.error("Failed to load competency data:", err);
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleInviteSuccess = () => {
+    setShowInviteModal(null);
+    // Optionally refresh data
+  };
+
+  const isExternalFeedbackEnabled = (window: CompetencyWindow) => {
+    return window.settings?.allow_external_feedback === true;
   };
 
   if (loading) {
@@ -105,7 +137,45 @@ export function CompetencyScanTab() {
                     Reflectie Schrijven
                   </Link>
                 )}
+                {isExternalFeedbackEnabled(window) && currentUserId && (
+                  <button
+                    onClick={() =>
+                      setShowInviteModal({
+                        windowId: window.id,
+                        userId: currentUserId,
+                      })
+                    }
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                  >
+                    Nodig Externen Uit
+                  </button>
+                )}
               </div>
+
+              {/* External Invites List - Expandable */}
+              {isExternalFeedbackEnabled(window) && currentUserId && (
+                <div className="mt-4 pt-4 border-t">
+                  <button
+                    onClick={() =>
+                      setExpandedWindow(
+                        expandedWindow === window.id ? null : window.id
+                      )
+                    }
+                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  >
+                    {expandedWindow === window.id ? "▼" : "▶"} Bekijk
+                    Uitnodigingen
+                  </button>
+                  {expandedWindow === window.id && (
+                    <div className="mt-3">
+                      <ExternalInviteList
+                        windowId={window.id}
+                        subjectUserId={currentUserId}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -152,6 +222,16 @@ export function CompetencyScanTab() {
             ))}
           </div>
         </div>
+      )}
+
+      {/* External Invite Modal */}
+      {showInviteModal && (
+        <ExternalInviteModal
+          windowId={showInviteModal.windowId}
+          subjectUserId={showInviteModal.userId}
+          onClose={() => setShowInviteModal(null)}
+          onSuccess={handleInviteSuccess}
+        />
       )}
     </div>
   );

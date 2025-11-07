@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { competencyService } from "@/services";
-import type { CompetencyWindow, ClassHeatmap } from "@/dtos";
+import type { CompetencyWindow, ClassHeatmap, ExternalInvite } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
 import Link from "next/link";
+import { ExternalInviteList } from "@/components/competency/ExternalInviteComponents";
 
 export default function WindowDetailPage() {
   const params = useParams();
@@ -20,6 +21,9 @@ export default function WindowDetailPage() {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"heatmap" | "invitations">(
+    "heatmap"
+  );
 
   useEffect(() => {
     loadData();
@@ -176,9 +180,36 @@ export default function WindowDetailPage() {
         </div>
       </div>
 
-      {/* Heatmap */}
-      <div className="border rounded-xl bg-white p-6">
-        <h2 className="text-xl font-semibold mb-0">Competentieheatmap</h2>
+      {/* Tabs */}
+      <div className="border-b">
+        <div className="flex gap-4">
+          <button
+            onClick={() => setActiveTab("heatmap")}
+            className={`px-4 py-2 font-medium border-b-2 transition ${
+              activeTab === "heatmap"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Heatmap
+          </button>
+          <button
+            onClick={() => setActiveTab("invitations")}
+            className={`px-4 py-2 font-medium border-b-2 transition ${
+              activeTab === "invitations"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Uitnodigingen
+          </button>
+        </div>
+      </div>
+
+      {/* Heatmap Tab */}
+      {activeTab === "heatmap" && (
+        <div className="border rounded-xl bg-white p-6">
+          <h2 className="text-xl font-semibold mb-4">Competentieheatmap</h2>
 
         {heatmap.rows.length === 0 ? (
           <div className="p-8 bg-gray-50 rounded-lg text-center text-gray-500">
@@ -304,6 +335,59 @@ export default function WindowDetailPage() {
           </div>
         </div>
       </div>
+        </div>
+      )}
+
+      {/* Invitations Tab */}
+      {activeTab === "invitations" && (
+        <div className="border rounded-xl bg-white p-6">
+          <h2 className="text-xl font-semibold mb-4">Externe Uitnodigingen</h2>
+          <p className="text-sm text-gray-600 mb-6">
+            Overzicht van alle externe uitnodigingen voor dit venster. Leerlingen
+            kunnen externen uitnodigen om hun competenties te beoordelen.
+          </p>
+
+          {/* Filter by student */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium mb-2">
+              Filter op leerling (optioneel):
+            </label>
+            <div className="text-sm text-gray-600">
+              Gebruik de lijst hieronder om uitnodigingen per leerling te bekijken.
+            </div>
+          </div>
+
+          {/* Show invites for all students */}
+          <ExternalInviteList windowId={windowId} subjectUserId={undefined} />
+        </div>
+      )}
+
+      {/* Legend (only show for heatmap tab) */}
+      {activeTab === "heatmap" && (
+        <div className="p-4 border rounded-lg bg-gray-50">
+          <h3 className="text-sm font-semibold mb-2">Legenda</h3>
+          <div className="flex gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-1 bg-green-100 text-green-700 rounded">
+                ≥ 4.0
+              </span>
+              <span>Goed</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                3.0 - 3.9
+              </span>
+              <span>Voldoende</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded">
+                &lt; 3.0
+              </span>
+              <span>Aandacht</span>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
