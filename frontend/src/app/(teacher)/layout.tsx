@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 
 const navItems = [
   { href: "/teacher", label: "Dashboard" },
+  { href: "/teacher/overview", label: "Overzicht" },
   { href: "/teacher/project-assessments", label: "Projectbeoordeling" },
   { href: "/teacher/evaluations", label: "Evaluaties" },
   { href: "/teacher/competencies", label: "Competentiemonitor" },
