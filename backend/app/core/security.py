@@ -1,6 +1,8 @@
 # app/core/security.py
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict
+import secrets
+import hashlib
 
 import jwt  # PyJWT
 from jwt import InvalidTokenError  # centrale PyJWT-exceptie (dekt Decode/Expired etc.)
@@ -45,3 +47,18 @@ def decode_access_token(token: str) -> Optional[Dict[str, object]]:
         return payload
     except InvalidTokenError:
         return None
+
+
+def generate_external_token() -> str:
+    """
+    Generate a secure random token for external invites (32 bytes = 64 hex chars)
+    """
+    return secrets.token_urlsafe(32)
+
+
+def hash_token(token: str) -> str:
+    """
+    Hash a token using SHA-256 for secure storage
+    Returns hex digest (64 chars)
+    """
+    return hashlib.sha256(token.encode()).hexdigest()

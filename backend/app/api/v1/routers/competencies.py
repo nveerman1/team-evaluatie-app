@@ -21,6 +21,7 @@ from app.infra.db.models import (
     CompetencyTeacherObservation,
     CompetencyGoal,
     CompetencyReflection,
+    CompetencyExternalScore,
     Group,
     GroupMember,
 )
@@ -773,6 +774,30 @@ def get_my_window_overview(
     )
     self_score_map = {s.competency_id: s.score for s in self_scores}
 
+    # Get external scores (average per competency)
+    external_scores = (
+        db.execute(
+            select(CompetencyExternalScore).where(
+                CompetencyExternalScore.window_id == window_id,
+                CompetencyExternalScore.subject_user_id == current_user.id,
+            )
+        )
+        .scalars()
+        .all()
+    )
+    external_score_map = {}
+    external_count_map = {}
+    for score in external_scores:
+        if score.competency_id not in external_score_map:
+            external_score_map[score.competency_id] = []
+        external_score_map[score.competency_id].append(score.score)
+    
+    # Calculate averages
+    external_avg_map = {}
+    for comp_id, scores in external_score_map.items():
+        external_avg_map[comp_id] = sum(scores) / len(scores)
+        external_count_map[comp_id] = len(scores)
+
     # Build scores list
     scores = []
     for comp in competencies:
@@ -783,6 +808,8 @@ def get_my_window_overview(
                 self_score=self_score_map.get(comp.id),
                 peer_score=None,  # TODO: implement peer score calculation
                 teacher_score=None,  # TODO: implement teacher score retrieval
+                external_score=external_avg_map.get(comp.id),
+                external_count=external_count_map.get(comp.id, 0),
                 final_score=self_score_map.get(comp.id),  # Simplified for now
                 delta=None,  # TODO: implement delta calculation
             )
@@ -881,6 +908,30 @@ def get_student_window_overview(
         .all()
     )
 
+    # Get external scores (average per competency)
+    external_scores = (
+        db.execute(
+            select(CompetencyExternalScore).where(
+                CompetencyExternalScore.window_id == window_id,
+                CompetencyExternalScore.subject_user_id == user_id,
+            )
+        )
+        .scalars()
+        .all()
+    )
+    external_score_map = {}
+    external_count_map = {}
+    for score in external_scores:
+        if score.competency_id not in external_score_map:
+            external_score_map[score.competency_id] = []
+        external_score_map[score.competency_id].append(score.score)
+    
+    # Calculate averages
+    external_avg_map = {}
+    for comp_id, scores in external_score_map.items():
+        external_avg_map[comp_id] = sum(scores) / len(scores)
+        external_count_map[comp_id] = len(scores)
+
     # Build maps
     self_score_map = {s.competency_id: s for s in self_scores}
     teacher_obs_map = {o.competency_id: o for o in teacher_observations}
@@ -898,6 +949,8 @@ def get_student_window_overview(
                 self_score=float(self_score_obj.score) if self_score_obj else None,
                 peer_score=None,  # TODO: implement peer score calculation
                 teacher_score=float(teacher_obs_obj.score) if teacher_obs_obj else None,
+                external_score=external_avg_map.get(comp.id),
+                external_count=external_count_map.get(comp.id, 0),
                 final_score=(
                     float(self_score_obj.score) if self_score_obj else None
                 ),  # Simplified for now

@@ -60,6 +60,16 @@ export interface CompetencyWindow {
   updated_at: string;
 }
 
+export interface CompetencyWindowSettings {
+  allow_external_feedback?: boolean;
+  max_invites_per_subject?: number;
+  invite_ttl_days?: number;
+  show_subject_name_to_external?: "full" | "partial" | "none";
+  show_external_names_to_teacher?: boolean;
+  external_instructions?: string;
+  external_weight?: number; // weighting for external scores (default 1.0)
+}
+
 export interface CompetencyWindowCreate {
   title: string;
   description?: string;
@@ -190,6 +200,8 @@ export interface CompetencyScore {
   self_score?: number;
   peer_score?: number;
   teacher_score?: number;
+  external_score?: number;
+  external_count: number;
   final_score?: number;
   delta?: number;
 }
@@ -245,4 +257,54 @@ export interface CompetencyRubricLevelCreate {
 export interface CompetencyRubricLevelUpdate {
   label?: string;
   description?: string;
+}
+
+// ============ External Invite DTOs ============
+
+export interface ExternalInviteCreate {
+  window_id: number;
+  subject_user_id: number;
+  emails: string[];
+  external_name?: string;
+  external_organization?: string;
+  competency_ids?: number[]; // Optional: if empty or undefined, all competencies are included
+}
+
+export interface ExternalInvite {
+  id: number;
+  school_id: number;
+  window_id: number;
+  subject_user_id: number;
+  invited_by_user_id: number;
+  email: string;
+  external_name?: string;
+  external_organization?: string;
+  status: string; // pending|used|revoked|expired
+  created_at: string;
+  expires_at: string;
+  sent_at?: string;
+  opened_at?: string;
+  submitted_at?: string;
+  revoked_at?: string;
+}
+
+export interface ExternalInvitePublicInfo {
+  window_title: string;
+  subject_name: string;
+  competencies: Competency[];
+  scale_min: number;
+  scale_max: number;
+  instructions?: string;
+}
+
+export interface ExternalScoreSubmit {
+  token: string;
+  scores: Array<{
+    competency_id: number;
+    score: number;
+    comment?: string;
+  }>;
+  reviewer_name?: string;
+  reviewer_organization?: string;
+  general_comment?: string;
 }

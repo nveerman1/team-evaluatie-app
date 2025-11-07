@@ -131,6 +131,18 @@ export default function GrowthPage() {
                         </span>
                       </div>
                     )}
+                    {score.external_score !== null &&
+                      score.external_score !== undefined && (
+                        <div className="text-sm">
+                          <span className="text-gray-600">Extern: </span>
+                          <span className="font-semibold text-green-600">
+                            {score.external_score.toFixed(1)}
+                          </span>
+                          <span className="text-xs text-gray-500 ml-1">
+                            (n={score.external_count})
+                          </span>
+                        </div>
+                      )}
                     {score.final_score !== null && score.final_score !== undefined && (
                       <div className="text-sm">
                         <span className="text-gray-600">Totaal: </span>
