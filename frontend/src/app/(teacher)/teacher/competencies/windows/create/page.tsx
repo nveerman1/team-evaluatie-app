@@ -371,6 +371,117 @@ export default function CreateWindowPage() {
               </label>
             </div>
           </div>
+
+          {/* External Feedback Settings */}
+          <div className="space-y-3 border-t pt-4">
+            <div className="flex items-start">
+              <label className="flex items-start cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.settings?.allow_external_feedback === true}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      settings: {
+                        ...formData.settings,
+                        allow_external_feedback: e.target.checked,
+                      },
+                    })
+                  }
+                  className="mr-2 mt-0.5"
+                />
+                <div>
+                  <span className="text-sm font-medium">
+                    Externe beoordelaars toestaan
+                  </span>
+                  <p className="text-xs text-gray-600 mt-0.5">
+                    Leerlingen kunnen externen (bijv. opdrachtgever, coach) uitnodigen om hun competenties te beoordelen
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            {/* Show additional settings when external feedback is enabled */}
+            {formData.settings?.allow_external_feedback && (
+              <div className="ml-6 space-y-3 p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <label className="block text-xs font-medium mb-1">
+                    Max. uitnodigingen per leerling
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={formData.settings?.max_invites_per_subject || 3}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        settings: {
+                          ...formData.settings,
+                          max_invites_per_subject: parseInt(e.target.value) || 3,
+                        },
+                      })
+                    }
+                    className="w-24 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Standaard: 3 uitnodigingen
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium mb-1">
+                    Verlooptijd uitnodiging (dagen)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="90"
+                    value={formData.settings?.invite_ttl_days || 14}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        settings: {
+                          ...formData.settings,
+                          invite_ttl_days: parseInt(e.target.value) || 14,
+                        },
+                      })
+                    }
+                    className="w-24 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Standaard: 14 dagen
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium mb-1">
+                    Naam leerling tonen aan externe
+                  </label>
+                  <select
+                    value={formData.settings?.show_subject_name_to_external || "full"}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        settings: {
+                          ...formData.settings,
+                          show_subject_name_to_external: e.target.value,
+                        },
+                      })
+                    }
+                    className="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="full">Volledige naam</option>
+                    <option value="partial">Gedeeltelijk (bijv. "Anna J.")</option>
+                    <option value="none">Anoniem</option>
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+              </label>
+            </div>
+          </div>
         </div>
 
         {/* Buttons */}
