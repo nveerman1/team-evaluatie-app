@@ -37,6 +37,8 @@ DEFAULT_MAX_INVITES_PER_SUBJECT = 3
 
 def get_window_setting(window: CompetencyWindow, key: str, default):
     """Helper to get setting from window settings dict"""
+    if window.settings is None:
+        return default
     return window.settings.get(key, default)
 
 
