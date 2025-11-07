@@ -43,7 +43,7 @@ export function ExternalInviteModal({
       setSelectedCompetencies(comps.map((c) => c.id));
     } catch (err) {
       console.error("Failed to load competencies:", err);
-      setError("Failed to load competencies. Please try again.");
+      setError("Competenties laden mislukt. Probeer het opnieuw.");
     } finally {
       setLoadingCompetencies(false);
     }
@@ -90,7 +90,7 @@ export function ExternalInviteModal({
     );
 
     if (validEmails.length === 0) {
-      setError("Please enter at least one valid email address.");
+      setError("Voer ten minste één geldig e-mailadres in.");
       return;
     }
 
@@ -100,14 +100,14 @@ export function ExternalInviteModal({
     );
     if (invalidEmails.length > 0) {
       setError(
-        `Invalid email format: ${invalidEmails.join(", ")}. Please correct and try again.`
+        `Ongeldig e-mailformaat: ${invalidEmails.join(", ")}. Corrigeer dit en probeer opnieuw.`
       );
       return;
     }
 
     // Validate that at least one competency is selected
     if (selectedCompetencies.length === 0) {
-      setError("Please select at least one competency for the external reviewer to assess.");
+      setError("Selecteer ten minste één competentie voor de externe beoordelaar om te beoordelen.");
       return;
     }
 
@@ -127,7 +127,7 @@ export function ExternalInviteModal({
       onClose();
     } catch (err: any) {
       setError(
-        err.response?.data?.detail || "Failed to create invites. Please try again."
+        err.response?.data?.detail || "Aanmaken uitnodigingen mislukt. Probeer het opnieuw."
       );
     } finally {
       setSubmitting(false);
@@ -140,7 +140,7 @@ export function ExternalInviteModal({
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-gray-900">
-              Invite External Reviewers
+              Nodig Externe Beoordelaars Uit
             </h2>
             <button
               onClick={onClose}
@@ -164,9 +164,9 @@ export function ExternalInviteModal({
 
           <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
             <p className="text-sm text-yellow-800">
-              <strong>Privacy Notice:</strong> You are sharing an assessment request
-              with an external person. Only invite people you trust. They will
-              receive a one-time link to assess your competencies.
+              <strong>Privacy Melding:</strong> Je deelt een beoordelingsverzoek
+              met een externe persoon. Nodig alleen mensen uit die je vertrouwt. Zij ontvangen
+              een eenmalige link om jouw competenties te beoordelen.
             </p>
           </div>
 
@@ -181,7 +181,7 @@ export function ExternalInviteModal({
               {/* Email Addresses */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Addresses *
+                  E-mailadressen *
                 </label>
                 <div className="space-y-2">
                   {emails.map((email, index) => (
@@ -190,7 +190,7 @@ export function ExternalInviteModal({
                         type="email"
                         value={email}
                         onChange={(e) => updateEmail(index, e.target.value)}
-                        placeholder="reviewer@example.com"
+                        placeholder="beoordelaar@voorbeeld.nl"
                         className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required={index === 0}
                       />
@@ -200,7 +200,7 @@ export function ExternalInviteModal({
                           onClick={() => removeEmailField(index)}
                           className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-md"
                         >
-                          Remove
+                          Verwijder
                         </button>
                       )}
                     </div>
@@ -212,7 +212,7 @@ export function ExternalInviteModal({
                     onClick={addEmailField}
                     className="mt-2 text-sm text-blue-600 hover:text-blue-800"
                   >
-                    + Add another email
+                    + Voeg nog een e-mail toe
                   </button>
                 )}
               </div>
@@ -220,13 +220,13 @@ export function ExternalInviteModal({
               {/* External Name (optional) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Name (Optional)
+                  Naam (Optioneel)
                 </label>
                 <input
                   type="text"
                   value={externalName}
                   onChange={(e) => setExternalName(e.target.value)}
-                  placeholder="Reviewer name"
+                  placeholder="Naam beoordelaar"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -234,13 +234,13 @@ export function ExternalInviteModal({
               {/* External Organization (optional) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Organization (Optional)
+                  Organisatie (Optioneel)
                 </label>
                 <input
                   type="text"
                   value={externalOrg}
                   onChange={(e) => setExternalOrg(e.target.value)}
-                  placeholder="Company or organization"
+                  placeholder="Bedrijf of organisatie"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -249,7 +249,7 @@ export function ExternalInviteModal({
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700">
-                    Select Competencies to Assess *
+                    Selecteer Competenties om te Beoordelen *
                   </label>
                   <button
                     type="button"
@@ -257,17 +257,17 @@ export function ExternalInviteModal({
                     className="text-sm text-blue-600 hover:text-blue-800"
                   >
                     {selectedCompetencies.length === competencies.length
-                      ? "Deselect All"
-                      : "Select All"}
+                      ? "Deselecteer Alles"
+                      : "Selecteer Alles"}
                   </button>
                 </div>
                 {loadingCompetencies ? (
-                  <div className="text-sm text-gray-500">Loading competencies...</div>
+                  <div className="text-sm text-gray-500">Competenties laden...</div>
                 ) : (
                   <div className="border border-gray-300 rounded-md p-3 max-h-60 overflow-y-auto">
                     {competencies.length === 0 ? (
                       <div className="text-sm text-gray-500">
-                        No competencies available
+                        Geen competenties beschikbaar
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -299,27 +299,27 @@ export function ExternalInviteModal({
                   </div>
                 )}
                 <div className="mt-1 text-xs text-gray-600">
-                  {selectedCompetencies.length} of {competencies.length} selected
+                  {selectedCompetencies.length} van {competencies.length} geselecteerd
                 </div>
               </div>
 
               {/* Information Box */}
               <div className="p-4 bg-blue-50 border border-blue-200 rounded">
                 <h3 className="font-semibold text-blue-900 text-sm mb-2">
-                  What happens next?
+                  Wat gebeurt er nu?
                 </h3>
                 <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• Invitations will be sent to the provided email addresses</li>
+                  <li>• Uitnodigingen worden verstuurd naar de opgegeven e-mailadressen</li>
                   <li>
-                    • Each invitation contains a unique, one-time-use link
+                    • Elke uitnodiging bevat een unieke, eenmalig te gebruiken link
                   </li>
-                  <li>• Links expire after 14 days</li>
+                  <li>• Links verlopen na 14 dagen</li>
                   <li>
-                    • External reviewers will see your name and the selected
-                    competencies to assess
+                    • Externe beoordelaars zien jouw naam en de geselecteerde
+                    competenties om te beoordelen
                   </li>
                   <li>
-                    • You'll only see aggregated scores from external reviewers
+                    • Je ziet alleen de gecombineerde scores van externe beoordelaars
                   </li>
                 </ul>
               </div>
@@ -331,14 +331,14 @@ export function ExternalInviteModal({
                 onClick={onClose}
                 className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
               >
-                Cancel
+                Annuleren
               </button>
               <button
                 type="submit"
                 disabled={submitting}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                {submitting ? "Sending..." : "Send Invitations"}
+                {submitting ? "Verzenden..." : "Verstuur Uitnodigingen"}
               </button>
             </div>
           </form>
@@ -375,14 +375,14 @@ export function ExternalInviteList({
       );
       setInvites(data);
     } catch (err: any) {
-      setError("Failed to load invites");
+      setError("Uitnodigingen laden mislukt");
     } finally {
       setLoading(false);
     }
   };
 
   const handleRevoke = async (inviteId: number) => {
-    if (!confirm("Are you sure you want to revoke this invitation?")) {
+    if (!confirm("Weet je zeker dat je deze uitnodiging wilt intrekken?")) {
       return;
     }
 
@@ -390,7 +390,7 @@ export function ExternalInviteList({
       await competencyService.revokeExternalInvite(inviteId);
       loadInvites();
     } catch (err: any) {
-      alert("Failed to revoke invite");
+      alert("Intrekken van uitnodiging mislukt");
     }
   };
 
@@ -401,19 +401,25 @@ export function ExternalInviteList({
       revoked: "bg-red-100 text-red-800",
       expired: "bg-gray-100 text-gray-800",
     };
+    const labels: Record<string, string> = {
+      pending: "In afwachting",
+      used: "Gebruikt",
+      revoked: "Ingetrokken",
+      expired: "Verlopen",
+    };
     return (
       <span
         className={`px-2 py-1 text-xs font-medium rounded ${
           colors[status] || "bg-gray-100 text-gray-800"
         }`}
       >
-        {status}
+        {labels[status] || status}
       </span>
     );
   };
 
   if (loading) {
-    return <div className="text-sm text-gray-600">Loading invites...</div>;
+    return <div className="text-sm text-gray-600">Uitnodigingen laden...</div>;
   }
 
   if (error) {
@@ -423,7 +429,7 @@ export function ExternalInviteList({
   if (invites.length === 0) {
     return (
       <div className="text-sm text-gray-600">
-        No external invitations yet. Click "Invite External" to send invitations.
+        Nog geen externe uitnodigingen. Klik op "Nodig Externen Uit" om uitnodigingen te versturen.
       </div>
     );
   }
@@ -434,19 +440,19 @@ export function ExternalInviteList({
         <thead className="bg-gray-50">
           <tr>
             <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-              Email
+              E-mail
             </th>
             <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
               Status
             </th>
             <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-              Sent
+              Verstuurd
             </th>
             <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-              Expires
+              Verloopt
             </th>
             <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-              Actions
+              Acties
             </th>
           </tr>
         </thead>
@@ -469,7 +475,7 @@ export function ExternalInviteList({
                     onClick={() => handleRevoke(invite.id)}
                     className="text-sm text-red-600 hover:text-red-800"
                   >
-                    Revoke
+                    Intrekken
                   </button>
                 )}
               </td>
