@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { competencyService } from "@/services/competency.service";
-import type { ExternalInvite, ExternalInviteCreate } from "@/dtos/competency.dto";
+import type { 
+  ExternalInvite, 
+  ExternalInviteCreate, 
+  Competency 
+} from "@/dtos/competency.dto";
 
 interface ExternalInviteModalProps {
   windowId: number;
@@ -22,6 +26,44 @@ export function ExternalInviteModal({
   const [externalOrg, setExternalOrg] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [competencies, setCompetencies] = useState<Competency[]>([]);
+  const [selectedCompetencies, setSelectedCompetencies] = useState<number[]>([]);
+  const [loadingCompetencies, setLoadingCompetencies] = useState(true);
+
+  useEffect(() => {
+    loadCompetencies();
+  }, []);
+
+  const loadCompetencies = async () => {
+    try {
+      setLoadingCompetencies(true);
+      const comps = await competencyService.getCompetencies(true);
+      setCompetencies(comps);
+      // By default, select all competencies
+      setSelectedCompetencies(comps.map((c) => c.id));
+    } catch (err) {
+      console.error("Failed to load competencies:", err);
+      setError("Failed to load competencies. Please try again.");
+    } finally {
+      setLoadingCompetencies(false);
+    }
+  };
+
+  const toggleCompetency = (competencyId: number) => {
+    setSelectedCompetencies((prev) =>
+      prev.includes(competencyId)
+        ? prev.filter((id) => id !== competencyId)
+        : [...prev, competencyId]
+    );
+  };
+
+  const toggleAllCompetencies = () => {
+    if (selectedCompetencies.length === competencies.length) {
+      setSelectedCompetencies([]);
+    } else {
+      setSelectedCompetencies(competencies.map((c) => c.id));
+    }
+  };
 
   const addEmailField = () => {
     setEmails([...emails, ""]);
@@ -63,6 +105,12 @@ export function ExternalInviteModal({
       return;
     }
 
+    // Validate that at least one competency is selected
+    if (selectedCompetencies.length === 0) {
+      setError("Please select at least one competency for the external reviewer to assess.");
+      return;
+    }
+
     try {
       setSubmitting(true);
       const data: ExternalInviteCreate = {
@@ -71,6 +119,7 @@ export function ExternalInviteModal({
         emails: validEmails,
         external_name: externalName || undefined,
         external_organization: externalOrg || undefined,
+        competency_ids: selectedCompetencies,
       };
 
       await competencyService.createExternalInvites(data);
@@ -196,6 +245,64 @@ export function ExternalInviteModal({
                 />
               </div>
 
+              {/* Competency Selection */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Select Competencies to Assess *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={toggleAllCompetencies}
+                    className="text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    {selectedCompetencies.length === competencies.length
+                      ? "Deselect All"
+                      : "Select All"}
+                  </button>
+                </div>
+                {loadingCompetencies ? (
+                  <div className="text-sm text-gray-500">Loading competencies...</div>
+                ) : (
+                  <div className="border border-gray-300 rounded-md p-3 max-h-60 overflow-y-auto">
+                    {competencies.length === 0 ? (
+                      <div className="text-sm text-gray-500">
+                        No competencies available
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {competencies.map((comp) => (
+                          <label
+                            key={comp.id}
+                            className="flex items-start gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedCompetencies.includes(comp.id)}
+                              onChange={() => toggleCompetency(comp.id)}
+                              className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <div className="flex-1">
+                              <div className="font-medium text-sm text-gray-900">
+                                {comp.name}
+                              </div>
+                              {comp.description && (
+                                <div className="text-xs text-gray-600 mt-0.5">
+                                  {comp.description}
+                                </div>
+                              )}
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="mt-1 text-xs text-gray-600">
+                  {selectedCompetencies.length} of {competencies.length} selected
+                </div>
+              </div>
+
               {/* Information Box */}
               <div className="p-4 bg-blue-50 border border-blue-200 rounded">
                 <h3 className="font-semibold text-blue-900 text-sm mb-2">
@@ -208,8 +315,8 @@ export function ExternalInviteModal({
                   </li>
                   <li>• Links expire after 14 days</li>
                   <li>
-                    • External reviewers will see your name and the competencies to
-                    assess
+                    • External reviewers will see your name and the selected
+                    competencies to assess
                   </li>
                   <li>
                     • You'll only see aggregated scores from external reviewers

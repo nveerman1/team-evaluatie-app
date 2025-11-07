@@ -267,6 +267,7 @@ export interface ExternalInviteCreate {
   emails: string[];
   external_name?: string;
   external_organization?: string;
+  competency_ids?: number[]; // Optional: if empty or undefined, all competencies are included
 }
 
 export interface ExternalInvite {

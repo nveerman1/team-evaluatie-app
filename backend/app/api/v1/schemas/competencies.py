@@ -333,6 +333,7 @@ class ExternalInviteCreate(BaseModel):
     emails: List[str] = Field(..., min_length=1, max_length=10)
     external_name: Optional[str] = Field(None, max_length=200)
     external_organization: Optional[str] = Field(None, max_length=200)
+    competency_ids: Optional[List[int]] = None  # If None or empty, all competencies are included
 
 
 class ExternalInviteOut(BaseModel):

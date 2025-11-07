@@ -105,16 +105,25 @@ def create_invites(
         )
 
     # Get rubric snapshot (competencies + levels)
-    competencies = (
-        db.execute(
-            select(Competency).where(
-                Competency.school_id == current_user.school_id,
-                Competency.active == True,
-            )
-        )
-        .scalars()
-        .all()
+    competencies_query = select(Competency).where(
+        Competency.school_id == current_user.school_id,
+        Competency.active == True,
     )
+    
+    # Filter by selected competencies if specified
+    if data.competency_ids:
+        competencies_query = competencies_query.where(
+            Competency.id.in_(data.competency_ids)
+        )
+    
+    competencies = db.execute(competencies_query).scalars().all()
+    
+    # Validate that at least one competency is selected
+    if not competencies:
+        raise HTTPException(
+            status_code=400,
+            detail="At least one competency must be selected for the invite.",
+        )
 
     rubric_snapshot = {
         "competencies": [
