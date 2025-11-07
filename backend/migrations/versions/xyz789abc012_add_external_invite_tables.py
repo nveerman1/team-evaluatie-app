@@ -1,7 +1,7 @@
 """add external invite tables
 
 Revision ID: xyz789abc012
-Revises: pqr678stu901
+Revises: ebfa692561d2
 Create Date: 2025-11-07 14:00:00.000000
 """
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSON
 
 revision = "xyz789abc012"
-down_revision = "pqr678stu901"
+down_revision = "ebfa692561d2"
 branch_labels = None
 depends_on = None
 
