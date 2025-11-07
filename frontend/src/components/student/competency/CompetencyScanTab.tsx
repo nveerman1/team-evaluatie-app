@@ -114,7 +114,7 @@ export function CompetencyScanTab() {
                 </span>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-3 flex-wrap">
                 {window.require_self_score && (
                   <Link
                     href={`/student/competency/scan/${window.id}`}
@@ -139,15 +139,33 @@ export function CompetencyScanTab() {
                     Reflectie Schrijven
                   </Link>
                 )}
-                {isExternalFeedbackEnabled(window) && currentUserId && (
+                {isExternalFeedbackEnabled(window) && (
                   <button
-                    onClick={() =>
-                      setShowInviteModal({
-                        windowId: window.id,
-                        userId: currentUserId,
-                      })
-                    }
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                    onClick={async () => {
+                      // Get user ID if not already loaded
+                      let userId = currentUserId;
+                      if (!userId) {
+                        try {
+                          const overview = await competencyService.getMyWindowOverview(
+                            window.id
+                          );
+                          userId = overview.user_id;
+                          setCurrentUserId(userId);
+                        } catch (err) {
+                          console.error("Failed to get user ID:", err);
+                          // If we still can't get it, we'll handle this in the modal
+                          // For now, try to proceed anyway
+                        }
+                      }
+                      if (userId) {
+                        setShowInviteModal({
+                          windowId: window.id,
+                          userId: userId,
+                        });
+                      }
+                    }}
+                    disabled={!currentUserId && loading}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Nodig Externen Uit
                   </button>
