@@ -316,10 +316,24 @@ def get_invite_info(token: str, db: Session = Depends(get_db)):
         subject_name = "Student"
 
     # Get competencies from snapshot
+    if not invite.rubric_snapshot or not isinstance(invite.rubric_snapshot, dict):
+        raise HTTPException(
+            status_code=500,
+            detail="Invite data is corrupted. Please contact the person who sent you this link."
+        )
+    
     competencies = []
     scale_min = 1
     scale_max = 5
-    for comp_data in invite.rubric_snapshot.get("competencies", []):
+    snapshot_competencies = invite.rubric_snapshot.get("competencies", [])
+    
+    if not snapshot_competencies:
+        raise HTTPException(
+            status_code=500,
+            detail="No competencies found in invite. Please contact the person who sent you this link."
+        )
+    
+    for comp_data in snapshot_competencies:
         comp_scale_min = comp_data.get("scale_min", 1)
         comp_scale_max = comp_data.get("scale_max", 5)
         # Use the first competency's scale as the window scale
