@@ -306,7 +306,16 @@ def get_invite_info(token: str, db: Session = Depends(get_db)):
 
     # Get competencies from snapshot
     competencies = []
+    scale_min = 1
+    scale_max = 5
     for comp_data in invite.rubric_snapshot.get("competencies", []):
+        comp_scale_min = comp_data.get("scale_min", 1)
+        comp_scale_max = comp_data.get("scale_max", 5)
+        # Use the first competency's scale as the window scale
+        if not competencies:
+            scale_min = comp_scale_min
+            scale_max = comp_scale_max
+        
         competencies.append(
             CompetencyOut(
                 id=comp_data["id"],
@@ -315,8 +324,8 @@ def get_invite_info(token: str, db: Session = Depends(get_db)):
                 category=comp_data.get("category"),
                 order=0,
                 active=True,
-                scale_min=comp_data.get("scale_min", 1),
-                scale_max=comp_data.get("scale_max", 5),
+                scale_min=comp_scale_min,
+                scale_max=comp_scale_max,
                 scale_labels={},
                 metadata_json={},
                 school_id=invite.school_id,
@@ -329,8 +338,8 @@ def get_invite_info(token: str, db: Session = Depends(get_db)):
         window_title=window.title,
         subject_name=subject_name,
         competencies=competencies,
-        scale_min=1,
-        scale_max=5,
+        scale_min=scale_min,
+        scale_max=scale_max,
         instructions=get_window_setting(
             window, "external_instructions", "Please assess the student on each competency."
         ),
@@ -377,28 +386,18 @@ def submit_external_scores(
     }
 
     # Create scores
-    for score_data in data.scores:
-        comp_id = score_data.get("competency_id")
-        score_value = score_data.get("score")
-        comment = score_data.get("comment")
-
-        if comp_id not in valid_comp_ids:
+    for score_item in data.scores:
+        if score_item.competency_id not in valid_comp_ids:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid competency ID: {comp_id}",
-            )
-
-        if not isinstance(score_value, int) or score_value < 1 or score_value > 5:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Score must be between 1 and 5",
+                detail=f"Invalid competency ID: {score_item.competency_id}",
             )
 
         # Check if score already exists (shouldn't happen, but handle gracefully)
         existing = db.execute(
             select(CompetencyExternalScore).where(
                 CompetencyExternalScore.invite_id == invite.id,
-                CompetencyExternalScore.competency_id == comp_id,
+                CompetencyExternalScore.competency_id == score_item.competency_id,
             )
         ).scalar_one_or_none()
 
@@ -408,9 +407,9 @@ def submit_external_scores(
                 invite_id=invite.id,
                 window_id=invite.window_id,
                 subject_user_id=invite.subject_user_id,
-                competency_id=comp_id,
-                score=score_value,
-                comment=comment,
+                competency_id=score_item.competency_id,
+                score=score_item.score,
+                comment=score_item.comment,
                 reviewer_name=data.reviewer_name,
                 reviewer_organization=data.reviewer_organization,
             )

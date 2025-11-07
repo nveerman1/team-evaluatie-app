@@ -367,10 +367,17 @@ class ExternalInvitePublicInfo(BaseModel):
     instructions: Optional[str] = None
 
 
+class ExternalScoreItem(BaseModel):
+    """Individual score item for external submission"""
+    competency_id: int
+    score: int = Field(..., ge=1, le=5)
+    comment: Optional[str] = None
+
+
 class ExternalScoreSubmit(BaseModel):
     """External score submission"""
     token: str
-    scores: List[Dict[str, Any]]  # List of {competency_id, score, comment}
+    scores: List[ExternalScoreItem]
     reviewer_name: Optional[str] = Field(None, max_length=200)
     reviewer_organization: Optional[str] = Field(None, max_length=200)
     general_comment: Optional[str] = None

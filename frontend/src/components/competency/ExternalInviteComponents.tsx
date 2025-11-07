@@ -41,12 +41,25 @@ export function ExternalInviteModal({
     e.preventDefault();
     setError(null);
 
+    // Better email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const validEmails = emails.filter(
-      (email) => email.trim() && email.includes("@")
+      (email) => email.trim() && emailRegex.test(email.trim())
     );
 
     if (validEmails.length === 0) {
       setError("Please enter at least one valid email address.");
+      return;
+    }
+
+    // Check for invalid emails
+    const invalidEmails = emails.filter(
+      (email) => email.trim() && !emailRegex.test(email.trim())
+    );
+    if (invalidEmails.length > 0) {
+      setError(
+        `Invalid email format: ${invalidEmails.join(", ")}. Please correct and try again.`
+      );
       return;
     }
 

@@ -25,6 +25,7 @@ export default function ExternalReviewPage() {
   const [generalComment, setGeneralComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
     loadInviteInfo();
@@ -55,13 +56,14 @@ export default function ExternalReviewPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setValidationError(null);
 
     // Validate all competencies have scores
     const allScored = inviteInfo?.competencies.every(
       (comp) => scores[comp.id] !== undefined
     );
     if (!allScored) {
-      alert("Please provide a score for all competencies.");
+      setValidationError("Please provide a score for all competencies.");
       return;
     }
 
@@ -82,7 +84,7 @@ export default function ExternalReviewPage() {
       await competencyService.submitExternalScores(submitData);
       setSubmitted(true);
     } catch (err: any) {
-      alert(
+      setValidationError(
         err.response?.data?.detail ||
           "Failed to submit scores. Please try again."
       );
@@ -240,6 +242,12 @@ export default function ExternalReviewPage() {
               Rate the student on each competency using the scale below. A higher
               score indicates stronger performance.
             </p>
+
+            {validationError && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded">
+                <p className="text-sm text-red-800">{validationError}</p>
+              </div>
+            )}
 
             <div className="space-y-6">
               {inviteInfo.competencies.map((competency) => (

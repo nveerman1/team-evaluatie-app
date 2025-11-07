@@ -60,6 +60,16 @@ export interface CompetencyWindow {
   updated_at: string;
 }
 
+export interface CompetencyWindowSettings {
+  allow_external_feedback?: boolean;
+  max_invites_per_subject?: number;
+  invite_ttl_days?: number;
+  show_subject_name_to_external?: "full" | "partial" | "none";
+  show_external_names_to_teacher?: boolean;
+  external_instructions?: string;
+  external_weight?: number; // weighting for external scores (default 1.0)
+}
+
 export interface CompetencyWindowCreate {
   title: string;
   description?: string;
