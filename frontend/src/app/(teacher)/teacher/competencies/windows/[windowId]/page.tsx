@@ -211,105 +211,106 @@ export default function WindowDetailPage() {
         <div className="border rounded-xl bg-white p-6">
           <h2 className="text-xl font-semibold mb-4">Competentieheatmap</h2>
 
-        {heatmap.rows.length === 0 ? (
-          <div className="p-8 bg-gray-50 rounded-lg text-center text-gray-500">
-            Geen data beschikbaar voor de geselecteerde filters.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full table-fixed border-collapse">
-              {/* Kolombreedtes: eerste kolom breed voor namen, overige gelijk */}
-              <colgroup>
-                <col className="w-[260px]" />
-                {heatmap.competencies.map((c) => (
-                  <col key={c.id} className="w-[140px]" />
-                ))}
-              </colgroup>
-
-              <thead>
-                <tr className="border-b">
-                  <th className="sticky left-0 z-10 bg-white p-3 text-left font-semibold align-bottom">
-                    Leerling
-                  </th>
-
-                  {heatmap.competencies.map((comp) => (
-                    <th
-                      key={comp.id}
-                      className="relative h-36 p-0 align-bottom"
-                    >
-                      {/* container om exact te centreren */}
-                      <div className="absolute inset-x-0 bottom-2 flex justify-center">
-                        {/* pivot op bottom-left, dus start van het woord blijft binnen de kolom */}
-                        <span className="block origin-bottom-left -rotate-45 whitespace-nowrap text-sm font-semibold translate-x-3">
-                          {comp.name}
-                        </span>
-                      </div>
-                    </th>
+          {heatmap.rows.length === 0 ? (
+            <div className="p-8 bg-gray-50 rounded-lg text-center text-gray-500">
+              Geen data beschikbaar voor de geselecteerde filters.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full table-fixed border-collapse">
+                {/* Kolombreedtes: eerste kolom breed voor namen, overige gelijk */}
+                <colgroup>
+                  <col className="w-[260px]" />
+                  {heatmap.competencies.map((c) => (
+                    <col key={c.id} className="w-[140px]" />
                   ))}
-                </tr>
-              </thead>
+                </colgroup>
 
-              <tbody>
-                {heatmap.rows.map((row) => (
-                  <tr key={row.user_id} className="border-b hover:bg-gray-50">
-                    <td className="sticky left-0 z-10 bg-white p-3 font-medium">
-                      <Link
-                        href={`/teacher/competencies/windows/${windowId}/student/${row.user_id}`}
-                        className="text-blue-600 hover:text-blue-800 hover:underline"
+                <thead>
+                  <tr className="border-b">
+                    <th className="sticky left-0 z-10 bg-white p-3 text-left font-semibold align-bottom">
+                      Leerling
+                    </th>
+
+                    {heatmap.competencies.map((comp) => (
+                      <th
+                        key={comp.id}
+                        className="relative h-36 p-0 align-bottom"
                       >
-                        {row.user_name}
-                      </Link>
-                    </td>
+                        {/* container om exact te centreren */}
+                        <div className="absolute inset-x-0 bottom-2 flex justify-center">
+                          {/* pivot op bottom-left, dus start van het woord blijft binnen de kolom */}
+                          <span className="block origin-bottom-left -rotate-45 whitespace-nowrap text-sm font-semibold translate-x-3">
+                            {comp.name}
+                          </span>
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
 
-                    {heatmap.competencies.map((comp) => {
-                      const score = row.scores[comp.id];
-                      const delta = row.deltas[comp.id];
-
-                      return (
-                        <td
-                          key={comp.id}
-                          className="p-3 text-center align-middle"
+                <tbody>
+                  {heatmap.rows.map((row) => (
+                    <tr key={row.user_id} className="border-b hover:bg-gray-50">
+                      <td className="sticky left-0 z-10 bg-white p-3 font-medium">
+                        <Link
+                          href={`/teacher/competencies/windows/${windowId}/student/${row.user_id}`}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
                         >
-                          {score !== undefined ? (
-                            <div className="flex flex-col items-center leading-tight">
-                              <span
-                                className={`px-2.5 py-1 rounded text-sm font-semibold ${
-                                  score >= 4
-                                    ? "bg-green-100 text-green-700"
-                                    : score >= 3
-                                      ? "bg-blue-100 text-blue-700"
-                                      : "bg-orange-100 text-orange-700"
-                                }`}
-                              >
-                                {score.toFixed(1)}
-                              </span>
+                          {row.user_name}
+                        </Link>
+                      </td>
 
-                              {delta !== undefined && delta !== 0 && (
+                      {heatmap.competencies.map((comp) => {
+                        const score = row.scores[comp.id];
+                        const delta = row.deltas[comp.id];
+
+                        return (
+                          <td
+                            key={comp.id}
+                            className="p-3 text-center align-middle"
+                          >
+                            {score !== undefined ? (
+                              <div className="flex flex-col items-center leading-tight">
                                 <span
-                                  className={`mt-1 text-xs ${
-                                    delta > 0
-                                      ? "text-green-600"
-                                      : "text-red-600"
+                                  className={`px-2.5 py-1 rounded text-sm font-semibold ${
+                                    score >= 4
+                                      ? "bg-green-100 text-green-700"
+                                      : score >= 3
+                                        ? "bg-blue-100 text-blue-700"
+                                        : "bg-orange-100 text-orange-700"
                                   }`}
                                 >
-                                  {delta > 0 ? "+" : ""}
-                                  {delta.toFixed(1)}
+                                  {score.toFixed(1)}
                                 </span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-gray-300 text-sm">–</span>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+
+                                {delta !== undefined && delta !== 0 && (
+                                  <span
+                                    className={`mt-1 text-xs ${
+                                      delta > 0
+                                        ? "text-green-600"
+                                        : "text-red-600"
+                                    }`}
+                                  >
+                                    {delta > 0 ? "+" : ""}
+                                    {delta.toFixed(1)}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-300 text-sm">–</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Invitations Tab */}
       {activeTab === "invitations" && (
