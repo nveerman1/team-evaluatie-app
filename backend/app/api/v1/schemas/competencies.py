@@ -319,3 +319,74 @@ class StudentGrowthCard(BaseModel):
     user_name: str
     windows: List[StudentCompetencyOverview]
     trends: Dict[int, List[float]]  # competency_id -> [scores over time]
+
+
+# ============ External Invite Schemas ============
+
+
+class ExternalInviteCreate(BaseModel):
+    """Create external invite(s)"""
+    window_id: int
+    subject_user_id: int
+    emails: List[str] = Field(..., min_length=1, max_length=10)
+    external_name: Optional[str] = Field(None, max_length=200)
+    external_organization: Optional[str] = Field(None, max_length=200)
+
+
+class ExternalInviteOut(BaseModel):
+    """External invite details"""
+    id: int
+    school_id: int
+    window_id: int
+    subject_user_id: int
+    invited_by_user_id: int
+    email: str
+    external_name: Optional[str]
+    external_organization: Optional[str]
+    status: str
+    created_at: datetime
+    expires_at: datetime
+    sent_at: Optional[datetime]
+    opened_at: Optional[datetime]
+    submitted_at: Optional[datetime]
+    revoked_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+class ExternalInvitePublicInfo(BaseModel):
+    """Public info shown to external reviewer (minimal context)"""
+    window_title: str
+    subject_name: str  # Full, partial or masked based on settings
+    competencies: List[CompetencyOut]
+    scale_min: int
+    scale_max: int
+    instructions: Optional[str] = None
+
+
+class ExternalScoreSubmit(BaseModel):
+    """External score submission"""
+    token: str
+    scores: List[Dict[str, Any]]  # List of {competency_id, score, comment}
+    reviewer_name: Optional[str] = Field(None, max_length=200)
+    reviewer_organization: Optional[str] = Field(None, max_length=200)
+    general_comment: Optional[str] = None
+
+
+class ExternalScoreOut(BaseModel):
+    """External score details"""
+    id: int
+    school_id: int
+    invite_id: int
+    window_id: int
+    subject_user_id: int
+    competency_id: int
+    score: int
+    comment: Optional[str]
+    reviewer_name: Optional[str]
+    reviewer_organization: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
