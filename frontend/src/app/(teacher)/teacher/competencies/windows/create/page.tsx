@@ -479,6 +479,7 @@ export default function CreateWindowPage() {
               </div>
             )}
           </div>
+        </div>
 
         {/* Buttons */}
         <div className="flex gap-3">
