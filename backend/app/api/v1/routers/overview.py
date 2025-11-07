@@ -2,7 +2,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import func, case, or_, and_
+from sqlalchemy import func, or_
 from io import StringIO
 import csv
 from datetime import datetime
@@ -19,7 +19,6 @@ from app.infra.db.models import (
     CompetencySelfScore,
     Group,
     Rubric,
-    RubricCriterion,
 )
 from app.api.v1.schemas.overview import OverviewItemOut, OverviewListResponse
 
