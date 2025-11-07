@@ -283,6 +283,8 @@ class CompetencyScore(BaseModel):
     self_score: Optional[float] = None
     peer_score: Optional[float] = None
     teacher_score: Optional[float] = None
+    external_score: Optional[float] = None
+    external_count: int = 0
     final_score: Optional[float] = None
     delta: Optional[float] = None  # compared to previous window
 
