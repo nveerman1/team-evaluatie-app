@@ -19,6 +19,9 @@ from app.infra.db.models import (
     CompetencySelfScore,
     Group,
     Rubric,
+    Grade,
+    PublishedGrade,
+    Allocation,
 )
 from app.api.v1.schemas.overview import OverviewItemOut, OverviewListResponse
 
@@ -27,8 +30,8 @@ router = APIRouter(prefix="/overview", tags=["overview"])
 
 def _calculate_project_score(db: Session, assessment_id: int, rubric_id: int) -> Optional[float]:
     """
-    Calculate final score for a project assessment
-    Returns average score normalized to 1-5 scale
+    Calculate final grade for a project assessment
+    Returns average score normalized to 1-10 scale (grade)
     """
     # Get rubric scale
     rubric = db.query(Rubric).filter(Rubric.id == rubric_id).first()
@@ -50,34 +53,58 @@ def _calculate_project_score(db: Session, assessment_id: int, rubric_id: int) ->
     if avg_score is None:
         return None
     
-    # Normalize to 1-5 scale if needed
-    if rubric.scale_min != 1 or rubric.scale_max != 5:
-        normalized = 1 + ((avg_score - rubric.scale_min) / (rubric.scale_max - rubric.scale_min)) * 4
-        return round(normalized, 2)
+    # Normalize to 1-10 scale (grade)
+    if rubric.scale_min != 1 or rubric.scale_max != 10:
+        normalized = 1 + ((avg_score - rubric.scale_min) / (rubric.scale_max - rubric.scale_min)) * 9
+        return round(normalized, 1)
     
-    return round(avg_score, 2)
+    return round(avg_score, 1)
 
 
 def _calculate_peer_score(db: Session, evaluation_id: int, user_id: int) -> Optional[float]:
     """
-    Calculate final peer evaluation score for a student
-    This is a simplified version - actual implementation depends on your scoring logic
+    Get final peer evaluation grade for a student (Eindcijfer)
+    Returns the published grade from the Grade table (1-10 scale)
     """
-    # For now, return None - you can implement actual logic based on your grade calculation
-    # This would typically involve aggregating scores from allocations
+    # Try to get published grade first
+    published = db.query(PublishedGrade).filter(
+        PublishedGrade.evaluation_id == evaluation_id,
+        PublishedGrade.user_id == user_id
+    ).first()
+    
+    if published and published.grade is not None:
+        return round(float(published.grade), 1)
+    
+    # Otherwise try to get grade from Grade table
+    grade = db.query(Grade).filter(
+        Grade.evaluation_id == evaluation_id,
+        Grade.user_id == user_id
+    ).first()
+    
+    if grade and grade.published_grade is not None:
+        return round(float(grade.published_grade), 1)
+    
     return None
 
 
 def _calculate_competency_score(db: Session, window_id: int, user_id: int) -> Optional[float]:
     """
     Calculate average competency score for a student in a window
+    Converts from 1-5 scale to 1-10 scale (grade)
     """
     scores = db.query(func.avg(CompetencySelfScore.score)).filter(
         CompetencySelfScore.window_id == window_id,
         CompetencySelfScore.user_id == user_id
     ).scalar()
     
-    return round(float(scores), 2) if scores else None
+    if not scores:
+        return None
+    
+    # Convert from 1-5 scale to 1-10 scale
+    avg_score = float(scores)
+    grade = 1 + ((avg_score - 1) / 4) * 9  # Maps 1-5 to 1-10
+    
+    return round(grade, 1)
 
 
 @router.get("/all-items", response_model=OverviewListResponse)
@@ -421,6 +448,7 @@ def export_overview_csv(
 def get_overview_matrix(
     course_id: Optional[int] = Query(None),
     class_name: Optional[str] = Query(None),
+    student_name: Optional[str] = Query(None),
     date_from: Optional[str] = Query(None),
     date_to: Optional[str] = Query(None),
     db: Session = Depends(get_db),
@@ -496,6 +524,10 @@ def get_overview_matrix(
         if class_name:
             members = [m for m in members if m.class_name == class_name]
         
+        # Filter by student name if specified
+        if student_name:
+            members = [m for m in members if student_name.lower() in m.name.lower()]
+        
         for member in members:
             if member.id not in student_data:
                 student_data[member.id] = {
@@ -518,8 +550,6 @@ def get_overview_matrix(
             }
     
     # ==================== COLLECT PEER EVALUATIONS ====================
-    from app.infra.db.models import Allocation
-    
     eval_query = db.query(
         Evaluation,
         Course,
@@ -564,6 +594,10 @@ def get_overview_matrix(
         # Filter by class if specified
         if class_name:
             students_in_eval = [s for s in students_in_eval if s.class_name == class_name]
+        
+        # Filter by student name if specified
+        if student_name:
+            students_in_eval = [s for s in students_in_eval if student_name.lower() in s.name.lower()]
         
         for student in students_in_eval:
             if student.id not in student_data:
@@ -623,6 +657,10 @@ def get_overview_matrix(
         # Filter by class if specified
         if class_name:
             students_with_scores = [s for s in students_with_scores if s.class_name == class_name]
+        
+        # Filter by student name if specified
+        if student_name:
+            students_with_scores = [s for s in students_with_scores if student_name.lower() in s.name.lower()]
         
         for student in students_with_scores:
             if student.id not in student_data:
@@ -707,4 +745,59 @@ def get_overview_matrix(
         rows=rows,
         column_averages=column_averages,
         total_students=len(rows)
+    )
+
+
+@router.get("/matrix/export.csv")
+def export_matrix_csv(
+    course_id: Optional[int] = Query(None),
+    class_name: Optional[str] = Query(None),
+    student_name: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Export matrix view to CSV
+    """
+    # Get matrix data with filters
+    matrix_data = get_overview_matrix(
+        course_id=course_id,
+        class_name=class_name,
+        student_name=student_name,
+        date_from=date_from,
+        date_to=date_to,
+        db=db,
+        current_user=current_user,
+    )
+    
+    # Create CSV
+    output = StringIO()
+    writer = csv.writer(output)
+    
+    # Header row
+    header = ["Leerling", "Klas"]
+    for col in matrix_data.columns:
+        header.append(f"{col.title} ({col.type})")
+    writer.writerow(header)
+    
+    # Data rows
+    for row in matrix_data.rows:
+        csv_row = [row.student_name, row.student_class or ""]
+        for col in matrix_data.columns:
+            cell = row.cells.get(col.key)
+            if cell and cell.score is not None:
+                csv_row.append(f"{cell.score:.1f}")
+            else:
+                csv_row.append("")
+        writer.writerow(csv_row)
+    
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename=overzicht-matrix-{datetime.now().strftime('%Y%m%d')}.csv"
+        }
     )

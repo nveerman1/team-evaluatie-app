@@ -99,6 +99,7 @@ export interface OverviewMatrixResponse {
 export interface MatrixFilters {
   course_id?: number;
   class_name?: string;
+  student_name?: string;
   date_from?: string;
   date_to?: string;
 }

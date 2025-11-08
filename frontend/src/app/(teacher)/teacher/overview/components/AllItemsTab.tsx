@@ -10,6 +10,7 @@ import { formatDate } from "@/utils";
 export default function AllItemsTab() {
   const [matrixData, setMatrixData] = useState<OverviewMatrixResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [courses, setCourses] = useState<Array<{id: number; name: string}>>([]);
   
   // Filter state
   const [filters, setFilters] = useState<MatrixFilters>({});
@@ -18,18 +19,34 @@ export default function AllItemsTab() {
   const [filterInputs, setFilterInputs] = useState({
     course_id: "",
     class_name: "",
+    student_name: "",
     date_from: "",
     date_to: "",
   });
 
   // Display options
-  const [showAverages, setShowAverages] = useState(true);
+  const [showAverages, setShowAverages] = useState(false);
   const [showTrends, setShowTrends] = useState(false);
+
+  // Load courses on mount
+  useEffect(() => {
+    loadCourses();
+  }, []);
 
   // Load data
   useEffect(() => {
     loadData();
   }, [filters]);
+
+  const loadCourses = async () => {
+    try {
+      const { courseService } = await import("@/services");
+      const coursesData = await courseService.getCourses();
+      setCourses(coursesData);
+    } catch (error) {
+      console.error("Error loading courses:", error);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -47,6 +64,7 @@ export default function AllItemsTab() {
     setFilters({
       course_id: filterInputs.course_id ? parseInt(filterInputs.course_id) : undefined,
       class_name: filterInputs.class_name || undefined,
+      student_name: filterInputs.student_name || undefined,
       date_from: filterInputs.date_from || undefined,
       date_to: filterInputs.date_to || undefined,
     });
@@ -56,19 +74,36 @@ export default function AllItemsTab() {
     setFilterInputs({
       course_id: "",
       class_name: "",
+      student_name: "",
       date_from: "",
       date_to: "",
     });
     setFilters({});
   };
 
+  const handleExportCSV = async () => {
+    try {
+      const blob = await overviewService.exportMatrixCSV(filters);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `overzicht-matrix-${new Date().toISOString().split("T")[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Error exporting CSV:", error);
+    }
+  };
+
   const getScoreColor = (score: number | null | undefined): string => {
     if (score === null || score === undefined) return "bg-gray-100 text-gray-400";
     
-    // Assuming 1-5 scale (normalized)
-    if (score >= 4.0) return "bg-green-100 text-green-800";
-    if (score >= 3.0) return "bg-yellow-100 text-yellow-800";
-    if (score >= 2.0) return "bg-orange-100 text-orange-800";
+    // Assuming 1-10 scale (grades)
+    if (score >= 8.0) return "bg-green-100 text-green-800";
+    if (score >= 6.5) return "bg-yellow-100 text-yellow-800";
+    if (score >= 5.5) return "bg-orange-100 text-orange-800";
     return "bg-red-100 text-red-800";
   };
 
@@ -93,18 +128,16 @@ export default function AllItemsTab() {
     }
 
     const scoreColor = getScoreColor(cell.score);
-    const icon = getTypeIcon(cell.type);
     
     return (
       <td key={colKey} className="px-2 py-2 text-center border-r border-gray-200">
         <Link
           href={cell.detail_url}
           className="group block"
-          title={`${cell.title}\nScore: ${cell.score?.toFixed(1) || "—"}\nDatum: ${cell.date ? formatDate(cell.date) : "—"}\nDocent: ${cell.teacher_name || "—"}`}
+          title={`${cell.title}\nCijfer: ${cell.score?.toFixed(1) || "—"}\nDatum: ${cell.date ? formatDate(cell.date) : "—"}\nDocent: ${cell.teacher_name || "—"}`}
         >
-          <div className={`w-full h-10 rounded flex flex-col items-center justify-center ${scoreColor} group-hover:ring-2 group-hover:ring-blue-500 transition-all cursor-pointer`}>
-            <div className="text-xs">{icon}</div>
-            <div className="font-bold text-sm">
+          <div className={`w-full h-10 rounded flex items-center justify-center ${scoreColor} group-hover:ring-2 group-hover:ring-blue-500 transition-all cursor-pointer`}>
+            <div className="font-bold text-base">
               {cell.score !== null && cell.score !== undefined ? cell.score.toFixed(1) : "—"}
             </div>
           </div>
@@ -145,17 +178,22 @@ export default function AllItemsTab() {
       <div className="bg-gray-50 rounded-xl p-4 space-y-4">
         <h3 className="font-semibold text-sm text-gray-700">Filters</h3>
         
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {/* Course ID - placeholder for now */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {/* Course Dropdown */}
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Vak (ID)</label>
-            <input
-              type="number"
-              placeholder="Course ID..."
+            <label className="block text-xs text-gray-600 mb-1">Vak</label>
+            <select
               className="w-full px-3 py-2 text-sm border rounded-lg"
               value={filterInputs.course_id}
               onChange={(e) => setFilterInputs({ ...filterInputs, course_id: e.target.value })}
-            />
+            >
+              <option value="">Alle vakken</option>
+              {courses.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Class */}
@@ -167,6 +205,18 @@ export default function AllItemsTab() {
               className="w-full px-3 py-2 text-sm border rounded-lg"
               value={filterInputs.class_name}
               onChange={(e) => setFilterInputs({ ...filterInputs, class_name: e.target.value })}
+            />
+          </div>
+
+          {/* Student Name */}
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Naam leerling</label>
+            <input
+              type="text"
+              placeholder="Zoek op naam..."
+              className="w-full px-3 py-2 text-sm border rounded-lg"
+              value={filterInputs.student_name}
+              onChange={(e) => setFilterInputs({ ...filterInputs, student_name: e.target.value })}
             />
           </div>
 
@@ -206,6 +256,12 @@ export default function AllItemsTab() {
           >
             Reset
           </button>
+          <button
+            onClick={handleExportCSV}
+            className="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-100"
+          >
+            📥 Export CSV
+          </button>
 
           {/* Display options */}
           <div className="ml-4 flex gap-3">
@@ -235,19 +291,19 @@ export default function AllItemsTab() {
       <div className="flex gap-4 text-xs">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 bg-green-100 rounded"></div>
-          <span>Hoog (≥4.0)</span>
+          <span>Hoog (≥8.0)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 bg-yellow-100 rounded"></div>
-          <span>Gemiddeld (3.0-3.9)</span>
+          <span>Voldoende (6.5-7.9)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 bg-orange-100 rounded"></div>
-          <span>Matig (2.0-2.9)</span>
+          <span>Matig (5.5-6.4)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 bg-red-100 rounded"></div>
-          <span>Laag (&lt;2.0)</span>
+          <span>Onvoldoende (&lt;5.5)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 bg-gray-50 rounded"></div>

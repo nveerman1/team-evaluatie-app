@@ -64,11 +64,31 @@ export const overviewService = {
     
     if (filters?.course_id) params.set("course_id", String(filters.course_id));
     if (filters?.class_name) params.set("class_name", filters.class_name);
+    if (filters?.student_name) params.set("student_name", filters.student_name);
     if (filters?.date_from) params.set("date_from", filters.date_from);
     if (filters?.date_to) params.set("date_to", filters.date_to);
     
     const { data } = await api.get<OverviewMatrixResponse>(
       `/overview/matrix${params.size ? `?${params.toString()}` : ""}`
+    );
+    return data;
+  },
+
+  /**
+   * Export matrix to CSV
+   */
+  async exportMatrixCSV(filters?: MatrixFilters): Promise<Blob> {
+    const params = new URLSearchParams();
+    
+    if (filters?.course_id) params.set("course_id", String(filters.course_id));
+    if (filters?.class_name) params.set("class_name", filters.class_name);
+    if (filters?.student_name) params.set("student_name", filters.student_name);
+    if (filters?.date_from) params.set("date_from", filters.date_from);
+    if (filters?.date_to) params.set("date_to", filters.date_to);
+    
+    const { data } = await api.get(
+      `/overview/matrix/export.csv${params.size ? `?${params.toString()}` : ""}`,
+      { responseType: "blob" }
     );
     return data;
   },
