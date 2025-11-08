@@ -14,6 +14,7 @@ import {
   SelfEvaluationStep,
   PeerReviewStep,
   ReflectionStep,
+  FeedbackSummary,
 } from "@/components/student";
 import { Loading, ErrorMessage } from "@/components";
 import { studentService } from "@/services";
@@ -271,44 +272,139 @@ export default function StudentWizardInner() {
         {/* Step 3: Overview */}
         {step === 3 && (
           <>
-            <h2 className="text-2xl font-semibold mb-6">
-              Stap 3: Overzicht Team
-            </h2>
+            <h2 className="text-2xl font-semibold mb-6">Stap 3: Overzicht</h2>
             <p className="text-gray-600 mb-6">
-              Samenvatting van alle team-beoordelingen (peer gemiddelden, self
-              scores, SPR/GCF).
+              Hier zie je een overzicht van je scores en een samenvatting van de
+              ontvangen peer-feedback.
             </p>
 
             {loadingDash && <Loading />}
 
             {!loadingDash && dash && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm border rounded-xl overflow-hidden">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="p-3 text-left">Naam</th>
-                      <th className="p-3 text-center">Peer-avg</th>
-                      <th className="p-3 text-center">Self-avg</th>
-                      <th className="p-3 text-center">SPR</th>
-                      <th className="p-3 text-center">GCF</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dash.items.map((r) => (
-                      <tr key={r.user_id} className="border-t hover:bg-gray-50">
-                        <td className="p-3">{r.user_name}</td>
-                        <td className="p-3 text-center font-medium">
-                          {r.peer_avg_overall.toFixed(2)}
-                        </td>
-                        <td className="p-3 text-center">
-                          {r.self_avg_overall?.toFixed(2) ?? "−"}
-                        </td>
-                        <td className="p-3 text-center">{r.spr.toFixed(2)}</td>
-                        <td className="p-3 text-center">{r.gcf.toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="space-y-6">
+                {/* Scores Overview */}
+                <div className="bg-white rounded-xl border p-6">
+                  <h3 className="text-lg font-semibold mb-4">Jouw scores</h3>
+                  
+                  {/* Find current user in dashboard */}
+                  {(() => {
+                    const selfUserId = selfAlloc?.reviewee_id;
+                    const myRow = dash.items.find((r) => r.user_id === selfUserId);
+                    if (!myRow) {
+                      return (
+                        <p className="text-sm text-gray-500">
+                          Nog geen scores beschikbaar.
+                        </p>
+                      );
+                    }
+
+                    // Extract categories from criteria
+                    const categories = Array.from(
+                      new Set(
+                        dash.criteria
+                          .map((c) => c.category)
+                          .filter((c): c is string => !!c)
+                      )
+                    );
+
+                    return (
+                      <div className="space-y-6">
+                        {/* GCF and SPR */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="bg-blue-50 rounded-lg p-4">
+                            <div className="text-sm text-blue-600 font-medium mb-1">
+                              GCF (Group Contribution Factor)
+                            </div>
+                            <div className="flex items-baseline gap-2">
+                              <div className="text-3xl font-bold text-blue-900">
+                                {myRow.gcf.toFixed(2)}
+                              </div>
+                              <div className="text-sm text-blue-600">
+                                Peer: {myRow.peer_avg_overall.toFixed(2)}
+                              </div>
+                            </div>
+                            <p className="text-xs text-blue-700 mt-2">
+                              Je bijdrage ten opzichte van teamgemiddelde
+                            </p>
+                          </div>
+
+                          <div className="bg-green-50 rounded-lg p-4">
+                            <div className="text-sm text-green-600 font-medium mb-1">
+                              SPR (Self-Peer Ratio)
+                            </div>
+                            <div className="flex items-baseline gap-2">
+                              <div className="text-3xl font-bold text-green-900">
+                                {myRow.spr.toFixed(2)}
+                              </div>
+                              <div className="text-sm text-green-600">
+                                Self: {myRow.self_avg_overall?.toFixed(2) ?? "−"}
+                              </div>
+                            </div>
+                            <p className="text-xs text-green-700 mt-2">
+                              Verhouding zelf- vs peer-beoordeling
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* OMZA Scores (Category breakdown) */}
+                        {categories.length > 0 && myRow.category_averages && (
+                          <div>
+                            <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                              OMZA Scores per Categorie
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {categories.map((category) => {
+                                const catAvg = myRow.category_averages?.find(
+                                  (ca) => ca.category === category
+                                );
+                                if (!catAvg) return null;
+
+                                return (
+                                  <div
+                                    key={category}
+                                    className="bg-gray-50 border border-gray-200 rounded-lg p-3"
+                                  >
+                                    <div className="text-xs text-gray-600 font-medium mb-1">
+                                      {category}
+                                    </div>
+                                    <div className="flex items-baseline gap-3">
+                                      <div className="text-lg font-bold text-gray-900">
+                                        Peer: {catAvg.peer_avg.toFixed(2)}
+                                      </div>
+                                      {catAvg.self_avg !== null && (
+                                        <div className="text-sm text-blue-600">
+                                          Self: {catAvg.self_avg.toFixed(2)}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* AI Feedback Summary */}
+                {(() => {
+                  // Get current user ID from self allocation
+                  const selfUserId = selfAlloc?.reviewee_id;
+                  const myRow = dash.items.find((r) => r.user_id === selfUserId);
+                  
+                  if (selfUserId && myRow) {
+                    return (
+                      <FeedbackSummary
+                        evaluationId={evaluationIdNum}
+                        studentId={selfUserId}
+                        studentName={myRow.user_name}
+                      />
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             )}
 

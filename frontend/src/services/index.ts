@@ -8,3 +8,4 @@ export * from "./student.service";
 export * from "./project-assessment.service";
 export * from "./competency.service";
 export * from "./overview.service";
+export * from "./feedback-summary.service";
