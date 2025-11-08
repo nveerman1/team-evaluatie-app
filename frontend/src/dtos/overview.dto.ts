@@ -102,4 +102,6 @@ export interface MatrixFilters {
   student_name?: string;
   date_from?: string;
   date_to?: string;
+  sort_by?: string;  // Column key to sort by
+  sort_order?: "asc" | "desc";
 }

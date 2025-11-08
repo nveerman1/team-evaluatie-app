@@ -67,6 +67,8 @@ export const overviewService = {
     if (filters?.student_name) params.set("student_name", filters.student_name);
     if (filters?.date_from) params.set("date_from", filters.date_from);
     if (filters?.date_to) params.set("date_to", filters.date_to);
+    if (filters?.sort_by) params.set("sort_by", filters.sort_by);
+    if (filters?.sort_order) params.set("sort_order", filters.sort_order);
     
     const { data } = await api.get<OverviewMatrixResponse>(
       `/overview/matrix${params.size ? `?${params.toString()}` : ""}`
@@ -85,6 +87,8 @@ export const overviewService = {
     if (filters?.student_name) params.set("student_name", filters.student_name);
     if (filters?.date_from) params.set("date_from", filters.date_from);
     if (filters?.date_to) params.set("date_to", filters.date_to);
+    if (filters?.sort_by) params.set("sort_by", filters.sort_by);
+    if (filters?.sort_order) params.set("sort_order", filters.sort_order);
     
     const { data } = await api.get(
       `/overview/matrix/export.csv${params.size ? `?${params.toString()}` : ""}`,

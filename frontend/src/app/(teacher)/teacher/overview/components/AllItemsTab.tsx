@@ -27,6 +27,10 @@ export default function AllItemsTab() {
   // Display options
   const [showAverages, setShowAverages] = useState(false);
   const [showTrends, setShowTrends] = useState(false);
+  
+  // Sorting state
+  const [sortBy, setSortBy] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   // Load courses on mount
   useEffect(() => {
@@ -67,6 +71,8 @@ export default function AllItemsTab() {
       student_name: filterInputs.student_name || undefined,
       date_from: filterInputs.date_from || undefined,
       date_to: filterInputs.date_to || undefined,
+      sort_by: sortBy || undefined,
+      sort_order: sortOrder,
     });
   };
 
@@ -78,7 +84,28 @@ export default function AllItemsTab() {
       date_from: "",
       date_to: "",
     });
+    setSortBy(null);
+    setSortOrder("desc");
     setFilters({});
+  };
+
+  const handleColumnSort = (columnKey: string) => {
+    if (sortBy === columnKey) {
+      // Toggle sort order
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      // New column, default to descending
+      setSortBy(columnKey);
+      setSortOrder("desc");
+    }
+    // Apply immediately
+    setTimeout(() => {
+      setFilters({
+        ...filters,
+        sort_by: columnKey,
+        sort_order: sortBy === columnKey && sortOrder === "asc" ? "desc" : sortOrder === "desc" && sortBy === columnKey ? "asc" : "desc",
+      });
+    }, 0);
   };
 
   const handleExportCSV = async () => {
@@ -316,24 +343,39 @@ export default function AllItemsTab() {
         <table className="w-full">
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
-              {/* Sticky student columns */}
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r-2 border-gray-300 sticky left-0 bg-gray-50 z-20">
-                Leerling
+              {/* Sticky student columns - sortable */}
+              <th 
+                className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r-2 border-gray-300 sticky left-0 bg-gray-50 z-20 cursor-pointer hover:bg-gray-100"
+                onClick={() => handleColumnSort("student")}
+                title="Klik om te sorteren op naam"
+              >
+                <div className="flex items-center gap-1">
+                  <span>Leerling</span>
+                  {sortBy === "student" && (
+                    <span className="text-xs">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                  )}
+                </div>
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r-2 border-gray-300 sticky left-[150px] bg-gray-50 z-20">
                 Klas
               </th>
               
-              {/* Dynamic evaluation columns */}
+              {/* Dynamic evaluation columns - sortable */}
               {matrixData.columns.map((col) => (
                 <th
                   key={col.key}
-                  className="px-2 py-3 text-center text-xs font-semibold text-gray-700 border-r border-gray-200"
+                  className="px-2 py-3 text-center text-xs font-semibold text-gray-700 border-r border-gray-200 cursor-pointer hover:bg-gray-100"
                   style={{ minWidth: "80px" }}
-                  title={`${col.title}\n${col.date ? formatDate(col.date) : "Geen datum"}`}
+                  title={`${col.title}\n${col.date ? formatDate(col.date) : "Geen datum"}\nKlik om te sorteren`}
+                  onClick={() => handleColumnSort(col.key)}
                 >
                   <div className="flex flex-col items-center gap-1">
-                    <span>{getTypeIcon(col.type)}</span>
+                    <div className="flex items-center gap-1">
+                      <span>{getTypeIcon(col.type)}</span>
+                      {sortBy === col.key && (
+                        <span className="text-xs">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                     <span className="truncate max-w-[60px]">{col.title}</span>
                     <span className="text-[10px] text-gray-500">
                       {col.date ? formatDate(col.date) : "—"}

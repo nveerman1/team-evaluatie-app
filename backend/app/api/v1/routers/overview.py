@@ -66,7 +66,7 @@ def _calculate_peer_score(db: Session, evaluation_id: int, user_id: int) -> Opti
     Get final peer evaluation grade for a student (Eindcijfer)
     Returns the published grade from the Grade table (1-10 scale)
     """
-    # Try to get published grade first
+    # Try to get from PublishedGrade table first
     published = db.query(PublishedGrade).filter(
         PublishedGrade.evaluation_id == evaluation_id,
         PublishedGrade.user_id == user_id
@@ -75,14 +75,14 @@ def _calculate_peer_score(db: Session, evaluation_id: int, user_id: int) -> Opti
     if published and published.grade is not None:
         return round(float(published.grade), 1)
     
-    # Otherwise try to get grade from Grade table
+    # Otherwise try to get grade from Grade table (use 'grade' field, not 'published_grade')
     grade = db.query(Grade).filter(
         Grade.evaluation_id == evaluation_id,
         Grade.user_id == user_id
     ).first()
     
-    if grade and grade.published_grade is not None:
-        return round(float(grade.published_grade), 1)
+    if grade and grade.grade is not None:
+        return round(float(grade.grade), 1)
     
     return None
 
@@ -451,6 +451,8 @@ def get_overview_matrix(
     student_name: Optional[str] = Query(None),
     date_from: Optional[str] = Query(None),
     date_to: Optional[str] = Query(None),
+    sort_by: Optional[str] = Query(None),  # Column key to sort by
+    sort_order: str = Query("asc", regex="^(asc|desc)$"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -513,11 +515,13 @@ def get_overview_matrix(
         teacher = db.query(User).filter(User.id == assessment.teacher_id).first()
         teacher_name = teacher.name if teacher else None
         
-        # Get all group members and their scores
+        # Get all group members and their scores (only active students)
         members = db.query(User).join(
             Group.members
         ).filter(
-            Group.id == group.id
+            Group.id == group.id,
+            ~User.archived,
+            User.role == "student"
         ).all()
         
         # Filter by class if specified
@@ -584,11 +588,13 @@ def get_overview_matrix(
             "evaluation_id": evaluation.id,
         })
         
-        # Get all students who have allocations in this evaluation (as reviewees)
+        # Get all students who have allocations in this evaluation (as reviewees, only active students)
         students_in_eval = db.query(User).join(
             Allocation, Allocation.reviewee_id == User.id
         ).filter(
-            Allocation.evaluation_id == evaluation.id
+            Allocation.evaluation_id == evaluation.id,
+            ~User.archived,
+            User.role == "student"
         ).distinct().all()
         
         # Filter by class if specified
@@ -647,11 +653,13 @@ def get_overview_matrix(
             "evaluation_id": window.id,
         })
         
-        # Get students who have self-scores in this window
+        # Get students who have self-scores in this window (only active students)
         students_with_scores = db.query(User).join(
             CompetencySelfScore, CompetencySelfScore.user_id == User.id
         ).filter(
-            CompetencySelfScore.window_id == window.id
+            CompetencySelfScore.window_id == window.id,
+            ~User.archived,
+            User.role == "student"
         ).distinct().all()
         
         # Filter by class if specified
@@ -725,8 +733,21 @@ def get_overview_matrix(
             average=average
         ))
     
-    # Sort rows by student name
-    rows.sort(key=lambda x: x.student_name)
+    # ==================== SORT ROWS ====================
+    # Sort by specified column or default to student name
+    if sort_by and sort_by != "student":
+        # Sort by a specific evaluation column
+        def get_sort_key(row):
+            cell = row.cells.get(sort_by)
+            if cell and cell.score is not None:
+                return cell.score
+            # Put rows without data at the end
+            return -999999 if sort_order == "desc" else 999999
+        
+        rows.sort(key=get_sort_key, reverse=(sort_order == "desc"))
+    else:
+        # Sort by student name (default)
+        rows.sort(key=lambda x: x.student_name, reverse=(sort_order == "desc"))
     
     # ==================== CALCULATE COLUMN AVERAGES ====================
     column_averages = {}
@@ -755,6 +776,8 @@ def export_matrix_csv(
     student_name: Optional[str] = Query(None),
     date_from: Optional[str] = Query(None),
     date_to: Optional[str] = Query(None),
+    sort_by: Optional[str] = Query(None),
+    sort_order: str = Query("asc", regex="^(asc|desc)$"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -768,6 +791,8 @@ def export_matrix_csv(
         student_name=student_name,
         date_from=date_from,
         date_to=date_to,
+        sort_by=sort_by,
+        sort_order=sort_order,
         db=db,
         current_user=current_user,
     )
