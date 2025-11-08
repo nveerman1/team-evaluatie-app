@@ -1,6 +1,6 @@
 from __future__ import annotations
 import os
-import httpx
+import requests
 import logging
 from typing import Optional
 
@@ -15,7 +15,7 @@ class OllamaService:
         self.model = model or os.getenv("OLLAMA_MODEL", "llama3.1")
         self.timeout = float(os.getenv("OLLAMA_TIMEOUT", "60.0"))
         
-    async def generate_summary(
+    def generate_summary(
         self, 
         feedback_comments: list[str],
         student_name: Optional[str] = None,
@@ -65,35 +65,35 @@ class OllamaService:
         user_message = "\n".join(user_message_parts)
         
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(
-                    f"{self.base_url}/api/generate",
-                    json={
-                        "model": self.model,
-                        "prompt": f"{system_prompt}\n\n{user_message}",
-                        "stream": False,
-                        "options": {
-                            "temperature": 0.3,  # Lower temperature for consistency
-                            "num_predict": 200,  # Limit output length
-                        }
+            response = requests.post(
+                f"{self.base_url}/api/generate",
+                json={
+                    "model": self.model,
+                    "prompt": f"{system_prompt}\n\n{user_message}",
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.3,  # Lower temperature for consistency
+                        "num_predict": 200,  # Limit output length
                     }
-                )
+                },
+                timeout=self.timeout
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                summary = result.get("response", "").strip()
                 
-                if response.status_code == 200:
-                    result = response.json()
-                    summary = result.get("response", "").strip()
-                    
-                    # Basic validation
-                    if summary and len(summary) > 20:
-                        return summary
-                    else:
-                        logger.warning(f"Generated summary too short: {len(summary)} chars")
-                        return None
+                # Basic validation
+                if summary and len(summary) > 20:
+                    return summary
                 else:
-                    logger.error(f"Ollama API error: {response.status_code} - {response.text}")
+                    logger.warning(f"Generated summary too short: {len(summary)} chars")
                     return None
-                    
-        except httpx.TimeoutException:
+            else:
+                logger.error(f"Ollama API error: {response.status_code} - {response.text}")
+                return None
+                
+        except requests.Timeout:
             logger.error("Ollama request timed out")
             return None
         except Exception as e:

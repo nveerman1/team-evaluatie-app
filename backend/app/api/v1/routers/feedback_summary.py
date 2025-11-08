@@ -40,7 +40,7 @@ def _compute_feedback_hash(comments: List[str]) -> str:
 
 
 @router.get("/evaluation/{evaluation_id}/student/{student_id}", response_model=FeedbackSummaryResponse)
-async def get_student_feedback_summary(
+def get_student_feedback_summary(
     evaluation_id: int,
     student_id: int,
     db: Session = Depends(get_db),
@@ -139,7 +139,7 @@ async def get_student_feedback_summary(
     start_time = time.time()
     
     try:
-        ai_summary = await ollama.generate_summary(
+        ai_summary = ollama.generate_summary(
             feedback_comments=anonymized_comments,
             student_name=student.name,
             context=f"Evaluatie: {ev.title}",
@@ -187,7 +187,7 @@ async def get_student_feedback_summary(
 
 
 @router.post("/evaluation/{evaluation_id}/student/{student_id}/regenerate", response_model=FeedbackSummaryResponse)
-async def regenerate_student_feedback_summary(
+def regenerate_student_feedback_summary(
     evaluation_id: int,
     student_id: int,
     payload: RegenerateSummaryRequest,
@@ -204,7 +204,7 @@ async def regenerate_student_feedback_summary(
     db.commit()
     
     # Call get endpoint to generate new summary
-    return await get_student_feedback_summary(evaluation_id, student_id, db, user)
+    return get_student_feedback_summary(evaluation_id, student_id, db, user)
 
 
 @router.get("/evaluation/{evaluation_id}/student/{student_id}/quotes")
