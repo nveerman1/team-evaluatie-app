@@ -24,10 +24,6 @@ export default function AllItemsTab() {
     date_to: "",
   });
 
-  // Display options
-  const [showAverages, setShowAverages] = useState(false);
-  const [showTrends, setShowTrends] = useState(false);
-  
   // Sorting state
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
@@ -289,28 +285,6 @@ export default function AllItemsTab() {
           >
             📥 Export CSV
           </button>
-
-          {/* Display options */}
-          <div className="ml-4 flex gap-3">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={showAverages}
-                onChange={(e) => setShowAverages(e.target.checked)}
-                className="rounded"
-              />
-              <span className="text-gray-700">Toon gemiddelden</span>
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={showTrends}
-                onChange={(e) => setShowTrends(e.target.checked)}
-                className="rounded"
-              />
-              <span className="text-gray-700">Toon trends</span>
-            </label>
-          </div>
         </div>
       </div>
 
@@ -383,13 +357,6 @@ export default function AllItemsTab() {
                   </div>
                 </th>
               ))}
-              
-              {/* Average column */}
-              {showAverages && (
-                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-l-2 border-gray-300 bg-gray-100 sticky right-0 z-20">
-                  Gem.
-                </th>
-              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white">
@@ -407,38 +374,8 @@ export default function AllItemsTab() {
                 {matrixData.columns.map((col) => 
                   renderCell(row.cells[col.key], row.student_id, col.key)
                 )}
-                
-                {/* Average */}
-                {showAverages && (
-                  <td className="px-4 py-2 text-center font-bold text-sm border-l-2 border-gray-300 bg-gray-50 sticky right-0 z-10">
-                    {row.average !== null && row.average !== undefined ? row.average.toFixed(2) : "—"}
-                  </td>
-                )}
               </tr>
             ))}
-            
-            {/* Column averages row */}
-            {showAverages && (
-              <tr className="bg-gray-100 font-semibold">
-                <td className="px-4 py-2 text-sm border-r-2 border-gray-300 sticky left-0 bg-gray-100 z-10">
-                  Gem. per evaluatie
-                </td>
-                <td className="px-4 py-2 border-r-2 border-gray-300 sticky left-[150px] bg-gray-100 z-10"></td>
-                
-                {matrixData.columns.map((col) => {
-                  const avg = matrixData.column_averages[col.key];
-                  return (
-                    <td key={col.key} className="px-2 py-2 text-center text-sm border-r border-gray-200">
-                      {avg !== null && avg !== undefined ? avg.toFixed(2) : "—"}
-                    </td>
-                  );
-                })}
-                
-                {showAverages && (
-                  <td className="px-4 py-2 border-l-2 border-gray-300 bg-gray-100 sticky right-0 z-10"></td>
-                )}
-              </tr>
-            )}
           </tbody>
         </table>
       </div>

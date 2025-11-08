@@ -19,6 +19,7 @@ from app.infra.db.models import (
     CompetencySelfScore,
     Group,
     Rubric,
+    RubricCriterion,
     Grade,
     PublishedGrade,
     Allocation,
@@ -28,35 +29,55 @@ from app.api.v1.schemas.overview import OverviewItemOut, OverviewListResponse
 router = APIRouter(prefix="/overview", tags=["overview"])
 
 
-def _calculate_project_score(db: Session, assessment_id: int, rubric_id: int) -> Optional[float]:
+def _calculate_project_score(db: Session, assessment_id: int, rubric_id: int, team_number: int) -> Optional[float]:
     """
-    Calculate final grade for a project assessment
-    Returns average score normalized to 1-10 scale (grade)
+    Calculate final grade for a project assessment for a specific team
+    Uses weighted average based on criterion weights, then normalizes to 1-10 scale
     """
     # Get rubric scale
     rubric = db.query(Rubric).filter(Rubric.id == rubric_id).first()
     if not rubric:
         return None
     
-    # Get all scores for this assessment
+    # Get all criteria for this rubric
+    criteria = db.query(RubricCriterion).filter(
+        RubricCriterion.rubric_id == rubric_id
+    ).all()
+    
+    if not criteria:
+        return None
+    
+    # Get scores for this assessment and team
     scores = db.query(ProjectAssessmentScore).filter(
-        ProjectAssessmentScore.assessment_id == assessment_id
+        ProjectAssessmentScore.assessment_id == assessment_id,
+        ProjectAssessmentScore.team_number == team_number
     ).all()
     
     if not scores:
         return None
     
-    # Calculate weighted average
-    total_score = sum(s.score for s in scores)
-    avg_score = total_score / len(scores) if scores else None
+    # Create a map of criterion_id -> score
+    score_map = {s.criterion_id: s.score for s in scores}
     
-    if avg_score is None:
+    # Calculate weighted average
+    total_weighted_score = 0.0
+    total_weight = 0.0
+    
+    for criterion in criteria:
+        if criterion.id in score_map:
+            total_weighted_score += score_map[criterion.id] * criterion.weight
+            total_weight += criterion.weight
+    
+    if total_weight == 0:
         return None
     
+    avg_score = total_weighted_score / total_weight
+    
     # Normalize to 1-10 scale (grade)
-    if rubric.scale_min != 1 or rubric.scale_max != 10:
-        normalized = 1 + ((avg_score - rubric.scale_min) / (rubric.scale_max - rubric.scale_min)) * 9
-        return round(normalized, 1)
+    scale_range = rubric.scale_max - rubric.scale_min
+    if scale_range > 0:
+        grade = ((avg_score - rubric.scale_min) / scale_range) * 9 + 1
+        return round(grade, 1)
     
     return round(avg_score, 1)
 
@@ -540,7 +561,9 @@ def get_overview_matrix(
                     "cells": {}
                 }
             
-            score = _calculate_project_score(db, assessment.id, assessment.rubric_id)
+            # Calculate score for this student's team
+            team_num = member.team_number if hasattr(member, 'team_number') else None
+            score = _calculate_project_score(db, assessment.id, assessment.rubric_id, team_num) if team_num else None
             
             student_data[member.id]["cells"][eval_key] = {
                 "evaluation_id": assessment.id,
