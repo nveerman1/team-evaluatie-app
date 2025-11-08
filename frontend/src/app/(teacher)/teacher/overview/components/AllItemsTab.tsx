@@ -81,10 +81,10 @@ export default function AllItemsTab() {
     }
   };
 
-  const renderCell = (cell: MatrixCell | null, studentId: number) => {
+  const renderCell = (cell: MatrixCell | null, studentId: number, colKey: string) => {
     if (!cell) {
       return (
-        <td className="px-2 py-2 text-center border-r border-gray-200">
+        <td key={colKey} className="px-2 py-2 text-center border-r border-gray-200">
           <div className="w-full h-10 bg-gray-50 rounded flex items-center justify-center text-gray-300 text-xs">
             —
           </div>
@@ -96,7 +96,7 @@ export default function AllItemsTab() {
     const icon = getTypeIcon(cell.type);
     
     return (
-      <td className="px-2 py-2 text-center border-r border-gray-200">
+      <td key={colKey} className="px-2 py-2 text-center border-r border-gray-200">
         <Link
           href={cell.detail_url}
           className="group block"
@@ -307,7 +307,7 @@ export default function AllItemsTab() {
                 
                 {/* Dynamic cells */}
                 {matrixData.columns.map((col) => 
-                  renderCell(row.cells[col.key], row.student_id)
+                  renderCell(row.cells[col.key], row.student_id, col.key)
                 )}
                 
                 {/* Average */}
