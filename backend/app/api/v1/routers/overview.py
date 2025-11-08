@@ -413,3 +413,298 @@ def export_overview_csv(
             "Content-Disposition": f"attachment; filename=overzicht-alle-items-{datetime.now().strftime('%Y%m%d')}.csv"
         }
     )
+
+
+# ==================== MATRIX VIEW ENDPOINT ====================
+
+@router.get("/matrix")
+def get_overview_matrix(
+    course_id: Optional[int] = Query(None),
+    class_name: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get matrix view of all evaluations organized by students (rows) and evaluations (columns)
+    Each cell represents one student's score in one evaluation
+    Columns are sorted chronologically
+    """
+    from app.api.v1.schemas.overview import (
+        OverviewMatrixResponse,
+        StudentMatrixRowOut,
+        MatrixColumnOut,
+        MatrixCellOut,
+    )
+    
+    school_id = current_user.school_id
+    
+    # Parse date filters
+    date_from_dt = datetime.fromisoformat(date_from) if date_from else None
+    date_to_dt = datetime.fromisoformat(date_to) if date_to else None
+    
+    # Dictionary to store all evaluations with metadata
+    evaluations = []  # List of (key, type, title, date, evaluation_id)
+    
+    # Dictionary to store student data: student_id -> {evaluation_key -> cell_data}
+    student_data = {}
+    
+    # ==================== COLLECT PROJECT ASSESSMENTS ====================
+    project_query = db.query(
+        ProjectAssessment,
+        Course,
+        Group,
+    ).join(
+        Group, ProjectAssessment.group_id == Group.id
+    ).outerjoin(
+        Course, Group.course_id == Course.id
+    ).filter(
+        ProjectAssessment.school_id == school_id,
+        ProjectAssessment.status == "published"  # Only published projects
+    )
+    
+    if course_id:
+        project_query = project_query.filter(Group.course_id == course_id)
+    if date_from_dt:
+        project_query = project_query.filter(ProjectAssessment.published_at >= date_from_dt)
+    if date_to_dt:
+        project_query = project_query.filter(ProjectAssessment.published_at <= date_to_dt)
+    
+    for assessment, course, group in project_query.all():
+        eval_key = f"project_{assessment.id}"
+        evaluations.append({
+            "key": eval_key,
+            "type": "project",
+            "title": assessment.title,
+            "date": assessment.published_at,
+            "evaluation_id": assessment.id,
+        })
+        
+        # Get teacher for this assessment
+        teacher = db.query(User).filter(User.id == assessment.teacher_id).first()
+        teacher_name = teacher.name if teacher else None
+        
+        # Get all group members and their scores
+        members = db.query(User).join(
+            Group.members
+        ).filter(
+            Group.id == group.id
+        ).all()
+        
+        # Filter by class if specified
+        if class_name:
+            members = [m for m in members if m.class_name == class_name]
+        
+        for member in members:
+            if member.id not in student_data:
+                student_data[member.id] = {
+                    "name": member.name,
+                    "class": member.class_name,
+                    "cells": {}
+                }
+            
+            score = _calculate_project_score(db, assessment.id, assessment.rubric_id)
+            
+            student_data[member.id]["cells"][eval_key] = {
+                "evaluation_id": assessment.id,
+                "type": "project",
+                "title": assessment.title,
+                "score": score,
+                "status": assessment.status,
+                "date": assessment.published_at,
+                "teacher_name": teacher_name,
+                "detail_url": f"/teacher/project-assessments/{assessment.id}/overview",
+            }
+    
+    # ==================== COLLECT PEER EVALUATIONS ====================
+    from app.infra.db.models import Allocation
+    
+    eval_query = db.query(
+        Evaluation,
+        Course,
+    ).outerjoin(
+        Course, Evaluation.course_id == Course.id
+    ).filter(
+        Evaluation.school_id == school_id,
+        or_(Evaluation.status == "open", Evaluation.status == "closed")
+    )
+    
+    if course_id:
+        eval_query = eval_query.filter(Evaluation.course_id == course_id)
+    
+    for evaluation, course in eval_query.all():
+        eval_key = f"peer_{evaluation.id}"
+        
+        # Use settings deadline or created_at as date
+        eval_date = None
+        if evaluation.settings and evaluation.settings.get("deadlines"):
+            deadline = evaluation.settings["deadlines"].get("review")
+            if deadline:
+                try:
+                    eval_date = datetime.fromisoformat(deadline)
+                except (ValueError, TypeError):
+                    pass
+        
+        evaluations.append({
+            "key": eval_key,
+            "type": "peer",
+            "title": evaluation.title,
+            "date": eval_date,
+            "evaluation_id": evaluation.id,
+        })
+        
+        # Get all students who have allocations in this evaluation (as reviewees)
+        students_in_eval = db.query(User).join(
+            Allocation, Allocation.reviewee_id == User.id
+        ).filter(
+            Allocation.evaluation_id == evaluation.id
+        ).distinct().all()
+        
+        # Filter by class if specified
+        if class_name:
+            students_in_eval = [s for s in students_in_eval if s.class_name == class_name]
+        
+        for student in students_in_eval:
+            if student.id not in student_data:
+                student_data[student.id] = {
+                    "name": student.name,
+                    "class": student.class_name,
+                    "cells": {}
+                }
+            
+            score = _calculate_peer_score(db, evaluation.id, student.id)
+            
+            student_data[student.id]["cells"][eval_key] = {
+                "evaluation_id": evaluation.id,
+                "type": "peer",
+                "title": evaluation.title,
+                "score": score,
+                "status": evaluation.status,
+                "date": eval_date,
+                "teacher_name": None,
+                "detail_url": f"/teacher/evaluations/{evaluation.id}/dashboard",
+            }
+    
+    # ==================== COLLECT COMPETENCY WINDOWS ====================
+    window_query = db.query(
+        CompetencyWindow,
+        Course,
+    ).outerjoin(
+        Course, CompetencyWindow.course_id == Course.id
+    ).filter(
+        CompetencyWindow.school_id == school_id
+    )
+    
+    if course_id:
+        window_query = window_query.filter(CompetencyWindow.course_id == course_id)
+    if date_from_dt:
+        window_query = window_query.filter(CompetencyWindow.end_date >= date_from_dt)
+    if date_to_dt:
+        window_query = window_query.filter(CompetencyWindow.start_date <= date_to_dt)
+    
+    for window, course in window_query.all():
+        eval_key = f"competency_{window.id}"
+        evaluations.append({
+            "key": eval_key,
+            "type": "competency",
+            "title": window.title,
+            "date": window.end_date,
+            "evaluation_id": window.id,
+        })
+        
+        # Get students who have self-scores in this window
+        students_with_scores = db.query(User).join(
+            CompetencySelfScore, CompetencySelfScore.user_id == User.id
+        ).filter(
+            CompetencySelfScore.window_id == window.id
+        ).distinct().all()
+        
+        # Filter by class if specified
+        if class_name:
+            students_with_scores = [s for s in students_with_scores if s.class_name == class_name]
+        
+        for student in students_with_scores:
+            if student.id not in student_data:
+                student_data[student.id] = {
+                    "name": student.name,
+                    "class": student.class_name,
+                    "cells": {}
+                }
+            
+            score = _calculate_competency_score(db, window.id, student.id)
+            
+            student_data[student.id]["cells"][eval_key] = {
+                "evaluation_id": window.id,
+                "type": "competency",
+                "title": window.title,
+                "score": score,
+                "status": window.status,
+                "date": window.end_date,
+                "teacher_name": None,
+                "detail_url": f"/teacher/competencies/windows/{window.id}",
+            }
+    
+    # ==================== SORT EVALUATIONS CHRONOLOGICALLY ====================
+    # Sort by date (None dates go to the end)
+    evaluations.sort(key=lambda x: (x["date"] is None, x["date"] if x["date"] else datetime.max))
+    
+    # Create column headers with order
+    columns = []
+    for idx, eval_info in enumerate(evaluations):
+        columns.append(MatrixColumnOut(
+            key=eval_info["key"],
+            type=eval_info["type"],
+            title=eval_info["title"],
+            date=eval_info["date"],
+            order=idx
+        ))
+    
+    # ==================== BUILD STUDENT ROWS ====================
+    rows = []
+    for student_id, data in student_data.items():
+        # Build cells dict with all columns (None for missing data)
+        cells = {}
+        scores_for_avg = []
+        
+        for col in columns:
+            if col.key in data["cells"]:
+                cell_data = data["cells"][col.key]
+                cells[col.key] = MatrixCellOut(**cell_data)
+                if cell_data["score"] is not None:
+                    scores_for_avg.append(cell_data["score"])
+            else:
+                cells[col.key] = None
+        
+        # Calculate average
+        average = round(sum(scores_for_avg) / len(scores_for_avg), 2) if scores_for_avg else None
+        
+        rows.append(StudentMatrixRowOut(
+            student_id=student_id,
+            student_name=data["name"],
+            student_class=data["class"],
+            cells=cells,
+            average=average
+        ))
+    
+    # Sort rows by student name
+    rows.sort(key=lambda x: x.student_name)
+    
+    # ==================== CALCULATE COLUMN AVERAGES ====================
+    column_averages = {}
+    for col in columns:
+        scores = []
+        for row in rows:
+            cell = row.cells.get(col.key)
+            if cell and cell.score is not None:
+                scores.append(cell.score)
+        
+        column_averages[col.key] = round(sum(scores) / len(scores), 2) if scores else None
+    
+    # ==================== RETURN MATRIX ====================
+    return OverviewMatrixResponse(
+        columns=columns,
+        rows=rows,
+        column_averages=column_averages,
+        total_students=len(rows)
+    )

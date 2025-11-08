@@ -76,3 +76,55 @@ class OverviewFilters(BaseModel):
     # Pagination
     page: int = 1
     limit: int = 50
+
+
+# ==================== Matrix View Schemas ====================
+
+class MatrixCellOut(BaseModel):
+    """
+    Single cell in the matrix representing one evaluation for one student
+    """
+    evaluation_id: int
+    type: str  # "project" | "peer" | "competency"
+    title: str
+    score: Optional[float] = None
+    status: str
+    date: Optional[datetime] = None
+    teacher_name: Optional[str] = None
+    detail_url: str
+
+
+class MatrixColumnOut(BaseModel):
+    """
+    Column header information for the matrix
+    """
+    key: str  # Unique key for the column (e.g., "project_1", "peer_2")
+    type: str  # "project" | "peer" | "competency"
+    title: str
+    date: Optional[datetime] = None
+    order: int  # For sorting columns chronologically
+
+
+class StudentMatrixRowOut(BaseModel):
+    """
+    One row in the matrix representing a student with all their evaluations
+    """
+    student_id: int
+    student_name: str
+    student_class: Optional[str] = None
+    cells: dict[str, Optional[MatrixCellOut]]  # key -> cell data (None if no data)
+    average: Optional[float] = None  # Overall average across all evaluations
+
+
+class OverviewMatrixResponse(BaseModel):
+    """
+    Matrix view of all evaluations organized by students
+    """
+    columns: List[MatrixColumnOut]  # Ordered list of column headers
+    rows: List[StudentMatrixRowOut]  # List of student rows
+    
+    # Column averages
+    column_averages: dict[str, Optional[float]] = {}
+    
+    # Metadata
+    total_students: int = 0

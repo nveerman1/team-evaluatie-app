@@ -59,3 +59,46 @@ export interface OverviewFilters {
   page?: number;
   limit?: number;
 }
+
+// ==================== Matrix View Types ====================
+
+export interface MatrixCell {
+  evaluation_id: number;
+  type: "project" | "peer" | "competency";
+  title: string;
+  score?: number | null;
+  status: string;
+  date?: string | null;
+  teacher_name?: string | null;
+  detail_url: string;
+}
+
+export interface MatrixColumn {
+  key: string;
+  type: "project" | "peer" | "competency";
+  title: string;
+  date?: string | null;
+  order: number;
+}
+
+export interface StudentMatrixRow {
+  student_id: number;
+  student_name: string;
+  student_class?: string | null;
+  cells: Record<string, MatrixCell | null>;
+  average?: number | null;
+}
+
+export interface OverviewMatrixResponse {
+  columns: MatrixColumn[];
+  rows: StudentMatrixRow[];
+  column_averages: Record<string, number | null>;
+  total_students: number;
+}
+
+export interface MatrixFilters {
+  course_id?: number;
+  class_name?: string;
+  date_from?: string;
+  date_to?: string;
+}

@@ -2,6 +2,8 @@ import api from "@/lib/api";
 import {
   OverviewListResponse,
   OverviewFilters,
+  OverviewMatrixResponse,
+  MatrixFilters,
 } from "@/dtos/overview.dto";
 
 export const overviewService = {
@@ -50,6 +52,23 @@ export const overviewService = {
     const { data } = await api.get(
       `/overview/all-items/export.csv?${params.toString()}`,
       { responseType: "blob" }
+    );
+    return data;
+  },
+
+  /**
+   * Get matrix view of all evaluations
+   */
+  async getMatrix(filters?: MatrixFilters): Promise<OverviewMatrixResponse> {
+    const params = new URLSearchParams();
+    
+    if (filters?.course_id) params.set("course_id", String(filters.course_id));
+    if (filters?.class_name) params.set("class_name", filters.class_name);
+    if (filters?.date_from) params.set("date_from", filters.date_from);
+    if (filters?.date_to) params.set("date_to", filters.date_to);
+    
+    const { data } = await api.get<OverviewMatrixResponse>(
+      `/overview/matrix${params.size ? `?${params.toString()}` : ""}`
     );
     return data;
   },
