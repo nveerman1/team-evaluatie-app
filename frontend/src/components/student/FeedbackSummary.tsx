@@ -10,13 +10,11 @@ import {
 interface FeedbackSummaryProps {
   evaluationId: number;
   studentId: number;
-  studentName?: string;
 }
 
 export function FeedbackSummary({
   evaluationId,
   studentId,
-  studentName,
 }: FeedbackSummaryProps) {
   const [summary, setSummary] = useState<FeedbackSummaryResponse | null>(null);
   const [quotes, setQuotes] = useState<FeedbackQuote[]>([]);
@@ -34,8 +32,9 @@ export function FeedbackSummary({
         studentId
       );
       setSummary(data);
-    } catch (err: any) {
-      setError(err?.response?.data?.detail || err?.message || "Laden mislukt");
+    } catch (err) {
+      const error = err as { response?: { data?: { detail?: string } }; message?: string };
+      setError(error?.response?.data?.detail || error?.message || "Laden mislukt");
     } finally {
       setLoading(false);
     }
@@ -48,7 +47,7 @@ export function FeedbackSummary({
         studentId
       );
       setQuotes(data.quotes || []);
-    } catch (err) {
+    } catch {
       // Silent fail for quotes
       setQuotes([]);
     }
@@ -56,6 +55,7 @@ export function FeedbackSummary({
 
   useEffect(() => {
     loadSummary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [evaluationId, studentId]);
 
   const handleRegenerate = async () => {
@@ -67,9 +67,10 @@ export function FeedbackSummary({
         studentId
       );
       setSummary(data);
-    } catch (err: any) {
+    } catch (err) {
+      const error = err as { response?: { data?: { detail?: string } }; message?: string };
       setError(
-        err?.response?.data?.detail || err?.message || "Regenereren mislukt"
+        error?.response?.data?.detail || error?.message || "Regenereren mislukt"
       );
     } finally {
       setRegenerating(false);

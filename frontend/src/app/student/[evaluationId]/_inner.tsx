@@ -392,14 +392,12 @@ export default function StudentWizardInner() {
                 {(() => {
                   // Get current user ID from self allocation
                   const selfUserId = selfAlloc?.reviewee_id;
-                  const myRow = dash.items.find((r) => r.user_id === selfUserId);
                   
-                  if (selfUserId && myRow) {
+                  if (selfUserId) {
                     return (
                       <FeedbackSummary
                         evaluationId={evaluationIdNum}
                         studentId={selfUserId}
-                        studentName={myRow.user_name}
                       />
                     );
                   }
