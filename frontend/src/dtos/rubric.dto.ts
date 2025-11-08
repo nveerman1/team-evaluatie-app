@@ -41,6 +41,7 @@ export type CriterionOut = {
   name: string;
   weight: number;
   descriptors: Record<string, string>;
+  category?: string | null;
   order?: number | null;
 };
 
@@ -49,6 +50,7 @@ export type CriterionUpsertItem = {
   name: string;
   weight: number;
   descriptors: Record<string, string>;
+  category?: string | null;
   order?: number | null;
 };
 

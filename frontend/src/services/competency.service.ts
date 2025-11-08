@@ -6,6 +6,9 @@ import type {
   Competency,
   CompetencyCreate,
   CompetencyUpdate,
+  CompetencyRubricLevel,
+  CompetencyRubricLevelCreate,
+  CompetencyRubricLevelUpdate,
   CompetencyWindow,
   CompetencyWindowCreate,
   CompetencyWindowUpdate,
@@ -20,6 +23,10 @@ import type {
   CompetencyTeacherObservationCreate,
   StudentCompetencyOverview,
   ClassHeatmap,
+  ExternalInviteCreate,
+  ExternalInvite,
+  ExternalInvitePublicInfo,
+  ExternalScoreSubmit,
 } from "@/dtos";
 
 export const competencyService = {
@@ -54,12 +61,47 @@ export const competencyService = {
     await api.delete(`/competencies/${id}`);
   },
 
+  // ============ Competency Rubric Level CRUD ============
+
+  async getRubricLevels(competencyId: number): Promise<CompetencyRubricLevel[]> {
+    const response = await api.get(`/competencies/${competencyId}/rubric-levels`);
+    return response.data;
+  },
+
+  async createRubricLevel(
+    competencyId: number,
+    data: CompetencyRubricLevelCreate
+  ): Promise<CompetencyRubricLevel> {
+    const response = await api.post(
+      `/competencies/${competencyId}/rubric-levels`,
+      data
+    );
+    return response.data;
+  },
+
+  async updateRubricLevel(
+    competencyId: number,
+    levelId: number,
+    data: CompetencyRubricLevelUpdate
+  ): Promise<CompetencyRubricLevel> {
+    const response = await api.patch(
+      `/competencies/${competencyId}/rubric-levels/${levelId}`,
+      data
+    );
+    return response.data;
+  },
+
+  async deleteRubricLevel(competencyId: number, levelId: number): Promise<void> {
+    await api.delete(`/competencies/${competencyId}/rubric-levels/${levelId}`);
+  },
+
   // ============ Competency Window CRUD ============
 
-  async getWindows(statusFilter?: string): Promise<CompetencyWindow[]> {
-    const response = await api.get("/competencies/windows/", {
-      params: statusFilter ? { status_filter: statusFilter } : {},
-    });
+  async getWindows(statusFilter?: string, courseId?: number): Promise<CompetencyWindow[]> {
+    const params: any = {};
+    if (statusFilter) params.status_filter = statusFilter;
+    if (courseId) params.course_id = courseId;
+    const response = await api.get("/competencies/windows/", { params });
     return response.data;
   },
 
@@ -171,6 +213,51 @@ export const competencyService = {
     const response = await api.get(`/competencies/windows/${windowId}/heatmap`, {
       params: className ? { class_name: className } : {},
     });
+    return response.data;
+  },
+
+  // ============ External Invites ============
+
+  async createExternalInvites(
+    data: ExternalInviteCreate
+  ): Promise<ExternalInvite[]> {
+    const response = await api.post("/competencies/external/invites", data);
+    return response.data;
+  },
+
+  async getExternalInvites(
+    windowId?: number,
+    subjectUserId?: number
+  ): Promise<ExternalInvite[]> {
+    const response = await api.get("/competencies/external/invites", {
+      params: {
+        window_id: windowId,
+        subject_user_id: subjectUserId,
+      },
+    });
+    return response.data;
+  },
+
+  async revokeExternalInvite(inviteId: number): Promise<void> {
+    await api.delete(`/competencies/external/invites/${inviteId}`);
+  },
+
+  // ============ Public External Endpoints (no auth) ============
+
+  async getPublicInviteInfo(token: string): Promise<ExternalInvitePublicInfo> {
+    const response = await api.get(
+      `/competencies/external/public/invite/${token}`
+    );
+    return response.data;
+  },
+
+  async submitExternalScores(
+    data: ExternalScoreSubmit
+  ): Promise<{ message: string; invite_id: number }> {
+    const response = await api.post(
+      "/competencies/external/public/submit",
+      data
+    );
     return response.data;
   },
 };

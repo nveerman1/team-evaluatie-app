@@ -1,10 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { competencyService } from "@/services";
-import type { CompetencyWindowCreate } from "@/dtos";
-import { ErrorMessage } from "@/components";
+import { competencyService, courseService } from "@/services";
+import type { CompetencyWindowCreate, Competency } from "@/dtos";
+import { ErrorMessage, Loading } from "@/components";
+
+interface Course {
+  id: number;
+  name: string;
+}
+
+interface WindowSettings {
+  selected_competency_ids?: number[];
+  [key: string]: any;
+}
 
 export default function CreateWindowPage() {
   const router = useRouter();
@@ -12,32 +22,81 @@ export default function CreateWindowPage() {
     title: "",
     description: "",
     class_names: [],
+    course_id: undefined,
     start_date: "",
     end_date: "",
     status: "draft",
     require_self_score: true,
     require_goal: false,
     require_reflection: false,
+    settings: {},
   });
-  const [classNameInput, setClassNameInput] = useState("");
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [competencies, setCompetencies] = useState<Competency[]>([]);
+  const [selectedCompetencies, setSelectedCompetencies] = useState<number[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const handleAddClass = () => {
-    if (classNameInput.trim() && !formData.class_names?.includes(classNameInput.trim())) {
-      setFormData({
-        ...formData,
-        class_names: [...(formData.class_names || []), classNameInput.trim()],
-      });
-      setClassNameInput("");
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const [coursesData, competenciesData] = await Promise.all([
+        courseService.getCourses(),
+        competencyService.getCompetencies(true), // Only active competencies
+      ]);
+      setCourses(coursesData);
+      setCompetencies(competenciesData);
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(`Er ging iets mis bij het laden: ${err.message}`);
+      } else {
+        setError("Er ging iets mis bij het laden van vakken en competenties");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleRemoveClass = (className: string) => {
-    setFormData({
-      ...formData,
-      class_names: (formData.class_names || []).filter((c) => c !== className),
+  const handleCompetencyToggle = (competencyId: number) => {
+    setSelectedCompetencies((prev) => {
+      if (prev.includes(competencyId)) {
+        return prev.filter((id) => id !== competencyId);
+      } else {
+        return [...prev, competencyId];
+      }
     });
+  };
+
+  const getSelectedCompetenciesText = () => {
+    if (selectedCompetencies.length === 0) {
+      return "Selecteer competenties...";
+    }
+    const names = selectedCompetencies
+      .map((id) => competencies.find((c) => c.id === id)?.name)
+      .filter(Boolean);
+    if (names.length <= 2) {
+      return names.join(", ");
+    }
+    return `${names.length} competenties geselecteerd`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,10 +107,25 @@ export default function CreateWindowPage() {
       return;
     }
 
+    if (selectedCompetencies.length === 0) {
+      setError("Selecteer minimaal één competentie");
+      return;
+    }
+
     try {
       setSubmitting(true);
       setError(null);
-      await competencyService.createWindow(formData);
+      
+      // Store selected competencies in settings
+      const dataToSubmit = {
+        ...formData,
+        settings: {
+          ...formData.settings,
+          selected_competency_ids: selectedCompetencies,
+        },
+      };
+      
+      await competencyService.createWindow(dataToSubmit);
       router.push("/teacher/competencies");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create window");
@@ -59,6 +133,8 @@ export default function CreateWindowPage() {
       setSubmitting(false);
     }
   };
+
+  if (loading) return <Loading />;
 
   return (
     <main className="p-6 max-w-4xl mx-auto space-y-6">
@@ -106,6 +182,33 @@ export default function CreateWindowPage() {
             />
           </div>
 
+          {/* Course Dropdown */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Vak/Course
+            </label>
+            <select
+              value={formData.course_id || ""}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  course_id: e.target.value ? Number(e.target.value) : undefined,
+                })
+              }
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">-- Selecteer een vak (optioneel) --</option>
+              {courses.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-sm text-gray-500 mt-1">
+              Koppel dit venster aan een specifiek vak voor betere organisatie
+            </p>
+          </div>
+
           {/* Dates */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -146,49 +249,64 @@ export default function CreateWindowPage() {
             </div>
           </div>
 
-          {/* Classes */}
+          {/* Competency Selection */}
           <div>
-            <label className="block text-sm font-medium mb-2">Klassen</label>
-            <div className="flex gap-2 mb-2">
-              <input
-                type="text"
-                value={classNameInput}
-                onChange={(e) => setClassNameInput(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleAddClass();
-                  }
-                }}
-                placeholder="bijv. 4A, 4B"
-                className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+            <label className="block text-sm font-medium mb-2">
+              Competenties <span className="text-red-600">*</span>
+            </label>
+            <p className="text-sm text-gray-500 mb-2">
+              Selecteer welke competenties je in dit venster wilt gebruiken
+            </p>
+            <div className="relative" ref={dropdownRef}>
               <button
                 type="button"
-                onClick={handleAddClass}
-                className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-left flex justify-between items-center"
               >
-                Toevoegen
+                <span className={selectedCompetencies.length === 0 ? "text-gray-500" : ""}>
+                  {getSelectedCompetenciesText()}
+                </span>
+                <svg
+                  className={`w-5 h-5 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </button>
+
+              {isDropdownOpen && (
+                <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                  {competencies.length === 0 ? (
+                    <div className="p-3 text-gray-500 text-sm">
+                      Geen competenties beschikbaar. Maak eerst competenties aan.
+                    </div>
+                  ) : (
+                    <div className="py-1">
+                      {competencies.map((comp) => (
+                        <label
+                          key={comp.id}
+                          className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedCompetencies.includes(comp.id)}
+                            onChange={() => handleCompetencyToggle(comp.id)}
+                            className="mr-3 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm">{comp.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-            {formData.class_names && formData.class_names.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {formData.class_names.map((className) => (
-                  <span
-                    key={className}
-                    className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm flex items-center gap-2"
-                  >
-                    {className}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveClass(className)}
-                      className="text-blue-600 hover:text-blue-800"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
+            {selectedCompetencies.length > 0 && (
+              <p className="text-sm text-gray-600 mt-2">
+                {selectedCompetencies.length} competentie(s) geselecteerd
+              </p>
             )}
           </div>
 
@@ -252,6 +370,114 @@ export default function CreateWindowPage() {
                 <span className="text-sm">Reflectie</span>
               </label>
             </div>
+          </div>
+
+          {/* External Feedback Settings */}
+          <div className="space-y-3 border-t pt-4">
+            <div className="flex items-start">
+              <label className="flex items-start cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.settings?.allow_external_feedback === true}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      settings: {
+                        ...formData.settings,
+                        allow_external_feedback: e.target.checked,
+                      },
+                    })
+                  }
+                  className="mr-2 mt-0.5"
+                />
+                <div>
+                  <span className="text-sm font-medium">
+                    Externe beoordelaars toestaan
+                  </span>
+                  <p className="text-xs text-gray-600 mt-0.5">
+                    Leerlingen kunnen externen (bijv. opdrachtgever, coach) uitnodigen om hun competenties te beoordelen
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            {/* Show additional settings when external feedback is enabled */}
+            {formData.settings?.allow_external_feedback && (
+              <div className="ml-6 space-y-3 p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <label className="block text-xs font-medium mb-1">
+                    Max. uitnodigingen per leerling
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={formData.settings?.max_invites_per_subject || 3}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        settings: {
+                          ...formData.settings,
+                          max_invites_per_subject: parseInt(e.target.value) || 3,
+                        },
+                      })
+                    }
+                    className="w-24 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Standaard: 3 uitnodigingen
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium mb-1">
+                    Verlooptijd uitnodiging (dagen)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="90"
+                    value={formData.settings?.invite_ttl_days || 14}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        settings: {
+                          ...formData.settings,
+                          invite_ttl_days: parseInt(e.target.value) || 14,
+                        },
+                      })
+                    }
+                    className="w-24 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Standaard: 14 dagen
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium mb-1">
+                    Naam leerling tonen aan externe
+                  </label>
+                  <select
+                    value={formData.settings?.show_subject_name_to_external || "full"}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        settings: {
+                          ...formData.settings,
+                          show_subject_name_to_external: e.target.value,
+                        },
+                      })
+                    }
+                    className="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="full">Volledige naam</option>
+                    <option value="partial">Gedeeltelijk (bijv. "Anna J.")</option>
+                    <option value="none">Anoniem</option>
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

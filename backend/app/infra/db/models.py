@@ -164,6 +164,7 @@ class RubricCriterion(Base):
     weight: Mapped[float] = mapped_column(Float, default=1.0)
     # descriptors per level, bijv. {"1": "…", "2": "…", …}
     descriptors: Mapped[dict] = mapped_column(JSON, default=dict)
+    category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)
 
     __table_args__ = (Index("ix_criterion_rubric", "rubric_id"),)
 
@@ -472,6 +473,28 @@ class Competency(Base):
     )
 
 
+class CompetencyRubricLevel(Base):
+    """
+    Rubric level descriptions for competencies with example behaviors
+    """
+    __tablename__ = "competency_rubric_levels"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = tenant_fk()
+    competency_id: Mapped[int] = mapped_column(
+        ForeignKey("competencies.id", ondelete="CASCADE"), nullable=False
+    )
+    
+    level: Mapped[int] = mapped_column(SmallInteger, nullable=False)  # 1-5
+    label: Mapped[Optional[str]] = mapped_column(String(100))  # e.g., "Startend", "Basis"
+    description: Mapped[str] = mapped_column(Text, nullable=False)  # Behavior examples
+    
+    __table_args__ = (
+        UniqueConstraint("competency_id", "level", name="uq_rubric_level_per_competency"),
+        Index("ix_rubric_level_competency", "competency_id"),
+    )
+
+
 class CompetencyWindow(Base):
     """
     Measurement window/period for competency scans (e.g., Startscan, Midscan, Eindscan)
@@ -663,4 +686,95 @@ class CompetencyReflection(Base):
             "window_id", "user_id", name="uq_competency_reflection_once"
         ),
         Index("ix_competency_reflection_window_user", "window_id", "user_id"),
+    )
+
+
+class CompetencyExternalInvite(Base):
+    """
+    External reviewer invite for competency window
+    Token-based, one-time use magic link
+    """
+    __tablename__ = "competency_external_invites"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = tenant_fk()
+    
+    window_id: Mapped[int] = mapped_column(
+        ForeignKey("competency_windows.id", ondelete="CASCADE"), nullable=False
+    )
+    subject_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    invited_by_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    
+    # Invite details
+    email: Mapped[str] = mapped_column(String(320), nullable=False)
+    external_name: Mapped[Optional[str]] = mapped_column(String(200))
+    external_organization: Mapped[Optional[str]] = mapped_column(String(200))
+    
+    # Security
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    
+    # Status tracking
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending|used|revoked|expired
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(nullable=False)
+    sent_at: Mapped[Optional[datetime]] = mapped_column()
+    opened_at: Mapped[Optional[datetime]] = mapped_column()  # First time link was opened
+    submitted_at: Mapped[Optional[datetime]] = mapped_column()
+    revoked_at: Mapped[Optional[datetime]] = mapped_column()
+    
+    # Frozen rubric snapshot at invite creation
+    rubric_snapshot: Mapped[dict] = mapped_column(JSON, default=dict)
+    
+    __table_args__ = (
+        Index("ix_external_invite_window", "window_id"),
+        Index("ix_external_invite_subject", "subject_user_id"),
+        Index("ix_external_invite_status", "status"),
+        Index("ix_external_invite_window_subject", "window_id", "subject_user_id"),
+    )
+
+
+class CompetencyExternalScore(Base):
+    """
+    External reviewer score for a student's competency
+    """
+    __tablename__ = "competency_external_scores"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = tenant_fk()
+    
+    invite_id: Mapped[int] = mapped_column(
+        ForeignKey("competency_external_invites.id", ondelete="CASCADE"), nullable=False
+    )
+    window_id: Mapped[int] = mapped_column(
+        ForeignKey("competency_windows.id", ondelete="CASCADE"), nullable=False
+    )
+    subject_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    competency_id: Mapped[int] = mapped_column(
+        ForeignKey("competencies.id", ondelete="CASCADE"), nullable=False
+    )
+    
+    score: Mapped[int] = mapped_column(SmallInteger, nullable=False)  # 1-5
+    comment: Mapped[Optional[str]] = mapped_column(Text)
+    
+    # External reviewer details (captured at submission)
+    reviewer_name: Mapped[Optional[str]] = mapped_column(String(200))
+    reviewer_organization: Mapped[Optional[str]] = mapped_column(String(200))
+    
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+    
+    __table_args__ = (
+        UniqueConstraint(
+            "invite_id", "competency_id", name="uq_external_score_per_competency"
+        ),
+        Index("ix_external_score_window_subject", "window_id", "subject_user_id"),
+        Index("ix_external_score_competency", "competency_id"),
     )

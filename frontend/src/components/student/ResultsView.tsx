@@ -82,7 +82,7 @@ export function ResultsView({ result }: ResultsViewProps) {
                       </div>
                       {comment.text && (
                         <div className="mt-1 text-gray-600 italic">
-                          "{comment.text}"
+                          &quot;{comment.text}&quot;
                         </div>
                       )}
                     </div>

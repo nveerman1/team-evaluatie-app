@@ -48,6 +48,35 @@ class CompetencyOut(CompetencyBase):
         from_attributes = True
 
 
+# ============ Competency Rubric Level Schemas ============
+
+
+class CompetencyRubricLevelBase(BaseModel):
+    level: int = Field(..., ge=1, le=5)
+    label: Optional[str] = Field(None, max_length=100)
+    description: str
+
+
+class CompetencyRubricLevelCreate(CompetencyRubricLevelBase):
+    competency_id: int
+
+
+class CompetencyRubricLevelUpdate(BaseModel):
+    label: Optional[str] = Field(None, max_length=100)
+    description: Optional[str] = None
+
+
+class CompetencyRubricLevelOut(CompetencyRubricLevelBase):
+    id: int
+    school_id: int
+    competency_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # ============ Competency Window Schemas ============
 
 
@@ -254,6 +283,8 @@ class CompetencyScore(BaseModel):
     self_score: Optional[float] = None
     peer_score: Optional[float] = None
     teacher_score: Optional[float] = None
+    external_score: Optional[float] = None
+    external_count: int = 0
     final_score: Optional[float] = None
     delta: Optional[float] = None  # compared to previous window
 
@@ -290,3 +321,82 @@ class StudentGrowthCard(BaseModel):
     user_name: str
     windows: List[StudentCompetencyOverview]
     trends: Dict[int, List[float]]  # competency_id -> [scores over time]
+
+
+# ============ External Invite Schemas ============
+
+
+class ExternalInviteCreate(BaseModel):
+    """Create external invite(s)"""
+    window_id: int
+    subject_user_id: int
+    emails: List[str] = Field(..., min_length=1, max_length=10)
+    external_name: Optional[str] = Field(None, max_length=200)
+    external_organization: Optional[str] = Field(None, max_length=200)
+    competency_ids: Optional[List[int]] = None  # If None or empty, all competencies are included
+
+
+class ExternalInviteOut(BaseModel):
+    """External invite details"""
+    id: int
+    school_id: int
+    window_id: int
+    subject_user_id: int
+    invited_by_user_id: int
+    email: str
+    external_name: Optional[str]
+    external_organization: Optional[str]
+    status: str
+    created_at: datetime
+    expires_at: datetime
+    sent_at: Optional[datetime]
+    opened_at: Optional[datetime]
+    submitted_at: Optional[datetime]
+    revoked_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+class ExternalInvitePublicInfo(BaseModel):
+    """Public info shown to external reviewer (minimal context)"""
+    window_title: str
+    subject_name: str  # Full, partial or masked based on settings
+    competencies: List[CompetencyOut]
+    scale_min: int
+    scale_max: int
+    instructions: Optional[str] = None
+
+
+class ExternalScoreItem(BaseModel):
+    """Individual score item for external submission"""
+    competency_id: int
+    score: int = Field(..., ge=1, le=5)
+    comment: Optional[str] = None
+
+
+class ExternalScoreSubmit(BaseModel):
+    """External score submission"""
+    token: str
+    scores: List[ExternalScoreItem]
+    reviewer_name: Optional[str] = Field(None, max_length=200)
+    reviewer_organization: Optional[str] = Field(None, max_length=200)
+    general_comment: Optional[str] = None
+
+
+class ExternalScoreOut(BaseModel):
+    """External score details"""
+    id: int
+    school_id: int
+    invite_id: int
+    window_id: int
+    subject_user_id: int
+    competency_id: int
+    score: int
+    comment: Optional[str]
+    reviewer_name: Optional[str]
+    reviewer_organization: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

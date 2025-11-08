@@ -20,6 +20,7 @@ from app.infra.db.models import (
     RubricCriterion,
     Course,
     Group,
+    GroupMember,
 )
 from app.api.v1.schemas.evaluations import (
     EvaluationCreate,
@@ -149,6 +150,29 @@ def list_evaluations(
     limit: int = Query(50, ge=1, le=100),
 ):
     stmt = select(Evaluation).where(Evaluation.school_id == user.school_id)
+
+    # If user is a student, only show evaluations for courses they're enrolled in
+    if user.role == "student":
+        # Get course IDs where student is an active member
+        student_course_ids = (
+            db.query(Group.course_id)
+            .join(GroupMember, GroupMember.group_id == Group.id)
+            .filter(
+                GroupMember.user_id == user.id,
+                GroupMember.active.is_(True),
+                Group.school_id == user.school_id,
+            )
+            .distinct()
+            .all()
+        )
+        course_ids = [cid for (cid,) in student_course_ids]
+
+        if course_ids:
+            stmt = stmt.where(Evaluation.course_id.in_(course_ids))
+        else:
+            # Student has no courses, filter to impossible condition to return empty
+            stmt = stmt.where(Evaluation.id == -1)
+
     if q:
         stmt = stmt.where(Evaluation.title.ilike(f"%{q}%"))
     if status_:
@@ -301,7 +325,11 @@ def get_feedback_by_evaluation(
                 "criterion_name": r.criterion_name,
                 "text": r.text or "",
                 "score": float(r.score) if r.score is not None else None,
-                "created_at": r.created_at.isoformat() if hasattr(r, 'created_at') and r.created_at else None,
+                "created_at": (
+                    r.created_at.isoformat()
+                    if hasattr(r, "created_at") and r.created_at
+                    else None
+                ),
                 "type": "self" if bool(r.is_self) else "peer",
             }
         )
@@ -433,7 +461,11 @@ def export_feedback_csv(
                 (float(r.score) if r.score is not None else ""),
                 (int(r.criterion_id) if r.criterion_id is not None else ""),
                 r.criterion_name or "",
-                (r.created_at.strftime("%d-%m-%Y") if hasattr(r, 'created_at') and r.created_at else ""),
+                (
+                    r.created_at.strftime("%d-%m-%Y")
+                    if hasattr(r, "created_at") and r.created_at
+                    else ""
+                ),
                 r.text or "",
             ]
         )

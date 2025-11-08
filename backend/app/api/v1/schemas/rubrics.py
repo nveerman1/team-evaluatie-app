@@ -98,6 +98,7 @@ class CriterionCreate(BaseModel):
     descriptors: Dict[str, str] = Field(
         default_factory=lambda: {k: "" for k in LEVEL_KEYS}
     )
+    category: Optional[str] = None
     order: Optional[int] = None  # wordt alleen gebruikt als je model dit veld heeft
 
     @field_validator("descriptors")
@@ -110,6 +111,7 @@ class CriterionUpdate(BaseModel):
     name: Optional[str] = None
     weight: Optional[float] = None
     descriptors: Optional[Dict[str, str]] = None
+    category: Optional[str] = None
     order: Optional[int] = None
 
     @field_validator("descriptors")
@@ -126,6 +128,7 @@ class CriterionOut(BaseModel):
     name: str
     weight: float
     descriptors: Dict[str, str]  # level1..level5
+    category: Optional[str] = None
     order: Optional[int] = None
 
     class Config:
@@ -143,6 +146,7 @@ class CriterionUpsertItem(BaseModel):
     descriptors: Dict[str, str] = Field(
         default_factory=lambda: {k: "" for k in LEVEL_KEYS}
     )
+    category: Optional[str] = None
     order: Optional[int] = None
 
     @field_validator("descriptors")

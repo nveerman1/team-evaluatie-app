@@ -5,12 +5,22 @@ import { competencyService } from "@/services";
 import type { CompetencyWindow, Competency } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
 import Link from "next/link";
+import {
+  ExternalInviteModal,
+  ExternalInviteList,
+} from "@/components/competency/ExternalInviteComponents";
 
 export function CompetencyScanTab() {
   const [windows, setWindows] = useState<CompetencyWindow[]>([]);
   const [competencies, setCompetencies] = useState<Competency[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [showInviteModal, setShowInviteModal] = useState<{
+    windowId: number;
+    userId: number;
+  } | null>(null);
+  const [expandedWindow, setExpandedWindow] = useState<number | null>(null);
 
   useEffect(() => {
     loadData();
@@ -25,12 +35,36 @@ export function CompetencyScanTab() {
       ]);
       setWindows(wins);
       setCompetencies(comps);
+
+      // Get current user ID from any completed window overview
+      // Try multiple windows if the first one fails
+      if (wins.length > 0 && !currentUserId) {
+        for (const win of wins) {
+          try {
+            const overview = await competencyService.getMyWindowOverview(win.id);
+            setCurrentUserId(overview.user_id);
+            break; // Successfully got user ID, exit loop
+          } catch (err) {
+            // Try next window if this one fails
+            continue;
+          }
+        }
+      }
     } catch (err) {
       console.error("Failed to load competency data:", err);
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleInviteSuccess = () => {
+    setShowInviteModal(null);
+    // Optionally refresh data
+  };
+
+  const isExternalFeedbackEnabled = (window: CompetencyWindow) => {
+    return window.settings?.allow_external_feedback === true;
   };
 
   if (loading) {
@@ -80,7 +114,7 @@ export function CompetencyScanTab() {
                 </span>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-3 flex-wrap">
                 {window.require_self_score && (
                   <Link
                     href={`/student/competency/scan/${window.id}`}
@@ -105,7 +139,63 @@ export function CompetencyScanTab() {
                     Reflectie Schrijven
                   </Link>
                 )}
+                {isExternalFeedbackEnabled(window) && (
+                  <button
+                    onClick={async () => {
+                      // Get user ID if not already loaded
+                      let userId = currentUserId;
+                      if (!userId) {
+                        try {
+                          const overview = await competencyService.getMyWindowOverview(
+                            window.id
+                          );
+                          userId = overview.user_id;
+                          setCurrentUserId(userId);
+                        } catch (err) {
+                          console.error("Failed to get user ID:", err);
+                          // If we still can't get it, we'll handle this in the modal
+                          // For now, try to proceed anyway
+                        }
+                      }
+                      if (userId) {
+                        setShowInviteModal({
+                          windowId: window.id,
+                          userId: userId,
+                        });
+                      }
+                    }}
+                    disabled={!currentUserId && loading}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Nodig Externen Uit
+                  </button>
+                )}
               </div>
+
+              {/* External Invites List - Expandable */}
+              {isExternalFeedbackEnabled(window) && currentUserId && (
+                <div className="mt-4 pt-4 border-t">
+                  <button
+                    onClick={() =>
+                      setExpandedWindow(
+                        expandedWindow === window.id ? null : window.id
+                      )
+                    }
+                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  >
+                    {expandedWindow === window.id ? "▼" : "▶"} Bekijk
+                    Uitnodigingen
+                  </button>
+                  {expandedWindow === window.id && (
+                    <div className="mt-3">
+                      <ExternalInviteList
+                        windowId={window.id}
+                        subjectUserId={currentUserId}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -152,6 +242,16 @@ export function CompetencyScanTab() {
             ))}
           </div>
         </div>
+      )}
+
+      {/* External Invite Modal */}
+      {showInviteModal && (
+        <ExternalInviteModal
+          windowId={showInviteModal.windowId}
+          subjectUserId={showInviteModal.userId}
+          onClose={() => setShowInviteModal(null)}
+          onSuccess={handleInviteSuccess}
+        />
       )}
     </div>
   );

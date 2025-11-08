@@ -245,8 +245,6 @@ def preview_grades(
 
     items: List[GradePreviewItem] = []
     for u in students:
-        raw_gid = team_gid_by_uid.get(u.id)
-        neat_team = team_index_by_gid.get(raw_gid) if raw_gid is not None else None
         avg_score = float(peer_pct_by_uid.get(u.id, 0.0))  # 0..100
         gcf = float(gcf_by_uid.get(u.id, 1.0))
         # SPR = self% / peer%
@@ -281,9 +279,6 @@ def preview_grades(
         # afronden en begrenzen (alleen als er een waarde is)
         suggested = clamp(round(suggested_val, 1), 1.0, 10.0) if suggested_val is not None else None
 
-        raw_gid = team_gid_by_uid.get(u.id)
-        neat_team = team_index_by_gid.get(raw_gid) if raw_gid is not None else None
-
         items.append(
             GradePreviewItem(
                 user_id=u.id,
@@ -292,7 +287,8 @@ def preview_grades(
                 gcf=gcf,  # placeholder
                 spr=spr,  # placeholder
                 suggested_grade=suggested,  # 1–10
-                team_number=neat_team,  # 1..N binnen cluster of None -> "–"
+                # Gebruik het teamnummer uit admin/students als bron van waarheid
+                team_number=getattr(u, "team_number", None),
                 class_name=getattr(u, "class_name", None),
             )
         )
