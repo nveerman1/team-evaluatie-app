@@ -27,6 +27,7 @@ type CriterionOut = {
     level4?: string;
     level5?: string;
   };
+  learning_objective_ids?: number[];
 };
 
 const EMPTY_DESC = {
@@ -68,6 +69,7 @@ export default function EditRubricPageInner() {
             category: ci.category ?? null,
             order: ci.order ?? null,
             descriptors: { ...EMPTY_DESC, ...(ci.descriptors || {}) },
+            learning_objective_ids: ci.learning_objective_ids || [],
           })),
         );
       } catch (e: any) {
@@ -104,6 +106,7 @@ export default function EditRubricPageInner() {
             level4: it.descriptors?.level4 ?? "",
             level5: it.descriptors?.level5 ?? "",
           },
+          learning_objective_ids: it.learning_objective_ids || [],
         })),
       };
       const res = await api.put(

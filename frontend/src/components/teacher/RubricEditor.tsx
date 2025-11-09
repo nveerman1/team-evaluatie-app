@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { listLearningObjectives } from "@/services/learning-objective.service";
+import type { LearningObjectiveDto } from "@/dtos/learning-objective.dto";
 
 type Descriptor = {
   level1?: string;
@@ -17,6 +19,7 @@ export type CriterionItem = {
   category?: string | null;
   order?: number | null;
   descriptors: Descriptor;
+  learning_objective_ids?: number[];
 };
 
 type RubricEditorProps = {
@@ -60,9 +63,31 @@ export default function RubricEditor({
   );
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
+  const [learningObjectives, setLearningObjectives] = useState<
+    LearningObjectiveDto[]
+  >([]);
 
   const categories =
     scope === "peer" ? PEER_CATEGORIES : PROJECT_CATEGORIES;
+
+  // Fetch learning objectives
+  useEffect(() => {
+    async function fetchObjectives() {
+      const userEmail = localStorage.getItem("userEmail");
+      if (!userEmail) return;
+
+      try {
+        const response = await listLearningObjectives(userEmail, {
+          active: true,
+          limit: 100,
+        });
+        setLearningObjectives(response.items);
+      } catch (err) {
+        console.error("Error fetching learning objectives:", err);
+      }
+    }
+    fetchObjectives();
+  }, []);
 
   const togglePanel = (category: string) => {
     setExpandedPanels((prev) => {
@@ -268,6 +293,7 @@ export default function RubricEditor({
                       onMove={moveCriterion}
                       onDragStart={handleDragStart}
                       onDragEnd={handleDragEnd}
+                      learningObjectives={learningObjectives}
                     />
                   ))
                 )}
@@ -311,6 +337,7 @@ type CriterionCardProps = {
   onMove: (idx: number, dir: -1 | 1) => void;
   onDragStart: (idx: number) => void;
   onDragEnd: () => void;
+  learningObjectives: LearningObjectiveDto[];
 };
 
 function CriterionCard({
@@ -321,6 +348,7 @@ function CriterionCard({
   onMove,
   onDragStart,
   onDragEnd,
+  learningObjectives,
 }: CriterionCardProps) {
   const handleDescriptorChange = (level: string, value: string) => {
     onUpdate(index, {
@@ -401,6 +429,47 @@ function CriterionCard({
           </button>
         </div>
       </div>
+
+      {/* Learning Objectives Row */}
+      {learningObjectives.length > 0 && (
+        <div className="pt-2">
+          <label className="block text-sm font-medium text-gray-600 mb-2">
+            Gekoppelde Leerdoelen:
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {learningObjectives.map((lo) => {
+              const isSelected = item.learning_objective_ids?.includes(lo.id);
+              return (
+                <button
+                  key={lo.id}
+                  type="button"
+                  onClick={() => {
+                    const current = item.learning_objective_ids || [];
+                    const updated = isSelected
+                      ? current.filter((id) => id !== lo.id)
+                      : [...current, lo.id];
+                    onUpdate(index, { learning_objective_ids: updated });
+                  }}
+                  className={`px-3 py-1 rounded-full text-xs border ${
+                    isSelected
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                  }`}
+                  title={lo.description || lo.title}
+                >
+                  {lo.domain ? `${lo.domain} - ` : ""}
+                  {lo.title}
+                </button>
+              );
+            })}
+          </div>
+          {item.learning_objective_ids && item.learning_objective_ids.length > 0 && (
+            <div className="mt-2 text-xs text-gray-500">
+              {item.learning_objective_ids.length} leerdoel(en) geselecteerd
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Second Row: Level Descriptors */}
       <div className="grid grid-cols-5 gap-3">
