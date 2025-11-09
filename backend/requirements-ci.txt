@@ -13,6 +13,7 @@ rq
 boto3
 pydantic[email]
 email-validator
+requests
 ruff
 black
 mypy

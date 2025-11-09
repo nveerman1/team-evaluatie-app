@@ -778,3 +778,43 @@ class CompetencyExternalScore(Base):
         Index("ix_external_score_window_subject", "window_id", "subject_user_id"),
         Index("ix_external_score_competency", "competency_id"),
     )
+
+
+class FeedbackSummary(Base):
+    """
+    Cached AI-generated summaries of peer feedback for students.
+    """
+    __tablename__ = "feedback_summaries"
+    
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = tenant_fk()
+    evaluation_id: Mapped[int] = mapped_column(
+        ForeignKey("evaluations.id", ondelete="CASCADE"), nullable=False
+    )
+    student_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    
+    # The AI-generated summary text
+    summary_text: Mapped[str] = mapped_column(Text, nullable=False)
+    
+    # Hash of the input feedback to detect changes
+    feedback_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    
+    # Metadata
+    generation_method: Mapped[str] = mapped_column(
+        String(20), default="ai"
+    )  # "ai" | "fallback"
+    generation_duration_ms: Mapped[Optional[int]] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+    
+    __table_args__ = (
+        UniqueConstraint(
+            "evaluation_id", "student_id", name="uq_summary_per_student_eval"
+        ),
+        Index("ix_feedback_summary_eval", "evaluation_id"),
+        Index("ix_feedback_summary_hash", "feedback_hash"),
+    )

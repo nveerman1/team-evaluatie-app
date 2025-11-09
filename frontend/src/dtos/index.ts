@@ -9,3 +9,4 @@ export * from "./student.dto";
 export * from "./project-assessment.dto";
 export * from "./competency.dto";
 export * from "./overview.dto";
+export * from "./feedback-summary.dto";
