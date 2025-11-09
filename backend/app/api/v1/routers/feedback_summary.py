@@ -145,6 +145,9 @@ def get_student_feedback_summary(
             context=f"Evaluatie: {ev.title}",
         )
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Exception during AI generation: {type(e).__name__}: {e}")
         ai_summary = None
     
     duration_ms = int((time.time() - start_time) * 1000)

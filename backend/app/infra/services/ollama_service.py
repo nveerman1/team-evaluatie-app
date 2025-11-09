@@ -25,21 +25,28 @@ class OllamaService:
         Returns:
             True if the text appears to be a refusal
         """
+        # More specific refusal patterns to avoid false positives
         refusal_phrases = [
             "ik kan niet helpen",
-            "ik kan je niet helpen",
-            "kan ik niet",
-            "sorry",
-            "helaas kan ik",
+            "ik kan je niet helpen", 
+            "ik kan deze taak niet",
+            "helaas kan ik niet",
             "ik ben niet in staat",
-            "dit kan ik niet",
-            "kan geen",
-            "unable to",
-            "i cannot",
-            "i can't"
+            "dit kan ik niet doen",
+            "kan geen samenvatting",
+            "unable to provide",
+            "i cannot provide",
+            "i can't help"
         ]
         text_lower = text.lower()
-        return any(phrase in text_lower for phrase in refusal_phrases)
+        
+        # Check if any refusal phrase is present
+        for phrase in refusal_phrases:
+            if phrase in text_lower:
+                logger.warning(f"Refusal detected with phrase: '{phrase}'")
+                return True
+        
+        return False
     
     def generate_summary(
         self, 
@@ -59,21 +66,33 @@ class OllamaService:
             Generated summary in Dutch or None if generation fails
         """
         if not feedback_comments:
+            logger.info("No feedback comments provided")
             return None
+        
+        logger.info(f"Generating summary for {len(feedback_comments)} feedback comments")
         
         # Try primary prompt first
         summary = self._try_generate(feedback_comments, context, use_retry_prompt=False)
         
+        if not summary:
+            logger.warning("Primary generation returned None")
+            return None
+        
         # If we get a refusal, try with a more neutral prompt
-        if summary and self._is_refusal(summary):
+        if self._is_refusal(summary):
             logger.warning("LLM refusal detected, retrying with neutral prompt")
             summary = self._try_generate(feedback_comments, context, use_retry_prompt=True)
             
+            if not summary:
+                logger.warning("Retry generation returned None")
+                return None
+            
             # If still refusal, return None to trigger fallback
-            if summary and self._is_refusal(summary):
+            if self._is_refusal(summary):
                 logger.warning("LLM refusal on retry, using fallback")
                 return None
         
+        logger.info(f"Successfully generated AI summary ({len(summary)} chars)")
         return summary
     
     def _try_generate(
