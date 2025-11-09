@@ -13,7 +13,7 @@ class OllamaService:
     def __init__(self, base_url: Optional[str] = None, model: Optional[str] = None):
         self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
         self.model = model or os.getenv("OLLAMA_MODEL", "llama3.1")
-        self.timeout = float(os.getenv("OLLAMA_TIMEOUT", "60.0"))
+        self.timeout = float(os.getenv("OLLAMA_TIMEOUT", "10.0"))
         
     def generate_summary(
         self, 
@@ -114,32 +114,56 @@ class OllamaService:
             return "Nog geen peer-feedback ontvangen."
             
         comment_count = len(feedback_comments)
-        
-        # Extract common positive/negative words (simple heuristic)
-        positive_words = ["goed", "sterk", "uitstekend", "prima", "helder", "duidelijk", "proactief"]
-        negative_words = ["verbeteren", "meer", "minder", "aandacht", "beter", "nog"]
-        
         all_text = " ".join(feedback_comments).lower()
         
-        has_positive = any(word in all_text for word in positive_words)
-        has_negative = any(word in all_text for word in negative_words)
+        # Check for negations to avoid false positives
+        negation_patterns = [
+            "niet goed", "niet sterk", "niet uitstekend", "niet prima",
+            "niet helder", "niet duidelijk", "niet proactief",
+            "weinig goed", "slecht", "zwak", "onvoldoende"
+        ]
+        
+        # Positive indicators (avoid simple word matching that can be negated)
+        positive_patterns = [
+            "goed gedaan", "sterke punten", "uitstekend werk", "prima samenwerking",
+            "helder communicatie", "duidelijk uitgelegd", "proactief", "goede bijdrage"
+        ]
+        
+        # Negative indicators
+        negative_patterns = [
+            "moet verbeteren", "kan beter", "meer aandacht", "minder",
+            "te weinig", "onvoldoende", "niet goed", "slecht", "zwak"
+        ]
+        
+        has_negation = any(pattern in all_text for pattern in negation_patterns)
+        has_positive = any(pattern in all_text for pattern in positive_patterns)
+        has_negative = any(pattern in all_text for pattern in negative_patterns)
+        
+        # If we detect negations, don't treat it as positive
+        if has_negation:
+            has_positive = False
+            has_negative = True
         
         summary_parts = [
             f"Je hebt {comment_count} peer-feedback reactie{'s' if comment_count > 1 else ''} ontvangen."
         ]
         
-        if has_positive:
+        # Be more conservative: only add positive message if clearly positive
+        if has_positive and not has_negative:
             summary_parts.append(
-                "Je teamgenoten waarderen je positieve bijdrage aan het team."
+                "Je teamgenoten waarderen je bijdrage aan het team."
             )
-        
-        if has_negative:
+        elif has_negative and not has_positive:
             summary_parts.append(
-                "Er zijn ook aandachtspunten genoemd waar je aan kunt werken."
+                "Er zijn aandachtspunten genoemd waar je aan kunt werken."
+            )
+        elif has_positive and has_negative:
+            summary_parts.append(
+                "Je feedback bevat zowel sterke punten als aandachtspunten."
             )
         else:
             summary_parts.append(
-                "Over het algemeen ben je op de goede weg."
+                "Je teamgenoten hebben feedback gegeven over je werk."
             )
             
         summary_parts.append(

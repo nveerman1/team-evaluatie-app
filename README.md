@@ -57,7 +57,7 @@ For AI-powered feedback summaries, configure Ollama:
 ```bash
 OLLAMA_BASE_URL=http://localhost:11434  # Default
 OLLAMA_MODEL=llama3.1                   # Default: llama3.1
-OLLAMA_TIMEOUT=60.0                     # Default: 60 seconds
+OLLAMA_TIMEOUT=10.0                     # Default: 10 seconds
 ```
 
 See [docs/FEEDBACK_SUMMARY.md](docs/FEEDBACK_SUMMARY.md) for detailed setup instructions.

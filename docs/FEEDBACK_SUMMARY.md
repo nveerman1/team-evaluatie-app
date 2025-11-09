@@ -30,7 +30,7 @@ Configure the following environment variables for the backend:
 # Ollama Configuration
 OLLAMA_BASE_URL=http://localhost:11434  # Default: http://localhost:11434
 OLLAMA_MODEL=llama3.1                   # Default: llama3.1 (can also use mistral, etc.)
-OLLAMA_TIMEOUT=60.0                     # Default: 60.0 seconds
+OLLAMA_TIMEOUT=10.0                     # Default: 10 seconds
 ```
 
 ## Setup
