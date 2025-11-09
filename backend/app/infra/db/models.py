@@ -166,6 +166,12 @@ class RubricCriterion(Base):
     descriptors: Mapped[dict] = mapped_column(JSON, default=dict)
     category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)
 
+    # Relationship to learning objectives
+    learning_objectives: Mapped[list["LearningObjective"]] = relationship(
+        secondary="rubric_criterion_learning_objectives",
+        back_populates="rubric_criteria"
+    )
+
     __table_args__ = (Index("ix_criterion_rubric", "rubric_id"),)
 
 
@@ -817,4 +823,77 @@ class FeedbackSummary(Base):
         ),
         Index("ix_feedback_summary_eval", "evaluation_id"),
         Index("ix_feedback_summary_hash", "feedback_hash"),
+    )
+
+
+# ============ Learning Objectives (Leerdoelen/Eindtermen) ============
+
+
+class LearningObjective(Base):
+    """
+    Learning objectives / eindtermen that can be linked to rubric criteria
+    to track student progress per learning goal.
+    """
+    __tablename__ = "learning_objectives"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = tenant_fk()
+    
+    # Domain (e.g., "A", "B", "C", "D - Ontwerpen", "E")
+    domain: Mapped[Optional[str]] = mapped_column(String(50))
+    
+    # Title/name of the learning objective
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    
+    # Detailed description
+    description: Mapped[Optional[str]] = mapped_column(Text)
+    
+    # Education level (e.g., "VWO", "HAVO", "VMBO")
+    level: Mapped[Optional[str]] = mapped_column(String(50))
+    
+    # Order/number (e.g., 9, 11, 13, 14, 16)
+    order: Mapped[int] = mapped_column(Integer, default=0)
+    
+    # Is this learning objective active/enabled?
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    
+    # Additional metadata
+    metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    
+    # Relationship to rubric criteria
+    rubric_criteria: Mapped[list["RubricCriterion"]] = relationship(
+        secondary="rubric_criterion_learning_objectives",
+        back_populates="learning_objectives"
+    )
+    
+    __table_args__ = (
+        Index("ix_learning_objective_school", "school_id"),
+        Index("ix_learning_objective_domain", "school_id", "domain"),
+        Index("ix_learning_objective_active", "school_id", "active"),
+    )
+
+
+class RubricCriterionLearningObjective(Base):
+    """
+    Many-to-many association table linking rubric criteria to learning objectives
+    """
+    __tablename__ = "rubric_criterion_learning_objectives"
+    
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = tenant_fk()
+    
+    criterion_id: Mapped[int] = mapped_column(
+        ForeignKey("rubric_criteria.id", ondelete="CASCADE"), nullable=False
+    )
+    learning_objective_id: Mapped[int] = mapped_column(
+        ForeignKey("learning_objectives.id", ondelete="CASCADE"), nullable=False
+    )
+    
+    __table_args__ = (
+        UniqueConstraint(
+            "criterion_id", "learning_objective_id", 
+            name="uq_criterion_learning_objective"
+        ),
+        Index("ix_criterion_lo_criterion", "criterion_id"),
+        Index("ix_criterion_lo_objective", "learning_objective_id"),
     )

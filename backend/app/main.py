@@ -22,6 +22,7 @@ from app.api.v1.routers import competencies as competencies_router
 from app.api.v1.routers import external_invites as external_invites_router
 from app.api.v1.routers import overview as overview_router
 from app.api.v1.routers import feedback_summary as feedback_summary_router
+from app.api.v1.routers import learning_objectives as learning_objectives_router
 
 
 app = FastAPI()
@@ -62,4 +63,5 @@ api_v1.include_router(competencies_router.router)
 api_v1.include_router(external_invites_router.router)
 api_v1.include_router(overview_router.router)
 api_v1.include_router(feedback_summary_router.router)
+api_v1.include_router(learning_objectives_router.router)
 app.include_router(api_v1)

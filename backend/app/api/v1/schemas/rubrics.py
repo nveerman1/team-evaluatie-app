@@ -100,6 +100,7 @@ class CriterionCreate(BaseModel):
     )
     category: Optional[str] = None
     order: Optional[int] = None  # wordt alleen gebruikt als je model dit veld heeft
+    learning_objective_ids: List[int] = Field(default_factory=list)
 
     @field_validator("descriptors")
     @classmethod
@@ -113,6 +114,7 @@ class CriterionUpdate(BaseModel):
     descriptors: Optional[Dict[str, str]] = None
     category: Optional[str] = None
     order: Optional[int] = None
+    learning_objective_ids: Optional[List[int]] = None
 
     @field_validator("descriptors")
     @classmethod
@@ -130,6 +132,7 @@ class CriterionOut(BaseModel):
     descriptors: Dict[str, str]  # level1..level5
     category: Optional[str] = None
     order: Optional[int] = None
+    learning_objective_ids: List[int] = Field(default_factory=list)
 
     class Config:
         from_attributes = True
@@ -148,6 +151,7 @@ class CriterionUpsertItem(BaseModel):
     )
     category: Optional[str] = None
     order: Optional[int] = None
+    learning_objective_ids: List[int] = Field(default_factory=list)
 
     @field_validator("descriptors")
     @classmethod
