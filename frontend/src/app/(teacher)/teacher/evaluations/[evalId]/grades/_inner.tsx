@@ -175,6 +175,35 @@ export default function GradesPageInner() {
     return list.sort(cmp);
   }, [rows, filterTeam, filterClass, searchName, sortBy, sortDir]);
 
+  async function handleRefresh() {
+    if (evalIdNum == null) return;
+    setLoading(true);
+    setError(null);
+    try {
+      // Force reload from preview to get latest calculations with new formulas
+      const preview = await gradesService.previewGrades(evalIdNum);
+      const items: GradePreviewItem[] = preview?.items ?? [];
+      setRows(
+        items.map((i) => ({
+          user_id: i.user_id,
+          name: i.user_name,
+          teamNumber: i.team_number ?? null,
+          className: i.class_name ?? null,
+          gcf: i.gcf,
+          peerPct: i.avg_score,
+          serverSuggested: i.suggested_grade ?? 0,
+          override: null,
+          comment: "",
+          rowGroupGrade: null,
+        })),
+      );
+    } catch (err: any) {
+      setError(err?.response?.data?.detail ?? err?.message ?? "Laden mislukt");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handlePublish() {
     if (evalIdNum == null) return;
     setSaving(true);
@@ -214,6 +243,15 @@ export default function GradesPageInner() {
             disabled={evalIdNum == null}
           >
             Terug naar dashboard
+          </button>
+
+          <button
+            onClick={handleRefresh}
+            disabled={loading || evalIdNum == null}
+            className="px-4 py-2 rounded-2xl border hover:bg-gray-50 disabled:opacity-60"
+            title="Herbereken cijfers met nieuwste formules en instellingen"
+          >
+            {loading ? "Verversen…" : "🔄 Verversen"}
           </button>
 
           <button
