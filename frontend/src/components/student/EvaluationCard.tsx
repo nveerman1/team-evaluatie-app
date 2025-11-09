@@ -53,6 +53,18 @@ export function EvaluationCard({ evaluation }: EvaluationCardProps) {
               </p>
             )}
           </div>
+          {/* Progress indicators */}
+          <div className="flex gap-4 mt-3 text-sm">
+            <span className={evaluation.selfCompleted ? "text-green-600" : "text-gray-400"}>
+              {evaluation.selfCompleted ? "✓" : "○"} Zelfbeoordeling
+            </span>
+            <span className={evaluation.peersCompleted === evaluation.peersTotal && evaluation.peersTotal > 0 ? "text-green-600" : "text-gray-400"}>
+              {evaluation.peersCompleted === evaluation.peersTotal && evaluation.peersTotal > 0 ? "✓" : "○"} Peer-evaluaties ({evaluation.peersCompleted}/{evaluation.peersTotal})
+            </span>
+            <span className={evaluation.reflectionCompleted ? "text-green-600" : "text-gray-400"}>
+              {evaluation.reflectionCompleted ? "✓" : "○"} Reflectie
+            </span>
+          </div>
         </div>
         {getStatusBadge()}
       </div>
@@ -65,13 +77,13 @@ export function EvaluationCard({ evaluation }: EvaluationCardProps) {
           Evaluatie Invullen
         </Link>
         <Link
-          href={`/student/${evaluation.id}?step=3`}
+          href={`/student/evaluation/${evaluation.id}/overzicht`}
           className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
         >
           Feedback Overzicht
         </Link>
         <Link
-          href={`/student/${evaluation.id}?step=4`}
+          href={`/student/evaluation/${evaluation.id}/reflectie`}
           className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm"
         >
           Reflectie
