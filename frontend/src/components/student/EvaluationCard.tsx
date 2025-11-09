@@ -92,7 +92,7 @@ export function EvaluationCard({ evaluation }: EvaluationCardProps) {
         </div>
 
         <Link
-          href={`/student/${evaluation.id}?step=${evaluation.nextStep || 1}`}
+          href={`/student/evaluation/${evaluation.id}`}
           className="px-4 py-2 rounded-xl bg-black text-white hover:bg-gray-800 transition-colors whitespace-nowrap"
         >
           {getButtonText()}
