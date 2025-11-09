@@ -807,6 +807,9 @@ class FeedbackSummary(Base):
     )  # "ai" | "fallback"
     generation_duration_ms: Mapped[Optional[int]] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
     
     __table_args__ = (
         UniqueConstraint(

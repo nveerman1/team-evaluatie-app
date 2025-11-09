@@ -28,6 +28,7 @@ def upgrade():
         sa.Column('generation_method', sa.String(length=20), nullable=False),
         sa.Column('generation_duration_ms', sa.Integer(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=False),
+        sa.Column('updated_at', sa.DateTime(), nullable=False),
         sa.ForeignKeyConstraint(['evaluation_id'], ['evaluations.id'], ondelete='CASCADE'),
         sa.ForeignKeyConstraint(['student_id'], ['users.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id'),
