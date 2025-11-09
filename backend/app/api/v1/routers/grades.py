@@ -267,8 +267,10 @@ def preview_grades(
         )
 
         # --- Suggestie op basis van Peer en Self (1–10 schaal) ---
-        P = (avg_score / 10.0) if avg_score > 0 else None
-        S = (self_pct / 10.0) if (self_pct is not None and self_pct > 0) else None
+        # Gebruik verbeterde formule: (percentage / 100) * 9 + 1
+        # Dit geeft realistischere cijfers: 60% → 6.4, 80% → 8.2, 100% → 10.0
+        P = ((avg_score / 100.0) * 9 + 1) if avg_score > 0 else None
+        S = ((self_pct / 100.0) * 9 + 1) if (self_pct is not None and self_pct > 0) else None
 
         if P is not None and S is not None:
             # 75% peer, 25% self: gebalanceerd en robuust
