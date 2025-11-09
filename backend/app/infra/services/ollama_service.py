@@ -15,6 +15,32 @@ class OllamaService:
         self.model = model or os.getenv("OLLAMA_MODEL", "llama3.1")
         self.timeout = float(os.getenv("OLLAMA_TIMEOUT", "10.0"))
         
+    def _is_refusal(self, text: str) -> bool:
+        """
+        Detect if the LLM response is a refusal to generate content.
+        
+        Args:
+            text: The generated text to check
+            
+        Returns:
+            True if the text appears to be a refusal
+        """
+        refusal_phrases = [
+            "ik kan niet helpen",
+            "ik kan je niet helpen",
+            "kan ik niet",
+            "sorry",
+            "helaas kan ik",
+            "ik ben niet in staat",
+            "dit kan ik niet",
+            "kan geen",
+            "unable to",
+            "i cannot",
+            "i can't"
+        ]
+        text_lower = text.lower()
+        return any(phrase in text_lower for phrase in refusal_phrases)
+    
     def generate_summary(
         self, 
         feedback_comments: list[str],
@@ -34,32 +60,87 @@ class OllamaService:
         """
         if not feedback_comments:
             return None
+        
+        # Try primary prompt first
+        summary = self._try_generate(feedback_comments, context, use_retry_prompt=False)
+        
+        # If we get a refusal, try with a more neutral prompt
+        if summary and self._is_refusal(summary):
+            logger.warning("LLM refusal detected, retrying with neutral prompt")
+            summary = self._try_generate(feedback_comments, context, use_retry_prompt=True)
             
-        # Build the prompt
-        system_prompt = (
-            "Je bent een vriendelijke coach die feedback samenvat voor studenten. "
-            "Maak een korte, tactvolle samenvatting in het Nederlands. "
-            "Spreek de student aan met 'je/jouw'. "
-            "Noem NOOIT namen van mensen. "
-            "Maximaal 7 zinnen. "
-            "Benoem 1-2 sterke punten en 1 aandachtspunt. "
-            "Verzin niets dat niet in de feedback staat. "
-            "Sluit af met een concrete actie voor de komende week."
-        )
+            # If still refusal, return None to trigger fallback
+            if summary and self._is_refusal(summary):
+                logger.warning("LLM refusal on retry, using fallback")
+                return None
+        
+        return summary
+    
+    def _try_generate(
+        self,
+        feedback_comments: list[str],
+        context: Optional[str],
+        use_retry_prompt: bool = False
+    ) -> Optional[str]:
+        """
+        Internal method to attempt summary generation.
+        
+        Args:
+            feedback_comments: List of feedback comments
+            context: Optional context
+            use_retry_prompt: If True, use a more neutral retry prompt
+            
+        Returns:
+            Generated summary or None
+        """
+        # Build the prompt based on retry flag
+        if use_retry_prompt:
+            # Neutral retry prompt (less likely to trigger safety filters)
+            system_prompt = (
+                "Je bent een onderwijsassistent die samenvattingen schrijft voor leerlingen "
+                "over hun peer-feedback. Dit is een educatieve context voor leren en groei. "
+                "Schrijf in het Nederlands in je/jouw-vorm, max 7 zinnen. "
+                "Wees feitelijk en neutraal: vat samen wat peers hebben genoemd. "
+                "Gebruik constructieve formuleringen. Noem geen namen."
+            )
+        else:
+            # Primary prompt (more friendly, educational framing)
+            system_prompt = (
+                "Je bent een onderwijsassistent die constructieve, tactvolle samenvattingen schrijft "
+                "voor leerlingen over hun peer-feedback. Dit is géén roddel of belediging; "
+                "het doel is leren en zelfverbetering. "
+                "\n"
+                "Schrijf in het Nederlands in je/jouw-vorm, max 7 zinnen. "
+                "Wees feitelijk en neutraal: vat samen wat peers hebben genoemd "
+                "(zowel sterke punten als verbeterpunten). "
+                "Gebruik positieve, constructieve formuleringen en concrete acties. "
+                "Noem geen namen of identificeerbare info. "
+                "\n"
+                "Belangrijk:\n"
+                "- Vat samen; verzin niets dat niet in de feedback staat.\n"
+                "- Vermijd beschuldigende taal. Gebruik 'je kunt', 'probeer', 'maak' i.p.v. harde oordelen.\n"
+                "- Het is toegestaan om kritische feedback te beschrijven, mits respectvol en helpend.\n"
+                "- Schrijf nooit dat je deze taak niet kunt uitvoeren."
+            )
         
         # Build user message with feedback bullets
         user_message_parts = []
         if context:
             user_message_parts.append(f"Context: {context}")
-        user_message_parts.append("\nAnonieme peer-feedback:")
-        for i, comment in enumerate(feedback_comments[:10], 1):  # Limit to 10 comments
+        
+        user_message_parts.append(f"\nAantal peer-feedback reacties: {len(feedback_comments)}")
+        user_message_parts.append("Geanonimiseerde citaten:")
+        
+        for comment in feedback_comments[:10]:  # Limit to 10 comments
             # Trim very long comments
             trimmed = comment[:500] if len(comment) > 500 else comment
-            user_message_parts.append(f"- {trimmed}")
+            user_message_parts.append(f'- "{trimmed}"')
         
         user_message_parts.append(
-            "\nMaak een tactvolle samenvatting in je/jouw-vorm, "
-            "max 7 zinnen, noem 1-2 sterke punten en 1 aandachtspunt."
+            "\nOpdracht:\n"
+            "Schrijf één compacte samenvatting (max 7 zinnen) in je/jouw-vorm. "
+            "Noem 1-2 sterke punten en 1 concreet verbeterpunt met praktische suggestie. "
+            "Geen namen, geen herleidbare details; schrijf vloeiende tekst."
         )
         
         user_message = "\n".join(user_message_parts)
@@ -73,7 +154,7 @@ class OllamaService:
                     "stream": False,
                     "options": {
                         "temperature": 0.3,  # Lower temperature for consistency
-                        "num_predict": 200,  # Limit output length
+                        "num_predict": 250,  # Slightly more tokens for complete sentences
                     }
                 },
                 timeout=self.timeout
