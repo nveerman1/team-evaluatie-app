@@ -8,3 +8,4 @@ mypy>=1.11
 bandit>=1.7
 pip-audit>=2.7
 pipdeptree>=2.23
+types-requests>=2

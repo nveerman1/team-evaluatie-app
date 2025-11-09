@@ -17,14 +17,19 @@ repos:
     rev: v1.18.2
     hooks:
       - id: mypy
+        additional_dependencies:
+          - types-requests>=2
         files: ^backend/.*\.py$
 
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v4.0.0-alpha.8
+  - repo: local
     hooks:
       - id: prettier
-        additional_dependencies: ["prettier@3.3.3"]
+        name: prettier (system)
+        entry: prettier --write
+        language: system
+        types_or: [javascript, jsx, ts, tsx, css, scss, html, json, yaml, markdown]
         files: ^frontend/
+
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.28.0
     hooks:

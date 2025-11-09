@@ -1,7 +1,7 @@
 # app/core/config.py
 from typing import List
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import field_validator
+from pydantic import AnyUrl, field_validator
 
 
 class Settings(BaseSettings):
@@ -25,7 +25,9 @@ class Settings(BaseSettings):
     SECURE_COOKIES: bool = False
 
     # pydantic-settings v2 configuratie
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
 
     # Handige parsing: sta toe dat CORS_ORIGINS als komma-gescheiden string in env staat
     @field_validator("CORS_ORIGINS", mode="before")
@@ -35,6 +37,11 @@ class Settings(BaseSettings):
             # Voorbeeld: "http://localhost:3000,https://example.com"
             return [item.strip() for item in v.split(",") if item.strip()]
         return v
+
+    # Ollama instellingen
+    OLLAMA_BASE_URL: AnyUrl = "http://localhost:11434"
+    OLLAMA_MODEL: str = "llama3.1"
+    OLLAMA_TIMEOUT: float = 60.0
 
 
 settings = Settings()

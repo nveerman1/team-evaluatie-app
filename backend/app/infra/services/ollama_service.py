@@ -1,8 +1,14 @@
+# app/services/ollama_service.py (drop-in vervanger)
 from __future__ import annotations
-import os
-import requests
+
+import json
 import logging
+import re
+import time
 from typing import Optional
+
+import requests
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -10,25 +16,180 @@ logger = logging.getLogger(__name__)
 class OllamaService:
     """Service for interacting with Ollama LLM for generating feedback summaries."""
 
-    def __init__(self, base_url: Optional[str] = None, model: Optional[str] = None):
-        self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-        self.model = model or os.getenv("OLLAMA_MODEL", "llama3.1")
-        self.timeout = float(os.getenv("OLLAMA_TIMEOUT", "10.0"))
-        
+    def __init__(
+        self,
+        base_url: str | None = None,
+        model: str | None = None,
+        timeout: float | None = None,
+    ):
+        # Haal uit Pydantic settings (die .env leest)
+        self.base_url = base_url or str(settings.OLLAMA_BASE_URL)
+        self.model = model or settings.OLLAMA_MODEL
+        self.timeout = float(
+            timeout if timeout is not None else settings.OLLAMA_TIMEOUT
+        )
+
+        logger.info(
+            f"OllamaService: url={self.base_url}, model={self.model}, timeout={self.timeout}s"
+        )
+
+    # ----------------------------
+    # Public API
+    # ----------------------------
+    def generate_summary(
+        self,
+        feedback_comments: list[str],
+        student_name: Optional[str] = None,
+        context: Optional[str] = None,
+    ) -> Optional[str]:
+        """
+        Generate a Dutch summary of peer feedback comments. Returns None to let caller use fallback.
+        """
+        if not feedback_comments:
+            logger.info("No feedback comments provided")
+            return None
+
+        logger.info(
+            f"Generating structured+summary for {len(feedback_comments)} comments"
+        )
+
+        # 1) Extract evidence as JSON (avoid hallucinated positives)
+        struct = self._extract_structured(feedback_comments, context)
+        if struct is None:
+            logger.warning(
+                "Structured extract failed; trying single-pass prompt as fallback-to-AI"
+            )
+            # Als extract faalt, probeer een enkele (oude) samenvattingsprompt
+            sp = self._single_pass_summary(feedback_comments, context, retry=False)
+            if sp and not self._is_refusal(sp):
+                logger.info(
+                    f"Successfully generated AI single-pass summary ({len(sp)} chars)"
+                )
+                return sp
+            # laatste retry
+            sp2 = self._single_pass_summary(feedback_comments, context, retry=True)
+            if sp2 and not self._is_refusal(sp2):
+                logger.info(
+                    f"Successfully generated AI single-pass summary (retry) ({len(sp2)} chars)"
+                )
+                return sp2
+            logger.warning(
+                "AI single-pass failed/refused; caller should use rule-based fallback"
+            )
+            return None
+
+        # 2) Summarize from the extracted JSON
+        text = self._summarize_from_struct(struct, context)
+        if text and not self._is_refusal(text) and len(text) > 20:
+            logger.info(
+                f"Successfully generated AI summary from struct ({len(text)} chars)"
+            )
+            return text
+
+        # 3) One retry with softer framing
+        text2 = self._summarize_from_struct(struct, context, retry=True)
+        if text2 and not self._is_refusal(text2) and len(text2) > 20:
+            logger.info(
+                f"Successfully generated AI summary from struct (retry) ({len(text2)} chars)"
+            )
+            return text2
+
+        logger.warning(
+            "Summarize-from-struct failed/refused; caller should use rule-based fallback"
+        )
+        return None
+
+    def create_fallback_summary(self, feedback_comments: list[str]) -> str:
+        """
+        Rule-based fallback (neutraal, conservatief).
+        """
+        if not feedback_comments:
+            return "Nog geen peer-feedback ontvangen."
+
+        texts = [t for t in feedback_comments if isinstance(t, str) and t.strip()]
+        count = len(texts)
+        all_text = " ".join(texts).lower()
+
+        neg_terms = [
+            r"\bniet\s+goed\b",
+            r"\bweinig\s+inzet\b",
+            r"\bnooit\b",
+            r"\bslecht(e)?\b",
+            r"\bonvoldoende\b",
+            r"\bwerkte\s+niet\s+goed\s+samen\b",
+            r"\bafspraken\s+(vrijwel\s+)?nooit\s+na\b",
+        ]
+        pos_terms = [
+            r"\bgoed\s+gepland\b",
+            r"\bgoede\s+bijdrage\b",
+            r"\bheldere\s+communicatie\b",
+            r"\bduidelijke\s+uitleg\b",
+            r"\bproactief\b",
+        ]
+        # neutral_terms = [r"\bok\b", r"\bging\s+ok\b"]
+
+        neg_hits = sum(len(re.findall(p, all_text)) for p in neg_terms)
+        pos_hits = sum(len(re.findall(p, all_text)) for p in pos_terms)
+        # neutral_hits = sum(len(re.findall(p, all_text)) for p in neutral_terms)
+
+        msg = [
+            f"Je hebt {count} peer-feedback reactie{'s' if count != 1 else ''} ontvangen."
+        ]
+
+        if neg_hits >= max(2, pos_hits + 1):
+            msg.append(
+                "Peers noemen vooral zorgen over inzet, afspraken en samenwerking."
+            )
+            action = "Spreek per overleg één taak en deadline af en bevestig die direct in de teamchat."
+        elif pos_hits > 0 and neg_hits == 0:
+            msg.append("Je bijdrage en communicatie worden positief benoemd.")
+            action = (
+                "Blijf dit vasthouden en maak vooraf duidelijk welke taak jij oppakt."
+            )
+        else:
+            msg.append("Er zijn zowel positieve als kritische punten genoemd.")
+            action = "Kies één verbeterpunt en maak daar deze week een concrete afspraak over."
+
+        msg.append(action)
+        return " ".join(msg)
+
+    # ----------------------------
+    # Private helpers
+    # ----------------------------
+    def _request_ollama(self, prompt: str, options: dict) -> Optional[str]:
+        """Low-level request helper with tuple timeout + elapsed logging."""
+        try:
+            start = time.perf_counter()
+            resp = requests.post(
+                f"{self.base_url}/api/generate",
+                json={
+                    "model": self.model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": options,
+                },
+                timeout=(5, self.timeout),  # connect=5s, read=self.timeout
+            )
+            elapsed = (time.perf_counter() - start) * 1000
+            logger.info(
+                f"Ollama request finished in {elapsed:.0f} ms with status {resp.status_code}"
+            )
+            if resp.status_code != 200:
+                logger.error(f"Ollama API error: {resp.status_code} - {resp.text}")
+                return None
+            data = resp.json()
+            return (data.get("response") or "").strip()
+        except requests.Timeout:
+            logger.error("Ollama request timed out")
+            return None
+        except Exception as e:
+            logger.error(f"Ollama request error: {e}")
+            return None
+
     def _is_refusal(self, text: str) -> bool:
-        """
-        Detect if the LLM response is a refusal to generate content.
-        
-        Args:
-            text: The generated text to check
-            
-        Returns:
-            True if the text appears to be a refusal
-        """
-        # More specific refusal patterns to avoid false positives
-        refusal_phrases = [
+        phrases = [
             "ik kan niet helpen",
-            "ik kan je niet helpen", 
+            "ik kan je niet helpen",
             "ik kan deze taak niet",
             "helaas kan ik niet",
             "ik ben niet in staat",
@@ -36,238 +197,180 @@ class OllamaService:
             "kan geen samenvatting",
             "unable to provide",
             "i cannot provide",
-            "i can't help"
+            "i can't help",
         ]
-        text_lower = text.lower()
-        
-        # Check if any refusal phrase is present
-        for phrase in refusal_phrases:
-            if phrase in text_lower:
-                logger.warning(f"Refusal detected with phrase: '{phrase}'")
-                return True
-        
-        return False
-    
-    def generate_summary(
-        self, 
-        feedback_comments: list[str],
-        student_name: Optional[str] = None,
-        context: Optional[str] = None,
-    ) -> Optional[str]:
+        t = (text or "").lower()
+        return any(p in t for p in phrases)
+
+    # ---------- STEP 1: EXTRACT ----------
+    def _extract_structured(
+        self, feedback_comments: list[str], context: Optional[str]
+    ) -> Optional[dict]:
         """
-        Generate a Dutch summary of peer feedback comments.
-        
-        Args:
-            feedback_comments: List of anonymized peer feedback comments
-            student_name: Name of the student (for context, not included in output)
-            context: Optional context like course/project phase
-            
-        Returns:
-            Generated summary in Dutch or None if generation fails
+        Laat het model alleen evidence structureren: positives/negatives/themes/action.
+        Retourneert dict of None.
         """
-        if not feedback_comments:
-            logger.info("No feedback comments provided")
-            return None
-        
-        logger.info(f"Generating summary for {len(feedback_comments)} feedback comments")
-        
-        # Try primary prompt first
-        summary = self._try_generate(feedback_comments, context, use_retry_prompt=False)
-        
-        if not summary:
-            logger.warning("Primary generation returned None")
-            return None
-        
-        # If we get a refusal, try with a more neutral prompt
-        if self._is_refusal(summary):
-            logger.warning("LLM refusal detected, retrying with neutral prompt")
-            summary = self._try_generate(feedback_comments, context, use_retry_prompt=True)
-            
-            if not summary:
-                logger.warning("Retry generation returned None")
-                return None
-            
-            # If still refusal, return None to trigger fallback
-            if self._is_refusal(summary):
-                logger.warning("LLM refusal on retry, using fallback")
-                return None
-        
-        logger.info(f"Successfully generated AI summary ({len(summary)} chars)")
-        return summary
-    
-    def _try_generate(
-        self,
-        feedback_comments: list[str],
-        context: Optional[str],
-        use_retry_prompt: bool = False
-    ) -> Optional[str]:
-        """
-        Internal method to attempt summary generation.
-        
-        Args:
-            feedback_comments: List of feedback comments
-            context: Optional context
-            use_retry_prompt: If True, use a more neutral retry prompt
-            
-        Returns:
-            Generated summary or None
-        """
-        # Build the prompt based on retry flag
-        if use_retry_prompt:
-            # Neutral retry prompt (less likely to trigger safety filters)
-            system_prompt = (
-                "Je bent een onderwijsassistent die samenvattingen schrijft voor leerlingen "
-                "over hun peer-feedback. Dit is een educatieve context voor leren en groei. "
-                "Schrijf in het Nederlands in je/jouw-vorm, max 7 zinnen. "
-                "Wees feitelijk en neutraal: vat samen wat peers hebben genoemd. "
-                "Gebruik constructieve formuleringen. Noem geen namen."
-            )
-        else:
-            # Primary prompt (more friendly, educational framing)
-            system_prompt = (
-                "Je bent een onderwijsassistent die constructieve, tactvolle samenvattingen schrijft "
-                "voor leerlingen over hun peer-feedback. Dit is géén roddel of belediging; "
-                "het doel is leren en zelfverbetering. "
-                "\n"
-                "Schrijf in het Nederlands in je/jouw-vorm, max 7 zinnen. "
-                "Wees feitelijk en neutraal: vat samen wat peers hebben genoemd "
-                "(zowel sterke punten als verbeterpunten). "
-                "Gebruik positieve, constructieve formuleringen en concrete acties. "
-                "Noem geen namen of identificeerbare info. "
-                "\n"
-                "Belangrijk:\n"
-                "- Vat samen; verzin niets dat niet in de feedback staat.\n"
-                "- Vermijd beschuldigende taal. Gebruik 'je kunt', 'probeer', 'maak' i.p.v. harde oordelen.\n"
-                "- Het is toegestaan om kritische feedback te beschrijven, mits respectvol en helpend.\n"
-                "- Schrijf nooit dat je deze taak niet kunt uitvoeren."
-            )
-        
-        # Build user message with feedback bullets
-        user_message_parts = []
-        if context:
-            user_message_parts.append(f"Context: {context}")
-        
-        user_message_parts.append(f"\nAantal peer-feedback reacties: {len(feedback_comments)}")
-        user_message_parts.append("Geanonimiseerde citaten:")
-        
-        for comment in feedback_comments[:10]:  # Limit to 10 comments
-            # Trim very long comments
-            trimmed = comment[:500] if len(comment) > 500 else comment
-            user_message_parts.append(f'- "{trimmed}"')
-        
-        user_message_parts.append(
-            "\nOpdracht:\n"
-            "Schrijf één compacte samenvatting (max 7 zinnen) in je/jouw-vorm. "
-            "Noem 1-2 sterke punten en 1 concreet verbeterpunt met praktische suggestie. "
-            "Geen namen, geen herleidbare details; schrijf vloeiende tekst."
+        sys = (
+            "Je verzamelt uitsluitend FEITEN uit geanonimiseerde peer-quotes voor een leercontext. "
+            "Je verzint niets. 'ok' is neutraal, niet positief. Geef JSON en niets anders."
         )
-        
-        user_message = "\n".join(user_message_parts)
-        
+        # Quotes compact aanbieden
+        bullets = "\n".join(
+            f'- "{c.strip()}"'
+            for c in feedback_comments[:10]
+            if c and isinstance(c, str)
+        )
+
+        user = (
+            f"{'Context: ' + context if context else ''}\n"
+            f"Aantal peer-quotes: {len(feedback_comments)}\n"
+            "Geanonimiseerde citaten:\n"
+            f"{bullets}\n\n"
+            "Opdracht: Geef exact JSON met velden "
+            '{"positives": [..], "negatives": [..], "themes": ["1-3 kernonderwerpen"], "action": "1 concreet advies"} '
+            "— zonder extra tekst."
+        )
+
+        prompt = f"{sys}\n\n{user}"
+
+        text = self._request_ollama(
+            prompt,
+            {
+                "temperature": 0.1,
+                "top_p": 0.9,
+                "num_predict": 220,
+            },
+        )
+        if not text or self._is_refusal(text):
+            return None
+
+        # Robust JSON extraction (sometimes models print extra prose)
+        json_str = self._extract_json_block(text)
+        if not json_str:
+            logger.warning("No JSON block found in extract output")
+            return None
+
         try:
-            response = requests.post(
-                f"{self.base_url}/api/generate",
-                json={
-                    "model": self.model,
-                    "prompt": f"{system_prompt}\n\n{user_message}",
-                    "stream": False,
-                    "options": {
-                        "temperature": 0.3,  # Lower temperature for consistency
-                        "num_predict": 250,  # Slightly more tokens for complete sentences
-                    }
-                },
-                timeout=self.timeout
-            )
-            
-            if response.status_code == 200:
-                result = response.json()
-                summary = result.get("response", "").strip()
-                
-                # Basic validation
-                if summary and len(summary) > 20:
-                    return summary
-                else:
-                    logger.warning(f"Generated summary too short: {len(summary)} chars")
-                    return None
-            else:
-                logger.error(f"Ollama API error: {response.status_code} - {response.text}")
-                return None
-                
-        except requests.Timeout:
-            logger.error("Ollama request timed out")
-            return None
+            data = json.loads(json_str)
+            # Normalize
+            data.setdefault("positives", [])
+            data.setdefault("negatives", [])
+            data.setdefault("themes", [])
+            data.setdefault("action", "")
+
+            # Positives mogen niet uit 'ok' bestaan
+            data["positives"] = [
+                p
+                for p in data["positives"]
+                if " ok" not in p.lower() and p.strip().lower() != "ok"
+            ]
+            return data
         except Exception as e:
-            logger.error(f"Error generating summary with Ollama: {e}")
+            logger.error(f"Failed to parse extract JSON: {e} :: {json_str[:200]}")
             return None
-            
-    def create_fallback_summary(self, feedback_comments: list[str]) -> str:
+
+    # ---------- STEP 2: SUMMARIZE ----------
+    def _summarize_from_struct(
+        self, struct: dict, context: Optional[str], retry: bool = False
+    ) -> Optional[str]:
         """
-        Create a simple rule-based summary when AI is unavailable.
-        
-        Args:
-            feedback_comments: List of feedback comments
-            
-        Returns:
-            Basic template-based summary
+        Laat het model samenvatten o.b.v. struct. Nooit positieve claims zonder positives.
         """
-        if not feedback_comments:
-            return "Nog geen peer-feedback ontvangen."
-            
-        comment_count = len(feedback_comments)
-        all_text = " ".join(feedback_comments).lower()
-        
-        # Check for negations to avoid false positives
-        negation_patterns = [
-            "niet goed", "niet sterk", "niet uitstekend", "niet prima",
-            "niet helder", "niet duidelijk", "niet proactief",
-            "weinig goed", "slecht", "zwak", "onvoldoende"
-        ]
-        
-        # Positive indicators (avoid simple word matching that can be negated)
-        positive_patterns = [
-            "goed gedaan", "sterke punten", "uitstekend werk", "prima samenwerking",
-            "helder communicatie", "duidelijk uitgelegd", "proactief", "goede bijdrage"
-        ]
-        
-        # Negative indicators
-        negative_patterns = [
-            "moet verbeteren", "kan beter", "meer aandacht", "minder",
-            "te weinig", "onvoldoende", "niet goed", "slecht", "zwak"
-        ]
-        
-        has_negation = any(pattern in all_text for pattern in negation_patterns)
-        has_positive = any(pattern in all_text for pattern in positive_patterns)
-        has_negative = any(pattern in all_text for pattern in negative_patterns)
-        
-        # If we detect negations, don't treat it as positive
-        if has_negation:
-            has_positive = False
-            has_negative = True
-        
-        summary_parts = [
-            f"Je hebt {comment_count} peer-feedback reactie{'s' if comment_count > 1 else ''} ontvangen."
-        ]
-        
-        # Be more conservative: only add positive message if clearly positive
-        if has_positive and not has_negative:
-            summary_parts.append(
-                "Je teamgenoten waarderen je bijdrage aan het team."
-            )
-        elif has_negative and not has_positive:
-            summary_parts.append(
-                "Er zijn aandachtspunten genoemd waar je aan kunt werken."
-            )
-        elif has_positive and has_negative:
-            summary_parts.append(
-                "Je feedback bevat zowel sterke punten als aandachtspunten."
-            )
-        else:
-            summary_parts.append(
-                "Je teamgenoten hebben feedback gegeven over je werk."
-            )
-            
-        summary_parts.append(
-            "Bekijk de individuele feedback voor meer details."
+
+        sys = (
+            "Je schrijft een korte, leerlingvriendelijke samenvatting in **de tweede persoon (je/jouw)**. "
+            "Gebruik nooit 'de leerling', 'de persoon' of 'de student'. "
+            "Gebruik alleen 'je' of 'jouw'. "
+            "De tekst is bedoeld als directe terugkoppeling aan de leerling. "
+            "Maximaal 7 zinnen. Noem niets dat niet uit de feiten volgt. Geen namen/PII."
         )
-        
-        return " ".join(summary_parts)
+        rules = (
+            "- Benoem 0–1 sterk punt alleen als 'positives' NIET leeg is.\n"
+            "- Benoem 2–3 concrete verbeterpunten uit 'negatives'/'themes'.\n"
+            "- Sluit af met het advies uit 'action' (1 zin, praktisch).\n"
+            "- 'ok' is neutraal en telt niet als positief.\n"
+        )
+        if retry:
+            rules += "- Formuleer extra neutraal en oplossingsgericht; vermijd oordelende taal.\n"
+
+        user = (
+            "Feiten (JSON):\n"
+            f"{json.dumps(struct, ensure_ascii=False)}\n\n"
+            "Opdracht:\n"
+            "Schrijf één compacte samenvatting in lopende tekst (geen lijstjes). "
+            "Gebruik de regels hierboven strikt."
+        )
+
+        prompt = f"{sys}\nBelangrijk:\n{rules}\n\n{user}"
+        text = self._request_ollama(
+            prompt,
+            {
+                "temperature": 0.1,
+                "top_p": 0.9,
+                "num_predict": 200,
+            },
+        )
+        return text
+
+    # ---------- Single-pass (fallback-to-AI) ----------
+    def _single_pass_summary(
+        self, feedback_comments: list[str], context: Optional[str], retry: bool
+    ) -> Optional[str]:
+        """Oude éénstaps prompt als AI-fallback wanneer extract faalt."""
+        system_prompt = (
+            "Je bent een onderwijsassistent die constructieve, tactvolle samenvattingen schrijft "
+            "voor leerlingen over hun peer-feedback. Doel: leren en verbeteren. "
+            "NL, je/jouw-vorm, max 7 zinnen, feitelijk, geen namen/PII. "
+            "Verzin niets. 'ok' is neutraal."
+        )
+        if retry:
+            system_prompt += " Het is toegestaan om kritische punten te benoemen mits respectvol en gericht op groei."
+
+        bullets = "\n".join(
+            f'- "{c.strip()}"'
+            for c in feedback_comments[:10]
+            if c and isinstance(c, str)
+        )
+        user_message = (
+            f"{'Context: ' + context if context else ''}\n"
+            f"Aantal peer-quotes: {len(feedback_comments)}\n"
+            "Geanonimiseerde citaten:\n"
+            f"{bullets}\n\n"
+            "Opdracht: schrijf één compacte samenvatting (max 7 zinnen) in je/jouw-vorm. "
+            "Noem alleen sterke punten als die expliciet voorkomen; geef 1 concreet verbeterpunt met praktische suggestie."
+        )
+
+        prompt = f"{system_prompt}\n\n{user_message}"
+        return self._request_ollama(
+            prompt,
+            {
+                "temperature": 0.2,
+                "top_p": 0.9,
+                "num_predict": 220,
+            },
+        )
+
+    # ---------- Utils ----------
+    @staticmethod
+    def _extract_json_block(text: str) -> Optional[str]:
+        """
+        Haal het JSON-blok uit modeloutput (met of zonder extra tekst eromheen).
+        """
+        t = (text or "").strip()
+        # Probeer fenced code blocks eerst
+        m = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", t, flags=re.DOTALL)
+        if m:
+            return m.group(1)
+        # Anders: pak het grootste { ... } blok
+        stack = 0
+        start = None
+        for i, ch in enumerate(t):
+            if ch == "{":
+                stack += 1
+                if start is None:
+                    start = i
+            elif ch == "}":
+                stack -= 1
+                if stack == 0 and start is not None:
+                    return t[start : i + 1]
+        return None
