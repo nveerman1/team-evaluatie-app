@@ -8,12 +8,6 @@ type EvaluationCardProps = {
 };
 
 export function EvaluationCard({ evaluation }: EvaluationCardProps) {
-  const getProgressColor = (progress: number) => {
-    if (progress === 100) return "bg-green-500";
-    if (progress >= 50) return "bg-yellow-500";
-    return "bg-gray-300";
-  };
-
   const getStatusBadge = () => {
     if (evaluation.progress === 100) {
       return (
@@ -36,66 +30,63 @@ export function EvaluationCard({ evaluation }: EvaluationCardProps) {
     );
   };
 
-  const getButtonText = () => {
-    if (evaluation.progress === 0) return "Start";
-    if (evaluation.progress === 100) return "Bekijk";
-    return "Doorgaan";
-  };
-
-  const deadline = evaluation.settings?.deadlines?.review || 
-                   evaluation.deadlines?.review;
+  // Get deadlines from evaluation settings
+  const reviewDeadline = evaluation.settings?.deadlines?.review || 
+                         evaluation.deadlines?.review;
+  const reflectionDeadline = evaluation.settings?.deadlines?.reflection ||
+                             evaluation.deadlines?.reflection;
 
   return (
-    <div className="p-4 border rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between gap-4">
+    <div className="p-5 border rounded-xl bg-white shadow-sm">
+      <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="font-semibold text-lg">{evaluation.title}</h3>
-            {getStatusBadge()}
-          </div>
-          
+          <h4 className="text-lg font-semibold mb-2">{evaluation.title}</h4>
           <div className="text-sm text-gray-600 space-y-1">
-            {deadline && (
-              <div>
-                <span className="font-medium">Deadline:</span> {deadline}
-              </div>
+            {reviewDeadline && (
+              <p className="text-sm text-gray-500">
+                Evaluatie deadline: {reviewDeadline}
+              </p>
             )}
-            
-            <div className="flex gap-4">
-              <span>
-                Zelfbeoordeling: {evaluation.selfCompleted ? "✓" : "−"}
-              </span>
-              <span>
-                Peer-reviews: {evaluation.peersCompleted}/{evaluation.peersTotal}
-              </span>
-              <span>
-                Reflectie: {evaluation.reflectionCompleted ? "✓" : "−"}
-              </span>
-            </div>
+            {reflectionDeadline && (
+              <p className="text-sm text-gray-500">
+                Reflectie deadline: {reflectionDeadline}
+              </p>
+            )}
           </div>
-
-          {/* Progress bar */}
-          <div className="mt-3">
-            <div className="flex items-center gap-2 text-sm mb-1">
-              <span className="text-gray-600">Voortgang:</span>
-              <span className="font-medium">{evaluation.progress}%</span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className={`h-2 rounded-full transition-all ${getProgressColor(
-                  evaluation.progress
-                )}`}
-                style={{ width: `${evaluation.progress}%` }}
-              />
-            </div>
+          {/* Progress indicators */}
+          <div className="flex gap-4 mt-3 text-sm">
+            <span className={evaluation.selfCompleted ? "text-green-600" : "text-gray-400"}>
+              {evaluation.selfCompleted ? "✓" : "○"} Zelfbeoordeling
+            </span>
+            <span className={evaluation.peersCompleted === evaluation.peersTotal && evaluation.peersTotal > 0 ? "text-green-600" : "text-gray-400"}>
+              {evaluation.peersCompleted === evaluation.peersTotal && evaluation.peersTotal > 0 ? "✓" : "○"} Peer-evaluaties ({evaluation.peersCompleted}/{evaluation.peersTotal})
+            </span>
+            <span className={evaluation.reflectionCompleted ? "text-green-600" : "text-gray-400"}>
+              {evaluation.reflectionCompleted ? "✓" : "○"} Reflectie
+            </span>
           </div>
         </div>
+        {getStatusBadge()}
+      </div>
 
+      <div className="flex gap-3 flex-wrap">
         <Link
-          href={`/student/${evaluation.id}?step=${evaluation.nextStep || 1}`}
-          className="px-4 py-2 rounded-xl bg-black text-white hover:bg-gray-800 transition-colors whitespace-nowrap"
+          href={`/student/${evaluation.id}?step=1`}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
         >
-          {getButtonText()}
+          Evaluatie Invullen
+        </Link>
+        <Link
+          href={`/student/evaluation/${evaluation.id}/overzicht`}
+          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
+        >
+          Feedback Overzicht
+        </Link>
+        <Link
+          href={`/student/evaluation/${evaluation.id}/reflectie`}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm"
+        >
+          Reflectie
         </Link>
       </div>
     </div>

@@ -39,6 +39,10 @@ def _safe_mean(vals):
     return mean(vals) if vals else 0.0
 
 
+def _clamp(x: float, lo: float, hi: float) -> float:
+    return max(lo, min(hi, x))
+
+
 @router.get("/evaluation/{evaluation_id}", response_model=DashboardResponse)
 def dashboard_evaluation(
     evaluation_id: int,
@@ -184,11 +188,54 @@ def dashboard_evaluation(
         if alloc.is_self:
             per_reviewee_self_avg[alloc.reviewee_id] = alloc_avg
 
-    # === 4) Globale gemiddelde voor GCF-berekening ===
-    all_avgs = [_safe_mean(v) for v in per_reviewee_alloc_avgs.values() if v]
-    global_avg = _safe_mean(all_avgs)
+    # === 4) Calculate peer averages per reviewee for GCF calculation ===
+    peer_avg_by_reviewee: dict[int, float] = {}
+    for reviewee_id, alloc_avgs in per_reviewee_alloc_avgs.items():
+        self_avg = per_reviewee_self_avg.get(reviewee_id)
+        if self_avg is None:
+            peer_avgs_only = alloc_avgs  # geen zelf-score, alles peers
+        else:
+            # neem alle allocs en filter self er uit voor peer-avg
+            peer_avgs_only = (
+                [a for a in alloc_avgs if a != self_avg] if len(alloc_avgs) > 1 else []
+            )
+        peer_avg_by_reviewee[reviewee_id] = _safe_mean(peer_avgs_only)
 
-    # === 5) Opbouw rows ===
+    # === 5) GCF: Calculate per-team means and ratios (matching grades.py logic) ===
+    # Load GCF range from evaluation settings
+    settings = getattr(ev, "settings", {}) or {}
+    min_cf = 0.6
+    max_cf = 1.4
+    if isinstance(settings, dict):
+        min_cf = float(settings.get("min_cf", 0.6))
+        max_cf = float(settings.get("max_cf", 1.4))
+
+    # Group peer averages by team_number
+    peer_avg_by_team: dict[int | None, list[float]] = {}
+    team_by_reviewee: dict[int, int | None] = {}
+    for reviewee_id in peer_avg_by_reviewee:
+        u = users.get(reviewee_id)
+        team_num = getattr(u, "team_number", None) if u else None
+        team_by_reviewee[reviewee_id] = team_num
+        peer_avg_by_team.setdefault(team_num, []).append(peer_avg_by_reviewee[reviewee_id])
+
+    # Calculate team means
+    team_means: dict[int | None, float] = {
+        team: _safe_mean(avgs) for team, avgs in peer_avg_by_team.items() if avgs
+    }
+
+    # Calculate GCF for each reviewee
+    gcf_by_reviewee: dict[int, float] = {}
+    for reviewee_id, peer_avg in peer_avg_by_reviewee.items():
+        team_num = team_by_reviewee.get(reviewee_id)
+        team_mean = team_means.get(team_num, 0.0)
+        if team_mean > 0:
+            raw_gcf = peer_avg / team_mean
+            gcf_by_reviewee[reviewee_id] = _clamp(raw_gcf, min_cf, max_cf)
+        else:
+            gcf_by_reviewee[reviewee_id] = 1.0
+
+    # === 6) Opbouw rows ===
     items: list[DashboardRow] = []
     for reviewee_id, alloc_avgs in per_reviewee_alloc_avgs.items():
         # splits peers vs self
@@ -206,8 +253,8 @@ def dashboard_evaluation(
         # reviewers count = aantal peer-allocaties die punten bevatten
         reviewers_count = len(peer_avgs_only)
 
-        # GCF: 1 - |avg - global| / global (fallback 1 als global==0)
-        gcf = 1 - abs(peer_avg_overall - global_avg) / global_avg if global_avg else 1.0
+        # GCF: from pre-calculated gcf_by_reviewee
+        gcf = gcf_by_reviewee.get(reviewee_id, 1.0)
 
         # SPR: self_avg / peer_avg (fallback 1 als peer_avg==0 of self ontbreekt)
         spr = (

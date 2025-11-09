@@ -56,39 +56,40 @@ export default function GradesPageInner() {
     (async () => {
       setLoading(true);
       try {
+        // Always fetch fresh preview data for latest GCF and suggested grade calculations
+        const preview = await gradesService.previewGrades(evalIdNum);
+        const items: GradePreviewItem[] = preview?.items ?? [];
+        
+        // Also fetch existing saved grades to preserve manual inputs
         const existing = await gradesService.listGrades(evalIdNum);
-        if (existing.length > 0) {
-          setRows(
-            existing.map((g) => ({
-              user_id: g.user_id,
-              name: g.user_name,
-              teamNumber: g.meta?.team_number ?? null,
-              className: g.meta?.class_name ?? null,
-              gcf: g.meta?.gcf ?? 1,
-              peerPct: g.meta?.avg_score ?? 0,
-              serverSuggested: g.meta?.suggested ?? 0,
+        const existingMap = new Map(
+          existing.map((g) => [
+            g.user_id,
+            {
               override: g.grade ?? null,
               comment: g.reason ?? "",
               rowGroupGrade: g.meta?.group_grade ?? null,
-            })),
-          );
-          return;
-        }
-        const preview = await gradesService.previewGrades(evalIdNum);
-        const items: GradePreviewItem[] = preview?.items ?? [];
+            },
+          ])
+        );
+        
+        // Merge: use fresh calculations (GCF, suggested) with preserved manual inputs
         setRows(
-          items.map((i) => ({
-            user_id: i.user_id,
-            name: i.user_name,
-            teamNumber: i.team_number ?? null,
-            className: i.class_name ?? null,
-            gcf: i.gcf,
-            peerPct: i.avg_score,
-            serverSuggested: i.suggested_grade,
-            rowGroupGrade: null,
-            override: null,
-            comment: "",
-          })),
+          items.map((i) => {
+            const saved = existingMap.get(i.user_id);
+            return {
+              user_id: i.user_id,
+              name: i.user_name,
+              teamNumber: i.team_number ?? null,
+              className: i.class_name ?? null,
+              gcf: i.gcf,  // Always fresh from preview
+              peerPct: i.avg_score,  // Always fresh from preview
+              serverSuggested: i.suggested_grade ?? 0,  // Always fresh from preview
+              override: saved?.override ?? null,  // Preserved from saved
+              comment: saved?.comment ?? "",  // Preserved from saved
+              rowGroupGrade: saved?.rowGroupGrade ?? null,  // Preserved from saved
+            };
+          }),
         );
       } catch (e: any) {
         setError(e?.response?.data?.detail ?? e?.message ?? "Laden mislukt");
