@@ -142,9 +142,18 @@ def preview_grades(
     scale_min = 1
     scale_max = 5
     crit_weights: dict[int, float] = {}
+    # GCF range from evaluation settings
+    min_cf = 0.6
+    max_cf = 1.4
     if Evaluation and Rubric and RubricCriterion:
         ev = db.get(Evaluation, evaluation_id)
         if ev:
+            # Load GCF range from evaluation settings
+            settings = getattr(ev, "settings", {}) or {}
+            if isinstance(settings, dict):
+                min_cf = float(settings.get("min_cf", 0.6))
+                max_cf = float(settings.get("max_cf", 1.4))
+            
             rub = db.get(Rubric, getattr(ev, "rubric_id", None))
             if rub:
                 if hasattr(rub, "scale_min"):
@@ -229,7 +238,7 @@ def preview_grades(
             if self_vals:
                 self_pct_by_uid[u.id] = mean(self_vals)
 
-    # GCF: normaliseer peer_avg binnen team naar mean==1.0
+    # GCF: normaliseer peer_avg binnen team naar mean==1.0, clamp to min_cf..max_cf
     gcf_by_uid: dict[int, float] = {}
     # verzamel per raw group id
     by_team: dict[int | None, list[float]] = {}
@@ -241,7 +250,9 @@ def preview_grades(
     for uid, pct in peer_pct_by_uid.items():
         t = teamid_by_uid.get(uid)
         m = team_mean.get(t)
-        gcf_by_uid[uid] = (pct / m) if (m and m > 0) else 1.0
+        raw_gcf = (pct / m) if (m and m > 0) else 1.0
+        # Clamp GCF to the evaluation's correction factor range
+        gcf_by_uid[uid] = clamp(raw_gcf, min_cf, max_cf)
 
     items: List[GradePreviewItem] = []
     for u in students:
