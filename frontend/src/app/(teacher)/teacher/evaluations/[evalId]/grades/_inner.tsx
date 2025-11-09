@@ -183,19 +183,35 @@ export default function GradesPageInner() {
       // Force reload from preview to get latest calculations with new formulas
       const preview = await gradesService.previewGrades(evalIdNum);
       const items: GradePreviewItem[] = preview?.items ?? [];
+      
+      // Create a map of existing manual inputs to preserve them
+      const existingOverrides = new Map(
+        rows.map((r) => [
+          r.user_id,
+          {
+            override: r.override,
+            comment: r.comment,
+            rowGroupGrade: r.rowGroupGrade,
+          },
+        ])
+      );
+      
       setRows(
-        items.map((i) => ({
-          user_id: i.user_id,
-          name: i.user_name,
-          teamNumber: i.team_number ?? null,
-          className: i.class_name ?? null,
-          gcf: i.gcf,
-          peerPct: i.avg_score,
-          serverSuggested: i.suggested_grade ?? 0,
-          override: null,
-          comment: "",
-          rowGroupGrade: null,
-        })),
+        items.map((i) => {
+          const existing = existingOverrides.get(i.user_id);
+          return {
+            user_id: i.user_id,
+            name: i.user_name,
+            teamNumber: i.team_number ?? null,
+            className: i.class_name ?? null,
+            gcf: i.gcf,  // Updated from preview
+            peerPct: i.avg_score,
+            serverSuggested: i.suggested_grade ?? 0,  // Updated from preview
+            override: existing?.override ?? null,  // Preserved
+            comment: existing?.comment ?? "",  // Preserved
+            rowGroupGrade: existing?.rowGroupGrade ?? null,  // Preserved
+          };
+        }),
       );
     } catch (err: any) {
       setError(err?.response?.data?.detail ?? err?.message ?? "Laden mislukt");
