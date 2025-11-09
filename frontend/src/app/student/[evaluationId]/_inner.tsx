@@ -143,7 +143,7 @@ export default function StudentWizardInner() {
               Evaluatie #{evaluationId}
             </span>
             <button
-              onClick={() => router.push(`/student/evaluation/${evaluationId}`)}
+              onClick={() => router.push("/student")}
               className="px-4 py-2 rounded-lg border hover:bg-gray-50 transition-colors"
             >
               Terug

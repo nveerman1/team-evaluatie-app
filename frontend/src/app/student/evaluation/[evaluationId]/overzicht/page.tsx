@@ -63,7 +63,7 @@ export default function OverzichtPage() {
           <h1 className="text-3xl font-bold">Overzicht</h1>
           <div className="flex gap-2">
             <button
-              onClick={() => router.push(`/student/evaluation/${evaluationId}`)}
+              onClick={() => router.push("/student")}
               className="px-4 py-2 rounded-lg border hover:bg-gray-50 transition-colors"
             >
               Terug
