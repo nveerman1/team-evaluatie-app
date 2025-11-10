@@ -1,7 +1,7 @@
 """add learning objectives
 
-Revision ID: c8f4e6b2d9a1
-Revises: lo_20251109_01
+Revision ID: lo_20251109_01
+Revises: aaa111bbb222
 Create Date: 2025-11-09 23:32:00.000000
 """
 
@@ -9,17 +9,13 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSON
 
-revision = "c8f4e6b2d9a1"
-down_revision = "lo_20251109_01"
+revision = "lo_20251109_01"
+down_revision = "aaa111bbb222"
 branch_labels = None
 depends_on = None
 
 
 def upgrade():
-    # Drop tables if they exist (in case migration was run with old schema)
-    op.execute("DROP TABLE IF EXISTS rubric_criterion_learning_objectives CASCADE")
-    op.execute("DROP TABLE IF EXISTS learning_objectives CASCADE")
-
     # Create learning_objectives table
     op.create_table(
         "learning_objectives",
@@ -32,18 +28,6 @@ def upgrade():
         sa.Column("order", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("active", sa.Boolean(), nullable=False, server_default="true"),
         sa.Column("metadata_json", JSON(), nullable=False, server_default="{}"),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
@@ -69,18 +53,6 @@ def upgrade():
         sa.Column("school_id", sa.Integer(), nullable=False),
         sa.Column("criterion_id", sa.Integer(), nullable=False),
         sa.Column("learning_objective_id", sa.Integer(), nullable=False),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
         sa.ForeignKeyConstraint(
             ["criterion_id"],
             ["rubric_criteria.id"],
