@@ -4,7 +4,7 @@ from typing import Optional, List, Dict, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import (
@@ -334,9 +334,13 @@ def list_criteria(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    qs = db.query(RubricCriterion).filter(
-        RubricCriterion.school_id == user.school_id,
-        RubricCriterion.rubric_id == rubric_id,
+    qs = (
+        db.query(RubricCriterion)
+        .options(selectinload(RubricCriterion.learning_objectives))
+        .filter(
+            RubricCriterion.school_id == user.school_id,
+            RubricCriterion.rubric_id == rubric_id,
+        )
     )
     # indien order-kolom bestaat: sorteer daarop
     if hasattr(RubricCriterion, "order"):
@@ -385,6 +389,8 @@ def add_criterion(
     
     db.commit()
     db.refresh(c)
+    # Eagerly load learning_objectives relationship
+    db.refresh(c, ["learning_objectives"])
     return _to_out_criterion(c)
 
 
@@ -429,6 +435,8 @@ def update_criterion(
     db.add(c)
     db.commit()
     db.refresh(c)
+    # Eagerly load learning_objectives relationship
+    db.refresh(c, ["learning_objectives"])
     return _to_out_criterion(c)
 
 
@@ -525,6 +533,7 @@ def batch_upsert_criteria(
     result = [
         _to_out_criterion(c)
         for c in db.query(RubricCriterion)
+        .options(selectinload(RubricCriterion.learning_objectives))
         .filter(
             RubricCriterion.school_id == user.school_id,
             RubricCriterion.rubric_id == rubric_id,
