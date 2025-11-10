@@ -28,6 +28,18 @@ def upgrade():
         sa.Column("order", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("active", sa.Boolean(), nullable=False, server_default="true"),
         sa.Column("metadata_json", JSON(), nullable=False, server_default="{}"),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
@@ -53,6 +65,18 @@ def upgrade():
         sa.Column("school_id", sa.Integer(), nullable=False),
         sa.Column("criterion_id", sa.Integer(), nullable=False),
         sa.Column("learning_objective_id", sa.Integer(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(
             ["criterion_id"],
             ["rubric_criteria.id"],
