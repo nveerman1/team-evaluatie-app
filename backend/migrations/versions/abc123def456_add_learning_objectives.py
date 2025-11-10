@@ -16,6 +16,10 @@ depends_on = None
 
 
 def upgrade():
+    # Drop tables if they exist (in case migration was run with old schema)
+    op.execute("DROP TABLE IF EXISTS rubric_criterion_learning_objectives CASCADE")
+    op.execute("DROP TABLE IF EXISTS learning_objectives CASCADE")
+    
     # Create learning_objectives table
     op.create_table(
         "learning_objectives",
