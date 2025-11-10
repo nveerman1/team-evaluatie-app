@@ -23,6 +23,7 @@ export type RubricOut = {
   scale_min: number;
   scale_max: number;
   scope: string; // "peer" | "project"
+  target_level?: string | null; // "onderbouw" | "bovenbouw"
   metadata_json: Record<string, any>;
 };
 
@@ -32,6 +33,7 @@ export type RubricCreate = {
   scale_min?: number;
   scale_max?: number;
   scope?: string; // "peer" | "project"
+  target_level?: string | null; // "onderbouw" | "bovenbouw"
   metadata_json?: Record<string, any>;
 };
 

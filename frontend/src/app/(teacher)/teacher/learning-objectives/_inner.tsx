@@ -24,10 +24,7 @@ export default function LearningObjectivesInner() {
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [domainFilter, setDomainFilter] = useState<string>("");
-  const [levelFilter, setLevelFilter] = useState<string>("");
-  const [activeFilter, setActiveFilter] = useState<boolean | undefined>(
-    undefined
-  );
+  const [phaseFilter, setPhaseFilter] = useState<string>("");  // "onderbouw" | "bovenbouw" | ""
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -48,9 +45,8 @@ export default function LearningObjectivesInner() {
     domain: "",
     title: "",
     description: "",
-    level: "",
     order: 0,
-    active: true,
+    phase: "",
   });
 
   // Import state
@@ -63,7 +59,7 @@ export default function LearningObjectivesInner() {
 
   useEffect(() => {
     fetchObjectives();
-  }, [page, searchQuery, domainFilter, levelFilter, activeFilter]);
+  }, [page, searchQuery, domainFilter, phaseFilter]);
 
   async function fetchObjectives() {
     setLoading(true);
@@ -74,8 +70,7 @@ export default function LearningObjectivesInner() {
         page,
         limit,
         domain: domainFilter || undefined,
-        level: levelFilter || undefined,
-        active: activeFilter,
+        phase: phaseFilter || undefined,
         search: searchQuery || undefined,
       });
 
@@ -94,9 +89,8 @@ export default function LearningObjectivesInner() {
       domain: "",
       title: "",
       description: "",
-      level: "",
       order: 0,
-      active: true,
+      phase: "",
     });
     setIsCreateModalOpen(true);
   }
@@ -107,9 +101,8 @@ export default function LearningObjectivesInner() {
       domain: objective.domain || "",
       title: objective.title,
       description: objective.description || "",
-      level: objective.level || "",
       order: objective.order,
-      active: objective.active,
+      phase: objective.phase || "",
     });
     setIsEditModalOpen(true);
   }
@@ -170,7 +163,7 @@ export default function LearningObjectivesInner() {
     }
 
     try {
-      // Parse CSV (simple implementation - expects: domain,title,description,level,order,active)
+      // Parse CSV (simple implementation - expects: domain,nummer,titel,beschrijving,fase)
       const lines = importText.trim().split("\n");
       const items: LearningObjectiveImportItem[] = [];
 
@@ -186,11 +179,10 @@ export default function LearningObjectivesInner() {
 
         items.push({
           domain: parts[0] || null,
-          title: parts[1],
-          description: parts[2] || null,
-          level: parts[3] || null,
-          order: parts[4] ? parseInt(parts[4], 10) : 0,
-          active: parts[5] ? parts[5].toLowerCase() === "true" : true,
+          order: parts[1] ? parseInt(parts[1], 10) : 0,
+          title: parts[2] || parts[1],  // fallback if structure differs
+          description: parts[3] || null,
+          phase: parts[4] || null,
         });
       }
 
@@ -247,8 +239,42 @@ export default function LearningObjectivesInner() {
         </button>
       </div>
 
+      {/* Phase Toggle */}
+      <div className="mb-6 flex gap-2 p-1 bg-gray-100 rounded-lg w-fit">
+        <button
+          onClick={() => setPhaseFilter("")}
+          className={`px-6 py-2 rounded-md font-medium transition-colors ${
+            phaseFilter === ""
+              ? "bg-white text-blue-600 shadow"
+              : "text-gray-600 hover:text-gray-900"
+          }`}
+        >
+          Alle
+        </button>
+        <button
+          onClick={() => setPhaseFilter("onderbouw")}
+          className={`px-6 py-2 rounded-md font-medium transition-colors ${
+            phaseFilter === "onderbouw"
+              ? "bg-white text-blue-600 shadow"
+              : "text-gray-600 hover:text-gray-900"
+          }`}
+        >
+          Onderbouw
+        </button>
+        <button
+          onClick={() => setPhaseFilter("bovenbouw")}
+          className={`px-6 py-2 rounded-md font-medium transition-colors ${
+            phaseFilter === "bovenbouw"
+              ? "bg-white text-blue-600 shadow"
+              : "text-gray-600 hover:text-gray-900"
+          }`}
+        >
+          Bovenbouw
+        </button>
+      </div>
+
       {/* Filters */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded">
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded">
         <div>
           <label className="block text-sm font-medium mb-1">Zoeken</label>
           <input
@@ -269,34 +295,6 @@ export default function LearningObjectivesInner() {
             className="w-full px-3 py-2 border rounded"
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Niveau</label>
-          <input
-            type="text"
-            value={levelFilter}
-            onChange={(e) => setLevelFilter(e.target.value)}
-            placeholder="VWO, HAVO..."
-            className="w-full px-3 py-2 border rounded"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Status</label>
-          <select
-            value={
-              activeFilter === undefined ? "" : activeFilter ? "true" : "false"
-            }
-            onChange={(e) =>
-              setActiveFilter(
-                e.target.value === "" ? undefined : e.target.value === "true"
-              )
-            }
-            className="w-full px-3 py-2 border rounded"
-          >
-            <option value="">Alle</option>
-            <option value="true">Actief</option>
-            <option value="false">Inactief</option>
-          </select>
-        </div>
       </div>
 
       {/* Table */}
@@ -305,19 +303,16 @@ export default function LearningObjectivesInner() {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Nr
+                Domein
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Domein
+                Nr
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Titel
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Niveau
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Status
+                Fase
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
                 Acties
@@ -327,19 +322,20 @@ export default function LearningObjectivesInner() {
           <tbody className="divide-y divide-gray-200">
             {objectives.map((obj) => (
               <tr key={obj.id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 text-sm font-medium">{obj.domain || "-"}</td>
                 <td className="px-6 py-4 text-sm">{obj.order}</td>
-                <td className="px-6 py-4 text-sm">{obj.domain || "-"}</td>
-                <td className="px-6 py-4 text-sm font-medium">{obj.title}</td>
-                <td className="px-6 py-4 text-sm">{obj.level || "-"}</td>
+                <td className="px-6 py-4 text-sm">{obj.title}</td>
                 <td className="px-6 py-4 text-sm">
-                  {obj.active ? (
-                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">
-                      Actief
+                  {obj.phase ? (
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      obj.phase === "onderbouw" 
+                        ? "bg-blue-100 text-blue-800" 
+                        : "bg-purple-100 text-purple-800"
+                    }`}>
+                      {obj.phase === "onderbouw" ? "Onderbouw" : "Bovenbouw"}
                     </span>
                   ) : (
-                    <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs">
-                      Inactief
-                    </span>
+                    <span className="text-gray-400">-</span>
                   )}
                 </td>
                 <td className="px-6 py-4 text-sm text-right">
@@ -407,7 +403,24 @@ export default function LearningObjectivesInner() {
                   onChange={(e) =>
                     setFormData({ ...formData, domain: e.target.value })
                   }
-                  placeholder="A, B, C, D - Ontwerpen, E"
+                  placeholder="A, B, C, D, E"
+                  className="w-full px-3 py-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Nummer
+                </label>
+                <input
+                  type="number"
+                  value={formData.order || 0}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      order: parseInt(e.target.value, 10),
+                    })
+                  }
+                  placeholder="9, 11, 13, 14, 16..."
                   className="w-full px-3 py-2 border rounded"
                 />
               </div>
@@ -441,45 +454,18 @@ export default function LearningObjectivesInner() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Niveau</label>
-                <input
-                  type="text"
-                  value={formData.level || ""}
+                <label className="block text-sm font-medium mb-1">Fase</label>
+                <select
+                  value={formData.phase || ""}
                   onChange={(e) =>
-                    setFormData({ ...formData, level: e.target.value })
-                  }
-                  placeholder="VWO, HAVO, VMBO"
-                  className="w-full px-3 py-2 border rounded"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Nummer/Volgorde
-                </label>
-                <input
-                  type="number"
-                  value={formData.order || 0}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      order: parseInt(e.target.value, 10),
-                    })
+                    setFormData({ ...formData, phase: e.target.value })
                   }
                   className="w-full px-3 py-2 border rounded"
-                />
-              </div>
-              <div>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.active !== false}
-                    onChange={(e) =>
-                      setFormData({ ...formData, active: e.target.checked })
-                    }
-                    className="mr-2"
-                  />
-                  <span className="text-sm font-medium">Actief</span>
-                </label>
+                >
+                  <option value="">Niet gespecificeerd</option>
+                  <option value="onderbouw">Onderbouw</option>
+                  <option value="bovenbouw">Bovenbouw</option>
+                </select>
               </div>
             </div>
             <div className="mt-6 flex gap-3">
@@ -516,6 +502,24 @@ export default function LearningObjectivesInner() {
                   onChange={(e) =>
                     setFormData({ ...formData, domain: e.target.value })
                   }
+                  placeholder="A, B, C, D, E"
+                  className="w-full px-3 py-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Nummer
+                </label>
+                <input
+                  type="number"
+                  value={formData.order || 0}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      order: parseInt(e.target.value, 10),
+                    })
+                  }
+                  placeholder="9, 11, 13, 14, 16..."
                   className="w-full px-3 py-2 border rounded"
                 />
               </div>
@@ -529,6 +533,7 @@ export default function LearningObjectivesInner() {
                   onChange={(e) =>
                     setFormData({ ...formData, title: e.target.value })
                   }
+                  placeholder="Conceptontwikkeling"
                   className="w-full px-3 py-2 border rounded"
                   required
                 />
@@ -542,49 +547,24 @@ export default function LearningObjectivesInner() {
                   onChange={(e) =>
                     setFormData({ ...formData, description: e.target.value })
                   }
+                  placeholder="Ontwerprichtingen genereren en onderbouwen"
                   className="w-full px-3 py-2 border rounded"
                   rows={3}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Niveau</label>
-                <input
-                  type="text"
-                  value={formData.level || ""}
+                <label className="block text-sm font-medium mb-1">Fase</label>
+                <select
+                  value={formData.phase || ""}
                   onChange={(e) =>
-                    setFormData({ ...formData, level: e.target.value })
+                    setFormData({ ...formData, phase: e.target.value })
                   }
                   className="w-full px-3 py-2 border rounded"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Nummer/Volgorde
-                </label>
-                <input
-                  type="number"
-                  value={formData.order || 0}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      order: parseInt(e.target.value, 10),
-                    })
-                  }
-                  className="w-full px-3 py-2 border rounded"
-                />
-              </div>
-              <div>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.active !== false}
-                    onChange={(e) =>
-                      setFormData({ ...formData, active: e.target.checked })
-                    }
-                    className="mr-2"
-                  />
-                  <span className="text-sm font-medium">Actief</span>
-                </label>
+                >
+                  <option value="">Niet gespecificeerd</option>
+                  <option value="onderbouw">Onderbouw</option>
+                  <option value="bovenbouw">Bovenbouw</option>
+                </select>
               </div>
             </div>
             <div className="mt-6 flex gap-3">
@@ -616,10 +596,9 @@ export default function LearningObjectivesInner() {
               Importeer Leerdoelen (CSV)
             </h2>
             <p className="text-sm text-gray-600 mb-4">
-              Formaat: domain,title,description,level,order,active
+              Formaat: domein,nummer,titel,beschrijving,fase
               <br />
-              Bijvoorbeeld: D - Ontwerpen,Conceptontwikkeling,Ontwerprichtingen
-              genereren,VWO,9,true
+              Bijvoorbeeld: D,9,Conceptontwikkeling,Ontwerprichtingen genereren en onderbouwen,onderbouw
             </p>
             <textarea
               value={importText}

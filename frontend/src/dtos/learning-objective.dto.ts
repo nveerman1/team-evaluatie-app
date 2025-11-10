@@ -3,9 +3,8 @@ export interface LearningObjectiveDto {
   domain: string | null;
   title: string;
   description: string | null;
-  level: string | null;
   order: number;
-  active: boolean;
+  phase: string | null;  // "onderbouw" | "bovenbouw"
   metadata_json: Record<string, unknown>;
 }
 
@@ -13,9 +12,8 @@ export interface LearningObjectiveCreateDto {
   domain?: string | null;
   title: string;
   description?: string | null;
-  level?: string | null;
   order?: number;
-  active?: boolean;
+  phase?: string | null;  // "onderbouw" | "bovenbouw"
   metadata_json?: Record<string, unknown>;
 }
 
@@ -23,9 +21,8 @@ export interface LearningObjectiveUpdateDto {
   domain?: string | null;
   title?: string;
   description?: string | null;
-  level?: string | null;
   order?: number;
-  active?: boolean;
+  phase?: string | null;  // "onderbouw" | "bovenbouw"
   metadata_json?: Record<string, unknown>;
 }
 
@@ -40,9 +37,8 @@ export interface LearningObjectiveImportItem {
   domain?: string | null;
   title: string;
   description?: string | null;
-  level?: string | null;
   order?: number;
-  active?: boolean;
+  phase?: string | null;  // "onderbouw" | "bovenbouw"
 }
 
 export interface LearningObjectiveImportRequest {

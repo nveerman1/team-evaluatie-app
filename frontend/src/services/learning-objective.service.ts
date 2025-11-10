@@ -26,8 +26,7 @@ export async function listLearningObjectives(
     page?: number;
     limit?: number;
     domain?: string;
-    level?: string;
-    active?: boolean;
+    phase?: string;
     search?: string;
   }
 ): Promise<LearningObjectiveListResponse> {
