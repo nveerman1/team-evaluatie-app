@@ -4,10 +4,15 @@ from typing import Optional, List, Dict, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.api.v1.deps import get_db, get_current_user
-from app.infra.db.models import Rubric, RubricCriterion
+from app.infra.db.models import (
+    Rubric,
+    RubricCriterion,
+    LearningObjective,
+    RubricCriterionLearningObjective,
+)
 from app.api.v1.schemas.rubrics import (
     RubricCreate,
     RubricUpdate,
@@ -64,6 +69,7 @@ def _to_out_rubric(r: Rubric) -> RubricOut:
             "scale_min": r.scale_min,
             "scale_max": r.scale_max,
             "scope": r.scope,
+            "target_level": r.target_level,
             "metadata_json": r.metadata_json or {},
         }
     )
@@ -77,10 +83,54 @@ def _to_out_criterion(c: RubricCriterion) -> CriterionOut:
         "weight": float(c.weight),
         "descriptors": _ensure5(c.descriptors),  # <-- altijd 5 niveaus naar buiten
         "category": getattr(c, "category", None),
+        "learning_objective_ids": [lo.id for lo in c.learning_objectives] if hasattr(c, "learning_objectives") and c.learning_objectives else [],
     }
     if hasattr(c, "order"):
         payload["order"] = getattr(c, "order")
     return CriterionOut.model_validate(payload)
+
+
+def _sync_learning_objectives(
+    db: Session,
+    criterion: RubricCriterion,
+    learning_objective_ids: List[int],
+    school_id: int,
+):
+    """
+    Synchronize learning objective associations for a criterion.
+    Removes old associations and adds new ones.
+    """
+    # Remove existing associations
+    db.execute(
+        select(RubricCriterionLearningObjective)
+        .where(RubricCriterionLearningObjective.criterion_id == criterion.id)
+    )
+    existing = db.execute(
+        select(RubricCriterionLearningObjective)
+        .where(RubricCriterionLearningObjective.criterion_id == criterion.id)
+    ).scalars().all()
+    
+    for assoc in existing:
+        db.delete(assoc)
+    
+    # Add new associations
+    for lo_id in learning_objective_ids:
+        # Verify learning objective exists and belongs to the same school
+        lo = db.execute(
+            select(LearningObjective)
+            .where(
+                LearningObjective.id == lo_id,
+                LearningObjective.school_id == school_id,
+            )
+        ).scalar_one_or_none()
+        
+        if lo:
+            assoc = RubricCriterionLearningObjective(
+                school_id=school_id,
+                criterion_id=criterion.id,
+                learning_objective_id=lo_id,
+            )
+            db.add(assoc)
 
 
 # ---------- CRUD Rubrics ----------
@@ -99,6 +149,7 @@ def create_rubric(
         scale_min=payload.scale_min,
         scale_max=payload.scale_max,
         scope=payload.scope,
+        target_level=payload.target_level,
         metadata_json=payload.metadata_json,
     )
     db.add(r)
@@ -183,6 +234,8 @@ def update_rubric(
         r.scale_max = payload.scale_max
     if payload.scope is not None:
         r.scope = payload.scope
+    if payload.target_level is not None:
+        r.target_level = payload.target_level
     if payload.metadata_json is not None:
         r.metadata_json = payload.metadata_json
     db.add(r)
@@ -285,9 +338,13 @@ def list_criteria(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    qs = db.query(RubricCriterion).filter(
-        RubricCriterion.school_id == user.school_id,
-        RubricCriterion.rubric_id == rubric_id,
+    qs = (
+        db.query(RubricCriterion)
+        .options(selectinload(RubricCriterion.learning_objectives))
+        .filter(
+            RubricCriterion.school_id == user.school_id,
+            RubricCriterion.rubric_id == rubric_id,
+        )
     )
     # indien order-kolom bestaat: sorteer daarop
     if hasattr(RubricCriterion, "order"):
@@ -328,8 +385,16 @@ def add_criterion(
     )
     _apply_order(c, payload.order)
     db.add(c)
+    db.flush()  # Get ID before syncing learning objectives
+    
+    # Sync learning objectives
+    if payload.learning_objective_ids:
+        _sync_learning_objectives(db, c, payload.learning_objective_ids, user.school_id)
+    
     db.commit()
     db.refresh(c)
+    # Eagerly load learning_objectives relationship
+    db.refresh(c, ["learning_objectives"])
     return _to_out_criterion(c)
 
 
@@ -366,10 +431,16 @@ def update_criterion(
         c.category = payload.category
     if payload.order is not None:
         _apply_order(c, payload.order)
+    
+    # Sync learning objectives if provided
+    if 'learning_objective_ids' in update_data:
+        _sync_learning_objectives(db, c, payload.learning_objective_ids or [], user.school_id)
 
     db.add(c)
     db.commit()
     db.refresh(c)
+    # Eagerly load learning_objectives relationship
+    db.refresh(c, ["learning_objectives"])
     return _to_out_criterion(c)
 
 
@@ -441,6 +512,9 @@ def batch_upsert_criteria(
             c.category = item.category
             _apply_order(c, item.order)
             db.add(c)
+            db.flush()
+            # Sync learning objectives
+            _sync_learning_objectives(db, c, item.learning_objective_ids or [], user.school_id)
             out.append(c)
         else:
             c = RubricCriterion(
@@ -454,6 +528,8 @@ def batch_upsert_criteria(
             _apply_order(c, item.order)
             db.add(c)
             db.flush()  # id verkrijgen
+            # Sync learning objectives
+            _sync_learning_objectives(db, c, item.learning_objective_ids or [], user.school_id)
             out.append(c)
 
     db.commit()
@@ -461,6 +537,7 @@ def batch_upsert_criteria(
     result = [
         _to_out_criterion(c)
         for c in db.query(RubricCriterion)
+        .options(selectinload(RubricCriterion.learning_objectives))
         .filter(
             RubricCriterion.school_id == user.school_id,
             RubricCriterion.rubric_id == rubric_id,

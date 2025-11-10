@@ -15,6 +15,7 @@ export default function CreateRubricPage() {
   const [scaleMin, setScaleMin] = useState(1);
   const [scaleMax, setScaleMax] = useState(5);
   const [scope, setScope] = useState<"peer" | "project">(scopeParam || "peer");
+  const [targetLevel, setTargetLevel] = useState<"onderbouw" | "bovenbouw" | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,6 +36,7 @@ export default function CreateRubricPage() {
         scale_min: scaleMin,
         scale_max: scaleMax,
         scope,
+        target_level: targetLevel || undefined,
         metadata_json: {},
       };
       const res = await api.post("/rubrics", payload);
@@ -79,6 +81,22 @@ export default function CreateRubricPage() {
             <option value="peer">Team-evaluatie (peer)</option>
             <option value="project">Projectbeoordeling</option>
           </select>
+        </div>
+
+        <div className="space-y-1">
+          <label className="block text-sm font-medium">Type rubric (voor leerdoelen)</label>
+          <select
+            className="w-full border rounded-lg px-3 py-2"
+            value={targetLevel || ""}
+            onChange={(e) => setTargetLevel(e.target.value as "onderbouw" | "bovenbouw" | null || null)}
+          >
+            <option value="">Geen specifiek niveau</option>
+            <option value="onderbouw">Onderbouw</option>
+            <option value="bovenbouw">Bovenbouw</option>
+          </select>
+          <p className="text-xs text-gray-500">
+            Hiermee filtert de app automatisch de beschikbare leerdoelen bij het koppelen aan criteria.
+          </p>
         </div>
 
         <div className="space-y-1">

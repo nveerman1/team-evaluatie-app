@@ -8,6 +8,7 @@ const navItems = [
   { href: "/teacher/project-assessments", label: "Projectbeoordeling" },
   { href: "/teacher/evaluations", label: "Evaluaties" },
   { href: "/teacher/competencies", label: "Competentiemonitor" },
+  { href: "/teacher/learning-objectives", label: "Leerdoelen" },
   { href: "/teacher/admin/students", label: "Leerlingen" },
   { href: "/teacher/rubrics", label: "Rubrics" },
 ];

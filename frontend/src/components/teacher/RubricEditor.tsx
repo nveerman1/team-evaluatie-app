@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { listLearningObjectives } from "@/services/learning-objective.service";
+import type { LearningObjectiveDto } from "@/dtos/learning-objective.dto";
 
 type Descriptor = {
   level1?: string;
@@ -17,10 +19,12 @@ export type CriterionItem = {
   category?: string | null;
   order?: number | null;
   descriptors: Descriptor;
+  learning_objective_ids?: number[];
 };
 
 type RubricEditorProps = {
   scope: "peer" | "project";
+  targetLevel?: "onderbouw" | "bovenbouw" | null;
   items: CriterionItem[];
   onItemsChange: (items: CriterionItem[]) => void;
 };
@@ -48,6 +52,7 @@ const EMPTY_DESC: Descriptor = {
 
 export default function RubricEditor({
   scope,
+  targetLevel,
   items,
   onItemsChange,
 }: RubricEditorProps) {
@@ -60,9 +65,36 @@ export default function RubricEditor({
   );
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
+  const [learningObjectives, setLearningObjectives] = useState<
+    LearningObjectiveDto[]
+  >([]);
+  const [isMounted, setIsMounted] = useState(false);
 
   const categories =
     scope === "peer" ? PEER_CATEGORIES : PROJECT_CATEGORIES;
+
+  // Set mounted state to avoid hydration issues
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Fetch learning objectives (only on client side), filtered by targetLevel
+  useEffect(() => {
+    if (!isMounted) return;
+
+    async function fetchObjectives() {
+      try {
+        const response = await listLearningObjectives({
+          phase: targetLevel || undefined,
+          limit: 100,
+        });
+        setLearningObjectives(response.items);
+      } catch (err) {
+        console.error("Error fetching learning objectives:", err);
+      }
+    }
+    fetchObjectives();
+  }, [isMounted, targetLevel]);
 
   const togglePanel = (category: string) => {
     setExpandedPanels((prev) => {
@@ -268,6 +300,7 @@ export default function RubricEditor({
                       onMove={moveCriterion}
                       onDragStart={handleDragStart}
                       onDragEnd={handleDragEnd}
+                      learningObjectives={learningObjectives}
                     />
                   ))
                 )}
@@ -311,6 +344,7 @@ type CriterionCardProps = {
   onMove: (idx: number, dir: -1 | 1) => void;
   onDragStart: (idx: number) => void;
   onDragEnd: () => void;
+  learningObjectives: LearningObjectiveDto[];
 };
 
 function CriterionCard({
@@ -321,7 +355,10 @@ function CriterionCard({
   onMove,
   onDragStart,
   onDragEnd,
+  learningObjectives,
 }: CriterionCardProps) {
+  const [showObjectiveDropdown, setShowObjectiveDropdown] = useState(false);
+
   const handleDescriptorChange = (level: string, value: string) => {
     onUpdate(index, {
       descriptors: {
@@ -333,6 +370,18 @@ function CriterionCard({
 
   const getCharCount = (text: string) => text.length;
 
+  const selectedObjectives = learningObjectives.filter((lo) =>
+    item.learning_objective_ids?.includes(lo.id)
+  );
+
+  const toggleObjective = (loId: number) => {
+    const current = item.learning_objective_ids || [];
+    const updated = current.includes(loId)
+      ? current.filter((id) => id !== loId)
+      : [...current, loId];
+    onUpdate(index, { learning_objective_ids: updated });
+  };
+
   return (
     <article
       className="px-4 py-3 space-y-3"
@@ -342,7 +391,7 @@ function CriterionCard({
       role="article"
       aria-label={`Criterium: ${item.name}`}
     >
-      {/* Top Row: Title, Weight, Actions */}
+      {/* Top Row: Title, Learning Objectives Icon, Weight, Actions */}
       <div className="flex items-center gap-3">
         <span
           className="cursor-move text-gray-400 text-lg select-none"
@@ -354,11 +403,88 @@ function CriterionCard({
         <input
           type="text"
           className="flex-1 border rounded-lg px-3 py-2"
-          value={item.name}
+          value={item.name || ""}
           onChange={(e) => onUpdate(index, { name: e.target.value })}
           placeholder="Criterium naam"
           aria-label="Criterium naam"
         />
+        
+        {/* Learning Objectives Dropdown */}
+        {learningObjectives.length > 0 && (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowObjectiveDropdown(!showObjectiveDropdown)}
+              className={`p-2 rounded-lg border hover:bg-gray-50 ${
+                selectedObjectives.length > 0 ? "bg-blue-50 border-blue-300" : ""
+              }`}
+              title="Leerdoelen koppelen"
+              aria-label="Leerdoelen koppelen"
+            >
+              🎯
+              {selectedObjectives.length > 0 && (
+                <span className="ml-1 text-xs font-medium text-blue-600">
+                  {selectedObjectives.length}
+                </span>
+              )}
+            </button>
+            
+            {showObjectiveDropdown && (
+              <>
+                {/* Backdrop to close dropdown */}
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowObjectiveDropdown(false)}
+                />
+                
+                {/* Dropdown content */}
+                <div className="absolute right-0 mt-2 w-80 bg-white border rounded-lg shadow-lg z-20 max-h-96 overflow-y-auto">
+                  <div className="p-3 border-b bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Leerdoelen selecteren</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowObjectiveDropdown(false)}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                  <div className="p-2">
+                    {learningObjectives.map((lo) => {
+                      const isSelected = item.learning_objective_ids?.includes(lo.id) ?? false;
+                      return (
+                        <label
+                          key={lo.id}
+                          className="flex items-start gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleObjective(lo.id)}
+                            className="mt-1"
+                          />
+                          <div className="flex-1 text-sm">
+                            <div className="font-medium">
+                              {lo.domain}.{lo.order} - {lo.title}
+                            </div>
+                            {lo.description && (
+                              <div className="text-xs text-gray-500 mt-0.5">
+                                {lo.description}
+                              </div>
+                            )}
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         <label className="flex items-center gap-2">
           <span className="text-sm text-gray-600">Weging:</span>
           <input
@@ -402,11 +528,26 @@ function CriterionCard({
         </div>
       </div>
 
+      {/* Compact Learning Objectives Badges */}
+      {selectedObjectives.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 pl-8">
+          {selectedObjectives.map((lo) => (
+            <span
+              key={lo.id}
+              className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium"
+              title={`${lo.title}${lo.description ? ` - ${lo.description}` : ""}`}
+            >
+              {lo.domain}.{lo.order}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Second Row: Level Descriptors */}
       <div className="grid grid-cols-5 gap-3">
         {(["level1", "level2", "level3", "level4", "level5"] as const).map(
           (level, idx) => {
-            const text = (item.descriptors?.[level] ?? "") as string;
+            const text = String(item.descriptors?.[level] ?? "");
             const charCount = getCharCount(text);
             
             return (

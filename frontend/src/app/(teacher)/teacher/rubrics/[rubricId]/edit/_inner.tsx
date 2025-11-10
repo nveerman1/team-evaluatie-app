@@ -12,6 +12,7 @@ type RubricOut = {
   scale_min: number;
   scale_max: number;
   scope?: string;
+  target_level?: "onderbouw" | "bovenbouw" | null;
 };
 type CriterionOut = {
   id: number;
@@ -27,6 +28,7 @@ type CriterionOut = {
     level4?: string;
     level5?: string;
   };
+  learning_objective_ids?: number[];
 };
 
 const EMPTY_DESC = {
@@ -68,6 +70,7 @@ export default function EditRubricPageInner() {
             category: ci.category ?? null,
             order: ci.order ?? null,
             descriptors: { ...EMPTY_DESC, ...(ci.descriptors || {}) },
+            learning_objective_ids: ci.learning_objective_ids || [],
           })),
         );
       } catch (e: any) {
@@ -104,6 +107,7 @@ export default function EditRubricPageInner() {
             level4: it.descriptors?.level4 ?? "",
             level5: it.descriptors?.level5 ?? "",
           },
+          learning_objective_ids: it.learning_objective_ids || [],
         })),
       };
       const res = await api.put(
@@ -201,6 +205,7 @@ export default function EditRubricPageInner() {
       {rubric && (
         <RubricEditor
           scope={(rubric.scope as "peer" | "project") || "peer"}
+          targetLevel={rubric.target_level || null}
           items={items}
           onItemsChange={setItems}
         />

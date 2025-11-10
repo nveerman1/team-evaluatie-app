@@ -23,6 +23,7 @@ export type RubricOut = {
   scale_min: number;
   scale_max: number;
   scope: string; // "peer" | "project"
+  target_level?: string | null; // "onderbouw" | "bovenbouw"
   metadata_json: Record<string, any>;
 };
 
@@ -32,6 +33,7 @@ export type RubricCreate = {
   scale_min?: number;
   scale_max?: number;
   scope?: string; // "peer" | "project"
+  target_level?: string | null; // "onderbouw" | "bovenbouw"
   metadata_json?: Record<string, any>;
 };
 
@@ -43,6 +45,7 @@ export type CriterionOut = {
   descriptors: Record<string, string>;
   category?: string | null;
   order?: number | null;
+  learning_objective_ids: number[];
 };
 
 export type CriterionUpsertItem = {
@@ -52,6 +55,7 @@ export type CriterionUpsertItem = {
   descriptors: Record<string, string>;
   category?: string | null;
   order?: number | null;
+  learning_objective_ids: number[];
 };
 
 export type CriterionBatchUpsertRequest = {
