@@ -12,8 +12,6 @@ import type {
 } from "@/dtos/learning-objective.dto";
 
 export default function LearningObjectivesOverviewInner() {
-  const router = useRouter();
-  const [userEmail, setUserEmail] = useState<string>("");
   const [overview, setOverview] = useState<LearningObjectiveOverviewResponse | null>(
     null
   );
@@ -30,31 +28,16 @@ export default function LearningObjectivesOverviewInner() {
   >(undefined);
 
   useEffect(() => {
-    const email = localStorage.getItem("userEmail");
-    if (!email) {
-      router.push("/");
-      return;
-    }
-    setUserEmail(email);
-  }, [router]);
+    fetchObjectives();
+  }, []);
 
   useEffect(() => {
-    if (userEmail) {
-      fetchObjectives();
-    }
-  }, [userEmail]);
-
-  useEffect(() => {
-    if (userEmail) {
-      fetchOverview();
-    }
-  }, [userEmail, className, selectedObjectiveId]);
+    fetchOverview();
+  }, [className, selectedObjectiveId]);
 
   async function fetchObjectives() {
-    if (!userEmail) return;
-
     try {
-      const response = await listLearningObjectives(userEmail, {
+      const response = await listLearningObjectives({
         active: true,
         limit: 100,
       });
@@ -65,13 +48,11 @@ export default function LearningObjectivesOverviewInner() {
   }
 
   async function fetchOverview() {
-    if (!userEmail) return;
-
     setLoading(true);
     setError(null);
 
     try {
-      const response = await getLearningObjectivesOverview(userEmail, {
+      const response = await getLearningObjectivesOverview({
         class_name: className || undefined,
         learning_objective_id: selectedObjectiveId,
       });

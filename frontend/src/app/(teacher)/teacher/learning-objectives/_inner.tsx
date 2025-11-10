@@ -17,8 +17,6 @@ import type {
 } from "@/dtos/learning-objective.dto";
 
 export default function LearningObjectivesInner() {
-  const router = useRouter();
-  const [userEmail, setUserEmail] = useState<string>("");
   const [objectives, setObjectives] = useState<LearningObjectiveDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,35 +62,15 @@ export default function LearningObjectivesInner() {
   } | null>(null);
 
   useEffect(() => {
-    const email = localStorage.getItem("userEmail");
-    if (!email) {
-      router.push("/");
-      return;
-    }
-    setUserEmail(email);
-  }, [router]);
-
-  useEffect(() => {
-    if (userEmail) {
-      fetchObjectives();
-    }
-  }, [
-    userEmail,
-    page,
-    searchQuery,
-    domainFilter,
-    levelFilter,
-    activeFilter,
-  ]);
+    fetchObjectives();
+  }, [page, searchQuery, domainFilter, levelFilter, activeFilter]);
 
   async function fetchObjectives() {
-    if (!userEmail) return;
-
     setLoading(true);
     setError(null);
 
     try {
-      const response = await listLearningObjectives(userEmail, {
+      const response = await listLearningObjectives({
         page,
         limit,
         domain: domainFilter || undefined,
@@ -137,7 +115,6 @@ export default function LearningObjectivesInner() {
   }
 
   async function handleCreate() {
-    if (!userEmail) return;
     if (!formData.title) {
       alert("Titel is verplicht");
       return;
@@ -145,8 +122,7 @@ export default function LearningObjectivesInner() {
 
     try {
       await createLearningObjective(
-        formData as LearningObjectiveCreateDto,
-        userEmail
+        formData as LearningObjectiveCreateDto
       );
       setIsCreateModalOpen(false);
       fetchObjectives();
@@ -157,13 +133,12 @@ export default function LearningObjectivesInner() {
   }
 
   async function handleUpdate() {
-    if (!userEmail || !currentObjective) return;
+    if (!currentObjective) return;
 
     try {
       await updateLearningObjective(
         currentObjective.id,
-        formData as LearningObjectiveUpdateDto,
-        userEmail
+        formData as LearningObjectiveUpdateDto
       );
       setIsEditModalOpen(false);
       setCurrentObjective(null);
@@ -175,13 +150,12 @@ export default function LearningObjectivesInner() {
   }
 
   async function handleDelete(id: number) {
-    if (!userEmail) return;
     if (!confirm("Weet je zeker dat je dit leerdoel wilt verwijderen?")) {
       return;
     }
 
     try {
-      await deleteLearningObjective(id, userEmail);
+      await deleteLearningObjective(id);
       fetchObjectives();
     } catch (err) {
       console.error("Error deleting learning objective:", err);
@@ -190,7 +164,7 @@ export default function LearningObjectivesInner() {
   }
 
   async function handleImport() {
-    if (!userEmail || !importText.trim()) {
+    if (!importText.trim()) {
       alert("Voer CSV-gegevens in");
       return;
     }
@@ -220,7 +194,7 @@ export default function LearningObjectivesInner() {
         });
       }
 
-      const result = await importLearningObjectives({ items }, userEmail);
+      const result = await importLearningObjectives({ items });
       setImportResult(result);
       if (result.errors.length === 0) {
         fetchObjectives();

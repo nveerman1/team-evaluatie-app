@@ -81,11 +81,8 @@ export default function RubricEditor({
     if (!isMounted) return;
 
     async function fetchObjectives() {
-      const userEmail = localStorage.getItem("userEmail");
-      if (!userEmail) return;
-
       try {
-        const response = await listLearningObjectives(userEmail, {
+        const response = await listLearningObjectives({
           active: true,
           limit: 100,
         });

@@ -1,4 +1,4 @@
-import axios from "axios";
+import api from "@/lib/api";
 import {
   LearningObjectiveDto,
   LearningObjectiveCreateDto,
@@ -9,27 +9,19 @@ import {
   LearningObjectiveOverviewResponse,
 } from "@/dtos/learning-objective.dto";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
-
 // ============ CRUD Operations ============
 
 export async function createLearningObjective(
-  data: LearningObjectiveCreateDto,
-  userEmail: string
+  data: LearningObjectiveCreateDto
 ): Promise<LearningObjectiveDto> {
-  const response = await axios.post(
-    `${API_BASE_URL}/api/v1/learning-objectives`,
-    data,
-    {
-      headers: { "X-User-Email": userEmail },
-    }
+  const response = await api.post<LearningObjectiveDto>(
+    `/learning-objectives`,
+    data
   );
   return response.data;
 }
 
 export async function listLearningObjectives(
-  userEmail: string,
   params?: {
     page?: number;
     limit?: number;
@@ -39,65 +31,47 @@ export async function listLearningObjectives(
     search?: string;
   }
 ): Promise<LearningObjectiveListResponse> {
-  const response = await axios.get(
-    `${API_BASE_URL}/api/v1/learning-objectives`,
-    {
-      params,
-      headers: { "X-User-Email": userEmail },
-    }
+  const response = await api.get<LearningObjectiveListResponse>(
+    `/learning-objectives`,
+    { params }
   );
   return response.data;
 }
 
 export async function getLearningObjective(
-  id: number,
-  userEmail: string
+  id: number
 ): Promise<LearningObjectiveDto> {
-  const response = await axios.get(
-    `${API_BASE_URL}/api/v1/learning-objectives/${id}`,
-    {
-      headers: { "X-User-Email": userEmail },
-    }
+  const response = await api.get<LearningObjectiveDto>(
+    `/learning-objectives/${id}`
   );
   return response.data;
 }
 
 export async function updateLearningObjective(
   id: number,
-  data: LearningObjectiveUpdateDto,
-  userEmail: string
+  data: LearningObjectiveUpdateDto
 ): Promise<LearningObjectiveDto> {
-  const response = await axios.put(
-    `${API_BASE_URL}/api/v1/learning-objectives/${id}`,
-    data,
-    {
-      headers: { "X-User-Email": userEmail },
-    }
+  const response = await api.put<LearningObjectiveDto>(
+    `/learning-objectives/${id}`,
+    data
   );
   return response.data;
 }
 
 export async function deleteLearningObjective(
-  id: number,
-  userEmail: string
+  id: number
 ): Promise<void> {
-  await axios.delete(`${API_BASE_URL}/api/v1/learning-objectives/${id}`, {
-    headers: { "X-User-Email": userEmail },
-  });
+  await api.delete(`/learning-objectives/${id}`);
 }
 
 // ============ Import ============
 
 export async function importLearningObjectives(
-  data: LearningObjectiveImportRequest,
-  userEmail: string
+  data: LearningObjectiveImportRequest
 ): Promise<LearningObjectiveImportResponse> {
-  const response = await axios.post(
-    `${API_BASE_URL}/api/v1/learning-objectives/import`,
-    data,
-    {
-      headers: { "X-User-Email": userEmail },
-    }
+  const response = await api.post<LearningObjectiveImportResponse>(
+    `/learning-objectives/import`,
+    data
   );
   return response.data;
 }
@@ -105,7 +79,6 @@ export async function importLearningObjectives(
 // ============ Overview ============
 
 export async function getLearningObjectivesOverview(
-  userEmail: string,
   params?: {
     class_name?: string;
     course_id?: number;
@@ -113,12 +86,9 @@ export async function getLearningObjectivesOverview(
     learning_objective_id?: number;
   }
 ): Promise<LearningObjectiveOverviewResponse> {
-  const response = await axios.get(
-    `${API_BASE_URL}/api/v1/learning-objectives/overview/students`,
-    {
-      params,
-      headers: { "X-User-Email": userEmail },
-    }
+  const response = await api.get<LearningObjectiveOverviewResponse>(
+    `/learning-objectives/overview/students`,
+    { params }
   );
   return response.data;
 }
