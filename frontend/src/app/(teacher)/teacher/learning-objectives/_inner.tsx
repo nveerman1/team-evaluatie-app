@@ -208,97 +208,108 @@ export default function LearningObjectivesInner() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Leerdoelen / Eindtermen</h1>
-        <p className="text-gray-600">
-          Beheer leerdoelen en koppel ze aan rubrieken voor rapportage en
-          voortgangsmonitoring.
-        </p>
-      </div>
+    <div className="max-w-6xl mx-auto p-6 space-y-6">
+      <header className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Leerdoelen / Eindtermen</h1>
+          <p className="text-gray-600">
+            Beheer leerdoelen en koppel ze aan rubrieken voor rapportage en
+            voortgangsmonitoring.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={openCreateModal}
+            className="px-4 py-2 rounded-xl bg-black text-white hover:opacity-90"
+          >
+            + Nieuw Leerdoel
+          </button>
+          <button
+            onClick={() => setIsImportModalOpen(true)}
+            className="px-4 py-2 rounded-xl bg-green-600 text-white hover:opacity-90"
+          >
+            Importeer CSV
+          </button>
+        </div>
+      </header>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded text-red-800">
+        <div className="p-4 bg-red-50 border border-red-200 rounded text-red-800">
           {error}
         </div>
       )}
 
-      {/* Actions */}
-      <div className="mb-6 flex gap-4">
-        <button
-          onClick={openCreateModal}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          + Nieuw Leerdoel
-        </button>
-        <button
-          onClick={() => setIsImportModalOpen(true)}
-          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-        >
-          Importeer CSV
-        </button>
-      </div>
-
-      {/* Phase Toggle */}
-      <div className="mb-6 flex gap-2 p-1 bg-gray-100 rounded-lg w-fit">
-        <button
-          onClick={() => setPhaseFilter("")}
-          className={`px-6 py-2 rounded-md font-medium transition-colors ${
-            phaseFilter === ""
-              ? "bg-white text-blue-600 shadow"
-              : "text-gray-600 hover:text-gray-900"
-          }`}
-        >
-          Alle
-        </button>
-        <button
-          onClick={() => setPhaseFilter("onderbouw")}
-          className={`px-6 py-2 rounded-md font-medium transition-colors ${
-            phaseFilter === "onderbouw"
-              ? "bg-white text-blue-600 shadow"
-              : "text-gray-600 hover:text-gray-900"
-          }`}
-        >
-          Onderbouw
-        </button>
-        <button
-          onClick={() => setPhaseFilter("bovenbouw")}
-          className={`px-6 py-2 rounded-md font-medium transition-colors ${
-            phaseFilter === "bovenbouw"
-              ? "bg-white text-blue-600 shadow"
-              : "text-gray-600 hover:text-gray-900"
-          }`}
-        >
-          Bovenbouw
-        </button>
+      {/* Phase Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="flex gap-8" aria-label="Tabs">
+          <button
+            onClick={() => setPhaseFilter("")}
+            className={`
+              py-4 px-1 border-b-2 font-medium text-sm transition-colors
+              ${
+                phaseFilter === ""
+                  ? "border-black text-black"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }
+            `}
+          >
+            Alle
+          </button>
+          <button
+            onClick={() => setPhaseFilter("onderbouw")}
+            className={`
+              py-4 px-1 border-b-2 font-medium text-sm transition-colors
+              ${
+                phaseFilter === "onderbouw"
+                  ? "border-black text-black"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }
+            `}
+          >
+            Onderbouw
+          </button>
+          <button
+            onClick={() => setPhaseFilter("bovenbouw")}
+            className={`
+              py-4 px-1 border-b-2 font-medium text-sm transition-colors
+              ${
+                phaseFilter === "bovenbouw"
+                  ? "border-black text-black"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }
+            `}
+          >
+            Bovenbouw
+          </button>
+        </nav>
       </div>
 
       {/* Filters */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded">
-        <div>
-          <label className="block text-sm font-medium mb-1">Zoeken</label>
+      <div className="flex items-center gap-6 bg-white p-4 rounded-2xl border">
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-medium">Zoeken:</label>
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Titel of beschrijving..."
-            className="w-full px-3 py-2 border rounded"
+            className="border rounded-lg px-3 py-2"
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Domein</label>
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-medium">Domein:</label>
           <input
             type="text"
             value={domainFilter}
             onChange={(e) => setDomainFilter(e.target.value)}
             placeholder="A, B, C, D, E..."
-            className="w-full px-3 py-2 border rounded"
+            className="border rounded-lg px-3 py-2 w-32"
           />
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-2xl border overflow-hidden">
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
@@ -366,11 +377,11 @@ export default function LearningObjectivesInner() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="mt-4 flex justify-center gap-2">
+        <div className="flex justify-center gap-2">
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="px-4 py-2 border rounded disabled:opacity-50"
+            className="px-4 py-2 border rounded-lg disabled:opacity-50 hover:bg-gray-100"
           >
             Vorige
           </button>
@@ -380,7 +391,7 @@ export default function LearningObjectivesInner() {
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
-            className="px-4 py-2 border rounded disabled:opacity-50"
+            className="px-4 py-2 border rounded-lg disabled:opacity-50 hover:bg-gray-100"
           >
             Volgende
           </button>
