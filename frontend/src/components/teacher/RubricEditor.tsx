@@ -403,7 +403,7 @@ function CriterionCard({
         <input
           type="text"
           className="flex-1 border rounded-lg px-3 py-2"
-          value={item.name}
+          value={item.name || ""}
           onChange={(e) => onUpdate(index, { name: e.target.value })}
           placeholder="Criterium naam"
           aria-label="Criterium naam"
@@ -453,7 +453,7 @@ function CriterionCard({
                   </div>
                   <div className="p-2">
                     {learningObjectives.map((lo) => {
-                      const isSelected = item.learning_objective_ids?.includes(lo.id);
+                      const isSelected = item.learning_objective_ids?.includes(lo.id) ?? false;
                       return (
                         <label
                           key={lo.id}
@@ -547,7 +547,7 @@ function CriterionCard({
       <div className="grid grid-cols-5 gap-3">
         {(["level1", "level2", "level3", "level4", "level5"] as const).map(
           (level, idx) => {
-            const text = (item.descriptors?.[level] ?? "") as string;
+            const text = String(item.descriptors?.[level] ?? "");
             const charCount = getCharCount(text);
             
             return (
