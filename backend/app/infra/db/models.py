@@ -148,6 +148,7 @@ class Rubric(Base):
     scale_min: Mapped[int] = mapped_column(SmallInteger, default=1)
     scale_max: Mapped[int] = mapped_column(SmallInteger, default=5)
     scope: Mapped[str] = mapped_column(String(20), default="peer", nullable=False)  # "peer" | "project"
+    target_level: Mapped[Optional[str]] = mapped_column(String(20))  # "onderbouw" | "bovenbouw"
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
     
     __table_args__ = (
@@ -848,14 +849,11 @@ class LearningObjective(Base):
     # Detailed description
     description: Mapped[Optional[str]] = mapped_column(Text)
     
-    # Education level (e.g., "VWO", "HAVO", "VMBO")
-    level: Mapped[Optional[str]] = mapped_column(String(50))
-    
     # Order/number (e.g., 9, 11, 13, 14, 16)
     order: Mapped[int] = mapped_column(Integer, default=0)
     
-    # Is this learning objective active/enabled?
-    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Phase: "onderbouw" or "bovenbouw"
+    phase: Mapped[Optional[str]] = mapped_column(String(20))
     
     # Additional metadata
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
@@ -869,7 +867,7 @@ class LearningObjective(Base):
     __table_args__ = (
         Index("ix_learning_objective_school", "school_id"),
         Index("ix_learning_objective_domain", "school_id", "domain"),
-        Index("ix_learning_objective_active", "school_id", "active"),
+        Index("ix_learning_objective_phase", "school_id", "phase"),
     )
 
 

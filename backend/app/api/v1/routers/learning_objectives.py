@@ -40,9 +40,8 @@ def _to_out(obj: LearningObjective) -> LearningObjectiveOut:
             "domain": obj.domain,
             "title": obj.title,
             "description": obj.description,
-            "level": obj.level,
             "order": obj.order,
-            "active": obj.active,
+            "phase": obj.phase,
             "metadata_json": obj.metadata_json or {},
         }
     )
@@ -65,9 +64,8 @@ def create_learning_objective(
         domain=payload.domain,
         title=payload.title,
         description=payload.description,
-        level=payload.level,
         order=payload.order,
-        active=payload.active,
+        phase=payload.phase,
         metadata_json=payload.metadata_json,
     )
     db.add(obj)
@@ -81,8 +79,7 @@ def list_learning_objectives(
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
     domain: Optional[str] = None,
-    level: Optional[str] = None,
-    active: Optional[bool] = None,
+    phase: Optional[str] = None,
     search: Optional[str] = None,
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
@@ -95,11 +92,8 @@ def list_learning_objectives(
     if domain is not None:
         query = query.where(LearningObjective.domain == domain)
 
-    if level is not None:
-        query = query.where(LearningObjective.level == level)
-
-    if active is not None:
-        query = query.where(LearningObjective.active == active)
+    if phase is not None:
+        query = query.where(LearningObjective.phase == phase)
 
     if search:
         search_pattern = f"%{search}%"
@@ -238,8 +232,7 @@ def import_learning_objectives(
                 # Update existing
                 existing.title = item.title
                 existing.description = item.description
-                existing.level = item.level
-                existing.active = item.active
+                existing.phase = item.phase
                 updated += 1
             else:
                 # Create new
@@ -248,9 +241,8 @@ def import_learning_objectives(
                     domain=item.domain,
                     title=item.title,
                     description=item.description,
-                    level=item.level,
                     order=item.order,
-                    active=item.active,
+                    phase=item.phase,
                     metadata_json={},
                 )
                 db.add(new_obj)

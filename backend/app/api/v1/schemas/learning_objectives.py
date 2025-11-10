@@ -12,9 +12,8 @@ class LearningObjectiveCreate(BaseModel):
     domain: Optional[str] = None
     title: str
     description: Optional[str] = None
-    level: Optional[str] = None
     order: int = 0
-    active: bool = True
+    phase: Optional[str] = None  # "onderbouw" | "bovenbouw"
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -22,9 +21,8 @@ class LearningObjectiveUpdate(BaseModel):
     domain: Optional[str] = None
     title: Optional[str] = None
     description: Optional[str] = None
-    level: Optional[str] = None
     order: Optional[int] = None
-    active: Optional[bool] = None
+    phase: Optional[str] = None  # "onderbouw" | "bovenbouw"
     metadata_json: Optional[Dict[str, Any]] = None
 
 
@@ -33,9 +31,8 @@ class LearningObjectiveOut(BaseModel):
     domain: Optional[str]
     title: str
     description: Optional[str]
-    level: Optional[str]
     order: int
-    active: bool
+    phase: Optional[str]
     metadata_json: Dict[str, Any]
 
     class Config:
@@ -60,9 +57,8 @@ class LearningObjectiveImportItem(BaseModel):
     domain: Optional[str] = None
     title: str
     description: Optional[str] = None
-    level: Optional[str] = None
     order: int = 0
-    active: bool = True
+    phase: Optional[str] = None  # "onderbouw" | "bovenbouw"
 
 
 class LearningObjectiveImportRequest(BaseModel):
