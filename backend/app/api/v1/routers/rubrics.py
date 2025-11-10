@@ -69,6 +69,7 @@ def _to_out_rubric(r: Rubric) -> RubricOut:
             "scale_min": r.scale_min,
             "scale_max": r.scale_max,
             "scope": r.scope,
+            "target_level": r.target_level,
             "metadata_json": r.metadata_json or {},
         }
     )
@@ -148,6 +149,7 @@ def create_rubric(
         scale_min=payload.scale_min,
         scale_max=payload.scale_max,
         scope=payload.scope,
+        target_level=payload.target_level,
         metadata_json=payload.metadata_json,
     )
     db.add(r)
@@ -232,6 +234,8 @@ def update_rubric(
         r.scale_max = payload.scale_max
     if payload.scope is not None:
         r.scope = payload.scope
+    if payload.target_level is not None:
+        r.target_level = payload.target_level
     if payload.metadata_json is not None:
         r.metadata_json = payload.metadata_json
     db.add(r)
