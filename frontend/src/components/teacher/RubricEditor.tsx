@@ -66,12 +66,20 @@ export default function RubricEditor({
   const [learningObjectives, setLearningObjectives] = useState<
     LearningObjectiveDto[]
   >([]);
+  const [isMounted, setIsMounted] = useState(false);
 
   const categories =
     scope === "peer" ? PEER_CATEGORIES : PROJECT_CATEGORIES;
 
-  // Fetch learning objectives
+  // Set mounted state to avoid hydration issues
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Fetch learning objectives (only on client side)
+  useEffect(() => {
+    if (!isMounted) return;
+
     async function fetchObjectives() {
       const userEmail = localStorage.getItem("userEmail");
       if (!userEmail) return;
@@ -87,7 +95,7 @@ export default function RubricEditor({
       }
     }
     fetchObjectives();
-  }, []);
+  }, [isMounted]);
 
   const togglePanel = (category: string) => {
     setExpandedPanels((prev) => {
