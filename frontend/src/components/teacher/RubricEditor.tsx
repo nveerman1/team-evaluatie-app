@@ -24,6 +24,7 @@ export type CriterionItem = {
 
 type RubricEditorProps = {
   scope: "peer" | "project";
+  targetLevel?: "onderbouw" | "bovenbouw" | null;
   items: CriterionItem[];
   onItemsChange: (items: CriterionItem[]) => void;
 };
@@ -51,6 +52,7 @@ const EMPTY_DESC: Descriptor = {
 
 export default function RubricEditor({
   scope,
+  targetLevel,
   items,
   onItemsChange,
 }: RubricEditorProps) {
@@ -76,14 +78,14 @@ export default function RubricEditor({
     setIsMounted(true);
   }, []);
 
-  // Fetch learning objectives (only on client side)
+  // Fetch learning objectives (only on client side), filtered by targetLevel
   useEffect(() => {
     if (!isMounted) return;
 
     async function fetchObjectives() {
       try {
         const response = await listLearningObjectives({
-          active: true,
+          phase: targetLevel || undefined,
           limit: 100,
         });
         setLearningObjectives(response.items);
@@ -92,7 +94,7 @@ export default function RubricEditor({
       }
     }
     fetchObjectives();
-  }, [isMounted]);
+  }, [isMounted, targetLevel]);
 
   const togglePanel = (category: string) => {
     setExpandedPanels((prev) => {
@@ -355,6 +357,8 @@ function CriterionCard({
   onDragEnd,
   learningObjectives,
 }: CriterionCardProps) {
+  const [showObjectiveDropdown, setShowObjectiveDropdown] = useState(false);
+
   const handleDescriptorChange = (level: string, value: string) => {
     onUpdate(index, {
       descriptors: {
@@ -366,6 +370,18 @@ function CriterionCard({
 
   const getCharCount = (text: string) => text.length;
 
+  const selectedObjectives = learningObjectives.filter((lo) =>
+    item.learning_objective_ids?.includes(lo.id)
+  );
+
+  const toggleObjective = (loId: number) => {
+    const current = item.learning_objective_ids || [];
+    const updated = current.includes(loId)
+      ? current.filter((id) => id !== loId)
+      : [...current, loId];
+    onUpdate(index, { learning_objective_ids: updated });
+  };
+
   return (
     <article
       className="px-4 py-3 space-y-3"
@@ -375,7 +391,7 @@ function CriterionCard({
       role="article"
       aria-label={`Criterium: ${item.name}`}
     >
-      {/* Top Row: Title, Weight, Actions */}
+      {/* Top Row: Title, Learning Objectives Icon, Weight, Actions */}
       <div className="flex items-center gap-3">
         <span
           className="cursor-move text-gray-400 text-lg select-none"
@@ -392,6 +408,83 @@ function CriterionCard({
           placeholder="Criterium naam"
           aria-label="Criterium naam"
         />
+        
+        {/* Learning Objectives Dropdown */}
+        {learningObjectives.length > 0 && (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowObjectiveDropdown(!showObjectiveDropdown)}
+              className={`p-2 rounded-lg border hover:bg-gray-50 ${
+                selectedObjectives.length > 0 ? "bg-blue-50 border-blue-300" : ""
+              }`}
+              title="Leerdoelen koppelen"
+              aria-label="Leerdoelen koppelen"
+            >
+              🎯
+              {selectedObjectives.length > 0 && (
+                <span className="ml-1 text-xs font-medium text-blue-600">
+                  {selectedObjectives.length}
+                </span>
+              )}
+            </button>
+            
+            {showObjectiveDropdown && (
+              <>
+                {/* Backdrop to close dropdown */}
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowObjectiveDropdown(false)}
+                />
+                
+                {/* Dropdown content */}
+                <div className="absolute right-0 mt-2 w-80 bg-white border rounded-lg shadow-lg z-20 max-h-96 overflow-y-auto">
+                  <div className="p-3 border-b bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Leerdoelen selecteren</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowObjectiveDropdown(false)}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                  <div className="p-2">
+                    {learningObjectives.map((lo) => {
+                      const isSelected = item.learning_objective_ids?.includes(lo.id);
+                      return (
+                        <label
+                          key={lo.id}
+                          className="flex items-start gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleObjective(lo.id)}
+                            className="mt-1"
+                          />
+                          <div className="flex-1 text-sm">
+                            <div className="font-medium">
+                              {lo.domain}.{lo.order} - {lo.title}
+                            </div>
+                            {lo.description && (
+                              <div className="text-xs text-gray-500 mt-0.5">
+                                {lo.description}
+                              </div>
+                            )}
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         <label className="flex items-center gap-2">
           <span className="text-sm text-gray-600">Weging:</span>
           <input
@@ -435,44 +528,18 @@ function CriterionCard({
         </div>
       </div>
 
-      {/* Learning Objectives Row */}
-      {learningObjectives.length > 0 && (
-        <div className="pt-2">
-          <label className="block text-sm font-medium text-gray-600 mb-2">
-            Gekoppelde Leerdoelen:
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {learningObjectives.map((lo) => {
-              const isSelected = item.learning_objective_ids?.includes(lo.id);
-              return (
-                <button
-                  key={lo.id}
-                  type="button"
-                  onClick={() => {
-                    const current = item.learning_objective_ids || [];
-                    const updated = isSelected
-                      ? current.filter((id) => id !== lo.id)
-                      : [...current, lo.id];
-                    onUpdate(index, { learning_objective_ids: updated });
-                  }}
-                  className={`px-3 py-1 rounded-full text-xs border ${
-                    isSelected
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                  }`}
-                  title={lo.description || lo.title}
-                >
-                  {lo.domain ? `${lo.domain} - ` : ""}
-                  {lo.title}
-                </button>
-              );
-            })}
-          </div>
-          {item.learning_objective_ids && item.learning_objective_ids.length > 0 && (
-            <div className="mt-2 text-xs text-gray-500">
-              {item.learning_objective_ids.length} leerdoel(en) geselecteerd
-            </div>
-          )}
+      {/* Compact Learning Objectives Badges */}
+      {selectedObjectives.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 pl-8">
+          {selectedObjectives.map((lo) => (
+            <span
+              key={lo.id}
+              className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium"
+              title={`${lo.title}${lo.description ? ` - ${lo.description}` : ""}`}
+            >
+              {lo.domain}.{lo.order}
+            </span>
+          ))}
         </div>
       )}
 

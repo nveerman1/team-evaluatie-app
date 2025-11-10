@@ -12,6 +12,7 @@ type RubricOut = {
   scale_min: number;
   scale_max: number;
   scope?: string;
+  target_level?: "onderbouw" | "bovenbouw" | null;
 };
 type CriterionOut = {
   id: number;
@@ -204,6 +205,7 @@ export default function EditRubricPageInner() {
       {rubric && (
         <RubricEditor
           scope={(rubric.scope as "peer" | "project") || "peer"}
+          targetLevel={rubric.target_level || null}
           items={items}
           onItemsChange={setItems}
         />
