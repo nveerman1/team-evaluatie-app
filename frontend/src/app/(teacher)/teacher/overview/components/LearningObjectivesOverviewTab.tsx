@@ -299,20 +299,20 @@ export default function LearningObjectivesOverviewTab() {
       {/* Overview Table */}
       {overview && (
         <div className="bg-white rounded-lg shadow border overflow-x-auto">
-          <table className="w-full text-sm border-collapse">
+          <table className="text-sm border-collapse" style={{ minWidth: "100%" }}>
             <thead className="bg-gray-50 sticky top-0">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-gray-700 uppercase text-xs sticky left-0 bg-gray-50 z-20 border-r-2 border-gray-300">
+                <th className="px-4 py-3 text-left font-medium text-gray-700 uppercase text-xs sticky left-0 bg-gray-50 z-20 border-r-2 border-gray-300" style={{ width: "200px", minWidth: "200px" }}>
                   Naam
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-700 uppercase text-xs sticky left-[150px] bg-gray-50 z-20 border-r-2 border-gray-300" style={{ minWidth: "100px" }}>
+                <th className="px-4 py-3 text-left font-medium text-gray-700 uppercase text-xs sticky bg-gray-50 z-20 border-r-2 border-gray-300" style={{ left: "200px", width: "120px", minWidth: "120px" }}>
                   Klas
                 </th>
                 {allObjectives.map((obj) => (
                   <th
                     key={obj.id}
                     className="px-2 py-3 text-center font-medium text-gray-700 uppercase text-xs border-r border-gray-200"
-                    style={{ minWidth: "80px" }}
+                    style={{ minWidth: "100px" }}
                     title={`${obj.title}\n${obj.description || ""}`}
                   >
                     <div className="flex flex-col items-center gap-1">
@@ -328,10 +328,10 @@ export default function LearningObjectivesOverviewTab() {
             <tbody className="divide-y divide-gray-200 bg-white">
               {filteredStudents.map((student) => (
                   <tr key={student.user_id} className="hover:bg-gray-50">
-                    <td className="px-4 py-2 font-medium text-gray-900 sticky left-0 bg-white z-10 border-r-2 border-gray-300">
+                    <td className="px-4 py-2 font-medium text-gray-900 sticky left-0 bg-white z-10 border-r-2 border-gray-300" style={{ width: "200px", minWidth: "200px" }}>
                       {student.user_name}
                     </td>
-                    <td className="px-4 py-2 text-sm text-gray-600 sticky left-[150px] bg-white z-10 border-r-2 border-gray-300">
+                    <td className="px-4 py-2 text-sm text-gray-600 sticky bg-white z-10 border-r-2 border-gray-300" style={{ left: "200px", width: "120px", minWidth: "120px" }}>
                       {student.class_name || "-"}
                     </td>
                     {allObjectives.map((obj) => {
@@ -342,6 +342,7 @@ export default function LearningObjectivesOverviewTab() {
                         <td
                           key={obj.id}
                           className="px-2 py-2 text-center border-r border-gray-200"
+                          style={{ minWidth: "100px" }}
                         >
                           <div
                             className={`w-full h-10 rounded flex items-center justify-center font-bold text-base ${getScoreColor(
