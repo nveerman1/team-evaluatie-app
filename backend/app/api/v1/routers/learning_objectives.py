@@ -294,6 +294,17 @@ def get_learning_objectives_overview(
     if class_name:
         students_query = students_query.where(User.class_name == class_name)
 
+    if course_id:
+        # Filter students to only those in groups for this course
+        students_query = students_query.join(
+            GroupMember, GroupMember.user_id == User.id
+        ).join(
+            Group, Group.id == GroupMember.group_id
+        ).where(
+            Group.course_id == course_id,
+            GroupMember.active == True,
+        ).distinct()
+
     students = db.execute(students_query).scalars().all()
 
     # Get learning objectives
