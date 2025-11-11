@@ -298,8 +298,7 @@ def get_learning_objectives_overview(
 
     # Get learning objectives
     lo_query = select(LearningObjective).where(
-        LearningObjective.school_id == user.school_id,
-        LearningObjective.active,
+        LearningObjective.school_id == user.school_id
     )
 
     if learning_objective_id:
