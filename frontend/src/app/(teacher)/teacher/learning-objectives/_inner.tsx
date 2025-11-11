@@ -156,6 +156,52 @@ export default function LearningObjectivesInner() {
     }
   }
 
+  /**
+   * Parse a CSV line, properly handling quoted fields that may contain commas.
+   * Follows RFC 4180 CSV format:
+   * - Fields may be enclosed in double quotes
+   * - Quoted fields can contain commas and newlines
+   * - Double quotes within quoted fields are escaped as ""
+   */
+  function parseCSVLine(line: string): string[] {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    let fieldStart = true;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      
+      if (char === '"' && (fieldStart || inQuotes)) {
+        // Start or end of quoted field
+        if (fieldStart && !inQuotes) {
+          // Starting a quoted field - don't include the quote
+          inQuotes = true;
+          fieldStart = false;
+        } else if (inQuotes) {
+          // Check for escaped quote (double quote)
+          if (i + 1 < line.length && line[i + 1] === '"') {
+            current += '"';
+            i++; // Skip next quote
+          } else {
+            // End of quoted field
+            inQuotes = false;
+          }
+        }
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+        fieldStart = true;
+      } else {
+        current += char;
+        fieldStart = false;
+      }
+    }
+    result.push(current.trim());
+    
+    return result;
+  }
+
   async function handleImport() {
     if (!importText.trim()) {
       alert("Voer CSV-gegevens in");
@@ -163,18 +209,24 @@ export default function LearningObjectivesInner() {
     }
 
     try {
-      // Parse CSV (simple implementation - expects: domain,nummer,titel,beschrijving,fase)
+      // Parse CSV (expects: domein,nummer,titel,beschrijving,fase)
       const lines = importText.trim().split("\n");
       const items: LearningObjectiveImportItem[] = [];
 
-      // Skip header if present
-      const startIdx = lines[0].toLowerCase().includes("domain") ? 1 : 0;
+      // Skip header if present (check for common Dutch/English header keywords)
+      const firstLine = lines[0].toLowerCase();
+      const hasHeader = firstLine.includes("domein") || 
+                       firstLine.includes("domain") || 
+                       firstLine.includes("nummer") ||
+                       firstLine.includes("titel") ||
+                       firstLine.includes("title");
+      const startIdx = hasHeader ? 1 : 0;
 
       for (let i = startIdx; i < lines.length; i++) {
         const line = lines[i].trim();
         if (!line) continue;
 
-        const parts = line.split(",").map((p) => p.trim());
+        const parts = parseCSVLine(line);
         if (parts.length < 2) continue;
 
         items.push({
