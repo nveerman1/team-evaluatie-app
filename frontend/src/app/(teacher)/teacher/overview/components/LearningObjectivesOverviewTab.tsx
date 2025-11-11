@@ -298,7 +298,7 @@ export default function LearningObjectivesOverviewTab() {
       {/* Overview Table */}
       {overview && (
         <div className="bg-white rounded-lg shadow border overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="text-sm" style={{ width: 'max-content', minWidth: '100%' }}>
             <thead className="bg-gray-50 sticky top-0">
               <tr>
                 <th className="px-4 py-3 text-left font-medium text-gray-700 uppercase text-xs sticky left-0 bg-gray-50 z-20 border-r shadow-[2px_0_4px_rgba(0,0,0,0.05)]">
