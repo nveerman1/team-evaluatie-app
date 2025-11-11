@@ -15,26 +15,34 @@ const SummaryTile = ({
   value,
   hint,
   color = "bg-white",
+  onClick,
 }: {
   icon: React.ReactNode;
   title: string;
   value: string | number;
   hint?: string;
   color?: string;
-}) => (
-  <div
-    className={`rounded-2xl ${color} shadow-sm p-4 border border-gray-100 flex items-center gap-4 w-full transition-all duration-200`}
-  >
-    <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-lg">
-      {icon}
-    </div>
-    <div className="flex-1">
-      <div className="text-sm text-gray-500">{title}</div>
-      <div className="text-2xl font-semibold leading-6">{value}</div>
-      {hint && <div className="text-xs text-gray-400 mt-1">{hint}</div>}
-    </div>
-  </div>
-);
+  onClick?: () => void;
+}) => {
+  const Component = onClick ? "button" : "div";
+  return (
+    <Component
+      onClick={onClick}
+      className={`rounded-2xl ${color} shadow-sm p-4 border border-gray-50 flex items-center gap-4 w-full transition-all duration-200 ${
+        onClick ? "cursor-pointer hover:shadow-md" : ""
+      }`}
+    >
+      <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-lg">
+        {icon}
+      </div>
+      <div className="flex-1">
+        <div className="text-sm text-gray-500">{title}</div>
+        <div className="text-2xl font-semibold leading-6">{value}</div>
+        {hint && <div className="text-xs text-gray-400 mt-1">{hint}</div>}
+      </div>
+    </Component>
+  );
+};
 
 export default function StudentDashboard() {
   const { dashboard, loading, error } = useStudentDashboard();
@@ -64,20 +72,22 @@ export default function StudentDashboard() {
       {/* Header with student info */}
       <div className="bg-white/80 backdrop-blur-sm shadow-sm">
         <header className="px-6 pt-8 pb-4">
-          <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between w-full">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
-                Mijn Dashboard
-              </h1>
-              <p className="text-gray-600 mt-1">
-                Overzicht van jouw evaluaties, reflecties en groei.
-              </p>
-            </div>
-            <div className="text-right mt-3 md:mt-0">
-              <div className="text-lg font-medium">{studentName}</div>
-              {studentClass && (
-                <div className="text-sm text-gray-500">{studentClass}</div>
-              )}
+          <div className="max-w-6xl mx-auto">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between w-full">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
+                  Mijn Dashboard
+                </h1>
+                <p className="text-gray-600 mt-1">
+                  Overzicht van jouw evaluaties, reflecties en groei.
+                </p>
+              </div>
+              <div className="text-right mt-3 md:mt-0">
+                <div className="text-lg font-medium">{studentName}</div>
+                {studentClass && (
+                  <div className="text-sm text-gray-500">{studentClass}</div>
+                )}
+              </div>
             </div>
           </div>
         </header>
@@ -109,6 +119,7 @@ export default function StudentDashboard() {
             title="Open Evaluaties"
             value={openEvaluations.length}
             hint={`${openEvaluations.length}/${openEvaluations.length} deze periode`}
+            onClick={() => setActiveTab("evaluaties")}
           />
           <SummaryTile
             icon={<span>🧭</span>}
@@ -116,6 +127,7 @@ export default function StudentDashboard() {
             value={dashboard.openScans}
             hint="Competentiescan"
             color="bg-green-50"
+            onClick={() => setActiveTab("competenties")}
           />
           <SummaryTile
             icon={<span>🆕</span>}
@@ -123,6 +135,7 @@ export default function StudentDashboard() {
             value={dashboard.newAssessments}
             hint={`${dashboard.newAssessments} ${dashboard.newAssessments === 1 ? "nieuw project" : "nieuwe projecten"}`}
             color="bg-orange-50"
+            onClick={() => setActiveTab("projecten")}
           />
         </div>
 
