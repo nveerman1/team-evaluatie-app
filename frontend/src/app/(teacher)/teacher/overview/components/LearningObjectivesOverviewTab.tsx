@@ -31,7 +31,7 @@ export default function LearningObjectivesOverviewTab() {
 
   // Filters
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [courseFilter, setCourseFilter] = useState<string>("");
+  const [courseFilter, setCourseFilter] = useState<number | undefined>(undefined);
   const [classFilter, setClassFilter] = useState<string>("");
   const [periodFilter, setPeriodFilter] = useState<string>("all");
   const [aggregationType, setAggregationType] = useState<AggregationType>("average");
@@ -87,7 +87,7 @@ export default function LearningObjectivesOverviewTab() {
     try {
       const response = await getLearningObjectivesOverview({
         class_name: classFilter || undefined,
-        // Note: course_id would need to be converted from string if we had course selection
+        course_id: courseFilter,
       });
 
       setOverview(response);
@@ -99,7 +99,7 @@ export default function LearningObjectivesOverviewTab() {
     } finally {
       setLoading(false);
     }
-  }, [classFilter]);
+  }, [classFilter, courseFilter]);
 
   useEffect(() => {
     fetchCourses();
@@ -252,13 +252,13 @@ export default function LearningObjectivesOverviewTab() {
           <div>
             <label className="block text-sm font-medium mb-1">🧭 Vak / Course</label>
             <select
-              value={courseFilter}
-              onChange={(e) => setCourseFilter(e.target.value)}
+              value={courseFilter || ""}
+              onChange={(e) => setCourseFilter(e.target.value ? Number(e.target.value) : undefined)}
               className="w-full px-3 py-2 border rounded-lg"
             >
               <option value="">Alle vakken</option>
               {courses.map((course) => (
-                <option key={course.id} value={course.name}>
+                <option key={course.id} value={course.id}>
                   {course.name}
                 </option>
               ))}
