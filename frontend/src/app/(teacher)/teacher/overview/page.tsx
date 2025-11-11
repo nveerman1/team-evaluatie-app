@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AllItemsTab from "./components/AllItemsTab";
+import LearningObjectivesOverviewTab from "./components/LearningObjectivesOverviewTab";
 
 export default function OverviewPage() {
   const [activeTab, setActiveTab] = useState("totaal");
@@ -71,20 +72,7 @@ export default function OverviewPage() {
           </div>
         )}
         
-        {activeTab === "leerdoelen" && (
-          <div className="text-center py-12">
-            <p className="text-lg font-medium mb-4">Leerdoelen Overzicht</p>
-            <p className="text-sm text-gray-600 mb-6">
-              Bekijk het uitgebreide leerdoelen overzicht met student voortgang
-            </p>
-            <a
-              href="/teacher/learning-objectives/overview"
-              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Ga naar Leerdoelen Overzicht
-            </a>
-          </div>
-        )}
+        {activeTab === "leerdoelen" && <LearningObjectivesOverviewTab />}
       </div>
     </div>
   );
