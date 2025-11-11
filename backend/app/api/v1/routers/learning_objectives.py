@@ -288,7 +288,7 @@ def get_learning_objectives_overview(
     students_query = select(User).where(
         User.school_id == user.school_id,
         User.role == "student",
-        not User.archived,
+        User.archived == False,
     )
 
     if class_name:
