@@ -297,74 +297,72 @@ export default function LearningObjectivesOverviewTab() {
 
       {/* Overview Table */}
       {overview && (
-        <div className="bg-white rounded-lg shadow border overflow-auto">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 sticky top-0">
-                <tr>
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 uppercase text-xs sticky left-0 bg-gray-50 z-20 border-r">
-                    Naam
+        <div className="bg-white rounded-lg shadow border overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 sticky top-0">
+              <tr>
+                <th className="px-4 py-3 text-left font-medium text-gray-700 uppercase text-xs sticky left-0 bg-gray-50 z-20 border-r shadow-[2px_0_4px_rgba(0,0,0,0.05)]">
+                  Naam
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-gray-700 uppercase text-xs sticky left-[120px] bg-gray-50 z-20 border-r shadow-[2px_0_4px_rgba(0,0,0,0.05)]">
+                  Klas
+                </th>
+                {allObjectives.map((obj) => (
+                  <th
+                    key={obj.id}
+                    className="px-4 py-3 text-center font-medium text-gray-700 uppercase text-xs min-w-[80px]"
+                    title={`${obj.title}\n${obj.description || ""}`}
+                  >
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="font-bold">{obj.domain}</span>
+                      {obj.order > 0 && (
+                        <span className="text-xs text-gray-500">{obj.order}</span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 uppercase text-xs sticky left-[120px] bg-gray-50 z-20 border-r">
-                    Klas
-                  </th>
-                  {allObjectives.map((obj) => (
-                    <th
-                      key={obj.id}
-                      className="px-4 py-3 text-center font-medium text-gray-700 uppercase text-xs min-w-[80px]"
-                      title={`${obj.title}\n${obj.description || ""}`}
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="font-bold">{obj.domain}</span>
-                        {obj.order > 0 && (
-                          <span className="text-xs text-gray-500">{obj.order}</span>
-                        )}
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredStudents.map((student) => (
-                    <tr key={student.user_id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium sticky left-0 bg-white z-10 border-r">
-                        {student.user_name}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 sticky left-[120px] bg-white z-10 border-r">
-                        {student.class_name || "-"}
-                      </td>
-                      {allObjectives.map((obj) => {
-                        const progress = student.objectives.find(
-                          o => o.learning_objective_id === obj.id
-                        );
-                        return (
-                          <td
-                            key={obj.id}
-                            className="px-4 py-3 text-center"
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {filteredStudents.map((student) => (
+                  <tr key={student.user_id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-medium sticky left-0 bg-white hover:bg-gray-50 z-10 border-r shadow-[2px_0_4px_rgba(0,0,0,0.05)]">
+                      {student.user_name}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 sticky left-[120px] bg-white hover:bg-gray-50 z-10 border-r shadow-[2px_0_4px_rgba(0,0,0,0.05)]">
+                      {student.class_name || "-"}
+                    </td>
+                    {allObjectives.map((obj) => {
+                      const progress = student.objectives.find(
+                        o => o.learning_objective_id === obj.id
+                      );
+                      return (
+                        <td
+                          key={obj.id}
+                          className="px-4 py-3 text-center"
+                        >
+                          <div
+                            className={`inline-flex items-center justify-center px-3 py-1.5 rounded font-medium min-w-[50px] ${getScoreColor(
+                              progress?.average_score || null
+                            )}`}
+                            title={`${progress?.assessment_count || 0} beoordelingen`}
                           >
-                            <div
-                              className={`inline-flex items-center justify-center px-3 py-1.5 rounded font-medium min-w-[50px] ${getScoreColor(
-                                progress?.average_score || null
-                              )}`}
-                              title={`${progress?.assessment_count || 0} beoordelingen`}
-                            >
-                              {formatScore(progress?.average_score || null)}
-                            </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  )
-                )}
-              </tbody>
-            </table>
+                            {formatScore(progress?.average_score || null)}
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                )
+              )}
+            </tbody>
+          </table>
 
-            {filteredStudents.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                Geen gegevens gevonden voor de geselecteerde filters
-              </div>
-            )}
-          </div>
+          {filteredStudents.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              Geen gegevens gevonden voor de geselecteerde filters
+            </div>
+          )}
         </div>
       )}
 
