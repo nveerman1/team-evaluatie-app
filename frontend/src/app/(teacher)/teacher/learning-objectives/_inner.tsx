@@ -229,12 +229,28 @@ export default function LearningObjectivesInner() {
         const parts = parseCSVLine(line);
         if (parts.length < 2) continue;
 
+        // Map phase codes to full phase names
+        // B = Basis/Onderbouw, E = Eindniveau/Bovenbouw
+        let phase = parts[4] || null;
+        if (phase) {
+          const phaseUpper = phase.toUpperCase();
+          if (phaseUpper === 'B' || phaseUpper === 'ONDERBOUW') {
+            phase = 'onderbouw';
+          } else if (phaseUpper === 'E' || phaseUpper === 'BOVENBOUW') {
+            phase = 'bovenbouw';
+          }
+          // Truncate if too long (max 20 chars for database)
+          if (phase.length > 20) {
+            phase = phase.substring(0, 20);
+          }
+        }
+
         items.push({
           domain: parts[0] || null,
           order: parts[1] ? parseInt(parts[1], 10) : 0,
           title: parts[2] || parts[1],  // fallback if structure differs
           description: parts[3] || null,
-          phase: parts[4] || null,
+          phase: phase,
         });
       }
 
