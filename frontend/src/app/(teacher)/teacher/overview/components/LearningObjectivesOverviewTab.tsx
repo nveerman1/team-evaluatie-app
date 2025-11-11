@@ -51,9 +51,9 @@ export default function LearningObjectivesOverviewTab() {
 
   const fetchClasses = useCallback(async () => {
     try {
-      // Fetch all students to get unique class names
+      // Fetch all students to get unique class names (max limit is 500)
       const response = await api.get<Array<{ class_name: string | null }>>("/students", {
-        params: { limit: 1000 }
+        params: { limit: 500 }
       });
       const uniqueClasses = Array.from(
         new Set(
