@@ -403,25 +403,25 @@ def get_learning_objectives_overview(
                 assessments = db.execute(assessments_query).scalars().all()
 
                 for assessment in assessments:
-                    proj_scores_query = select(ProjectAssessmentScore).where(
-                        ProjectAssessmentScore.assessment_id == assessment.id,
-                        ProjectAssessmentScore.criterion_id.in_(criteria_ids),
-                    )
-                    # Filter by team_number if the student has one and the score has one
-                    # If team_number is NULL in the score, it's a group score (applies to all members)
+                    # First, try to get individual scores for this student's team_number
+                    proj_scores = []
                     if student.team_number is not None:
-                        proj_scores_query = proj_scores_query.where(
-                            or_(
-                                ProjectAssessmentScore.team_number == student.team_number,
-                                ProjectAssessmentScore.team_number == None,
-                            )
+                        individual_scores_query = select(ProjectAssessmentScore).where(
+                            ProjectAssessmentScore.assessment_id == assessment.id,
+                            ProjectAssessmentScore.criterion_id.in_(criteria_ids),
+                            ProjectAssessmentScore.team_number == student.team_number,
                         )
-                    else:
-                        # Student has no team number, only get group scores
-                        proj_scores_query = proj_scores_query.where(
-                            ProjectAssessmentScore.team_number == None
+                        proj_scores = db.execute(individual_scores_query).scalars().all()
+                    
+                    # If no individual scores found, fall back to group scores
+                    if not proj_scores:
+                        group_scores_query = select(ProjectAssessmentScore).where(
+                            ProjectAssessmentScore.assessment_id == assessment.id,
+                            ProjectAssessmentScore.criterion_id.in_(criteria_ids),
+                            ProjectAssessmentScore.team_number == None,
                         )
-                    proj_scores = db.execute(proj_scores_query).scalars().all()
+                        proj_scores = db.execute(group_scores_query).scalars().all()
+                    
                     scores_from_project.extend(proj_scores)
 
             # Calculate average score
