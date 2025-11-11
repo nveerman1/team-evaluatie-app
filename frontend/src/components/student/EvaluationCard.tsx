@@ -40,7 +40,7 @@ export function EvaluationCard({ evaluation }: EvaluationCardProps) {
                              evaluation.deadlines?.reflection;
 
   return (
-    <div className="border rounded-lg p-4 flex flex-col gap-2 bg-white w-full">
+    <div className="rounded-lg shadow-sm p-4 flex flex-col gap-2 bg-white w-full">
       <div className="flex justify-between items-start">
         <div>
           <div className="font-medium flex items-center gap-2">

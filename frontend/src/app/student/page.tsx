@@ -28,7 +28,7 @@ const SummaryTile = ({
   return (
     <Component
       onClick={onClick}
-      className={`rounded-2xl ${color} shadow-sm p-4 border border-gray-100 flex items-center gap-4 w-full transition-all duration-200 ${
+      className={`rounded-2xl ${color} shadow-sm p-4 flex items-center gap-4 w-full transition-all duration-200 ${
         onClick ? "cursor-pointer hover:shadow-md" : ""
       }`}
     >
@@ -72,18 +72,16 @@ export default function StudentDashboard() {
       {/* Header with student info */}
       <div className="bg-white/80 backdrop-blur-sm shadow-sm">
         <header className="px-6 pt-8 pb-4">
-          <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between w-full">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
-                Mijn Dashboard
-              </h1>
-              <p className="text-gray-600 mt-1">
-                Overzicht van jouw evaluaties, reflecties en groei.
-              </p>
-            </div>
-            <div className="text-right mt-3 md:mt-0">
-              <div className="text-lg font-medium">{studentName}</div>
-              <div className="text-sm text-gray-500">{studentClass}</div>
+          <div className="max-w-6xl mx-auto flex flex-col items-center text-center">
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
+              Mijn Dashboard
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Overzicht van jouw evaluaties, reflecties en groei.
+            </p>
+            <div className="mt-2">
+              <div className="text-sm text-gray-600">{studentName}</div>
+              <div className="text-sm text-gray-600">{studentClass}</div>
             </div>
           </div>
         </header>
@@ -174,7 +172,7 @@ export default function StudentDashboard() {
           <div className="max-w-6xl mx-auto mt-5 space-y-4 w-full transition-all duration-300">
 
             {/* Peer-feedback Results Card */}
-            <div className="rounded-xl border shadow-sm bg-blue-50 p-4 space-y-3 w-full">
+            <div className="rounded-xl shadow-sm bg-blue-50 p-4 space-y-3 w-full">
               <div className="px-4 py-2 rounded-t-xl font-semibold text-sm bg-blue-200 text-blue-900">
                 Peer-feedback resultaten
               </div>
@@ -203,7 +201,7 @@ export default function StudentDashboard() {
 
             {/* Evaluation Cards */}
             {openEvaluations.length === 0 ? (
-              <div className="p-8 border rounded-xl bg-gray-50 text-center">
+              <div className="p-8 rounded-xl shadow-sm bg-gray-50 text-center">
                 <p className="text-gray-500">
                   Geen open evaluaties op dit moment.
                 </p>
@@ -231,7 +229,7 @@ export default function StudentDashboard() {
         {activeTab === "projecten" && (
           <div className="max-w-6xl mx-auto mt-5 space-y-4 w-full transition-all duration-300">
 
-            <div className="rounded-xl border shadow-sm bg-gray-50 p-4 space-y-3 w-full">
+            <div className="rounded-xl shadow-sm bg-gray-50 p-4 space-y-3 w-full">
               <div className="px-4 py-2 rounded-t-xl font-semibold text-sm bg-gray-200 text-gray-800">
                 Projectbeoordelingen
               </div>
@@ -251,11 +249,11 @@ export default function StudentDashboard() {
                     <Link
                       key={assessment.id}
                       href={`/student/project-assessments/${assessment.id}`}
-                      className="block border rounded-lg p-4 bg-white hover:shadow-md transition-shadow"
+                      className="block rounded-lg shadow-sm p-4 bg-white hover:shadow-md transition-shadow"
                     >
                       <div className="flex justify-between items-start">
                         <div>
-                          <div className="font-medium flex items-center gap-2">
+                          <div className="font-medium text-base text-gray-900 flex items-center gap-2">
                             {assessment.title}
                             <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-medium">
                               Gesloten

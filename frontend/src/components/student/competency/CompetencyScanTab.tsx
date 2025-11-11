@@ -69,7 +69,7 @@ export function CompetencyScanTab() {
 
   if (loading) {
     return (
-      <div className="p-6 border rounded-xl bg-gray-50">
+      <div className="p-6 rounded-xl shadow-sm bg-gray-50">
         <Loading />
       </div>
     );
@@ -77,7 +77,7 @@ export function CompetencyScanTab() {
 
   if (error) {
     return (
-      <div className="p-6 border rounded-xl bg-gray-50">
+      <div className="p-6 rounded-xl shadow-sm bg-gray-50">
         <ErrorMessage message={error} />
       </div>
     );
@@ -86,7 +86,7 @@ export function CompetencyScanTab() {
   return (
     <div className="space-y-4">
       {/* My Growth Card */}
-      <div className="rounded-xl border shadow-sm bg-green-50 p-4 space-y-3 w-full">
+      <div className="rounded-xl shadow-sm bg-green-50 p-4 space-y-3 w-full">
         <div className="px-4 py-2 rounded-t-xl font-semibold text-sm bg-green-200 text-green-900">
           Mijn Groei
         </div>
@@ -103,7 +103,7 @@ export function CompetencyScanTab() {
 
       {/* Competencies Card */}
       {competencies.length > 0 && (
-        <div className="rounded-xl border shadow-sm bg-lime-50 p-4 space-y-3 w-full">
+        <div className="rounded-xl shadow-sm bg-lime-50 p-4 space-y-3 w-full">
           <div className="px-4 py-2 rounded-t-xl font-semibold text-sm bg-lime-200 text-lime-900">
             Competenties die worden gevolgd
           </div>
@@ -126,11 +126,11 @@ export function CompetencyScanTab() {
           {windows.map((window) => (
             <div
               key={window.id}
-              className="border rounded-lg p-4 flex flex-col gap-2 bg-white w-full"
+              className="rounded-lg shadow-sm p-4 flex flex-col gap-2 bg-white w-full"
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <div className="font-medium flex items-center gap-2">
+                  <div className="font-medium text-base text-gray-900 flex items-center gap-2">
                     {window.title}
                     <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
                       <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
@@ -232,7 +232,7 @@ export function CompetencyScanTab() {
           ))}
         </div>
       ) : (
-        <div className="p-8 border rounded-xl bg-gray-50 text-center">
+        <div className="p-8 rounded-xl shadow-sm bg-gray-50 text-center">
           <p className="text-gray-500">
             Geen open competentiescans op dit moment.
           </p>
