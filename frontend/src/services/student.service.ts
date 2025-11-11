@@ -137,19 +137,23 @@ export const studentService = {
       let userClass: string | undefined;
       
       try {
-        const [windows, assessments] = await Promise.all([
-          api.get("/competencies/windows", { params: { status: "open" } }),
-          api.get("/project-assessments"),
+        // Import services dynamically to avoid circular dependency
+        const { competencyService } = await import("./competency.service");
+        const { projectAssessmentService } = await import("./project-assessment.service");
+        
+        const [windows, assessmentsData] = await Promise.all([
+          competencyService.getWindows("open"),
+          projectAssessmentService.getProjectAssessments(undefined, undefined, "published"),
         ]);
         
-        openScans = windows.data?.length || 0;
-        newAssessments = assessments.data?.length || 0;
+        openScans = windows?.length || 0;
+        newAssessments = assessmentsData?.items?.length || 0;
         
         // Try to get user info from first competency window if available
-        if (windows.data && windows.data.length > 0) {
+        if (windows && windows.length > 0) {
           try {
-            const overview = await api.get(`/competencies/windows/${windows.data[0].id}/overview`);
-            userName = overview.data?.user_name;
+            const overview = await competencyService.getMyWindowOverview(windows[0].id);
+            userName = overview?.user_name;
             // Note: class_name is not in StudentCompetencyOverview, we'll try to get it from evaluations
           } catch {
             // Ignore error, user info is optional
