@@ -116,9 +116,10 @@ export default function LearningObjectivesOverviewTab() {
 
   function getScoreColor(score: number | null): string {
     if (score === null) return "bg-gray-100 text-gray-400";
-    if (score >= 4) return "bg-green-500 text-white";
-    if (score >= 3) return "bg-yellow-300 text-gray-900";
-    return "bg-red-300 text-gray-900";
+    if (score >= 4) return "bg-green-100 text-green-800";
+    if (score >= 3) return "bg-yellow-100 text-yellow-800";
+    if (score >= 2) return "bg-orange-100 text-orange-800";
+    return "bg-red-100 text-red-800";
   }
 
   function formatScore(score: number | null): string {
@@ -297,74 +298,73 @@ export default function LearningObjectivesOverviewTab() {
 
       {/* Overview Table */}
       {overview && (
-        <div className="bg-white rounded-lg shadow border">
-          <div className="overflow-x-auto">
-            <table className="border-collapse text-sm">
-              <thead className="bg-gray-50 sticky top-0">
-                <tr>
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 uppercase text-xs sticky left-0 bg-gray-50 z-20 border-r shadow-[2px_0_4px_rgba(0,0,0,0.05)] whitespace-nowrap min-w-[150px]">
-                    Naam
+        <div className="bg-white rounded-lg shadow border overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead className="bg-gray-50 sticky top-0">
+              <tr>
+                <th className="px-4 py-3 text-left font-medium text-gray-700 uppercase text-xs sticky left-0 bg-gray-50 z-20 border-r-2 border-gray-300">
+                  Naam
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-gray-700 uppercase text-xs sticky left-[150px] bg-gray-50 z-20 border-r-2 border-gray-300" style={{ minWidth: "100px" }}>
+                  Klas
+                </th>
+                {allObjectives.map((obj) => (
+                  <th
+                    key={obj.id}
+                    className="px-2 py-3 text-center font-medium text-gray-700 uppercase text-xs border-r border-gray-200"
+                    style={{ minWidth: "80px" }}
+                    title={`${obj.title}\n${obj.description || ""}`}
+                  >
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="font-bold">{obj.domain}</span>
+                      {obj.order > 0 && (
+                        <span className="text-xs text-gray-500">{obj.order}</span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 uppercase text-xs sticky left-[150px] bg-gray-50 z-20 border-r shadow-[2px_0_4px_rgba(0,0,0,0.05)] whitespace-nowrap min-w-[100px]">
-                    Klas
-                  </th>
-                  {allObjectives.map((obj) => (
-                    <th
-                      key={obj.id}
-                      className="px-4 py-3 text-center font-medium text-gray-700 uppercase text-xs whitespace-nowrap min-w-[100px]"
-                      title={`${obj.title}\n${obj.description || ""}`}
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="font-bold">{obj.domain}</span>
-                        {obj.order > 0 && (
-                          <span className="text-xs text-gray-500">{obj.order}</span>
-                        )}
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredStudents.map((student) => (
-                    <tr key={student.user_id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium sticky left-0 bg-white hover:bg-gray-50 z-10 border-r shadow-[2px_0_4px_rgba(0,0,0,0.05)] whitespace-nowrap">
-                        {student.user_name}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 sticky left-[150px] bg-white hover:bg-gray-50 z-10 border-r shadow-[2px_0_4px_rgba(0,0,0,0.05)] whitespace-nowrap">
-                        {student.class_name || "-"}
-                      </td>
-                      {allObjectives.map((obj) => {
-                        const progress = student.objectives.find(
-                          o => o.learning_objective_id === obj.id
-                        );
-                        return (
-                          <td
-                            key={obj.id}
-                            className="px-4 py-3 text-center whitespace-nowrap"
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 bg-white">
+              {filteredStudents.map((student) => (
+                  <tr key={student.user_id} className="hover:bg-gray-50">
+                    <td className="px-4 py-2 font-medium text-gray-900 sticky left-0 bg-white z-10 border-r-2 border-gray-300">
+                      {student.user_name}
+                    </td>
+                    <td className="px-4 py-2 text-sm text-gray-600 sticky left-[150px] bg-white z-10 border-r-2 border-gray-300">
+                      {student.class_name || "-"}
+                    </td>
+                    {allObjectives.map((obj) => {
+                      const progress = student.objectives.find(
+                        o => o.learning_objective_id === obj.id
+                      );
+                      return (
+                        <td
+                          key={obj.id}
+                          className="px-2 py-2 text-center border-r border-gray-200"
+                        >
+                          <div
+                            className={`w-full h-10 rounded flex items-center justify-center font-bold text-base ${getScoreColor(
+                              progress?.average_score || null
+                            )}`}
+                            title={`${progress?.assessment_count || 0} beoordelingen`}
                           >
-                            <div
-                              className={`inline-flex items-center justify-center px-3 py-1.5 rounded font-medium min-w-[50px] ${getScoreColor(
-                                progress?.average_score || null
-                              )}`}
-                              title={`${progress?.assessment_count || 0} beoordelingen`}
-                            >
-                              {formatScore(progress?.average_score || null)}
-                            </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  )
-                )}
-              </tbody>
-            </table>
+                            {formatScore(progress?.average_score || null)}
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                )
+              )}
+            </tbody>
+          </table>
 
-            {filteredStudents.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                Geen gegevens gevonden voor de geselecteerde filters
-              </div>
-            )}
-          </div>
+          {filteredStudents.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              Geen gegevens gevonden voor de geselecteerde filters
+            </div>
+          )}
         </div>
       )}
 
@@ -373,22 +373,28 @@ export default function LearningObjectivesOverviewTab() {
         <h3 className="font-medium mb-3">Legenda:</h3>
         <div className="flex flex-wrap gap-4 text-sm">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-8 bg-green-500 rounded flex items-center justify-center text-white font-medium">
+            <div className="w-10 h-8 bg-green-100 text-green-800 rounded flex items-center justify-center font-medium">
               4+
             </div>
             <span>Goed (≥4.0)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-10 h-8 bg-yellow-300 rounded flex items-center justify-center font-medium">
+            <div className="w-10 h-8 bg-yellow-100 text-yellow-800 rounded flex items-center justify-center font-medium">
               3+
             </div>
-            <span>Voldoende (≥3.0)</span>
+            <span>Voldoende (3.0-3.9)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-10 h-8 bg-red-300 rounded flex items-center justify-center font-medium">
-              &lt;3
+            <div className="w-10 h-8 bg-orange-100 text-orange-800 rounded flex items-center justify-center font-medium">
+              2+
             </div>
-            <span>Onvoldoende (&lt;3.0)</span>
+            <span>Matig (2.0-2.9)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-8 bg-red-100 text-red-800 rounded flex items-center justify-center font-medium">
+              &lt;2
+            </div>
+            <span>Onvoldoende (&lt;2.0)</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-10 h-8 bg-gray-100 rounded flex items-center justify-center text-gray-400">
