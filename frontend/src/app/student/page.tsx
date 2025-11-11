@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { motion } from "framer-motion";
+import { useState } from "react";
 import { useStudentDashboard } from "@/hooks";
 import { useStudentProjectAssessments } from "@/hooks/useStudentProjectAssessments";
 import { EvaluationCard } from "@/components/student";
@@ -23,9 +22,8 @@ const SummaryTile = ({
   hint?: string;
   color?: string;
 }) => (
-  <motion.div
-    layout
-    className={`rounded-2xl ${color} shadow-sm p-4 border border-gray-100 flex items-center gap-4 w-full`}
+  <div
+    className={`rounded-2xl ${color} shadow-sm p-4 border border-gray-100 flex items-center gap-4 w-full transition-all duration-200`}
   >
     <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-lg">
       {icon}
@@ -35,7 +33,7 @@ const SummaryTile = ({
       <div className="text-2xl font-semibold leading-6">{value}</div>
       {hint && <div className="text-xs text-gray-400 mt-1">{hint}</div>}
     </div>
-  </motion.div>
+  </div>
 );
 
 export default function StudentDashboard() {
@@ -53,11 +51,6 @@ export default function StudentDashboard() {
 
   // Get open evaluations early (before conditional returns)
   const openEvaluations = dashboard?.openEvaluations || [];
-
-  // Filter project assessments based on search
-  const filteredProjectAssessments = useMemo(() => {
-    return projectAssessments;
-  }, [projectAssessments]);
 
   if (loading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
@@ -169,10 +162,8 @@ export default function StudentDashboard() {
 
         {/* Tab Content */}
         {activeTab === "evaluaties" && (
-          <motion.div
-            layout
-            className="max-w-6xl mx-auto mt-5 space-y-4 w-full"
-          >
+          <div className="max-w-6xl mx-auto mt-5 space-y-4 w-full transition-all duration-300">
+
             {/* Peer-feedback Results Card */}
             <div className="rounded-xl border shadow-sm bg-blue-50 p-4 space-y-3 w-full">
               <div className="px-4 py-2 rounded-t-xl font-semibold text-sm bg-blue-200 text-blue-900">
@@ -218,23 +209,19 @@ export default function StudentDashboard() {
                 ))}
               </div>
             )}
-          </motion.div>
+          </div>
         )}
 
         {activeTab === "competenties" && (
-          <motion.div
-            layout
-            className="max-w-6xl mx-auto mt-5 space-y-4 w-full"
-          >
+          <div className="max-w-6xl mx-auto mt-5 space-y-4 w-full transition-all duration-300">
+
             <CompetencyScanTab />
-          </motion.div>
+          </div>
         )}
 
         {activeTab === "projecten" && (
-          <motion.div
-            layout
-            className="max-w-6xl mx-auto mt-5 space-y-4 w-full"
-          >
+          <div className="max-w-6xl mx-auto mt-5 space-y-4 w-full transition-all duration-300">
+
             <div className="rounded-xl border shadow-sm bg-gray-50 p-4 space-y-3 w-full">
               <div className="px-4 py-2 rounded-t-xl font-semibold text-sm bg-gray-200 text-gray-800">
                 Projectbeoordelingen
@@ -243,7 +230,7 @@ export default function StudentDashboard() {
                 <Loading />
               ) : projectError ? (
                 <ErrorMessage message={projectError} />
-              ) : filteredProjectAssessments.length === 0 ? (
+              ) : projectAssessments.length === 0 ? (
                 <div className="p-8 text-center">
                   <p className="text-gray-500">
                     Nog geen projectbeoordelingen beschikbaar.
@@ -251,7 +238,7 @@ export default function StudentDashboard() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {filteredProjectAssessments.map((assessment) => (
+                  {projectAssessments.map((assessment) => (
                     <Link
                       key={assessment.id}
                       href={`/student/project-assessments/${assessment.id}`}
@@ -290,7 +277,7 @@ export default function StudentDashboard() {
                 </div>
               )}
             </div>
-          </motion.div>
+          </div>
         )}
       </section>
     </div>
