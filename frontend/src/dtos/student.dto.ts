@@ -36,6 +36,10 @@ export type StudentDashboard = {
   hasAnyEvaluations: boolean; // true if student has at least one evaluation (any status)
   canReviewPeers: boolean; // false if student needs to complete self-assessment first
   needsSelfAssessment: boolean; // true if student has not completed self-assessment yet
+  openScans: number; // number of open competency scans
+  newAssessments: number; // number of new project assessments
+  userName?: string; // student name
+  userClass?: string; // student class
 };
 
 /**

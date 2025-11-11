@@ -130,6 +130,35 @@ export const studentService = {
         (e) => !e.reflectionCompleted && e.canSubmitReflection
       ).length;
       
+      // Fetch competency windows and project assessments in parallel
+      let openScans = 0;
+      let newAssessments = 0;
+      let userName: string | undefined;
+      let userClass: string | undefined;
+      
+      try {
+        const [windows, assessments] = await Promise.all([
+          api.get("/competencies/windows", { params: { status: "open" } }),
+          api.get("/project-assessments"),
+        ]);
+        
+        openScans = windows.data?.length || 0;
+        newAssessments = assessments.data?.length || 0;
+        
+        // Try to get user info from first competency window if available
+        if (windows.data && windows.data.length > 0) {
+          try {
+            const overview = await api.get(`/competencies/windows/${windows.data[0].id}/overview`);
+            userName = overview.data?.user_name;
+            // Note: class_name is not in StudentCompetencyOverview, we'll try to get it from evaluations
+          } catch {
+            // Ignore error, user info is optional
+          }
+        }
+      } catch {
+        // Ignore errors for these optional counts
+      }
+      
       return {
         openEvaluations,
         completedEvaluations,
@@ -138,6 +167,10 @@ export const studentService = {
         hasAnyEvaluations: allEvaluations.length > 0,
         canReviewPeers: true,
         needsSelfAssessment: false,
+        openScans,
+        newAssessments,
+        userName,
+        userClass,
       };
     } catch (error) {
       // Handle ApiAuthError for business cases
@@ -152,6 +185,8 @@ export const studentService = {
           hasAnyEvaluations: false,
           canReviewPeers: false,
           needsSelfAssessment: true,
+          openScans: 0,
+          newAssessments: 0,
         };
       }
       // Re-throw auth errors (401) or other errors for higher-level handling
