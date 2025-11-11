@@ -191,7 +191,7 @@ export default function LearningObjectivesOverviewTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold mb-2">Leerdoelen / Eindtermen Overzicht</h2>
