@@ -407,6 +407,20 @@ def get_learning_objectives_overview(
                         ProjectAssessmentScore.assessment_id == assessment.id,
                         ProjectAssessmentScore.criterion_id.in_(criteria_ids),
                     )
+                    # Filter by team_number if the student has one and the score has one
+                    # If team_number is NULL in the score, it's a group score (applies to all members)
+                    if student.team_number is not None:
+                        proj_scores_query = proj_scores_query.where(
+                            or_(
+                                ProjectAssessmentScore.team_number == student.team_number,
+                                ProjectAssessmentScore.team_number == None,
+                            )
+                        )
+                    else:
+                        # Student has no team number, only get group scores
+                        proj_scores_query = proj_scores_query.where(
+                            ProjectAssessmentScore.team_number == None
+                        )
                     proj_scores = db.execute(proj_scores_query).scalars().all()
                     scores_from_project.extend(proj_scores)
 
