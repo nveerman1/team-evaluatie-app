@@ -298,8 +298,9 @@ export default function LearningObjectivesOverviewTab() {
 
       {/* Overview Table */}
       {overview && (
-        <div className="bg-white rounded-lg shadow border overflow-x-auto">
-          <table className="text-sm border-collapse" style={{ minWidth: "100%" }}>
+        <div className="bg-white rounded-lg shadow border">
+          <div className="overflow-x-auto">
+            <table className="text-sm border-collapse" style={{ width: `${320 + allObjectives.length * 100}px`, minWidth: "100%" }}>
             <thead className="bg-gray-50 sticky top-0">
               <tr>
                 <th className="px-4 py-3 text-left font-medium text-gray-700 uppercase text-xs sticky left-0 bg-gray-50 z-20 border-r-2 border-gray-300" style={{ width: "200px", minWidth: "200px" }}>
@@ -359,7 +360,8 @@ export default function LearningObjectivesOverviewTab() {
                 )
               )}
             </tbody>
-          </table>
+            </table>
+          </div>
 
           {filteredStudents.length === 0 && (
             <div className="text-center py-8 text-gray-500">
