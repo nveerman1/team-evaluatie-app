@@ -5,10 +5,13 @@ import {
   getLearningObjectivesOverview,
   listLearningObjectives,
 } from "@/services/learning-objective.service";
+import { courseService } from "@/services/course.service";
+import api from "@/lib/api";
 import type {
   LearningObjectiveOverviewResponse,
   LearningObjectiveDto,
 } from "@/dtos/learning-objective.dto";
+import type { CourseLite } from "@/dtos/course.dto";
 
 type AggregationType = "average" | "most_recent" | "highest";
 type Phase = "onderbouw" | "bovenbouw";
@@ -32,6 +35,38 @@ export default function LearningObjectivesOverviewTab() {
   const [classFilter, setClassFilter] = useState<string>("");
   const [periodFilter, setPeriodFilter] = useState<string>("all");
   const [aggregationType, setAggregationType] = useState<AggregationType>("average");
+
+  // Dropdown data
+  const [courses, setCourses] = useState<CourseLite[]>([]);
+  const [classes, setClasses] = useState<string[]>([]);
+
+  const fetchCourses = useCallback(async () => {
+    try {
+      const coursesData = await courseService.getCourses();
+      setCourses(coursesData);
+    } catch (err) {
+      console.error("Error fetching courses:", err);
+    }
+  }, []);
+
+  const fetchClasses = useCallback(async () => {
+    try {
+      // Fetch all students to get unique class names
+      const response = await api.get<Array<{ class_name: string | null }>>("/students", {
+        params: { limit: 1000 }
+      });
+      const uniqueClasses = Array.from(
+        new Set(
+          response.data
+            .map((s) => s.class_name)
+            .filter((c): c is string => !!c)
+        )
+      ).sort();
+      setClasses(uniqueClasses);
+    } catch (err) {
+      console.error("Error fetching classes:", err);
+    }
+  }, []);
 
   const fetchObjectives = useCallback(async () => {
     try {
@@ -67,6 +102,11 @@ export default function LearningObjectivesOverviewTab() {
   }, [classFilter]);
 
   useEffect(() => {
+    fetchCourses();
+    fetchClasses();
+  }, [fetchCourses, fetchClasses]);
+
+  useEffect(() => {
     fetchObjectives();
   }, [fetchObjectives]);
 
@@ -99,7 +139,7 @@ export default function LearningObjectivesOverviewTab() {
     if (!overview) return;
 
     // Create CSV content
-    const headers = ["Naam", "Klas", ...allObjectives.map(obj => obj.domain || obj.title), "Gemiddeld"];
+    const headers = ["Naam", "Klas", ...allObjectives.map(obj => obj.domain || obj.title)];
     const rows = overview.students.map(student => {
       const scores = allObjectives.map(obj => {
         const progress = student.objectives.find(
@@ -107,12 +147,10 @@ export default function LearningObjectivesOverviewTab() {
         );
         return formatScore(progress?.average_score || null);
       });
-      const avg = calculateAverage(student.objectives);
       return [
         student.user_name,
         student.class_name || "",
-        ...scores,
-        formatScore(avg)
+        ...scores
       ];
     });
 
@@ -153,13 +191,19 @@ export default function LearningObjectivesOverviewTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold mb-2">Leerdoelen / Eindtermen Overzicht</h2>
           <p className="text-gray-600">
             Totaaloverzicht van hoe goed leerlingen de leerdoelen/eindtermen beheersen
           </p>
         </div>
+        <button
+          onClick={handleExportCSV}
+          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+        >
+          📤 Exporteer CSV
+        </button>
       </div>
 
       {error && (
@@ -194,7 +238,7 @@ export default function LearningObjectivesOverviewTab() {
 
       {/* Filter Bar */}
       <div className="bg-white border rounded-lg p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">🔍 Zoeken</label>
             <input
@@ -207,23 +251,33 @@ export default function LearningObjectivesOverviewTab() {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">🧭 Vak / Course</label>
-            <input
-              type="text"
+            <select
               value={courseFilter}
               onChange={(e) => setCourseFilter(e.target.value)}
-              placeholder="O&O 3V, O&O 5V..."
               className="w-full px-3 py-2 border rounded-lg"
-            />
+            >
+              <option value="">Alle vakken</option>
+              {courses.map((course) => (
+                <option key={course.id} value={course.name}>
+                  {course.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">🏫 Klas</label>
-            <input
-              type="text"
+            <select
               value={classFilter}
               onChange={(e) => setClassFilter(e.target.value)}
-              placeholder="3V1, 3V2, 5H1..."
               className="w-full px-3 py-2 border rounded-lg"
-            />
+            >
+              <option value="">Alle klassen</option>
+              {classes.map((className) => (
+                <option key={className} value={className}>
+                  {className}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">📅 Periode</label>
@@ -238,26 +292,6 @@ export default function LearningObjectivesOverviewTab() {
               <option value="year">Dit schooljaar</option>
             </select>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">⚙️ Aggregatie</label>
-            <select
-              value={aggregationType}
-              onChange={(e) => setAggregationType(e.target.value as AggregationType)}
-              className="w-full px-3 py-2 border rounded-lg"
-            >
-              <option value="average">Gemiddelde</option>
-              <option value="most_recent">Meest recente</option>
-              <option value="highest">Hoogste score</option>
-            </select>
-          </div>
-        </div>
-        <div className="mt-4 flex gap-2">
-          <button
-            onClick={handleExportCSV}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            📤 Exporteer CSV
-          </button>
         </div>
       </div>
 
@@ -288,15 +322,10 @@ export default function LearningObjectivesOverviewTab() {
                       </div>
                     </th>
                   ))}
-                  <th className="px-4 py-3 text-center font-medium text-gray-700 uppercase text-xs border-l bg-blue-50">
-                    Gemiddeld
-                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredStudents.map((student) => {
-                  const studentAvg = calculateAverage(student.objectives);
-                  return (
+                {filteredStudents.map((student) => (
                     <tr key={student.user_id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 font-medium sticky left-0 bg-white z-10 border-r">
                         {student.user_name}
@@ -324,18 +353,9 @@ export default function LearningObjectivesOverviewTab() {
                           </td>
                         );
                       })}
-                      <td className="px-4 py-3 text-center border-l bg-blue-50">
-                        <div
-                          className={`inline-flex items-center justify-center px-3 py-1.5 rounded font-medium min-w-[50px] ${getScoreColor(
-                            studentAvg
-                          )}`}
-                        >
-                          {formatScore(studentAvg)}
-                        </div>
-                      </td>
                     </tr>
-                  );
-                })}
+                  )
+                )}
               </tbody>
             </table>
 
@@ -378,9 +398,7 @@ export default function LearningObjectivesOverviewTab() {
           </div>
         </div>
         <p className="mt-3 text-xs text-gray-600">
-          Scores zijn {aggregationType === "average" ? "gemiddelden" : 
-                      aggregationType === "most_recent" ? "meest recente waarden" : 
-                      "hoogste waarden"} van alle gekoppelde beoordelingen 
+          Scores zijn gemiddelden van alle gekoppelde beoordelingen 
           (peer evaluaties, projectbeoordelingen en competentiescans).
         </p>
       </div>
