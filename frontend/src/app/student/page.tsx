@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useStudentDashboard } from "@/hooks";
+import { useStudentDashboard, useCurrentUser } from "@/hooks";
 import { useStudentProjectAssessments } from "@/hooks/useStudentProjectAssessments";
 import { EvaluationCard } from "@/components/student";
 import { CompetencyScanTab } from "@/components/student/competency/CompetencyScanTab";
@@ -46,6 +46,7 @@ const SummaryTile = ({
 
 export default function StudentDashboard() {
   const { dashboard, loading, error } = useStudentDashboard();
+  const { user, loading: userLoading } = useCurrentUser();
   const {
     assessments: projectAssessments,
     loading: projectLoading,
@@ -60,12 +61,13 @@ export default function StudentDashboard() {
   // Get open evaluations early (before conditional returns)
   const openEvaluations = dashboard?.openEvaluations || [];
 
-  if (loading) return <Loading />;
+  if (loading || userLoading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
   if (!dashboard) return <ErrorMessage message="Kon dashboard niet laden" />;
 
-  const studentName = dashboard.userName || "Leerling";
-  const studentClass = dashboard.userClass || "";
+  // Get student name and class from current user (using class_name from API)
+  const studentName = user?.name || dashboard.userName || "Leerling";
+  const studentClass = user?.class_name || dashboard.userClass || "—";
 
   return (
     <div className="min-h-screen bg-gray-100">
