@@ -9,3 +9,4 @@ export * from "./useStudentEvaluations";
 export * from "./useStudentResults";
 export * from "./useStudentProjectAssessments";
 export * from "./useCurrentUser";
+export * from "./useAuth";
