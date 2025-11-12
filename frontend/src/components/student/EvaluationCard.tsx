@@ -11,83 +11,103 @@ export function EvaluationCard({ evaluation }: EvaluationCardProps) {
   const getStatusBadge = () => {
     if (evaluation.progress === 100) {
       return (
-        <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">
-          Voltooid
+        <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-800">
+          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
+          Gesloten
         </span>
       );
     }
     if (evaluation.status === "open") {
       return (
-        <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">
+        <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
+          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
           Open
         </span>
       );
     }
     return (
-      <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700">
+      <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700">
+        <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
         {evaluation.status}
       </span>
     );
   };
 
   // Get deadlines from evaluation settings
-  const reviewDeadline = evaluation.settings?.deadlines?.review || 
-                         evaluation.deadlines?.review;
-  const reflectionDeadline = evaluation.settings?.deadlines?.reflection ||
-                             evaluation.deadlines?.reflection;
+  const reviewDeadline =
+    evaluation.settings?.deadlines?.review || evaluation.deadlines?.review;
+  const reflectionDeadline =
+    evaluation.settings?.deadlines?.reflection ||
+    evaluation.deadlines?.reflection;
 
   return (
-    <div className="p-5 border rounded-xl bg-white shadow-sm">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <h4 className="text-lg font-semibold mb-2">{evaluation.title}</h4>
-          <div className="text-sm text-gray-600 space-y-1">
-            {reviewDeadline && (
-              <p className="text-sm text-gray-500">
-                Evaluatie deadline: {reviewDeadline}
-              </p>
-            )}
-            {reflectionDeadline && (
-              <p className="text-sm text-gray-500">
-                Reflectie deadline: {reflectionDeadline}
-              </p>
-            )}
+    <div className="border border-gray-300 shadow-sm rounded-xl p-4 space-y-4 bg-white flex flex-col gap-2 w-full">
+      <div className="flex justify-between items-start">
+        <div>
+          <div className="font-semibold flex items-center gap-2">
+            {evaluation.title}
+            {getStatusBadge()}
           </div>
-          {/* Progress indicators */}
-          <div className="flex gap-4 mt-3 text-sm">
-            <span className={evaluation.selfCompleted ? "text-green-600" : "text-gray-400"}>
-              {evaluation.selfCompleted ? "✓" : "○"} Zelfbeoordeling
-            </span>
-            <span className={evaluation.peersCompleted === evaluation.peersTotal && evaluation.peersTotal > 0 ? "text-green-600" : "text-gray-400"}>
-              {evaluation.peersCompleted === evaluation.peersTotal && evaluation.peersTotal > 0 ? "✓" : "○"} Peer-evaluaties ({evaluation.peersCompleted}/{evaluation.peersTotal})
-            </span>
-            <span className={evaluation.reflectionCompleted ? "text-green-600" : "text-gray-400"}>
-              {evaluation.reflectionCompleted ? "✓" : "○"} Reflectie
-            </span>
-          </div>
+          {(reviewDeadline || reflectionDeadline) && (
+            <div className="text-sm text-gray-500 mt-1">
+              {reviewDeadline && `Evaluatie deadline: ${reviewDeadline}`}
+              {reviewDeadline && reflectionDeadline && " | "}
+              {reflectionDeadline &&
+                `Reflectie deadline: ${reflectionDeadline}`}
+            </div>
+          )}
         </div>
-        {getStatusBadge()}
+        <div className="flex gap-2">
+          <Link
+            href={`/student/${evaluation.id}?step=1`}
+            className="rounded-lg bg-blue-600 text-white text-sm px-3 py-1.5"
+          >
+            Evaluatie Invullen
+          </Link>
+          <Link
+            href={`/student/evaluation/${evaluation.id}/overzicht`}
+            className="rounded-lg bg-fuchsia-600 text-white text-sm px-3 py-1.5"
+          >
+            Feedback Overzicht
+          </Link>
+          <Link
+            href={`/student/evaluation/${evaluation.id}/reflectie`}
+            className="rounded-lg bg-indigo-600 text-white text-sm px-3 py-1.5"
+          >
+            Reflectie
+          </Link>
+        </div>
       </div>
-
-      <div className="flex gap-3 flex-wrap">
-        <Link
-          href={`/student/${evaluation.id}?step=1`}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+      {/* Progress indicators */}
+      <div className="text-sm text-gray-600 flex flex-wrap gap-4">
+        <span
+          className={
+            evaluation.selfCompleted ? "text-green-700" : "text-gray-400"
+          }
         >
-          Evaluatie Invullen
-        </Link>
-        <Link
-          href={`/student/evaluation/${evaluation.id}/overzicht`}
-          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
+          {evaluation.selfCompleted ? "✓" : "○"} Zelfbeoordeling
+        </span>
+        <span
+          className={
+            evaluation.peersCompleted === evaluation.peersTotal &&
+            evaluation.peersTotal > 0
+              ? "text-green-700"
+              : "text-gray-400"
+          }
         >
-          Feedback Overzicht
-        </Link>
-        <Link
-          href={`/student/evaluation/${evaluation.id}/reflectie`}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm"
+          {evaluation.peersCompleted === evaluation.peersTotal &&
+          evaluation.peersTotal > 0
+            ? "✓"
+            : "○"}{" "}
+          Peer-evaluaties ({evaluation.peersCompleted}/{evaluation.peersTotal})
+        </span>
+        <span
+          className={
+            evaluation.reflectionCompleted ? "text-green-700" : "text-gray-400"
+          }
         >
-          Reflectie
-        </Link>
+          {evaluation.reflectionCompleted ? "✓" : "○"} Reflectie
+        </span>
       </div>
     </div>
   );

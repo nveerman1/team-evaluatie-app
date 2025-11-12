@@ -130,6 +130,39 @@ export const studentService = {
         (e) => !e.reflectionCompleted && e.canSubmitReflection
       ).length;
       
+      // Fetch competency windows and project assessments in parallel
+      let openScans = 0;
+      let newAssessments = 0;
+      let userName: string | undefined;
+      let userClass: string | undefined;
+      
+      try {
+        // Import services dynamically to avoid circular dependency
+        const { competencyService } = await import("./competency.service");
+        const { projectAssessmentService } = await import("./project-assessment.service");
+        
+        const [windows, assessmentsData] = await Promise.all([
+          competencyService.getWindows("open"),
+          projectAssessmentService.getProjectAssessments(undefined, undefined, "published"),
+        ]);
+        
+        openScans = windows?.length || 0;
+        newAssessments = assessmentsData?.items?.length || 0;
+        
+        // Try to get user info from first competency window if available
+        if (windows && windows.length > 0) {
+          try {
+            const overview = await competencyService.getMyWindowOverview(windows[0].id);
+            userName = overview?.user_name;
+            // Note: class_name is not in StudentCompetencyOverview, we'll try to get it from evaluations
+          } catch {
+            // Ignore error, user info is optional
+          }
+        }
+      } catch {
+        // Ignore errors for these optional counts
+      }
+      
       return {
         openEvaluations,
         completedEvaluations,
@@ -138,6 +171,10 @@ export const studentService = {
         hasAnyEvaluations: allEvaluations.length > 0,
         canReviewPeers: true,
         needsSelfAssessment: false,
+        openScans,
+        newAssessments,
+        userName,
+        userClass,
       };
     } catch (error) {
       // Handle ApiAuthError for business cases
@@ -152,6 +189,8 @@ export const studentService = {
           hasAnyEvaluations: false,
           canReviewPeers: false,
           needsSelfAssessment: true,
+          openScans: 0,
+          newAssessments: 0,
         };
       }
       // Re-throw auth errors (401) or other errors for higher-level handling

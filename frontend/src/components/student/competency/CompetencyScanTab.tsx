@@ -41,7 +41,9 @@ export function CompetencyScanTab() {
       if (wins.length > 0 && !currentUserId) {
         for (const win of wins) {
           try {
-            const overview = await competencyService.getMyWindowOverview(win.id);
+            const overview = await competencyService.getMyWindowOverview(
+              win.id,
+            );
             setCurrentUserId(overview.user_id);
             break; // Successfully got user ID, exit loop
           } catch (err) {
@@ -69,7 +71,7 @@ export function CompetencyScanTab() {
 
   if (loading) {
     return (
-      <div className="p-6 border rounded-xl bg-gray-50">
+      <div className="p-6 rounded-xl shadow-sm bg-gray-50">
         <Loading />
       </div>
     );
@@ -77,117 +79,130 @@ export function CompetencyScanTab() {
 
   if (error) {
     return (
-      <div className="p-6 border rounded-xl bg-gray-50">
+      <div className="p-6 rounded-xl shadow-sm bg-gray-50">
         <ErrorMessage message={error} />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* My Growth Card */}
+      <div className="rounded-xl border border-gray-300 shadow-sm bg-green-50 p-4 space-y-3 w-full">
+        <div className="px-4 py-2 rounded-t-xl font-semibold text-sm bg-green-200 text-green-900">
+          Mijn Groei
+        </div>
+        <div className="text-sm text-gray-700">
+          Bekijk je competentieontwikkeling en leerdoelen in één overzicht.
+        </div>
+        <Link
+          href="/student/competency/growth"
+          className="rounded-lg bg-green-600 text-white text-sm px-3 py-1.5 mt-2 inline-block"
+        >
+          Bekijk Groei →
+        </Link>
+      </div>
+
       {/* Open Windows */}
       {windows.length > 0 ? (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Open Scans</h3>
           {windows.map((window) => (
             <div
               key={window.id}
-              className="p-5 border rounded-xl bg-white shadow-sm"
+              className="border border-gray-300 shadow-sm rounded-xl p-4 space-y-4 bg-white flex flex-col gap-2 w-full"
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h4 className="text-lg font-semibold mb-2">{window.title}</h4>
-                  {window.description && (
-                    <p className="text-sm text-gray-600 mb-2">
-                      {window.description}
-                    </p>
-                  )}
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="font-semibold text-base text-gray-900 flex items-center gap-2">
+                    {window.title}
+                    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
+                      <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
+                      Open
+                    </span>
+                  </div>
                   {window.end_date && (
-                    <p className="text-sm text-gray-500">
+                    <div className="text-sm text-gray-500">
                       Sluit op:{" "}
                       {new Date(window.end_date).toLocaleDateString("nl-NL")}
-                    </p>
+                    </div>
                   )}
                 </div>
-                <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium">
-                  Open
-                </span>
-              </div>
-
-              <div className="flex gap-3 flex-wrap">
-                {window.require_self_score && (
-                  <Link
-                    href={`/student/competency/scan/${window.id}`}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-                  >
-                    Scan Invullen
-                  </Link>
-                )}
-                {window.require_goal && (
-                  <Link
-                    href={`/student/competency/goal/${window.id}`}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
-                  >
-                    Leerdoel Instellen
-                  </Link>
-                )}
-                {window.require_reflection && (
-                  <Link
-                    href={`/student/competency/reflection/${window.id}`}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm"
-                  >
-                    Reflectie Schrijven
-                  </Link>
-                )}
-                {isExternalFeedbackEnabled(window) && (
-                  <button
-                    onClick={async () => {
-                      // Get user ID if not already loaded
-                      let userId = currentUserId;
-                      if (!userId) {
-                        try {
-                          const overview = await competencyService.getMyWindowOverview(
-                            window.id
-                          );
-                          userId = overview.user_id;
-                          setCurrentUserId(userId);
-                        } catch (err) {
-                          console.error("Failed to get user ID:", err);
-                          // If we still can't get it, we'll handle this in the modal
-                          // For now, try to proceed anyway
+                <div className="flex gap-2 flex-wrap">
+                  {window.require_self_score && (
+                    <Link
+                      href={`/student/competency/scan/${window.id}`}
+                      className="rounded-lg bg-blue-600 text-white text-sm px-3 py-1.5"
+                    >
+                      Scan Invullen
+                    </Link>
+                  )}
+                  {window.require_goal && (
+                    <Link
+                      href={`/student/competency/goal/${window.id}`}
+                      className="rounded-lg bg-fuchsia-600 text-white text-sm px-3 py-1.5"
+                    >
+                      Leerdoel Instellen
+                    </Link>
+                  )}
+                  {window.require_reflection && (
+                    <Link
+                      href={`/student/competency/reflection/${window.id}`}
+                      className="rounded-lg bg-indigo-600 text-white text-sm px-3 py-1.5"
+                    >
+                      Reflectie Schrijven
+                    </Link>
+                  )}
+                  {isExternalFeedbackEnabled(window) && (
+                    <button
+                      onClick={async () => {
+                        // Get user ID if not already loaded
+                        let userId = currentUserId;
+                        if (!userId) {
+                          try {
+                            const overview =
+                              await competencyService.getMyWindowOverview(
+                                window.id,
+                              );
+                            userId = overview.user_id;
+                            setCurrentUserId(userId);
+                          } catch (err) {
+                            console.error("Failed to get user ID:", err);
+                            // If we still can't get it, we'll handle this in the modal
+                            // For now, try to proceed anyway
+                          }
                         }
-                      }
-                      if (userId) {
-                        setShowInviteModal({
-                          windowId: window.id,
-                          userId: userId,
-                        });
-                      }
-                    }}
-                    disabled={!currentUserId && loading}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Nodig Externen Uit
-                  </button>
-                )}
+                        if (userId) {
+                          setShowInviteModal({
+                            windowId: window.id,
+                            userId: userId,
+                          });
+                        }
+                      }}
+                      disabled={!currentUserId && loading}
+                      className="rounded-lg bg-emerald-600 text-white text-sm px-3 py-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Nodig Externen Uit
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* External Invites List - Expandable */}
               {isExternalFeedbackEnabled(window) && currentUserId && (
-                <div className="mt-4 pt-4 border-t">
+                <div className="border-t pt-3 mt-2">
                   <button
                     onClick={() =>
                       setExpandedWindow(
-                        expandedWindow === window.id ? null : window.id
+                        expandedWindow === window.id ? null : window.id,
                       )
                     }
-                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                    className="text-sm text-blue-700 underline flex items-center gap-1"
                   >
-                    {expandedWindow === window.id ? "▼" : "▶"} Bekijk
-                    Uitnodigingen
+                    <span>{expandedWindow === window.id ? "▼" : "▶"}</span>{" "}
+                    Bekijk Uitnodigingen
                   </button>
                   {expandedWindow === window.id && (
-                    <div className="mt-3">
+                    <div className="mt-2">
                       <ExternalInviteList
                         windowId={window.id}
                         subjectUserId={currentUserId}
@@ -200,47 +215,10 @@ export function CompetencyScanTab() {
           ))}
         </div>
       ) : (
-        <div className="p-8 border rounded-xl bg-gray-50 text-center">
+        <div className="p-8 rounded-xl shadow-sm bg-gray-50 text-center">
           <p className="text-gray-500">
             Geen open competentiescans op dit moment.
           </p>
-        </div>
-      )}
-
-      {/* My Growth Link */}
-      <div className="p-5 border rounded-xl bg-blue-50">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold mb-1">Mijn Groei</h3>
-            <p className="text-sm text-gray-600">
-              Bekijk je competentieontwikkeling en leerdoelen
-            </p>
-          </div>
-          <Link
-            href="/student/competency/growth"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Bekijk Groei →
-          </Link>
-        </div>
-      </div>
-
-      {/* Info Section */}
-      {competencies.length > 0 && (
-        <div className="p-5 border rounded-xl bg-gray-50">
-          <h3 className="text-sm font-semibold mb-3 text-gray-700">
-            Competenties die worden gevolgd:
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {competencies.map((comp) => (
-              <span
-                key={comp.id}
-                className="px-3 py-1 rounded-full bg-white text-gray-700 text-sm border"
-              >
-                {comp.name}
-              </span>
-            ))}
-          </div>
         </div>
       )}
 
