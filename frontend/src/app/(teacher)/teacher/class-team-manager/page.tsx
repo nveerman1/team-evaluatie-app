@@ -14,20 +14,13 @@ type ClassInfo = {
   color: string;
 };
 
-type TeamInfo = {
-  number: number;
-  name: string;
-  color: string;
-  memberCount: number;
-  editable?: boolean; // Admin can edit team names
-};
-
 type StudentRow = {
   id: number;
   name: string;
   email: string;
   class_name: string;
   team_number: number | null;
+  isModified?: boolean; // Track if this row has been changed
 };
 
 // ============ Constants ============
@@ -100,6 +93,8 @@ export default function ClassTeamManagerPage() {
   const [showAdminImportModal, setShowAdminImportModal] = useState(false);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const [alertType, setAlertType] = useState<"success" | "error" | "info">("info");
+  const [editingStudentId, setEditingStudentId] = useState<number | null>(null);
+  const [editingValue, setEditingValue] = useState<string>("");
 
   // Feature flags
   const teacherCanImportExport = false; // Can be toggled via config
@@ -120,26 +115,11 @@ export default function ClassTeamManagerPage() {
     }
   }, [allClasses, selectedClasses.length]);
 
-  // Extract teams with counts
-  const teams = useMemo(() => {
-    const teamMap = new Map<number, TeamInfo>();
-    students.forEach((student) => {
-      if (student.team_number !== null) {
-        if (!teamMap.has(student.team_number)) {
-          teamMap.set(student.team_number, {
-            number: student.team_number,
-            name: `Team ${student.team_number}`,
-            color: TEAM_COLORS[student.team_number % TEAM_COLORS.length],
-            memberCount: 0,
-            editable: isAdmin,
-          });
-        }
-        const team = teamMap.get(student.team_number)!;
-        team.memberCount++;
-      }
-    });
-    return Array.from(teamMap.values()).sort((a, b) => a.number - b.number);
-  }, [students, isAdmin]);
+  // Extract available team numbers
+  const availableTeams = useMemo(() => {
+    const teamSet = new Set(students.map((s) => s.team_number).filter((t) => t !== null));
+    return Array.from(teamSet).sort((a, b) => a! - b!);
+  }, [students]);
 
   // Filter students
   const filteredStudents = useMemo(() => {
@@ -169,11 +149,22 @@ export default function ClassTeamManagerPage() {
     });
   }, [students, searchQuery, selectedClasses, showUnassignedOnly]);
 
-  // Check for unsaved changes
+  // Check for unsaved changes and mark modified rows
   useEffect(() => {
-    const hasChanges = JSON.stringify(students) !== JSON.stringify(originalStudents);
+    const updatedStudents = students.map((student) => {
+      const original = originalStudents.find((s) => s.id === student.id);
+      return {
+        ...student,
+        isModified: original && original.team_number !== student.team_number,
+      };
+    });
+    setStudents(updatedStudents);
+    
+    const hasChanges = students.some((student, idx) => {
+      return student.team_number !== originalStudents[idx]?.team_number;
+    });
     setHasUnsavedChanges(hasChanges);
-  }, [students, originalStudents]);
+  }, [students.map(s => `${s.id}-${s.team_number}`).join(',')]);
 
   // Load course from URL param (mock for now)
   useEffect(() => {
@@ -190,7 +181,6 @@ export default function ClassTeamManagerPage() {
     if (course) {
       // TODO: Fetch students for course
       // GET /api/v1/courses/{course.id}/students
-      // For now, use mock data
       setStudents(MOCK_STUDENTS);
       setOriginalStudents(MOCK_STUDENTS);
     }
@@ -208,14 +198,33 @@ export default function ClassTeamManagerPage() {
     );
   };
 
-  const handleAddTeam = (teamNumber: number, teamName: string) => {
-    // Team will be created automatically when first student is assigned
-    setShowAddTeamModal(false);
-    showAlert("Team toegevoegd! Wijs nu studenten toe aan dit team.", "success");
+  const handleStartEdit = (student: StudentRow) => {
+    setEditingStudentId(student.id);
+    setEditingValue(student.team_number?.toString() || "");
+  };
+
+  const handleSaveEdit = (studentId: number) => {
+    const newValue = editingValue.trim() === "" ? null : parseInt(editingValue, 10);
+    if (newValue !== null && (isNaN(newValue) || newValue < 1)) {
+      showAlert("Teamnummer moet een positief getal zijn.", "error");
+      return;
+    }
+    handleTeamChange(studentId, newValue);
+    setEditingStudentId(null);
+    setEditingValue("");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingStudentId(null);
+    setEditingValue("");
+  };
+
+  const handleAddTeam = () => {
+    setShowAddTeamModal(true);
   };
 
   const handleAutoBalance = () => {
-    if (teams.length === 0) {
+    if (availableTeams.length === 0) {
       showAlert("Maak eerst teams aan voordat je studenten kunt verdelen.", "error");
       return;
     }
@@ -226,19 +235,18 @@ export default function ClassTeamManagerPage() {
       return;
     }
 
-    const teamNumbers = teams.map((t) => t.number);
     const updated = [...students];
 
     unassigned.forEach((student, idx) => {
-      const teamIdx = idx % teamNumbers.length;
+      const teamIdx = idx % availableTeams.length;
       const studentIdx = updated.findIndex((s) => s.id === student.id);
       if (studentIdx !== -1) {
-        updated[studentIdx].team_number = teamNumbers[teamIdx];
+        updated[studentIdx].team_number = availableTeams[teamIdx]!;
       }
     });
 
     setStudents(updated);
-    showAlert(`${unassigned.length} studenten automatisch verdeeld over ${teams.length} teams.`, "success");
+    showAlert(`${unassigned.length} studenten automatisch verdeeld over ${availableTeams.length} teams.`, "success");
   };
 
   const handleClearAllTeams = () => {
@@ -298,16 +306,19 @@ export default function ClassTeamManagerPage() {
           const [, , email, , teamNum] = match;
           const studentIdx = updatedStudents.findIndex((s) => s.email === email);
           if (studentIdx !== -1) {
-            updatedStudents[studentIdx].team_number = teamNum ? parseInt(teamNum) : null;
+            updatedStudents[studentIdx].team_number = teamNum ? parseInt(teamNum, 10) : null;
             updated++;
           }
         }
       });
 
       setStudents(updatedStudents);
-      showAlert(`${updated} studenten geïmporteerd uit CSV.`, "success");
+      showAlert(`CSV geïmporteerd! ${updated} teamindelingen bijgewerkt.`, "success");
     };
     reader.readAsText(file);
+
+    // Reset input
+    event.target.value = "";
   };
 
   const showAlert = (message: string, type: "success" | "error" | "info") => {
@@ -316,11 +327,14 @@ export default function ClassTeamManagerPage() {
     setTimeout(() => setAlertMessage(null), 5000);
   };
 
-  // RBAC guard: redirect if no access
+  // RBAC check
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-        <div className="text-gray-600">Laden...</div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Laden...</p>
+        </div>
       </div>
     );
   }
@@ -328,48 +342,37 @@ export default function ClassTeamManagerPage() {
   if (!isTeacher && !isAdmin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-        <div className="bg-white/80 backdrop-blur-sm border rounded-2xl shadow-sm p-8 max-w-md">
-          <h2 className="text-xl font-semibold text-red-600 mb-4">Geen toegang</h2>
-          <p className="text-gray-600 mb-4">
-            Je hebt geen rechten om deze pagina te bekijken. Neem contact op met je beheerder.
+        <div className="max-w-md mx-auto px-6 py-8 bg-white rounded-2xl shadow-lg">
+          <div className="text-center mb-4">
+            <span className="text-4xl">🔒</span>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2 text-center">Geen toegang</h2>
+          <p className="text-gray-600 mb-6 text-center">
+            Je hebt geen toegang tot deze pagina. Alleen docenten en admins kunnen klas- en teambeheer gebruiken.
           </p>
-          <a href="/teacher/courses" className="text-blue-600 hover:underline">
-            ← Terug naar vakken
+          <a
+            href="/teacher/courses"
+            className="block w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-center"
+          >
+            Terug naar vakken
           </a>
         </div>
       </div>
     );
   }
 
-  // Empty state: no course selected
   if (!selectedCourse) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="max-w-7xl mx-auto px-6 py-6">
-          {/* Header */}
-          <div className="mb-6">
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold text-gray-900">
-                Klas- & Teambeheer
-                {isAdmin && (
-                  <span className="ml-3 text-sm font-medium px-3 py-1 bg-purple-100 text-purple-700 rounded-full">
-                    Admin
-                  </span>
-                )}
-              </h1>
-            </div>
-            <p className="text-gray-600">Beheer klassen en teams per vak</p>
-          </div>
-
-          {/* Empty state */}
-          <div className="bg-white/80 backdrop-blur-sm border rounded-2xl shadow-sm p-12 text-center">
-            <div className="text-6xl mb-4">📚</div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Selecteer een vak</h3>
+          <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
+            <div className="text-4xl mb-4">📚</div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Selecteer een vak</h2>
             <p className="text-gray-600 mb-6">
-              Kies een vak om klassen en teams te beheren.
+              Kies een vak om de klas- en teamindeling te beheren.
             </p>
             <CourseSelector
-              courses={[MOCK_COURSE]} // TODO: Fetch courses based on role
+              courses={[MOCK_COURSE]} // TODO: Fetch based on role
               selectedCourseId={null}
               onCourseChange={handleCourseChange}
             />
@@ -379,7 +382,6 @@ export default function ClassTeamManagerPage() {
     );
   }
 
-  // Main UI
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="max-w-7xl mx-auto px-6 py-6">
@@ -387,14 +389,12 @@ export default function ClassTeamManagerPage() {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold text-gray-900">
-                Klas- & Teambeheer
-                {isAdmin && (
-                  <span className="ml-3 text-sm font-medium px-3 py-1 bg-purple-100 text-purple-700 rounded-full">
-                    Admin
-                  </span>
-                )}
-              </h1>
+              <h1 className="text-2xl font-bold text-gray-900">Klas- & Teambeheer</h1>
+              {isAdmin && (
+                <span className="px-3 py-1 text-xs font-semibold bg-purple-100 text-purple-800 rounded-full">
+                  Admin
+                </span>
+              )}
             </div>
 
             {/* Admin-only controls */}
@@ -478,35 +478,32 @@ export default function ClassTeamManagerPage() {
           </div>
         </div>
 
-        {/* Main layout: Sidebar + Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Filters */}
-            <div className="bg-white/80 backdrop-blur-sm border rounded-2xl shadow-sm p-5">
-              <h3 className="font-semibold text-gray-900 mb-4">Filters</h3>
+        {/* Main Content: Toolbar + Table */}
+        <div className="bg-white rounded-2xl shadow-sm border">
+          {/* Sticky Toolbar */}
+          <div className="sticky top-0 z-10 bg-white border-b rounded-t-2xl">
+            <div className="p-4">
+              {/* First row: Filters */}
+              <div className="flex flex-wrap items-center gap-3 mb-3">
+                {/* Search */}
+                <div className="flex-1 min-w-[200px]">
+                  <input
+                    type="text"
+                    placeholder="Zoek op naam of email..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  />
+                </div>
 
-              {/* Search */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Zoeken</label>
-                <input
-                  type="text"
-                  placeholder="Naam of email..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              {/* Class toggles */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Klassen</label>
-                <div className="flex flex-wrap gap-2">
+                {/* Class toggles */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">Klassen:</span>
                   {allClasses.map((classInfo) => (
                     <button
                       key={classInfo.name}
                       onClick={() => handleToggleClass(classInfo.name)}
-                      className={`px-3 py-1 text-sm font-medium rounded-lg border transition ${
+                      className={`px-3 py-1.5 text-sm font-medium rounded-lg border transition ${
                         selectedClasses.includes(classInfo.name)
                           ? classInfo.color
                           : "bg-gray-100 text-gray-400 border-gray-200"
@@ -516,11 +513,9 @@ export default function ClassTeamManagerPage() {
                     </button>
                   ))}
                 </div>
-              </div>
 
-              {/* Unassigned only */}
-              <div>
-                <label className="flex items-center gap-2 cursor-pointer">
+                {/* Unassigned only checkbox */}
+                <label className="flex items-center gap-2 cursor-pointer ml-auto">
                   <input
                     type="checkbox"
                     checked={showUnassignedOnly}
@@ -530,62 +525,37 @@ export default function ClassTeamManagerPage() {
                   <span className="text-sm text-gray-700">Alleen zonder team</span>
                 </label>
               </div>
-            </div>
 
-            {/* Teams */}
-            <div className="bg-white/80 backdrop-blur-sm border rounded-2xl shadow-sm p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-900">Teams</h3>
+              {/* Second row: Actions */}
+              <div className="flex flex-wrap items-center gap-2">
                 <button
-                  onClick={() => setShowAddTeamModal(true)}
-                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                  onClick={handleAddTeam}
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                 >
-                  + Nieuw
+                  + Nieuw team
                 </button>
-              </div>
-
-              {teams.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-4">Nog geen teams</p>
-              ) : (
-                <div className="space-y-2">
-                  {teams.map((team) => (
-                    <div
-                      key={team.number}
-                      className={`px-3 py-2 rounded-lg border ${team.color} flex items-center justify-between`}
-                    >
-                      <span className="font-medium text-sm">{team.name}</span>
-                      <span className="text-xs font-semibold">{team.memberCount}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="bg-white/80 backdrop-blur-sm border rounded-2xl shadow-sm p-5">
-              <h3 className="font-semibold text-gray-900 mb-4">Acties</h3>
-              <div className="space-y-2">
                 <button
                   onClick={handleAutoBalance}
-                  className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                  className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
                 >
-                  🔄 Auto-verdeel oningedeeld
+                  🔄 Auto-verdeel
                 </button>
                 <button
                   onClick={handleClearAllTeams}
-                  className="w-full px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                  className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
                 >
-                  🗑️ Wis alle teams
+                  🗑️ Wis alle
                 </button>
+
                 {(isAdmin || teacherCanImportExport) && (
                   <>
                     <button
                       onClick={handleExportCSV}
-                      className="w-full px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+                      className="px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
                     >
                       📥 Exporteer CSV
                     </button>
-                    <label className="w-full px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition cursor-pointer block text-center">
+                    <label className="px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition cursor-pointer">
                       📤 Importeer CSV
                       <input
                         type="file"
@@ -596,285 +566,192 @@ export default function ClassTeamManagerPage() {
                     </label>
                   </>
                 )}
-              </div>
-            </div>
-          </div>
 
-          {/* Main content */}
-          <div className="lg:col-span-3">
-            <div className="bg-white/80 backdrop-blur-sm border rounded-2xl shadow-sm overflow-hidden">
-              {/* Table header with save button */}
-              <div className="px-6 py-4 border-b bg-gray-50/50 flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-gray-900">
-                    Studenten ({filteredStudents.length})
-                  </h3>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Selecteer een team per student via de dropdown
-                  </p>
-                </div>
+                {/* Save button (right-aligned) */}
                 {hasUnsavedChanges && (
                   <button
                     onClick={handleSaveChanges}
-                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
+                    className="ml-auto px-6 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold"
                   >
-                    💾 Opslaan ({students.filter((s, i) => s.team_number !== originalStudents[i].team_number).length} wijzigingen)
+                    💾 Opslaan
                   </button>
                 )}
               </div>
-
-              {/* Table */}
-              {filteredStudents.length === 0 ? (
-                <div className="p-12 text-center">
-                  <div className="text-6xl mb-4">🔍</div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Geen studenten gevonden</h3>
-                  <p className="text-gray-600">
-                    Pas je filters aan of selecteer een andere klas.
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 border-b">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Naam
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Email
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Klas
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Team
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredStudents.map((student) => {
-                        const classColor = allClasses.find((c) => c.name === student.class_name)?.color;
-                        const teamColor = student.team_number
-                          ? TEAM_COLORS[student.team_number % TEAM_COLORS.length]
-                          : "";
-
-                        return (
-                          <tr key={student.id} className="hover:bg-gray-50 transition">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">{student.name}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-500">{student.email}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`px-3 py-1 text-xs font-medium rounded-full ${classColor}`}>
-                                {student.class_name}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <select
-                                value={student.team_number || ""}
-                                onChange={(e) =>
-                                  handleTeamChange(
-                                    student.id,
-                                    e.target.value ? parseInt(e.target.value) : null
-                                  )
-                                }
-                                className={`px-3 py-1 text-sm rounded-lg border focus:ring-2 focus:ring-blue-500 ${
-                                  student.team_number ? teamColor : "bg-gray-100 text-gray-400"
-                                }`}
-                              >
-                                <option value="">Geen team</option>
-                                {teams.map((team) => (
-                                  <option key={team.number} value={team.number}>
-                                    {team.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
             </div>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Naam
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Email
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Klas
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Teamnr
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredStudents.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                      Geen studenten gevonden met de huidige filters.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredStudents.map((student) => {
+                    const classColor = allClasses.find((c) => c.name === student.class_name)?.color || "bg-gray-100 text-gray-800";
+                    const isEditing = editingStudentId === student.id;
+
+                    return (
+                      <tr
+                        key={student.id}
+                        className={`hover:bg-gray-50 transition ${
+                          student.isModified ? "bg-yellow-50" : ""
+                        }`}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="font-medium text-gray-900">{student.name}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm text-gray-600">{student.email}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 text-xs font-medium rounded ${classColor}`}>
+                            {student.class_name}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {isEditing ? (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                min="1"
+                                value={editingValue}
+                                onChange={(e) => setEditingValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleSaveEdit(student.id);
+                                  if (e.key === "Escape") handleCancelEdit();
+                                }}
+                                className="w-20 px-2 py-1 border border-blue-500 rounded focus:ring-2 focus:ring-blue-500 text-sm"
+                                autoFocus
+                              />
+                              <button
+                                onClick={() => handleSaveEdit(student.id)}
+                                className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+                              >
+                                ✓
+                              </button>
+                              <button
+                                onClick={handleCancelEdit}
+                                className="px-2 py-1 text-xs bg-gray-400 text-white rounded hover:bg-gray-500"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleStartEdit(student)}
+                              className="text-sm text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
+                            >
+                              {student.team_number || "-"}
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Table footer with count */}
+          <div className="px-6 py-3 bg-gray-50 border-t rounded-b-2xl">
+            <p className="text-sm text-gray-600">
+              {filteredStudents.length} van {students.length} studenten getoond
+              {hasUnsavedChanges && <span className="ml-2 text-yellow-600 font-medium">• Niet-opgeslagen wijzigingen</span>}
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Add Team Modal */}
+      {/* Modals (placeholders) */}
       {showAddTeamModal && (
-        <AddTeamModal
-          onClose={() => setShowAddTeamModal(false)}
-          onAdd={handleAddTeam}
-          existingTeams={teams}
-        />
-      )}
-
-      {/* Admin Teacher Panel (placeholder) */}
-      {showAdminTeacherPanel && (
-        <AdminTeacherPanel
-          courseId={selectedCourse.id}
-          onClose={() => setShowAdminTeacherPanel(false)}
-        />
-      )}
-
-      {/* Admin Import Modal (placeholder) */}
-      {showAdminImportModal && (
-        <AdminImportModal
-          courseId={selectedCourse.id}
-          onClose={() => setShowAdminImportModal(false)}
-        />
-      )}
-    </div>
-  );
-}
-
-// ============ Modals ============
-
-function AddTeamModal({
-  onClose,
-  onAdd,
-  existingTeams,
-}: {
-  onClose: () => void;
-  onAdd: (number: number, name: string) => void;
-  existingTeams: TeamInfo[];
-}) {
-  const [teamNumber, setTeamNumber] = useState(existingTeams.length + 1);
-  const [teamName, setTeamName] = useState(`Team ${existingTeams.length + 1}`);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (existingTeams.some((t) => t.number === teamNumber)) {
-      alert("Dit teamnummer bestaat al. Kies een ander nummer.");
-      return;
-    }
-    onAdd(teamNumber, teamName);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Nieuw team toevoegen</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Teamnummer</label>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Nieuw team toevoegen</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Voer een teamnummer in. Wijs daarna studenten toe aan dit team via de tabel.
+            </p>
             <input
               type="number"
               min="1"
-              value={teamNumber}
-              onChange={(e) => setTeamNumber(parseInt(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              required
+              placeholder="Teamnummer (bijv. 4)"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4"
             />
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowAddTeamModal(false)}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+              >
+                Annuleren
+              </button>
+              <button
+                onClick={() => {
+                  setShowAddTeamModal(false);
+                  showAlert("Team toegevoegd! Wijs nu studenten toe.", "success");
+                }}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Toevoegen
+              </button>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Teamnaam</label>
-            <input
-              type="text"
-              value={teamName}
-              onChange={(e) => setTeamName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-            >
-              Annuleren
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-            >
-              Toevoegen
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function AdminTeacherPanel({ courseId, onClose }: { courseId: number; onClose: () => void }) {
-  // TODO: Implement teacher assignment panel
-  // GET /api/v1/courses/{courseId}/teachers
-  // POST /api/v1/courses/{courseId}/teachers
-  // DELETE /api/v1/courses/{courseId}/teachers/{teacherId}
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Docenten toewijzen</h2>
-        <div className="p-8 bg-gray-50 rounded-xl text-center">
-          <p className="text-gray-600 mb-4">
-            Deze functie moet nog geïmplementeerd worden.
-          </p>
-          <p className="text-sm text-gray-500">
-            Backend endpoints: GET/POST/DELETE /api/v1/courses/{courseId}/teachers
-          </p>
         </div>
-        <div className="mt-6">
-          <button
-            onClick={onClose}
-            className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
-          >
-            Sluiten
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+      )}
 
-function AdminImportModal({ courseId, onClose }: { courseId: number; onClose: () => void }) {
-  // TODO: Implement student import (Somtoday OAuth + CSV upload)
-  // POST /api/v1/integrations/somtoday/import/students
-  // POST /api/v1/courses/{courseId}/students/import-csv
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Leerlingen importeren</h2>
-        
-        <div className="space-y-4">
-          <div className="p-6 bg-blue-50 border border-blue-200 rounded-xl">
-            <h3 className="font-semibold text-blue-900 mb-2">Via Somtoday</h3>
-            <p className="text-sm text-blue-800 mb-4">
-              Importeer leerlingen direct uit Somtoday via OAuth2.
-            </p>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-              Verbind met Somtoday
-            </button>
-          </div>
-
-          <div className="p-6 bg-gray-50 border border-gray-200 rounded-xl">
-            <h3 className="font-semibold text-gray-900 mb-2">Via CSV</h3>
+      {showAdminTeacherPanel && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Docenten toewijzen (Admin)</h3>
             <p className="text-sm text-gray-600 mb-4">
-              Upload een CSV bestand met kolommen: Naam, Email, Klas
+              TODO: Implement teacher assignment panel with API integration.
             </p>
-            <label className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition cursor-pointer inline-block">
-              Kies bestand
-              <input type="file" accept=".csv" className="hidden" />
-            </label>
+            <button
+              onClick={() => setShowAdminTeacherPanel(false)}
+              className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+            >
+              Sluiten
+            </button>
           </div>
         </div>
+      )}
 
-        <div className="mt-6">
-          <button
-            onClick={onClose}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-          >
-            Sluiten
-          </button>
+      {showAdminImportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Importeer leerlingen (Admin)</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              TODO: Implement Somtoday OAuth2 import + CSV upload tabs.
+            </p>
+            <button
+              onClick={() => setShowAdminImportModal(false)}
+              className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+            >
+              Sluiten
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
