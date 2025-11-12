@@ -233,9 +233,6 @@ export default function CoursesPage() {
                         )}
 
                         <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-500">
-                          {course.period && (
-                            <span>📅 Periode: {course.period}</span>
-                          )}
                           {course.year && <span>📚 Jaar: {course.year}</span>}
                           <span>
                             🆔 ID: {course.id}
@@ -245,7 +242,7 @@ export default function CoursesPage() {
 
                       <div className="ml-4 flex gap-2">
                         <a
-                          href={`/teacher/admin/courses/${course.id}/teams`}
+                          href={`/teacher/class-teams?course_id=${course.id}`}
                           className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                         >
                           Beheren
@@ -324,7 +321,6 @@ function CreateCourseModal({
   const [formData, setFormData] = useState<CourseCreate>({
     name: "",
     code: "",
-    period: "",
     level: "",
     year: new Date().getFullYear(),
     description: "",
@@ -341,7 +337,6 @@ function CreateCourseModal({
       await courseService.createCourse({
         ...formData,
         code: formData.code || undefined,
-        period: formData.period || undefined,
         level: formData.level || undefined,
         description: formData.description || undefined,
       });
@@ -385,44 +380,23 @@ function CreateCourseModal({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor="code"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Vakcode
-              </label>
-              <input
-                id="code"
-                type="text"
-                value={formData.code}
-                onChange={(e) =>
-                  setFormData({ ...formData, code: e.target.value })
-                }
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="bijv. O&O"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="period"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Periode
-              </label>
-              <input
-                id="period"
-                type="text"
-                value={formData.period}
-                onChange={(e) =>
-                  setFormData({ ...formData, period: e.target.value })
-                }
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="bijv. Q1, Semester 1"
-              />
-            </div>
+          <div>
+            <label
+              htmlFor="code"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Vakcode
+            </label>
+            <input
+              id="code"
+              type="text"
+              value={formData.code}
+              onChange={(e) =>
+                setFormData({ ...formData, code: e.target.value })
+              }
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="bijv. O&O"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
