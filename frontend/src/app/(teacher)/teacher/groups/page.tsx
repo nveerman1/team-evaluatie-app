@@ -31,14 +31,51 @@ export default function GroupsPage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await groupService.listGroups({
-        page: currentPage,
-        per_page: 20,
-        course_id: selectedCourse.id,
-      });
-      setGroups(response.groups);
-      setTotalGroups(response.total);
-      setTotalPages(Math.ceil(response.total / response.per_page));
+      
+      // TODO: Replace with actual API call when backend is ready
+      // const response = await groupService.listGroups({
+      //   page: currentPage,
+      //   per_page: 20,
+      //   course_id: selectedCourse.id,
+      // });
+      
+      // Mock data for testing UI
+      const mockGroups: GroupWithMembers[] = [
+        {
+          id: 1,
+          course_id: selectedCourse.id,
+          name: "Team Alpha",
+          team_number: 1,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          member_count: 4,
+          members: [],
+        },
+        {
+          id: 2,
+          course_id: selectedCourse.id,
+          name: "Team Beta",
+          team_number: 2,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          member_count: 5,
+          members: [],
+        },
+        {
+          id: 3,
+          course_id: selectedCourse.id,
+          name: "Team Gamma",
+          team_number: 3,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          member_count: 4,
+          members: [],
+        },
+      ];
+      
+      setGroups(mockGroups);
+      setTotalGroups(mockGroups.length);
+      setTotalPages(Math.ceil(mockGroups.length / 20));
     } catch (err) {
       console.error("Failed to load groups:", err);
       setError("Kon klassengroepen niet laden");
@@ -53,8 +90,12 @@ export default function GroupsPage() {
     }
 
     try {
-      await groupService.deleteGroup(groupId);
-      await loadGroups();
+      // TODO: Replace with actual API call when backend is ready
+      // await groupService.deleteGroup(groupId);
+      
+      // Mock delete - just remove from local state
+      setGroups((prev) => prev.filter((g) => g.id !== groupId));
+      setTotalGroups((prev) => prev - 1);
     } catch (err) {
       console.error("Failed to delete group:", err);
       alert("Kon klassengroep niet verwijderen");
@@ -72,6 +113,34 @@ export default function GroupsPage() {
           <p className="mt-1 text-gray-600">
             Beheer teams en klassengroepen per vak
           </p>
+        </div>
+
+        {/* Mock data notice */}
+        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <div className="flex items-start gap-3">
+            <svg
+              className="h-5 w-5 text-blue-600 mt-0.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-blue-900">
+                Demo modus - Mock data
+              </p>
+              <p className="mt-1 text-sm text-blue-700">
+                Deze pagina gebruikt mock data voor UI testing. De backend Groups API moet nog geïmplementeerd worden. 
+                Zie <code className="bg-blue-100 px-1 py-0.5 rounded">docs/IMPLEMENTATION_SUMMARY_MULTITENANT.md</code> voor API specificaties.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Course selector */}
@@ -281,7 +350,11 @@ function CreateGroupModal({
     setError(null);
 
     try {
-      await groupService.createGroup(formData);
+      // TODO: Replace with actual API call when backend is ready
+      // await groupService.createGroup(formData);
+      
+      // Mock create - just simulate success
+      await new Promise((resolve) => setTimeout(resolve, 500));
       onSuccess();
     } catch (err: any) {
       console.error("Failed to create group:", err);
