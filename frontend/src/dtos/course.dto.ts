@@ -15,6 +15,7 @@ export type Course = {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  teacher_names?: string[];
 };
 
 export type CourseCreate = {
@@ -55,5 +56,10 @@ export type TeacherCourse = {
 
 export type TeacherCourseCreate = {
   teacher_id: number;
+  role?: "teacher" | "coordinator";
+};
+
+export type BulkTeacherAssignment = {
+  teacher_ids: number[];
   role?: "teacher" | "coordinator";
 };

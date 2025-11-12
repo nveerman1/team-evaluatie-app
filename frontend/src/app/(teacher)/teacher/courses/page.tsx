@@ -234,6 +234,9 @@ export default function CoursesPage() {
 
                         <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-500">
                           {course.year && <span>📚 Jaar: {course.year}</span>}
+                          {course.teacher_names && course.teacher_names.length > 0 && (
+                            <span>👥 Docenten: {course.teacher_names.join(", ")}</span>
+                          )}
                           <span>
                             🆔 ID: {course.id}
                           </span>
@@ -251,7 +254,7 @@ export default function CoursesPage() {
                           href={`/teacher/courses/${course.id}`}
                           className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                          Bekijken
+                          Bewerken
                         </a>
                         <button
                           onClick={() => handleDeleteCourse(course.id)}

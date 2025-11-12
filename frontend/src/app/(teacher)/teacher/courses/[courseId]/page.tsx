@@ -126,7 +126,6 @@ export default function CourseDetailPage({
                 <p className="mt-2 text-gray-600">{course.description}</p>
               )}
               <div className="mt-2 flex gap-4 text-sm text-gray-500">
-                {course.period && <span>📅 {course.period}</span>}
                 {course.year && <span>📚 {course.year}</span>}
               </div>
             </div>
@@ -180,12 +179,6 @@ export default function CourseDetailPage({
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Code</dt>
                   <dd className="mt-1 text-sm text-gray-900">{course.code}</dd>
-                </div>
-              )}
-              {course.period && (
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Periode</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{course.period}</dd>
                 </div>
               )}
               {course.level && (

@@ -25,9 +25,7 @@ export default function AssignTeacherModal({
   const [teachers, setTeachers] = useState<User[]>([]);
   const [filteredTeachers, setFilteredTeachers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTeacherId, setSelectedTeacherId] = useState<number | null>(
-    null
-  );
+  const [selectedTeacherIds, setSelectedTeacherIds] = useState<number[]>([]);
   const [role, setRole] = useState<"teacher" | "coordinator">("teacher");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -95,8 +93,8 @@ export default function AssignTeacherModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedTeacherId) {
-      setError("Selecteer een docent");
+    if (selectedTeacherIds.length === 0) {
+      setError("Selecteer minimaal één docent");
       return;
     }
 
@@ -104,20 +102,33 @@ export default function AssignTeacherModal({
     setError(null);
 
     try {
-      await assignTeacher(courseId, {
-        teacher_id: selectedTeacherId,
-        role: role,
-      });
+      // Assign each teacher sequentially
+      for (const teacherId of selectedTeacherIds) {
+        await assignTeacher(courseId, {
+          teacher_id: teacherId,
+          role: role,
+        });
+      }
       onSuccess();
     } catch (err: any) {
       console.error("Failed to assign teacher:", err);
       setError(
         err?.response?.data?.detail ||
-          "Kon docent niet toewijzen. Probeer het opnieuw."
+          "Kon docent(en) niet toewijzen. Probeer het opnieuw."
       );
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleTeacherToggle = (teacherId: number) => {
+    setSelectedTeacherIds((prev) => {
+      if (prev.includes(teacherId)) {
+        return prev.filter((id) => id !== teacherId);
+      } else {
+        return [...prev, teacherId];
+      }
+    });
   };
 
   return (
@@ -148,7 +159,7 @@ export default function AssignTeacherModal({
         </div>
 
         <p className="mb-4 text-gray-600">
-          Wijs een docent toe aan <span className="font-semibold">{courseName}</span>
+          Wijs één of meerdere docenten toe aan <span className="font-semibold">{courseName}</span>
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -173,7 +184,7 @@ export default function AssignTeacherModal({
           {/* Teacher list */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Selecteer docent *
+              Selecteer docent(en) * ({selectedTeacherIds.length} geselecteerd)
             </label>
             
             {loading ? (
@@ -192,16 +203,14 @@ export default function AssignTeacherModal({
                       <label
                         key={teacher.id}
                         className={`flex cursor-pointer items-center gap-3 p-3 transition-colors hover:bg-gray-50 ${
-                          selectedTeacherId === teacher.id ? "bg-blue-50" : ""
+                          selectedTeacherIds.includes(teacher.id) ? "bg-blue-50" : ""
                         }`}
                       >
                         <input
-                          type="radio"
-                          name="teacher"
-                          value={teacher.id}
-                          checked={selectedTeacherId === teacher.id}
-                          onChange={() => setSelectedTeacherId(teacher.id)}
-                          className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+                          type="checkbox"
+                          checked={selectedTeacherIds.includes(teacher.id)}
+                          onChange={() => handleTeacherToggle(teacher.id)}
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
                         <div className="flex-1">
                           <div className="font-medium text-gray-900">
