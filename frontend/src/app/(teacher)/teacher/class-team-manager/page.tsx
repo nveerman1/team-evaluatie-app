@@ -540,31 +540,15 @@ export default function ClassTeamManagerPage() {
                 >
                   🔄 Auto-verdeel
                 </button>
-                <button
-                  onClick={handleClearAllTeams}
-                  className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-                >
-                  🗑️ Wis alle
-                </button>
 
+                {/* Export CSV: only for teachers with feature flag enabled */}
                 {(isAdmin || teacherCanImportExport) && (
-                  <>
-                    <button
-                      onClick={handleExportCSV}
-                      className="px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
-                    >
-                      📥 Exporteer CSV
-                    </button>
-                    <label className="px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition cursor-pointer">
-                      📤 Importeer CSV
-                      <input
-                        type="file"
-                        accept=".csv"
-                        onChange={handleImportCSV}
-                        className="hidden"
-                      />
-                    </label>
-                  </>
+                  <button
+                    onClick={handleExportCSV}
+                    className="px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+                  >
+                    📥 Exporteer CSV
+                  </button>
                 )}
 
                 {/* Save button (right-aligned) */}
