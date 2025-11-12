@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { use } from "react";
 import { Course, TeacherCourse, TeacherCourseCreate, CourseUpdate } from "@/dtos/course.dto";
 import { courseService } from "@/services/course.service";
+import AssignTeacherModal from "@/components/AssignTeacherModal";
 
 export default function CourseDetailPage({
   params,
@@ -18,6 +19,7 @@ export default function CourseDetailPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [showAssignTeacherModal, setShowAssignTeacherModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"details" | "teachers">("details");
 
   useEffect(() => {
@@ -233,10 +235,7 @@ export default function CourseDetailPage({
                 Toegewezen docenten
               </h2>
               <button
-                onClick={() => {
-                  /* TODO: Open assign teacher modal */
-                  alert("Docent toewijzen - nog niet geïmplementeerd");
-                }}
+                onClick={() => setShowAssignTeacherModal(true)}
                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
               >
                 + Docent toewijzen
@@ -309,6 +308,20 @@ export default function CourseDetailPage({
               setShowEditForm(false);
               loadCourse();
             }}
+          />
+        )}
+
+        {/* Assign teacher modal */}
+        {showAssignTeacherModal && (
+          <AssignTeacherModal
+            courseId={courseId}
+            courseName={course.name}
+            onClose={() => setShowAssignTeacherModal(false)}
+            onSuccess={() => {
+              setShowAssignTeacherModal(false);
+              loadTeachers();
+            }}
+            assignTeacher={courseService.assignTeacher}
           />
         )}
       </div>
