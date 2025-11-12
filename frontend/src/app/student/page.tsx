@@ -28,7 +28,7 @@ const SummaryTile = ({
   return (
     <Component
       onClick={onClick}
-      className={`rounded-2xl ${color} shadow-sm p-4 flex items-center gap-4 w-full transition-all duration-200 ${
+      className={`rounded-2xl ${color} border border-gray-300 shadow-sm p-4 flex items-center gap-4 w-full transition-all duration-200 ${
         onClick ? "cursor-pointer hover:shadow-md" : ""
       }`}
     >
@@ -69,19 +69,29 @@ export default function StudentDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Header with student info */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm">
+      {/* HEADER met subtiele onderrand + vaste 2-koloms layout */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
         <header className="px-6 pt-8 pb-4">
-          <div className="max-w-6xl mx-auto flex flex-col items-center text-center">
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
-              Mijn Dashboard
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Overzicht van jouw evaluaties, reflecties en groei.
-            </p>
-            <div className="mt-2">
-              <div className="text-sm text-gray-600">{studentName}</div>
-              <div className="text-sm text-gray-600">{studentClass}</div>
+          <div className="max-w-6xl mx-auto">
+            {/* Forceer links/rechts met grid i.p.v. flex zodat het nooit 'wegschuift' */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+              {/* Links: titel + subtitel, expliciet links uitlijnen */}
+              <div className="text-left">
+                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+                  Mijn Dashboard
+                </h1>
+                <p className="text-gray-600 mt-1 text-sm">
+                  Overzicht van jouw evaluaties, reflecties en groei.
+                </p>
+              </div>
+
+              {/* Rechts: naam + klas, expliciet rechts uitlijnen op md+ */}
+              <div className="md:text-right">
+                <div className="text-lg font-medium text-gray-900">
+                  {studentName}
+                </div>
+                <div className="text-sm text-gray-600">{studentClass}</div>
+              </div>
             </div>
           </div>
         </header>
@@ -170,9 +180,8 @@ export default function StudentDashboard() {
         {/* Tab Content */}
         {activeTab === "evaluaties" && (
           <div className="max-w-6xl mx-auto mt-5 space-y-4 w-full transition-all duration-300">
-
             {/* Peer-feedback Results Card */}
-            <div className="rounded-xl shadow-sm bg-blue-50 p-4 space-y-3 w-full">
+            <div className="rounded-xl border border-gray-300 shadow-sm bg-blue-50 p-4 space-y-3 w-full">
               <div className="px-4 py-2 rounded-t-xl font-semibold text-sm bg-blue-200 text-blue-900">
                 Peer-feedback resultaten
               </div>
@@ -209,10 +218,7 @@ export default function StudentDashboard() {
             ) : (
               <div className="space-y-4">
                 {openEvaluations.map((evaluation) => (
-                  <EvaluationCard
-                    key={evaluation.id}
-                    evaluation={evaluation}
-                  />
+                  <EvaluationCard key={evaluation.id} evaluation={evaluation} />
                 ))}
               </div>
             )}
@@ -221,14 +227,12 @@ export default function StudentDashboard() {
 
         {activeTab === "competenties" && (
           <div className="max-w-6xl mx-auto mt-5 space-y-4 w-full transition-all duration-300">
-
             <CompetencyScanTab />
           </div>
         )}
 
         {activeTab === "projecten" && (
           <div className="max-w-6xl mx-auto mt-5 space-y-4 w-full transition-all duration-300">
-
             <div className="rounded-xl shadow-sm bg-gray-50 p-4 space-y-3 w-full">
               <div className="px-4 py-2 rounded-t-xl font-semibold text-sm bg-gray-200 text-gray-800">
                 Projectbeoordelingen
@@ -275,7 +279,7 @@ export default function StudentDashboard() {
                         <div className="text-sm text-gray-600 mt-2">
                           Datum gepubliceerd:{" "}
                           {new Date(assessment.published_at).toLocaleDateString(
-                            "nl-NL"
+                            "nl-NL",
                           )}
                         </div>
                       )}

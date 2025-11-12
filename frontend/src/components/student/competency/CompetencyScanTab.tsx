@@ -41,7 +41,9 @@ export function CompetencyScanTab() {
       if (wins.length > 0 && !currentUserId) {
         for (const win of wins) {
           try {
-            const overview = await competencyService.getMyWindowOverview(win.id);
+            const overview = await competencyService.getMyWindowOverview(
+              win.id,
+            );
             setCurrentUserId(overview.user_id);
             break; // Successfully got user ID, exit loop
           } catch (err) {
@@ -86,7 +88,7 @@ export function CompetencyScanTab() {
   return (
     <div className="space-y-4">
       {/* My Growth Card */}
-      <div className="rounded-xl shadow-sm bg-green-50 p-4 space-y-3 w-full">
+      <div className="rounded-xl border border-gray-300 shadow-sm bg-green-50 p-4 space-y-3 w-full">
         <div className="px-4 py-2 rounded-t-xl font-semibold text-sm bg-green-200 text-green-900">
           Mijn Groei
         </div>
@@ -101,36 +103,17 @@ export function CompetencyScanTab() {
         </Link>
       </div>
 
-      {/* Competencies Card */}
-      {competencies.length > 0 && (
-        <div className="rounded-xl shadow-sm bg-lime-50 p-4 space-y-3 w-full">
-          <div className="px-4 py-2 rounded-t-xl font-semibold text-sm bg-lime-200 text-lime-900">
-            Competenties die worden gevolgd
-          </div>
-          <div className="flex gap-2 flex-wrap mt-2">
-            {competencies.map((comp) => (
-              <span
-                key={comp.id}
-                className="px-3 py-1 border rounded-full text-sm"
-              >
-                {comp.name}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Open Windows */}
       {windows.length > 0 ? (
         <div className="space-y-4">
           {windows.map((window) => (
             <div
               key={window.id}
-              className="rounded-lg shadow-sm p-4 flex flex-col gap-2 bg-white w-full"
+              className="border border-gray-300 shadow-sm rounded-xl p-4 space-y-4 bg-white flex flex-col gap-2 w-full"
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <div className="font-medium text-base text-gray-900 flex items-center gap-2">
+                  <div className="font-semibold text-base text-gray-900 flex items-center gap-2">
                     {window.title}
                     <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
                       <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
@@ -178,7 +161,7 @@ export function CompetencyScanTab() {
                           try {
                             const overview =
                               await competencyService.getMyWindowOverview(
-                                window.id
+                                window.id,
                               );
                             userId = overview.user_id;
                             setCurrentUserId(userId);
@@ -210,7 +193,7 @@ export function CompetencyScanTab() {
                   <button
                     onClick={() =>
                       setExpandedWindow(
-                        expandedWindow === window.id ? null : window.id
+                        expandedWindow === window.id ? null : window.id,
                       )
                     }
                     className="text-sm text-blue-700 underline flex items-center gap-1"

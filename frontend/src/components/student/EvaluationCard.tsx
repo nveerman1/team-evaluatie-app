@@ -34,16 +34,17 @@ export function EvaluationCard({ evaluation }: EvaluationCardProps) {
   };
 
   // Get deadlines from evaluation settings
-  const reviewDeadline = evaluation.settings?.deadlines?.review || 
-                         evaluation.deadlines?.review;
-  const reflectionDeadline = evaluation.settings?.deadlines?.reflection ||
-                             evaluation.deadlines?.reflection;
+  const reviewDeadline =
+    evaluation.settings?.deadlines?.review || evaluation.deadlines?.review;
+  const reflectionDeadline =
+    evaluation.settings?.deadlines?.reflection ||
+    evaluation.deadlines?.reflection;
 
   return (
-    <div className="rounded-lg shadow-sm p-4 flex flex-col gap-2 bg-white w-full">
+    <div className="border border-gray-300 shadow-sm rounded-xl p-4 space-y-4 bg-white flex flex-col gap-2 w-full">
       <div className="flex justify-between items-start">
         <div>
-          <div className="font-medium flex items-center gap-2">
+          <div className="font-semibold flex items-center gap-2">
             {evaluation.title}
             {getStatusBadge()}
           </div>
@@ -51,7 +52,8 @@ export function EvaluationCard({ evaluation }: EvaluationCardProps) {
             <div className="text-sm text-gray-500 mt-1">
               {reviewDeadline && `Evaluatie deadline: ${reviewDeadline}`}
               {reviewDeadline && reflectionDeadline && " | "}
-              {reflectionDeadline && `Reflectie deadline: ${reflectionDeadline}`}
+              {reflectionDeadline &&
+                `Reflectie deadline: ${reflectionDeadline}`}
             </div>
           )}
         </div>
@@ -78,13 +80,32 @@ export function EvaluationCard({ evaluation }: EvaluationCardProps) {
       </div>
       {/* Progress indicators */}
       <div className="text-sm text-gray-600 flex flex-wrap gap-4">
-        <span className={evaluation.selfCompleted ? "text-green-700" : "text-gray-400"}>
+        <span
+          className={
+            evaluation.selfCompleted ? "text-green-700" : "text-gray-400"
+          }
+        >
           {evaluation.selfCompleted ? "✓" : "○"} Zelfbeoordeling
         </span>
-        <span className={evaluation.peersCompleted === evaluation.peersTotal && evaluation.peersTotal > 0 ? "text-green-700" : "text-gray-400"}>
-          {evaluation.peersCompleted === evaluation.peersTotal && evaluation.peersTotal > 0 ? "✓" : "○"} Peer-evaluaties ({evaluation.peersCompleted}/{evaluation.peersTotal})
+        <span
+          className={
+            evaluation.peersCompleted === evaluation.peersTotal &&
+            evaluation.peersTotal > 0
+              ? "text-green-700"
+              : "text-gray-400"
+          }
+        >
+          {evaluation.peersCompleted === evaluation.peersTotal &&
+          evaluation.peersTotal > 0
+            ? "✓"
+            : "○"}{" "}
+          Peer-evaluaties ({evaluation.peersCompleted}/{evaluation.peersTotal})
         </span>
-        <span className={evaluation.reflectionCompleted ? "text-green-700" : "text-gray-400"}>
+        <span
+          className={
+            evaluation.reflectionCompleted ? "text-green-700" : "text-gray-400"
+          }
+        >
           {evaluation.reflectionCompleted ? "✓" : "○"} Reflectie
         </span>
       </div>
