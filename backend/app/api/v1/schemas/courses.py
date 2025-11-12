@@ -1,0 +1,83 @@
+"""
+Schemas for Course API
+"""
+
+from __future__ import annotations
+from typing import Optional, List
+from datetime import datetime
+from pydantic import BaseModel, Field
+
+
+class CourseBase(BaseModel):
+    """Base course schema"""
+
+    name: str = Field(..., min_length=1, max_length=200)
+    code: Optional[str] = Field(None, max_length=50)
+    period: Optional[str] = Field(None, max_length=50)
+    level: Optional[str] = Field(
+        None, max_length=50, description="e.g., 'onderbouw', 'bovenbouw'"
+    )
+    year: Optional[int] = Field(None, ge=2020, le=2100)
+    description: Optional[str] = None
+
+
+class CourseCreate(CourseBase):
+    """Schema for creating a course"""
+
+    pass
+
+
+class CourseUpdate(BaseModel):
+    """Schema for updating a course"""
+
+    name: Optional[str] = Field(None, min_length=1, max_length=200)
+    code: Optional[str] = Field(None, max_length=50)
+    period: Optional[str] = Field(None, max_length=50)
+    level: Optional[str] = Field(None, max_length=50)
+    year: Optional[int] = Field(None, ge=2020, le=2100)
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class CourseOut(CourseBase):
+    """Schema for course output"""
+
+    id: int
+    school_id: int
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class CourseListOut(BaseModel):
+    """Schema for course list output with pagination"""
+
+    courses: List[CourseOut]
+    total: int
+    page: int
+    per_page: int
+
+
+class TeacherCourseCreate(BaseModel):
+    """Schema for assigning teacher to course"""
+
+    teacher_id: int
+    role: str = Field(default="teacher", pattern="^(teacher|coordinator)$")
+
+
+class TeacherCourseOut(BaseModel):
+    """Schema for teacher-course assignment output"""
+
+    id: int
+    teacher_id: int
+    course_id: int
+    role: str
+    is_active: bool
+    teacher_name: Optional[str] = None
+    teacher_email: Optional[str] = None
+
+    class Config:
+        from_attributes = True

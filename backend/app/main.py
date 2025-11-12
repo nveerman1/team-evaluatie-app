@@ -24,6 +24,7 @@ from app.api.v1.routers import overview as overview_router
 from app.api.v1.routers import feedback_summary as feedback_summary_router
 from app.api.v1.routers import learning_objectives as learning_objectives_router
 from app.api.v1.routers import auth as auth_router
+from app.api.v1.routers import courses as courses_router
 
 
 app = FastAPI()
@@ -66,4 +67,5 @@ api_v1.include_router(overview_router.router)
 api_v1.include_router(feedback_summary_router.router)
 api_v1.include_router(learning_objectives_router.router)
 api_v1.include_router(auth_router.router)
+api_v1.include_router(courses_router.router)
 app.include_router(api_v1)
