@@ -46,6 +46,20 @@ export default function ClassTeamsPage() {
   const [alertType, setAlertType] = useState<"success" | "error" | "info">("info");
   const [editingStudentId, setEditingStudentId] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState<string>("");
+  const [sortColumn, setSortColumn] = useState<"name" | "email" | "class_name" | "team_number" | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  // Team colors for visual distinction
+  const TEAM_COLORS = [
+    "bg-blue-100 text-blue-800 border-blue-300",
+    "bg-green-100 text-green-800 border-green-300",
+    "bg-purple-100 text-purple-800 border-purple-300",
+    "bg-pink-100 text-pink-800 border-pink-300",
+    "bg-yellow-100 text-yellow-800 border-yellow-300",
+    "bg-indigo-100 text-indigo-800 border-indigo-300",
+    "bg-red-100 text-red-800 border-red-300",
+    "bg-teal-100 text-teal-800 border-teal-300",
+  ];
 
   // Extract unique classes
   const allClasses = useMemo(() => {
@@ -132,9 +146,9 @@ export default function ClassTeamsPage() {
     }
   }, [authLoading, isAdmin, isTeacher]);
 
-  // Filter students based on search, class, and unassigned status
+  // Filter and sort students
   const filteredStudents = useMemo(() => {
-    return students.filter((student) => {
+    let filtered = students.filter((student) => {
       // Search filter
       const matchesSearch =
         searchQuery === "" ||
@@ -150,7 +164,38 @@ export default function ClassTeamsPage() {
 
       return matchesSearch && matchesClass && matchesUnassigned;
     });
-  }, [students, searchQuery, selectedClasses, showUnassignedOnly]);
+
+    // Apply sorting
+    if (sortColumn) {
+      filtered = [...filtered].sort((a, b) => {
+        let aVal = a[sortColumn];
+        let bVal = b[sortColumn];
+
+        // Handle null values for team_number
+        if (sortColumn === "team_number") {
+          if (aVal === null && bVal === null) return 0;
+          if (aVal === null) return sortDirection === "asc" ? 1 : -1;
+          if (bVal === null) return sortDirection === "asc" ? -1 : 1;
+        }
+
+        // String comparison
+        if (typeof aVal === "string" && typeof bVal === "string") {
+          return sortDirection === "asc" 
+            ? aVal.localeCompare(bVal)
+            : bVal.localeCompare(aVal);
+        }
+
+        // Number comparison
+        if (typeof aVal === "number" && typeof bVal === "number") {
+          return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+        }
+
+        return 0;
+      });
+    }
+
+    return filtered;
+  }, [students, searchQuery, selectedClasses, showUnassignedOnly, sortColumn, sortDirection]);
 
   const showAlert = (message: string, type: "success" | "error" | "info" = "info") => {
     setAlertMessage(message);
@@ -215,6 +260,35 @@ export default function ClassTeamsPage() {
     }
   };
 
+  const handleCreateTeams = () => {
+    if (students.length === 0) {
+      showAlert("Geen studenten om te verdelen", "info");
+      return;
+    }
+
+    if (!confirm("Weet je zeker dat je alle studenten opnieuw wilt verdelen in teams van 4? Bestaande teams worden overschreven.")) {
+      return;
+    }
+
+    // Shuffle students randomly
+    const shuffled = [...students].sort(() => Math.random() - 0.5);
+    
+    // Calculate number of teams needed
+    const teamSize = 4;
+    const numTeams = Math.ceil(shuffled.length / teamSize);
+    
+    // Assign team numbers
+    const updated = shuffled.map((student, idx) => ({
+      ...student,
+      team_number: (idx % numTeams) + 1,
+      isModified: true,
+    }));
+
+    setStudents(updated);
+    setHasUnsavedChanges(true);
+    showAlert(`${updated.length} studenten verdeeld over ${numTeams} teams`, "success");
+  };
+
   const handleAutoBalance = () => {
     const unassigned = students.filter((s) => s.team_number === null);
     if (unassigned.length === 0) {
@@ -243,6 +317,30 @@ export default function ClassTeamsPage() {
     setStudents(updated);
     setHasUnsavedChanges(true);
     showAlert(`${unassigned.length} studenten verdeeld over ${teamNumbers.length} teams`, "success");
+  };
+
+  const handleDeleteStudent = (studentId: number) => {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return;
+
+    if (!confirm(`Weet je zeker dat je ${student.name} wilt verwijderen uit dit vak?`)) {
+      return;
+    }
+
+    // Remove student from local state
+    setStudents((prev) => prev.filter((s) => s.id !== studentId));
+    showAlert("Student verwijderd (let op: deze wijziging is alleen lokaal)", "info");
+  };
+
+  const handleSort = (column: "name" | "email" | "class_name" | "team_number") => {
+    if (sortColumn === column) {
+      // Toggle direction if same column
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // New column, default to ascending
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
   };
 
   const handleClearAll = () => {
@@ -445,6 +543,13 @@ export default function ClassTeamsPage() {
               {/* Row 2: Actions */}
               <div className="flex flex-wrap items-center gap-2">
                 <button
+                  onClick={handleCreateTeams}
+                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                >
+                  ✨ Teams maken
+                </button>
+
+                <button
                   onClick={handleAutoBalance}
                   className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                 >
@@ -487,17 +592,52 @@ export default function ClassTeamsPage() {
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                        Naam
+                      <th 
+                        onClick={() => handleSort("name")}
+                        className="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:bg-gray-100"
+                      >
+                        <div className="flex items-center gap-1">
+                          Naam
+                          {sortColumn === "name" && (
+                            <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        onClick={() => handleSort("email")}
+                        className="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:bg-gray-100"
+                      >
+                        <div className="flex items-center gap-1">
+                          Email
+                          {sortColumn === "email" && (
+                            <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        onClick={() => handleSort("class_name")}
+                        className="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:bg-gray-100"
+                      >
+                        <div className="flex items-center gap-1">
+                          Klas
+                          {sortColumn === "class_name" && (
+                            <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        onClick={() => handleSort("team_number")}
+                        className="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:bg-gray-100"
+                      >
+                        <div className="flex items-center gap-1">
+                          Teamnr
+                          {sortColumn === "team_number" && (
+                            <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </div>
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                        Email
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                        Klas
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                        Teamnr
+                        Acties
                       </th>
                     </tr>
                   </thead>
@@ -554,13 +694,41 @@ export default function ClassTeamsPage() {
                                 </button>
                               </div>
                             ) : (
+                              student.team_number !== null ? (
+                                <span 
+                                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
+                                    TEAM_COLORS[(student.team_number - 1) % TEAM_COLORS.length]
+                                  }`}
+                                >
+                                  Team {student.team_number}
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => handleStartEdit(student.id, student.team_number)}
+                                  className="text-gray-400 hover:text-gray-600"
+                                >
+                                  - (klik om toe te wijzen)
+                                </button>
+                              )
+                            )}
+                          </td>
+                          <td className="whitespace-nowrap px-6 py-4 text-sm">
+                            <div className="flex items-center gap-2">
                               <button
                                 onClick={() => handleStartEdit(student.id, student.team_number)}
-                                className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                className="rounded bg-blue-600 px-2 py-1 text-white hover:bg-blue-700"
+                                title="Bewerken"
                               >
-                                {student.team_number !== null ? `Team ${student.team_number}` : "- (klik om toe te wijzen)"}
+                                ✏️
                               </button>
-                            )}
+                              <button
+                                onClick={() => handleDeleteStudent(student.id)}
+                                className="rounded bg-red-600 px-2 py-1 text-white hover:bg-red-700"
+                                title="Verwijderen"
+                              >
+                                🗑️
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
