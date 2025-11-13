@@ -84,13 +84,15 @@ def get_course_summary(
         .scalar()
     ) or 0
     
-    # Calculate average grade (mock for now - would need to join with grades table)
-    # TODO: Implement actual grade calculation from grades/scores tables
-    average_score = 7.5  # Mock value
+    # Calculate participation rate: percentage of students who are in at least one group
+    if total_students > 0:
+        participation_rate = 100.0  # All counted students are already participating (they're in groups)
+    else:
+        participation_rate = 0.0
     
-    # Calculate participation rate (mock for now)
-    # TODO: Implement actual participation calculation
-    participation_rate = 85 if total_students > 0 else 0
+    # Calculate average grade: would need actual grades/scores from evaluations
+    # For now, return 0 to indicate no data available
+    average_score = 0.0
     
     return CourseSummaryOut(
         total_students=total_students,
@@ -129,22 +131,28 @@ def get_learning_objectives_progress(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
     
-    # Get learning objectives used in course evaluations
-    # This is a simplified version - actual implementation would need to:
-    # 1. Find all evaluations for the course
-    # 2. Get rubrics used in those evaluations
-    # 3. Get criteria from those rubrics
-    # 4. Get learning objectives linked to those criteria
-    # 5. Calculate coverage and scores
+    # Get learning objectives filtered by course level (onderbouw/bovenbouw)
+    # Map course.level to learning objective phase
+    phase_filter = None
+    if course.level:
+        level_lower = course.level.lower()
+        if "onderbouw" in level_lower:
+            phase_filter = "onderbouw"
+        elif "bovenbouw" in level_lower:
+            phase_filter = "bovenbouw"
     
-    # For now, return mock data structure
-    # TODO: Implement actual learning objective analytics
-    learning_objectives = (
-        db.query(LearningObjective)
-        .filter(LearningObjective.school_id == user.school_id)
-        .limit(10)
-        .all()
+    query = db.query(LearningObjective).filter(
+        LearningObjective.school_id == user.school_id
     )
+    
+    # Apply phase filter if course has a level
+    if phase_filter:
+        query = query.filter(LearningObjective.phase == phase_filter)
+    
+    learning_objectives = query.order_by(
+        LearningObjective.domain, 
+        LearningObjective.order
+    ).all()
     
     result = []
     for lo in learning_objectives:
@@ -156,9 +164,9 @@ def get_learning_objectives_progress(
                 id=lo.id,
                 code=code,
                 description=lo.description or lo.title or "",
-                coverage=75,  # Mock value - percentage of students who have been assessed
-                average_score=7.5,  # Mock value
-                student_count=30,  # Mock value
+                coverage=0.0,  # TODO: Calculate from actual evaluations
+                average_score=0.0,  # TODO: Calculate from actual grades
+                student_count=0,  # TODO: Count students assessed on this LO
             )
         )
     
@@ -211,8 +219,8 @@ def get_evaluation_type_stats(
     for eval_type, count, completed in stats:
         completion_rate = (completed / count * 100) if count > 0 else 0
         
-        # Mock average score - would need to calculate from actual scores
-        avg_score = 7.5
+        # TODO: Calculate average score from actual evaluation scores/grades
+        avg_score = 0.0
         
         result.append(
             EvaluationTypeStatsOut(
