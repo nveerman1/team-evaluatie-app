@@ -13,6 +13,7 @@ import {
 export default function AnalyticsPage() {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [analytics, setAnalytics] = useState<CourseSummary | null>(null);
   const [loProgress, setLoProgress] = useState<LearningObjectiveProgress[]>([]);
   const [evalStats, setEvalStats] = useState<EvaluationTypeStats[]>([]);
@@ -27,6 +28,7 @@ export default function AnalyticsPage() {
     if (!selectedCourse) return;
 
     setLoading(true);
+    setError(null);
     try {
       // Load all analytics data in parallel
       const [summaryData, loData, evalStatsData] = await Promise.all([
@@ -38,8 +40,14 @@ export default function AnalyticsPage() {
       setAnalytics(summaryData);
       setLoProgress(loData);
       setEvalStats(evalStatsData);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to load analytics:", err);
+      const errorMsg = err?.response?.data?.detail || err?.message || "Kon analytics niet laden";
+      setError(errorMsg);
+      // Reset data on error
+      setAnalytics(null);
+      setLoProgress([]);
+      setEvalStats([]);
     } finally {
       setLoading(false);
     }
@@ -90,6 +98,32 @@ export default function AnalyticsPage() {
         ) : loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
+          </div>
+        ) : error ? (
+          <div className="rounded-lg bg-red-50 p-6">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">
+                  Analytics kunnen niet worden geladen
+                </h3>
+                <div className="mt-2 text-sm text-red-700">
+                  <p>{error}</p>
+                </div>
+                <div className="mt-4">
+                  <button
+                    onClick={loadAnalytics}
+                    className="rounded-md bg-red-50 px-3 py-2 text-sm font-medium text-red-800 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 focus:ring-offset-red-50"
+                  >
+                    Opnieuw proberen
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="space-y-6">
