@@ -63,3 +63,16 @@ export type BulkTeacherAssignment = {
   teacher_ids: number[];
   role?: "teacher" | "coordinator";
 };
+
+export type CourseStudent = {
+  id: number;
+  name: string;
+  email: string;
+  class_name?: string;
+  team_number?: number;
+};
+
+export type StudentTeamUpdate = {
+  student_id: number;
+  team_number?: number;
+};

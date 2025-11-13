@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Course } from "@/dtos/course.dto";
 import { useAuth } from "@/hooks/useAuth";
 import CourseSelector from "@/components/CourseSelector";
+import { courseService } from "@/services/course.service";
 
 // ============ Types ============
 
@@ -63,8 +64,9 @@ export default function ClassTeamsPage() {
   const courseIdParam = searchParams?.get("course_id");
   const { user, isAdmin, isTeacher, loading: authLoading } = useAuth();
 
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(courseIdParam ? MOCK_COURSE : null);
-  const [students, setStudents] = useState<StudentRow[]>(MOCK_STUDENTS);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [students, setStudents] = useState<StudentRow[]>([]);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
   const [showUnassignedOnly, setShowUnassignedOnly] = useState(false);
@@ -82,6 +84,37 @@ export default function ClassTeamsPage() {
       color: CLASS_COLORS[idx % CLASS_COLORS.length],
     }));
   }, [students]);
+
+  // Load students when course is selected
+  useEffect(() => {
+    const loadStudents = async () => {
+      if (!selectedCourse) {
+        setStudents([]);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const courseStudents = await courseService.getCourseStudents(selectedCourse.id);
+        setStudents(
+          courseStudents.map((s) => ({
+            id: s.id,
+            name: s.name,
+            email: s.email,
+            class_name: s.class_name || "",
+            team_number: s.team_number,
+          }))
+        );
+      } catch (error) {
+        console.error("Failed to load students:", error);
+        showAlert("Kon studenten niet laden", "error");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStudents();
+  }, [selectedCourse]);
 
   // Auto-select all classes on mount
   useEffect(() => {
@@ -168,13 +201,27 @@ export default function ClassTeamsPage() {
     setEditingValue("");
   };
 
-  const handleSaveChanges = () => {
-    // TODO: Implement backend API call
-    // await courseService.bulkUpdateStudentTeams(courseId, students);
+  const handleSaveChanges = async () => {
+    if (!selectedCourse) return;
     
-    showAlert("Wijzigingen automatisch opgeslagen", "success");
-    setStudents((prev) => prev.map((s) => ({ ...s, isModified: false })));
-    setHasUnsavedChanges(false);
+    try {
+      const modifiedStudents = students.filter((s) => s.isModified);
+      if (modifiedStudents.length === 0) return;
+
+      const updates = modifiedStudents.map((s) => ({
+        student_id: s.id,
+        team_number: s.team_number,
+      }));
+
+      await courseService.bulkUpdateStudentTeams(selectedCourse.id, updates);
+      
+      showAlert("Wijzigingen automatisch opgeslagen", "success");
+      setStudents((prev) => prev.map((s) => ({ ...s, isModified: false })));
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error("Failed to save changes:", error);
+      showAlert("Kon wijzigingen niet opslaan", "error");
+    }
   };
 
   const handleAutoBalance = () => {

@@ -3,36 +3,17 @@
 import { useState, useEffect } from "react";
 import { Course } from "@/dtos/course.dto";
 import CourseSelector from "@/components/CourseSelector";
-
-// Mock analytics data types
-type CourseAnalytics = {
-  total_students: number;
-  total_evaluations: number;
-  completed_evaluations: number;
-  average_score: number;
-  participation_rate: number;
-};
-
-type LearningObjectiveProgress = {
-  id: number;
-  code: string;
-  description: string;
-  coverage: number; // percentage
-  average_score: number;
-  student_count: number;
-};
-
-type EvaluationTypeStats = {
-  type: "peer" | "project" | "competency";
-  count: number;
-  avg_score: number;
-  completion_rate: number;
-};
+import {
+  analyticsService,
+  CourseSummary,
+  LearningObjectiveProgress,
+  EvaluationTypeStats,
+} from "@/services/analytics.service";
 
 export default function AnalyticsPage() {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(false);
-  const [analytics, setAnalytics] = useState<CourseAnalytics | null>(null);
+  const [analytics, setAnalytics] = useState<CourseSummary | null>(null);
   const [loProgress, setLoProgress] = useState<LearningObjectiveProgress[]>([]);
   const [evalStats, setEvalStats] = useState<EvaluationTypeStats[]>([]);
 
@@ -47,73 +28,16 @@ export default function AnalyticsPage() {
 
     setLoading(true);
     try {
-      // TODO: Replace with actual API calls
-      // Mock data for demonstration
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      setAnalytics({
-        total_students: 45,
-        total_evaluations: 12,
-        completed_evaluations: 8,
-        average_score: 7.6,
-        participation_rate: 82,
-      });
-
-      setLoProgress([
-        {
-          id: 1,
-          code: "A1.2",
-          description: "Analyseert probleemstelling systematisch",
-          coverage: 85,
-          average_score: 7.5,
-          student_count: 38,
-        },
-        {
-          id: 2,
-          code: "D2.1",
-          description: "Ontwerpt creatieve oplossingen",
-          coverage: 72,
-          average_score: 8.1,
-          student_count: 32,
-        },
-        {
-          id: 3,
-          code: "D2.3",
-          description: "Evalueert ontwerp iteratief",
-          coverage: 65,
-          average_score: 7.2,
-          student_count: 29,
-        },
-        {
-          id: 4,
-          code: "E1.1",
-          description: "Reflecteert op leerproces",
-          coverage: 91,
-          average_score: 8.4,
-          student_count: 41,
-        },
+      // Load all analytics data in parallel
+      const [summaryData, loData, evalStatsData] = await Promise.all([
+        analyticsService.getCourseSummary(selectedCourse.id),
+        analyticsService.getLearningObjectivesProgress(selectedCourse.id),
+        analyticsService.getEvaluationTypeStats(selectedCourse.id),
       ]);
 
-      setEvalStats([
-        {
-          type: "peer",
-          count: 6,
-          avg_score: 7.8,
-          completion_rate: 85,
-        },
-        {
-          type: "project",
-          count: 4,
-          avg_score: 7.4,
-          completion_rate: 78,
-        },
-        {
-          type: "competency",
-          count: 2,
-          avg_score: 7.9,
-          completion_rate: 88,
-        },
-      ]);
+      setAnalytics(summaryData);
+      setLoProgress(loData);
+      setEvalStats(evalStatsData);
     } catch (err) {
       console.error("Failed to load analytics:", err);
     } finally {
