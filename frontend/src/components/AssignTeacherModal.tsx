@@ -267,7 +267,7 @@ export default function AssignTeacherModal({
             </button>
             <button
               type="submit"
-              disabled={submitting || !selectedTeacherId}
+              disabled={submitting || selectedTeacherIds.length === 0}
               className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submitting ? "Toewijzen..." : "Docent toewijzen"}
