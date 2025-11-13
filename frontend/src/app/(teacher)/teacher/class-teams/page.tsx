@@ -56,6 +56,26 @@ export default function ClassTeamsPage() {
     }));
   }, [students]);
 
+  // Load course from URL parameter if present
+  useEffect(() => {
+    const loadCourseFromUrl = async () => {
+      if (!courseIdParam) return;
+      
+      try {
+        const courseId = parseInt(courseIdParam, 10);
+        if (isNaN(courseId)) return;
+        
+        const course = await courseService.getCourse(courseId);
+        setSelectedCourse(course);
+      } catch (error) {
+        console.error("Failed to load course from URL:", error);
+        showAlert("Kon vak niet laden", "error");
+      }
+    };
+
+    loadCourseFromUrl();
+  }, [courseIdParam]);
+
   // Load students when course is selected
   useEffect(() => {
     const loadStudents = async () => {
