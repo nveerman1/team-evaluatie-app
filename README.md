@@ -2,9 +2,21 @@
 
 # Team Evaluatie App
 
-Een webapplicatie voor peer evaluaties met AI-powered feedback summaries.
+Een multi-tenant webapplicatie voor peer evaluaties, projectbeoordelingen en competentiemonitoring met AI-powered feedback summaries.
 
 ## Features
+
+### Multi-Tenant & Multi-Course Architecture
+- **Multi-school support**: Volledig gescheiden data per school
+- **Multiple courses**: Ondersteuning voor O&O, XPLR, Biologie, Nederlands, Engels, etc.
+- **Teacher-course mapping**: Docenten worden expliciet gekoppeld aan vakken
+- **Role-Based Access Control (RBAC)**: Admin, teacher en student rollen met granulaire toegangscontrole
+- **Audit logging**: Alle muterende acties worden gelogd voor compliance
+
+### Evaluation Types
+- **Peer Evaluation**: Wederzijdse beoordelingen tussen studenten
+- **Project Assessment**: Teamprojectbeoordelingen door docenten
+- **Competency Monitor**: Competentiemeting met self-assessment en peer feedback
 
 ### Student Evaluatie Wizard
 - **Stap 1**: Zelfbeoordeling
@@ -22,6 +34,13 @@ Automatisch gegenereerde samenvattingen van peer-feedback met:
 - Volledige anonimisering van namen en PII
 - Caching voor efficiëntie
 - Fallback naar regel-gebaseerde summaries
+
+### Somtoday Integration (Preparation)
+Voorbereiding voor integratie met Somtoday:
+- OAuth2 authenticatie
+- Import van klassen en studenten
+- Export van cijfers
+- Zie [docs/architecture.md](docs/architecture.md) voor details
 
 📚 Zie [docs/FEEDBACK_SUMMARY.md](docs/FEEDBACK_SUMMARY.md) voor gedetailleerde setup instructies.
 
@@ -59,5 +78,147 @@ OLLAMA_BASE_URL=http://localhost:11434  # Default
 OLLAMA_MODEL=llama3.1                   # Default: llama3.1
 OLLAMA_TIMEOUT=10.0                     # Default: 10 seconds
 ```
+
+See [docs/FEEDBACK_SUMMARY.md](docs/FEEDBACK_SUMMARY.md) for detailed setup instructions.
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.11+
+- Node.js 18+
+- PostgreSQL 14+
+- Docker & Docker Compose (optional)
+
+### Quick Start
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/nveerman1/team-evaluatie-app.git
+   cd team-evaluatie-app
+   ```
+
+2. **Start the database**
+   ```bash
+   make up
+   # or: docker compose -f ops/docker/compose.dev.yml up -d
+   ```
+
+3. **Setup backend**
+   ```bash
+   cd backend
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r requirements-dev.txt
+   
+   # Run migrations
+   alembic upgrade head
+   
+   # Optional: Seed demo data
+   python scripts/seed_demo_data.py
+   
+   # Start backend
+   uvicorn app.main:app --reload
+   ```
+
+4. **Setup frontend**
+   ```bash
+   cd frontend
+   npm install  # or: pnpm install
+   npm run dev
+   ```
+
+5. **Access the application**
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:8000
+   - API Docs: http://localhost:8000/docs
+
+### Demo Credentials
+
+After running the seed script:
+- **Admin**: admin@demo.school / demo123
+- **Teacher**: teacher1@school1.demo / demo123
+- **Student**: student.4a.1@school1.demo / demo123
+
+## Documentation
+
+- [Architecture](docs/architecture.md) - Multi-tenant architecture, data model, RBAC
+- [Migration Notes](MIGRATION_NOTES.md) - Database migration guide
+- [Feedback Summary](docs/FEEDBACK_SUMMARY.md) - AI feedback configuration
+- [API Documentation](http://localhost:8000/docs) - Interactive API docs (when running)
+
+## API Endpoints
+
+### Core Endpoints
+- `/api/v1/courses` - Course management (CRUD, teacher assignment)
+- `/api/v1/evaluations` - Evaluation management
+- `/api/v1/scores` - Score submission and retrieval
+- `/api/v1/grades` - Grade calculation and publishing
+- `/api/v1/auth` - Authentication
+- `/api/v1/rubrics` - Rubric management
+
+### Integration Endpoints
+- `/api/v1/integrations/somtoday/*` - Somtoday integration (placeholder)
+
+See [docs/architecture.md](docs/architecture.md) for complete API documentation.
+
+## Development
+
+### Running Tests
+
+```bash
+cd backend
+pytest
+```
+
+### Database Migrations
+
+```bash
+cd backend
+
+# Create a new migration
+alembic revision --autogenerate -m "description"
+
+# Apply migrations
+alembic upgrade head
+
+# Rollback one migration
+alembic downgrade -1
+```
+
+### Code Quality
+
+```bash
+cd backend
+
+# Format code
+black .
+
+# Lint code
+ruff check .
+
+# Type checking
+mypy .
+
+# Security audit
+bandit -r app/
+pip-audit
+```
+
+## Deployment
+
+See deployment documentation in `ops/` directory.
+
+## Contributing
+
+1. Create a feature branch
+2. Make your changes
+3. Write tests
+4. Ensure all tests pass
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License.
 
 See [docs/FEEDBACK_SUMMARY.md](docs/FEEDBACK_SUMMARY.md) for detailed setup instructions.

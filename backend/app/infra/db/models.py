@@ -78,10 +78,43 @@ class Course(Base):
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
     name: Mapped[str] = mapped_column(String(200), nullable=False)
+    code: Mapped[Optional[str]] = mapped_column(String(50))  # e.g., "O&O", "XPLR", "BIO"
     period: Mapped[Optional[str]] = mapped_column(String(50))
+    level: Mapped[Optional[str]] = mapped_column(String(50))  # e.g., "onderbouw", "bovenbouw"
+    year: Mapped[Optional[int]] = mapped_column(Integer)  # e.g., 2024, 2025
+    description: Mapped[Optional[str]] = mapped_column(Text)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     __table_args__ = (
         UniqueConstraint("school_id", "name", "period", name="uq_course_name_period"),
+        UniqueConstraint("school_id", "code", name="uq_course_code_per_school"),
+        Index("ix_course_school_active", "school_id", "is_active"),
+    )
+
+
+class TeacherCourse(Base):
+    """
+    Junction table linking teachers to courses they can manage
+    """
+    __tablename__ = "teacher_courses"
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = tenant_fk()
+    teacher_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    course_id: Mapped[int] = mapped_column(
+        ForeignKey("courses.id", ondelete="CASCADE"), nullable=False
+    )
+    role: Mapped[str] = mapped_column(
+        String(50), default="teacher"
+    )  # "teacher" | "coordinator"
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    __table_args__ = (
+        UniqueConstraint("teacher_id", "course_id", name="uq_teacher_course_once"),
+        Index("ix_teacher_course_teacher", "teacher_id"),
+        Index("ix_teacher_course_course", "course_id"),
+        Index("ix_teacher_course_school", "school_id"),
     )
 
 
@@ -191,6 +224,11 @@ class Evaluation(Base):
         ForeignKey("rubrics.id", ondelete="RESTRICT")
     )
     title: Mapped[str] = mapped_column(String(200), nullable=False)
+    
+    # Evaluation type to make logic generic
+    evaluation_type: Mapped[str] = mapped_column(
+        String(30), default="peer", nullable=False
+    )  # "peer" | "project" | "competency"
 
     settings: Mapped[dict] = mapped_column(JSON, default=dict)
     status: Mapped[str] = mapped_column(
@@ -203,6 +241,8 @@ class Evaluation(Base):
     __table_args__ = (
         Index("ix_eval_course", "course_id"),
         Index("ix_eval_rubric", "rubric_id"),
+        Index("ix_eval_type", "evaluation_type"),
+        Index("ix_eval_school_type", "school_id", "evaluation_type"),
     )
 
 
@@ -894,4 +934,43 @@ class RubricCriterionLearningObjective(Base):
         ),
         Index("ix_criterion_lo_criterion", "criterion_id"),
         Index("ix_criterion_lo_objective", "learning_objective_id"),
+    )
+
+
+# ============ Audit Log ============
+
+
+class AuditLog(Base):
+    """
+    Audit log for tracking all mutating actions in the system
+    """
+    __tablename__ = "audit_logs"
+    
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = tenant_fk()
+    
+    # Who performed the action
+    user_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    user_email: Mapped[Optional[str]] = mapped_column(String(320))  # Snapshot of email
+    
+    # What action was performed
+    action: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g., "create_evaluation", "update_grade"
+    entity_type: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g., "evaluation", "score", "user"
+    entity_id: Mapped[Optional[int]] = mapped_column(Integer)  # ID of affected entity
+    
+    # Details
+    details: Mapped[dict] = mapped_column(JSON, default=dict)  # Additional context
+    ip_address: Mapped[Optional[str]] = mapped_column(String(45))  # IPv4 or IPv6
+    user_agent: Mapped[Optional[str]] = mapped_column(String(500))
+    
+    # Timestamp is already in Base (created_at)
+    
+    __table_args__ = (
+        Index("ix_audit_log_school", "school_id"),
+        Index("ix_audit_log_user", "user_id"),
+        Index("ix_audit_log_entity", "entity_type", "entity_id"),
+        Index("ix_audit_log_action", "action"),
+        Index("ix_audit_log_created", "created_at"),
     )
