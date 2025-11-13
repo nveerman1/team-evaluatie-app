@@ -28,35 +28,6 @@ const CLASS_COLORS = [
   "bg-rose-100 text-rose-800",
 ];
 
-// ============ Mock Data ============
-
-const MOCK_STUDENTS: StudentRow[] = [
-  { id: 1, name: "Emma de Vries", email: "emma.devries@school.nl", class_name: "5V1", team_number: 1 },
-  { id: 2, name: "Liam Jansen", email: "liam.jansen@school.nl", class_name: "5V1", team_number: 1 },
-  { id: 3, name: "Sophie Bakker", email: "sophie.bakker@school.nl", class_name: "5V1", team_number: 2 },
-  { id: 4, name: "Noah van Dijk", email: "noah.vandijk@school.nl", class_name: "5V2", team_number: 2 },
-  { id: 5, name: "Lisa Vermeulen", email: "lisa.vermeulen@school.nl", class_name: "5V2", team_number: 3 },
-  { id: 6, name: "Tom de Jong", email: "tom.dejong@school.nl", class_name: "5V2", team_number: 3 },
-  { id: 7, name: "Anna Smit", email: "anna.smit@school.nl", class_name: "5V1", team_number: null },
-  { id: 8, name: "Max Peters", email: "max.peters@school.nl", class_name: "5V1", team_number: null },
-  { id: 9, name: "Sarah Visser", email: "sarah.visser@school.nl", class_name: "5V2", team_number: null },
-  { id: 10, name: "Lucas Berg", email: "lucas.berg@school.nl", class_name: "5V2", team_number: 1 },
-];
-
-const MOCK_COURSE: Course = {
-  id: 1,
-  school_id: 1,
-  name: "Onderzoek & Ontwikkelen",
-  code: "O&O",
-  level: "VWO",
-  year: 5,
-  period: "Jaar",
-  description: "Project-based learning course",
-  is_active: true,
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-};
-
 // ============ Main Component ============
 
 export default function ClassTeamsPage() {
@@ -386,15 +357,6 @@ export default function ClassTeamsPage() {
               )}
             </div>
           </div>
-        </div>
-
-        {/* Demo Notice */}
-        <div className="mb-6 rounded-lg bg-blue-50 p-4">
-          <p className="text-sm text-blue-800">
-            <strong>Demo modus:</strong> Deze pagina gebruikt mock data. Verbind met{" "}
-            <code className="rounded bg-blue-100 px-1">GET /api/v1/courses/{"{id}"}/students</code> en{" "}
-            <code className="rounded bg-blue-100 px-1">PATCH /api/v1/courses/{"{id}"}/students/bulk-update</code>
-          </p>
         </div>
 
         {/* Course Selector for Teachers (no courseId in URL) */}
