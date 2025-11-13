@@ -365,19 +365,33 @@ export default function ClassTeamsPage() {
     setEditingStudent(null);
   };
 
-  const handleSaveAddModal = () => {
-    if (!editingStudent) return;
+  const handleSaveAddModal = async () => {
+    if (!editingStudent || !selectedCourse) return;
 
     if (!editingStudent.name || !editingStudent.email) {
       showAlert("Naam en email zijn verplicht", "error");
       return;
     }
 
-    setStudents((prev) => [...prev, editingStudent]);
-    setHasUnsavedChanges(true);
-    setShowAddModal(false);
-    setEditingStudent(null);
-    showAlert("Student toegevoegd", "success");
+    try {
+      // Call API to add student to course
+      const newStudent = await courseService.addStudentToCourse(selectedCourse.id, {
+        name: editingStudent.name,
+        email: editingStudent.email,
+        class_name: editingStudent.class_name || undefined,
+        team_number: editingStudent.team_number,
+      });
+
+      // Add to local state
+      setStudents((prev) => [...prev, newStudent]);
+      setShowAddModal(false);
+      setEditingStudent(null);
+      showAlert("Student succesvol toegevoegd aan vak", "success");
+    } catch (error: any) {
+      console.error("Failed to add student:", error);
+      const errorMsg = error?.response?.data?.detail || "Kon student niet toevoegen";
+      showAlert(errorMsg, "error");
+    }
   };
 
   const handleDeleteStudent = (studentId: number) => {

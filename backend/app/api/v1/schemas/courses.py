@@ -97,6 +97,15 @@ class CourseStudentOut(BaseModel):
         from_attributes = True
 
 
+class CourseStudentCreate(BaseModel):
+    """Schema for adding a student to a course"""
+    
+    name: str = Field(..., min_length=1, max_length=200)
+    email: str = Field(..., min_length=1, max_length=200)
+    class_name: Optional[str] = Field(None, max_length=50)
+    team_number: Optional[int] = None
+
+
 class StudentTeamUpdate(BaseModel):
     """Schema for updating a single student's team"""
     

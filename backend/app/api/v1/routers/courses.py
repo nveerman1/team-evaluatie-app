@@ -18,6 +18,7 @@ from app.api.v1.schemas.courses import (
     TeacherCourseCreate,
     TeacherCourseOut,
     CourseStudentOut,
+    CourseStudentCreate,
     BulkStudentTeamUpdate,
 )
 from app.core.rbac import require_role, scope_query_by_school, require_course_access
@@ -574,6 +575,122 @@ def list_course_students(
     )
     
     return [CourseStudentOut.model_validate(s) for s in students]
+
+
+@router.post("/{course_id}/students", response_model=CourseStudentOut, status_code=status.HTTP_201_CREATED)
+def add_student_to_course(
+    course_id: int,
+    payload: CourseStudentCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    request: Request = None,
+):
+    """
+    Add/enroll a student to a course
+    
+    Creates a new user if email doesn't exist, or updates existing user.
+    Enrolls the student in a default group for the course.
+    """
+    require_role(user, ["admin", "teacher"])
+    require_course_access(db, user, course_id)
+    
+    # Verify course exists
+    course = (
+        db.query(Course)
+        .filter(Course.id == course_id, Course.school_id == user.school_id)
+        .first()
+    )
+    
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
+        )
+    
+    # Check if user with this email already exists in the school
+    student = (
+        db.query(User)
+        .filter(
+            User.email == payload.email,
+            User.school_id == user.school_id,
+        )
+        .first()
+    )
+    
+    if student:
+        # Update existing student
+        student.name = payload.name
+        student.class_name = payload.class_name
+        student.team_number = payload.team_number
+    else:
+        # Create new student
+        student = User(
+            school_id=user.school_id,
+            email=payload.email,
+            name=payload.name,
+            role="student",
+            class_name=payload.class_name,
+            team_number=payload.team_number,
+            hashed_password="",  # No password for students initially
+        )
+        db.add(student)
+        db.flush()  # Get the student ID
+    
+    # Enroll student in a course group (find or create default group)
+    from app.infra.db.models import Group, GroupMember
+    
+    # Find or create a default group for this course
+    default_group = (
+        db.query(Group)
+        .filter(
+            Group.course_id == course_id,
+            Group.name == "Alle studenten",
+        )
+        .first()
+    )
+    
+    if not default_group:
+        default_group = Group(
+            school_id=user.school_id,
+            course_id=course_id,
+            name="Alle studenten",
+            description="Standaard groep voor alle studenten",
+        )
+        db.add(default_group)
+        db.flush()
+    
+    # Check if student is already a member
+    existing_membership = (
+        db.query(GroupMember)
+        .filter(
+            GroupMember.group_id == default_group.id,
+            GroupMember.user_id == student.id,
+        )
+        .first()
+    )
+    
+    if not existing_membership:
+        # Add student to the group
+        membership = GroupMember(
+            group_id=default_group.id,
+            user_id=student.id,
+            active=True,
+        )
+        db.add(membership)
+    
+    db.commit()
+    db.refresh(student)
+    
+    # Log the action
+    log_create(
+        db,
+        request,
+        user,
+        "user",
+        student.id,
+        f"Added student {student.name} to course {course.name}",
+    )
+    
+    return CourseStudentOut.model_validate(student)
 
 
 @router.patch("/{course_id}/students/bulk-update", status_code=status.HTTP_200_OK)

@@ -108,6 +108,25 @@ export const courseService = {
   },
 
   /**
+   * Add a student to a course
+   */
+  async addStudentToCourse(
+    courseId: number,
+    student: {
+      name: string;
+      email: string;
+      class_name?: string;
+      team_number?: number | null;
+    }
+  ): Promise<CourseStudent> {
+    const response = await api.post<CourseStudent>(
+      `/courses/${courseId}/students`,
+      student
+    );
+    return response.data;
+  },
+
+  /**
    * Bulk update student team assignments
    */
   async bulkUpdateStudentTeams(
