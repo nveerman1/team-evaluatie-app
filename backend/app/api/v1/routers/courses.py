@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.api.v1.deps import get_db, get_current_user
-from app.infra.db.models import Course, User, TeacherCourse
+from app.infra.db.models import Course, User, TeacherCourse, Group, GroupMember
 from app.api.v1.schemas.courses import (
     CourseCreate,
     CourseUpdate,
@@ -557,8 +557,6 @@ def list_course_students(
         )
     
     # Get students through groups
-    from app.infra.db.models import Group, GroupMember
-    
     students = (
         db.query(User)
         .join(GroupMember, GroupMember.user_id == User.id)
@@ -636,8 +634,6 @@ def add_student_to_course(
         db.flush()  # Get the student ID
     
     # Enroll student in a course group (find or create default group)
-    from app.infra.db.models import Group, GroupMember
-    
     # Find or create a default group for this course
     default_group = (
         db.query(Group)
