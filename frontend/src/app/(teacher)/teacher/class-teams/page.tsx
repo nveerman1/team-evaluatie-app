@@ -48,6 +48,9 @@ export default function ClassTeamsPage() {
   const [editingValue, setEditingValue] = useState<string>("");
   const [sortColumn, setSortColumn] = useState<"name" | "email" | "class_name" | "team_number" | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<StudentRow | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   // Team colors for visual distinction
   const TEAM_COLORS = [
@@ -319,6 +322,64 @@ export default function ClassTeamsPage() {
     showAlert(`${unassigned.length} studenten verdeeld over ${teamNumbers.length} teams`, "success");
   };
 
+  const handleOpenEditModal = (student: StudentRow) => {
+    setEditingStudent({ ...student });
+    setShowEditModal(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setEditingStudent(null);
+  };
+
+  const handleSaveEditModal = () => {
+    if (!editingStudent) return;
+
+    setStudents((prev) =>
+      prev.map((s) =>
+        s.id === editingStudent.id
+          ? { ...editingStudent, isModified: true }
+          : s
+      )
+    );
+    setHasUnsavedChanges(true);
+    setShowEditModal(false);
+    setEditingStudent(null);
+    showAlert("Student gewijzigd", "success");
+  };
+
+  const handleOpenAddModal = () => {
+    setEditingStudent({
+      id: Date.now(), // Temporary ID
+      name: "",
+      email: "",
+      class_name: "",
+      team_number: null,
+      isModified: true,
+    });
+    setShowAddModal(true);
+  };
+
+  const handleCloseAddModal = () => {
+    setShowAddModal(false);
+    setEditingStudent(null);
+  };
+
+  const handleSaveAddModal = () => {
+    if (!editingStudent) return;
+
+    if (!editingStudent.name || !editingStudent.email) {
+      showAlert("Naam en email zijn verplicht", "error");
+      return;
+    }
+
+    setStudents((prev) => [...prev, editingStudent]);
+    setHasUnsavedChanges(true);
+    setShowAddModal(false);
+    setEditingStudent(null);
+    showAlert("Student toegevoegd", "success");
+  };
+
   const handleDeleteStudent = (studentId: number) => {
     const student = students.find(s => s.id === studentId);
     if (!student) return;
@@ -543,6 +604,13 @@ export default function ClassTeamsPage() {
               {/* Row 2: Actions */}
               <div className="flex flex-wrap items-center gap-2">
                 <button
+                  onClick={handleOpenAddModal}
+                  className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                >
+                  ➕ Leerling toevoegen
+                </button>
+
+                <button
                   onClick={handleCreateTeams}
                   className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
                 >
@@ -715,7 +783,7 @@ export default function ClassTeamsPage() {
                           <td className="whitespace-nowrap px-6 py-4 text-sm">
                             <div className="flex items-center gap-2">
                               <button
-                                onClick={() => handleStartEdit(student.id, student.team_number)}
+                                onClick={() => handleOpenEditModal(student)}
                                 className="rounded bg-blue-600 px-2 py-1 text-white hover:bg-blue-700"
                                 title="Bewerken"
                               >
@@ -746,6 +814,144 @@ export default function ClassTeamsPage() {
               </div>
             </div>
           </>
+        )}
+
+        {/* Edit Student Modal */}
+        {showEditModal && editingStudent && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+              <h2 className="mb-4 text-xl font-bold text-gray-900">Leerling bewerken</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Naam *</label>
+                  <input
+                    type="text"
+                    value={editingStudent.name}
+                    onChange={(e) => setEditingStudent({ ...editingStudent, name: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Email *</label>
+                  <input
+                    type="email"
+                    value={editingStudent.email}
+                    onChange={(e) => setEditingStudent({ ...editingStudent, email: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Klas</label>
+                  <input
+                    type="text"
+                    value={editingStudent.class_name}
+                    onChange={(e) => setEditingStudent({ ...editingStudent, class_name: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Teamnummer</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editingStudent.team_number || ""}
+                    onChange={(e) => setEditingStudent({ ...editingStudent, team_number: e.target.value ? parseInt(e.target.value) : null })}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-2">
+                <button
+                  onClick={handleCloseEditModal}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Annuleren
+                </button>
+                <button
+                  onClick={handleSaveEditModal}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Opslaan
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Student Modal */}
+        {showAddModal && editingStudent && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+              <h2 className="mb-4 text-xl font-bold text-gray-900">Leerling toevoegen</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Naam *</label>
+                  <input
+                    type="text"
+                    value={editingStudent.name}
+                    onChange={(e) => setEditingStudent({ ...editingStudent, name: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="Volledige naam"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Email *</label>
+                  <input
+                    type="email"
+                    value={editingStudent.email}
+                    onChange={(e) => setEditingStudent({ ...editingStudent, email: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="email@school.nl"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Klas</label>
+                  <input
+                    type="text"
+                    value={editingStudent.class_name}
+                    onChange={(e) => setEditingStudent({ ...editingStudent, class_name: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="bijv. 5V1"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Teamnummer</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editingStudent.team_number || ""}
+                    onChange={(e) => setEditingStudent({ ...editingStudent, team_number: e.target.value ? parseInt(e.target.value) : null })}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="Optioneel"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-2">
+                <button
+                  onClick={handleCloseAddModal}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Annuleren
+                </button>
+                <button
+                  onClick={handleSaveAddModal}
+                  className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                >
+                  Toevoegen
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
