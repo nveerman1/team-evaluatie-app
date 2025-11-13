@@ -740,8 +740,24 @@ export default function ClassTeamsPage() {
                                   value={editingValue}
                                   onChange={(e) => setEditingValue(e.target.value)}
                                   onKeyDown={(e) => {
-                                    if (e.key === "Enter") handleSaveEdit(student.id);
-                                    if (e.key === "Escape") handleCancelEdit();
+                                    if (e.key === "Enter") {
+                                      handleSaveEdit(student.id);
+                                    }
+                                    if (e.key === "Escape") {
+                                      handleCancelEdit();
+                                    }
+                                    if (e.key === "Tab") {
+                                      e.preventDefault();
+                                      handleSaveEdit(student.id);
+                                      // Find next student in filtered list
+                                      const currentIndex = filteredStudents.findIndex(s => s.id === student.id);
+                                      if (currentIndex < filteredStudents.length - 1) {
+                                        const nextStudent = filteredStudents[currentIndex + 1];
+                                        setTimeout(() => {
+                                          handleStartEdit(nextStudent.id, nextStudent.team_number);
+                                        }, 50);
+                                      }
+                                    }
                                   }}
                                   className="w-20 rounded border border-gray-300 px-2 py-1 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                   autoFocus
@@ -763,13 +779,14 @@ export default function ClassTeamsPage() {
                               </div>
                             ) : (
                               student.team_number !== null ? (
-                                <span 
-                                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
+                                <button
+                                  onClick={() => handleStartEdit(student.id, student.team_number)}
+                                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold cursor-pointer hover:opacity-80 ${
                                     TEAM_COLORS[(student.team_number - 1) % TEAM_COLORS.length]
                                   }`}
                                 >
                                   Team {student.team_number}
-                                </span>
+                                </button>
                               ) : (
                                 <button
                                   onClick={() => handleStartEdit(student.id, student.team_number)}
