@@ -148,11 +148,14 @@ def get_learning_objectives_progress(
     
     result = []
     for lo in learning_objectives:
+        # Use domain as code, or generate a code from domain and order
+        code = f"{lo.domain or 'LO'}{lo.order}" if lo.domain else f"LO{lo.order}"
+        
         result.append(
             LearningObjectiveProgressOut(
                 id=lo.id,
-                code=lo.code,
-                description=lo.description or "",
+                code=code,
+                description=lo.description or lo.title or "",
                 coverage=75,  # Mock value - percentage of students who have been assessed
                 average_score=7.5,  # Mock value
                 student_count=30,  # Mock value
