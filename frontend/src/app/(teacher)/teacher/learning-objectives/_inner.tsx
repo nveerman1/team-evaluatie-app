@@ -276,30 +276,36 @@ export default function LearningObjectivesInner() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
-      <header className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Leerdoelen / Eindtermen</h1>
-          <p className="text-gray-600">
-            Beheer leerdoelen en koppel ze aan rubrieken voor rapportage en
-            voortgangsmonitoring.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={openCreateModal}
-            className="px-4 py-2 rounded-xl bg-black text-white hover:opacity-90"
-          >
-            + Nieuw Leerdoel
-          </button>
-          <button
-            onClick={() => setIsImportModalOpen(true)}
-            className="px-4 py-2 rounded-xl bg-green-600 text-white hover:opacity-90"
-          >
-            Importeer CSV
-          </button>
-        </div>
-      </header>
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">Leerdoelen / Eindtermen</h1>
+            <p className="text-gray-600 mt-1 text-sm">
+              Beheer leerdoelen en koppel ze aan rubrieken voor rapportage en
+              voortgangsmonitoring.
+            </p>
+          </div>
+          <div className="flex gap-2 mt-4 md:mt-0">
+            <button
+              onClick={openCreateModal}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+            >
+              + Nieuw Leerdoel
+            </button>
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Importeer CSV
+            </button>
+          </div>
+        </header>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded text-red-800">
@@ -724,6 +730,7 @@ export default function LearningObjectivesInner() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

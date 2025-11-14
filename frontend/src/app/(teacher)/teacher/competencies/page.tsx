@@ -71,13 +71,19 @@ export default function CompetenciesPage() {
   if (error) return <ErrorMessage message={error} />;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Competentiemonitor</h1>
-        <p className="text-gray-600">
-          Beheer competenties en vensters voor competentiescans
-        </p>
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">Competentiemonitor</h1>
+          <p className="text-gray-600 mt-1 text-sm">
+            Beheer competenties en vensters voor competentiescans
+          </p>
+        </header>
       </div>
+
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
       {/* Tabs */}
       <div className="border-b">
@@ -479,7 +485,8 @@ export default function CompetenciesPage() {
             </div>
           </div>
         </div>
-      )}
-    </div>
+        )}
+      </div>
+    </>
   );
 }

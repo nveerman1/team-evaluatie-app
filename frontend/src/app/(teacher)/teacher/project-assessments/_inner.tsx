@@ -86,24 +86,30 @@ export default function ProjectAssessmentsListInner() {
   });
 
   return (
-    <main className="max-w-6xl mx-auto p-6 space-y-6">
-      <header className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Projectbeoordelingen</h1>
-          <p className="text-gray-600">
-            Beheer projectbeoordelingen per team met vaste criteria.
-          </p>
-        </div>
-        <Link
-          href="/teacher/project-assessments/create"
-          className="px-4 py-2 rounded-xl bg-black text-white hover:opacity-90"
-        >
-          + Nieuwe projectbeoordeling
-        </Link>
-      </header>
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">Projectbeoordeling</h1>
+            <p className="text-gray-600 mt-1 text-sm">
+              Beheer projectbeoordelingen per team met vaste criteria.
+            </p>
+          </div>
+          <Link
+            href="/teacher/project-assessments/create"
+            className="mt-4 md:mt-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+          >
+            + Nieuwe projectbeoordeling
+          </Link>
+        </header>
+      </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-6 bg-white p-4 rounded-2xl border">
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+        {/* Filters */}
+        <div className="flex items-center gap-6 bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
         <div className="flex items-center gap-3">
           <label className="text-sm font-medium">Vak/Cluster:</label>
           <select
@@ -131,9 +137,9 @@ export default function ProjectAssessmentsListInner() {
             <option value="published">Gepubliceerd</option>
           </select>
         </div>
-      </div>
+        </div>
 
-      {loading && (
+        {loading && (
         <div className="p-6">
           <Loading />
         </div>
@@ -142,12 +148,12 @@ export default function ProjectAssessmentsListInner() {
         <div className="p-6">
           <ErrorMessage message={`Fout: ${error}`} />
         </div>
-      )}
-      {!loading && !error && data.length === 0 && (
-        <div className="p-6 text-gray-500 bg-white border rounded-2xl">
-          Geen projectbeoordelingen gevonden.
-        </div>
-      )}
+        )}
+        {!loading && !error && data.length === 0 && (
+          <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6 text-gray-500">
+            Geen projectbeoordelingen gevonden.
+          </div>
+        )}
       {!loading &&
         !error &&
         Object.keys(groupedByCourse).map((courseName) => (
@@ -229,6 +235,7 @@ export default function ProjectAssessmentsListInner() {
             </div>
           </section>
         ))}
-    </main>
+      </main>
+    </>
   );
 }

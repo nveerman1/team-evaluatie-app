@@ -96,21 +96,27 @@ export default function EvaluationsListInner() {
   }
 
   return (
-    <main className="max-w-5xl mx-auto p-6 space-y-6">
-      <header className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Evaluaties</h1>
-          <p className="text-gray-600">
-            Beheer evaluaties en open het dashboard per evaluatie.
-          </p>
-        </div>
-        <a
-          href="/teacher/evaluations/create"
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-black text-white hover:opacity-90"
-        >
-          + Nieuwe evaluatie
-        </a>
-      </header>
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">Evaluaties</h1>
+            <p className="text-gray-600 mt-1 text-sm">
+              Beheer evaluaties en open het dashboard per evaluatie.
+            </p>
+          </div>
+          <a
+            href="/teacher/evaluations/create"
+            className="mt-4 md:mt-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+          >
+            + Nieuwe evaluatie
+          </a>
+        </header>
+      </div>
+
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
       {/* Filters */}
       <section className="flex flex-wrap items-center gap-3">
@@ -162,7 +168,7 @@ export default function EvaluationsListInner() {
       {toast && <Toast message={toast} />}
 
       {/* Tabel */}
-      <section className="bg-white border rounded-2xl overflow-hidden">
+      <section className="bg-white border border-gray-200/80 shadow-sm rounded-xl overflow-hidden">
         <div className="grid grid-cols-[1fr_220px_220px_minmax(280px,1fr)] gap-0 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">
           <div>Titel</div>
           <div>Status</div>
@@ -266,7 +272,8 @@ export default function EvaluationsListInner() {
               </div>
             );
           })}
-      </section>
-    </main>
+        </section>
+      </main>
+    </>
   );
 }
