@@ -71,7 +71,9 @@ class TeacherCourseAssignment(BaseModel):
     """Schema for assigning a course to a teacher"""
 
     course_id: int
-    role: str = Field("teacher", description="Role in course: 'teacher' or 'coordinator'")
+    role: str = Field(
+        "teacher", description="Role in course: 'teacher' or 'coordinator'"
+    )
 
 
 class CSVImportResult(BaseModel):

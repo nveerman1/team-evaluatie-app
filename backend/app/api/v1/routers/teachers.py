@@ -3,18 +3,19 @@ Teachers API endpoints for CRUD operations
 """
 
 from __future__ import annotations
-from typing import Optional, List, Literal
+from typing import Optional, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from fastapi import status as http_status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, func, and_
+from sqlalchemy import or_
 import csv
-from io import StringIO, TextIOWrapper
-import bcrypt
+from io import StringIO
+from passlib.context import CryptContext
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import User, TeacherCourse, Course
+from app.core.rbac import require_role
 from app.api.v1.schemas.teachers import (
     TeacherOut,
     TeacherCreate,
@@ -24,23 +25,25 @@ from app.api.v1.schemas.teachers import (
     CSVImportResult,
     CourseInfo,
 )
-from app.core.rbac import require_role
 
 router = APIRouter(prefix="/teachers", tags=["teachers"])
 
 SortKey = Literal["name", "email", "role"]
 Dir = Literal["asc", "desc"]
 
+# Password hashing context
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+
 
 def _hash_password(password: str) -> str:
-    """Hash a password using bcrypt"""
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    """Hash a password using argon2"""
+    return pwd_context.hash(password)
 
 
 @router.get("", response_model=TeacherListOut)
 def list_teachers(
     db: Session = Depends(get_db),
-    user: User = Depends(require_role(["admin", "teacher"])),
+    user: User = Depends(get_current_user),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     search: Optional[str] = Query(None, description="Search by name or email"),
@@ -53,9 +56,12 @@ def list_teachers(
 ):
     """
     List all teachers in the school with pagination and filters
-    
+
     Only accessible by admins and teachers
     """
+    # Check authorization
+    require_role(user, ["admin", "teacher"])
+
     # Base query: only teacher and admin roles, scoped to school
     query = db.query(User).filter(
         User.school_id == user.school_id, User.role.in_(["teacher", "admin"])
@@ -74,9 +80,9 @@ def list_teachers(
 
     # Apply status filter
     if status == "active":
-        query = query.filter(User.archived == False)
+        query = query.filter(not User.archived)
     elif status == "inactive":
-        query = query.filter(User.archived == True)
+        query = query.filter(User.archived)
 
     # Apply sorting
     sort_col = getattr(User, sort or "name", User.name)
@@ -101,7 +107,7 @@ def list_teachers(
             .join(TeacherCourse, TeacherCourse.course_id == Course.id)
             .filter(
                 TeacherCourse.teacher_id == teacher.id,
-                TeacherCourse.is_active == True,
+                TeacherCourse.is_active,
             )
             .all()
         )
@@ -122,22 +128,21 @@ def list_teachers(
             )
         )
 
-    return TeacherListOut(
-        teachers=teachers, total=total, page=page, per_page=per_page
-    )
+    return TeacherListOut(teachers=teachers, total=total, page=page, per_page=per_page)
 
 
 @router.post("", response_model=TeacherOut, status_code=http_status.HTTP_201_CREATED)
 def create_teacher(
     teacher_data: TeacherCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(require_role(["admin"])),
+    user: User = Depends(get_current_user),
 ):
     """
     Create a new teacher
-    
+
     Only accessible by admins
     """
+    require_role(user, ["admin"])
     # Check if email already exists in school
     existing = (
         db.query(User)
@@ -192,13 +197,14 @@ def create_teacher(
 def get_teacher(
     teacher_id: int,
     db: Session = Depends(get_db),
-    user: User = Depends(require_role(["admin", "teacher"])),
+    user: User = Depends(get_current_user),
 ):
     """
     Get a specific teacher by ID
-    
+
     Only accessible by admins and teachers
     """
+    require_role(user, ["admin", "teacher"])
     teacher = (
         db.query(User)
         .filter(
@@ -218,9 +224,7 @@ def get_teacher(
     teacher_courses = (
         db.query(Course)
         .join(TeacherCourse, TeacherCourse.course_id == Course.id)
-        .filter(
-            TeacherCourse.teacher_id == teacher.id, TeacherCourse.is_active == True
-        )
+        .filter(TeacherCourse.teacher_id == teacher.id, TeacherCourse.is_active)
         .all()
     )
 
@@ -244,13 +248,14 @@ def update_teacher(
     teacher_id: int,
     teacher_data: TeacherUpdate,
     db: Session = Depends(get_db),
-    user: User = Depends(require_role(["admin"])),
+    user: User = Depends(get_current_user),
 ):
     """
     Update a teacher
-    
+
     Only accessible by admins
     """
+    require_role(user, ["admin"])
     teacher = (
         db.query(User)
         .filter(
@@ -303,9 +308,7 @@ def update_teacher(
     teacher_courses = (
         db.query(Course)
         .join(TeacherCourse, TeacherCourse.course_id == Course.id)
-        .filter(
-            TeacherCourse.teacher_id == teacher.id, TeacherCourse.is_active == True
-        )
+        .filter(TeacherCourse.teacher_id == teacher.id, TeacherCourse.is_active)
         .all()
     )
 
@@ -328,13 +331,14 @@ def update_teacher(
 def delete_teacher(
     teacher_id: int,
     db: Session = Depends(get_db),
-    user: User = Depends(require_role(["admin"])),
+    user: User = Depends(get_current_user),
 ):
     """
     Archive (soft delete) a teacher
-    
+
     Only accessible by admins
     """
+    require_role(user, ["admin"])
     teacher = (
         db.query(User)
         .filter(
@@ -359,13 +363,14 @@ def assign_course_to_teacher(
     teacher_id: int,
     assignment: TeacherCourseAssignment,
     db: Session = Depends(get_db),
-    user: User = Depends(require_role(["admin"])),
+    user: User = Depends(get_current_user),
 ):
     """
     Assign a course to a teacher
-    
+
     Only accessible by admins
     """
+    require_role(user, ["admin"])
     # Verify teacher exists and is in same school
     teacher = (
         db.query(User)
@@ -425,18 +430,21 @@ def assign_course_to_teacher(
     return get_teacher(teacher_id, db, user)
 
 
-@router.delete("/{teacher_id}/courses/{course_id}", status_code=http_status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{teacher_id}/courses/{course_id}", status_code=http_status.HTTP_204_NO_CONTENT
+)
 def remove_course_from_teacher(
     teacher_id: int,
     course_id: int,
     db: Session = Depends(get_db),
-    user: User = Depends(require_role(["admin"])),
+    user: User = Depends(get_current_user),
 ):
     """
     Remove a course assignment from a teacher
-    
+
     Only accessible by admins
     """
+    require_role(user, ["admin"])
     # Verify teacher exists and is in same school
     teacher = (
         db.query(User)
@@ -478,23 +486,26 @@ def remove_course_from_teacher(
 async def import_teachers_csv(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    user: User = Depends(require_role(["admin"])),
+    user: User = Depends(get_current_user),
 ):
     """
     Import teachers from CSV file
-    
+
     Expected CSV format: name,email,role
     - role should be 'teacher' or 'admin'
-    
+
     Only accessible by admins
     """
+    require_role(user, ["admin"])
     if not file.filename or not file.filename.endswith(".csv"):
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
             detail="File must be a CSV",
         )
 
-    result = CSVImportResult(success_count=0, error_count=0, errors=[], created=[], updated=[])
+    result = CSVImportResult(
+        success_count=0, error_count=0, errors=[], created=[], updated=[]
+    )
 
     try:
         # Read CSV content
@@ -584,23 +595,26 @@ async def import_teachers_csv(
 @router.get("/export-csv", response_class=StreamingResponse)
 def export_teachers_csv(
     db: Session = Depends(get_db),
-    user: User = Depends(require_role(["admin", "teacher"])),
-    status: Optional[str] = Query(None, description="Filter by status: active, inactive"),
+    user: User = Depends(get_current_user),
+    status: Optional[str] = Query(
+        None, description="Filter by status: active, inactive"
+    ),
 ):
     """
     Export teachers to CSV
-    
+
     Only accessible by admins and teachers
     """
+    require_role(user, ["admin", "teacher"])
     # Get teachers
     query = db.query(User).filter(
         User.school_id == user.school_id, User.role.in_(["teacher", "admin"])
     )
 
     if status == "active":
-        query = query.filter(User.archived == False)
+        query = query.filter(not User.archived)
     elif status == "inactive":
-        query = query.filter(User.archived == True)
+        query = query.filter(User.archived)
 
     teachers = query.order_by(User.name).all()
 
@@ -610,13 +624,15 @@ def export_teachers_csv(
     writer.writerow(["id", "name", "email", "role", "status"])
 
     for teacher in teachers:
-        writer.writerow([
-            teacher.id,
-            teacher.name,
-            teacher.email,
-            teacher.role,
-            "active" if not teacher.archived else "inactive",
-        ])
+        writer.writerow(
+            [
+                teacher.id,
+                teacher.name,
+                teacher.email,
+                teacher.role,
+                "active" if not teacher.archived else "inactive",
+            ]
+        )
 
     output.seek(0)
     return StreamingResponse(
