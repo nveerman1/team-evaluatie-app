@@ -649,7 +649,6 @@ def add_student_to_course(
             school_id=user.school_id,
             course_id=course_id,
             name="Alle studenten",
-            description="Standaard groep voor alle studenten",
         )
         db.add(default_group)
         db.flush()
