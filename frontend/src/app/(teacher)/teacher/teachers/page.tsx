@@ -157,34 +157,38 @@ export default function TeachersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="mx-auto max-w-7xl">
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
               Docenten beheren
             </h1>
-            <p className="mt-1 text-gray-600">
+            <p className="text-gray-600 mt-1 text-sm">
               Beheer alle docenten van jouw school en hun gekoppelde vakken
             </p>
           </div>
-          <div className="flex gap-3">
-            <button className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <div className="flex gap-3 mt-4 md:mt-0">
+            <button className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
               Importeer CSV
             </button>
-            <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
               + Nieuwe docent
             </button>
           </div>
-        </div>
+        </header>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
         <div className="flex flex-col gap-6 lg:flex-row">
           {/* Left Column */}
           <div className="flex-1">
             {/* Stats */}
-            <div className="mb-6 grid grid-cols-3 gap-4">
-              <div className="rounded-lg bg-white p-4 shadow">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
                 <p className="text-sm font-medium text-gray-600">
                   Totaal docenten
                 </p>
@@ -192,13 +196,13 @@ export default function TeachersPage() {
                   {totalTeachers}
                 </p>
               </div>
-              <div className="rounded-lg bg-white p-4 shadow">
+              <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
                 <p className="text-sm font-medium text-gray-600">Actief</p>
                 <p className="mt-1 text-2xl font-bold text-green-600">
                   {activeTeachers}
                 </p>
               </div>
-              <div className="rounded-lg bg-white p-4 shadow">
+              <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
                 <p className="text-sm font-medium text-gray-600">Admins</p>
                 <p className="mt-1 text-2xl font-bold text-purple-600">
                   {adminTeachers}
@@ -207,7 +211,7 @@ export default function TeachersPage() {
             </div>
 
             {/* Filter Bar */}
-            <div className="mb-6 rounded-lg bg-white p-4 shadow">
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="relative">
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -243,7 +247,7 @@ export default function TeachersPage() {
             </div>
 
             {/* Teacher List */}
-            <div className="rounded-lg bg-white shadow">
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm">
               <div className="border-b border-gray-200 px-4 py-3">
                 <p className="text-sm font-medium text-gray-700">
                   {filteredTeachers.length} docenten gevonden
@@ -307,7 +311,7 @@ export default function TeachersPage() {
 
           {/* Right Column - Detail Sidebar */}
           <div className="lg:w-80">
-            <div className="sticky top-28 rounded-lg bg-white p-6 shadow">
+            <div className="sticky top-28 bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
               <h2 className="mb-4 text-lg font-semibold text-gray-900">
                 Docentdetails
               </h2>
@@ -438,6 +442,6 @@ export default function TeachersPage() {
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -66,20 +66,24 @@ export default function AnalyticsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="mx-auto max-w-7xl">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Analytics Dashboard
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+            Analytics
           </h1>
-          <p className="mt-1 text-gray-600">
+          <p className="text-gray-600 mt-1 text-sm">
             Bekijk voortgang en resultaten per vak
           </p>
-        </div>
+        </header>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
         {/* Course selector */}
-        <div className="mb-6">
+        <div>
           <CourseSelector
             selectedCourseId={selectedCourse?.id}
             onCourseChange={setSelectedCourse}
@@ -87,20 +91,23 @@ export default function AnalyticsPage() {
         </div>
 
         {!selectedCourse ? (
-          <div className="rounded-lg bg-yellow-50 p-6 text-center">
+          <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
+            <div className="rounded-lg bg-yellow-50 p-6 text-center">
             <p className="text-lg font-medium text-yellow-900">
               Selecteer een vak
             </p>
             <p className="mt-1 text-yellow-700">
               Kies eerst een vak om de analytics te bekijken
             </p>
+            </div>
           </div>
         ) : loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
           </div>
         ) : error ? (
-          <div className="rounded-lg bg-red-50 p-6">
+          <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
+            <div className="rounded-lg bg-red-50 p-6">
             <div className="flex">
               <div className="flex-shrink-0">
                 <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
@@ -124,13 +131,14 @@ export default function AnalyticsPage() {
                 </div>
               </div>
             </div>
+            </div>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Summary cards */}
             {analytics && (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-lg bg-white p-6 shadow">
+                <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-600">
@@ -158,7 +166,7 @@ export default function AnalyticsPage() {
                   </div>
                 </div>
 
-                <div className="rounded-lg bg-white p-6 shadow">
+                <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-600">
@@ -186,7 +194,7 @@ export default function AnalyticsPage() {
                   </div>
                 </div>
 
-                <div className="rounded-lg bg-white p-6 shadow">
+                <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-600">
@@ -222,7 +230,7 @@ export default function AnalyticsPage() {
                   </div>
                 </div>
 
-                <div className="rounded-lg bg-white p-6 shadow">
+                <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-600">
@@ -253,7 +261,7 @@ export default function AnalyticsPage() {
             )}
 
             {/* Learning Objectives Progress */}
-            <div className="rounded-lg bg-white p-6 shadow">
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
               <h2 className="mb-4 text-xl font-semibold text-gray-900">
                 Leerdoelen voortgang
               </h2>
@@ -310,7 +318,7 @@ export default function AnalyticsPage() {
             </div>
 
             {/* Evaluation Type Statistics */}
-            <div className="rounded-lg bg-white p-6 shadow">
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
               <h2 className="mb-4 text-xl font-semibold text-gray-900">
                 Evaluatie types
               </h2>
@@ -379,6 +387,6 @@ export default function AnalyticsPage() {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }

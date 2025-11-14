@@ -16,16 +16,22 @@ export default function OverviewPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-3xl font-bold mb-2">Overzicht</h1>
-        <p className="text-gray-600">
-          Gecombineerd overzicht van alle beoordelingen en evaluaties
-        </p>
-      </header>
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">Overzicht</h1>
+          <p className="text-gray-600 mt-1 text-sm">
+            Gecombineerd overzicht van alle beoordelingen en evaluaties
+          </p>
+        </header>
+      </div>
 
-      {/* Tabs Navigation */}
-      <div className="border-b border-gray-200">
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+        {/* Tabs Navigation */}
+        <div className="border-b border-gray-200">
         <nav className="flex gap-8" aria-label="Tabs">
           {tabs.map((tab) => (
             <button
@@ -45,10 +51,10 @@ export default function OverviewPage() {
             </button>
           ))}
         </nav>
-      </div>
+        </div>
 
-      {/* Tab Content */}
-      <div className="bg-white border rounded-2xl p-6">
+        {/* Tab Content */}
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
         {activeTab === "totaal" && <AllItemsTab />}
         
         {activeTab === "projecten" && (
@@ -73,7 +79,8 @@ export default function OverviewPage() {
         )}
         
         {activeTab === "leerdoelen" && <LearningObjectivesOverviewTab />}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
