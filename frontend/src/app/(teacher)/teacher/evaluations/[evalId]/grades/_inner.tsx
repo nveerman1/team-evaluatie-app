@@ -199,45 +199,76 @@ export default function GradesPageInner() {
     }
   }
 
+  const tabs = [
+    { id: "dashboard", label: "Dashboard", href: `/teacher/evaluations/${evalIdStr}/dashboard` },
+    { id: "omza", label: "OMZA", href: `/teacher/evaluations/${evalIdStr}/omza` },
+    { id: "grades", label: "Cijfers", href: `/teacher/evaluations/${evalIdStr}/grades` },
+    { id: "feedback", label: "Feedback", href: `/teacher/evaluations/${evalIdStr}/feedback` },
+    { id: "reflections", label: "Reflecties", href: `/teacher/evaluations/${evalIdStr}/reflections` },
+    { id: "settings", label: "Instellingen", href: `/teacher/evaluations/${evalIdStr}/settings` },
+  ];
+
   return (
-    <main className="max-w-7xl mx-auto p-6 space-y-6">
-      <header className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">
-          Cijfers — Evaluatie {evalIdStr}
-        </h1>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() =>
-              evalIdNum != null &&
-              router.push(`/teacher/evaluations/${evalIdStr}/dashboard`)
-            }
-            className="px-4 py-2 rounded-2xl border"
-            disabled={evalIdNum == null}
-          >
-            Terug naar dashboard
-          </button>
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+              Cijfers
+            </h1>
+            <p className="text-gray-600 mt-1 text-sm">
+              Beheer en publiceer eindcijfers voor deze evaluatie
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                await handleDraftSave();
+                alert("Concept opgeslagen!");
+              }}
+              className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Concept opslaan
+            </button>
+            <button
+              onClick={handlePublish}
+              disabled={saving || loading || evalIdNum == null}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
+            >
+              {saving ? "Publiceren…" : "Publiceer cijfers"}
+            </button>
+          </div>
+        </header>
+      </div>
 
-          <button
-            onClick={async () => {
-              await handleDraftSave();
-              alert("Concept opgeslagen!");
-            }}
-            className="px-4 py-2 rounded-2xl border"
-          >
-            Concept opslaan
-          </button>
-
-          <button
-            onClick={handlePublish}
-            disabled={saving || loading || evalIdNum == null}
-            className="px-4 py-2 rounded-2xl bg-black text-white disabled:opacity-60"
-          >
-            {saving ? "Publiceren…" : "Publiceer cijfers"}
-          </button>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        
+        {/* Tabs Navigation */}
+        <div className="border-b border-gray-200">
+          <nav className="flex gap-8" aria-label="Tabs">
+            {tabs.map((tab) => (
+              <Link
+                key={tab.id}
+                href={tab.href}
+                className={`
+                  py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                  ${
+                    tab.id === "grades"
+                      ? "border-black text-black"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }
+                `}
+                aria-current={tab.id === "grades" ? "page" : undefined}
+              >
+                {tab.label}
+              </Link>
+            ))}
+          </nav>
         </div>
-      </header>
 
-      <section className="bg-white p-4 rounded-2xl border space-y-4">
+        <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 space-y-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <input
@@ -433,8 +464,9 @@ export default function GradesPageInner() {
             </table>
           </div>
         )}
-      </section>
-    </main>
+        </section>
+      </div>
+    </>
   );
 
   function toggleSort(key: SortKey) {

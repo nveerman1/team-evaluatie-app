@@ -20,6 +20,15 @@ export default function ProjectAssessmentOverviewInner() {
   const [sortBy, setSortBy] = useState<"team" | "status" | "progress" | "updated">("team");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
+  const [activeTab, setActiveTab] = useState("overzicht");
+
+  const tabs = [
+    { id: "overzicht", label: "Overzicht", href: `/teacher/project-assessments/${assessmentId}/overview` },
+    { id: "scores", label: "Scores", href: `/teacher/project-assessments/${assessmentId}/scores` },
+    { id: "reflecties", label: "Reflecties", href: `/teacher/project-assessments/${assessmentId}/reflections` },
+    { id: "bewerken", label: "Bewerken", href: `/teacher/project-assessments/${assessmentId}/edit` },
+  ];
+
   useEffect(() => {
     async function loadData() {
       setLoading(true);
@@ -92,15 +101,6 @@ export default function ProjectAssessmentOverviewInner() {
     return sortOrder === "asc" ? comparison : -comparison;
   });
 
-  const [activeTab, setActiveTab] = useState("overzicht");
-
-  const tabs = [
-    { id: "overzicht", label: "Overzicht", href: `/teacher/project-assessments/${assessmentId}/overview` },
-    { id: "scores", label: "Scores", href: `/teacher/project-assessments/${assessmentId}/scores` },
-    { id: "reflecties", label: "Reflecties", href: `/teacher/project-assessments/${assessmentId}/reflections` },
-    { id: "bewerken", label: "Bewerken", href: `/teacher/project-assessments/${assessmentId}/edit` },
-  ];
-
   return (
     <>
       {/* Page Header */}
@@ -129,23 +129,31 @@ export default function ProjectAssessmentOverviewInner() {
         {/* Tabs Navigation */}
         <div className="border-b border-gray-200">
           <nav className="flex gap-8" aria-label="Tabs">
-            {tabs.map((tab) => (
-              <Link
-                key={tab.id}
-                href={tab.href}
-                className={`
-                  py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                  ${
-                    activeTab === tab.id
-                      ? "border-black text-black"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }
-                `}
-                aria-current={activeTab === tab.id ? "page" : undefined}
-              >
-                {tab.label}
-              </Link>
-            ))}
+            <Link
+              href={`/teacher/project-assessments/${assessmentId}/overview`}
+              className="py-4 px-1 border-b-2 font-medium text-sm transition-colors border-black text-black"
+              aria-current="page"
+            >
+              Overzicht
+            </Link>
+            <Link
+              href={`/teacher/project-assessments/${assessmentId}/scores`}
+              className="py-4 px-1 border-b-2 font-medium text-sm transition-colors border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            >
+              Scores
+            </Link>
+            <Link
+              href={`/teacher/project-assessments/${assessmentId}/reflections`}
+              className="py-4 px-1 border-b-2 font-medium text-sm transition-colors border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            >
+              Reflecties
+            </Link>
+            <Link
+              href={`/teacher/project-assessments/${assessmentId}/edit`}
+              className="py-4 px-1 border-b-2 font-medium text-sm transition-colors border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            >
+              Bewerken
+            </Link>
           </nav>
         </div>
 
