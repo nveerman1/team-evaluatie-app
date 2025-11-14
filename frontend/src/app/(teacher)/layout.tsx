@@ -40,6 +40,7 @@ export default function TeacherLayout({
                 <NavItem href="/teacher/project-assessments" label="Projectbeoordeling" />
                 <NavItem href="/teacher/evaluations" label="Evaluaties" />
                 <NavItem href="/teacher/competencies" label="Competentiemonitor" />
+                <NavItem href="/teacher/project-notes" label="Projectaantekeningen" />
               </div>
             </div>
 
