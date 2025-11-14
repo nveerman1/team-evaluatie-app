@@ -666,6 +666,7 @@ def add_student_to_course(
     if not existing_membership:
         # Add student to the group
         membership = GroupMember(
+            school_id=user.school_id,
             group_id=default_group.id,
             user_id=student.id,
             active=True,
