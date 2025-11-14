@@ -411,7 +411,7 @@ export default function ScoresOverviewInner() {
     <>
       {/* Page Header */}
       <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
-        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+        <header className="px-6 py-6 max-w-[1600px] mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
             <div className="mb-2">
               <Link
