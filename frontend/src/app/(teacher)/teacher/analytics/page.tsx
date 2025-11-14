@@ -3,36 +3,18 @@
 import { useState, useEffect } from "react";
 import { Course } from "@/dtos/course.dto";
 import CourseSelector from "@/components/CourseSelector";
-
-// Mock analytics data types
-type CourseAnalytics = {
-  total_students: number;
-  total_evaluations: number;
-  completed_evaluations: number;
-  average_score: number;
-  participation_rate: number;
-};
-
-type LearningObjectiveProgress = {
-  id: number;
-  code: string;
-  description: string;
-  coverage: number; // percentage
-  average_score: number;
-  student_count: number;
-};
-
-type EvaluationTypeStats = {
-  type: "peer" | "project" | "competency";
-  count: number;
-  avg_score: number;
-  completion_rate: number;
-};
+import {
+  analyticsService,
+  CourseSummary,
+  LearningObjectiveProgress,
+  EvaluationTypeStats,
+} from "@/services/analytics.service";
 
 export default function AnalyticsPage() {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(false);
-  const [analytics, setAnalytics] = useState<CourseAnalytics | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [analytics, setAnalytics] = useState<CourseSummary | null>(null);
   const [loProgress, setLoProgress] = useState<LearningObjectiveProgress[]>([]);
   const [evalStats, setEvalStats] = useState<EvaluationTypeStats[]>([]);
 
@@ -46,76 +28,26 @@ export default function AnalyticsPage() {
     if (!selectedCourse) return;
 
     setLoading(true);
+    setError(null);
     try {
-      // TODO: Replace with actual API calls
-      // Mock data for demonstration
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      setAnalytics({
-        total_students: 45,
-        total_evaluations: 12,
-        completed_evaluations: 8,
-        average_score: 7.6,
-        participation_rate: 82,
-      });
-
-      setLoProgress([
-        {
-          id: 1,
-          code: "A1.2",
-          description: "Analyseert probleemstelling systematisch",
-          coverage: 85,
-          average_score: 7.5,
-          student_count: 38,
-        },
-        {
-          id: 2,
-          code: "D2.1",
-          description: "Ontwerpt creatieve oplossingen",
-          coverage: 72,
-          average_score: 8.1,
-          student_count: 32,
-        },
-        {
-          id: 3,
-          code: "D2.3",
-          description: "Evalueert ontwerp iteratief",
-          coverage: 65,
-          average_score: 7.2,
-          student_count: 29,
-        },
-        {
-          id: 4,
-          code: "E1.1",
-          description: "Reflecteert op leerproces",
-          coverage: 91,
-          average_score: 8.4,
-          student_count: 41,
-        },
+      // Load all analytics data in parallel
+      const [summaryData, loData, evalStatsData] = await Promise.all([
+        analyticsService.getCourseSummary(selectedCourse.id),
+        analyticsService.getLearningObjectivesProgress(selectedCourse.id),
+        analyticsService.getEvaluationTypeStats(selectedCourse.id),
       ]);
 
-      setEvalStats([
-        {
-          type: "peer",
-          count: 6,
-          avg_score: 7.8,
-          completion_rate: 85,
-        },
-        {
-          type: "project",
-          count: 4,
-          avg_score: 7.4,
-          completion_rate: 78,
-        },
-        {
-          type: "competency",
-          count: 2,
-          avg_score: 7.9,
-          completion_rate: 88,
-        },
-      ]);
-    } catch (err) {
+      setAnalytics(summaryData);
+      setLoProgress(loData);
+      setEvalStats(evalStatsData);
+    } catch (err: any) {
       console.error("Failed to load analytics:", err);
+      const errorMsg = err?.response?.data?.detail || err?.message || "Kon analytics niet laden";
+      setError(errorMsg);
+      // Reset data on error
+      setAnalytics(null);
+      setLoProgress([]);
+      setEvalStats([]);
     } finally {
       setLoading(false);
     }
@@ -146,34 +78,6 @@ export default function AnalyticsPage() {
           </p>
         </div>
 
-        {/* Mock data notice */}
-        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
-          <div className="flex items-start gap-3">
-            <svg
-              className="h-5 w-5 text-blue-600 mt-0.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-blue-900">
-                Demo modus - Mock data
-              </p>
-              <p className="mt-1 text-sm text-blue-700">
-                Deze pagina gebruikt mock data voor UI testing. De backend Analytics API moet nog geïmplementeerd worden. 
-                Zie <code className="bg-blue-100 px-1 py-0.5 rounded">docs/IMPLEMENTATION_SUMMARY_MULTITENANT.md</code> voor API specificaties.
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* Course selector */}
         <div className="mb-6">
           <CourseSelector
@@ -194,6 +98,32 @@ export default function AnalyticsPage() {
         ) : loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
+          </div>
+        ) : error ? (
+          <div className="rounded-lg bg-red-50 p-6">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">
+                  Analytics kunnen niet worden geladen
+                </h3>
+                <div className="mt-2 text-sm text-red-700">
+                  <p>{error}</p>
+                </div>
+                <div className="mt-4">
+                  <button
+                    onClick={loadAnalytics}
+                    className="rounded-md bg-red-50 px-3 py-2 text-sm font-medium text-red-800 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 focus:ring-offset-red-50"
+                  >
+                    Opnieuw proberen
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="space-y-6">

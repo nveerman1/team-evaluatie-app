@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.api.v1.deps import get_db, get_current_user
-from app.infra.db.models import Course, User, TeacherCourse
+from app.infra.db.models import Course, User, TeacherCourse, Group, GroupMember
 from app.api.v1.schemas.courses import (
     CourseCreate,
     CourseUpdate,
@@ -17,6 +17,9 @@ from app.api.v1.schemas.courses import (
     CourseListOut,
     TeacherCourseCreate,
     TeacherCourseOut,
+    CourseStudentOut,
+    CourseStudentCreate,
+    BulkStudentTeamUpdate,
 )
 from app.core.rbac import require_role, scope_query_by_school, require_course_access
 from app.core.audit import log_create, log_update, log_delete
@@ -91,8 +94,26 @@ def list_courses(
     offset = (page - 1) * per_page
     courses = query.order_by(Course.name).offset(offset).limit(per_page).all()
     
+    # Enrich courses with teacher names
+    course_outputs = []
+    for course in courses:
+        course_dict = CourseOut.model_validate(course).model_dump()
+        
+        # Get teacher names for this course
+        teachers = (
+            db.query(User.name)
+            .join(TeacherCourse, TeacherCourse.teacher_id == User.id)
+            .filter(
+                TeacherCourse.course_id == course.id,
+                TeacherCourse.is_active == True,
+            )
+            .all()
+        )
+        course_dict["teacher_names"] = [t[0] for t in teachers]
+        course_outputs.append(CourseOut(**course_dict))
+    
     return CourseListOut(
-        courses=[CourseOut.model_validate(c) for c in courses],
+        courses=course_outputs,
         total=total,
         page=page,
         per_page=per_page,
@@ -191,7 +212,21 @@ def get_course(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
     
-    return CourseOut.model_validate(course)
+    # Get teacher names
+    teachers = (
+        db.query(User.name)
+        .join(TeacherCourse, TeacherCourse.teacher_id == User.id)
+        .filter(
+            TeacherCourse.course_id == course.id,
+            TeacherCourse.is_active == True,
+        )
+        .all()
+    )
+    
+    course_dict = CourseOut.model_validate(course).model_dump()
+    course_dict["teacher_names"] = [t[0] for t in teachers]
+    
+    return CourseOut(**course_dict)
 
 
 @router.patch("/{course_id}", response_model=CourseOut)
@@ -494,3 +529,221 @@ def remove_teacher_from_course(
     )
     
     db.commit()
+
+
+@router.get("/{course_id}/students", response_model=List[CourseStudentOut])
+def list_course_students(
+    course_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """
+    Get all students enrolled in a course
+    
+    Returns students with their class_name and team_number
+    """
+    require_course_access(db, user, course_id)
+    
+    # Verify course exists and is in the same school
+    course = (
+        db.query(Course)
+        .filter(Course.id == course_id, Course.school_id == user.school_id)
+        .first()
+    )
+    
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
+        )
+    
+    # Get students through groups
+    students = (
+        db.query(User)
+        .join(GroupMember, GroupMember.user_id == User.id)
+        .join(Group, Group.id == GroupMember.group_id)
+        .filter(
+            Group.course_id == course_id,
+            User.school_id == user.school_id,
+            User.role == "student",
+            GroupMember.active == True,
+        )
+        .distinct()
+        .order_by(User.class_name, User.name)
+        .all()
+    )
+    
+    return [CourseStudentOut.model_validate(s) for s in students]
+
+
+@router.post("/{course_id}/students", response_model=CourseStudentOut, status_code=status.HTTP_201_CREATED)
+def add_student_to_course(
+    course_id: int,
+    payload: CourseStudentCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    request: Request = None,
+):
+    """
+    Add/enroll a student to a course
+    
+    Creates a new user if email doesn't exist, or updates existing user.
+    Enrolls the student in a default group for the course.
+    """
+    require_role(user, ["admin", "teacher"])
+    require_course_access(db, user, course_id)
+    
+    # Verify course exists
+    course = (
+        db.query(Course)
+        .filter(Course.id == course_id, Course.school_id == user.school_id)
+        .first()
+    )
+    
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
+        )
+    
+    # Check if user with this email already exists in the school
+    student = (
+        db.query(User)
+        .filter(
+            User.email == payload.email,
+            User.school_id == user.school_id,
+        )
+        .first()
+    )
+    
+    if student:
+        # Update existing student
+        student.name = payload.name
+        student.class_name = payload.class_name
+        student.team_number = payload.team_number
+    else:
+        # Create new student
+        student = User(
+            school_id=user.school_id,
+            email=payload.email,
+            name=payload.name,
+            role="student",
+            class_name=payload.class_name,
+            team_number=payload.team_number,
+            password_hash=None,  # No password for students initially
+        )
+        db.add(student)
+        db.flush()  # Get the student ID
+    
+    # Enroll student in a course group (find or create default group)
+    # Find or create a default group for this course
+    default_group = (
+        db.query(Group)
+        .filter(
+            Group.course_id == course_id,
+            Group.name == "Alle studenten",
+        )
+        .first()
+    )
+    
+    if not default_group:
+        default_group = Group(
+            school_id=user.school_id,
+            course_id=course_id,
+            name="Alle studenten",
+        )
+        db.add(default_group)
+        db.flush()
+    
+    # Check if student is already a member
+    existing_membership = (
+        db.query(GroupMember)
+        .filter(
+            GroupMember.group_id == default_group.id,
+            GroupMember.user_id == student.id,
+        )
+        .first()
+    )
+    
+    if not existing_membership:
+        # Add student to the group
+        membership = GroupMember(
+            school_id=user.school_id,
+            group_id=default_group.id,
+            user_id=student.id,
+            active=True,
+        )
+        db.add(membership)
+    
+    db.commit()
+    db.refresh(student)
+    
+    # Log the action
+    log_create(
+        db,
+        request,
+        user,
+        "user",
+        student.id,
+        f"Added student {student.name} to course {course.name}",
+    )
+    
+    return CourseStudentOut.model_validate(student)
+
+
+@router.patch("/{course_id}/students/bulk-update", status_code=status.HTTP_200_OK)
+def bulk_update_student_teams(
+    course_id: int,
+    payload: BulkStudentTeamUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    request: Request = None,
+):
+    """
+    Bulk update team assignments for students in a course
+    
+    Only teachers and admins can update team assignments
+    """
+    require_role(user, ["admin", "teacher"])
+    require_course_access(db, user, course_id)
+    
+    # Verify course exists
+    course = (
+        db.query(Course)
+        .filter(Course.id == course_id, Course.school_id == user.school_id)
+        .first()
+    )
+    
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
+        )
+    
+    # Update each student
+    updated_count = 0
+    for update in payload.updates:
+        student = (
+            db.query(User)
+            .filter(
+                User.id == update.student_id,
+                User.school_id == user.school_id,
+                User.role == "student",
+            )
+            .first()
+        )
+        
+        if student:
+            student.team_number = update.team_number
+            updated_count += 1
+    
+    # Log the action
+    log_update(
+        db=db,
+        user=user,
+        entity_type="course_students",
+        entity_id=course_id,
+        details={"updated_count": updated_count, "updates": len(payload.updates)},
+        request=request,
+    )
+    
+    db.commit()
+    
+    return {"message": f"Updated {updated_count} students", "updated_count": updated_count}

@@ -7,6 +7,8 @@ import {
   CourseListResponse,
   TeacherCourse,
   TeacherCourseCreate,
+  CourseStudent,
+  StudentTeamUpdate,
 } from "@/dtos/course.dto";
 
 export const courseService = {
@@ -93,5 +95,44 @@ export const courseService = {
    */
   async removeTeacher(courseId: number, teacherId: number): Promise<void> {
     await api.delete(`/courses/${courseId}/teachers/${teacherId}`);
+  },
+
+  /**
+   * Get students enrolled in a course
+   */
+  async getCourseStudents(courseId: number): Promise<CourseStudent[]> {
+    const response = await api.get<CourseStudent[]>(
+      `/courses/${courseId}/students`
+    );
+    return response.data;
+  },
+
+  /**
+   * Add a student to a course
+   */
+  async addStudentToCourse(
+    courseId: number,
+    student: {
+      name: string;
+      email: string;
+      class_name?: string;
+      team_number?: number | null;
+    }
+  ): Promise<CourseStudent> {
+    const response = await api.post<CourseStudent>(
+      `/courses/${courseId}/students`,
+      student
+    );
+    return response.data;
+  },
+
+  /**
+   * Bulk update student team assignments
+   */
+  async bulkUpdateStudentTeams(
+    courseId: number,
+    updates: StudentTeamUpdate[]
+  ): Promise<void> {
+    await api.patch(`/courses/${courseId}/students/bulk-update`, { updates });
   },
 };

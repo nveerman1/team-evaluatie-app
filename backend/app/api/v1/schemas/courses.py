@@ -47,6 +47,7 @@ class CourseOut(CourseBase):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    teacher_names: Optional[List[str]] = None
 
     class Config:
         from_attributes = True
@@ -81,3 +82,38 @@ class TeacherCourseOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class CourseStudentOut(BaseModel):
+    """Schema for student in a course"""
+    
+    id: int
+    name: str
+    email: str
+    class_name: Optional[str] = None
+    team_number: Optional[int] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class CourseStudentCreate(BaseModel):
+    """Schema for adding a student to a course"""
+    
+    name: str = Field(..., min_length=1, max_length=200)
+    email: str = Field(..., min_length=1, max_length=200)
+    class_name: Optional[str] = Field(None, max_length=50)
+    team_number: Optional[int] = None
+
+
+class StudentTeamUpdate(BaseModel):
+    """Schema for updating a single student's team"""
+    
+    student_id: int
+    team_number: Optional[int] = None
+
+
+class BulkStudentTeamUpdate(BaseModel):
+    """Schema for bulk updating student team assignments"""
+    
+    updates: List[StudentTeamUpdate]

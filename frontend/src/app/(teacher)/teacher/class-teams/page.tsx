@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Course } from "@/dtos/course.dto";
 import { useAuth } from "@/hooks/useAuth";
 import CourseSelector from "@/components/CourseSelector";
+import { courseService } from "@/services/course.service";
 
 // ============ Types ============
 
@@ -27,35 +28,6 @@ const CLASS_COLORS = [
   "bg-rose-100 text-rose-800",
 ];
 
-// ============ Mock Data ============
-
-const MOCK_STUDENTS: StudentRow[] = [
-  { id: 1, name: "Emma de Vries", email: "emma.devries@school.nl", class_name: "5V1", team_number: 1 },
-  { id: 2, name: "Liam Jansen", email: "liam.jansen@school.nl", class_name: "5V1", team_number: 1 },
-  { id: 3, name: "Sophie Bakker", email: "sophie.bakker@school.nl", class_name: "5V1", team_number: 2 },
-  { id: 4, name: "Noah van Dijk", email: "noah.vandijk@school.nl", class_name: "5V2", team_number: 2 },
-  { id: 5, name: "Lisa Vermeulen", email: "lisa.vermeulen@school.nl", class_name: "5V2", team_number: 3 },
-  { id: 6, name: "Tom de Jong", email: "tom.dejong@school.nl", class_name: "5V2", team_number: 3 },
-  { id: 7, name: "Anna Smit", email: "anna.smit@school.nl", class_name: "5V1", team_number: null },
-  { id: 8, name: "Max Peters", email: "max.peters@school.nl", class_name: "5V1", team_number: null },
-  { id: 9, name: "Sarah Visser", email: "sarah.visser@school.nl", class_name: "5V2", team_number: null },
-  { id: 10, name: "Lucas Berg", email: "lucas.berg@school.nl", class_name: "5V2", team_number: 1 },
-];
-
-const MOCK_COURSE: Course = {
-  id: 1,
-  school_id: 1,
-  name: "Onderzoek & Ontwikkelen",
-  code: "O&O",
-  level: "VWO",
-  year: 5,
-  period: "Jaar",
-  description: "Project-based learning course",
-  is_active: true,
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-};
-
 // ============ Main Component ============
 
 export default function ClassTeamsPage() {
@@ -63,8 +35,9 @@ export default function ClassTeamsPage() {
   const courseIdParam = searchParams?.get("course_id");
   const { user, isAdmin, isTeacher, loading: authLoading } = useAuth();
 
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(courseIdParam ? MOCK_COURSE : null);
-  const [students, setStudents] = useState<StudentRow[]>(MOCK_STUDENTS);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [students, setStudents] = useState<StudentRow[]>([]);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
   const [showUnassignedOnly, setShowUnassignedOnly] = useState(false);
@@ -73,6 +46,23 @@ export default function ClassTeamsPage() {
   const [alertType, setAlertType] = useState<"success" | "error" | "info">("info");
   const [editingStudentId, setEditingStudentId] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState<string>("");
+  const [sortColumn, setSortColumn] = useState<"name" | "email" | "class_name" | "team_number" | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<StudentRow | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+
+  // Team colors for visual distinction
+  const TEAM_COLORS = [
+    "bg-blue-100 text-blue-800 border-blue-300",
+    "bg-green-100 text-green-800 border-green-300",
+    "bg-purple-100 text-purple-800 border-purple-300",
+    "bg-pink-100 text-pink-800 border-pink-300",
+    "bg-yellow-100 text-yellow-800 border-yellow-300",
+    "bg-indigo-100 text-indigo-800 border-indigo-300",
+    "bg-red-100 text-red-800 border-red-300",
+    "bg-teal-100 text-teal-800 border-teal-300",
+  ];
 
   // Extract unique classes
   const allClasses = useMemo(() => {
@@ -82,6 +72,57 @@ export default function ClassTeamsPage() {
       color: CLASS_COLORS[idx % CLASS_COLORS.length],
     }));
   }, [students]);
+
+  // Load course from URL parameter if present
+  useEffect(() => {
+    const loadCourseFromUrl = async () => {
+      if (!courseIdParam) return;
+      
+      try {
+        const courseId = parseInt(courseIdParam, 10);
+        if (isNaN(courseId)) return;
+        
+        const course = await courseService.getCourse(courseId);
+        setSelectedCourse(course);
+      } catch (error) {
+        console.error("Failed to load course from URL:", error);
+        showAlert("Kon vak niet laden", "error");
+      }
+    };
+
+    loadCourseFromUrl();
+  }, [courseIdParam]);
+
+  // Load students when course is selected
+  useEffect(() => {
+    const loadStudents = async () => {
+      if (!selectedCourse) {
+        setStudents([]);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const courseStudents = await courseService.getCourseStudents(selectedCourse.id);
+        setStudents(
+          courseStudents.map((s) => ({
+            id: s.id,
+            name: s.name,
+            email: s.email,
+            class_name: s.class_name || "",
+            team_number: s.team_number,
+          }))
+        );
+      } catch (error) {
+        console.error("Failed to load students:", error);
+        showAlert("Kon studenten niet laden", "error");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStudents();
+  }, [selectedCourse]);
 
   // Auto-select all classes on mount
   useEffect(() => {
@@ -108,9 +149,9 @@ export default function ClassTeamsPage() {
     }
   }, [authLoading, isAdmin, isTeacher]);
 
-  // Filter students based on search, class, and unassigned status
+  // Filter and sort students
   const filteredStudents = useMemo(() => {
-    return students.filter((student) => {
+    let filtered = students.filter((student) => {
       // Search filter
       const matchesSearch =
         searchQuery === "" ||
@@ -126,7 +167,38 @@ export default function ClassTeamsPage() {
 
       return matchesSearch && matchesClass && matchesUnassigned;
     });
-  }, [students, searchQuery, selectedClasses, showUnassignedOnly]);
+
+    // Apply sorting
+    if (sortColumn) {
+      filtered = [...filtered].sort((a, b) => {
+        let aVal = a[sortColumn];
+        let bVal = b[sortColumn];
+
+        // Handle null values for team_number
+        if (sortColumn === "team_number") {
+          if (aVal === null && bVal === null) return 0;
+          if (aVal === null) return sortDirection === "asc" ? 1 : -1;
+          if (bVal === null) return sortDirection === "asc" ? -1 : 1;
+        }
+
+        // String comparison
+        if (typeof aVal === "string" && typeof bVal === "string") {
+          return sortDirection === "asc" 
+            ? aVal.localeCompare(bVal)
+            : bVal.localeCompare(aVal);
+        }
+
+        // Number comparison
+        if (typeof aVal === "number" && typeof bVal === "number") {
+          return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+        }
+
+        return 0;
+      });
+    }
+
+    return filtered;
+  }, [students, searchQuery, selectedClasses, showUnassignedOnly, sortColumn, sortDirection]);
 
   const showAlert = (message: string, type: "success" | "error" | "info" = "info") => {
     setAlertMessage(message);
@@ -168,13 +240,56 @@ export default function ClassTeamsPage() {
     setEditingValue("");
   };
 
-  const handleSaveChanges = () => {
-    // TODO: Implement backend API call
-    // await courseService.bulkUpdateStudentTeams(courseId, students);
+  const handleSaveChanges = async () => {
+    if (!selectedCourse) return;
     
-    showAlert("Wijzigingen automatisch opgeslagen", "success");
-    setStudents((prev) => prev.map((s) => ({ ...s, isModified: false })));
-    setHasUnsavedChanges(false);
+    try {
+      const modifiedStudents = students.filter((s) => s.isModified);
+      if (modifiedStudents.length === 0) return;
+
+      const updates = modifiedStudents.map((s) => ({
+        student_id: s.id,
+        team_number: s.team_number,
+      }));
+
+      await courseService.bulkUpdateStudentTeams(selectedCourse.id, updates);
+      
+      showAlert("Wijzigingen automatisch opgeslagen", "success");
+      setStudents((prev) => prev.map((s) => ({ ...s, isModified: false })));
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error("Failed to save changes:", error);
+      showAlert("Kon wijzigingen niet opslaan", "error");
+    }
+  };
+
+  const handleCreateTeams = () => {
+    if (students.length === 0) {
+      showAlert("Geen studenten om te verdelen", "info");
+      return;
+    }
+
+    if (!confirm("Weet je zeker dat je alle studenten opnieuw wilt verdelen in teams van 4? Bestaande teams worden overschreven.")) {
+      return;
+    }
+
+    // Shuffle students randomly
+    const shuffled = [...students].sort(() => Math.random() - 0.5);
+    
+    // Calculate number of teams needed
+    const teamSize = 4;
+    const numTeams = Math.ceil(shuffled.length / teamSize);
+    
+    // Assign team numbers
+    const updated = shuffled.map((student, idx) => ({
+      ...student,
+      team_number: (idx % numTeams) + 1,
+      isModified: true,
+    }));
+
+    setStudents(updated);
+    setHasUnsavedChanges(true);
+    showAlert(`${updated.length} studenten verdeeld over ${numTeams} teams`, "success");
   };
 
   const handleAutoBalance = () => {
@@ -205,6 +320,102 @@ export default function ClassTeamsPage() {
     setStudents(updated);
     setHasUnsavedChanges(true);
     showAlert(`${unassigned.length} studenten verdeeld over ${teamNumbers.length} teams`, "success");
+  };
+
+  const handleOpenEditModal = (student: StudentRow) => {
+    setEditingStudent({ ...student });
+    setShowEditModal(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setEditingStudent(null);
+  };
+
+  const handleSaveEditModal = () => {
+    if (!editingStudent) return;
+
+    setStudents((prev) =>
+      prev.map((s) =>
+        s.id === editingStudent.id
+          ? { ...editingStudent, isModified: true }
+          : s
+      )
+    );
+    setHasUnsavedChanges(true);
+    setShowEditModal(false);
+    setEditingStudent(null);
+    showAlert("Student gewijzigd", "success");
+  };
+
+  const handleOpenAddModal = () => {
+    setEditingStudent({
+      id: Date.now(), // Temporary ID
+      name: "",
+      email: "",
+      class_name: "",
+      team_number: null,
+      isModified: true,
+    });
+    setShowAddModal(true);
+  };
+
+  const handleCloseAddModal = () => {
+    setShowAddModal(false);
+    setEditingStudent(null);
+  };
+
+  const handleSaveAddModal = async () => {
+    if (!editingStudent || !selectedCourse) return;
+
+    if (!editingStudent.name || !editingStudent.email) {
+      showAlert("Naam en email zijn verplicht", "error");
+      return;
+    }
+
+    try {
+      // Call API to add student to course
+      const newStudent = await courseService.addStudentToCourse(selectedCourse.id, {
+        name: editingStudent.name,
+        email: editingStudent.email,
+        class_name: editingStudent.class_name || undefined,
+        team_number: editingStudent.team_number,
+      });
+
+      // Add to local state
+      setStudents((prev) => [...prev, newStudent]);
+      setShowAddModal(false);
+      setEditingStudent(null);
+      showAlert("Student succesvol toegevoegd aan vak", "success");
+    } catch (error: any) {
+      console.error("Failed to add student:", error);
+      const errorMsg = error?.response?.data?.detail || "Kon student niet toevoegen";
+      showAlert(errorMsg, "error");
+    }
+  };
+
+  const handleDeleteStudent = (studentId: number) => {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return;
+
+    if (!confirm(`Weet je zeker dat je ${student.name} wilt verwijderen uit dit vak?`)) {
+      return;
+    }
+
+    // Remove student from local state
+    setStudents((prev) => prev.filter((s) => s.id !== studentId));
+    showAlert("Student verwijderd (let op: deze wijziging is alleen lokaal)", "info");
+  };
+
+  const handleSort = (column: "name" | "email" | "class_name" | "team_number") => {
+    if (sortColumn === column) {
+      // Toggle direction if same column
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // New column, default to ascending
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
   };
 
   const handleClearAll = () => {
@@ -341,15 +552,6 @@ export default function ClassTeamsPage() {
           </div>
         </div>
 
-        {/* Demo Notice */}
-        <div className="mb-6 rounded-lg bg-blue-50 p-4">
-          <p className="text-sm text-blue-800">
-            <strong>Demo modus:</strong> Deze pagina gebruikt mock data. Verbind met{" "}
-            <code className="rounded bg-blue-100 px-1">GET /api/v1/courses/{"{id}"}/students</code> en{" "}
-            <code className="rounded bg-blue-100 px-1">PATCH /api/v1/courses/{"{id}"}/students/bulk-update</code>
-          </p>
-        </div>
-
         {/* Course Selector for Teachers (no courseId in URL) */}
         {isTeacher && !courseIdParam && (
           <div className="mb-6 rounded-lg bg-white p-4 shadow">
@@ -416,6 +618,20 @@ export default function ClassTeamsPage() {
               {/* Row 2: Actions */}
               <div className="flex flex-wrap items-center gap-2">
                 <button
+                  onClick={handleOpenAddModal}
+                  className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                >
+                  ➕ Leerling toevoegen
+                </button>
+
+                <button
+                  onClick={handleCreateTeams}
+                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                >
+                  ✨ Teams maken
+                </button>
+
+                <button
                   onClick={handleAutoBalance}
                   className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                 >
@@ -458,17 +674,52 @@ export default function ClassTeamsPage() {
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                        Naam
+                      <th 
+                        onClick={() => handleSort("name")}
+                        className="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:bg-gray-100"
+                      >
+                        <div className="flex items-center gap-1">
+                          Naam
+                          {sortColumn === "name" && (
+                            <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        onClick={() => handleSort("email")}
+                        className="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:bg-gray-100"
+                      >
+                        <div className="flex items-center gap-1">
+                          Email
+                          {sortColumn === "email" && (
+                            <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        onClick={() => handleSort("class_name")}
+                        className="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:bg-gray-100"
+                      >
+                        <div className="flex items-center gap-1">
+                          Klas
+                          {sortColumn === "class_name" && (
+                            <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        onClick={() => handleSort("team_number")}
+                        className="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 hover:bg-gray-100"
+                      >
+                        <div className="flex items-center gap-1">
+                          Teamnr
+                          {sortColumn === "team_number" && (
+                            <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </div>
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                        Email
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                        Klas
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                        Teamnr
+                        Acties
                       </th>
                     </tr>
                   </thead>
@@ -503,8 +754,24 @@ export default function ClassTeamsPage() {
                                   value={editingValue}
                                   onChange={(e) => setEditingValue(e.target.value)}
                                   onKeyDown={(e) => {
-                                    if (e.key === "Enter") handleSaveEdit(student.id);
-                                    if (e.key === "Escape") handleCancelEdit();
+                                    if (e.key === "Enter") {
+                                      handleSaveEdit(student.id);
+                                    }
+                                    if (e.key === "Escape") {
+                                      handleCancelEdit();
+                                    }
+                                    if (e.key === "Tab") {
+                                      e.preventDefault();
+                                      handleSaveEdit(student.id);
+                                      // Find next student in filtered list
+                                      const currentIndex = filteredStudents.findIndex(s => s.id === student.id);
+                                      if (currentIndex < filteredStudents.length - 1) {
+                                        const nextStudent = filteredStudents[currentIndex + 1];
+                                        setTimeout(() => {
+                                          handleStartEdit(nextStudent.id, nextStudent.team_number);
+                                        }, 50);
+                                      }
+                                    }
                                   }}
                                   className="w-20 rounded border border-gray-300 px-2 py-1 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                   autoFocus
@@ -525,13 +792,42 @@ export default function ClassTeamsPage() {
                                 </button>
                               </div>
                             ) : (
-                              <button
-                                onClick={() => handleStartEdit(student.id, student.team_number)}
-                                className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                              >
-                                {student.team_number !== null ? `Team ${student.team_number}` : "- (klik om toe te wijzen)"}
-                              </button>
+                              student.team_number !== null ? (
+                                <button
+                                  onClick={() => handleStartEdit(student.id, student.team_number)}
+                                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold cursor-pointer hover:opacity-80 ${
+                                    TEAM_COLORS[(student.team_number - 1) % TEAM_COLORS.length]
+                                  }`}
+                                >
+                                  Team {student.team_number}
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleStartEdit(student.id, student.team_number)}
+                                  className="text-gray-400 hover:text-gray-600"
+                                >
+                                  - (klik om toe te wijzen)
+                                </button>
+                              )
                             )}
+                          </td>
+                          <td className="whitespace-nowrap px-6 py-4 text-sm">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleOpenEditModal(student)}
+                                className="rounded bg-blue-600 px-2 py-1 text-white hover:bg-blue-700"
+                                title="Bewerken"
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                onClick={() => handleDeleteStudent(student.id)}
+                                className="rounded bg-red-600 px-2 py-1 text-white hover:bg-red-700"
+                                title="Verwijderen"
+                              >
+                                🗑️
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -549,6 +845,144 @@ export default function ClassTeamsPage() {
               </div>
             </div>
           </>
+        )}
+
+        {/* Edit Student Modal */}
+        {showEditModal && editingStudent && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+              <h2 className="mb-4 text-xl font-bold text-gray-900">Leerling bewerken</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Naam *</label>
+                  <input
+                    type="text"
+                    value={editingStudent.name}
+                    onChange={(e) => setEditingStudent({ ...editingStudent, name: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Email *</label>
+                  <input
+                    type="email"
+                    value={editingStudent.email}
+                    onChange={(e) => setEditingStudent({ ...editingStudent, email: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Klas</label>
+                  <input
+                    type="text"
+                    value={editingStudent.class_name}
+                    onChange={(e) => setEditingStudent({ ...editingStudent, class_name: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Teamnummer</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editingStudent.team_number || ""}
+                    onChange={(e) => setEditingStudent({ ...editingStudent, team_number: e.target.value ? parseInt(e.target.value) : null })}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-2">
+                <button
+                  onClick={handleCloseEditModal}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Annuleren
+                </button>
+                <button
+                  onClick={handleSaveEditModal}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Opslaan
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Student Modal */}
+        {showAddModal && editingStudent && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+              <h2 className="mb-4 text-xl font-bold text-gray-900">Leerling toevoegen</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Naam *</label>
+                  <input
+                    type="text"
+                    value={editingStudent.name}
+                    onChange={(e) => setEditingStudent({ ...editingStudent, name: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="Volledige naam"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Email *</label>
+                  <input
+                    type="email"
+                    value={editingStudent.email}
+                    onChange={(e) => setEditingStudent({ ...editingStudent, email: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="email@school.nl"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Klas</label>
+                  <input
+                    type="text"
+                    value={editingStudent.class_name}
+                    onChange={(e) => setEditingStudent({ ...editingStudent, class_name: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="bijv. 5V1"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Teamnummer</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editingStudent.team_number || ""}
+                    onChange={(e) => setEditingStudent({ ...editingStudent, team_number: e.target.value ? parseInt(e.target.value) : null })}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="Optioneel"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-2">
+                <button
+                  onClick={handleCloseAddModal}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Annuleren
+                </button>
+                <button
+                  onClick={handleSaveAddModal}
+                  className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                >
+                  Toevoegen
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
