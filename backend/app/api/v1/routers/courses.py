@@ -628,7 +628,7 @@ def add_student_to_course(
             role="student",
             class_name=payload.class_name,
             team_number=payload.team_number,
-            hashed_password="",  # No password for students initially
+            password_hash=None,  # No password for students initially
         )
         db.add(student)
         db.flush()  # Get the student ID
