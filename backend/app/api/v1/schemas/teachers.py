@@ -5,7 +5,7 @@ Schemas for Teachers API
 from __future__ import annotations
 from typing import Optional, List
 from datetime import datetime
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, ConfigDict
 
 
 class TeacherBase(BaseModel):
@@ -34,18 +34,19 @@ class TeacherUpdate(BaseModel):
 class CourseInfo(BaseModel):
     """Minimal course info for teacher details"""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str
     code: Optional[str] = None
     level: Optional[str] = None
     year: Optional[int] = None
 
-    class Config:
-        from_attributes = True
-
 
 class TeacherOut(TeacherBase):
     """Schema for teacher output"""
+
+    model_config = ConfigDict(from_attributes=True)
 
     id: int
     school_id: int
@@ -53,9 +54,6 @@ class TeacherOut(TeacherBase):
     courses: List[CourseInfo] = []
     created_at: Optional[datetime] = None
     last_login: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
 
 
 class TeacherListOut(BaseModel):
