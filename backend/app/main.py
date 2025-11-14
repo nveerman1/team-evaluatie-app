@@ -27,6 +27,7 @@ from app.api.v1.routers import auth as auth_router
 from app.api.v1.routers import courses as courses_router
 from app.api.v1.routers import users as users_router
 from app.api.v1.routers import analytics as analytics_router
+from app.api.v1.routers import teachers as teachers_router
 from app.integrations.somtoday import router as somtoday_router
 
 
@@ -73,5 +74,6 @@ api_v1.include_router(auth_router.router)
 api_v1.include_router(courses_router.router)
 api_v1.include_router(users_router.router)
 api_v1.include_router(analytics_router.router)
+api_v1.include_router(teachers_router.router)
 api_v1.include_router(somtoday_router.router)
 app.include_router(api_v1)
