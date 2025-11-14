@@ -18,6 +18,7 @@ export default function TeacherLayout({
         { href: "/teacher", label: "Dashboard" },
         { href: "/teacher/overview", label: "Overzicht" },
         { href: "/teacher/courses", label: "Vakken beheren" },
+        { href: "/teacher/teachers", label: "Docenten beheren" },
         { href: "/teacher/project-assessments", label: "Projectbeoordeling" },
         { href: "/teacher/evaluations", label: "Evaluaties" },
         { href: "/teacher/competencies", label: "Competentiemonitor" },
