@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import api from "@/lib/api";
 import { useNumericEvalId } from "@/lib/id";
 
@@ -100,41 +101,67 @@ export default function ReflectionsPageInner() {
     setExpanded(map);
   };
 
-  return (
-    <main className="max-w-5xl mx-auto p-6 space-y-6">
-      <header className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Reflecties</h1>
-        <div className="flex gap-2">
-          {evalIdNum != null ? (
-            <>
-              <a
-                href={`/api/v1/evaluations/${evalIdStr}/reflections/export.csv`}
-                className="px-3 py-2 rounded-xl border"
-              >
-                Export CSV
-              </a>
-              <a
-                href={`/teacher/evaluations/${evalIdStr}/dashboard`}
-                className="px-3 py-2 rounded-xl border"
-              >
-                Terug naar dashboard
-              </a>
-            </>
-          ) : (
-            <>
-              <span className="px-3 py-2 rounded-xl border opacity-60">
-                Export CSV
-              </span>
-              <span className="px-3 py-2 rounded-xl border opacity-60">
-                Terug naar dashboard
-              </span>
-            </>
-          )}
-        </div>
-      </header>
+  const tabs = [
+    { id: "dashboard", label: "Dashboard", href: `/teacher/evaluations/${evalIdStr}/dashboard` },
+    { id: "omza", label: "OMZA", href: `/teacher/evaluations/${evalIdStr}/omza` },
+    { id: "grades", label: "Cijfers", href: `/teacher/evaluations/${evalIdStr}/grades` },
+    { id: "feedback", label: "Feedback", href: `/teacher/evaluations/${evalIdStr}/feedback` },
+    { id: "reflections", label: "Reflecties", href: `/teacher/evaluations/${evalIdStr}/reflections` },
+    { id: "settings", label: "Instellingen", href: `/teacher/evaluations/${evalIdStr}/settings` },
+  ];
 
-      {/* Filters */}
-      <div className="sticky top-0 bg-white/80 backdrop-blur border rounded-2xl p-3 flex flex-wrap items-center gap-3">
+  return (
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+              Reflecties
+            </h1>
+            <p className="text-gray-600 mt-1 text-sm">
+              Bekijk en exporteer studentreflecties
+            </p>
+          </div>
+          {evalIdNum != null && (
+            <a
+              href={`/api/v1/evaluations/${evalIdStr}/reflections/export.csv`}
+              className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Export CSV
+            </a>
+          )}
+        </header>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        
+        {/* Tabs Navigation */}
+        <div className="border-b border-gray-200">
+          <nav className="flex gap-8" aria-label="Tabs">
+            {tabs.map((tab) => (
+              <Link
+                key={tab.id}
+                href={tab.href}
+                className={`
+                  py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                  ${
+                    tab.id === "reflections"
+                      ? "border-black text-black"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }
+                `}
+                aria-current={tab.id === "reflections" ? "page" : undefined}
+              >
+                {tab.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+
+        {/* Filters */}
+        <div className="sticky top-0 bg-white/80 backdrop-blur border rounded-2xl p-3 flex flex-wrap items-center gap-3">
         <input
           className="px-3 py-2 border rounded-lg w-80"
           placeholder="Zoek op student/tekst…"
@@ -297,11 +324,12 @@ export default function ReflectionsPageInner() {
         </>
       )}
 
-      {evalIdNum == null && (
-        <p className="text-sm text-gray-500">
-          Geen geldige evaluatie geselecteerd.
-        </p>
-      )}
-    </main>
+        {evalIdNum == null && (
+          <p className="text-sm text-gray-500">
+            Geen geldige evaluatie geselecteerd.
+          </p>
+        )}
+      </div>
+    </>
   );
 }

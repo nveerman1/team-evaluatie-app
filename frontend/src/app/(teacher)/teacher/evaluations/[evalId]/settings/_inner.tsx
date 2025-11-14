@@ -1,6 +1,7 @@
 "use client";
 
 import api from "@/lib/api";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { RubricListResponse, RubricListItem } from "@/lib/rubric-types";
@@ -162,48 +163,89 @@ export default function EvaluationSettingsPageInner() {
   }
 
   const anyLoading = loading;
+  const evalIdStr = String(params.evalId);
 
   if (loading) return <main className="p-6">Laden…</main>;
+  
+  const tabs = [
+    { id: "dashboard", label: "Dashboard", href: `/teacher/evaluations/${evalIdStr}/dashboard` },
+    { id: "omza", label: "OMZA", href: `/teacher/evaluations/${evalIdStr}/omza` },
+    { id: "grades", label: "Cijfers", href: `/teacher/evaluations/${evalIdStr}/grades` },
+    { id: "feedback", label: "Feedback", href: `/teacher/evaluations/${evalIdStr}/feedback` },
+    { id: "reflections", label: "Reflecties", href: `/teacher/evaluations/${evalIdStr}/reflections` },
+    { id: "settings", label: "Instellingen", href: `/teacher/evaluations/${evalIdStr}/settings` },
+  ];
 
   return (
-    <main className="max-w-5xl mx-auto p-6 space-y-6">
-      <header className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Evaluatie-instellingen</h1>
-          <p className="text-gray-600 text-sm">
-            Evaluatie #{evaluation?.id} — {evaluation?.title}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <a
-            href="/teacher/evaluations"
-            className="px-3 py-2 rounded-lg border"
-          >
-            Terug
-          </a>
-          <button
-            onClick={handleSave}
-            disabled={saving || anyLoading || !courseId || rubricId === ""}
-            className="px-4 py-2 rounded-xl bg-black text-white disabled:opacity-60"
-          >
-            {saving ? "Opslaan…" : "Opslaan"}
-          </button>
-        </div>
-      </header>
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+              Instellingen
+            </h1>
+            <p className="text-gray-600 mt-1 text-sm">
+              Evaluatie #{evaluation?.id} — {evaluation?.title}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/teacher/evaluations"
+              className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Terug
+            </Link>
+            <button
+              onClick={handleSave}
+              disabled={saving || anyLoading || !courseId || rubricId === ""}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
+            >
+              {saving ? "Opslaan…" : "Opslaan"}
+            </button>
+          </div>
+        </header>
+      </div>
 
-      {error && (
-        <div className="p-3 rounded-lg bg-red-50 text-red-700">
-          {error}
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        
+        {/* Tabs Navigation */}
+        <div className="border-b border-gray-200">
+          <nav className="flex gap-8" aria-label="Tabs">
+            {tabs.map((tab) => (
+              <Link
+                key={tab.id}
+                href={tab.href}
+                className={`
+                  py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                  ${
+                    tab.id === "settings"
+                      ? "border-black text-black"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }
+                `}
+                aria-current={tab.id === "settings" ? "page" : undefined}
+              >
+                {tab.label}
+              </Link>
+            ))}
+          </nav>
         </div>
-      )}
-      {info && (
-        <div className="p-3 rounded-lg bg-green-50 text-green-700">{info}</div>
-      )}
 
-      <form
-        onSubmit={handleSave}
-        className="bg-white border rounded-2xl p-5 space-y-6"
-      >
+        {error && (
+          <div className="p-3 rounded-lg bg-red-50 text-red-700">
+            {error}
+          </div>
+        )}
+        {info && (
+          <div className="p-3 rounded-lg bg-green-50 text-green-700">{info}</div>
+        )}
+
+        <form
+          onSubmit={handleSave}
+          className="bg-white border rounded-2xl p-5 space-y-6"
+        >
         {/* Titel */}
         <div className="space-y-1">
           <label className="block text-sm font-medium">Titel</label>
@@ -377,7 +419,8 @@ export default function EvaluationSettingsPageInner() {
             Terug
           </a>
         </div>
-      </form>
-    </main>
+        </form>
+      </div>
+    </>
   );
 }

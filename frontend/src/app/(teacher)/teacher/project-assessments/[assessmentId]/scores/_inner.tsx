@@ -400,54 +400,86 @@ export default function ScoresOverviewInner() {
     });
   }
 
+  const tabs = [
+    { id: "overzicht", label: "Overzicht", href: `/teacher/project-assessments/${assessmentId}/overview` },
+    { id: "bewerken", label: "Rubric Invullen", href: `/teacher/project-assessments/${assessmentId}/edit` },
+    { id: "scores", label: "Scores", href: `/teacher/project-assessments/${assessmentId}/scores` },
+    { id: "reflecties", label: "Reflecties", href: `/teacher/project-assessments/${assessmentId}/reflections` },
+  ];
+
   return (
-    <main className="max-w-[1600px] mx-auto p-6 space-y-6">
-      {/* Header */}
-      <header className="space-y-2">
-        <div className="flex items-center gap-3">
-          <Link
-            href={`/teacher/project-assessments/${assessmentId}/overview`}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            ← Terug naar overzicht
-          </Link>
-        </div>
-        <div className="flex items-start justify-between gap-4 flex-wrap">
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-[1600px] mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-semibold">
-              Scores – {currentData.assessment.title}
+            <div className="mb-2">
+              <Link
+                href={`/teacher/project-assessments/${assessmentId}/overview`}
+                className="text-gray-500 hover:text-gray-700 text-sm"
+              >
+                ← Terug naar overzicht
+              </Link>
+            </div>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+              {currentData.assessment.title} – Scores
             </h1>
-            <p className="text-gray-600">
-              Rubric: {currentData.rubric_title} (schaal {currentData.rubric_scale_min}-
-              {currentData.rubric_scale_max})
+            <p className="text-gray-600 mt-1 text-sm">
+              Rubric: {currentData.rubric_title} (schaal {currentData.rubric_scale_min}-{currentData.rubric_scale_max})
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => viewMode === "teams" ? loadTeamsData() : loadStudentsData()}
-              className="px-4 py-2 rounded-xl border hover:bg-gray-50"
+              className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
               disabled={loading}
             >
               ⟳ Verversen
             </button>
             <button
               onClick={exportToCSV}
-              className="px-4 py-2 rounded-xl border hover:bg-gray-50"
+              className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
-              🧾 Exporteer CSV
+              🧾 CSV
             </button>
             <button
               onClick={exportToXLSX}
-              className="px-4 py-2 rounded-xl border hover:bg-gray-50"
+              className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
-              📥 Exporteer Excel
+              📥 Excel
             </button>
           </div>
-        </div>
-      </header>
+        </header>
+      </div>
 
-      {/* Tab Navigation */}
-      <div className="flex gap-2 border-b border-gray-200">
+      {/* Main Content */}
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-6 space-y-6">
+        
+        {/* Tabs Navigation */}
+        <div className="border-b border-gray-200">
+          <nav className="flex gap-8" aria-label="Tabs">
+            {tabs.map((tab) => (
+              <Link
+                key={tab.id}
+                href={tab.href}
+                className={`
+                  py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                  ${
+                    tab.id === "scores"
+                      ? "border-black text-black"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }
+                `}
+                aria-current={tab.id === "scores" ? "page" : undefined}
+              >
+                {tab.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+
+        {/* View Mode Toggle */}
+        <div className="flex gap-2 border-b border-gray-200">
         <button
           onClick={() => {
             setViewMode("teams");
@@ -985,7 +1017,8 @@ export default function ScoresOverviewInner() {
             </div>
           </>
         )}
-      </section>
-    </main>
+        </section>
+      </div>
+    </>
   );
 }

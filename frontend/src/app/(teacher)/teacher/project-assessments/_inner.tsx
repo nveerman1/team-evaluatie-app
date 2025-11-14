@@ -16,6 +16,7 @@ export default function ProjectAssessmentsListInner() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [courseFilter, setCourseFilter] = useState<string>("all");
 
@@ -75,9 +76,17 @@ export default function ProjectAssessmentsListInner() {
     }
   };
 
+  // Filter data by search query
+  const filteredData = data.filter((item) => {
+    const matchesSearch = searchQuery === "" || 
+      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.course_name && item.course_name.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesSearch;
+  });
+
   // Group assessments by course
   const groupedByCourse: Record<string, ProjectAssessmentListItem[]> = {};
-  data.forEach((item) => {
+  filteredData.forEach((item) => {
     const courseKey = item.course_name || "Geen vak";
     if (!groupedByCourse[courseKey]) {
       groupedByCourse[courseKey] = [];
@@ -86,28 +95,39 @@ export default function ProjectAssessmentsListInner() {
   });
 
   return (
-    <main className="max-w-6xl mx-auto p-6 space-y-6">
-      <header className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Projectbeoordelingen</h1>
-          <p className="text-gray-600">
-            Beheer projectbeoordelingen per team met vaste criteria.
-          </p>
-        </div>
-        <Link
-          href="/teacher/project-assessments/create"
-          className="px-4 py-2 rounded-xl bg-black text-white hover:opacity-90"
-        >
-          + Nieuwe projectbeoordeling
-        </Link>
-      </header>
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">Projectbeoordeling</h1>
+            <p className="text-gray-600 mt-1 text-sm">
+              Beheer projectbeoordelingen per team met vaste criteria.
+            </p>
+          </div>
+          <Link
+            href="/teacher/project-assessments/create"
+            className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+          >
+            + Nieuwe projectbeoordeling
+          </Link>
+        </header>
+      </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-6 bg-white p-4 rounded-2xl border">
-        <div className="flex items-center gap-3">
-          <label className="text-sm font-medium">Vak/Cluster:</label>
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-3 bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
+          <input
+            type="text"
+            placeholder="Zoek op titel, vak..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="px-3 py-2 rounded-lg border w-64"
+          />
           <select
-            className="border rounded-lg px-3 py-2"
+            className="px-3 py-2 rounded-lg border"
             value={courseFilter}
             onChange={(e) => setCourseFilter(e.target.value)}
           >
@@ -118,22 +138,30 @@ export default function ProjectAssessmentsListInner() {
               </option>
             ))}
           </select>
-        </div>
-        <div className="flex items-center gap-3">
-          <label className="text-sm font-medium">Status:</label>
           <select
-            className="border rounded-lg px-3 py-2"
+            className="px-3 py-2 rounded-lg border"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
-            <option value="all">Alle</option>
+            <option value="all">Alle statussen</option>
             <option value="draft">Concept</option>
             <option value="published">Gepubliceerd</option>
           </select>
+          {(searchQuery || courseFilter !== "all" || statusFilter !== "all") && (
+            <button
+              onClick={() => {
+                setSearchQuery("");
+                setCourseFilter("all");
+                setStatusFilter("all");
+              }}
+              className="px-3 py-2 rounded-lg border hover:bg-gray-50"
+            >
+              Reset
+            </button>
+          )}
         </div>
-      </div>
 
-      {loading && (
+        {loading && (
         <div className="p-6">
           <Loading />
         </div>
@@ -142,24 +170,24 @@ export default function ProjectAssessmentsListInner() {
         <div className="p-6">
           <ErrorMessage message={`Fout: ${error}`} />
         </div>
-      )}
-      {!loading && !error && data.length === 0 && (
-        <div className="p-6 text-gray-500 bg-white border rounded-2xl">
-          Geen projectbeoordelingen gevonden.
-        </div>
-      )}
+        )}
+        {!loading && !error && data.length === 0 && (
+          <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6 text-gray-500">
+            Geen projectbeoordelingen gevonden.
+          </div>
+        )}
       {!loading &&
         !error &&
         Object.keys(groupedByCourse).map((courseName) => (
           <section key={courseName} className="space-y-3">
-            <h2 className="text-lg font-semibold text-gray-700 px-2">
+            <h3 className="text-lg font-semibold text-gray-800 px-2">
               {courseName}
-            </h2>
-            <div className="bg-white border rounded-2xl overflow-hidden">
+            </h3>
+            <div className="space-y-3">
               {groupedByCourse[courseName].map((item) => (
                 <div
                   key={item.id}
-                  className="border-b last:border-b-0 p-4 hover:bg-gray-50 transition-colors"
+                  className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 space-y-2">
@@ -229,6 +257,7 @@ export default function ProjectAssessmentsListInner() {
             </div>
           </section>
         ))}
-    </main>
+      </main>
+    </>
   );
 }

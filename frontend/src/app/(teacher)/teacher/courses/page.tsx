@@ -68,26 +68,30 @@ export default function CoursesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="mx-auto max-w-7xl">
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Vakken beheren</h1>
-            <p className="mt-1 text-gray-600">
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">Vakken beheren</h1>
+            <p className="text-gray-600 mt-1 text-sm">
               Beheer alle vakken en docenten voor jouw school
             </p>
           </div>
           <button
             onClick={handleCreateCourse}
-            className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
           >
             + Nieuw vak
           </button>
-        </div>
+        </header>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-4">
 
         {/* Filters */}
-        <div className="mb-6 rounded-lg bg-white p-4 shadow">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <div>
               <label
@@ -171,7 +175,8 @@ export default function CoursesPage() {
 
         {/* Error state */}
         {error && (
-          <div className="rounded-lg bg-red-50 p-4 text-red-800">
+          <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
+            <div className="rounded-lg bg-red-50 p-4 text-red-800">
             <p className="font-medium">Fout bij laden</p>
             <p className="text-sm">{error}</p>
             <button
@@ -180,18 +185,20 @@ export default function CoursesPage() {
             >
               Opnieuw proberen
             </button>
+            </div>
           </div>
         )}
 
         {/* Courses list */}
         {!loading && !error && (
           <>
-            <div className="mb-4 text-sm text-gray-600">
+            <div className="text-sm text-gray-600">
               {totalCourses} {totalCourses === 1 ? "vak" : "vakken"} gevonden
             </div>
 
             {courses.length === 0 ? (
-              <div className="rounded-lg bg-yellow-50 p-8 text-center">
+              <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-8">
+                <div className="rounded-lg bg-yellow-50 p-8 text-center">
                 <p className="text-lg font-medium text-yellow-900">
                   Geen vakken gevonden
                 </p>
@@ -200,13 +207,14 @@ export default function CoursesPage() {
                     ? "Probeer andere filters"
                     : "Maak je eerste vak aan om te beginnen"}
                 </p>
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
                 {courses.map((course) => (
                   <div
                     key={course.id}
-                    className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow"
+                    className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6 hover:shadow-md transition-shadow"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -246,19 +254,19 @@ export default function CoursesPage() {
                       <div className="ml-4 flex gap-2">
                         <a
                           href={`/teacher/class-teams?course_id=${course.id}`}
-                          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
                         >
                           Beheren
                         </a>
                         <a
                           href={`/teacher/courses/${course.id}`}
-                          className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                         >
                           Bewerken
                         </a>
                         <button
                           onClick={() => handleDeleteCourse(course.id)}
-                          className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
+                          className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-red-600 hover:bg-gray-50"
                         >
                           Verwijderen
                         </button>
@@ -309,7 +317,7 @@ export default function CoursesPage() {
           />
         )}
       </div>
-    </div>
+    </>
   );
 }
 

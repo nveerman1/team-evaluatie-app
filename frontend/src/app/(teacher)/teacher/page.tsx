@@ -139,45 +139,51 @@ export default function TeacherDashboard() {
   };
 
   return (
-    <main className="p-6 max-w-7xl mx-auto space-y-8">
-      <header>
-        <h1 className="text-3xl font-bold mb-2">Teacher Dashboard</h1>
-        <p className="text-gray-600">
-          Welkom 👋 — Hier vind je een overzicht van alle actieve evaluaties, projecten en deadlines.
-        </p>
-      </header>
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">Dashboard</h1>
+          <p className="text-gray-600 mt-1 text-sm">
+            Welkom 👋 — Hier vind je een overzicht van alle actieve evaluaties, projecten en deadlines.
+          </p>
+        </header>
+      </div>
+
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
       {/* Quick Actions */}
-      <section className="bg-white border rounded-2xl p-6">
+      <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
         <h2 className="text-xl font-semibold mb-4">🧩 Snelle acties</h2>
         <div className="flex flex-wrap gap-3">
           <Link
             href="/teacher/project-assessments/create"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-black text-white hover:opacity-90"
+            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
           >
             ➕ Nieuwe projectbeoordeling
           </Link>
           <Link
             href="/teacher/evaluations/create"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-800 text-white hover:opacity-90"
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             ➕ Nieuwe peerevaluatie
           </Link>
           <Link
             href="/teacher/competencies/windows/create"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-700 text-white hover:opacity-90"
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             ➕ Nieuw competentievenster
           </Link>
           <Link
             href="/teacher/rubrics/create"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-600 text-white hover:opacity-90"
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             ➕ Nieuwe peer rubric
           </Link>
           <Link
             href="/teacher/rubrics/create"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-500 text-white hover:opacity-90"
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             ➕ Nieuwe project rubric
           </Link>
@@ -185,7 +191,7 @@ export default function TeacherDashboard() {
       </section>
 
       {/* Upcoming Deadlines */}
-      <section className="bg-white border rounded-2xl p-6">
+      <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
         <h2 className="text-xl font-semibold mb-4">📅 Aankomende deadlines</h2>
         {upcomingDeadlines.length > 0 ? (
           <div className="space-y-3">
@@ -227,7 +233,7 @@ export default function TeacherDashboard() {
       </section>
 
       {/* Active Evaluations */}
-      <section className="bg-white border rounded-2xl p-6">
+      <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">🧭 Actieve evaluaties</h2>
           <Link
@@ -295,7 +301,7 @@ export default function TeacherDashboard() {
       </section>
 
       {/* Project Assessments This Week */}
-      <section className="bg-white border rounded-2xl p-6">
+      <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">📊 Projectbeoordelingen deze week</h2>
           <Link
@@ -349,7 +355,7 @@ export default function TeacherDashboard() {
       </section>
 
       {/* Competency Monitor Status */}
-      <section className="bg-white border rounded-2xl p-6">
+      <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">🎯 Competentiemonitor status</h2>
           <Link
@@ -388,8 +394,7 @@ export default function TeacherDashboard() {
           <p className="text-gray-500 text-center py-8">Geen actieve competentievensters.</p>
         )}
       </section>
-
-
-    </main>
+      </main>
+    </>
   );
 }
