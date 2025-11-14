@@ -92,47 +92,65 @@ export default function ProjectAssessmentOverviewInner() {
     return sortOrder === "asc" ? comparison : -comparison;
   });
 
-  return (
-    <main className="max-w-7xl mx-auto p-6 space-y-6">
-      {/* Header */}
-      <header className="space-y-2">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/teacher/project-assessments"
-            className="text-gray-500 hover:text-gray-700"
-          >
-            ← Terug naar overzicht
-          </Link>
-        </div>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold">
-              Beoordeling: {data.assessment.title}
-            </h1>
-            <p className="text-gray-600">
-              Rubric: {data.rubric_title} (schaal {data.rubric_scale_min}-
-              {data.rubric_scale_max})
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Link
-              href={`/teacher/project-assessments/${assessmentId}/scores`}
-              className="px-4 py-2 rounded-xl border hover:bg-gray-50 bg-blue-50 border-blue-200"
-            >
-              📊 Bekijk alle scores
-            </Link>
-            <Link
-              href={`/teacher/project-assessments/${assessmentId}/reflections`}
-              className="px-4 py-2 rounded-xl border hover:bg-gray-50"
-            >
-              📝 Reflecties bekijken
-            </Link>
-          </div>
-        </div>
-      </header>
+  const [activeTab, setActiveTab] = useState("overzicht");
 
-      {/* Filters and Search */}
-      <div className="flex items-center gap-4 bg-white p-4 rounded-2xl border flex-wrap">
+  const tabs = [
+    { id: "overzicht", label: "Overzicht", href: `/teacher/project-assessments/${assessmentId}/overview` },
+    { id: "scores", label: "Scores", href: `/teacher/project-assessments/${assessmentId}/scores` },
+    { id: "reflecties", label: "Reflecties", href: `/teacher/project-assessments/${assessmentId}/reflections` },
+    { id: "bewerken", label: "Bewerken", href: `/teacher/project-assessments/${assessmentId}/edit` },
+  ];
+
+  return (
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto">
+          <div className="mb-4">
+            <Link
+              href="/teacher/project-assessments"
+              className="text-gray-500 hover:text-gray-700 text-sm"
+            >
+              ← Terug naar overzicht
+            </Link>
+          </div>
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+            {data.assessment.title}
+          </h1>
+          <p className="text-gray-600 mt-1 text-sm">
+            Rubric: {data.rubric_title} (schaal {data.rubric_scale_min}-{data.rubric_scale_max})
+          </p>
+        </header>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        
+        {/* Tabs Navigation */}
+        <div className="border-b border-gray-200">
+          <nav className="flex gap-8" aria-label="Tabs">
+            {tabs.map((tab) => (
+              <Link
+                key={tab.id}
+                href={tab.href}
+                className={`
+                  py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                  ${
+                    activeTab === tab.id
+                      ? "border-black text-black"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }
+                `}
+                aria-current={activeTab === tab.id ? "page" : undefined}
+              >
+                {tab.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+
+        {/* Filters and Search */}
+        <div className="flex items-center gap-4 bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex-wrap">
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium">Zoeken:</label>
           <input
@@ -286,7 +304,8 @@ export default function ProjectAssessmentOverviewInner() {
             </tbody>
           </table>
         </div>
-      </section>
-    </main>
+        </section>
+      </div>
+    </>
   );
 }
