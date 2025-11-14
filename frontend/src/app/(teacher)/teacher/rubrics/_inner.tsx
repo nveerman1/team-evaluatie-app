@@ -62,19 +62,26 @@ export default function RubricsListInner() {
     <>
       {/* Page Header */}
       <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
-        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between">
+        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">Rubrics</h1>
             <p className="text-gray-600 mt-1 text-sm">
               Beheer je beoordelingsrubrics met criteria op 5 niveaus.
             </p>
           </div>
-          {activeTab !== "competencies" && (
+          {activeTab !== "competencies" ? (
             <Link
               href={`/teacher/rubrics/create?scope=${activeTab}`}
-              className="mt-4 md:mt-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
             >
               + Nieuwe {activeTab === "peer" ? "team-evaluatie" : "projectbeoordeling"}
+            </Link>
+          ) : (
+            <Link
+              href="/teacher/competencies/create"
+              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+            >
+              + Nieuwe Competentie
             </Link>
           )}
         </header>
@@ -213,15 +220,6 @@ export default function RubricsListInner() {
         {/* Competencies Tab Content */}
         {activeTab === "competencies" && (
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold">Competenties</h2>
-              <Link
-                href="/teacher/competencies/create"
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
-              >
-                + Nieuwe Competentie
-              </Link>
-            </div>
 
           {loading && (
             <div className="p-6">

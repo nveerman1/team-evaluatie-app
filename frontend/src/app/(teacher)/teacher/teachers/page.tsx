@@ -160,7 +160,7 @@ export default function TeachersPage() {
     <>
       {/* Page Header */}
       <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
-        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between">
+        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
               Docenten beheren
