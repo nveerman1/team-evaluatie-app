@@ -149,15 +149,22 @@ class TestAnalyticsEndpoints:
         user = Mock(spec=User)
         user.school_id = 1
 
-        # Mock course query
-        db.query.return_value.filter.return_value.first.return_value = Mock(
-            id=1, school_id=1
-        )
+        # Mock course query with proper level attribute
+        mock_course = Mock(id=1, school_id=1)
+        mock_course.level = None  # Set level to None to avoid Mock iteration issues
+        db.query.return_value.filter.return_value.first.return_value = mock_course
 
-        # Mock LO query
-        db.query.return_value.filter.return_value.limit.return_value.all.return_value = (
-            []
-        )
+        # Mock LO query - need to set up proper query chain
+        mock_lo_query = Mock()
+        mock_lo_query.filter.return_value = mock_lo_query
+        mock_lo_query.order_by.return_value = mock_lo_query
+        mock_lo_query.all.return_value = []
+        
+        # db.query() is called twice: once for Course, once for LearningObjective
+        db.query.side_effect = [
+            db.query.return_value,  # First call for Course
+            mock_lo_query,           # Second call for LearningObjective
+        ]
 
         with patch("app.api.v1.routers.analytics.require_course_access"):
             result = get_learning_objectives_progress(course_id=1, db=db, user=user)
