@@ -157,38 +157,28 @@ export default function TeachersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Sticky Header */}
-      <div className="sticky top-0 z-10 border-b border-gray-200 bg-white shadow-sm">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-          <div className="mb-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Admin Dashboard
-            </p>
-          </div>
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold text-gray-900">
-                Docenten beheren
-              </h1>
-              <p className="mt-2 text-sm text-gray-600">
-                Beheer alle docenten van jouw school en hun gekoppelde vakken.
-              </p>
-            </div>
-            <div className="ml-6 flex gap-3">
-              <button className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                Importeer CSV
-              </button>
-              <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                + Nieuwe docent
-              </button>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="mx-auto max-w-7xl">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">
+            Docenten beheren
+          </h1>
+          <p className="mt-1 text-gray-600">
+            Beheer alle docenten van jouw school en hun gekoppelde vakken
+          </p>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+        {/* Action buttons */}
+        <div className="mb-6 flex gap-3">
+          <button className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            Importeer CSV
+          </button>
+          <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            + Nieuwe docent
+          </button>
+        </div>
+
         <div className="flex flex-col gap-6 lg:flex-row">
           {/* Left Column */}
           <div className="flex-1">
