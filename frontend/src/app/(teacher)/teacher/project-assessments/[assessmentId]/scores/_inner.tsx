@@ -402,9 +402,9 @@ export default function ScoresOverviewInner() {
 
   const tabs = [
     { id: "overzicht", label: "Overzicht", href: `/teacher/project-assessments/${assessmentId}/overview` },
+    { id: "bewerken", label: "Rubric Invullen", href: `/teacher/project-assessments/${assessmentId}/edit` },
     { id: "scores", label: "Scores", href: `/teacher/project-assessments/${assessmentId}/scores` },
     { id: "reflecties", label: "Reflecties", href: `/teacher/project-assessments/${assessmentId}/reflections` },
-    { id: "bewerken", label: "Bewerken", href: `/teacher/project-assessments/${assessmentId}/edit` },
   ];
 
   return (

@@ -212,9 +212,9 @@ export default function EditProjectAssessmentInner() {
 
   const tabs = [
     { id: "overzicht", label: "Overzicht", href: `/teacher/project-assessments/${assessmentId}/overview` },
+    { id: "bewerken", label: "Rubric Invullen", href: `/teacher/project-assessments/${assessmentId}/edit` },
     { id: "scores", label: "Scores", href: `/teacher/project-assessments/${assessmentId}/scores` },
     { id: "reflecties", label: "Reflecties", href: `/teacher/project-assessments/${assessmentId}/reflections` },
-    { id: "bewerken", label: "Bewerken", href: `/teacher/project-assessments/${assessmentId}/edit` },
   ];
 
   return (
@@ -223,23 +223,12 @@ export default function EditProjectAssessmentInner() {
       <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
         <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
-            <div className="mb-2">
-              <Link
-                href={`/teacher/project-assessments/${assessmentId}/overview`}
-                className="text-gray-500 hover:text-gray-700 text-sm"
-              >
-                ← Terug naar overzicht
-              </Link>
-            </div>
             <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
-              Rubric invullen: Team {teamNumber}
+              Rubric Invullen
             </h1>
             <p className="text-gray-600 mt-1 text-sm">
               {data.rubric_title} • Schaal: {data.rubric_scale_min}-{data.rubric_scale_max}
             </p>
-            <div className="mt-1 text-sm text-gray-600">
-              <strong>Teamleden:</strong> {currentTeam.members.map(m => m.name).join(", ")}
-            </div>
             {autoSaving && (
               <p className="text-sm text-blue-600 mt-1">💾 Autosave actief...</p>
             )}
@@ -302,6 +291,9 @@ export default function EditProjectAssessmentInner() {
             <div className="font-semibold">Team {teamNumber}</div>
             <div className="text-sm text-gray-500">
               {currentTeamIndex + 1} van {teamsData?.teams.length || 0}
+            </div>
+            <div className="mt-2 text-sm text-gray-600">
+              <strong>Teamleden:</strong> {currentTeam.members.map(m => m.name).join(", ")}
             </div>
           </div>
           <button

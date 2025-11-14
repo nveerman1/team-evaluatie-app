@@ -163,10 +163,9 @@ export default function EvaluationSettingsPageInner() {
   }
 
   const anyLoading = loading;
+  const evalIdStr = String(params.evalId);
 
   if (loading) return <main className="p-6">Laden…</main>;
-
-  const evalIdStr = String(params.evalId);
   
   const tabs = [
     { id: "dashboard", label: "Dashboard", href: `/teacher/evaluations/${evalIdStr}/dashboard` },
