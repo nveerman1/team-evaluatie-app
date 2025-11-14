@@ -160,23 +160,23 @@ export default function TeachersPage() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-7xl">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Docenten beheren
-          </h1>
-          <p className="mt-1 text-gray-600">
-            Beheer alle docenten van jouw school en hun gekoppelde vakken
-          </p>
-        </div>
-
-        {/* Action buttons */}
-        <div className="mb-6 flex gap-3">
-          <button className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            Importeer CSV
-          </button>
-          <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            + Nieuwe docent
-          </button>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Docenten beheren
+            </h1>
+            <p className="mt-1 text-gray-600">
+              Beheer alle docenten van jouw school en hun gekoppelde vakken
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <button className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              Importeer CSV
+            </button>
+            <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              + Nieuwe docent
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col gap-6 lg:flex-row">
