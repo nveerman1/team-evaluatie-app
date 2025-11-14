@@ -163,7 +163,7 @@ export default function CompetenciesPage() {
 
                   return (
                     <div key={courseId} className="space-y-3">
-                      <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">
+                      <h3 className="text-lg font-semibold text-gray-800 px-2">
                         {courseName}
                       </h3>
                       <div className="grid gap-4">

@@ -185,9 +185,9 @@ export default function TeachersPage() {
 
         <div className="flex flex-col gap-6 lg:flex-row">
           {/* Left Column */}
-          <div className="flex-1">
+          <div className="flex-1 space-y-6">
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-6">
               <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
                 <p className="text-sm font-medium text-gray-600">
                   Totaal docenten

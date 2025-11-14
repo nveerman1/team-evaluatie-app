@@ -180,14 +180,14 @@ export default function ProjectAssessmentsListInner() {
         !error &&
         Object.keys(groupedByCourse).map((courseName) => (
           <section key={courseName} className="space-y-3">
-            <h2 className="text-lg font-semibold text-gray-700 px-2">
+            <h3 className="text-lg font-semibold text-gray-800 px-2">
               {courseName}
-            </h2>
-            <div className="bg-white border rounded-2xl overflow-hidden">
+            </h3>
+            <div className="space-y-3">
               {groupedByCourse[courseName].map((item) => (
                 <div
                   key={item.id}
-                  className="border-b last:border-b-0 p-4 hover:bg-gray-50 transition-colors"
+                  className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 space-y-2">
