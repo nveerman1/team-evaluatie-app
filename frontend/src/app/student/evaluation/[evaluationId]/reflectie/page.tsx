@@ -39,31 +39,40 @@ export default function ReflectiePage() {
   if (loading) return <Loading />;
 
   return (
-    <main className="p-6 max-w-5xl mx-auto space-y-8">
+    <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Reflectie Schrijven</h1>
-          <div className="flex gap-2">
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+                Reflectie Schrijven
+              </h1>
+              <p className="text-gray-600 mt-1 text-sm">
+                Schrijf je reflectie op de evaluatie
+              </p>
+            </div>
             <button
               onClick={() => router.push("/student")}
-              className="px-4 py-2 rounded-lg border hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
             >
               Terug
             </button>
           </div>
-        </div>
+        </header>
       </div>
 
-      {/* Content */}
-      <div className="bg-white rounded-xl border p-6">
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-6 py-6">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
         <ReflectionStep
           evaluationId={evaluationId}
           onSave={saveReflection}
           initialText={reflection?.text || ""}
           submitted={!!reflection?.submitted_at}
         />
-      </div>
-    </main>
+        </div>
+      </main>
+    </div>
   );
 }

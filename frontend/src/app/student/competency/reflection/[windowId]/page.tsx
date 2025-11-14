@@ -98,39 +98,46 @@ export default function ReflectionPage() {
   if (!window) return <ErrorMessage message="Window not found" />;
 
   return (
-    <main className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Reflectie Schrijven</h1>
-        <p className="text-gray-600">
-          Reflecteer op je competentieontwikkeling tijdens {window.title}
-        </p>
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+            Reflectie Schrijven
+          </h1>
+          <p className="text-gray-600 mt-1 text-sm">
+            Reflecteer op je competentieontwikkeling tijdens {window.title}
+          </p>
+        </header>
       </div>
 
-      {successMessage && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
-          {successMessage}
-        </div>
-      )}
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-6 py-6 space-y-6">
 
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-          {error}
-        </div>
-      )}
+        {successMessage && (
+          <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
+            {successMessage}
+          </div>
+        )}
 
-      {existingReflection && (
-        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-sm text-yellow-700">
-            ⚠️ Je hebt al een reflectie voor deze periode. Let op: het indienen
-            van een nieuwe reflectie kan de oude vervangen.
-          </p>
-        </div>
-      )}
+        {error && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+            {error}
+          </div>
+        )}
 
-      {/* Show goals if any */}
-      {goals.length > 0 && (
-        <div className="p-5 border rounded-xl bg-purple-50">
+        {existingReflection && (
+          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-sm text-yellow-700">
+              ⚠️ Je hebt al een reflectie voor deze periode. Let op: het indienen
+              van een nieuwe reflectie kan de oude vervangen.
+            </p>
+          </div>
+        )}
+
+        {/* Show goals if any */}
+        {goals.length > 0 && (
+          <div className="p-5 border border-gray-200/80 shadow-sm rounded-xl bg-purple-50">
           <h3 className="text-lg font-semibold mb-3">Jouw Leerdoelen</h3>
           <div className="space-y-2">
             {goals.map((goal) => (
@@ -145,13 +152,13 @@ export default function ReflectionPage() {
                   </p>
                 )}
               </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="p-6 border rounded-xl bg-white space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="p-6 border border-gray-200/80 shadow-sm rounded-xl bg-white space-y-4">
           {/* Goal Selection */}
           {goals.length > 0 && (
             <div>
@@ -273,28 +280,29 @@ export default function ReflectionPage() {
               <li>Geef concrete voorbeelden van situaties</li>
               <li>Beschrijf wat je hebt geleerd en waarom</li>
               <li>Kijk vooruit: wat neem je mee naar volgende keer?</li>
-            </ul>
+              </ul>
+            </div>
           </div>
-        </div>
 
-        {/* Submit Button */}
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={() => router.push("/student")}
-            className="px-6 py-2 border rounded-lg hover:bg-gray-50"
-          >
-            Annuleren
-          </button>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {submitting ? "Opslaan..." : "Reflectie Indienen"}
-          </button>
-        </div>
-      </form>
-    </main>
+          {/* Submit Button */}
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => router.push("/student")}
+              className="px-6 py-2 border rounded-lg hover:bg-gray-50"
+            >
+              Annuleren
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {submitting ? "Opslaan..." : "Reflectie Indienen"}
+            </button>
+          </div>
+        </form>
+      </main>
+    </div>
   );
 }

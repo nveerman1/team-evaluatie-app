@@ -136,36 +136,43 @@ export default function SelfScanPage() {
   if (!window) return <ErrorMessage message="Window not found" />;
 
   return (
-    <main className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold mb-2">{window.title}</h1>
-        <p className="text-gray-600">
-          {window.description ||
-            "Beoordeel jezelf op de volgende competenties"}
-        </p>
-        {window.end_date && (
-          <p className="text-sm text-gray-500 mt-2">
-            Sluit op: {new Date(window.end_date).toLocaleDateString("nl-NL")}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+            {window.title}
+          </h1>
+          <p className="text-gray-600 mt-1 text-sm">
+            {window.description ||
+              "Beoordeel jezelf op de volgende competenties"}
           </p>
-        )}
+          {window.end_date && (
+            <p className="text-sm text-gray-500 mt-2">
+              Sluit op: {new Date(window.end_date).toLocaleDateString("nl-NL")}
+            </p>
+          )}
+        </header>
       </div>
 
-      {successMessage && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
-          {successMessage}
-        </div>
-      )}
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-6 py-6 space-y-6">
 
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-          {error}
-        </div>
-      )}
+        {successMessage && (
+          <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
+            {successMessage}
+          </div>
+        )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Competencies */}
-        {competencies.map((comp) => {
+        {error && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Competencies */}
+          {competencies.map((comp) => {
           const levels = Array.from(
             { length: comp.scale_max - comp.scale_min + 1 },
             (_, i) => comp.scale_min + i
@@ -176,8 +183,8 @@ export default function SelfScanPage() {
           // Default labels if no rubric levels are defined
           const defaultLabels = ["Startend", "Basis", "Competent", "Gevorderd", "Excellent"];
 
-          return (
-            <div key={comp.id} className="p-5 border rounded-xl bg-white space-y-4">
+            return (
+              <div key={comp.id} className="p-5 border border-gray-200/80 shadow-sm rounded-xl bg-white space-y-4">
               <div>
                 <h3 className="text-lg font-semibold mb-1">{comp.name}</h3>
                 {comp.description && (
@@ -258,30 +265,31 @@ export default function SelfScanPage() {
                   placeholder="Beschrijf een concreet voorbeeld..."
                   rows={2}
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                  />
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
 
-        {/* Submit Button */}
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={() => router.push("/student")}
-            className="px-6 py-2 border rounded-lg hover:bg-gray-50"
-          >
-            Annuleren
-          </button>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-          >
-            {submitting ? "Opslaan..." : "Scan Indienen"}
-          </button>
-        </div>
-      </form>
-    </main>
+          {/* Submit Button */}
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => router.push("/student")}
+              className="px-6 py-2 border rounded-lg hover:bg-gray-50"
+            >
+              Annuleren
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+              {submitting ? "Opslaan..." : "Scan Indienen"}
+            </button>
+          </div>
+        </form>
+      </main>
+    </div>
   );
 }
