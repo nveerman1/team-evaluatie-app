@@ -429,7 +429,7 @@ export function ExternalInviteList({
   if (invites.length === 0) {
     return (
       <div className="text-sm text-gray-600">
-        Nog geen externe uitnodigingen. Klik op "Nodig Externen Uit" om uitnodigingen te versturen.
+        Nog geen externe uitnodigingen. Klik op &quot;Nodig Externen Uit&quot; om uitnodigingen te versturen.
       </div>
     );
   }
