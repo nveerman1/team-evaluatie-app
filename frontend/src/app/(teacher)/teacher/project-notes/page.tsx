@@ -1,63 +1,52 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-
-interface Project {
-  id: number;
-  title: string;
-  course: string;
-  class_name: string;
-  team_count?: number;
-  student_count?: number;
-  description?: string;
-}
-
-// Dummy data for initial implementation
-const DUMMY_PROJECTS: Project[] = [
-  {
-    id: 1,
-    title: "Duurzame wijk",
-    course: "Ontwerpen",
-    class_name: "3H",
-    team_count: 3,
-    student_count: 10,
-    description: "Ontwerp een duurzame woonwijk met groene daken en slimme mobiliteit",
-  },
-  {
-    id: 2,
-    title: "Woonhub Noord",
-    course: "Ontwerpen",
-    class_name: "3H",
-    team_count: 4,
-    student_count: 12,
-    description: "Community-gedreven woonproject in Amsterdam-Noord",
-  },
-  {
-    id: 3,
-    title: "Circulaire economie",
-    course: "Onderzoeken",
-    class_name: "4A",
-    team_count: 5,
-    student_count: 15,
-    description: "Onderzoek naar circulaire businessmodellen in de bouw",
-  },
-];
+import { projectNotesService } from "@/services";
+import { ProjectNotesContext } from "@/dtos/project-notes.dto";
 
 export default function ProjectNotesOverviewPage() {
+  const [projects, setProjects] = useState<ProjectNotesContext[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showNewProjectForm, setShowNewProjectForm] = useState(false);
   const [newProject, setNewProject] = useState({
     title: "",
-    course: "",
+    course_id: undefined as number | undefined,
     class_name: "",
     description: "",
   });
 
-  const handleCreateProject = () => {
-    // TODO: API call to create project
-    console.log("Creating project:", newProject);
-    setShowNewProjectForm(false);
-    setNewProject({ title: "", course: "", class_name: "", description: "" });
+  useEffect(() => {
+    loadProjects();
+  }, []);
+
+  const loadProjects = async () => {
+    try {
+      setLoading(true);
+      const data = await projectNotesService.listContexts();
+      setProjects(data);
+    } catch (error) {
+      console.error("Failed to load projects:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateProject = async () => {
+    try {
+      await projectNotesService.createContext({
+        title: newProject.title,
+        course_id: newProject.course_id,
+        class_name: newProject.class_name || null,
+        description: newProject.description || null,
+      });
+      setShowNewProjectForm(false);
+      setNewProject({ title: "", course_id: undefined, class_name: "", description: "" });
+      loadProjects(); // Reload the list
+    } catch (error) {
+      console.error("Failed to create project:", error);
+      alert("Fout bij aanmaken project. Probeer het opnieuw.");
+    }
   };
 
   return (
@@ -168,8 +157,13 @@ export default function ProjectNotesOverviewPage() {
         )}
 
         {/* Projects Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {DUMMY_PROJECTS.map((project) => (
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500">Projecten laden...</p>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {projects.map((project) => (
             <div
               key={project.id}
               className="rounded-xl bg-white border border-gray-200/80 shadow-sm p-5 hover:shadow-md transition-shadow"
@@ -180,12 +174,16 @@ export default function ProjectNotesOverviewPage() {
                     {project.title}
                   </h3>
                   <div className="mt-1 flex flex-wrap gap-2 text-xs">
-                    <span className="rounded-full bg-blue-50 px-2.5 py-1 text-blue-700 border border-blue-100">
-                      {project.course}
-                    </span>
-                    <span className="rounded-full bg-slate-50 px-2.5 py-1 text-slate-700 border border-slate-100">
-                      Klas {project.class_name}
-                    </span>
+                    {project.course_name && (
+                      <span className="rounded-full bg-blue-50 px-2.5 py-1 text-blue-700 border border-blue-100">
+                        {project.course_name}
+                      </span>
+                    )}
+                    {project.class_name && (
+                      <span className="rounded-full bg-slate-50 px-2.5 py-1 text-slate-700 border border-slate-100">
+                        Klas {project.class_name}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -196,14 +194,8 @@ export default function ProjectNotesOverviewPage() {
                 )}
 
                 <div className="flex items-center gap-3 text-xs text-gray-500">
-                  {project.team_count && (
-                    <span>{project.team_count} teams</span>
-                  )}
-                  {project.student_count && (
-                    <span>·</span>
-                  )}
-                  {project.student_count && (
-                    <span>{project.student_count} leerlingen</span>
+                  {project.note_count !== undefined && (
+                    <span>{project.note_count} {project.note_count === 1 ? 'notitie' : 'notities'}</span>
                   )}
                 </div>
 
@@ -217,8 +209,9 @@ export default function ProjectNotesOverviewPage() {
             </div>
           ))}
         </div>
+        )}
 
-        {DUMMY_PROJECTS.length === 0 && (
+        {!loading && projects.length === 0 && (
           <div className="rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-12 text-center">
             <p className="text-gray-500">
               Nog geen projecten aangemaakt. Klik op &quot;Nieuw project&quot; om te beginnen.
