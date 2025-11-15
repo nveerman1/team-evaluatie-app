@@ -29,6 +29,7 @@ from app.api.v1.routers import users as users_router
 from app.api.v1.routers import analytics as analytics_router
 from app.api.v1.routers import teachers as teachers_router
 from app.api.v1.routers import project_notes as project_notes_router
+from app.api.v1.routers import clients as clients_router
 from app.integrations.somtoday import router as somtoday_router
 
 
@@ -77,5 +78,6 @@ api_v1.include_router(users_router.router)
 api_v1.include_router(analytics_router.router)
 api_v1.include_router(teachers_router.router)
 api_v1.include_router(project_notes_router.router)
+api_v1.include_router(clients_router.router)
 api_v1.include_router(somtoday_router.router)
 app.include_router(api_v1)

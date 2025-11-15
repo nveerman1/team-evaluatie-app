@@ -9,6 +9,11 @@ import type { CompetencyWindow } from "@/dtos/competency.dto";
 import { Loading, StatusBadge } from "@/components";
 import { formatDate } from "@/utils";
 
+// Helper function for building mailto links
+function buildMailto({ to, subject, body }: { to: string; subject: string; body: string }) {
+  return `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
 export default function TeacherDashboard() {
   const [loading, setLoading] = useState(true);
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
@@ -189,6 +194,9 @@ export default function TeacherDashboard() {
           </Link>
         </div>
       </section>
+
+      {/* Opdrachtgever-taken komende weken */}
+      <ClientRemindersCard />
 
       {/* Upcoming Deadlines */}
       <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
@@ -396,5 +404,89 @@ export default function TeacherDashboard() {
       </section>
       </main>
     </>
+  );
+}
+
+// Client Reminders Card Component
+function ClientRemindersCard() {
+  const [reminders, setReminders] = useState([
+    {
+      id: "1",
+      text: "Uitnodiging tussenpresentatie versturen aan Greystar (5V1)",
+      clientEmail: "sanne.devries@greystar.nl",
+      subject: "Uitnodiging tussenpresentatie 5V1",
+      body: "Beste Sanne,\n\nGraag nodigen wij u uit voor de tussenpresentatie van 5V1.\n\nMet vriendelijke groet,\nHet docententeam",
+    },
+    {
+      id: "2",
+      text: "Bevestigingsmail eindpresentatie versturen aan Marine (4H2)",
+      clientEmail: "r.gans@mindef.nl",
+      subject: "Bevestiging eindpresentatie 4H2",
+      body: "Beste Richard,\n\nHierbij bevestigen wij de eindpresentatie van 4H2.\n\nMet vriendelijke groet,\nHet docententeam",
+    },
+    {
+      id: "3",
+      text: "Bedankmail versturen aan Rijndam (3H1)",
+      clientEmail: "l.janssen@rijndam.nl",
+      subject: "Bedankt voor de samenwerking 3H1",
+      body: "Beste Lotte,\n\nHartelijk dank voor de prettige samenwerking met 3H1.\n\nMet vriendelijke groet,\nHet docententeam",
+    },
+  ]);
+
+  const handleOpenMail = (reminder: typeof reminders[0]) => {
+    const mailtoLink = buildMailto({
+      to: reminder.clientEmail,
+      subject: reminder.subject,
+      body: reminder.body,
+    });
+    window.open(mailtoLink, '_self');
+  };
+
+  const handleCheckOff = (reminderId: string) => {
+    setReminders(reminders.filter(r => r.id !== reminderId));
+  };
+
+  return (
+    <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold">📋 Opdrachtgever-taken komende weken</h2>
+        <Link
+          href="/teacher/clients"
+          className="text-sm text-blue-600 hover:underline"
+        >
+          Beheer opdrachtgevers →
+        </Link>
+      </div>
+      {reminders.length > 0 ? (
+        <div className="space-y-3">
+          {reminders.map((reminder) => (
+            <div
+              key={reminder.id}
+              className="flex items-center justify-between p-4 border rounded-xl hover:bg-gray-50"
+            >
+              <div className="flex-1">
+                <p className="text-sm text-gray-800">{reminder.text}</p>
+              </div>
+              <div className="flex gap-2 ml-4">
+                <button
+                  onClick={() => handleOpenMail(reminder)}
+                  className="px-3 py-1.5 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  📧 Open mail in Outlook
+                </button>
+                <button
+                  onClick={() => handleCheckOff(reminder.id)}
+                  className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100"
+                >
+                  ✓ Afvinken
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-gray-500 text-center py-8">Geen taken op dit moment.</p>
+      )}
+    </section>
   );
 }
