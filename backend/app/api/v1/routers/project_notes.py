@@ -283,9 +283,9 @@ async def get_context(
                 .distinct()
             )
 
-        groups = groups_query.all()
+        groups = groups_query.order_by(Group.team_number.nulls_last(), Group.name).all()
 
-        for group in groups:
+        for idx, group in enumerate(groups, start=1):
             # Get members
             members_data = (
                 db.query(User)
@@ -304,7 +304,7 @@ async def get_context(
                 TeamInfo(
                     id=group.id,
                     name=group.name,
-                    team_number=group.team_number,
+                    team_number=idx,  # Sequential number for display
                     member_count=len(member_names),
                     members=member_names,
                     member_ids=member_ids,
