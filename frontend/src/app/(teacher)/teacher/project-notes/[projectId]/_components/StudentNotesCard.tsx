@@ -1,60 +1,119 @@
 "use client";
 
-import { useState } from "react";
-import { StudentInfo } from "@/dtos/project-notes.dto";
-
-interface NoteItem {
-  id: number;
-  date: string;
-  who: string;
-  category: string;
-  text: string;
-  tags?: string[];
-}
+import { useState, useEffect } from "react";
+import { StudentInfo, ProjectNote } from "@/dtos/project-notes.dto";
+import { projectNotesService } from "@/services";
 
 interface StudentNotesCardProps {
   contextId: number;
   selectedStudent: StudentInfo;
+  searchText?: string;
+  filterCategory?: string;
 }
 
+// Quick notes with pre-linked OMZA category and tags
 const STUDENT_QUICK_NOTES = [
-  { label: "Neemt weinig initiatief", omza: "Meedoen" },
-  { label: "Trekt de kar voor het team", omza: "Organiseren" },
-  { label: "Laat weinig van zich horen", omza: "Zelfvertrouwen" },
-  { label: "Probeert een nieuwe aanpak uit", omza: "Autonomie" },
+  { label: "Neemt weinig initiatief", omza: "Meedoen", tags: ["initiatief", "aandachtspunt"] },
+  { label: "Trekt de kar voor het team", omza: "Organiseren", tags: ["leiderschap", "organisatie"] },
+  { label: "Laat weinig van zich horen", omza: "Zelfvertrouwen", tags: ["communicatie", "aandachtspunt"] },
+  { label: "Probeert een nieuwe aanpak uit", omza: "Autonomie", tags: ["innovatie", "experimenteren"] },
 ];
 
 export function StudentNotesCard({
   contextId,
   selectedStudent,
+  searchText,
+  filterCategory,
 }: StudentNotesCardProps) {
   const name = selectedStudent.name;
   const [studentNoteText, setStudentNoteText] = useState("");
   const [studentOmza, setStudentOmza] = useState<string>("");
+  const [notes, setNotes] = useState<ProjectNote[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  
+  // Form state
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [learningObjectiveId, setLearningObjectiveId] = useState<string>("");
+  const [isPortfolioEvidence, setIsPortfolioEvidence] = useState(false);
 
-  const handleStudentQuickNoteClick = (note: { label: string; omza: string }) => {
-    setStudentNoteText(note.label);
-    setStudentOmza(note.omza);
+  useEffect(() => {
+    loadNotes();
+  }, [contextId, selectedStudent.id]);
+
+  const loadNotes = async () => {
+    try {
+      setLoading(true);
+      const data = await projectNotesService.listNotes(contextId, {
+        note_type: "student",
+        student_id: selectedStudent.id,
+      });
+      setNotes(data);
+    } catch (error) {
+      console.error("Failed to load student notes:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const studentNotes: NoteItem[] = [
-    {
-      id: 1,
-      date: "14-11-2025 · Les 3",
-      who: name,
-      category: "Meedoen · Communicatie",
-      text: `${name} werkte actief samen met het team en nam een duidelijke rol in tijdens de opdracht.`,
-      tags: ["samenwerking", "communicatie"],
-    },
-    {
-      id: 2,
-      date: "13-11-2025 · Les 2",
-      who: name,
-      category: "Zelfvertrouwen",
-      text: `${name} presenteerde een tussenresultaat aan de klas met meer overtuiging dan vorige week`,
-      tags: ["presenteren", "zelfvertrouwen"],
-    },
-  ];
+  const handleStudentQuickNoteClick = (note: typeof STUDENT_QUICK_NOTES[0]) => {
+    setStudentNoteText(note.label);
+    setStudentOmza(note.omza);
+    setSelectedTags(note.tags);
+  };
+
+  const handleToggleTag = (tag: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const handleSave = async () => {
+    if (!studentNoteText.trim()) {
+      alert("Vul eerst een aantekening in.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await projectNotesService.createNote(contextId, {
+        note_type: "student",
+        student_id: selectedStudent.id,
+        text: studentNoteText,
+        tags: selectedTags,
+        omza_category: studentOmza || null,
+        learning_objective_id: learningObjectiveId ? Number(learningObjectiveId) : null,
+        is_competency_evidence: false,
+        is_portfolio_evidence: isPortfolioEvidence,
+        metadata: {},
+      });
+      
+      // Reset form
+      setStudentNoteText("");
+      setSelectedTags([]);
+      setStudentOmza("");
+      setLearningObjectiveId("");
+      setIsPortfolioEvidence(false);
+      
+      loadNotes(); // Reload notes
+    } catch (error) {
+      console.error("Failed to save note:", error);
+      alert("Fout bij opslaan. Probeer het opnieuw.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Filter notes
+  const filteredNotes = notes.filter(note => {
+    if (searchText && !note.text.toLowerCase().includes(searchText.toLowerCase())) {
+      return false;
+    }
+    if (filterCategory && note.omza_category !== filterCategory) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <div className="space-y-4 md:space-y-5">
@@ -67,11 +126,8 @@ export function StudentNotesCard({
             <p className="text-xs text-slate-500">{selectedStudent.team_name || 'Geen team'}</p>
           </div>
           <div className="flex flex-wrap gap-1.5 text-[11px]">
-            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700 border border-emerald-100">
-              Sterk in: Samenwerken (dummy)
-            </span>
-            <span className="rounded-full bg-sky-50 px-2.5 py-1 text-sky-700 border border-sky-100">
-              Groei in: Presenteren (dummy)
+            <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-indigo-700 border border-indigo-100">
+              {notes.length} {notes.length === 1 ? 'observatie' : 'observaties'}
             </span>
           </div>
         </div>
@@ -93,6 +149,7 @@ export function StudentNotesCard({
                 type="button"
                 onClick={() => handleStudentQuickNoteClick(note)}
                 className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-800"
+                title={`OMZA: ${note.omza} | Tags: ${note.tags.join(', ')}`}
               >
                 <span>{note.label}</span>
               </button>
@@ -114,7 +171,12 @@ export function StudentNotesCard({
             {["samenwerking", "proces", "reflectie", "communicatie"].map((tag) => (
               <button
                 key={tag}
-                className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-800"
+                onClick={() => handleToggleTag(tag)}
+                className={`rounded-full border px-2.5 py-1 ${
+                  selectedTags.includes(tag)
+                    ? 'bg-indigo-50 border-indigo-200 text-indigo-800'
+                    : 'border-slate-200 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-800'
+                }`}
               >
                 #{tag}
               </button>
@@ -122,7 +184,12 @@ export function StudentNotesCard({
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <label className="inline-flex items-center gap-1 text-slate-600">
-              <input type="checkbox" className="h-3 w-3 rounded border-slate-300" />
+              <input 
+                type="checkbox" 
+                className="h-3 w-3 rounded border-slate-300"
+                checked={isPortfolioEvidence}
+                onChange={(e) => setIsPortfolioEvidence(e.target.checked)}
+              />
               Markeer als portfolio-bewijs
             </label>
             <select
@@ -135,11 +202,16 @@ export function StudentNotesCard({
               <option value="Meedoen">Meedoen</option>
               <option value="Zelfvertrouwen">Zelfvertrouwen</option>
               <option value="Autonomie">Autonomie</option>
+              <option value="Communicatie">Communicatie</option>
             </select>
-            <select className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-700">
-              <option>Koppel aan eindterm (optioneel)</option>
-              <option>16 – Presenteren</option>
-              <option>5 – Projectmatig werken</option>
+            <select 
+              className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-700"
+              value={learningObjectiveId}
+              onChange={(e) => setLearningObjectiveId(e.target.value)}
+            >
+              <option value="">Koppel aan eindterm (optioneel)</option>
+              <option value="16">16 – Presenteren</option>
+              <option value="5">5 – Projectmatig werken</option>
             </select>
           </div>
         </div>
@@ -148,47 +220,74 @@ export function StudentNotesCard({
           <p className="text-[11px] text-slate-500">
             Alleen zichtbaar voor docenten; niet gedeeld met leerlingen.
           </p>
-          <button className="rounded-full bg-indigo-600 px-3.5 py-1.5 text-xs font-medium text-white hover:bg-indigo-700">
-            Aantekening opslaan (dummy)
+          <button 
+            onClick={handleSave}
+            disabled={saving}
+            className="rounded-full bg-indigo-600 px-3.5 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {saving ? "Opslaan..." : "Aantekening opslaan"}
           </button>
         </div>
       </div>
 
-      {/* Observatielijst (dummydata) */}
+      {/* Observatielijst */}
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
           <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">
             Observaties gekoppeld aan {name}
           </p>
-          <button className="text-[11px] text-indigo-600 hover:text-indigo-700 font-medium">
-            Exporteer voor gesprek (dummy)
-          </button>
         </div>
-        <ul className="divide-y divide-slate-100">
-          {studentNotes.map((note) => (
-            <li key={note.id} className="px-4 py-3.5">
-              <div className="flex justify-between gap-2">
-                <div>
-                  <p className="text-[11px] text-slate-500">{note.date}</p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">{note.category}</p>
-                  <p className="text-sm text-slate-800 mt-0.5">{note.text}</p>
-                  {note.tags && (
-                    <div className="mt-1 flex flex-wrap gap-1.5 text-[10px] text-slate-500">
-                      {note.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="rounded-full bg-slate-50 border border-slate-200 px-2 py-0.5"
-                        >
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+        {loading ? (
+          <div className="px-4 py-8 text-center text-sm text-slate-500">
+            Laden...
+          </div>
+        ) : filteredNotes.length === 0 ? (
+          <div className="px-4 py-8 text-center text-sm text-slate-500">
+            Nog geen notities voor deze leerling.
+          </div>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {filteredNotes.map((note) => (
+              <li key={note.id} className="px-4 py-3.5">
+                <div className="flex justify-between gap-2">
+                  <div>
+                    <p className="text-[11px] text-slate-500">
+                      {new Date(note.created_at).toLocaleDateString('nl-NL', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                      {note.created_by_name && ` • ${note.created_by_name}`}
+                    </p>
+                    {note.omza_category && (
+                      <p className="text-[11px] text-slate-500 mt-0.5">{note.omza_category}</p>
+                    )}
+                    <p className="text-sm text-slate-800 mt-0.5">{note.text}</p>
+                    {note.tags.length > 0 && (
+                      <div className="mt-1 flex flex-wrap gap-1.5 text-[10px] text-slate-500">
+                        {note.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="rounded-full bg-slate-50 border border-slate-200 px-2 py-0.5"
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {note.is_portfolio_evidence && (
+                      <span className="inline-block mt-1 text-[10px] text-purple-700 bg-purple-50 border border-purple-200 rounded-full px-2 py-0.5">
+                        Portfolio-bewijs
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );
