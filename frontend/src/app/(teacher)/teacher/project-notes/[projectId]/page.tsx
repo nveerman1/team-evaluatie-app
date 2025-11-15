@@ -210,27 +210,29 @@ export default function ProjectNotesDetailPage({
                 </div>
               )}
 
-              {/* Leerlingenlijst in sidebar */}
-              {context.students.length > 0 && (
+              {/* Leerlingenlijst in sidebar - filtered by selected team */}
+              {selectedTeamId && context.students.filter(s => s.team_id === selectedTeamId).length > 0 && (
                 <div className="rounded-xl bg-white border border-gray-200/80 shadow-sm p-3">
                   <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500 px-1 mb-2">
-                    Leerlingen in dit project
+                    Leerlingen in dit team
                   </p>
                   <div className="flex flex-col gap-1.5">
-                    {context.students.map((student) => (
-                      <button
-                        key={student.id}
-                        onClick={() => handleSelectStudent(student.id)}
-                        className={`w-full text-left rounded-xl px-3 py-2 text-xs transition border ${
-                          selectedStudentId === student.id
-                            ? "bg-slate-900 text-slate-50 border-slate-900 shadow-sm"
-                            : "bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100"
-                        }`}
-                      >
-                        <p className="font-medium text-[13px]">{student.name}</p>
-                        <p className="text-[11px] opacity-80">{student.team_name || 'Geen team'}</p>
-                      </button>
-                    ))}
+                    {context.students
+                      .filter((student) => student.team_id === selectedTeamId)
+                      .map((student) => (
+                        <button
+                          key={student.id}
+                          onClick={() => handleSelectStudent(student.id)}
+                          className={`w-full text-left rounded-xl px-3 py-2 text-xs transition border ${
+                            selectedStudentId === student.id
+                              ? "bg-slate-900 text-slate-50 border-slate-900 shadow-sm"
+                              : "bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100"
+                          }`}
+                        >
+                          <p className="font-medium text-[13px]">{student.name}</p>
+                          <p className="text-[11px] opacity-80">{student.team_name || 'Geen team'}</p>
+                        </button>
+                      ))}
                   </div>
                 </div>
               )}
