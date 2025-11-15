@@ -60,34 +60,52 @@ export default function GrowthPage() {
   if (error) return <ErrorMessage message={error} />;
   if (windows.length === 0) {
     return (
-      <main className="p-6 max-w-6xl mx-auto">
-        <div className="p-8 border rounded-xl bg-gray-50 text-center">
-          <p className="text-gray-500">
-            Nog geen competentiescans beschikbaar.
-          </p>
-          <Link
-            href="/student"
-            className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Terug naar Dashboard
-          </Link>
+      <div className="min-h-screen bg-gray-100">
+        <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+          <header className="px-6 py-6 max-w-6xl mx-auto">
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+              Mijn Competentiegroei
+            </h1>
+            <p className="text-gray-600 mt-1 text-sm">
+              Bekijk je ontwikkeling en leerdoelen over tijd
+            </p>
+          </header>
         </div>
-      </main>
+        <main className="max-w-6xl mx-auto px-6 py-6">
+          <div className="p-8 border rounded-xl bg-gray-50 text-center">
+            <p className="text-gray-500">
+              Nog geen competentiescans beschikbaar.
+            </p>
+            <Link
+              href="/student"
+              className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Terug naar Dashboard
+            </Link>
+          </div>
+        </main>
+      </div>
     );
   }
 
   return (
-    <main className="p-6 max-w-6xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Mijn Competentiegroei</h1>
-        <p className="text-gray-600">
-          Bekijk je ontwikkeling en leerdoelen over tijd
-        </p>
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+            Mijn Competentiegroei
+          </h1>
+          <p className="text-gray-600 mt-1 text-sm">
+            Bekijk je ontwikkeling en leerdoelen over tijd
+          </p>
+        </header>
       </div>
 
-      {/* Window Selector */}
-      <div>
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-6 py-6 space-y-6">
+        {/* Window Selector */}
+        <div>
         <label className="block text-sm font-medium mb-2">
           Selecteer periode:
         </label>
@@ -104,14 +122,14 @@ export default function GrowthPage() {
               {win.title} ({win.status})
             </option>
           ))}
-        </select>
-      </div>
+          </select>
+        </div>
 
-      {/* Overview */}
-      {overview && (
-        <div className="space-y-6">
-          {/* Scores */}
-          <div className="p-5 border rounded-xl bg-white">
+        {/* Overview */}
+        {overview && (
+          <div className="space-y-6">
+            {/* Scores */}
+            <div className="p-5 border border-gray-200/80 shadow-sm rounded-xl bg-white">
             <h2 className="text-xl font-semibold mb-4">Competentiescores</h2>
             <div className="space-y-3">
               {overview.scores.map((score) => (
@@ -168,12 +186,12 @@ export default function GrowthPage() {
                   </div>
                 </div>
               ))}
+              </div>
             </div>
-          </div>
 
-          {/* Goals */}
-          {overview.goals.length > 0 && (
-            <div className="p-5 border rounded-xl bg-white">
+            {/* Goals */}
+            {overview.goals.length > 0 && (
+              <div className="p-5 border border-gray-200/80 shadow-sm rounded-xl bg-white">
               <h2 className="text-xl font-semibold mb-4">Leerdoelen</h2>
               <div className="space-y-3">
                 {overview.goals.map((goal) => (
@@ -205,14 +223,14 @@ export default function GrowthPage() {
                       </p>
                     )}
                   </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Reflection */}
-          {overview.reflection && (
-            <div className="p-5 border rounded-xl bg-white">
+            {/* Reflection */}
+            {overview.reflection && (
+              <div className="p-5 border border-gray-200/80 shadow-sm rounded-xl bg-white">
               <h2 className="text-xl font-semibold mb-4">Reflectie</h2>
               <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
                 <p className="text-gray-700 whitespace-pre-wrap">
@@ -240,21 +258,22 @@ export default function GrowthPage() {
                     </span>
                   </div>
                 )}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
 
-      {/* Back Button */}
-      <div>
-        <Link
-          href="/student"
-          className="inline-block px-4 py-2 border rounded-lg hover:bg-gray-50"
-        >
-          ← Terug naar Dashboard
-        </Link>
-      </div>
-    </main>
+        {/* Back Button */}
+        <div>
+          <Link
+            href="/student"
+            className="inline-block px-4 py-2 border rounded-lg hover:bg-gray-50"
+          >
+            ← Terug naar Dashboard
+          </Link>
+        </div>
+      </main>
+    </div>
   );
 }

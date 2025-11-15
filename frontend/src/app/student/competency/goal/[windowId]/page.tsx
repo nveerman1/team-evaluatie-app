@@ -97,39 +97,46 @@ export default function GoalPage() {
   if (!window) return <ErrorMessage message="Window not found" />;
 
   return (
-    <main className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Leerdoel Instellen</h1>
-        <p className="text-gray-600">
-          Stel een persoonlijk leerdoel in voor {window.title}
-        </p>
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+            Leerdoel Instellen
+          </h1>
+          <p className="text-gray-600 mt-1 text-sm">
+            Stel een persoonlijk leerdoel in voor {window.title}
+          </p>
+        </header>
       </div>
 
-      {successMessage && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
-          {successMessage}
-        </div>
-      )}
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-6 py-6 space-y-6">
 
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-          {error}
-        </div>
-      )}
+        {successMessage && (
+          <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
+            {successMessage}
+          </div>
+        )}
 
-      {existingGoals.length > 0 && (
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-700">
-            💡 Je hebt al een leerdoel voor deze periode. Het onderstaande
-            formulier toont je huidige leerdoel. Je kunt een nieuw leerdoel
-            toevoegen door op &apos;Opslaan&apos; te klikken.
-          </p>
-        </div>
-      )}
+        {error && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+            {error}
+          </div>
+        )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="p-6 border rounded-xl bg-white space-y-4">
+        {existingGoals.length > 0 && (
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-700">
+              💡 Je hebt al een leerdoel voor deze periode. Het onderstaande
+              formulier toont je huidige leerdoel. Je kunt een nieuw leerdoel
+              toevoegen door op &apos;Opslaan&apos; te klikken.
+            </p>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="p-6 border border-gray-200/80 shadow-sm rounded-xl bg-white space-y-4">
           {/* Competency Selection */}
           <div>
             <label className="block text-sm font-medium mb-2">
@@ -202,28 +209,29 @@ export default function GoalPage() {
               <li>Zorg dat het realistisch en haalbaar is</li>
               <li>Koppel het aan concrete acties</li>
               <li>Denk na over hoe je je voortgang kunt meten</li>
-            </ul>
+              </ul>
+            </div>
           </div>
-        </div>
 
-        {/* Submit Button */}
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={() => router.push("/student")}
-            className="px-6 py-2 border rounded-lg hover:bg-gray-50"
-          >
-            Annuleren
-          </button>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
-          >
-            {submitting ? "Opslaan..." : "Leerdoel Opslaan"}
-          </button>
-        </div>
-      </form>
-    </main>
+          {/* Submit Button */}
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => router.push("/student")}
+              className="px-6 py-2 border rounded-lg hover:bg-gray-50"
+            >
+              Annuleren
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+            >
+              {submitting ? "Opslaan..." : "Leerdoel Opslaan"}
+            </button>
+          </div>
+        </form>
+      </main>
+    </div>
   );
 }

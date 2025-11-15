@@ -131,28 +131,35 @@ export default function StudentProjectAssessmentInner() {
   });
 
   return (
-    <main className="max-w-6xl mx-auto p-6 space-y-6">
-      {/* Back button */}
-      <div className="flex justify-start">
-        <button
-          onClick={() => router.back()}
-          className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
-        >
-          ← Terug
-        </button>
+    <div className="min-h-screen bg-gray-100">
+      {/* Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+                {data.assessment.title}
+              </h1>
+              <p className="text-gray-600 mt-1 text-sm">
+                Rubric: {data.rubric_title}
+                {data.teacher_name && <> • Beoordeeld door: {data.teacher_name}</>}
+                {data.assessment.published_at && (
+                  <> • Datum: {new Date(data.assessment.published_at).toLocaleDateString("nl-NL")}</>
+                )}
+              </p>
+            </div>
+            <button
+              onClick={() => router.back()}
+              className="px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+            >
+              ← Terug
+            </button>
+          </div>
+        </header>
       </div>
 
-      {/* Header with project info */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">{data.assessment.title}</h1>
-        <p className="text-gray-600">
-          Rubric: {data.rubric_title}
-          {data.teacher_name && <> • Beoordeeld door: {data.teacher_name}</>}
-          {data.assessment.published_at && (
-            <> • Datum: {new Date(data.assessment.published_at).toLocaleDateString("nl-NL")}</>
-          )}
-        </p>
-      </div>
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-6 py-6 space-y-6">
 
       {successMsg && (
         <div className="p-3 rounded-lg bg-green-50 text-green-700 flex items-center gap-2">
@@ -164,8 +171,8 @@ export default function StudentProjectAssessmentInner() {
         <div className="p-3 rounded-lg bg-red-50 text-red-700">{error}</div>
       )}
 
-      {/* Rubric matrices grouped by category */}
-      <div className="bg-white border rounded-2xl p-6 space-y-8">
+        {/* Rubric matrices grouped by category */}
+        <div className="bg-white border border-gray-200/80 shadow-sm rounded-xl p-6 space-y-8">
         {(() => {
           // Group criteria by category
           const grouped = data.criteria.reduce((acc, c) => {
@@ -207,9 +214,9 @@ export default function StudentProjectAssessmentInner() {
         })()}
       </div>
 
-      {/* Total Score and Grade */}
-      {data.total_score != null && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6">
+        {/* Total Score and Grade */}
+        {data.total_score != null && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
           <h2 className="text-2xl font-bold mb-4">Eindresultaat</h2>
           <div className="grid grid-cols-2 gap-8">
             <div>
@@ -230,12 +237,12 @@ export default function StudentProjectAssessmentInner() {
                 <p className="text-sm text-gray-500 mt-1">schaal 1-10</p>
               </div>
             )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Reflection Section */}
-      <div className="bg-white border rounded-2xl p-6">
+        {/* Reflection Section */}
+        <div className="bg-white border border-gray-200/80 shadow-sm rounded-xl p-6">
         <div className="flex items-start justify-between mb-2">
           <div>
             <h2 className="text-2xl font-bold">Jouw reflectie</h2>
@@ -279,19 +286,20 @@ export default function StudentProjectAssessmentInner() {
           disabled={saving || !reflectionText.trim()}
           className="px-6 py-2 rounded-lg bg-blue-600 text-white disabled:opacity-60 hover:bg-blue-700 transition-colors"
         >
-          {saving ? "Opslaan…" : "Reflectie opslaan"}
-        </button>
-      </div>
+            {saving ? "Opslaan…" : "Reflectie opslaan"}
+          </button>
+        </div>
 
-      {/* PDF Download Button */}
-      <div className="flex justify-center">
-        <button
-          onClick={handleDownloadPDF}
-          className="px-6 py-3 rounded-lg bg-gray-800 text-white hover:bg-gray-900 transition-colors"
-        >
-          Download beoordeling als PDF
-        </button>
-      </div>
-    </main>
+        {/* PDF Download Button */}
+        <div className="flex justify-center">
+          <button
+            onClick={handleDownloadPDF}
+            className="px-6 py-3 rounded-lg bg-gray-800 text-white hover:bg-gray-900 transition-colors"
+          >
+            Download beoordeling als PDF
+          </button>
+        </div>
+      </main>
+    </div>
   );
 }

@@ -41,24 +41,32 @@ export default function StudentResults() {
   );
 
   return (
-    <main className="p-6 max-w-6xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Mijn Resultaten</h1>
-          <p className="text-gray-600">
-            Bekijk je cijfers, feedback en reflecties
-          </p>
-        </div>
-        <Link
-          href="/student"
-          className="px-4 py-2 rounded-xl border hover:bg-gray-50 transition-colors"
-        >
-          ← Terug naar Dashboard
-        </Link>
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+                Mijn Resultaten
+              </h1>
+              <p className="text-gray-600 mt-1 text-sm">
+                Bekijk je cijfers, feedback en reflecties
+              </p>
+            </div>
+            <Link
+              href="/student"
+              className="px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+            >
+              ← Terug naar Dashboard
+            </Link>
+          </div>
+        </header>
       </div>
 
-      {results.length === 0 ? (
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-6 py-6">
+        {results.length === 0 ? (
         <div className="p-12 border rounded-xl bg-gray-50 text-center">
           <p className="text-gray-500 text-lg">
             Je hebt nog geen voltooide evaluaties met resultaten.
@@ -121,7 +129,8 @@ export default function StudentResults() {
             )}
           </div>
         </div>
-      )}
-    </main>
+        )}
+      </main>
+    </div>
   );
 }
