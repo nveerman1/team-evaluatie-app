@@ -36,6 +36,13 @@ export default function ProjectNotesDetailPage({
     loadContext();
   }, [projectId]);
 
+  // Automatically switch to timeline view when search or filter is used
+  useEffect(() => {
+    if (searchText || searchName || filterCategory || filterLearningObjective) {
+      setActiveTab("timeline");
+    }
+  }, [searchText, searchName, filterCategory, filterLearningObjective]);
+
   const loadContext = async () => {
     try {
       setLoading(true);
