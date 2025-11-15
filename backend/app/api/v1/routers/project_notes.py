@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_
+from sqlalchemy import func
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import (
@@ -49,45 +49,51 @@ async def list_contexts(
 ):
     """List all project note contexts for the current teacher."""
     require_role(current_user, ["teacher", "admin"])
-    
+
     query = db.query(ProjectNotesContext).filter(
         ProjectNotesContext.school_id == current_user.school_id,
         ProjectNotesContext.created_by == current_user.id,
     )
-    
+
     if course_id:
         query = query.filter(ProjectNotesContext.course_id == course_id)
     if class_name:
         query = query.filter(ProjectNotesContext.class_name == class_name)
-    
+
     contexts = query.order_by(ProjectNotesContext.created_at.desc()).all()
-    
+
     # Enrich with course names and note counts
     results = []
     for context in contexts:
         context_dict = ProjectNotesContextOut.model_validate(context).model_dump()
-        
+
         # Add course name
         if context.course_id:
             course = db.query(Course).filter(Course.id == context.course_id).first()
             context_dict["course_name"] = course.name if course else None
-        
+
         # Add creator name
         creator = db.query(User).filter(User.id == context.created_by).first()
         context_dict["created_by_name"] = creator.name if creator else None
-        
+
         # Add note count
-        note_count = db.query(func.count(ProjectNote.id)).filter(
-            ProjectNote.context_id == context.id
-        ).scalar()
+        note_count = (
+            db.query(func.count(ProjectNote.id))
+            .filter(ProjectNote.context_id == context.id)
+            .scalar()
+        )
         context_dict["note_count"] = note_count or 0
-        
+
         results.append(ProjectNotesContextOut(**context_dict))
-    
+
     return results
 
 
-@router.post("/contexts", response_model=ProjectNotesContextOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/contexts",
+    response_model=ProjectNotesContextOut,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_context(
     data: ProjectNotesContextCreate,
     db: Session = Depends(get_db),
@@ -96,19 +102,23 @@ async def create_context(
 ):
     """Create a new project notes context."""
     require_role(current_user, ["teacher", "admin"])
-    
+
     # Verify course exists if provided
     if data.course_id:
-        course = db.query(Course).filter(
-            Course.id == data.course_id,
-            Course.school_id == current_user.school_id,
-        ).first()
+        course = (
+            db.query(Course)
+            .filter(
+                Course.id == data.course_id,
+                Course.school_id == current_user.school_id,
+            )
+            .first()
+        )
         if not course:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Course not found",
             )
-    
+
     context = ProjectNotesContext(
         school_id=current_user.school_id,
         title=data.title,
@@ -119,10 +129,10 @@ async def create_context(
         created_by=current_user.id,
         settings=data.settings,
     )
-    
+
     db.add(context)
     db.flush()
-    
+
     # Log the action
     log_create(
         db=db,
@@ -132,19 +142,19 @@ async def create_context(
         details={"title": context.title},
         request=request,
     )
-    
+
     db.commit()
     db.refresh(context)
-    
+
     # Enrich response
     context_dict = ProjectNotesContextOut.model_validate(context).model_dump()
     context_dict["created_by_name"] = current_user.name
     context_dict["note_count"] = 0
-    
+
     if context.course_id:
         course = db.query(Course).filter(Course.id == context.course_id).first()
         context_dict["course_name"] = course.name if course else None
-    
+
     return ProjectNotesContextOut(**context_dict)
 
 
@@ -156,99 +166,114 @@ async def get_context(
 ):
     """Get details of a specific project notes context."""
     require_role(current_user, ["teacher", "admin"])
-    
-    context = db.query(ProjectNotesContext).filter(
-        ProjectNotesContext.id == context_id,
-        ProjectNotesContext.school_id == current_user.school_id,
-    ).first()
-    
+
+    context = (
+        db.query(ProjectNotesContext)
+        .filter(
+            ProjectNotesContext.id == context_id,
+            ProjectNotesContext.school_id == current_user.school_id,
+        )
+        .first()
+    )
+
     if not context:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Context not found",
         )
-    
+
     # Build basic response
     context_dict = ProjectNotesContextOut.model_validate(context).model_dump()
-    
+
     # Add course name
     if context.course_id:
         course = db.query(Course).filter(Course.id == context.course_id).first()
         context_dict["course_name"] = course.name if course else None
-    
+
     # Add creator name
     creator = db.query(User).filter(User.id == context.created_by).first()
     context_dict["created_by_name"] = creator.name if creator else None
-    
+
     # Add note count
-    note_count = db.query(func.count(ProjectNote.id)).filter(
-        ProjectNote.context_id == context.id
-    ).scalar()
+    note_count = (
+        db.query(func.count(ProjectNote.id))
+        .filter(ProjectNote.context_id == context.id)
+        .scalar()
+    )
     context_dict["note_count"] = note_count or 0
-    
+
     # Get teams for this context (based on course_id and class_name)
     teams = []
     students = []
-    
+
     if context.course_id:
         # Get all groups for this course
         groups_query = db.query(Group).filter(
             Group.course_id == context.course_id,
             Group.school_id == current_user.school_id,
         )
-        
+
         # Filter by class_name if specified
         if context.class_name:
             # Get students in this class and find their groups
-            student_ids = db.query(User.id).filter(
-                User.school_id == current_user.school_id,
-                User.class_name == context.class_name,
-                User.role == "student",
-            ).all()
+            student_ids = (
+                db.query(User.id)
+                .filter(
+                    User.school_id == current_user.school_id,
+                    User.class_name == context.class_name,
+                    User.role == "student",
+                )
+                .all()
+            )
             student_ids = [s[0] for s in student_ids]
-            
+
             # Get groups that have these students
-            groups_query = groups_query.join(
-                GroupMember,
-                GroupMember.group_id == Group.id
-            ).filter(
-                GroupMember.user_id.in_(student_ids)
-            ).distinct()
-        
+            groups_query = (
+                groups_query.join(GroupMember, GroupMember.group_id == Group.id)
+                .filter(GroupMember.user_id.in_(student_ids))
+                .distinct()
+            )
+
         groups = groups_query.all()
-        
+
         for group in groups:
             # Get members
-            members_data = db.query(User).join(
-                GroupMember,
-                GroupMember.user_id == User.id
-            ).filter(
-                GroupMember.group_id == group.id,
-                GroupMember.active == True,
-            ).all()
-            
+            members_data = (
+                db.query(User)
+                .join(GroupMember, GroupMember.user_id == User.id)
+                .filter(
+                    GroupMember.group_id == group.id,
+                    GroupMember.active,
+                )
+                .all()
+            )
+
             member_names = [m.name for m in members_data]
-            
-            teams.append(TeamInfo(
-                id=group.id,
-                name=group.name,
-                member_count=len(member_names),
-                members=member_names,
-            ))
-            
+
+            teams.append(
+                TeamInfo(
+                    id=group.id,
+                    name=group.name,
+                    member_count=len(member_names),
+                    members=member_names,
+                )
+            )
+
             # Add students to the students list
             for member in members_data:
                 if not any(s.id == member.id for s in students):
-                    students.append(StudentInfo(
-                        id=member.id,
-                        name=member.name,
-                        team_id=group.id,
-                        team_name=group.name,
-                    ))
-    
+                    students.append(
+                        StudentInfo(
+                            id=member.id,
+                            name=member.name,
+                            team_id=group.id,
+                            team_name=group.name,
+                        )
+                    )
+
     context_dict["teams"] = teams
     context_dict["students"] = students
-    
+
     return ProjectNotesContextDetailOut(**context_dict)
 
 
@@ -262,23 +287,27 @@ async def update_context(
 ):
     """Update a project notes context."""
     require_role(current_user, ["teacher", "admin"])
-    
-    context = db.query(ProjectNotesContext).filter(
-        ProjectNotesContext.id == context_id,
-        ProjectNotesContext.school_id == current_user.school_id,
-    ).first()
-    
+
+    context = (
+        db.query(ProjectNotesContext)
+        .filter(
+            ProjectNotesContext.id == context_id,
+            ProjectNotesContext.school_id == current_user.school_id,
+        )
+        .first()
+    )
+
     if not context:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Context not found",
         )
-    
+
     # Update fields
     update_data = data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(context, field, value)
-    
+
     # Log the action
     log_update(
         db=db,
@@ -288,25 +317,27 @@ async def update_context(
         details=update_data,
         request=request,
     )
-    
+
     db.commit()
     db.refresh(context)
-    
+
     # Enrich response
     context_dict = ProjectNotesContextOut.model_validate(context).model_dump()
-    
+
     if context.course_id:
         course = db.query(Course).filter(Course.id == context.course_id).first()
         context_dict["course_name"] = course.name if course else None
-    
+
     creator = db.query(User).filter(User.id == context.created_by).first()
     context_dict["created_by_name"] = creator.name if creator else None
-    
-    note_count = db.query(func.count(ProjectNote.id)).filter(
-        ProjectNote.context_id == context.id
-    ).scalar()
+
+    note_count = (
+        db.query(func.count(ProjectNote.id))
+        .filter(ProjectNote.context_id == context.id)
+        .scalar()
+    )
     context_dict["note_count"] = note_count or 0
-    
+
     return ProjectNotesContextOut(**context_dict)
 
 
@@ -319,18 +350,22 @@ async def delete_context(
 ):
     """Delete a project notes context and all its notes."""
     require_role(current_user, ["teacher", "admin"])
-    
-    context = db.query(ProjectNotesContext).filter(
-        ProjectNotesContext.id == context_id,
-        ProjectNotesContext.school_id == current_user.school_id,
-    ).first()
-    
+
+    context = (
+        db.query(ProjectNotesContext)
+        .filter(
+            ProjectNotesContext.id == context_id,
+            ProjectNotesContext.school_id == current_user.school_id,
+        )
+        .first()
+    )
+
     if not context:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Context not found",
         )
-    
+
     # Log the action
     log_delete(
         db=db,
@@ -340,7 +375,7 @@ async def delete_context(
         details={"title": context.title},
         request=request,
     )
-    
+
     db.delete(context)
     db.commit()
 
@@ -357,21 +392,25 @@ async def list_notes(
 ):
     """Get all notes for a specific context with optional filters."""
     require_role(current_user, ["teacher", "admin"])
-    
+
     # Verify context exists and belongs to user's school
-    context = db.query(ProjectNotesContext).filter(
-        ProjectNotesContext.id == context_id,
-        ProjectNotesContext.school_id == current_user.school_id,
-    ).first()
-    
+    context = (
+        db.query(ProjectNotesContext)
+        .filter(
+            ProjectNotesContext.id == context_id,
+            ProjectNotesContext.school_id == current_user.school_id,
+        )
+        .first()
+    )
+
     if not context:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Context not found",
         )
-    
+
     query = db.query(ProjectNote).filter(ProjectNote.context_id == context_id)
-    
+
     if note_type:
         query = query.filter(ProjectNote.note_type == note_type)
     if team_id:
@@ -380,41 +419,47 @@ async def list_notes(
         query = query.filter(ProjectNote.student_id == student_id)
     if omza_category:
         query = query.filter(ProjectNote.omza_category == omza_category)
-    
+
     notes = query.order_by(ProjectNote.created_at.desc()).all()
-    
+
     # Enrich with joined data
     results = []
     for note in notes:
         note_dict = ProjectNoteOut.model_validate(note).model_dump()
-        
+
         # Add team name
         if note.team_id:
             team = db.query(Group).filter(Group.id == note.team_id).first()
             note_dict["team_name"] = team.name if team else None
-        
+
         # Add student name
         if note.student_id:
             student = db.query(User).filter(User.id == note.student_id).first()
             note_dict["student_name"] = student.name if student else None
-        
+
         # Add learning objective title
         if note.learning_objective_id:
-            lo = db.query(LearningObjective).filter(
-                LearningObjective.id == note.learning_objective_id
-            ).first()
+            lo = (
+                db.query(LearningObjective)
+                .filter(LearningObjective.id == note.learning_objective_id)
+                .first()
+            )
             note_dict["learning_objective_title"] = lo.title if lo else None
-        
+
         # Add creator name
         creator = db.query(User).filter(User.id == note.created_by).first()
         note_dict["created_by_name"] = creator.name if creator else None
-        
+
         results.append(ProjectNoteOut(**note_dict))
-    
+
     return results
 
 
-@router.post("/contexts/{context_id}/notes", response_model=ProjectNoteOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/contexts/{context_id}/notes",
+    response_model=ProjectNoteOut,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_note(
     context_id: int,
     data: ProjectNoteCreate,
@@ -424,19 +469,23 @@ async def create_note(
 ):
     """Create a new note in the context."""
     require_role(current_user, ["teacher", "admin"])
-    
+
     # Verify context exists
-    context = db.query(ProjectNotesContext).filter(
-        ProjectNotesContext.id == context_id,
-        ProjectNotesContext.school_id == current_user.school_id,
-    ).first()
-    
+    context = (
+        db.query(ProjectNotesContext)
+        .filter(
+            ProjectNotesContext.id == context_id,
+            ProjectNotesContext.school_id == current_user.school_id,
+        )
+        .first()
+    )
+
     if not context:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Context not found",
         )
-    
+
     # Validate note type requirements
     if data.note_type == "team" and not data.team_id:
         raise HTTPException(
@@ -448,7 +497,7 @@ async def create_note(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="student_id is required for student notes",
         )
-    
+
     note = ProjectNote(
         context_id=context_id,
         note_type=data.note_type,
@@ -463,10 +512,10 @@ async def create_note(
         metadata_json=data.metadata,
         created_by=current_user.id,
     )
-    
+
     db.add(note)
     db.flush()
-    
+
     # Log the action
     log_create(
         db=db,
@@ -476,28 +525,30 @@ async def create_note(
         details={"context_id": context_id, "note_type": data.note_type},
         request=request,
     )
-    
+
     db.commit()
     db.refresh(note)
-    
+
     # Enrich response
     note_dict = ProjectNoteOut.model_validate(note).model_dump()
     note_dict["created_by_name"] = current_user.name
-    
+
     if note.team_id:
         team = db.query(Group).filter(Group.id == note.team_id).first()
         note_dict["team_name"] = team.name if team else None
-    
+
     if note.student_id:
         student = db.query(User).filter(User.id == note.student_id).first()
         note_dict["student_name"] = student.name if student else None
-    
+
     if note.learning_objective_id:
-        lo = db.query(LearningObjective).filter(
-            LearningObjective.id == note.learning_objective_id
-        ).first()
+        lo = (
+            db.query(LearningObjective)
+            .filter(LearningObjective.id == note.learning_objective_id)
+            .first()
+        )
         note_dict["learning_objective_title"] = lo.title if lo else None
-    
+
     return ProjectNoteOut(**note_dict)
 
 
@@ -509,41 +560,45 @@ async def get_note(
 ):
     """Get a specific note by ID."""
     require_role(current_user, ["teacher", "admin"])
-    
-    note = db.query(ProjectNote).join(
-        ProjectNotesContext,
-        ProjectNotesContext.id == ProjectNote.context_id
-    ).filter(
-        ProjectNote.id == note_id,
-        ProjectNotesContext.school_id == current_user.school_id,
-    ).first()
-    
+
+    note = (
+        db.query(ProjectNote)
+        .join(ProjectNotesContext, ProjectNotesContext.id == ProjectNote.context_id)
+        .filter(
+            ProjectNote.id == note_id,
+            ProjectNotesContext.school_id == current_user.school_id,
+        )
+        .first()
+    )
+
     if not note:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Note not found",
         )
-    
+
     # Enrich response
     note_dict = ProjectNoteOut.model_validate(note).model_dump()
-    
+
     if note.team_id:
         team = db.query(Group).filter(Group.id == note.team_id).first()
         note_dict["team_name"] = team.name if team else None
-    
+
     if note.student_id:
         student = db.query(User).filter(User.id == note.student_id).first()
         note_dict["student_name"] = student.name if student else None
-    
+
     if note.learning_objective_id:
-        lo = db.query(LearningObjective).filter(
-            LearningObjective.id == note.learning_objective_id
-        ).first()
+        lo = (
+            db.query(LearningObjective)
+            .filter(LearningObjective.id == note.learning_objective_id)
+            .first()
+        )
         note_dict["learning_objective_title"] = lo.title if lo else None
-    
+
     creator = db.query(User).filter(User.id == note.created_by).first()
     note_dict["created_by_name"] = creator.name if creator else None
-    
+
     return ProjectNoteOut(**note_dict)
 
 
@@ -557,21 +612,23 @@ async def update_note(
 ):
     """Update a note."""
     require_role(current_user, ["teacher", "admin"])
-    
-    note = db.query(ProjectNote).join(
-        ProjectNotesContext,
-        ProjectNotesContext.id == ProjectNote.context_id
-    ).filter(
-        ProjectNote.id == note_id,
-        ProjectNotesContext.school_id == current_user.school_id,
-    ).first()
-    
+
+    note = (
+        db.query(ProjectNote)
+        .join(ProjectNotesContext, ProjectNotesContext.id == ProjectNote.context_id)
+        .filter(
+            ProjectNote.id == note_id,
+            ProjectNotesContext.school_id == current_user.school_id,
+        )
+        .first()
+    )
+
     if not note:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Note not found",
         )
-    
+
     # Update fields
     update_data = data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -580,7 +637,7 @@ async def update_note(
             setattr(note, "metadata_json", value)
         else:
             setattr(note, field, value)
-    
+
     # Log the action
     log_update(
         db=db,
@@ -590,30 +647,32 @@ async def update_note(
         details=update_data,
         request=request,
     )
-    
+
     db.commit()
     db.refresh(note)
-    
+
     # Enrich response
     note_dict = ProjectNoteOut.model_validate(note).model_dump()
-    
+
     if note.team_id:
         team = db.query(Group).filter(Group.id == note.team_id).first()
         note_dict["team_name"] = team.name if team else None
-    
+
     if note.student_id:
         student = db.query(User).filter(User.id == note.student_id).first()
         note_dict["student_name"] = student.name if student else None
-    
+
     if note.learning_objective_id:
-        lo = db.query(LearningObjective).filter(
-            LearningObjective.id == note.learning_objective_id
-        ).first()
+        lo = (
+            db.query(LearningObjective)
+            .filter(LearningObjective.id == note.learning_objective_id)
+            .first()
+        )
         note_dict["learning_objective_title"] = lo.title if lo else None
-    
+
     creator = db.query(User).filter(User.id == note.created_by).first()
     note_dict["created_by_name"] = creator.name if creator else None
-    
+
     return ProjectNoteOut(**note_dict)
 
 
@@ -626,21 +685,23 @@ async def delete_note(
 ):
     """Delete a specific note."""
     require_role(current_user, ["teacher", "admin"])
-    
-    note = db.query(ProjectNote).join(
-        ProjectNotesContext,
-        ProjectNotesContext.id == ProjectNote.context_id
-    ).filter(
-        ProjectNote.id == note_id,
-        ProjectNotesContext.school_id == current_user.school_id,
-    ).first()
-    
+
+    note = (
+        db.query(ProjectNote)
+        .join(ProjectNotesContext, ProjectNotesContext.id == ProjectNote.context_id)
+        .filter(
+            ProjectNote.id == note_id,
+            ProjectNotesContext.school_id == current_user.school_id,
+        )
+        .first()
+    )
+
     if not note:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Note not found",
         )
-    
+
     # Log the action
     log_delete(
         db=db,
@@ -650,7 +711,7 @@ async def delete_note(
         details={"context_id": note.context_id, "note_type": note.note_type},
         request=request,
     )
-    
+
     db.delete(note)
     db.commit()
 
@@ -663,45 +724,54 @@ async def get_timeline(
 ):
     """Get chronological timeline of all notes in a context."""
     require_role(current_user, ["teacher", "admin"])
-    
+
     # Verify context exists
-    context = db.query(ProjectNotesContext).filter(
-        ProjectNotesContext.id == context_id,
-        ProjectNotesContext.school_id == current_user.school_id,
-    ).first()
-    
+    context = (
+        db.query(ProjectNotesContext)
+        .filter(
+            ProjectNotesContext.id == context_id,
+            ProjectNotesContext.school_id == current_user.school_id,
+        )
+        .first()
+    )
+
     if not context:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Context not found",
         )
-    
-    notes = db.query(ProjectNote).filter(
-        ProjectNote.context_id == context_id
-    ).order_by(ProjectNote.created_at.desc()).all()
-    
+
+    notes = (
+        db.query(ProjectNote)
+        .filter(ProjectNote.context_id == context_id)
+        .order_by(ProjectNote.created_at.desc())
+        .all()
+    )
+
     # Enrich with joined data
     results = []
     for note in notes:
         note_dict = ProjectNoteOut.model_validate(note).model_dump()
-        
+
         if note.team_id:
             team = db.query(Group).filter(Group.id == note.team_id).first()
             note_dict["team_name"] = team.name if team else None
-        
+
         if note.student_id:
             student = db.query(User).filter(User.id == note.student_id).first()
             note_dict["student_name"] = student.name if student else None
-        
+
         if note.learning_objective_id:
-            lo = db.query(LearningObjective).filter(
-                LearningObjective.id == note.learning_objective_id
-            ).first()
+            lo = (
+                db.query(LearningObjective)
+                .filter(LearningObjective.id == note.learning_objective_id)
+                .first()
+            )
             note_dict["learning_objective_title"] = lo.title if lo else None
-        
+
         creator = db.query(User).filter(User.id == note.created_by).first()
         note_dict["created_by_name"] = creator.name if creator else None
-        
+
         results.append(ProjectNoteOut(**note_dict))
-    
+
     return results

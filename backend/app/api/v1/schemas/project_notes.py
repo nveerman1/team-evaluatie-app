@@ -7,14 +7,16 @@ Pydantic schemas for the Projectaantekeningen (Project Notes) feature.
 
 from __future__ import annotations
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List, Dict, Any
 
 
 # ========== ProjectNotesContext Schemas ==========
 
+
 class ProjectNotesContextCreate(BaseModel):
     """Schema for creating a new project notes context."""
+
     title: str = Field(..., min_length=1, max_length=200)
     course_id: Optional[int] = None
     class_name: Optional[str] = None
@@ -25,6 +27,7 @@ class ProjectNotesContextCreate(BaseModel):
 
 class ProjectNotesContextUpdate(BaseModel):
     """Schema for updating a project notes context."""
+
     title: Optional[str] = None
     description: Optional[str] = None
     settings: Optional[Dict[str, Any]] = None
@@ -32,6 +35,9 @@ class ProjectNotesContextUpdate(BaseModel):
 
 class ProjectNotesContextOut(BaseModel):
     """Basic output schema for project notes context."""
+
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     title: str
     course_id: Optional[int]
@@ -46,12 +52,10 @@ class ProjectNotesContextOut(BaseModel):
     settings: Dict[str, Any]
     note_count: Optional[int] = 0  # Can be computed
 
-    class Config:
-        from_attributes = True
-
 
 class TeamInfo(BaseModel):
     """Information about a team in the context."""
+
     id: int
     name: str
     member_count: int
@@ -60,6 +64,7 @@ class TeamInfo(BaseModel):
 
 class StudentInfo(BaseModel):
     """Information about a student in the context."""
+
     id: int
     name: str
     team_id: Optional[int]
@@ -68,14 +73,17 @@ class StudentInfo(BaseModel):
 
 class ProjectNotesContextDetailOut(ProjectNotesContextOut):
     """Detailed output schema including teams and students."""
+
     teams: List[TeamInfo] = []
     students: List[StudentInfo] = []
 
 
 # ========== ProjectNote Schemas ==========
 
+
 class ProjectNoteCreate(BaseModel):
     """Schema for creating a new note."""
+
     note_type: str = Field(..., pattern="^(project|team|student)$")
     team_id: Optional[int] = None  # Required if note_type == "team"
     student_id: Optional[int] = None  # Required if note_type == "student"
@@ -90,6 +98,7 @@ class ProjectNoteCreate(BaseModel):
 
 class ProjectNoteUpdate(BaseModel):
     """Schema for updating a note."""
+
     text: Optional[str] = None
     tags: Optional[List[str]] = None
     omza_category: Optional[str] = None
@@ -101,6 +110,9 @@ class ProjectNoteUpdate(BaseModel):
 
 class ProjectNoteOut(BaseModel):
     """Output schema for a note."""
+
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     context_id: int
     note_type: str
@@ -120,6 +132,3 @@ class ProjectNoteOut(BaseModel):
     created_by_name: Optional[str] = None  # Joined
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True

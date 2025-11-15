@@ -78,9 +78,13 @@ class Course(Base):
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
     name: Mapped[str] = mapped_column(String(200), nullable=False)
-    code: Mapped[Optional[str]] = mapped_column(String(50))  # e.g., "O&O", "XPLR", "BIO"
+    code: Mapped[Optional[str]] = mapped_column(
+        String(50)
+    )  # e.g., "O&O", "XPLR", "BIO"
     period: Mapped[Optional[str]] = mapped_column(String(50))
-    level: Mapped[Optional[str]] = mapped_column(String(50))  # e.g., "onderbouw", "bovenbouw"
+    level: Mapped[Optional[str]] = mapped_column(
+        String(50)
+    )  # e.g., "onderbouw", "bovenbouw"
     year: Mapped[Optional[int]] = mapped_column(Integer)  # e.g., 2024, 2025
     description: Mapped[Optional[str]] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -96,6 +100,7 @@ class TeacherCourse(Base):
     """
     Junction table linking teachers to courses they can manage
     """
+
     __tablename__ = "teacher_courses"
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
@@ -180,13 +185,15 @@ class Rubric(Base):
     description: Mapped[Optional[str]] = mapped_column(Text)
     scale_min: Mapped[int] = mapped_column(SmallInteger, default=1)
     scale_max: Mapped[int] = mapped_column(SmallInteger, default=5)
-    scope: Mapped[str] = mapped_column(String(20), default="peer", nullable=False)  # "peer" | "project"
-    target_level: Mapped[Optional[str]] = mapped_column(String(20))  # "onderbouw" | "bovenbouw"
+    scope: Mapped[str] = mapped_column(
+        String(20), default="peer", nullable=False
+    )  # "peer" | "project"
+    target_level: Mapped[Optional[str]] = mapped_column(
+        String(20)
+    )  # "onderbouw" | "bovenbouw"
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
-    
-    __table_args__ = (
-        Index("ix_rubric_school_scope", "school_id", "scope"),
-    )
+
+    __table_args__ = (Index("ix_rubric_school_scope", "school_id", "scope"),)
 
 
 class RubricCriterion(Base):
@@ -198,12 +205,14 @@ class RubricCriterion(Base):
     weight: Mapped[float] = mapped_column(Float, default=1.0)
     # descriptors per level, bijv. {"1": "…", "2": "…", …}
     descriptors: Mapped[dict] = mapped_column(JSON, default=dict)
-    category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)
+    category: Mapped[Optional[str]] = mapped_column(
+        String(100), nullable=True, index=True
+    )
 
     # Relationship to learning objectives
     learning_objectives: Mapped[list["LearningObjective"]] = relationship(
         secondary="rubric_criterion_learning_objectives",
-        back_populates="rubric_criteria"
+        back_populates="rubric_criteria",
     )
 
     __table_args__ = (Index("ix_criterion_rubric", "rubric_id"),)
@@ -224,7 +233,7 @@ class Evaluation(Base):
         ForeignKey("rubrics.id", ondelete="RESTRICT")
     )
     title: Mapped[str] = mapped_column(String(200), nullable=False)
-    
+
     # Evaluation type to make logic generic
     evaluation_type: Mapped[str] = mapped_column(
         String(30), default="peer", nullable=False
@@ -401,11 +410,12 @@ class ProjectAssessment(Base):
     """
     Project assessment per team/group, uses rubrics with scope='project'
     """
+
     __tablename__ = "project_assessments"
 
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
-    
+
     # Relationships
     group_id: Mapped[int] = mapped_column(
         ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True
@@ -416,16 +426,18 @@ class ProjectAssessment(Base):
     teacher_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    
+
     # Assessment data
     title: Mapped[str] = mapped_column(String(200), nullable=False)
-    version: Mapped[Optional[str]] = mapped_column(String(50))  # e.g., "tussentijds", "eind"
+    version: Mapped[Optional[str]] = mapped_column(
+        String(50)
+    )  # e.g., "tussentijds", "eind"
     status: Mapped[str] = mapped_column(String(30), default="draft")  # draft|published
     published_at: Mapped[Optional[datetime]] = mapped_column()
-    
+
     # Metadata
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
-    
+
     __table_args__ = (
         Index("ix_project_assessment_group", "group_id"),
         Index("ix_project_assessment_teacher", "teacher_id"),
@@ -436,11 +448,12 @@ class ProjectAssessmentScore(Base):
     """
     Scores for project assessment criteria
     """
+
     __tablename__ = "project_assessment_scores"
 
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
-    
+
     assessment_id: Mapped[int] = mapped_column(
         ForeignKey("project_assessments.id", ondelete="CASCADE"), nullable=False
     )
@@ -448,13 +461,16 @@ class ProjectAssessmentScore(Base):
         ForeignKey("rubric_criteria.id", ondelete="CASCADE"), nullable=False
     )
     team_number: Mapped[Optional[int]] = mapped_column(nullable=True)
-    
+
     score: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     comment: Mapped[Optional[str]] = mapped_column(Text)
-    
+
     __table_args__ = (
         UniqueConstraint(
-            "assessment_id", "criterion_id", "team_number", name="uq_project_score_per_criterion_team"
+            "assessment_id",
+            "criterion_id",
+            "team_number",
+            name="uq_project_score_per_criterion_team",
         ),
         Index("ix_project_score_assessment", "assessment_id"),
         Index("ix_project_score_team", "assessment_id", "team_number"),
@@ -465,26 +481,25 @@ class ProjectAssessmentReflection(Base):
     """
     Student reflection on project assessment
     """
+
     __tablename__ = "project_assessment_reflections"
 
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
-    
+
     assessment_id: Mapped[int] = mapped_column(
         ForeignKey("project_assessments.id", ondelete="CASCADE"), nullable=False
     )
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    
+
     text: Mapped[str] = mapped_column(Text)
     word_count: Mapped[int] = mapped_column(Integer)
     submitted_at: Mapped[Optional[datetime]] = mapped_column()
-    
+
     __table_args__ = (
-        UniqueConstraint(
-            "assessment_id", "user_id", name="uq_project_reflection_once"
-        ),
+        UniqueConstraint("assessment_id", "user_id", name="uq_project_reflection_once"),
         Index("ix_project_reflection_assessment", "assessment_id"),
     )
 
@@ -496,24 +511,29 @@ class Competency(Base):
     """
     Competency definition (e.g., Samenwerken, Communiceren, etc.)
     """
+
     __tablename__ = "competencies"
 
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
-    
+
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
-    category: Mapped[Optional[str]] = mapped_column(String(100))  # e.g., "Domein", "Denkwijzen", "Werkwijzen"
+    category: Mapped[Optional[str]] = mapped_column(
+        String(100)
+    )  # e.g., "Domein", "Denkwijzen", "Werkwijzen"
     order: Mapped[int] = mapped_column(Integer, default=0)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
-    
+
     # Scale settings (default 1-5 Likert)
     scale_min: Mapped[int] = mapped_column(SmallInteger, default=1)
     scale_max: Mapped[int] = mapped_column(SmallInteger, default=5)
-    scale_labels: Mapped[dict] = mapped_column(JSON, default=dict)  # e.g., {"1": "Startend", "5": "Sterk"}
-    
+    scale_labels: Mapped[dict] = mapped_column(
+        JSON, default=dict
+    )  # e.g., {"1": "Startend", "5": "Sterk"}
+
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
-    
+
     __table_args__ = (
         UniqueConstraint("school_id", "name", name="uq_competency_name_per_school"),
         Index("ix_competency_school", "school_id"),
@@ -524,6 +544,7 @@ class CompetencyRubricLevel(Base):
     """
     Rubric level descriptions for competencies with example behaviors
     """
+
     __tablename__ = "competency_rubric_levels"
 
     id: Mapped[int] = id_pk()
@@ -531,13 +552,17 @@ class CompetencyRubricLevel(Base):
     competency_id: Mapped[int] = mapped_column(
         ForeignKey("competencies.id", ondelete="CASCADE"), nullable=False
     )
-    
+
     level: Mapped[int] = mapped_column(SmallInteger, nullable=False)  # 1-5
-    label: Mapped[Optional[str]] = mapped_column(String(100))  # e.g., "Startend", "Basis"
+    label: Mapped[Optional[str]] = mapped_column(
+        String(100)
+    )  # e.g., "Startend", "Basis"
     description: Mapped[str] = mapped_column(Text, nullable=False)  # Behavior examples
-    
+
     __table_args__ = (
-        UniqueConstraint("competency_id", "level", name="uq_rubric_level_per_competency"),
+        UniqueConstraint(
+            "competency_id", "level", name="uq_rubric_level_per_competency"
+        ),
         Index("ix_rubric_level_competency", "competency_id"),
     )
 
@@ -546,33 +571,38 @@ class CompetencyWindow(Base):
     """
     Measurement window/period for competency scans (e.g., Startscan, Midscan, Eindscan)
     """
+
     __tablename__ = "competency_windows"
 
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
-    
-    title: Mapped[str] = mapped_column(String(200), nullable=False)  # e.g., "Startscan Q1 2025"
+
+    title: Mapped[str] = mapped_column(
+        String(200), nullable=False
+    )  # e.g., "Startscan Q1 2025"
     description: Mapped[Optional[str]] = mapped_column(Text)
-    
+
     # Scope: which classes/courses
     class_names: Mapped[list] = mapped_column(JSON, default=list)  # e.g., ["4A", "4B"]
     course_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("courses.id", ondelete="CASCADE"), nullable=True
     )
-    
+
     # Timing
     start_date: Mapped[Optional[datetime]] = mapped_column()
     end_date: Mapped[Optional[datetime]] = mapped_column()
-    status: Mapped[str] = mapped_column(String(20), default="draft")  # draft|open|closed
-    
+    status: Mapped[str] = mapped_column(
+        String(20), default="draft"
+    )  # draft|open|closed
+
     # Required fields per window type
     require_self_score: Mapped[bool] = mapped_column(Boolean, default=True)
     require_goal: Mapped[bool] = mapped_column(Boolean, default=False)
     require_reflection: Mapped[bool] = mapped_column(Boolean, default=False)
-    
+
     # Settings
     settings: Mapped[dict] = mapped_column(JSON, default=dict)
-    
+
     __table_args__ = (
         Index("ix_competency_window_school", "school_id"),
         Index("ix_competency_window_status", "school_id", "status"),
@@ -583,11 +613,12 @@ class CompetencySelfScore(Base):
     """
     Student self-assessment score for a competency in a window
     """
+
     __tablename__ = "competency_self_scores"
 
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
-    
+
     window_id: Mapped[int] = mapped_column(
         ForeignKey("competency_windows.id", ondelete="CASCADE"), nullable=False
     )
@@ -597,11 +628,13 @@ class CompetencySelfScore(Base):
     competency_id: Mapped[int] = mapped_column(
         ForeignKey("competencies.id", ondelete="CASCADE"), nullable=False
     )
-    
+
     score: Mapped[int] = mapped_column(SmallInteger, nullable=False)  # 1-5
-    example: Mapped[Optional[str]] = mapped_column(Text)  # Optional: "Wanneer heb je dit laten zien?"
+    example: Mapped[Optional[str]] = mapped_column(
+        Text
+    )  # Optional: "Wanneer heb je dit laten zien?"
     submitted_at: Mapped[Optional[datetime]] = mapped_column()
-    
+
     __table_args__ = (
         UniqueConstraint(
             "window_id", "user_id", "competency_id", name="uq_self_score_once"
@@ -614,11 +647,12 @@ class CompetencyPeerLabel(Base):
     """
     Peer labels/tags given during peer reviews (lightweight)
     """
+
     __tablename__ = "competency_peer_labels"
 
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
-    
+
     window_id: Mapped[int] = mapped_column(
         ForeignKey("competency_windows.id", ondelete="CASCADE"), nullable=False
     )
@@ -631,10 +665,14 @@ class CompetencyPeerLabel(Base):
     competency_id: Mapped[int] = mapped_column(
         ForeignKey("competencies.id", ondelete="CASCADE"), nullable=False
     )
-    
-    sentiment: Mapped[str] = mapped_column(String(20), default="positive")  # positive|neutral|negative
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, nullable=False)
-    
+
+    sentiment: Mapped[str] = mapped_column(
+        String(20), default="positive"
+    )  # positive|neutral|negative
+    created_at: Mapped[datetime] = mapped_column(
+        default=datetime.utcnow, nullable=False
+    )
+
     __table_args__ = (
         Index("ix_peer_label_window_to", "window_id", "to_user_id"),
         Index("ix_peer_label_competency", "competency_id"),
@@ -645,11 +683,12 @@ class CompetencyTeacherObservation(Base):
     """
     Teacher observation/score for a student's competency in a window
     """
+
     __tablename__ = "competency_teacher_observations"
 
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
-    
+
     window_id: Mapped[int] = mapped_column(
         ForeignKey("competency_windows.id", ondelete="CASCADE"), nullable=False
     )
@@ -662,11 +701,13 @@ class CompetencyTeacherObservation(Base):
     teacher_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    
+
     score: Mapped[int] = mapped_column(SmallInteger, nullable=False)  # 1-5
     comment: Mapped[Optional[str]] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, nullable=False)
-    
+    created_at: Mapped[datetime] = mapped_column(
+        default=datetime.utcnow, nullable=False
+    )
+
     __table_args__ = (
         UniqueConstraint(
             "window_id", "user_id", "competency_id", name="uq_teacher_obs_once"
@@ -679,11 +720,12 @@ class CompetencyGoal(Base):
     """
     Student learning goal for a competency in a window
     """
+
     __tablename__ = "competency_goals"
 
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
-    
+
     window_id: Mapped[int] = mapped_column(
         ForeignKey("competency_windows.id", ondelete="CASCADE"), nullable=False
     )
@@ -693,26 +735,27 @@ class CompetencyGoal(Base):
     competency_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("competencies.id", ondelete="SET NULL"), nullable=True
     )
-    
+
     goal_text: Mapped[str] = mapped_column(Text, nullable=False)
     success_criteria: Mapped[Optional[str]] = mapped_column(Text)
-    status: Mapped[str] = mapped_column(String(20), default="in_progress")  # in_progress|achieved|not_achieved
+    status: Mapped[str] = mapped_column(
+        String(20), default="in_progress"
+    )  # in_progress|achieved|not_achieved
     submitted_at: Mapped[Optional[datetime]] = mapped_column()
-    
-    __table_args__ = (
-        Index("ix_competency_goal_window_user", "window_id", "user_id"),
-    )
+
+    __table_args__ = (Index("ix_competency_goal_window_user", "window_id", "user_id"),)
 
 
 class CompetencyReflection(Base):
     """
     Student reflection on competency growth in a window
     """
+
     __tablename__ = "competency_reflections"
 
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
-    
+
     window_id: Mapped[int] = mapped_column(
         ForeignKey("competency_windows.id", ondelete="CASCADE"), nullable=False
     )
@@ -722,16 +765,14 @@ class CompetencyReflection(Base):
     goal_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("competency_goals.id", ondelete="SET NULL"), nullable=True
     )
-    
+
     text: Mapped[str] = mapped_column(Text, nullable=False)
     goal_achieved: Mapped[Optional[bool]] = mapped_column(Boolean)
     evidence: Mapped[Optional[str]] = mapped_column(Text)  # Bewijs/voorbeelden
     submitted_at: Mapped[Optional[datetime]] = mapped_column()
-    
+
     __table_args__ = (
-        UniqueConstraint(
-            "window_id", "user_id", name="uq_competency_reflection_once"
-        ),
+        UniqueConstraint("window_id", "user_id", name="uq_competency_reflection_once"),
         Index("ix_competency_reflection_window_user", "window_id", "user_id"),
     )
 
@@ -741,11 +782,12 @@ class CompetencyExternalInvite(Base):
     External reviewer invite for competency window
     Token-based, one-time use magic link
     """
+
     __tablename__ = "competency_external_invites"
 
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
-    
+
     window_id: Mapped[int] = mapped_column(
         ForeignKey("competency_windows.id", ondelete="CASCADE"), nullable=False
     )
@@ -755,27 +797,35 @@ class CompetencyExternalInvite(Base):
     invited_by_user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    
+
     # Invite details
     email: Mapped[str] = mapped_column(String(320), nullable=False)
     external_name: Mapped[Optional[str]] = mapped_column(String(200))
     external_organization: Mapped[Optional[str]] = mapped_column(String(200))
-    
+
     # Security
-    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
-    
+    token_hash: Mapped[str] = mapped_column(
+        String(64), nullable=False, unique=True, index=True
+    )
+
     # Status tracking
-    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending|used|revoked|expired
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(20), default="pending"
+    )  # pending|used|revoked|expired
+    created_at: Mapped[datetime] = mapped_column(
+        default=datetime.utcnow, nullable=False
+    )
     expires_at: Mapped[datetime] = mapped_column(nullable=False)
     sent_at: Mapped[Optional[datetime]] = mapped_column()
-    opened_at: Mapped[Optional[datetime]] = mapped_column()  # First time link was opened
+    opened_at: Mapped[Optional[datetime]] = (
+        mapped_column()
+    )  # First time link was opened
     submitted_at: Mapped[Optional[datetime]] = mapped_column()
     revoked_at: Mapped[Optional[datetime]] = mapped_column()
-    
+
     # Frozen rubric snapshot at invite creation
     rubric_snapshot: Mapped[dict] = mapped_column(JSON, default=dict)
-    
+
     __table_args__ = (
         Index("ix_external_invite_window", "window_id"),
         Index("ix_external_invite_subject", "subject_user_id"),
@@ -788,11 +838,12 @@ class CompetencyExternalScore(Base):
     """
     External reviewer score for a student's competency
     """
+
     __tablename__ = "competency_external_scores"
 
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
-    
+
     invite_id: Mapped[int] = mapped_column(
         ForeignKey("competency_external_invites.id", ondelete="CASCADE"), nullable=False
     )
@@ -805,19 +856,21 @@ class CompetencyExternalScore(Base):
     competency_id: Mapped[int] = mapped_column(
         ForeignKey("competencies.id", ondelete="CASCADE"), nullable=False
     )
-    
+
     score: Mapped[int] = mapped_column(SmallInteger, nullable=False)  # 1-5
     comment: Mapped[Optional[str]] = mapped_column(Text)
-    
+
     # External reviewer details (captured at submission)
     reviewer_name: Mapped[Optional[str]] = mapped_column(String(200))
     reviewer_organization: Mapped[Optional[str]] = mapped_column(String(200))
-    
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(
+        default=datetime.utcnow, nullable=False
+    )
     updated_at: Mapped[datetime] = mapped_column(
         default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
     )
-    
+
     __table_args__ = (
         UniqueConstraint(
             "invite_id", "competency_id", name="uq_external_score_per_competency"
@@ -831,8 +884,9 @@ class FeedbackSummary(Base):
     """
     Cached AI-generated summaries of peer feedback for students.
     """
+
     __tablename__ = "feedback_summaries"
-    
+
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
     evaluation_id: Mapped[int] = mapped_column(
@@ -841,23 +895,25 @@ class FeedbackSummary(Base):
     student_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    
+
     # The AI-generated summary text
     summary_text: Mapped[str] = mapped_column(Text, nullable=False)
-    
+
     # Hash of the input feedback to detect changes
     feedback_hash: Mapped[str] = mapped_column(String(64), nullable=False)
-    
+
     # Metadata
     generation_method: Mapped[str] = mapped_column(
         String(20), default="ai"
     )  # "ai" | "fallback"
     generation_duration_ms: Mapped[Optional[int]] = mapped_column()
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        default=datetime.utcnow, nullable=False
+    )
     updated_at: Mapped[datetime] = mapped_column(
         default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
     )
-    
+
     __table_args__ = (
         UniqueConstraint(
             "evaluation_id", "student_id", name="uq_summary_per_student_eval"
@@ -875,35 +931,36 @@ class LearningObjective(Base):
     Learning objectives / eindtermen that can be linked to rubric criteria
     to track student progress per learning goal.
     """
+
     __tablename__ = "learning_objectives"
 
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
-    
+
     # Domain (e.g., "A", "B", "C", "D - Ontwerpen", "E")
     domain: Mapped[Optional[str]] = mapped_column(String(50))
-    
+
     # Title/name of the learning objective
     title: Mapped[str] = mapped_column(String(200), nullable=False)
-    
+
     # Detailed description
     description: Mapped[Optional[str]] = mapped_column(Text)
-    
+
     # Order/number (e.g., 9, 11, 13, 14, 16)
     order: Mapped[int] = mapped_column(Integer, default=0)
-    
+
     # Phase: "onderbouw" or "bovenbouw"
     phase: Mapped[Optional[str]] = mapped_column(String(20))
-    
+
     # Additional metadata
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
-    
+
     # Relationship to rubric criteria
     rubric_criteria: Mapped[list["RubricCriterion"]] = relationship(
         secondary="rubric_criterion_learning_objectives",
-        back_populates="learning_objectives"
+        back_populates="learning_objectives",
     )
-    
+
     __table_args__ = (
         Index("ix_learning_objective_school", "school_id"),
         Index("ix_learning_objective_domain", "school_id", "domain"),
@@ -915,22 +972,24 @@ class RubricCriterionLearningObjective(Base):
     """
     Many-to-many association table linking rubric criteria to learning objectives
     """
+
     __tablename__ = "rubric_criterion_learning_objectives"
-    
+
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
-    
+
     criterion_id: Mapped[int] = mapped_column(
         ForeignKey("rubric_criteria.id", ondelete="CASCADE"), nullable=False
     )
     learning_objective_id: Mapped[int] = mapped_column(
         ForeignKey("learning_objectives.id", ondelete="CASCADE"), nullable=False
     )
-    
+
     __table_args__ = (
         UniqueConstraint(
-            "criterion_id", "learning_objective_id", 
-            name="uq_criterion_learning_objective"
+            "criterion_id",
+            "learning_objective_id",
+            name="uq_criterion_learning_objective",
         ),
         Index("ix_criterion_lo_criterion", "criterion_id"),
         Index("ix_criterion_lo_objective", "learning_objective_id"),
@@ -944,29 +1003,34 @@ class AuditLog(Base):
     """
     Audit log for tracking all mutating actions in the system
     """
+
     __tablename__ = "audit_logs"
-    
+
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
-    
+
     # Who performed the action
     user_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     user_email: Mapped[Optional[str]] = mapped_column(String(320))  # Snapshot of email
-    
+
     # What action was performed
-    action: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g., "create_evaluation", "update_grade"
-    entity_type: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g., "evaluation", "score", "user"
+    action: Mapped[str] = mapped_column(
+        String(100), nullable=False
+    )  # e.g., "create_evaluation", "update_grade"
+    entity_type: Mapped[str] = mapped_column(
+        String(100), nullable=False
+    )  # e.g., "evaluation", "score", "user"
     entity_id: Mapped[Optional[int]] = mapped_column(Integer)  # ID of affected entity
-    
+
     # Details
     details: Mapped[dict] = mapped_column(JSON, default=dict)  # Additional context
     ip_address: Mapped[Optional[str]] = mapped_column(String(45))  # IPv4 or IPv6
     user_agent: Mapped[Optional[str]] = mapped_column(String(500))
-    
+
     # Timestamp is already in Base (created_at)
-    
+
     __table_args__ = (
         Index("ix_audit_log_school", "school_id"),
         Index("ix_audit_log_user", "user_id"),
@@ -984,15 +1048,16 @@ class ProjectNotesContext(Base):
     A container for all notes related to a specific project.
     Links to a course, class, and optionally an evaluation.
     """
+
     __tablename__ = "project_notes_contexts"
-    
+
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
-    
+
     # Basic info
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
-    
+
     # Links
     course_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("courses.id", ondelete="SET NULL"),
@@ -1003,7 +1068,7 @@ class ProjectNotesContext(Base):
         ForeignKey("evaluations.id", ondelete="SET NULL"),
         index=True,
     )
-    
+
     # Metadata
     created_by: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -1019,7 +1084,7 @@ class ProjectNotesContext(Base):
         nullable=False,
     )
     settings: Mapped[dict] = mapped_column(JSONB, default=dict)
-    
+
     # Relationships
     notes: Mapped[list["ProjectNote"]] = relationship(
         back_populates="context",
@@ -1028,7 +1093,7 @@ class ProjectNotesContext(Base):
     course: Mapped[Optional["Course"]] = relationship()
     evaluation: Mapped[Optional["Evaluation"]] = relationship()
     creator: Mapped["User"] = relationship()
-    
+
     __table_args__ = (
         Index("ix_project_notes_context_school_course", "school_id", "course_id"),
         Index("ix_project_notes_context_created_by", "created_by"),
@@ -1040,21 +1105,22 @@ class ProjectNote(Base):
     An individual note/observation within a project context.
     Can be project-wide, team-specific, or student-specific.
     """
+
     __tablename__ = "project_notes"
-    
+
     id: Mapped[int] = id_pk()
     context_id: Mapped[int] = mapped_column(
         ForeignKey("project_notes_contexts.id", ondelete="CASCADE"),
         index=True,
         nullable=False,
     )
-    
+
     # Note type and target
     note_type: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
     )  # "project" | "team" | "student"
-    
+
     team_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("groups.id", ondelete="CASCADE"),
         index=True,
@@ -1063,25 +1129,25 @@ class ProjectNote(Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         index=True,
     )
-    
+
     # Content
     text: Mapped[str] = mapped_column(Text, nullable=False)
     tags: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
-    
+
     # Links to competencies and learning objectives
     omza_category: Mapped[Optional[str]] = mapped_column(String(100))
     learning_objective_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("learning_objectives.id", ondelete="SET NULL"),
         index=True,
     )
-    
+
     # Flags
     is_competency_evidence: Mapped[bool] = mapped_column(Boolean, default=False)
     is_portfolio_evidence: Mapped[bool] = mapped_column(Boolean, default=False)
-    
+
     # Additional metadata (flexible JSON field for future extensions)
     metadata_json: Mapped[dict] = mapped_column("metadata", JSONB, default=dict)
-    
+
     # Audit fields
     created_by: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -1096,14 +1162,14 @@ class ProjectNote(Base):
         onupdate=datetime.utcnow,
         nullable=False,
     )
-    
+
     # Relationships
     context: Mapped["ProjectNotesContext"] = relationship(back_populates="notes")
     team: Mapped[Optional["Group"]] = relationship()
     student: Mapped[Optional["User"]] = relationship()
     learning_objective: Mapped[Optional["LearningObjective"]] = relationship()
     creator: Mapped["User"] = relationship()
-    
+
     __table_args__ = (
         Index("ix_project_note_context_type", "context_id", "note_type"),
         Index("ix_project_note_team", "team_id"),
