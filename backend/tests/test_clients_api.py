@@ -3,7 +3,7 @@ Tests for Client (Opdrachtgevers) API endpoints
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 from datetime import datetime
 from app.infra.db.models import User, Client, ClientLog
 from app.api.v1.routers.clients import (
@@ -108,7 +108,7 @@ class TestClientsEndpoints:
             email="jane@newcompany.com",
         )
 
-        result = create_client(client_data=client_data, db=db, user=user)
+        create_client(client_data=client_data, db=db, user=user)
         
         assert db.add.called
         assert db.commit.called
@@ -149,7 +149,7 @@ class TestClientsEndpoints:
 
         update_data = ClientUpdate(organization="Updated Name")
         
-        result = update_client(client_id=1, client_data=update_data, db=db, user=user)
+        update_client(client_id=1, client_data=update_data, db=db, user=user)
         
         assert db.commit.called
 
