@@ -193,6 +193,56 @@ def create_teacher(
     )
 
 
+@router.get("/export-csv", response_class=StreamingResponse)
+def export_teachers_csv(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    status: Optional[str] = Query(
+        None, description="Filter by status: active, inactive"
+    ),
+):
+    """
+    Export teachers to CSV
+
+    Only accessible by admins and teachers
+    """
+    require_role(user, ["admin", "teacher"])
+    # Get teachers
+    query = db.query(User).filter(
+        User.school_id == user.school_id, User.role.in_(["teacher", "admin"])
+    )
+
+    if status == "active":
+        query = query.filter(not User.archived)
+    elif status == "inactive":
+        query = query.filter(User.archived)
+
+    teachers = query.order_by(User.name).all()
+
+    # Generate CSV
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["id", "name", "email", "role", "status"])
+
+    for teacher in teachers:
+        writer.writerow(
+            [
+                teacher.id,
+                teacher.name,
+                teacher.email,
+                teacher.role,
+                "active" if not teacher.archived else "inactive",
+            ]
+        )
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=teachers.csv"},
+    )
+
+
 @router.get("/{teacher_id}", response_model=TeacherOut)
 def get_teacher(
     teacher_id: int,
@@ -590,53 +640,3 @@ async def import_teachers_csv(
         )
 
     return result
-
-
-@router.get("/export-csv", response_class=StreamingResponse)
-def export_teachers_csv(
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-    status: Optional[str] = Query(
-        None, description="Filter by status: active, inactive"
-    ),
-):
-    """
-    Export teachers to CSV
-
-    Only accessible by admins and teachers
-    """
-    require_role(user, ["admin", "teacher"])
-    # Get teachers
-    query = db.query(User).filter(
-        User.school_id == user.school_id, User.role.in_(["teacher", "admin"])
-    )
-
-    if status == "active":
-        query = query.filter(not User.archived)
-    elif status == "inactive":
-        query = query.filter(User.archived)
-
-    teachers = query.order_by(User.name).all()
-
-    # Generate CSV
-    output = StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["id", "name", "email", "role", "status"])
-
-    for teacher in teachers:
-        writer.writerow(
-            [
-                teacher.id,
-                teacher.name,
-                teacher.email,
-                teacher.role,
-                "active" if not teacher.archived else "inactive",
-            ]
-        )
-
-    output.seek(0)
-    return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=teachers.csv"},
-    )
