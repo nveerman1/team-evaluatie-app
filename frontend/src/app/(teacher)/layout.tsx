@@ -31,16 +31,17 @@ export default function TeacherLayout({
               </div>
             </div>
 
-            {/* EVALUATIES & INZICHT Section */}
+            {/* PROJECTTOOLS Section */}
             <div>
               <div className="text-[10px] uppercase font-semibold tracking-[0.16em] text-slate-500 mb-1 mt-1 px-3">
-                Evaluaties & Inzicht
+                Projecttools
               </div>
               <div className="space-y-1">
                 <NavItem href="/teacher/project-assessments" label="Projectbeoordeling" />
-                <NavItem href="/teacher/evaluations" label="Evaluaties" />
+                <NavItem href="/teacher/evaluations" label="Peerevaluaties" />
                 <NavItem href="/teacher/competencies" label="Competentiemonitor" />
                 <NavItem href="/teacher/project-notes" label="Projectaantekeningen" />
+                <NavItem href="/teacher/clients" label="Opdrachtgevers" />
               </div>
             </div>
 
@@ -55,7 +56,6 @@ export default function TeacherLayout({
                   <NavItem href="/teacher/teachers" label="Docenten beheren" />
                   <NavItem href="/teacher/learning-objectives" label="Leerdoelen" />
                   <NavItem href="/teacher/rubrics" label="Rubrics" />
-                  <NavItem href="/teacher/clients" label="Opdrachtgevers" />
                 </div>
               </div>
             )}
@@ -70,7 +70,6 @@ export default function TeacherLayout({
                   <NavItem href="/teacher/class-teams" label="Klas- & Teambeheer" />
                   <NavItem href="/teacher/learning-objectives" label="Leerdoelen" />
                   <NavItem href="/teacher/rubrics" label="Rubrics" />
-                  <NavItem href="/teacher/clients" label="Opdrachtgevers" />
                 </div>
               </div>
             )}
