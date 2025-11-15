@@ -134,6 +134,26 @@ MOCK_REMINDERS = [
 ]
 
 
+@router.get("/upcoming-reminders")
+def get_upcoming_reminders(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """
+    Get upcoming client communication reminders (mock data)
+    """
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required"
+        )
+    
+    return {
+        "items": MOCK_REMINDERS,
+        "total": len(MOCK_REMINDERS),
+    }
+
+
 @router.get("")
 def list_clients(
     db: Session = Depends(get_db),
@@ -287,23 +307,3 @@ def create_log_entry(
     MOCK_LOG[client_id].insert(0, new_entry)
     
     return new_entry
-
-
-@router.get("/upcoming-reminders")
-def get_upcoming_reminders(
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    """
-    Get upcoming client communication reminders (mock data)
-    """
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required"
-        )
-    
-    return {
-        "items": MOCK_REMINDERS,
-        "total": len(MOCK_REMINDERS),
-    }
