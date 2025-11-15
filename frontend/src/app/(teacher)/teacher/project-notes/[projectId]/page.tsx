@@ -203,7 +203,7 @@ export default function ProjectNotesDetailPage({
                   >
                     {context.teams.map((team) => (
                       <option key={team.id} value={team.id}>
-                        {team.name}
+                        {team.team_number ? `Team ${team.team_number}` : team.name}
                       </option>
                     ))}
                   </select>

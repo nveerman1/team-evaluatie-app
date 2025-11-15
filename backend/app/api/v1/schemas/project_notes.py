@@ -58,6 +58,7 @@ class TeamInfo(BaseModel):
 
     id: int
     name: str
+    team_number: Optional[int]
     member_count: int
     members: List[str]  # List of student names
     member_ids: List[int]  # List of student IDs

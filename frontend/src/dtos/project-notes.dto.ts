@@ -38,6 +38,7 @@ export interface ProjectNotesContext {
 export interface TeamInfo {
   id: number;
   name: string;
+  team_number?: number | null;
   member_count: number;
   members: string[];
   member_ids: number[];

@@ -304,6 +304,7 @@ async def get_context(
                 TeamInfo(
                     id=group.id,
                     name=group.name,
+                    team_number=group.team_number,
                     member_count=len(member_names),
                     members=member_names,
                     member_ids=member_ids,

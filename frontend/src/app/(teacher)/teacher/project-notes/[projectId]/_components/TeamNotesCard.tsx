@@ -70,13 +70,12 @@ export function TeamNotesCard({
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div>
             <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Team</p>
-            <h2 className="text-sm font-semibold text-slate-900">{team.name}</h2>
+            <h2 className="text-sm font-semibold text-slate-900">
+              {team.team_number ? `Team ${team.team_number}` : team.name}
+            </h2>
             <p className="text-xs text-slate-500">Leerlingen: {team.members.join(", ")}</p>
           </div>
           <div className="flex flex-wrap gap-1.5 text-[11px]">
-            <span className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-700 border border-amber-100">
-              Focus: {team.focus}
-            </span>
             <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-indigo-700 border border-indigo-100">
               {teamNotes.length} observaties (dummy)
             </span>
