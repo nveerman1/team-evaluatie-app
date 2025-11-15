@@ -298,6 +298,7 @@ async def get_context(
             )
 
             member_names = [m.name for m in members_data]
+            member_ids = [m.id for m in members_data]
 
             teams.append(
                 TeamInfo(
@@ -305,6 +306,7 @@ async def get_context(
                     name=group.name,
                     member_count=len(member_names),
                     members=member_names,
+                    member_ids=member_ids,
                 )
             )
 

@@ -60,6 +60,7 @@ class TeamInfo(BaseModel):
     name: str
     member_count: int
     members: List[str]  # List of student names
+    member_ids: List[int]  # List of student IDs
 
 
 class StudentInfo(BaseModel):

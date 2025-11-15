@@ -40,6 +40,7 @@ export interface TeamInfo {
   name: string;
   member_count: number;
   members: string[];
+  member_ids: number[];
 }
 
 export interface StudentInfo {

@@ -1,11 +1,5 @@
 import { ChecklistItem } from "./ChecklistItem";
-
-interface Team {
-  id: number;
-  name: string;
-  focus: string;
-  members: string[];
-}
+import { TeamInfo } from "@/dtos/project-notes.dto";
 
 interface NoteItem {
   id: number;
@@ -17,11 +11,12 @@ interface NoteItem {
 }
 
 interface TeamNotesCardProps {
-  team: Team;
+  contextId: number;
+  team: TeamInfo;
   quickNoteText: string;
   onQuickNoteTextChange: (value: string) => void;
   onQuickNoteClick: (template: string) => void;
-  onSelectStudent: (name: string) => void;
+  onSelectStudent: (studentId: number) => void;
 }
 
 const QUICK_NOTES = [
@@ -34,6 +29,7 @@ const QUICK_NOTES = [
 ];
 
 export function TeamNotesCard({
+  contextId,
   team,
   quickNoteText,
   onQuickNoteTextChange,
@@ -90,13 +86,13 @@ export function TeamNotesCard({
         {/* Snelle navigatie naar leerlingen van dit team */}
         <div className="flex flex-wrap items-center gap-2 text-[11px]">
           <span className="text-slate-500">Ga naar leerlingdossier:</span>
-          {team.members.map((m) => (
+          {team.members.map((memberName, idx) => (
             <button
-              key={m}
-              onClick={() => onSelectStudent(m)}
+              key={team.member_ids[idx]}
+              onClick={() => onSelectStudent(team.member_ids[idx])}
               className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-800"
             >
-              {m}
+              {memberName}
             </button>
           ))}
         </div>
