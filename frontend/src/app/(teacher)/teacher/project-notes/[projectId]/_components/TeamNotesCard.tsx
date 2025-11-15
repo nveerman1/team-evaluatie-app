@@ -1,11 +1,5 @@
 import { ChecklistItem } from "./ChecklistItem";
-
-interface Team {
-  id: number;
-  name: string;
-  focus: string;
-  members: string[];
-}
+import { TeamInfo } from "@/dtos/project-notes.dto";
 
 interface NoteItem {
   id: number;
@@ -17,11 +11,12 @@ interface NoteItem {
 }
 
 interface TeamNotesCardProps {
-  team: Team;
+  contextId: number;
+  team: TeamInfo;
   quickNoteText: string;
   onQuickNoteTextChange: (value: string) => void;
   onQuickNoteClick: (template: string) => void;
-  onSelectStudent: (name: string) => void;
+  onSelectStudent: (studentId: number) => void;
 }
 
 const QUICK_NOTES = [
@@ -34,6 +29,7 @@ const QUICK_NOTES = [
 ];
 
 export function TeamNotesCard({
+  contextId,
   team,
   quickNoteText,
   onQuickNoteTextChange,
@@ -74,13 +70,12 @@ export function TeamNotesCard({
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div>
             <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Team</p>
-            <h2 className="text-sm font-semibold text-slate-900">{team.name}</h2>
+            <h2 className="text-sm font-semibold text-slate-900">
+              {team.team_number ? `Team ${team.team_number}` : team.name}
+            </h2>
             <p className="text-xs text-slate-500">Leerlingen: {team.members.join(", ")}</p>
           </div>
           <div className="flex flex-wrap gap-1.5 text-[11px]">
-            <span className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-700 border border-amber-100">
-              Focus: {team.focus}
-            </span>
             <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-indigo-700 border border-indigo-100">
               {teamNotes.length} observaties (dummy)
             </span>
@@ -90,13 +85,13 @@ export function TeamNotesCard({
         {/* Snelle navigatie naar leerlingen van dit team */}
         <div className="flex flex-wrap items-center gap-2 text-[11px]">
           <span className="text-slate-500">Ga naar leerlingdossier:</span>
-          {team.members.map((m) => (
+          {team.members.map((memberName, idx) => (
             <button
-              key={m}
-              onClick={() => onSelectStudent(m)}
+              key={team.member_ids[idx]}
+              onClick={() => onSelectStudent(team.member_ids[idx])}
               className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-800"
             >
-              {m}
+              {memberName}
             </button>
           ))}
         </div>

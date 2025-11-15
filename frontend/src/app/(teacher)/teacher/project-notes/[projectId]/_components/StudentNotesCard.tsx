@@ -1,13 +1,7 @@
 "use client";
 
 import { useState } from "react";
-
-interface Team {
-  id: number;
-  name: string;
-  focus: string;
-  members: string[];
-}
+import { StudentInfo } from "@/dtos/project-notes.dto";
 
 interface NoteItem {
   id: number;
@@ -19,8 +13,8 @@ interface NoteItem {
 }
 
 interface StudentNotesCardProps {
-  selectedStudentName: string | null;
-  selectedTeam: Team;
+  contextId: number;
+  selectedStudent: StudentInfo;
 }
 
 const STUDENT_QUICK_NOTES = [
@@ -31,10 +25,10 @@ const STUDENT_QUICK_NOTES = [
 ];
 
 export function StudentNotesCard({
-  selectedStudentName,
-  selectedTeam,
+  contextId,
+  selectedStudent,
 }: StudentNotesCardProps) {
-  const name = selectedStudentName ?? selectedTeam.members[0] ?? "Leerling";
+  const name = selectedStudent.name;
   const [studentNoteText, setStudentNoteText] = useState("");
   const [studentOmza, setStudentOmza] = useState<string>("");
 
@@ -70,7 +64,7 @@ export function StudentNotesCard({
           <div>
             <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Leerlingdossier</p>
             <h2 className="text-sm font-semibold text-slate-900">{name}</h2>
-            <p className="text-xs text-slate-500">3H · {selectedTeam.name}</p>
+            <p className="text-xs text-slate-500">{selectedStudent.team_name || 'Geen team'}</p>
           </div>
           <div className="flex flex-wrap gap-1.5 text-[11px]">
             <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700 border border-emerald-100">
