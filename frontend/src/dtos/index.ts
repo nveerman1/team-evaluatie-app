@@ -12,3 +12,4 @@ export * from "./overview.dto";
 export * from "./feedback-summary.dto";
 export * from "./learning-objective.dto";
 export * from "./user.dto";
+export * from "./client.dto";
