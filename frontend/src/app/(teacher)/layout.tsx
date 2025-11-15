@@ -55,6 +55,7 @@ export default function TeacherLayout({
                   <NavItem href="/teacher/teachers" label="Docenten beheren" />
                   <NavItem href="/teacher/learning-objectives" label="Leerdoelen" />
                   <NavItem href="/teacher/rubrics" label="Rubrics" />
+                  <NavItem href="/teacher/clients" label="Opdrachtgevers" />
                 </div>
               </div>
             )}
@@ -69,6 +70,7 @@ export default function TeacherLayout({
                   <NavItem href="/teacher/class-teams" label="Klas- & Teambeheer" />
                   <NavItem href="/teacher/learning-objectives" label="Leerdoelen" />
                   <NavItem href="/teacher/rubrics" label="Rubrics" />
+                  <NavItem href="/teacher/clients" label="Opdrachtgevers" />
                 </div>
               </div>
             )}
