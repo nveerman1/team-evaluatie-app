@@ -8,7 +8,7 @@ import { TeamNotesCard } from "./_components/TeamNotesCard";
 import { StudentNotesCard } from "./_components/StudentNotesCard";
 import { TimelineCard } from "./_components/TimelineCard";
 import { projectNotesService } from "@/services";
-import { ProjectNotesContextDetail, TeamInfo, StudentInfo } from "@/dtos/project-notes.dto";
+import { ProjectNotesContextDetail } from "@/dtos/project-notes.dto";
 
 type TabKey = "project" | "teams" | "students" | "timeline";
 

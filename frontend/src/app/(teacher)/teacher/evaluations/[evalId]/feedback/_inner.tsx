@@ -68,7 +68,7 @@ function normalizeToGroups(res: any): UiGroup[] {
     const toId = Number(c.to_student_id ?? c.student_id ?? c.user_id);
     const toName =
       c.to_student_name ?? c.student_name ?? c.user_name ?? `#${toId}`;
-    const group = byStudent.get(toId) ?? {
+    const group: UiGroup = byStudent.get(toId) ?? {
       student_id: toId,
       student_name: toName,
       comments: [],

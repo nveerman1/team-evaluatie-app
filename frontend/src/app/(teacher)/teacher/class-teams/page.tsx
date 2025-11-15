@@ -110,7 +110,7 @@ export default function ClassTeamsPage() {
             name: s.name,
             email: s.email,
             class_name: s.class_name || "",
-            team_number: s.team_number,
+            team_number: s.team_number ?? null,
           }))
         );
       } catch (error) {
@@ -249,7 +249,7 @@ export default function ClassTeamsPage() {
 
       const updates = modifiedStudents.map((s) => ({
         student_id: s.id,
-        team_number: s.team_number,
+        team_number: s.team_number === null ? undefined : s.team_number,
       }));
 
       await courseService.bulkUpdateStudentTeams(selectedCourse.id, updates);
@@ -383,7 +383,11 @@ export default function ClassTeamsPage() {
       });
 
       // Add to local state
-      setStudents((prev) => [...prev, newStudent]);
+      setStudents((prev) => [...prev, {
+        ...newStudent,
+        class_name: newStudent.class_name || "",
+        team_number: newStudent.team_number ?? null,
+      }]);
       setShowAddModal(false);
       setEditingStudent(null);
       showAlert("Student succesvol toegevoegd aan vak", "success");
