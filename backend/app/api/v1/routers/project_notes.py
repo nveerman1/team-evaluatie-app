@@ -251,77 +251,78 @@ async def get_context(
     )
     context_dict["note_count"] = note_count or 0
 
-    # Get teams for this context (based on course_id and class_name)
+    # Get teams for this context (based on course_id)
+    # Teams are formed by grouping students by their team_number field
     teams = []
     students = []
 
     if context.course_id:
-        # Get all groups for this course
-        groups_query = db.query(Group).filter(
-            Group.course_id == context.course_id,
-            Group.school_id == current_user.school_id,
+        # Get all students in this course via GroupMember
+        all_students = (
+            db.query(User)
+            .join(GroupMember, GroupMember.user_id == User.id)
+            .join(Group, Group.id == GroupMember.group_id)
+            .filter(
+                Group.course_id == context.course_id,
+                Group.school_id == current_user.school_id,
+                GroupMember.active,
+                User.role == "student",
+            )
+            .distinct()
+            .all()
         )
 
-        # Filter by class_name if specified
-        if context.class_name:
-            # Get students in this class and find their groups
-            student_ids = (
-                db.query(User.id)
-                .filter(
-                    User.school_id == current_user.school_id,
-                    User.class_name == context.class_name,
-                    User.role == "student",
-                )
-                .all()
-            )
-            student_ids = [s[0] for s in student_ids]
+        # Group students by team_number
+        teams_dict = {}
+        students_without_team = []
+        
+        for student in all_students:
+            if student.team_number is not None:
+                team_num = student.team_number
+                if team_num not in teams_dict:
+                    teams_dict[team_num] = []
+                teams_dict[team_num].append(student)
+            else:
+                students_without_team.append(student)
 
-            # Get groups that have these students
-            groups_query = (
-                groups_query.join(GroupMember, GroupMember.group_id == Group.id)
-                .filter(GroupMember.user_id.in_(student_ids))
-                .distinct()
-            )
-
-        groups = groups_query.order_by(Group.team_number.nulls_last(), Group.name).all()
-
-        for idx, group in enumerate(groups, start=1):
-            # Get members
-            members_data = (
-                db.query(User)
-                .join(GroupMember, GroupMember.user_id == User.id)
-                .filter(
-                    GroupMember.group_id == group.id,
-                    GroupMember.active,
-                )
-                .all()
-            )
-
-            member_names = [m.name for m in members_data]
-            member_ids = [m.id for m in members_data]
+        # Create TeamInfo for each team
+        for team_num in sorted(teams_dict.keys()):
+            team_members = teams_dict[team_num]
+            member_names = [m.name for m in team_members]
+            member_ids = [m.id for m in team_members]
 
             teams.append(
                 TeamInfo(
-                    id=group.id,
-                    name=group.name,
-                    team_number=idx,  # Sequential number for display
+                    id=team_num,  # Use team_number as ID
+                    name=f"Team {team_num}",
+                    team_number=team_num,
                     member_count=len(member_names),
                     members=member_names,
                     member_ids=member_ids,
                 )
             )
 
-            # Add students to the students list
-            for member in members_data:
-                if not any(s.id == member.id for s in students):
-                    students.append(
-                        StudentInfo(
-                            id=member.id,
-                            name=member.name,
-                            team_id=group.id,
-                            team_name=group.name,
-                        )
+            # Add team students to the students list
+            for member in team_members:
+                students.append(
+                    StudentInfo(
+                        id=member.id,
+                        name=member.name,
+                        team_id=team_num,
+                        team_name=f"Team {team_num}",
                     )
+                )
+        
+        # Add students without teams
+        for student in students_without_team:
+            students.append(
+                StudentInfo(
+                    id=student.id,
+                    name=student.name,
+                    team_id=None,
+                    team_name=None,
+                )
+            )
 
     context_dict["teams"] = teams
     context_dict["students"] = students
