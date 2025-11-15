@@ -26,6 +26,25 @@ const QUICK_NOTES = [
   { text: "Sterke uitleg aan klasgenoten", omza: "Communicatie", tags: ["communicatie", "helpend"] },
 ];
 
+// Checklist items definition
+const CHECKLIST_ITEMS = {
+  voortgang: [
+    { id: "product-op-tijd", label: "Tussenproduct op tijd ingeleverd" },
+    { id: "planning-zichtbaar", label: "Planning zichtbaar/geactualiseerd" },
+    { id: "doelen-duidelijk", label: "Doelen voor deze les duidelijk" },
+  ],
+  taakverdeling: [
+    { id: "taken-evenwichtig", label: "Taken evenwichtig verdeeld" },
+    { id: "iedereen-weet-rol", label: "Iedereen weet wat hij/zij doet" },
+    { id: "taken-kwaliteiten", label: "Taken sluiten aan bij kwaliteiten" },
+  ],
+  proces: [
+    { id: "reflectie-vastgelegd", label: "Reflectie op keuzes vastgelegd" },
+    { id: "feedback-gebruikt", label: "Feedback gebruikt in bijsturing" },
+    { id: "prototypes-uitgevoerd", label: "Prototypes/testen uitgevoerd" },
+  ],
+};
+
 export function TeamNotesCard({
   contextId,
   team,
@@ -45,10 +64,60 @@ export function TeamNotesCard({
   const [omzaCategory, setOmzaCategory] = useState<string>("");
   const [learningObjectiveId, setLearningObjectiveId] = useState<string>("");
   const [isCompetencyEvidence, setIsCompetencyEvidence] = useState(false);
+  
+  // Checklist state - stored per team
+  const [checklistState, setChecklistState] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     loadNotes();
+    loadChecklistState();
   }, [contextId, team.id]);
+
+  const loadChecklistState = async () => {
+    try {
+      const context = await projectNotesService.getContext(contextId);
+      
+      // Load team-specific checklist state from context settings
+      const teamChecklistKey = `team_${team.id}_checklist`;
+      const savedState = context.settings?.[teamChecklistKey] || {};
+      setChecklistState(savedState);
+    } catch (error) {
+      console.error("Failed to load checklist state:", error);
+    }
+  };
+
+  const saveChecklistState = async (newState: Record<string, boolean>) => {
+    try {
+      // Fetch current context to get all settings
+      const context = await projectNotesService.getContext(contextId);
+      
+      // Merge the new checklist state with existing settings
+      const teamChecklistKey = `team_${team.id}_checklist`;
+      const updatedSettings = {
+        ...context.settings,
+        [teamChecklistKey]: newState,
+      };
+      
+      // Save complete settings back to backend
+      await projectNotesService.updateContext(contextId, {
+        settings: updatedSettings,
+      });
+    } catch (error) {
+      console.error("Failed to save checklist state:", error);
+    }
+  };
+
+  const handleChecklistToggle = async (itemId: string, checked: boolean) => {
+    const newState = {
+      ...checklistState,
+      [itemId]: checked,
+    };
+    
+    setChecklistState(newState);
+    
+    // Auto-save to backend
+    await saveChecklistState(newState);
+  };
 
   const loadNotes = async () => {
     try {
@@ -167,21 +236,36 @@ export function TeamNotesCard({
             <div className="grid md:grid-cols-3 gap-3 text-[11px]">
               <div className="space-y-1.5">
                 <p className="font-semibold text-slate-800 text-xs">Voortgang</p>
-                <ChecklistItem label="Tussenproduct op tijd ingeleverd" />
-                <ChecklistItem label="Planning zichtbaar/geactualiseerd" />
-                <ChecklistItem label="Doelen voor deze les duidelijk" />
+                {CHECKLIST_ITEMS.voortgang.map((item) => (
+                  <ChecklistItem
+                    key={item.id}
+                    label={item.label}
+                    checked={checklistState[item.id] || false}
+                    onChange={(checked) => handleChecklistToggle(item.id, checked)}
+                  />
+                ))}
               </div>
               <div className="space-y-1.5">
                 <p className="font-semibold text-slate-800 text-xs">Taakverdeling</p>
-                <ChecklistItem label="Taken evenwichtig verdeeld" />
-                <ChecklistItem label="Iedereen weet wat hij/zij doet" />
-                <ChecklistItem label="Taken sluiten aan bij kwaliteiten" />
+                {CHECKLIST_ITEMS.taakverdeling.map((item) => (
+                  <ChecklistItem
+                    key={item.id}
+                    label={item.label}
+                    checked={checklistState[item.id] || false}
+                    onChange={(checked) => handleChecklistToggle(item.id, checked)}
+                  />
+                ))}
               </div>
               <div className="space-y-1.5">
                 <p className="font-semibold text-slate-800 text-xs">Proces</p>
-                <ChecklistItem label="Reflectie op keuzes vastgelegd" />
-                <ChecklistItem label="Feedback gebruikt in bijsturing" />
-                <ChecklistItem label="Prototypes/testen uitgevoerd" />
+                {CHECKLIST_ITEMS.proces.map((item) => (
+                  <ChecklistItem
+                    key={item.id}
+                    label={item.label}
+                    checked={checklistState[item.id] || false}
+                    onChange={(checked) => handleChecklistToggle(item.id, checked)}
+                  />
+                ))}
               </div>
             </div>
           </div>
