@@ -40,6 +40,55 @@ from app.core.audit import log_create, log_update, log_delete
 router = APIRouter(prefix="/project-notes", tags=["project-notes"])
 
 
+def serialize_note(note: ProjectNote, db: Session) -> dict:
+    """Helper function to serialize a ProjectNote to dict with proper metadata handling"""
+    note_dict = {
+        "id": note.id,
+        "context_id": note.context_id,
+        "note_type": note.note_type,
+        "team_id": note.team_id,
+        "student_id": note.student_id,
+        "text": note.text,
+        "tags": note.tags,
+        "omza_category": note.omza_category,
+        "learning_objective_id": note.learning_objective_id,
+        "is_competency_evidence": note.is_competency_evidence,
+        "is_portfolio_evidence": note.is_portfolio_evidence,
+        "metadata": note.note_metadata,  # Map note_metadata to metadata
+        "created_by": note.created_by,
+        "created_at": note.created_at,
+        "updated_at": note.updated_at,
+    }
+
+    # Add joined data
+    if note.team_id:
+        team = db.query(Group).filter(Group.id == note.team_id).first()
+        note_dict["team_name"] = team.name if team else None
+    else:
+        note_dict["team_name"] = None
+
+    if note.student_id:
+        student = db.query(User).filter(User.id == note.student_id).first()
+        note_dict["student_name"] = student.name if student else None
+    else:
+        note_dict["student_name"] = None
+
+    if note.learning_objective_id:
+        lo = (
+            db.query(LearningObjective)
+            .filter(LearningObjective.id == note.learning_objective_id)
+            .first()
+        )
+        note_dict["learning_objective_title"] = lo.title if lo else None
+    else:
+        note_dict["learning_objective_title"] = None
+
+    creator = db.query(User).filter(User.id == note.created_by).first()
+    note_dict["created_by_name"] = creator.name if creator else None
+
+    return note_dict
+
+
 @router.get("/contexts", response_model=List[ProjectNotesContextOut])
 async def list_contexts(
     db: Session = Depends(get_db),
@@ -422,36 +471,8 @@ async def list_notes(
 
     notes = query.order_by(ProjectNote.created_at.desc()).all()
 
-    # Enrich with joined data
-    results = []
-    for note in notes:
-        note_dict = ProjectNoteOut.model_validate(note).model_dump()
-
-        # Add team name
-        if note.team_id:
-            team = db.query(Group).filter(Group.id == note.team_id).first()
-            note_dict["team_name"] = team.name if team else None
-
-        # Add student name
-        if note.student_id:
-            student = db.query(User).filter(User.id == note.student_id).first()
-            note_dict["student_name"] = student.name if student else None
-
-        # Add learning objective title
-        if note.learning_objective_id:
-            lo = (
-                db.query(LearningObjective)
-                .filter(LearningObjective.id == note.learning_objective_id)
-                .first()
-            )
-            note_dict["learning_objective_title"] = lo.title if lo else None
-
-        # Add creator name
-        creator = db.query(User).filter(User.id == note.created_by).first()
-        note_dict["created_by_name"] = creator.name if creator else None
-
-        results.append(ProjectNoteOut(**note_dict))
-
+    # Serialize with joined data
+    results = [ProjectNoteOut(**serialize_note(note, db)) for note in notes]
     return results
 
 
@@ -509,7 +530,7 @@ async def create_note(
         learning_objective_id=data.learning_objective_id,
         is_competency_evidence=data.is_competency_evidence,
         is_portfolio_evidence=data.is_portfolio_evidence,
-        metadata_json=data.metadata,
+        note_metadata=data.metadata,
         created_by=current_user.id,
     )
 
@@ -529,27 +550,8 @@ async def create_note(
     db.commit()
     db.refresh(note)
 
-    # Enrich response
-    note_dict = ProjectNoteOut.model_validate(note).model_dump()
-    note_dict["created_by_name"] = current_user.name
-
-    if note.team_id:
-        team = db.query(Group).filter(Group.id == note.team_id).first()
-        note_dict["team_name"] = team.name if team else None
-
-    if note.student_id:
-        student = db.query(User).filter(User.id == note.student_id).first()
-        note_dict["student_name"] = student.name if student else None
-
-    if note.learning_objective_id:
-        lo = (
-            db.query(LearningObjective)
-            .filter(LearningObjective.id == note.learning_objective_id)
-            .first()
-        )
-        note_dict["learning_objective_title"] = lo.title if lo else None
-
-    return ProjectNoteOut(**note_dict)
+    # Serialize and return
+    return ProjectNoteOut(**serialize_note(note, db))
 
 
 @router.get("/notes/{note_id}", response_model=ProjectNoteOut)
@@ -577,29 +579,8 @@ async def get_note(
             detail="Note not found",
         )
 
-    # Enrich response
-    note_dict = ProjectNoteOut.model_validate(note).model_dump()
-
-    if note.team_id:
-        team = db.query(Group).filter(Group.id == note.team_id).first()
-        note_dict["team_name"] = team.name if team else None
-
-    if note.student_id:
-        student = db.query(User).filter(User.id == note.student_id).first()
-        note_dict["student_name"] = student.name if student else None
-
-    if note.learning_objective_id:
-        lo = (
-            db.query(LearningObjective)
-            .filter(LearningObjective.id == note.learning_objective_id)
-            .first()
-        )
-        note_dict["learning_objective_title"] = lo.title if lo else None
-
-    creator = db.query(User).filter(User.id == note.created_by).first()
-    note_dict["created_by_name"] = creator.name if creator else None
-
-    return ProjectNoteOut(**note_dict)
+    # Serialize and return
+    return ProjectNoteOut(**serialize_note(note, db))
 
 
 @router.put("/notes/{note_id}", response_model=ProjectNoteOut)
@@ -634,7 +615,7 @@ async def update_note(
     for field, value in update_data.items():
         # Handle metadata field name mapping
         if field == "metadata":
-            setattr(note, "metadata_json", value)
+            setattr(note, "note_metadata", value)
         else:
             setattr(note, field, value)
 
@@ -651,29 +632,8 @@ async def update_note(
     db.commit()
     db.refresh(note)
 
-    # Enrich response
-    note_dict = ProjectNoteOut.model_validate(note).model_dump()
-
-    if note.team_id:
-        team = db.query(Group).filter(Group.id == note.team_id).first()
-        note_dict["team_name"] = team.name if team else None
-
-    if note.student_id:
-        student = db.query(User).filter(User.id == note.student_id).first()
-        note_dict["student_name"] = student.name if student else None
-
-    if note.learning_objective_id:
-        lo = (
-            db.query(LearningObjective)
-            .filter(LearningObjective.id == note.learning_objective_id)
-            .first()
-        )
-        note_dict["learning_objective_title"] = lo.title if lo else None
-
-    creator = db.query(User).filter(User.id == note.created_by).first()
-    note_dict["created_by_name"] = creator.name if creator else None
-
-    return ProjectNoteOut(**note_dict)
+    # Serialize and return
+    return ProjectNoteOut(**serialize_note(note, db))
 
 
 @router.delete("/notes/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -748,30 +708,6 @@ async def get_timeline(
         .all()
     )
 
-    # Enrich with joined data
-    results = []
-    for note in notes:
-        note_dict = ProjectNoteOut.model_validate(note).model_dump()
-
-        if note.team_id:
-            team = db.query(Group).filter(Group.id == note.team_id).first()
-            note_dict["team_name"] = team.name if team else None
-
-        if note.student_id:
-            student = db.query(User).filter(User.id == note.student_id).first()
-            note_dict["student_name"] = student.name if student else None
-
-        if note.learning_objective_id:
-            lo = (
-                db.query(LearningObjective)
-                .filter(LearningObjective.id == note.learning_objective_id)
-                .first()
-            )
-            note_dict["learning_objective_title"] = lo.title if lo else None
-
-        creator = db.query(User).filter(User.id == note.created_by).first()
-        note_dict["created_by_name"] = creator.name if creator else None
-
-        results.append(ProjectNoteOut(**note_dict))
-
+    # Serialize with joined data
+    results = [ProjectNoteOut(**serialize_note(note, db)) for note in notes]
     return results

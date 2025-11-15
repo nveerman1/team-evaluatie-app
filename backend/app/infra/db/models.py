@@ -1146,7 +1146,7 @@ class ProjectNote(Base):
     is_portfolio_evidence: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Additional metadata (flexible JSON field for future extensions)
-    metadata_json: Mapped[dict] = mapped_column("metadata", JSONB, default=dict)
+    note_metadata: Mapped[dict] = mapped_column("metadata", JSONB, default=dict)
 
     # Audit fields
     created_by: Mapped[int] = mapped_column(
@@ -1166,9 +1166,9 @@ class ProjectNote(Base):
     # Relationships
     context: Mapped["ProjectNotesContext"] = relationship(back_populates="notes")
     team: Mapped[Optional["Group"]] = relationship()
-    student: Mapped[Optional["User"]] = relationship()
+    student: Mapped[Optional["User"]] = relationship(foreign_keys=[student_id])
     learning_objective: Mapped[Optional["LearningObjective"]] = relationship()
-    creator: Mapped["User"] = relationship()
+    creator: Mapped["User"] = relationship(foreign_keys=[created_by])
 
     __table_args__ = (
         Index("ix_project_note_context_type", "context_id", "note_type"),
