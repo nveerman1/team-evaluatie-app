@@ -54,6 +54,8 @@ export default function OMZAOverviewPage() {
     const result: Record<string, { peer: number; self: number | null }> = {};
 
     categories.forEach((category) => {
+      if (!category) return;
+      
       const peerAvgs: number[] = [];
       const selfAvgs: number[] = [];
 
@@ -213,7 +215,7 @@ export default function OMZAOverviewPage() {
                                     <div className={`inline-block px-2 py-1 rounded font-medium ${colorClass}`}>
                                       {peerScore.toFixed(2)}
                                     </div>
-                                    {catAvg.self_avg !== null && (
+                                    {catAvg.self_avg !== null && catAvg.self_avg !== undefined && (
                                       <div className="text-xs text-blue-600">
                                         ({catAvg.self_avg.toFixed(2)})
                                       </div>
@@ -242,23 +244,26 @@ export default function OMZAOverviewPage() {
                         <td className="px-4 py-3 text-sm sticky left-0 bg-gray-50">
                           Gemiddelde per categorie
                         </td>
-                        {categories.map((category) => (
-                          <td
-                            key={category}
-                            className="px-4 py-3 text-center text-sm"
-                          >
-                            <div className="space-y-1">
-                              <div className="font-bold text-gray-900">
-                                {categoryAverages[category]?.peer.toFixed(2) || "0.00"}
-                              </div>
-                              {categoryAverages[category]?.self !== null && (
-                                <div className="text-xs text-blue-600">
-                                  ({categoryAverages[category]?.self?.toFixed(2) || "0.00"})
+                        {categories.map((category) => {
+                          if (!category) return null;
+                          return (
+                            <td
+                              key={category}
+                              className="px-4 py-3 text-center text-sm"
+                            >
+                              <div className="space-y-1">
+                                <div className="font-bold text-gray-900">
+                                  {categoryAverages[category]?.peer.toFixed(2) || "0.00"}
                                 </div>
-                              )}
-                            </div>
-                          </td>
-                        ))}
+                                {categoryAverages[category]?.self !== null && (
+                                  <div className="text-xs text-blue-600">
+                                    ({categoryAverages[category]?.self?.toFixed(2) || "0.00"})
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          );
+                        })}
                         <td className="px-4 py-3 text-center text-sm font-bold">
                           {dashboard.items.length > 0
                             ? (

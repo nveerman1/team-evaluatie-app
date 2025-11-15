@@ -330,7 +330,7 @@ export default function WindowDetailPage() {
           </div>
 
           {/* Show invites for the entire window (all students) */}
-          <ExternalInviteList windowId={windowId} subjectUserId={undefined} />
+          <ExternalInviteList windowId={windowId} subjectUserId={0} />
         </div>
       )}
 

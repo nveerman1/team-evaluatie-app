@@ -472,7 +472,7 @@ export default function CreateWindowPage() {
                     className="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="full">Volledige naam</option>
-                    <option value="partial">Gedeeltelijk (bijv. "Anna J.")</option>
+                    <option value="partial">Gedeeltelijk (bijv. &quot;Anna J.&quot;)</option>
                     <option value="none">Anoniem</option>
                   </select>
                 </div>

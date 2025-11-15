@@ -8,7 +8,7 @@ import { TeamNotesCard } from "./_components/TeamNotesCard";
 import { StudentNotesCard } from "./_components/StudentNotesCard";
 import { TimelineCard } from "./_components/TimelineCard";
 import { projectNotesService } from "@/services";
-import { ProjectNotesContextDetail, TeamInfo, StudentInfo } from "@/dtos/project-notes.dto";
+import { ProjectNotesContextDetail } from "@/dtos/project-notes.dto";
 
 type TabKey = "project" | "teams" | "students" | "timeline";
 
@@ -25,10 +25,23 @@ export default function ProjectNotesDetailPage({
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   const [quickNoteText, setQuickNoteText] = useState<string>("");
+  
+  // Filter states
+  const [searchText, setSearchText] = useState<string>("");
+  const [searchName, setSearchName] = useState<string>("");
+  const [filterCategory, setFilterCategory] = useState<string>("");
+  const [filterLearningObjective, setFilterLearningObjective] = useState<string>("");
 
   useEffect(() => {
     loadContext();
   }, [projectId]);
+
+  // Automatically switch to timeline view when search or filter is used
+  useEffect(() => {
+    if (searchText || searchName || filterCategory || filterLearningObjective) {
+      setActiveTab("timeline");
+    }
+  }, [searchText, searchName, filterCategory, filterLearningObjective]);
 
   const loadContext = async () => {
     try {
@@ -67,6 +80,44 @@ export default function ProjectNotesDetailPage({
     setQuickNoteText(template);
   }
 
+  async function handleExport() {
+    try {
+      // Get all notes from the context
+      const notes = await projectNotesService.listNotes(Number(projectId));
+      
+      // Import XLSX dynamically
+      const XLSX = await import('xlsx');
+      
+      // Prepare data for export
+      const exportData = notes.map(note => ({
+        'Datum': new Date(note.created_at).toLocaleDateString('nl-NL'),
+        'Type': note.note_type === 'project' ? 'Project' : note.note_type === 'team' ? 'Team' : 'Student',
+        'Team': note.team_name || '-',
+        'Student': note.student_name || '-',
+        'OMZA Categorie': note.omza_category || '-',
+        'Eindterm': note.learning_objective_title || '-',
+        'Tags': note.tags.join(', '),
+        'Aantekening': note.text,
+        'Competentiebewijs': note.is_competency_evidence ? 'Ja' : 'Nee',
+        'Portfolio': note.is_portfolio_evidence ? 'Ja' : 'Nee',
+      }));
+      
+      // Create workbook and worksheet
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Aantekeningen');
+      
+      // Generate filename with project title and date
+      const filename = `${context?.title || 'project'}_aantekeningen_${new Date().toISOString().split('T')[0]}.xlsx`;
+      
+      // Download file
+      XLSX.writeFile(wb, filename);
+    } catch (error) {
+      console.error('Failed to export notes:', error);
+      alert('Fout bij exporteren. Probeer het opnieuw.');
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -99,11 +150,11 @@ export default function ProjectNotesDetailPage({
             </p>
           </div>
           <div className="flex items-center gap-2 md:self-center">
-            <button className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-              Exporteren (dummy)
-            </button>
-            <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
-              Nieuwe notitie
+            <button 
+              onClick={handleExport}
+              className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Exporteren
             </button>
           </div>
         </header>
@@ -114,12 +165,14 @@ export default function ProjectNotesDetailPage({
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
           {/* BOVENSTE RIJ: filters + quick note context */}
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4 md:mb-6">
-            {/* Filters & search (dummy) */}
+            {/* Filters & search */}
             <div className="flex flex-wrap gap-2 items-center">
               <div className="relative">
                 <input
                   type="text"
                   placeholder="Zoek in aantekeningen..."
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
                   className="w-64 max-w-full rounded-xl border border-gray-200/80 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/70 focus:border-indigo-500 shadow-sm"
                 />
                 <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-400 text-[11px]">
@@ -132,26 +185,36 @@ export default function ProjectNotesDetailPage({
                 <input
                   type="text"
                   placeholder="Zoek op naam..."
+                  value={searchName}
+                  onChange={(e) => setSearchName(e.target.value)}
                   className="w-52 max-w-full rounded-xl border border-gray-200/80 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/70 focus:border-blue-500 shadow-sm"
                 />
               </div>
 
-              <select className="rounded-xl border border-gray-200/80 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/70">
-                <option>Alle categorieën</option>
-                <option>Organiseren</option>
-                <option>Meedoen</option>
-                <option>Zelfvertrouwen</option>
-                <option>Autonomie</option>
-                <option>Projectproces</option>
-                <option>Eindresultaat</option>
-                <option>Communicatie</option>
+              <select 
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="rounded-xl border border-gray-200/80 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/70"
+              >
+                <option value="">Alle categorieën</option>
+                <option value="Organiseren">Organiseren</option>
+                <option value="Meedoen">Meedoen</option>
+                <option value="Zelfvertrouwen">Zelfvertrouwen</option>
+                <option value="Autonomie">Autonomie</option>
+                <option value="Projectproces">Projectproces</option>
+                <option value="Eindresultaat">Eindresultaat</option>
+                <option value="Communicatie">Communicatie</option>
               </select>
 
-              <select className="rounded-xl border border-gray-200/80 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/70">
-                <option>Alle eindtermen</option>
-                <option>Domein A – Vaardig handelen</option>
-                <option>Domein C – Denkwijzen</option>
-                <option>Domein F – Zelfregulatie</option>
+              <select 
+                value={filterLearningObjective}
+                onChange={(e) => setFilterLearningObjective(e.target.value)}
+                className="rounded-xl border border-gray-200/80 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/70"
+              >
+                <option value="">Alle eindtermen</option>
+                <option value="Domein A">Domein A – Vaardig handelen</option>
+                <option value="Domein C">Domein C – Denkwijzen</option>
+                <option value="Domein F">Domein F – Zelfregulatie</option>
               </select>
             </div>
           </div>
@@ -240,7 +303,12 @@ export default function ProjectNotesDetailPage({
 
             {/* CONTENT: aantekeningen-secties */}
             <section className="flex-1 space-y-4 md:space-y-6">
-              {activeTab === "project" && <ProjectNotesCard contextId={Number(projectId)} />}
+              {activeTab === "project" && (
+                <ProjectNotesCard 
+                  contextId={Number(projectId)} 
+                  searchText={searchText}
+                />
+              )}
 
               {activeTab === "teams" && selectedTeam && (
                 <TeamNotesCard
@@ -250,6 +318,8 @@ export default function ProjectNotesDetailPage({
                   onQuickNoteTextChange={setQuickNoteText}
                   onQuickNoteClick={handleQuickNoteClick}
                   onSelectStudent={handleSelectStudent}
+                  searchText={searchText}
+                  filterCategory={filterCategory}
                 />
               )}
 
@@ -257,10 +327,19 @@ export default function ProjectNotesDetailPage({
                 <StudentNotesCard
                   contextId={Number(projectId)}
                   selectedStudent={selectedStudent}
+                  searchText={searchText}
+                  filterCategory={filterCategory}
                 />
               )}
 
-              {activeTab === "timeline" && <TimelineCard contextId={Number(projectId)} />}
+              {activeTab === "timeline" && (
+                <TimelineCard 
+                  contextId={Number(projectId)} 
+                  searchText={searchText}
+                  searchName={searchName}
+                  filterCategory={filterCategory}
+                />
+              )}
             </section>
           </div>
         </div>
