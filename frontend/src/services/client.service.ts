@@ -149,4 +149,27 @@ export const clientService = {
     );
     return response.data;
   },
+
+  /**
+   * Link a project to a client
+   */
+  async linkProjectToClient(
+    clientId: number,
+    projectId: number,
+    role: string = "main"
+  ): Promise<void> {
+    await api.post(`/clients/${clientId}/projects/${projectId}`, null, {
+      params: { role },
+    });
+  },
+
+  /**
+   * Unlink a project from a client
+   */
+  async unlinkProjectFromClient(
+    clientId: number,
+    projectId: number
+  ): Promise<void> {
+    await api.delete(`/clients/${clientId}/projects/${projectId}`);
+  },
 };
