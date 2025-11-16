@@ -648,15 +648,18 @@ export default function NewProjectWizardPage() {
 
                 {/* Competency Scan */}
                 <div className="border rounded-lg p-4">
-                  <label className="flex items-start gap-3 cursor-pointer">
+                  <div className="flex items-start gap-3">
                     <input
                       type="checkbox"
                       checked={competencyScanEnabled}
                       onChange={(e) => setCompetencyScanEnabled(e.target.checked)}
                       className="mt-1"
+                      id="competency-scan-checkbox"
                     />
                     <div className="flex-1">
-                      <div className="font-medium">Competentiescan</div>
+                      <label htmlFor="competency-scan-checkbox" className="font-medium cursor-pointer">
+                        Competentiescan
+                      </label>
                       <div className="text-sm text-gray-600 mb-3">
                         Studenten vullen een competentiescan in voor dit project
                       </div>
@@ -722,7 +725,7 @@ export default function NewProjectWizardPage() {
                         </div>
                       )}
                     </div>
-                  </label>
+                  </div>
                 </div>
               </div>
             )}
