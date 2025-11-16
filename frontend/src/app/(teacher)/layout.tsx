@@ -26,6 +26,7 @@ export default function TeacherLayout({
               </div>
               <div className="space-y-1">
                 <NavItem href="/teacher" label="Dashboard" />
+                <NavItem href="/teacher/calendar" label="Kalender" />
                 <NavItem href="/teacher/overview" label="Overzicht" />
                 <NavItem href="/teacher/analytics" label="Analytics" />
               </div>
