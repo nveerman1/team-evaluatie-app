@@ -39,8 +39,9 @@ export function Filters({ items, onFilter }: FiltersProps) {
       <select
         value={course}
         onChange={(e) => {
-          setCourse(e.target.value);
-          apply();
+          const newCourse = e.target.value;
+          setCourse(newCourse);
+          onFilter({ q, course: newCourse, status });
         }}
         className="px-3 py-2 rounded-lg border"
       >
@@ -54,8 +55,9 @@ export function Filters({ items, onFilter }: FiltersProps) {
       <select
         value={status}
         onChange={(e) => {
-          setStatus(e.target.value);
-          apply();
+          const newStatus = e.target.value;
+          setStatus(newStatus);
+          onFilter({ q, course, status: newStatus });
         }}
         className="px-3 py-2 rounded-lg border"
       >
