@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { projectService, clientService } from "@/services";
+import { projectService, clientService, rubricService, competencyService } from "@/services";
 import { useCourses } from "@/hooks";
 import type { WizardProjectCreate, EvaluationConfig } from "@/dtos/project.dto";
 import type { ClientListItem } from "@/dtos/client.dto";
+import type { RubricListItem } from "@/dtos/rubric.dto";
+import type { Competency } from "@/dtos";
 import { Loading } from "@/components";
 
 export default function NewProjectWizardPage() {
@@ -18,6 +20,8 @@ export default function NewProjectWizardPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [createdProjectId, setCreatedProjectId] = useState<number | null>(null);
+  const [createdEntities, setCreatedEntities] = useState<any[]>([]);
+  const [wizardWarnings, setWizardWarnings] = useState<string[]>([]);
 
   // Step 1: Project basics
   const [title, setTitle] = useState("");
@@ -27,13 +31,26 @@ export default function NewProjectWizardPage() {
   const [endDate, setEndDate] = useState("");
   const [description, setDescription] = useState("");
 
-  // Step 2: Evaluations
-  const [evalConfig, setEvalConfig] = useState<EvaluationConfig>({
-    create_peer_tussen: true,
-    create_peer_eind: true,
-    create_project_assessment: true,
-    create_competency_scan: false,
-  });
+  // Step 2: Evaluations (using new nested structure)
+  const [peerTussenEnabled, setPeerTussenEnabled] = useState(true);
+  const [peerTussenDeadline, setPeerTussenDeadline] = useState("");
+  const [peerTussenRubricId, setPeerTussenRubricId] = useState<number | "">("");
+  
+  const [peerEindEnabled, setPeerEindEnabled] = useState(true);
+  const [peerEindDeadline, setPeerEindDeadline] = useState("");
+  const [peerEindRubricId, setPeerEindRubricId] = useState<number | "">("");
+  
+  const [projectAssessmentEnabled, setProjectAssessmentEnabled] = useState(true);
+  const [projectAssessmentRubricId, setProjectAssessmentRubricId] = useState<number | "">("");
+  const [projectAssessmentDeadline, setProjectAssessmentDeadline] = useState("");
+  const [projectAssessmentVersion, setProjectAssessmentVersion] = useState("");
+  
+  const [competencyScanEnabled, setCompetencyScanEnabled] = useState(false);
+  const [competencyScanStartDate, setCompetencyScanStartDate] = useState("");
+  const [competencyScanEndDate, setCompetencyScanEndDate] = useState("");
+  const [competencyScanDeadline, setCompetencyScanDeadline] = useState("");
+  const [competencyScanCompetencyIds, setCompetencyScanCompetencyIds] = useState<number[]>([]);
+  const [competencyScanTitle, setCompetencyScanTitle] = useState("");
 
   // Step 3: Clients and notes
   const [clients, setClients] = useState<ClientListItem[]>([]);
@@ -42,6 +59,28 @@ export default function NewProjectWizardPage() {
   const [loadingClients, setLoadingClients] = useState(false);
   const [clientsLoadError, setClientsLoadError] = useState<string | null>(null);
   const [clientsLoaded, setClientsLoaded] = useState(false);
+  
+  // Rubrics and competencies for step 2
+  const [rubrics, setRubrics] = useState<RubricListItem[]>([]);
+  const [competencies, setCompetencies] = useState<Competency[]>([]);
+  const [loadingRubrics, setLoadingRubrics] = useState(false);
+  const [loadingCompetencies, setLoadingCompetencies] = useState(false);
+  const [rubricsLoaded, setRubricsLoaded] = useState(false);
+  const [competenciesLoaded, setCompetenciesLoaded] = useState(false);
+
+  // Load rubrics when reaching step 2
+  useEffect(() => {
+    if (step === 2 && !rubricsLoaded) {
+      loadRubrics();
+    }
+  }, [step, rubricsLoaded]);
+  
+  // Load competencies when reaching step 2
+  useEffect(() => {
+    if (step === 2 && !competenciesLoaded) {
+      loadCompetencies();
+    }
+  }, [step, competenciesLoaded]);
 
   // Load clients when reaching step 3
   useEffect(() => {
@@ -49,6 +88,34 @@ export default function NewProjectWizardPage() {
       loadClients();
     }
   }, [step, clientsLoaded]);
+  
+  async function loadRubrics() {
+    setLoadingRubrics(true);
+    try {
+      const response = await rubricService.getRubrics();
+      setRubrics(response.items || []);
+      setRubricsLoaded(true);
+    } catch (e: any) {
+      console.error("Failed to load rubrics:", e);
+      setRubricsLoaded(true);
+    } finally {
+      setLoadingRubrics(false);
+    }
+  }
+  
+  async function loadCompetencies() {
+    setLoadingCompetencies(true);
+    try {
+      const comps = await competencyService.getCompetencies(true);
+      setCompetencies(comps || []);
+      setCompetenciesLoaded(true);
+    } catch (e: any) {
+      console.error("Failed to load competencies:", e);
+      setCompetenciesLoaded(true);
+    } finally {
+      setLoadingCompetencies(false);
+    }
+  }
 
   async function loadClients() {
     setLoadingClients(true);
@@ -96,6 +163,47 @@ export default function NewProjectWizardPage() {
     setSubmitting(true);
 
     try {
+      // Build new nested evaluation config
+      const evaluationConfig: EvaluationConfig = {};
+      
+      if (peerTussenEnabled) {
+        evaluationConfig.peer_tussen = {
+          enabled: true,
+          deadline: peerTussenDeadline || undefined,
+          rubric_id: peerTussenRubricId || undefined,
+          title_suffix: "tussentijds",
+        };
+      }
+      
+      if (peerEindEnabled) {
+        evaluationConfig.peer_eind = {
+          enabled: true,
+          deadline: peerEindDeadline || undefined,
+          rubric_id: peerEindRubricId || undefined,
+          title_suffix: "eind",
+        };
+      }
+      
+      if (projectAssessmentEnabled && projectAssessmentRubricId) {
+        evaluationConfig.project_assessment = {
+          enabled: true,
+          rubric_id: Number(projectAssessmentRubricId),
+          deadline: projectAssessmentDeadline || undefined,
+          version: projectAssessmentVersion || undefined,
+        };
+      }
+      
+      if (competencyScanEnabled) {
+        evaluationConfig.competency_scan = {
+          enabled: true,
+          start_date: competencyScanStartDate || undefined,
+          end_date: competencyScanEndDate || undefined,
+          deadline: competencyScanDeadline || undefined,
+          competency_ids: competencyScanCompetencyIds.length > 0 ? competencyScanCompetencyIds : undefined,
+          title: competencyScanTitle || undefined,
+        };
+      }
+
       const payload: WizardProjectCreate = {
         project: {
           title: title.trim(),
@@ -106,12 +214,17 @@ export default function NewProjectWizardPage() {
           description: description.trim() || undefined,
           status: "concept",
         },
-        evaluations: evalConfig,
+        evaluations: evaluationConfig,
         client_ids: selectedClientIds,
         create_default_note: createDefaultNote,
       };
 
       const result = await projectService.wizardCreateProject(payload);
+      
+      // Store created entities and warnings
+      setCreatedEntities(result.entities || []);
+      setWizardWarnings(result.warnings || []);
+      
       setCreatedProjectId(result.project.id);
       setSuccess(true);
     } catch (e: any) {
@@ -138,28 +251,84 @@ export default function NewProjectWizardPage() {
 
   // Success screen
   if (success) {
+    // Count entity types
+    const peerCount = createdEntities.filter(e => e.type === "peer").length;
+    const projectAssessmentCount = createdEntities.filter(e => e.type === "project_assessment").length;
+    const competencyScanCount = createdEntities.filter(e => e.type === "competency_scan").length;
+    
     return (
       <main className="p-6 max-w-4xl mx-auto">
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 text-center">
-          <div className="text-6xl mb-4">✅</div>
-          <h1 className="text-2xl font-bold mb-2">Project aangemaakt!</h1>
-          <p className="text-gray-600 mb-6">
-            Het project "{title}" is succesvol aangemaakt met alle geselecteerde evaluaties.
-          </p>
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8">
+          <div className="text-center mb-6">
+            <div className="text-6xl mb-4">✅</div>
+            <h1 className="text-2xl font-bold mb-2">Project aangemaakt!</h1>
+            <p className="text-gray-600">
+              Het project "{title}" is succesvol aangemaakt.
+            </p>
+          </div>
+          
+          {/* Show warnings if any */}
+          {wizardWarnings.length > 0 && (
+            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <h3 className="font-semibold text-yellow-800 mb-2">⚠️ Waarschuwingen</h3>
+              <ul className="text-sm text-yellow-700 space-y-1 list-disc list-inside">
+                {wizardWarnings.map((warning, idx) => (
+                  <li key={idx}>{warning}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          
+          {/* Summary of created entities */}
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <h3 className="font-semibold mb-3">Aangemaakt:</h3>
+            <ul className="space-y-2 text-sm">
+              {peerCount > 0 && (
+                <li className="flex items-center gap-2">
+                  <span className="text-green-600">✓</span>
+                  <span>{peerCount} Peerevaluatie{peerCount > 1 ? 's' : ''}</span>
+                </li>
+              )}
+              {projectAssessmentCount > 0 && (
+                <li className="flex items-center gap-2">
+                  <span className="text-green-600">✓</span>
+                  <span>{projectAssessmentCount} Projectbeoordeling{projectAssessmentCount > 1 ? 'en' : ''}</span>
+                </li>
+              )}
+              {competencyScanCount > 0 && (
+                <li className="flex items-center gap-2">
+                  <span className="text-green-600">✓</span>
+                  <span>{competencyScanCount} Competentiescan{competencyScanCount > 1 ? 's' : ''}</span>
+                </li>
+              )}
+            </ul>
+          </div>
           
           <div className="flex gap-3 justify-center flex-wrap">
-            <button
-              onClick={() => router.push("/teacher/project-assessments")}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Ga naar Projectbeoordelingen
-            </button>
-            <button
-              onClick={() => router.push("/teacher/evaluations")}
-              className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
-            >
-              Ga naar Peerevaluaties
-            </button>
+            {projectAssessmentCount > 0 && (
+              <button
+                onClick={() => router.push("/teacher/project-assessments")}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Ga naar Projectbeoordelingen
+              </button>
+            )}
+            {peerCount > 0 && (
+              <button
+                onClick={() => router.push("/teacher/evaluations")}
+                className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+              >
+                Ga naar Peerevaluaties
+              </button>
+            )}
+            {competencyScanCount > 0 && (
+              <button
+                onClick={() => router.push("/teacher/competencies")}
+                className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+              >
+                Ga naar Competentiescans
+              </button>
+            )}
             <button
               onClick={() => router.push("/teacher")}
               className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
@@ -316,83 +485,259 @@ export default function NewProjectWizardPage() {
           </div>
         )}
 
-        {/* Step 2: Evaluations */}
+        {/* Step 2: Evaluations (Enhanced with deadlines, rubrics, competencies) */}
         {step === 2 && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold mb-4">Evaluaties & beoordeling</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              Selecteer welke evaluaties automatisch aangemaakt moeten worden voor dit project.
-            </p>
-
-            <div className="space-y-3">
-              <label className="flex items-start gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={evalConfig.create_peer_tussen || false}
-                  onChange={(e) =>
-                    setEvalConfig({ ...evalConfig, create_peer_tussen: e.target.checked })
-                  }
-                  className="mt-1"
-                />
-                <div>
-                  <div className="font-medium">Peerevaluatie tussentijds</div>
-                  <div className="text-sm text-gray-600">
-                    Studenten beoordelen elkaar halverwege het project
-                  </div>
-                </div>
-              </label>
-
-              <label className="flex items-start gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={evalConfig.create_peer_eind || false}
-                  onChange={(e) =>
-                    setEvalConfig({ ...evalConfig, create_peer_eind: e.target.checked })
-                  }
-                  className="mt-1"
-                />
-                <div>
-                  <div className="font-medium">Peerevaluatie eind</div>
-                  <div className="text-sm text-gray-600">
-                    Studenten beoordelen elkaar aan het einde van het project
-                  </div>
-                </div>
-              </label>
-
-              <label className="flex items-start gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={evalConfig.create_project_assessment || false}
-                  onChange={(e) =>
-                    setEvalConfig({ ...evalConfig, create_project_assessment: e.target.checked })
-                  }
-                  className="mt-1"
-                />
-                <div>
-                  <div className="font-medium">Projectbeoordeling</div>
-                  <div className="text-sm text-gray-600">
-                    Docent beoordeelt het projectresultaat per team
-                  </div>
-                </div>
-              </label>
-
-              <label className="flex items-start gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={evalConfig.create_competency_scan || false}
-                  onChange={(e) =>
-                    setEvalConfig({ ...evalConfig, create_competency_scan: e.target.checked })
-                  }
-                  className="mt-1"
-                />
-                <div>
-                  <div className="font-medium">Competentiescan</div>
-                  <div className="text-sm text-gray-600">
-                    Studenten vullen een competentiescan in voor dit project
-                  </div>
-                </div>
-              </label>
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold mb-2">Evaluaties & beoordeling</h2>
+              <p className="text-sm text-gray-600">
+                Configureer welke evaluaties automatisch aangemaakt moeten worden.
+              </p>
             </div>
+
+            {loadingRubrics || loadingCompetencies ? (
+              <Loading />
+            ) : (
+              <div className="space-y-4">
+                {/* Peer Evaluatie Tussentijds */}
+                <div className="border rounded-lg p-4">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={peerTussenEnabled}
+                      onChange={(e) => setPeerTussenEnabled(e.target.checked)}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium">Peerevaluatie tussentijds</div>
+                      <div className="text-sm text-gray-600 mb-3">
+                        Studenten beoordelen elkaar halverwege het project
+                      </div>
+                      
+                      {peerTussenEnabled && (
+                        <div className="space-y-3 mt-3 pl-6 border-l-2 border-blue-200">
+                          <div>
+                            <label className="block text-xs font-medium mb-1">Deadline</label>
+                            <input
+                              type="datetime-local"
+                              value={peerTussenDeadline}
+                              onChange={(e) => setPeerTussenDeadline(e.target.value)}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium mb-1">Rubric (optioneel)</label>
+                            <select
+                              value={peerTussenRubricId}
+                              onChange={(e) => setPeerTussenRubricId(e.target.value ? Number(e.target.value) : "")}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                            >
+                              <option value="">Gebruik standaard peer rubric</option>
+                              {rubrics.filter(r => r.scope === "peer").map(rubric => (
+                                <option key={rubric.id} value={rubric.id}>{rubric.title}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                </div>
+
+                {/* Peer Evaluatie Eind */}
+                <div className="border rounded-lg p-4">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={peerEindEnabled}
+                      onChange={(e) => setPeerEindEnabled(e.target.checked)}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium">Peerevaluatie eind</div>
+                      <div className="text-sm text-gray-600 mb-3">
+                        Studenten beoordelen elkaar aan het einde van het project
+                      </div>
+                      
+                      {peerEindEnabled && (
+                        <div className="space-y-3 mt-3 pl-6 border-l-2 border-blue-200">
+                          <div>
+                            <label className="block text-xs font-medium mb-1">Deadline</label>
+                            <input
+                              type="datetime-local"
+                              value={peerEindDeadline}
+                              onChange={(e) => setPeerEindDeadline(e.target.value)}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium mb-1">Rubric (optioneel)</label>
+                            <select
+                              value={peerEindRubricId}
+                              onChange={(e) => setPeerEindRubricId(e.target.value ? Number(e.target.value) : "")}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                            >
+                              <option value="">Gebruik standaard peer rubric</option>
+                              {rubrics.filter(r => r.scope === "peer").map(rubric => (
+                                <option key={rubric.id} value={rubric.id}>{rubric.title}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                </div>
+
+                {/* Project Assessment */}
+                <div className="border rounded-lg p-4">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={projectAssessmentEnabled}
+                      onChange={(e) => setProjectAssessmentEnabled(e.target.checked)}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium">Projectbeoordeling</div>
+                      <div className="text-sm text-gray-600 mb-3">
+                        Docent beoordeelt het projectresultaat per team
+                      </div>
+                      
+                      {projectAssessmentEnabled && (
+                        <div className="space-y-3 mt-3 pl-6 border-l-2 border-green-200">
+                          <div>
+                            <label className="block text-xs font-medium mb-1">
+                              Rubric <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                              value={projectAssessmentRubricId}
+                              onChange={(e) => setProjectAssessmentRubricId(e.target.value ? Number(e.target.value) : "")}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                              required
+                            >
+                              <option value="">Selecteer project rubric...</option>
+                              {rubrics.filter(r => r.scope === "project").map(rubric => (
+                                <option key={rubric.id} value={rubric.id}>{rubric.title}</option>
+                              ))}
+                            </select>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Er wordt één beoordeling per team aangemaakt
+                            </p>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium mb-1">Deadline (optioneel)</label>
+                            <input
+                              type="datetime-local"
+                              value={projectAssessmentDeadline}
+                              onChange={(e) => setProjectAssessmentDeadline(e.target.value)}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium mb-1">Versie (optioneel)</label>
+                            <input
+                              type="text"
+                              value={projectAssessmentVersion}
+                              onChange={(e) => setProjectAssessmentVersion(e.target.value)}
+                              placeholder="bijv. tussentijds, eind"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                </div>
+
+                {/* Competency Scan */}
+                <div className="border rounded-lg p-4">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={competencyScanEnabled}
+                      onChange={(e) => setCompetencyScanEnabled(e.target.checked)}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium">Competentiescan</div>
+                      <div className="text-sm text-gray-600 mb-3">
+                        Studenten vullen een competentiescan in voor dit project
+                      </div>
+                      
+                      {competencyScanEnabled && (
+                        <div className="space-y-3 mt-3 pl-6 border-l-2 border-purple-200">
+                          <div>
+                            <label className="block text-xs font-medium mb-1">Titel (optioneel)</label>
+                            <input
+                              type="text"
+                              value={competencyScanTitle}
+                              onChange={(e) => setCompetencyScanTitle(e.target.value)}
+                              placeholder="bijv. Q1 Competentiescan"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-xs font-medium mb-1">Startdatum</label>
+                              <input
+                                type="datetime-local"
+                                value={competencyScanStartDate}
+                                onChange={(e) => setCompetencyScanStartDate(e.target.value)}
+                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium mb-1">Einddatum</label>
+                              <input
+                                type="datetime-local"
+                                value={competencyScanEndDate}
+                                onChange={(e) => setCompetencyScanEndDate(e.target.value)}
+                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium mb-1">Deadline (optioneel)</label>
+                            <input
+                              type="datetime-local"
+                              value={competencyScanDeadline}
+                              onChange={(e) => setCompetencyScanDeadline(e.target.value)}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                              placeholder="Anders wordt einddatum gebruikt"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium mb-1">Competenties</label>
+                            <div className="max-h-40 overflow-y-auto border rounded p-2 space-y-1">
+                              {competencies.map(comp => (
+                                <label key={comp.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                  <input
+                                    type="checkbox"
+                                    checked={competencyScanCompetencyIds.includes(comp.id)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setCompetencyScanCompetencyIds([...competencyScanCompetencyIds, comp.id]);
+                                      } else {
+                                        setCompetencyScanCompetencyIds(competencyScanCompetencyIds.filter(id => id !== comp.id));
+                                      }
+                                    }}
+                                  />
+                                  <span>{comp.name}</span>
+                                </label>
+                              ))}
+                              {competencies.length === 0 && (
+                                <p className="text-xs text-gray-500 italic">Geen competenties beschikbaar</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -523,19 +868,59 @@ export default function NewProjectWizardPage() {
 
               <div className="bg-gray-50 rounded-lg p-4">
                 <h3 className="font-semibold mb-2">Evaluaties</h3>
-                <ul className="space-y-1 text-sm">
-                  {evalConfig.create_peer_tussen && (
-                    <li>✓ Peerevaluatie tussentijds</li>
+                <ul className="space-y-2 text-sm">
+                  {peerTussenEnabled && (
+                    <li>
+                      <div className="font-medium">✓ Peerevaluatie tussentijds</div>
+                      {peerTussenDeadline && (
+                        <div className="text-xs text-gray-600 ml-4">
+                          Deadline: {new Date(peerTussenDeadline).toLocaleString("nl-NL")}
+                        </div>
+                      )}
+                    </li>
                   )}
-                  {evalConfig.create_peer_eind && <li>✓ Peerevaluatie eind</li>}
-                  {evalConfig.create_project_assessment && (
-                    <li>✓ Projectbeoordeling</li>
+                  {peerEindEnabled && (
+                    <li>
+                      <div className="font-medium">✓ Peerevaluatie eind</div>
+                      {peerEindDeadline && (
+                        <div className="text-xs text-gray-600 ml-4">
+                          Deadline: {new Date(peerEindDeadline).toLocaleString("nl-NL")}
+                        </div>
+                      )}
+                    </li>
                   )}
-                  {evalConfig.create_competency_scan && <li>✓ Competentiescan</li>}
-                  {!evalConfig.create_peer_tussen &&
-                    !evalConfig.create_peer_eind &&
-                    !evalConfig.create_project_assessment &&
-                    !evalConfig.create_competency_scan && (
+                  {projectAssessmentEnabled && (
+                    <li>
+                      <div className="font-medium">✓ Projectbeoordeling</div>
+                      <div className="text-xs text-gray-600 ml-4">
+                        Rubric: {rubrics.find(r => r.id === projectAssessmentRubricId)?.title || "Niet geselecteerd"}
+                      </div>
+                      {projectAssessmentDeadline && (
+                        <div className="text-xs text-gray-600 ml-4">
+                          Deadline: {new Date(projectAssessmentDeadline).toLocaleString("nl-NL")}
+                        </div>
+                      )}
+                    </li>
+                  )}
+                  {competencyScanEnabled && (
+                    <li>
+                      <div className="font-medium">✓ Competentiescan</div>
+                      {competencyScanCompetencyIds.length > 0 && (
+                        <div className="text-xs text-gray-600 ml-4">
+                          {competencyScanCompetencyIds.length} competentie{competencyScanCompetencyIds.length > 1 ? 's' : ''} geselecteerd
+                        </div>
+                      )}
+                      {competencyScanStartDate && competencyScanEndDate && (
+                        <div className="text-xs text-gray-600 ml-4">
+                          Periode: {new Date(competencyScanStartDate).toLocaleDateString("nl-NL")} - {new Date(competencyScanEndDate).toLocaleDateString("nl-NL")}
+                        </div>
+                      )}
+                    </li>
+                  )}
+                  {!peerTussenEnabled &&
+                    !peerEindEnabled &&
+                    !projectAssessmentEnabled &&
+                    !competencyScanEnabled && (
                       <li className="text-gray-500 italic">Geen evaluaties geselecteerd</li>
                     )}
                 </ul>
