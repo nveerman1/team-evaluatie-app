@@ -88,8 +88,37 @@ export type ProjectNoteUpdate = {
   note_type?: string;
 };
 
-// Wizard types
+// Wizard types - NEW STRUCTURE
+export type PeerEvaluationConfig = {
+  enabled: boolean;
+  deadline?: string; // ISO datetime string
+  rubric_id?: number;
+  title_suffix?: string; // e.g., "tussentijds" or "eind"
+};
+
+export type ProjectAssessmentConfig = {
+  enabled: boolean;
+  rubric_id: number; // Required
+  deadline?: string; // ISO datetime string
+  version?: string; // e.g., "tussentijds", "eind"
+};
+
+export type CompetencyScanConfig = {
+  enabled: boolean;
+  start_date?: string; // ISO datetime string
+  end_date?: string; // ISO datetime string
+  deadline?: string; // Optional separate deadline
+  competency_ids?: number[];
+  title?: string;
+};
+
 export type EvaluationConfig = {
+  peer_tussen?: PeerEvaluationConfig;
+  peer_eind?: PeerEvaluationConfig;
+  project_assessment?: ProjectAssessmentConfig;
+  competency_scan?: CompetencyScanConfig;
+  
+  // Legacy support (deprecated, for backward compatibility)
   create_peer_tussen?: boolean;
   create_peer_eind?: boolean;
   create_project_assessment?: boolean;
@@ -108,11 +137,39 @@ export type WizardEvaluationOut = {
   title: string;
   evaluation_type: string;
   status: string;
+  deadline?: string;
+};
+
+export type WizardProjectAssessmentOut = {
+  id: number;
+  title: string;
+  group_id: number;
+  group_name?: string;
+  rubric_id: number;
+  version?: string;
+  status: string;
+  deadline?: string;
+};
+
+export type WizardCompetencyWindowOut = {
+  id: number;
+  title: string;
+  start_date?: string;
+  end_date?: string;
+  deadline?: string;
+  status: string;
+  competency_ids?: number[];
+};
+
+export type WizardEntityOut = {
+  type: "peer" | "project_assessment" | "competency_scan";
+  data: Record<string, any>;
 };
 
 export type WizardProjectOut = {
   project: Project;
-  evaluations: WizardEvaluationOut[];
+  entities: WizardEntityOut[];
   note?: ProjectNote;
   linked_clients: number[];
+  warnings?: string[];
 };
