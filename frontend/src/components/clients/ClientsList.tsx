@@ -37,7 +37,7 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = \`opdrachtgevers_\${new Date().toISOString().split("T")[0]}.csv\`;
+      a.download = `opdrachtgevers_${new Date().toISOString().split("T")[0]}.csv`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -117,7 +117,7 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
                 {data.items.map((client) => (
                   <tr key={client.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3">
-                      <Link href={\`/teacher/clients/\${client.id}\`} className="font-medium text-sky-700 hover:underline">
+                      <Link href={`/teacher/clients/${client.id}`} className="font-medium text-sky-700 hover:underline">
                         {client.organization}
                       </Link>
                       {client.tags && client.tags.length > 0 && (
@@ -133,7 +133,7 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
                     <td className="px-4 py-3">{client.level || "-"}</td>
                     <td className="px-4 py-3 text-center">{client.projects_this_year}</td>
                     <td className="px-4 py-3">
-                      <span className={\`rounded-full px-2 py-0.5 text-xs \${client.active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100"}\`}>
+                      <span className={`rounded-full px-2 py-0.5 text-xs ${client.active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100"}`}>
                         {client.status}
                       </span>
                     </td>
