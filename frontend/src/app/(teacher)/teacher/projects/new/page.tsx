@@ -40,21 +40,30 @@ export default function NewProjectWizardPage() {
   const [selectedClientIds, setSelectedClientIds] = useState<number[]>([]);
   const [createDefaultNote, setCreateDefaultNote] = useState(true);
   const [loadingClients, setLoadingClients] = useState(false);
+  const [clientsLoadError, setClientsLoadError] = useState<string | null>(null);
+  const [clientsLoaded, setClientsLoaded] = useState(false);
 
   // Load clients when reaching step 3
   useEffect(() => {
-    if (step === 3 && clients.length === 0) {
+    if (step === 3 && !clientsLoaded) {
       loadClients();
     }
-  }, [step]);
+  }, [step, clientsLoaded]);
 
   async function loadClients() {
     setLoadingClients(true);
+    setClientsLoadError(null);
     try {
       const response = await clientService.listClients({ per_page: 100 });
       setClients(response.items || []);
+      setClientsLoaded(true);
     } catch (e: any) {
       console.error("Failed to load clients:", e);
+      setClientsLoadError(
+        "Kon opdrachtgevers niet laden. Je kunt doorgaan zonder opdrachtgevers te selecteren."
+      );
+      // Mark as loaded to prevent retry loop
+      setClientsLoaded(true);
     } finally {
       setLoadingClients(false);
     }
@@ -107,11 +116,13 @@ export default function NewProjectWizardPage() {
       setSuccess(true);
     } catch (e: any) {
       const detail = e?.response?.data?.detail;
-      setError(
-        typeof detail === "string"
-          ? detail
-          : e?.message || "Project aanmaken mislukt"
-      );
+      const errorMessage = e?.message?.includes("Network Error")
+        ? "Kan geen verbinding maken met de backend server. Controleer of de backend server draait op http://localhost:8000"
+        : typeof detail === "string"
+        ? detail
+        : e?.message || "Project aanmaken mislukt";
+      
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -396,35 +407,52 @@ export default function NewProjectWizardPage() {
                 Selecteer welke opdrachtgevers betrokken zijn bij dit project.
               </p>
 
+              {clientsLoadError && (
+                <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800">{clientsLoadError}</p>
+                  <button
+                    onClick={() => {
+                      setClientsLoaded(false);
+                      loadClients();
+                    }}
+                    className="mt-2 text-sm text-blue-600 hover:underline"
+                  >
+                    Opnieuw proberen
+                  </button>
+                </div>
+              )}
+
               {loadingClients ? (
                 <Loading />
-              ) : clients.length === 0 ? (
+              ) : clients.length === 0 && !clientsLoadError ? (
                 <p className="text-sm text-gray-500 italic">
                   Geen opdrachtgevers beschikbaar.
                 </p>
               ) : (
-                <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-3">
-                  {clients.map((client) => (
-                    <label
-                      key={client.id}
-                      className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedClientIds.includes(client.id)}
-                        onChange={() => toggleClient(client.id)}
-                      />
-                      <div className="flex-1">
-                        <div className="font-medium text-sm">{client.organization}</div>
-                        {client.contact_name && (
-                          <div className="text-xs text-gray-600">
-                            {client.contact_name}
-                          </div>
-                        )}
-                      </div>
-                    </label>
-                  ))}
-                </div>
+                clients.length > 0 && (
+                  <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-3">
+                    {clients.map((client) => (
+                      <label
+                        key={client.id}
+                        className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedClientIds.includes(client.id)}
+                          onChange={() => toggleClient(client.id)}
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium text-sm">{client.organization}</div>
+                          {client.contact_name && (
+                            <div className="text-xs text-gray-600">
+                              {client.contact_name}
+                            </div>
+                          )}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )
               )}
             </div>
 
