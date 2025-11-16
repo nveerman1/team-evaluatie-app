@@ -12,6 +12,7 @@ A dropdown component that allows selecting multiple items from a list with searc
 - Selected items displayed as removable chips
 - "Deselect all" option
 - Click outside to close
+- Event propagation handling for use within forms/labels
 
 ### Usage
 

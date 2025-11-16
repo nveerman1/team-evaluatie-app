@@ -69,7 +69,10 @@ export function MultiSelect({
     <div ref={containerRef} className={`relative ${className}`}>
       {/* Trigger button */}
       <div
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!disabled) setIsOpen(!isOpen);
+        }}
         className={`min-h-[38px] w-full px-3 py-2 border border-gray-300 rounded-lg bg-white cursor-pointer 
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-400'}
           ${isOpen ? 'ring-2 ring-blue-500/50 border-blue-500' : ''}`}
@@ -102,7 +105,7 @@ export function MultiSelect({
       {isOpen && !disabled && (
         <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-hidden">
           {/* Search input */}
-          <div className="p-2 border-b border-gray-200">
+          <div className="p-2 border-b border-gray-200" onClick={(e) => e.stopPropagation()}>
             <input
               ref={inputRef}
               type="text"
@@ -127,7 +130,10 @@ export function MultiSelect({
                   <div className="px-3 py-2 border-b border-gray-100">
                     <button
                       type="button"
-                      onClick={handleClearAll}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleClearAll(e);
+                      }}
                       className="text-xs text-blue-600 hover:text-blue-700"
                     >
                       Alles deselecteren
@@ -141,6 +147,7 @@ export function MultiSelect({
                     <label
                       key={option.id}
                       className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <input
                         type="checkbox"
