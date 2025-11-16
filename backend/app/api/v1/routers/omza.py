@@ -1,0 +1,568 @@
+"""
+OMZA (Organiseren, Meedoen, Zelfvertrouwen, Autonomie) API ENDPOINTS
+=====================================================================
+
+This module provides endpoints for the OMZA teacher interface where teachers can:
+- View peer and self-assessment scores by OMZA category
+- Add teacher scores per student per category
+- Add teacher comments per student
+- Manage standard comments per category
+"""
+
+from __future__ import annotations
+from typing import Optional, List
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
+from sqlalchemy.orm import Session
+from sqlalchemy import func, and_
+
+from app.api.v1.deps import get_db, get_current_user
+from app.infra.db.models import (
+    User,
+    Evaluation,
+    Score,
+    Allocation,
+    RubricCriterion,
+    Rubric,
+)
+from app.api.v1.schemas.omza import (
+    OmzaDataResponse,
+    OmzaStudentData,
+    OmzaCategoryScore,
+    TeacherScoreCreate,
+    TeacherCommentCreate,
+    StandardCommentCreate,
+    StandardCommentOut,
+)
+from app.core.rbac import require_role
+from app.core.audit import log_create, log_update, log_delete
+
+router = APIRouter(prefix="/omza", tags=["omza"])
+
+
+@router.get("/evaluations/{evaluation_id}/data", response_model=OmzaDataResponse)
+async def get_omza_data(
+    evaluation_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get OMZA data for an evaluation including peer scores, self scores,
+    teacher scores, and teacher comments per student.
+    """
+    require_role(current_user, ["teacher", "admin"])
+
+    # Verify evaluation exists
+    evaluation = (
+        db.query(Evaluation)
+        .filter(
+            Evaluation.id == evaluation_id,
+            Evaluation.school_id == current_user.school_id,
+        )
+        .first()
+    )
+    if not evaluation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Evaluation not found",
+        )
+
+    # Get rubric and criteria
+    rubric = (
+        db.query(Rubric)
+        .filter(
+            Rubric.id == evaluation.rubric_id,
+            Rubric.school_id == current_user.school_id,
+        )
+        .first()
+    )
+    if not rubric:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Rubric not found",
+        )
+
+    criteria = (
+        db.query(RubricCriterion)
+        .filter(
+            RubricCriterion.rubric_id == rubric.id,
+            RubricCriterion.school_id == current_user.school_id,
+        )
+        .all()
+    )
+
+    # Group criteria by category
+    categories = {}
+    for criterion in criteria:
+        if criterion.category:
+            if criterion.category not in categories:
+                categories[criterion.category] = []
+            categories[criterion.category].append(criterion.id)
+
+    # Get all active students from the course
+    from app.infra.db.models import Group, GroupMember
+    
+    if not evaluation.course_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Evaluation must be linked to a course",
+        )
+    
+    # Get all students in the course via group membership
+    students = (
+        db.query(User)
+        .join(GroupMember, GroupMember.user_id == User.id)
+        .join(Group, Group.id == GroupMember.group_id)
+        .filter(
+            Group.course_id == evaluation.course_id,
+            Group.school_id == current_user.school_id,
+            GroupMember.active == True,
+            User.role == "student",
+            User.archived == False,
+        )
+        .distinct()
+        .all()
+    )
+
+    # Build student data
+    student_data_list = []
+    for student in students:
+        category_scores = {}
+
+        # Calculate peer and self averages per category
+        for category, criterion_ids in categories.items():
+            # Peer scores (where student is reviewee and reviewer is someone else)
+            peer_scores = (
+                db.query(Score.score)
+                .join(Allocation, Allocation.id == Score.allocation_id)
+                .filter(
+                    Allocation.reviewee_id == student.id,
+                    Allocation.reviewer_id != student.id,
+                    Score.criterion_id.in_(criterion_ids),
+                    Score.status == "submitted",
+                )
+                .all()
+            )
+            peer_avg = (
+                sum([s[0] for s in peer_scores]) / len(peer_scores)
+                if peer_scores
+                else None
+            )
+
+            # Self scores (where student is both reviewer and reviewee)
+            self_scores = (
+                db.query(Score.score)
+                .join(Allocation, Allocation.id == Score.allocation_id)
+                .filter(
+                    Allocation.reviewee_id == student.id,
+                    Allocation.reviewer_id == student.id,
+                    Score.criterion_id.in_(criterion_ids),
+                    Score.status == "submitted",
+                )
+                .all()
+            )
+            self_avg = (
+                sum([s[0] for s in self_scores]) / len(self_scores)
+                if self_scores
+                else None
+            )
+
+            # Teacher score (stored in settings for now - we'll use a dedicated table later)
+            # For MVP, we'll store teacher scores in evaluation settings
+            teacher_score = None
+            teacher_key = f"teacher_score_{student.id}_{category}"
+            if evaluation.settings and teacher_key in evaluation.settings:
+                teacher_score = evaluation.settings[teacher_key]
+
+            category_scores[category] = OmzaCategoryScore(
+                peer_avg=round(peer_avg, 2) if peer_avg is not None else None,
+                self_avg=round(self_avg, 2) if self_avg is not None else None,
+                teacher_score=teacher_score,
+            )
+
+        # Teacher comment (stored in evaluation settings for now)
+        teacher_comment_key = f"teacher_comment_{student.id}"
+        teacher_comment = (
+            evaluation.settings.get(teacher_comment_key)
+            if evaluation.settings
+            else None
+        )
+
+        student_data_list.append(
+            OmzaStudentData(
+                student_id=student.id,
+                student_name=student.name,
+                class_name=student.class_name,
+                team_number=student.team_number,
+                category_scores=category_scores,
+                teacher_comment=teacher_comment,
+            )
+        )
+
+    # Sort categories in specific order: O, M, Z, A
+    category_order = ["O", "M", "Z", "A"]
+    sorted_categories = [cat for cat in category_order if cat in categories]
+    # Add any other categories that might exist
+    sorted_categories.extend([cat for cat in categories.keys() if cat not in category_order])
+    
+    return OmzaDataResponse(
+        evaluation_id=evaluation_id,
+        students=student_data_list,
+        categories=sorted_categories,
+    )
+
+
+@router.post("/evaluations/{evaluation_id}/teacher-score")
+async def save_teacher_score(
+    evaluation_id: int,
+    data: TeacherScoreCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    request: Request = None,
+):
+    """
+    Save a teacher score for a specific student and category.
+    """
+    require_role(current_user, ["teacher", "admin"])
+
+    # Verify evaluation exists
+    evaluation = (
+        db.query(Evaluation)
+        .filter(
+            Evaluation.id == evaluation_id,
+            Evaluation.school_id == current_user.school_id,
+        )
+        .first()
+    )
+    if not evaluation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Evaluation not found",
+        )
+
+    # Store teacher score in evaluation settings
+    if evaluation.settings is None:
+        evaluation.settings = {}
+
+    teacher_key = f"teacher_score_{data.student_id}_{data.category}"
+    evaluation.settings[teacher_key] = data.score
+
+    # Mark as modified
+    from sqlalchemy.orm.attributes import flag_modified
+
+    flag_modified(evaluation, "settings")
+
+    # Log the action
+    log_update(
+        db=db,
+        user=current_user,
+        entity_type="evaluation_teacher_score",
+        entity_id=evaluation_id,
+        details={
+            "student_id": data.student_id,
+            "category": data.category,
+            "score": data.score,
+        },
+        request=request,
+    )
+
+    db.commit()
+
+    return {"message": "Teacher score saved", "student_id": data.student_id, "category": data.category}
+
+
+@router.post("/evaluations/{evaluation_id}/teacher-comment")
+async def save_teacher_comment(
+    evaluation_id: int,
+    data: TeacherCommentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    request: Request = None,
+):
+    """
+    Save a teacher comment for a specific student.
+    """
+    require_role(current_user, ["teacher", "admin"])
+
+    # Verify evaluation exists
+    evaluation = (
+        db.query(Evaluation)
+        .filter(
+            Evaluation.id == evaluation_id,
+            Evaluation.school_id == current_user.school_id,
+        )
+        .first()
+    )
+    if not evaluation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Evaluation not found",
+        )
+
+    # Store teacher comment in evaluation settings
+    if evaluation.settings is None:
+        evaluation.settings = {}
+
+    teacher_comment_key = f"teacher_comment_{data.student_id}"
+    evaluation.settings[teacher_comment_key] = data.comment
+
+    # Mark as modified
+    from sqlalchemy.orm.attributes import flag_modified
+
+    flag_modified(evaluation, "settings")
+
+    # Log the action
+    log_update(
+        db=db,
+        user=current_user,
+        entity_type="evaluation_teacher_comment",
+        entity_id=evaluation_id,
+        details={
+            "student_id": data.student_id,
+            "comment_length": len(data.comment) if data.comment else 0,
+        },
+        request=request,
+    )
+
+    db.commit()
+
+    return {"message": "Teacher comment saved", "student_id": data.student_id}
+
+
+@router.get("/evaluations/{evaluation_id}/standard-comments", response_model=List[StandardCommentOut])
+async def get_standard_comments(
+    evaluation_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    category: Optional[str] = Query(None),
+):
+    """
+    Get standard comments for an evaluation, optionally filtered by category.
+    Standard comments are stored in evaluation settings.
+    """
+    require_role(current_user, ["teacher", "admin"])
+
+    # Get evaluation
+    evaluation = (
+        db.query(Evaluation)
+        .filter(
+            Evaluation.id == evaluation_id,
+            Evaluation.school_id == current_user.school_id,
+        )
+        .first()
+    )
+    if not evaluation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Evaluation not found",
+        )
+
+    # Initialize default standard comments if not present
+    default_comments = {
+        "O": [
+            "Plant goed en houdt overzicht.",
+            "Werkt gestructureerd.",
+            "Verliest snel overzicht.",
+            "Plant onregelmatig.",
+        ],
+        "M": [
+            "Doet actief mee.",
+            "Draagt positief bij.",
+            "Blijft op de achtergrond.",
+            "Toont weinig betrokkenheid.",
+        ],
+        "Z": [
+            "Toont vertrouwen in eigen kunnen.",
+            "Durft uitdagingen aan.",
+            "Twijfelt snel aan zichzelf.",
+            "Vermijdt moeilijke taken.",
+        ],
+        "A": [
+            "Werkt zelfstandig.",
+            "Neemt verantwoordelijkheid.",
+            "Heeft veel sturing nodig.",
+            "Wacht af en toont weinig initiatief.",
+        ],
+    }
+    
+    # Get standard comments from evaluation settings
+    if evaluation.settings is None:
+        evaluation.settings = {}
+    
+    if "omza_standard_comments" not in evaluation.settings:
+        evaluation.settings["omza_standard_comments"] = default_comments
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(evaluation, "settings")
+        db.commit()
+    
+    standard_comments = evaluation.settings.get("omza_standard_comments", {})
+
+    results = []
+    # Ensure categories are in the correct order: O, M, Z, A
+    category_order = ["O", "M", "Z", "A"]
+    ordered_categories = [cat for cat in category_order if cat in standard_comments]
+    # Add any other categories that might exist
+    ordered_categories.extend([cat for cat in standard_comments.keys() if cat not in category_order])
+    
+    for cat in ordered_categories:
+        if category and cat != category:
+            continue
+        comments = standard_comments[cat]
+        for idx, text in enumerate(comments):
+            results.append(
+                StandardCommentOut(
+                    id=f"{cat}_{idx}",
+                    category=cat,
+                    text=text,
+                )
+            )
+
+    return results
+
+
+@router.post("/evaluations/{evaluation_id}/standard-comments", response_model=StandardCommentOut)
+async def add_standard_comment(
+    evaluation_id: int,
+    data: StandardCommentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    request: Request = None,
+):
+    """
+    Add a new standard comment for a specific category in an evaluation.
+    """
+    require_role(current_user, ["teacher", "admin"])
+
+    # Get evaluation
+    evaluation = (
+        db.query(Evaluation)
+        .filter(
+            Evaluation.id == evaluation_id,
+            Evaluation.school_id == current_user.school_id,
+        )
+        .first()
+    )
+    if not evaluation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Evaluation not found",
+        )
+
+    if evaluation.settings is None:
+        evaluation.settings = {}
+
+    if "omza_standard_comments" not in evaluation.settings:
+        evaluation.settings["omza_standard_comments"] = {}
+
+    if data.category not in evaluation.settings["omza_standard_comments"]:
+        evaluation.settings["omza_standard_comments"][data.category] = []
+
+    # Add the new comment
+    evaluation.settings["omza_standard_comments"][data.category].append(data.text)
+
+    # Mark as modified
+    from sqlalchemy.orm.attributes import flag_modified
+
+    flag_modified(evaluation, "settings")
+
+    # Log the action
+    log_create(
+        db=db,
+        user=current_user,
+        entity_type="omza_standard_comment",
+        entity_id=evaluation_id,
+        details={"category": data.category, "text": data.text},
+        request=request,
+    )
+
+    db.commit()
+
+    idx = len(evaluation.settings["omza_standard_comments"][data.category]) - 1
+    return StandardCommentOut(
+        id=f"{data.category}_{idx}",
+        category=data.category,
+        text=data.text,
+    )
+
+
+@router.delete("/evaluations/{evaluation_id}/standard-comments/{comment_id}")
+async def delete_standard_comment(
+    evaluation_id: int,
+    comment_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    request: Request = None,
+):
+    """
+    Delete a standard comment from an evaluation.
+    """
+    require_role(current_user, ["teacher", "admin"])
+
+    # Get evaluation
+    evaluation = (
+        db.query(Evaluation)
+        .filter(
+            Evaluation.id == evaluation_id,
+            Evaluation.school_id == current_user.school_id,
+        )
+        .first()
+    )
+    if not evaluation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Evaluation not found",
+        )
+
+    if evaluation.settings is None:
+        evaluation.settings = {}
+
+    # Parse comment_id (format: "category_index")
+    try:
+        category, idx_str = comment_id.rsplit("_", 1)
+        idx = int(idx_str)
+    except (ValueError, AttributeError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid comment ID format",
+        )
+
+    # Check if comment exists
+    if "omza_standard_comments" not in evaluation.settings:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No standard comments found",
+        )
+
+    if category not in evaluation.settings["omza_standard_comments"]:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No comments found for category {category}",
+        )
+
+    comments = evaluation.settings["omza_standard_comments"][category]
+    if idx < 0 or idx >= len(comments):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Comment not found",
+        )
+
+    # Delete the comment
+    deleted_text = comments.pop(idx)
+
+    # Mark as modified
+    from sqlalchemy.orm.attributes import flag_modified
+
+    flag_modified(evaluation, "settings")
+
+    # Log the action
+    log_delete(
+        db=db,
+        user=current_user,
+        entity_type="omza_standard_comment",
+        entity_id=evaluation_id,
+        details={"category": category, "text": deleted_text},
+        request=request,
+    )
+
+    db.commit()
+
+    return {"message": "Standard comment deleted", "category": category}
