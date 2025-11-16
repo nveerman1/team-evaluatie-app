@@ -18,6 +18,7 @@ export function useClients(params?: {
   status?: string;
   search?: string;
   autoFetch?: boolean;
+  refreshKey?: number;
 }) {
   const [data, setData] = useState<ClientListResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -53,6 +54,7 @@ export function useClients(params?: {
     params?.status,
     debouncedSearch,
     params?.autoFetch,
+    params?.refreshKey,
   ]);
 
   return { data, loading, error };

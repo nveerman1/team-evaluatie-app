@@ -5,7 +5,11 @@ import Link from "next/link";
 import { useClients } from "@/hooks/useClients";
 import { clientService } from "@/services";
 
-export function ClientsList() {
+interface ClientsListProps {
+  refreshKey?: number;
+}
+
+export function ClientsList({ refreshKey }: ClientsListProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLevel, setSelectedLevel] = useState<string>("Alle");
   const [selectedStatus, setSelectedStatus] = useState<string>("Alle");
@@ -19,6 +23,7 @@ export function ClientsList() {
     level: selectedLevel !== "Alle" ? selectedLevel : undefined,
     status: selectedStatus !== "Alle" ? selectedStatus : undefined,
     search: searchQuery || undefined,
+    refreshKey,
   });
 
   const handleExportCSV = async () => {

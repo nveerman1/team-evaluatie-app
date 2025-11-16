@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { ClientFormModal } from "@/components/clients/ClientFormModal";
+import { ClientsList } from "@/components/clients/ClientsList";
 
 // Helper function for building mailto links
 function buildMailto({ to, bcc, subject, body }: { to?: string; bcc?: string; subject: string; body: string }) {
@@ -84,6 +86,13 @@ const mockClients = [
 
 export default function ClientsPage() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "list" | "communication">("dashboard");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleClientCreated = () => {
+    // Trigger a refresh by updating the key
+    setRefreshKey(prev => prev + 1);
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
@@ -97,10 +106,20 @@ export default function ClientsPage() {
             Beheer contactgegevens, projecten en samenwerkingen met externe partners.
           </p>
         </div>
-        <button className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50">
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50"
+        >
           + Nieuwe opdrachtgever
         </button>
       </div>
+
+      {/* Modal for creating new client */}
+      <ClientFormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={handleClientCreated}
+      />
 
       {/* Tab Navigation */}
       <div className="flex border-b border-slate-200">
@@ -138,7 +157,7 @@ export default function ClientsPage() {
 
       {/* Tab Content */}
       {activeTab === "dashboard" && <DashboardTab />}
-      {activeTab === "list" && <ListTab />}
+      {activeTab === "list" && <ListTab refreshKey={refreshKey} />}
       {activeTab === "communication" && <CommunicationTab />}
     </div>
   );
@@ -239,195 +258,10 @@ function DashboardTab() {
 }
 
 // Tab 2: List & filters
-function ListTab() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedLevel, setSelectedLevel] = useState("Alle");
-  const [selectedYear, setSelectedYear] = useState("2025–2026");
-  const [showRiskOnly, setShowRiskOnly] = useState(false);
-
-  // Filter clients based on search and filters
-  const filteredClients = mockClients.filter(client => {
-    // Search filter
-    if (searchQuery) {
-      const search = searchQuery.toLowerCase();
-      const matchesSearch = 
-        client.organization.toLowerCase().includes(search) ||
-        client.contactName.toLowerCase().includes(search) ||
-        client.sector.toLowerCase().includes(search) ||
-        client.tags.some(tag => tag.toLowerCase().includes(search));
-      if (!matchesSearch) return false;
-    }
-
-    // Level filter
-    if (selectedLevel !== "Alle" && client.level !== selectedLevel) {
-      return false;
-    }
-
-    // Risk filter
-    if (showRiskOnly) {
-      const lastActiveDate = new Date(client.lastActive);
-      const oneYearAgo = new Date();
-      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-      if (lastActiveDate > oneYearAgo) return false;
-    }
-
-    return true;
-  });
-
-  return (
-    <>
-      {/* Expertise tags */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h3 className="text-sm font-semibold text-slate-800 mb-3">Expertise-tags</h3>
-        <div className="flex flex-wrap gap-2">
-          {[
-            "Duurzaamheid",
-            "AI/Tech",
-            "Healthcare",
-            "Mobiliteit",
-            "Circulaire economie",
-            "Defensie",
-            "Mixed-use",
-            "Stadsontwikkeling",
-          ].map((tag, idx) => (
-            <span
-              key={idx}
-              className="inline-flex items-center rounded-full bg-purple-50 border border-purple-200 px-3 py-1 text-xs font-medium text-purple-700"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-      </section>
-
-      {/* Filters bar */}
-      <div className="flex flex-wrap gap-3 items-end">
-        <div className="flex-1 min-w-[200px]">
-          <label className="text-xs font-medium text-slate-600 block mb-1.5">Zoeken</label>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Zoek op naam, organisatie, sector, tags…"
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-          />
-        </div>
-        <div className="w-40">
-          <label className="text-xs font-medium text-slate-600 block mb-1.5">Niveau</label>
-          <select 
-            value={selectedLevel}
-            onChange={(e) => setSelectedLevel(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-          >
-            <option>Alle</option>
-            <option>Onderbouw</option>
-            <option>Bovenbouw</option>
-          </select>
-        </div>
-        <div className="w-40">
-          <label className="text-xs font-medium text-slate-600 block mb-1.5">Schooljaar</label>
-          <select 
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-          >
-            <option>2025–2026</option>
-            <option>2024–2025</option>
-            <option>2023–2024</option>
-          </select>
-        </div>
-        <div>
-          <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white cursor-pointer hover:bg-slate-50">
-            <input
-              type="checkbox"
-              checked={showRiskOnly}
-              onChange={(e) => setShowRiskOnly(e.target.checked)}
-              className="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
-            />
-            <span className="text-sm font-medium text-slate-700">Risico op afhaak</span>
-          </label>
-        </div>
-      </div>
-
-      {/* Table */}
-      <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="border-b border-slate-100 px-4 py-3 flex items-center justify-between">
-          <p className="text-xs text-slate-500">
-            {filteredClients.length} opdrachtgever{filteredClients.length !== 1 ? 's' : ''} gevonden
-          </p>
-          <button className="text-xs text-slate-500 hover:text-slate-700">
-            Exporteer als CSV
-          </button>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-slate-50">
-              <tr className="text-left text-xs font-semibold text-slate-500">
-                <th className="px-4 py-2.5">Organisatie</th>
-                <th className="px-4 py-2.5">Contactpersoon + email</th>
-                <th className="px-4 py-2.5">Niveau</th>
-                <th className="px-4 py-2.5">Sector</th>
-                <th className="px-4 py-2.5">Projecten dit jaar</th>
-                <th className="px-4 py-2.5">Laatst actief</th>
-                <th className="px-4 py-2.5">Status</th>
-                <th className="px-4 py-2.5" />
-              </tr>
-            </thead>
-            <tbody>
-              {filteredClients.map((client, index) => (
-                <tr
-                  key={client.id}
-                  className={`border-t border-slate-100 ${
-                    index % 2 === 1 ? 'bg-slate-50/40' : 'bg-white'
-                  }`}
-                >
-                  <td className="px-4 py-2.5 font-medium text-slate-900">
-                    {client.organization}
-                  </td>
-                  <td className="px-4 py-2.5 text-slate-700">
-                    <div className="flex flex-col">
-                      <span>{client.contactName}</span>
-                      <span className="text-xs text-slate-500">
-                        {client.email}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-2.5 text-slate-700">{client.level}</td>
-                  <td className="px-4 py-2.5 text-slate-700">{client.sector}</td>
-                  <td className="px-4 py-2.5 text-slate-700">
-                    {client.projectsThisYear}
-                  </td>
-                  <td className="px-4 py-2.5 text-slate-700">
-                    {client.lastActive}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <span
-                      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        client.status === 'Actief'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                          : 'bg-slate-50 text-slate-500 border border-slate-200'
-                      }`}
-                    >
-                      {client.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5 text-right">
-                    <Link 
-                      href={`/teacher/clients/${client.id}`}
-                      className="text-xs font-medium text-sky-600 hover:text-sky-700"
-                    >
-                      Details &gt;
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </>
-  );
+function ListTab({ refreshKey }: { refreshKey?: number }) {
+  return <ClientsList refreshKey={refreshKey} />;
 }
+
 
 // Tab 3: Communication
 function CommunicationTab() {
