@@ -66,7 +66,11 @@ export function MultiSelect({
   };
 
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    <div 
+      ref={containerRef} 
+      className={`relative ${className}`}
+      onClick={(e) => e.stopPropagation()}
+    >
       {/* Trigger button */}
       <div
         onClick={(e) => {

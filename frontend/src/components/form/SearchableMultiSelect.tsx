@@ -71,10 +71,17 @@ export function SearchableMultiSelect({
   };
 
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    <div 
+      ref={containerRef} 
+      className={`relative ${className}`}
+      onClick={(e) => e.stopPropagation()}
+    >
       {/* Main input area */}
       <div
-        onClick={() => !disabled && !loading && setIsOpen(true)}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!disabled && !loading) setIsOpen(true);
+        }}
         className={`min-h-[38px] w-full px-3 py-2 border border-gray-300 rounded-lg bg-white cursor-text
           ${disabled || loading ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-400'}
           ${isOpen ? 'ring-2 ring-blue-500/50 border-blue-500' : ''}`}
@@ -130,7 +137,10 @@ export function SearchableMultiSelect({
                 return (
                   <div
                     key={option.id}
-                    onClick={() => handleToggleOption(option.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleOption(option.id);
+                    }}
                     className="px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
                   >
                     <div className="flex items-center gap-2">
