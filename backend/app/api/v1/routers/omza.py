@@ -98,18 +98,30 @@ async def get_omza_data(
                 categories[criterion.category] = []
             categories[criterion.category].append(criterion.id)
 
-    # Get all students in the evaluation
-    allocations = (
-        db.query(Allocation)
-        .filter(
-            Allocation.evaluation_id == evaluation_id,
-            Allocation.school_id == current_user.school_id,
+    # Get all active students from the course
+    from app.infra.db.models import Group, GroupMember
+    
+    if not evaluation.course_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Evaluation must be linked to a course",
         )
+    
+    # Get all students in the course via group membership
+    students = (
+        db.query(User)
+        .join(GroupMember, GroupMember.user_id == User.id)
+        .join(Group, Group.id == GroupMember.group_id)
+        .filter(
+            Group.course_id == evaluation.course_id,
+            Group.school_id == current_user.school_id,
+            GroupMember.active == True,
+            User.role == "student",
+            User.archived == False,
+        )
+        .distinct()
         .all()
     )
-
-    student_ids = list(set([a.reviewee_id for a in allocations]))
-    students = db.query(User).filter(User.id.in_(student_ids)).all()
 
     # Build student data
     student_data_list = []
@@ -186,10 +198,16 @@ async def get_omza_data(
             )
         )
 
+    # Sort categories in specific order: O, M, Z, A
+    category_order = ["O", "M", "Z", "A"]
+    sorted_categories = [cat for cat in category_order if cat in categories]
+    # Add any other categories that might exist
+    sorted_categories.extend([cat for cat in categories.keys() if cat not in category_order])
+    
     return OmzaDataResponse(
         evaluation_id=evaluation_id,
         students=student_data_list,
-        categories=list(categories.keys()),
+        categories=sorted_categories,
     )
 
 
@@ -338,10 +356,45 @@ async def get_standard_comments(
             detail="Evaluation not found",
         )
 
+    # Initialize default standard comments if not present
+    default_comments = {
+        "O": [
+            "Plant goed en houdt overzicht.",
+            "Werkt gestructureerd.",
+            "Verliest snel overzicht.",
+            "Plant onregelmatig.",
+        ],
+        "M": [
+            "Doet actief mee.",
+            "Draagt positief bij.",
+            "Blijft op de achtergrond.",
+            "Toont weinig betrokkenheid.",
+        ],
+        "Z": [
+            "Toont vertrouwen in eigen kunnen.",
+            "Durft uitdagingen aan.",
+            "Twijfelt snel aan zichzelf.",
+            "Vermijdt moeilijke taken.",
+        ],
+        "A": [
+            "Werkt zelfstandig.",
+            "Neemt verantwoordelijkheid.",
+            "Heeft veel sturing nodig.",
+            "Wacht af en toont weinig initiatief.",
+        ],
+    }
+    
     # Get standard comments from evaluation settings
-    standard_comments = {}
-    if evaluation.settings:
-        standard_comments = evaluation.settings.get("omza_standard_comments", {})
+    if evaluation.settings is None:
+        evaluation.settings = {}
+    
+    if "omza_standard_comments" not in evaluation.settings:
+        evaluation.settings["omza_standard_comments"] = default_comments
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(evaluation, "settings")
+        db.commit()
+    
+    standard_comments = evaluation.settings.get("omza_standard_comments", {})
 
     results = []
     for cat, comments in standard_comments.items():

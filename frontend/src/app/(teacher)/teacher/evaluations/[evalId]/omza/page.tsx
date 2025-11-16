@@ -505,14 +505,24 @@ export default function OMZAOverviewPage() {
                               )}
                             </td>
                             <td className="px-5 py-3 align-top">
-                              <button
-                                className="text-sm font-medium text-indigo-700 hover:underline"
-                                onClick={() =>
-                                  setExpandedRow(isExpanded ? null : student.student_id)
-                                }
-                              >
-                                {student.student_name}
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <Link
+                                  href={`/teacher/evaluations/${evalId}/students/${student.student_id}`}
+                                  className="text-sm font-medium text-indigo-700 hover:underline"
+                                >
+                                  {student.student_name}
+                                </Link>
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center rounded-full border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] text-gray-500 hover:bg-gray-50"
+                                  onClick={() =>
+                                    setExpandedRow(isExpanded ? null : student.student_id)
+                                  }
+                                  title="Open docentopmerking"
+                                >
+                                  💬
+                                </button>
+                              </div>
                             </td>
                             <td className="px-3 py-3 align-top text-xs text-gray-500">
                               {student.class_name}
