@@ -23,6 +23,87 @@ const CATEGORY_LABELS: Record<string, string> = {
   A: "Autonomie",
 };
 
+// Component for quick comments grid
+function OmzaQuickCommentsGrid({
+  categories,
+  standardComments,
+  studentId,
+  appendStandardComment,
+  addStandardComment,
+}: {
+  categories: string[];
+  standardComments: Record<string, StandardComment[]>;
+  studentId: number;
+  appendStandardComment: (studentId: number, text: string) => void;
+  addStandardComment: (category: string, text: string) => void;
+}) {
+  const [newCommentTexts, setNewCommentTexts] = useState<Record<string, string>>({});
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+      {categories.map((cat) => {
+        const comments = standardComments[cat] || [];
+        const newCommentText = newCommentTexts[cat] || "";
+
+        return (
+          <div
+            key={cat}
+            className="rounded-xl border border-indigo-100 bg-white/70 p-3 shadow-sm"
+          >
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-semibold text-gray-800">
+                {CATEGORY_LABELS[cat] || cat}
+              </span>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {comments.map((comment) => (
+                <button
+                  key={comment.id}
+                  type="button"
+                  className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] text-gray-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700"
+                  onClick={() => appendStandardComment(studentId, comment.text)}
+                >
+                  {comment.text}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-1">
+              <input
+                className="flex-1 h-7 rounded-md border border-gray-300 bg-white px-2 text-[11px] shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                placeholder="Nieuwe opmerking..."
+                value={newCommentText}
+                onChange={(e) =>
+                  setNewCommentTexts((prev) => ({ ...prev, [cat]: e.target.value }))
+                }
+                onKeyPress={(e) => {
+                  if (e.key === "Enter" && newCommentText.trim()) {
+                    addStandardComment(cat, newCommentText);
+                    setNewCommentTexts((prev) => ({ ...prev, [cat]: "" }));
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="h-7 px-2 text-[10px] rounded-md border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                onClick={() => {
+                  if (newCommentText.trim()) {
+                    addStandardComment(cat, newCommentText);
+                    setNewCommentTexts((prev) => ({ ...prev, [cat]: "" }));
+                  }
+                }}
+              >
+                +
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function OMZAOverviewPage() {
   const evalIdNum = useNumericEvalId();
   const evalId = evalIdNum?.toString() ?? "";
@@ -508,65 +589,13 @@ export default function OMZAOverviewPage() {
                                     </span>
                                   </div>
 
-                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                    {omzaData.categories.map((cat) => {
-                                      const comments = standardComments[cat] || [];
-                                      const [newCommentText, setNewCommentText] = useState("");
-
-                                      return (
-                                        <div
-                                          key={cat}
-                                          className="rounded-xl border border-indigo-100 bg-white/70 p-3 shadow-sm"
-                                        >
-                                          <div className="flex items-center justify-between mb-1.5">
-                                            <span className="text-xs font-semibold text-gray-800">
-                                              {CATEGORY_LABELS[cat] || cat}
-                                            </span>
-                                          </div>
-
-                                          <div className="flex flex-wrap gap-1.5 mb-2">
-                                            {comments.map((comment) => (
-                                              <button
-                                                key={comment.id}
-                                                type="button"
-                                                className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] text-gray-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700"
-                                                onClick={() =>
-                                                  appendStandardComment(student.student_id, comment.text)
-                                                }
-                                              >
-                                                {comment.text}
-                                              </button>
-                                            ))}
-                                          </div>
-
-                                          <div className="flex gap-1">
-                                            <input
-                                              className="flex-1 h-7 rounded-md border border-gray-300 bg-white px-2 text-[11px] shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                                              placeholder="Nieuwe opmerking..."
-                                              value={newCommentText}
-                                              onChange={(e) => setNewCommentText(e.target.value)}
-                                              onKeyPress={(e) => {
-                                                if (e.key === "Enter") {
-                                                  addStandardComment(cat, newCommentText);
-                                                  setNewCommentText("");
-                                                }
-                                              }}
-                                            />
-                                            <button
-                                              type="button"
-                                              className="h-7 px-2 text-[10px] rounded-md border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
-                                              onClick={() => {
-                                                addStandardComment(cat, newCommentText);
-                                                setNewCommentText("");
-                                              }}
-                                            >
-                                              +
-                                            </button>
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
+                                  <OmzaQuickCommentsGrid
+                                    categories={omzaData.categories}
+                                    standardComments={standardComments}
+                                    studentId={student.student_id}
+                                    appendStandardComment={appendStandardComment}
+                                    addStandardComment={addStandardComment}
+                                  />
 
                                   <div className="mt-3">
                                     <textarea
