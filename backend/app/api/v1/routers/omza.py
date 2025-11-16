@@ -154,12 +154,12 @@ async def get_omza_data(
                 else None
             )
 
-            # Teacher score (stored in metadata for now - we'll use a dedicated table later)
-            # For MVP, we'll store teacher scores in evaluation metadata
+            # Teacher score (stored in settings for now - we'll use a dedicated table later)
+            # For MVP, we'll store teacher scores in evaluation settings
             teacher_score = None
             teacher_key = f"teacher_score_{student.id}_{category}"
-            if evaluation.metadata and teacher_key in evaluation.metadata:
-                teacher_score = evaluation.metadata[teacher_key]
+            if evaluation.settings and teacher_key in evaluation.settings:
+                teacher_score = evaluation.settings[teacher_key]
 
             category_scores[category] = OmzaCategoryScore(
                 peer_avg=round(peer_avg, 2) if peer_avg is not None else None,
@@ -167,11 +167,11 @@ async def get_omza_data(
                 teacher_score=teacher_score,
             )
 
-        # Teacher comment (stored in evaluation metadata for now)
+        # Teacher comment (stored in evaluation settings for now)
         teacher_comment_key = f"teacher_comment_{student.id}"
         teacher_comment = (
-            evaluation.metadata.get(teacher_comment_key)
-            if evaluation.metadata
+            evaluation.settings.get(teacher_comment_key)
+            if evaluation.settings
             else None
         )
 
@@ -221,17 +221,17 @@ async def save_teacher_score(
             detail="Evaluation not found",
         )
 
-    # Store teacher score in evaluation metadata
-    if evaluation.metadata is None:
-        evaluation.metadata = {}
+    # Store teacher score in evaluation settings
+    if evaluation.settings is None:
+        evaluation.settings = {}
 
     teacher_key = f"teacher_score_{data.student_id}_{data.category}"
-    evaluation.metadata[teacher_key] = data.score
+    evaluation.settings[teacher_key] = data.score
 
     # Mark as modified
     from sqlalchemy.orm.attributes import flag_modified
 
-    flag_modified(evaluation, "metadata")
+    flag_modified(evaluation, "settings")
 
     # Log the action
     log_update(
@@ -280,17 +280,17 @@ async def save_teacher_comment(
             detail="Evaluation not found",
         )
 
-    # Store teacher comment in evaluation metadata
-    if evaluation.metadata is None:
-        evaluation.metadata = {}
+    # Store teacher comment in evaluation settings
+    if evaluation.settings is None:
+        evaluation.settings = {}
 
     teacher_comment_key = f"teacher_comment_{data.student_id}"
-    evaluation.metadata[teacher_comment_key] = data.comment
+    evaluation.settings[teacher_comment_key] = data.comment
 
     # Mark as modified
     from sqlalchemy.orm.attributes import flag_modified
 
-    flag_modified(evaluation, "metadata")
+    flag_modified(evaluation, "settings")
 
     # Log the action
     log_update(

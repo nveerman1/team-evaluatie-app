@@ -90,8 +90,8 @@ All criteria met:
 - FastAPI router with 6 endpoints
 - RBAC: All endpoints require teacher or admin role
 - Data storage:
-  - Teacher scores: Stored in `Evaluation.metadata` as `teacher_score_{student_id}_{category}`
-  - Teacher comments: Stored in `Evaluation.metadata` as `teacher_comment_{student_id}`
+  - Teacher scores: Stored in `Evaluation.settings` as `teacher_score_{student_id}_{category}`
+  - Teacher comments: Stored in `Evaluation.settings` as `teacher_comment_{student_id}`
   - Standard comments: Stored in `Evaluation.settings` as `omza_standard_comments[category][]`
 - Score calculation:
   - Peer avg: Average of all peer scores for category criteria
@@ -175,7 +175,7 @@ All criteria met:
 - Implement optimistic updates with rollback on error
 
 ### Data Storage
-- Migrate teacher scores from `Evaluation.metadata` to dedicated table:
+- Migrate teacher scores from `Evaluation.settings` to dedicated table:
   ```sql
   CREATE TABLE omza_teacher_scores (
     id SERIAL PRIMARY KEY,
@@ -215,8 +215,7 @@ The old OMZA page (`/teacher/evaluations/[evalId]/omza/page.tsx`) was a simple r
 
 ### Database Schema
 No database migrations required for MVP. Uses existing fields:
-- `Evaluation.metadata` (JSONB) - for teacher scores/comments
-- `School.settings` (JSONB) - for standard comments
+- `Evaluation.settings` (JSON) - for teacher scores/comments and standard comments
 - `RubricCriterion.category` (VARCHAR) - for OMZA categories
 
 ## Testing Checklist
