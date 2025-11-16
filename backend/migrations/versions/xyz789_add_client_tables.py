@@ -1,7 +1,7 @@
 """add_client_tables
 
 Revision ID: xyz789
-Revises: ghi123jkl456
+Revises: 553d97716b1d
 Create Date: 2025-11-15 22:43:00.000000
 
 """
@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "xyz789"
-down_revision = "ghi123jkl456"
+down_revision = "553d97716b1d"
 branch_labels = None
 depends_on = None
 
@@ -32,15 +32,29 @@ def upgrade():
         sa.Column("sector", sa.String(length=100), nullable=True),
         sa.Column("tags", postgresql.ARRAY(sa.String()), nullable=False),
         sa.Column("active", sa.Boolean(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(["school_id"], ["schools.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_client_organization", "clients", ["organization"], unique=False)
-    op.create_index("ix_client_school_active", "clients", ["school_id", "active"], unique=False)
+    op.create_index(
+        "ix_client_school_active", "clients", ["school_id", "active"], unique=False
+    )
     op.create_index(op.f("ix_clients_id"), "clients", ["id"], unique=False)
-    op.create_index(op.f("ix_clients_school_id"), "clients", ["school_id"], unique=False)
+    op.create_index(
+        op.f("ix_clients_school_id"), "clients", ["school_id"], unique=False
+    )
 
     # Create client_logs table
     op.create_table(
@@ -50,16 +64,32 @@ def upgrade():
         sa.Column("author_id", sa.Integer(), nullable=False),
         sa.Column("log_type", sa.String(length=50), nullable=False),
         sa.Column("text", sa.Text(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(["author_id"], ["users.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["client_id"], ["clients.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_client_log_client", "client_logs", ["client_id"], unique=False)
-    op.create_index("ix_client_log_created_at", "client_logs", ["created_at"], unique=False)
-    op.create_index(op.f("ix_client_logs_author_id"), "client_logs", ["author_id"], unique=False)
-    op.create_index(op.f("ix_client_logs_client_id"), "client_logs", ["client_id"], unique=False)
+    op.create_index(
+        "ix_client_log_created_at", "client_logs", ["created_at"], unique=False
+    )
+    op.create_index(
+        op.f("ix_client_logs_author_id"), "client_logs", ["author_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_client_logs_client_id"), "client_logs", ["client_id"], unique=False
+    )
     op.create_index(op.f("ix_client_logs_id"), "client_logs", ["id"], unique=False)
 
     # Create client_project_links table
@@ -71,25 +101,63 @@ def upgrade():
         sa.Column("role", sa.String(length=50), nullable=False),
         sa.Column("start_date", sa.DateTime(), nullable=True),
         sa.Column("end_date", sa.DateTime(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(["client_id"], ["clients.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["project_assessment_id"], ["project_assessments.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["project_assessment_id"], ["project_assessments.id"], ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("client_id", "project_assessment_id", name="uq_client_project_once"),
+        sa.UniqueConstraint(
+            "client_id", "project_assessment_id", name="uq_client_project_once"
+        ),
     )
-    op.create_index("ix_client_project_client", "client_project_links", ["client_id"], unique=False)
-    op.create_index("ix_client_project_project", "client_project_links", ["project_assessment_id"], unique=False)
-    op.create_index(op.f("ix_client_project_links_client_id"), "client_project_links", ["client_id"], unique=False)
-    op.create_index(op.f("ix_client_project_links_id"), "client_project_links", ["id"], unique=False)
-    op.create_index(op.f("ix_client_project_links_project_assessment_id"), "client_project_links", ["project_assessment_id"], unique=False)
+    op.create_index(
+        "ix_client_project_client", "client_project_links", ["client_id"], unique=False
+    )
+    op.create_index(
+        "ix_client_project_project",
+        "client_project_links",
+        ["project_assessment_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_client_project_links_client_id"),
+        "client_project_links",
+        ["client_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_client_project_links_id"), "client_project_links", ["id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_client_project_links_project_assessment_id"),
+        "client_project_links",
+        ["project_assessment_id"],
+        unique=False,
+    )
 
 
 def downgrade():
     # Drop client_project_links table
-    op.drop_index(op.f("ix_client_project_links_project_assessment_id"), table_name="client_project_links")
+    op.drop_index(
+        op.f("ix_client_project_links_project_assessment_id"),
+        table_name="client_project_links",
+    )
     op.drop_index(op.f("ix_client_project_links_id"), table_name="client_project_links")
-    op.drop_index(op.f("ix_client_project_links_client_id"), table_name="client_project_links")
+    op.drop_index(
+        op.f("ix_client_project_links_client_id"), table_name="client_project_links"
+    )
     op.drop_index("ix_client_project_project", table_name="client_project_links")
     op.drop_index("ix_client_project_client", table_name="client_project_links")
     op.drop_table("client_project_links")
