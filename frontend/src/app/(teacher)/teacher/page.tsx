@@ -163,6 +163,12 @@ export default function TeacherDashboard() {
         <h2 className="text-xl font-semibold mb-4">🧩 Snelle acties</h2>
         <div className="flex flex-wrap gap-3">
           <Link
+            href="/teacher/projects/new"
+            className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-blue-700 hover:to-purple-700"
+          >
+            ➕ Nieuw project (met evaluaties)
+          </Link>
+          <Link
             href="/teacher/project-assessments/create"
             className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
           >
