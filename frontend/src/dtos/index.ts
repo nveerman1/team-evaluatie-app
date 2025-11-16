@@ -12,4 +12,5 @@ export * from "./overview.dto";
 export * from "./feedback-summary.dto";
 export * from "./learning-objective.dto";
 export * from "./user.dto";
+export * from "./peer-feedback-results.dto";
 export * from "./client.dto";
