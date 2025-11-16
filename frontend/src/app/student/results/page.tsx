@@ -48,7 +48,7 @@ export default function PeerFeedbackResultsPage() {
   };
 
   return (
-    <>
+    <div className="min-h-screen bg-gray-100">
       <PageHeader onRefresh={handleRefresh} onExportAll={handleExportAll} />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
@@ -83,6 +83,6 @@ export default function PeerFeedbackResultsPage() {
         onClose={() => setDetailOpen(false)}
         evaluation={active}
       />
-    </>
+    </div>
   );
 }
