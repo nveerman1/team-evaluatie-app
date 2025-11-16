@@ -131,6 +131,7 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
                   <th className="px-4 py-3">Organisatie</th>
                   <th className="px-4 py-3">Contact</th>
                   <th className="px-4 py-3">Email</th>
+                  <th className="px-4 py-3">Sector</th>
                   <th className="px-4 py-3">Niveau</th>
                   <th className="px-4 py-3">Projecten</th>
                   <th className="px-4 py-3">Status</th>
@@ -153,6 +154,7 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
                     </td>
                     <td className="px-4 py-3">{client.contact_name || "-"}</td>
                     <td className="px-4 py-3">{client.email || "-"}</td>
+                    <td className="px-4 py-3">{client.sector || "-"}</td>
                     <td className="px-4 py-3">{client.level || "-"}</td>
                     <td className="px-4 py-3 text-center">{client.projects_this_year}</td>
                     <td className="px-4 py-3">
