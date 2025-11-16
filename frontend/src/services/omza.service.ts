@@ -77,4 +77,17 @@ export const omzaService = {
     );
     return response.data;
   },
+
+  /**
+   * Delete a standard comment
+   */
+  async deleteStandardComment(
+    evaluationId: number,
+    commentId: string
+  ): Promise<{ message: string }> {
+    const response = await api.delete(
+      `/omza/evaluations/${evaluationId}/standard-comments/${commentId}`
+    );
+    return response.data;
+  },
 };

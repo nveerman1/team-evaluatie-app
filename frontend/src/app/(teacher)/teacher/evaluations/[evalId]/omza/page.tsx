@@ -30,12 +30,14 @@ function OmzaQuickCommentsGrid({
   studentId,
   appendStandardComment,
   addStandardComment,
+  deleteStandardComment,
 }: {
   categories: string[];
   standardComments: Record<string, StandardComment[]>;
   studentId: number;
   appendStandardComment: (studentId: number, text: string) => void;
   addStandardComment: (category: string, text: string) => void;
+  deleteStandardComment: (commentId: string) => void;
 }) {
   const [newCommentTexts, setNewCommentTexts] = useState<Record<string, string>>({});
 
@@ -58,14 +60,26 @@ function OmzaQuickCommentsGrid({
 
             <div className="flex flex-wrap gap-1.5 mb-2">
               {comments.map((comment) => (
-                <button
-                  key={comment.id}
-                  type="button"
-                  className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] text-gray-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700"
-                  onClick={() => appendStandardComment(studentId, comment.text)}
-                >
-                  {comment.text}
-                </button>
+                <div key={comment.id} className="group relative inline-flex">
+                  <button
+                    type="button"
+                    className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] text-gray-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700"
+                    onClick={() => appendStandardComment(studentId, comment.text)}
+                  >
+                    {comment.text}
+                  </button>
+                  <button
+                    type="button"
+                    className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] flex items-center justify-center hover:bg-red-600"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteStandardComment(comment.id);
+                    }}
+                    title="Verwijder opmerking"
+                  >
+                    ×
+                  </button>
+                </div>
               ))}
             </div>
 
@@ -124,6 +138,10 @@ export default function OMZAOverviewPage() {
   const [savingScores, setSavingScores] = useState<Record<string, boolean>>({});
   const [savingComments, setSavingComments] = useState<Record<string, boolean>>({});
   const [toast, setToast] = useState<string | null>(null);
+  
+  // Sorting state
+  const [sortColumn, setSortColumn] = useState<"team" | "name" | "class" | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   
   // Refs for debouncing
   const scoreTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
@@ -325,13 +343,71 @@ export default function OMZAOverviewPage() {
       });
   }, [evalIdNum, showToast]);
 
-  // Filter students
-  const filteredStudents = omzaData?.students.filter((student) => {
-    const matchesSearch = student.student_name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTeam = teamFilter === "all" || student.team_number?.toString() === teamFilter;
-    const matchesClass = classFilter === "all" || student.class_name === classFilter;
-    return matchesSearch && matchesTeam && matchesClass;
-  }) || [];
+  // Delete standard comment
+  const deleteStandardComment = useCallback((commentId: string) => {
+    if (!evalIdNum) return;
+    
+    omzaService
+      .deleteStandardComment(evalIdNum, commentId)
+      .then(() => {
+        // Remove from state
+        setStandardComments((prev) => {
+          const newComments = { ...prev };
+          Object.keys(newComments).forEach((cat) => {
+            newComments[cat] = newComments[cat].filter((c) => c.id !== commentId);
+          });
+          return newComments;
+        });
+        showToast("Standaardopmerking verwijderd");
+      })
+      .catch((err) => {
+        showToast(`Fout bij verwijderen: ${err?.message || "Onbekende fout"}`);
+      });
+  }, [evalIdNum, showToast]);
+
+  // Toggle sort
+  const handleSort = (column: "team" | "name" | "class") => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  // Filter and sort students
+  const filteredStudents = React.useMemo(() => {
+    let filtered = omzaData?.students.filter((student) => {
+      const matchesSearch = student.student_name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesTeam = teamFilter === "all" || student.team_number?.toString() === teamFilter;
+      const matchesClass = classFilter === "all" || student.class_name === classFilter;
+      return matchesSearch && matchesTeam && matchesClass;
+    }) || [];
+
+    // Apply sorting
+    if (sortColumn) {
+      filtered = [...filtered].sort((a, b) => {
+        let aVal: any, bVal: any;
+        
+        if (sortColumn === "team") {
+          aVal = a.team_number || 0;
+          bVal = b.team_number || 0;
+        } else if (sortColumn === "name") {
+          aVal = a.student_name.toLowerCase();
+          bVal = b.student_name.toLowerCase();
+        } else if (sortColumn === "class") {
+          aVal = a.class_name || "";
+          bVal = b.class_name || "";
+        }
+        
+        if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
+        if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return filtered;
+  }, [omzaData?.students, searchQuery, teamFilter, classFilter, sortColumn, sortDirection]);
 
   // Get unique teams and classes
   const teams = Array.from(new Set(omzaData?.students.map((s) => s.team_number).filter((t) => t != null)));
@@ -459,14 +535,38 @@ export default function OMZAOverviewPage() {
                 <table className="min-w-full divide-y divide-gray-200 text-sm">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide w-20">
-                        Team
+                      <th 
+                        className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide w-20 cursor-pointer hover:bg-gray-100"
+                        onClick={() => handleSort("team")}
+                      >
+                        <div className="flex items-center gap-1">
+                          Team
+                          {sortColumn === "team" && (
+                            <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </div>
                       </th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
-                        Leerling
+                      <th 
+                        className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide cursor-pointer hover:bg-gray-100"
+                        onClick={() => handleSort("name")}
+                      >
+                        <div className="flex items-center gap-1">
+                          Leerling
+                          {sortColumn === "name" && (
+                            <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </div>
                       </th>
-                      <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
-                        Klas
+                      <th 
+                        className="px-3 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide cursor-pointer hover:bg-gray-100"
+                        onClick={() => handleSort("class")}
+                      >
+                        <div className="flex items-center gap-1">
+                          Klas
+                          {sortColumn === "class" && (
+                            <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </div>
                       </th>
                       {omzaData.categories.map((cat) => (
                         <th
@@ -543,10 +643,10 @@ export default function OMZAOverviewPage() {
                                           catScore?.peer_avg || null
                                         )}`}
                                       >
-                                        Peer: {catScore?.peer_avg?.toFixed(2) || "-"}
+                                        Peer: {catScore?.peer_avg?.toFixed(1) || "-"}
                                       </span>
                                       <span className="text-gray-400">
-                                        Self: {catScore?.self_avg?.toFixed(2) || "-"}
+                                        Self: {catScore?.self_avg?.toFixed(1) || "-"}
                                       </span>
                                     </div>
                                     <div className="flex items-center gap-1">
@@ -563,18 +663,9 @@ export default function OMZAOverviewPage() {
                                         onChange={(e) =>
                                           handleScoreChange(student.student_id, cat, e.target.value)
                                         }
-                                        placeholder={catScore?.peer_avg?.toFixed(2) || ""}
+                                        placeholder={catScore?.peer_avg?.toFixed(1) || ""}
                                         disabled={isSaving}
                                       />
-                                      <button
-                                        type="button"
-                                        className="inline-flex items-center rounded-full border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] text-gray-500 hover:bg-gray-50"
-                                        onClick={() =>
-                                          setExpandedRow(isExpanded ? null : student.student_id)
-                                        }
-                                      >
-                                        💬
-                                      </button>
                                     </div>
                                   </div>
                                 </td>
@@ -605,6 +696,7 @@ export default function OMZAOverviewPage() {
                                     studentId={student.student_id}
                                     appendStandardComment={appendStandardComment}
                                     addStandardComment={addStandardComment}
+                                    deleteStandardComment={deleteStandardComment}
                                   />
 
                                   <div className="mt-3">

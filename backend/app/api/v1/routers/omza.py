@@ -475,3 +475,87 @@ async def add_standard_comment(
         category=data.category,
         text=data.text,
     )
+
+
+@router.delete("/evaluations/{evaluation_id}/standard-comments/{comment_id}")
+async def delete_standard_comment(
+    evaluation_id: int,
+    comment_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    request: Request = None,
+):
+    """
+    Delete a standard comment from an evaluation.
+    """
+    require_role(current_user, ["teacher", "admin"])
+
+    # Get evaluation
+    evaluation = (
+        db.query(Evaluation)
+        .filter(
+            Evaluation.id == evaluation_id,
+            Evaluation.school_id == current_user.school_id,
+        )
+        .first()
+    )
+    if not evaluation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Evaluation not found",
+        )
+
+    if evaluation.settings is None:
+        evaluation.settings = {}
+
+    # Parse comment_id (format: "category_index")
+    try:
+        category, idx_str = comment_id.rsplit("_", 1)
+        idx = int(idx_str)
+    except (ValueError, AttributeError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid comment ID format",
+        )
+
+    # Check if comment exists
+    if "omza_standard_comments" not in evaluation.settings:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No standard comments found",
+        )
+
+    if category not in evaluation.settings["omza_standard_comments"]:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No comments found for category {category}",
+        )
+
+    comments = evaluation.settings["omza_standard_comments"][category]
+    if idx < 0 or idx >= len(comments):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Comment not found",
+        )
+
+    # Delete the comment
+    deleted_text = comments.pop(idx)
+
+    # Mark as modified
+    from sqlalchemy.orm.attributes import flag_modified
+
+    flag_modified(evaluation, "settings")
+
+    # Log the action
+    log_delete(
+        db=db,
+        user=current_user,
+        entity_type="omza_standard_comment",
+        entity_id=evaluation_id,
+        details={"category": category, "text": deleted_text},
+        request=request,
+    )
+
+    db.commit()
+
+    return {"message": "Standard comment deleted", "category": category}
