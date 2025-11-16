@@ -310,26 +310,38 @@ async def save_teacher_comment(
     return {"message": "Teacher comment saved", "student_id": data.student_id}
 
 
-@router.get("/standard-comments", response_model=List[StandardCommentOut])
+@router.get("/evaluations/{evaluation_id}/standard-comments", response_model=List[StandardCommentOut])
 async def get_standard_comments(
+    evaluation_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     category: Optional[str] = Query(None),
 ):
     """
-    Get standard comments, optionally filtered by category.
-    Standard comments are stored in school metadata.
+    Get standard comments for an evaluation, optionally filtered by category.
+    Standard comments are stored in evaluation settings.
     """
     require_role(current_user, ["teacher", "admin"])
 
-    # Get from school metadata
-    from app.infra.db.models import School
+    # Get evaluation
+    evaluation = (
+        db.query(Evaluation)
+        .filter(
+            Evaluation.id == evaluation_id,
+            Evaluation.school_id == current_user.school_id,
+        )
+        .first()
+    )
+    if not evaluation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Evaluation not found",
+        )
 
-    school = db.query(School).filter(School.id == current_user.school_id).first()
-    if not school or not school.settings:
-        return []
-
-    standard_comments = school.settings.get("omza_standard_comments", {})
+    # Get standard comments from evaluation settings
+    standard_comments = {}
+    if evaluation.settings:
+        standard_comments = evaluation.settings.get("omza_standard_comments", {})
 
     results = []
     for cat, comments in standard_comments.items():
@@ -347,57 +359,64 @@ async def get_standard_comments(
     return results
 
 
-@router.post("/standard-comments", response_model=StandardCommentOut)
+@router.post("/evaluations/{evaluation_id}/standard-comments", response_model=StandardCommentOut)
 async def add_standard_comment(
+    evaluation_id: int,
     data: StandardCommentCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     request: Request = None,
 ):
     """
-    Add a new standard comment for a specific category.
+    Add a new standard comment for a specific category in an evaluation.
     """
     require_role(current_user, ["teacher", "admin"])
 
-    from app.infra.db.models import School
-
-    school = db.query(School).filter(School.id == current_user.school_id).first()
-    if not school:
+    # Get evaluation
+    evaluation = (
+        db.query(Evaluation)
+        .filter(
+            Evaluation.id == evaluation_id,
+            Evaluation.school_id == current_user.school_id,
+        )
+        .first()
+    )
+    if not evaluation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="School not found",
+            detail="Evaluation not found",
         )
 
-    if school.settings is None:
-        school.settings = {}
+    if evaluation.settings is None:
+        evaluation.settings = {}
 
-    if "omza_standard_comments" not in school.settings:
-        school.settings["omza_standard_comments"] = {}
+    if "omza_standard_comments" not in evaluation.settings:
+        evaluation.settings["omza_standard_comments"] = {}
 
-    if data.category not in school.settings["omza_standard_comments"]:
-        school.settings["omza_standard_comments"][data.category] = []
+    if data.category not in evaluation.settings["omza_standard_comments"]:
+        evaluation.settings["omza_standard_comments"][data.category] = []
 
     # Add the new comment
-    school.settings["omza_standard_comments"][data.category].append(data.text)
+    evaluation.settings["omza_standard_comments"][data.category].append(data.text)
 
     # Mark as modified
     from sqlalchemy.orm.attributes import flag_modified
 
-    flag_modified(school, "settings")
+    flag_modified(evaluation, "settings")
 
     # Log the action
     log_create(
         db=db,
         user=current_user,
         entity_type="omza_standard_comment",
-        entity_id=school.id,
+        entity_id=evaluation_id,
         details={"category": data.category, "text": data.text},
         request=request,
     )
 
     db.commit()
 
-    idx = len(school.settings["omza_standard_comments"][data.category]) - 1
+    idx = len(evaluation.settings["omza_standard_comments"][data.category]) - 1
     return StandardCommentOut(
         id=f"{data.category}_{idx}",
         category=data.category,

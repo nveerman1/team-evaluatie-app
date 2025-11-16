@@ -177,7 +177,7 @@ export default function OMZAOverviewPage() {
   useEffect(() => {
     if (!evalIdNum) return;
     
-    omzaService.getStandardComments().then((comments) => {
+    omzaService.getStandardComments(evalIdNum).then((comments) => {
       const byCategory: Record<string, StandardComment[]> = {};
       comments.forEach((comment) => {
         if (!byCategory[comment.category]) {
@@ -309,10 +309,10 @@ export default function OMZAOverviewPage() {
 
   // Add new standard comment
   const addStandardComment = useCallback((category: string, text: string) => {
-    if (!text.trim()) return;
+    if (!text.trim() || !evalIdNum) return;
     
     omzaService
-      .addStandardComment({ category, text: text.trim() })
+      .addStandardComment(evalIdNum, { category, text: text.trim() })
       .then((newComment) => {
         setStandardComments((prev) => ({
           ...prev,
@@ -323,7 +323,7 @@ export default function OMZAOverviewPage() {
       .catch((err) => {
         showToast(`Fout bij toevoegen: ${err?.message || "Onbekende fout"}`);
       });
-  }, [showToast]);
+  }, [evalIdNum, showToast]);
 
   // Filter students
   const filteredStudents = omzaData?.students.filter((student) => {

@@ -49,13 +49,14 @@ export const omzaService = {
   },
 
   /**
-   * Get standard comments, optionally filtered by category
+   * Get standard comments for an evaluation, optionally filtered by category
    */
   async getStandardComments(
+    evaluationId: number,
     category?: string
   ): Promise<StandardComment[]> {
     const response = await api.get<StandardComment[]>(
-      "/omza/standard-comments",
+      `/omza/evaluations/${evaluationId}/standard-comments`,
       {
         params: category ? { category } : undefined,
       }
@@ -64,13 +65,14 @@ export const omzaService = {
   },
 
   /**
-   * Add a new standard comment
+   * Add a new standard comment for an evaluation
    */
   async addStandardComment(
+    evaluationId: number,
     data: StandardCommentCreate
   ): Promise<StandardComment> {
     const response = await api.post<StandardComment>(
-      "/omza/standard-comments",
+      `/omza/evaluations/${evaluationId}/standard-comments`,
       data
     );
     return response.data;

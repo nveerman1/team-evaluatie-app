@@ -11,8 +11,8 @@ All requirements from the problem statement have been implemented:
   - `GET /omza/evaluations/{evaluationId}/data` - Fetch OMZA data with peer/self/teacher scores per student
   - `POST /omza/evaluations/{evaluationId}/teacher-score` - Save teacher score for student/category
   - `POST /omza/evaluations/{evaluationId}/teacher-comment` - Save teacher comment for student
-  - `GET /omza/standard-comments` - Fetch standard comments (optionally filtered by category)
-  - `POST /omza/standard-comments` - Add new standard comment for a category
+  - `GET /omza/evaluations/{evaluationId}/standard-comments` - Fetch standard comments (optionally filtered by category)
+  - `POST /omza/evaluations/{evaluationId}/standard-comments` - Add new standard comment for a category
 
 - **Frontend Service Layer:**
   - `omzaService` in `frontend/src/services/omza.service.ts`
@@ -92,7 +92,7 @@ All criteria met:
 - Data storage:
   - Teacher scores: Stored in `Evaluation.metadata` as `teacher_score_{student_id}_{category}`
   - Teacher comments: Stored in `Evaluation.metadata` as `teacher_comment_{student_id}`
-  - Standard comments: Stored in `School.settings` as `omza_standard_comments[category][]`
+  - Standard comments: Stored in `Evaluation.settings` as `omza_standard_comments[category][]`
 - Score calculation:
   - Peer avg: Average of all peer scores for category criteria
   - Self avg: Average of all self scores for category criteria
@@ -129,7 +129,7 @@ All criteria met:
 
 1. **Page Load**:
    - Fetch OMZA data: `GET /omza/evaluations/{id}/data`
-   - Fetch standard comments: `GET /omza/standard-comments`
+   - Fetch standard comments: `GET /omza/evaluations/{id}/standard-comments`
    - Initialize state with existing teacher scores/comments
 
 2. **Score Input**:
@@ -153,7 +153,7 @@ All criteria met:
 
 5. **Standard Comments**:
    - User adds new comment
-   - `POST /omza/standard-comments`
+   - `POST /omza/evaluations/{id}/standard-comments`
    - New comment added to state and appears in UI
    - Toast notification
 
