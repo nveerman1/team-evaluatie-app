@@ -13,3 +13,4 @@ export * from "./learning-objective.service";
 export * from "./project-notes.service";
 export * from "./client.service";
 export * from "./project.service";
+export * from "./omza.service";
