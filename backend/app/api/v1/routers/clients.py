@@ -229,6 +229,123 @@ def get_client_projects(
     }
 
 
+@router.post("/{client_id}/projects/{project_id}", status_code=status.HTTP_201_CREATED)
+def link_project_to_client(
+    client_id: int,
+    project_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    role: str = Query("main", description="Role of the client in the project"),
+):
+    """
+    Link a project to a client
+    """
+    # Verify client exists and belongs to user's school
+    client = (
+        db.query(Client)
+        .filter(Client.id == client_id, Client.school_id == user.school_id)
+        .first()
+    )
+    
+    if not client:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Client not found",
+        )
+    
+    # Verify project exists and belongs to user's school
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.school_id == user.school_id)
+        .first()
+    )
+    
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found",
+        )
+    
+    # Check if link already exists
+    existing_link = (
+        db.query(ClientProjectLink)
+        .filter(
+            ClientProjectLink.client_id == client_id,
+            ClientProjectLink.project_id == project_id,
+        )
+        .first()
+    )
+    
+    if existing_link:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Project is already linked to this client",
+        )
+    
+    # Create new link
+    new_link = ClientProjectLink(
+        client_id=client_id,
+        project_id=project_id,
+        role=role,
+        start_date=project.start_date,
+        end_date=project.end_date,
+    )
+    
+    db.add(new_link)
+    db.commit()
+    db.refresh(new_link)
+    
+    return {
+        "id": new_link.id,
+        "client_id": client_id,
+        "project_id": project_id,
+        "role": role,
+    }
+
+
+@router.delete("/{client_id}/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+def unlink_project_from_client(
+    client_id: int,
+    project_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """
+    Unlink a project from a client
+    """
+    # Verify client exists and belongs to user's school
+    client = (
+        db.query(Client)
+        .filter(Client.id == client_id, Client.school_id == user.school_id)
+        .first()
+    )
+    
+    if not client:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Client not found",
+        )
+    
+    # Find and delete the link
+    link = (
+        db.query(ClientProjectLink)
+        .filter(
+            ClientProjectLink.client_id == client_id,
+            ClientProjectLink.project_id == project_id,
+        )
+        .first()
+    )
+    
+    if not link:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project link not found",
+        )
+    
+    db.delete(link)
+    db.commit()
+
+
 @router.get("/{client_id}/log", response_model=ClientLogListOut)
 def get_client_log(
     client_id: int,

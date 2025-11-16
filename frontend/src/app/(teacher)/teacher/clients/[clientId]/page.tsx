@@ -1,71 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useClient, useClientLogs } from "@/hooks/useClients";
 import { ClientEditModal } from "@/components/clients/ClientEditModal";
 import { AddNoteModal } from "@/components/clients/AddNoteModal";
-import { clientService } from "@/services";
+import { clientService, projectService } from "@/services";
 
 // Helper function for building mailto links
 function buildMailto({ to, subject, body }: { to: string; subject: string; body: string }) {
   return `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
-
-// TODO: vervang mock data door echte data uit je API / loader
-const mockClient = {
-  id: "1",
-  organization: "Greystar",
-  contactName: "Sanne de Vries",
-  email: "sanne.devries@greystar.nl",
-  level: "Bovenbouw",
-  sector: "Vastgoed",
-  tags: ["Duurzaamheid", "Mixed-use", "Stadsontwikkeling"],
-  active: true,
-};
-
-const mockProjects = [
-  {
-    id: "p1",
-    name: "Gemeenschappelijke ruimte mixed-use gebouw",
-    year: "2024–2025",
-    level: "5 VWO",
-    className: "5V1",
-    teams: 4,
-    role: "Hoofdopdrachtgever",
-  },
-  {
-    id: "p2",
-    name: "Bewonersbeleving & gedeelde functies",
-    year: "2023–2024",
-    level: "4 HAVO",
-    className: "4H2",
-    teams: 3,
-    role: "Hoofdopdrachtgever",
-  },
-];
-
-const mockLog = [
-  {
-    date: "2025-03-01",
-    type: "Notitie",
-    text: "Greystar wil volgend jaar graag weer een project, liefst in periode 3.",
-    author: "Nick Veerman",
-  },
-  {
-    date: "2025-02-10",
-    type: "Mail (template)",
-    text: "Bedankmail eindpresentatie verzonden.",
-    author: "Systeem",
-  },
-  {
-    date: "2025-01-20",
-    type: "Notitie",
-    text: "Tussenpresentatie goed verlopen, stellen peerfeedback erg op prijs.",
-    author: "Nick Veerman",
-  },
-];
 
 export default function ClientDetailPage() {
   const params = useParams();
@@ -295,7 +241,7 @@ export default function ClientDetailPage() {
         {/* Tab content */}
         <div className="px-4 py-4">
           {activeTab === "logboek" && <LogboekTab logs={logsData?.items || []} onAddNote={() => setIsNoteModalOpen(true)} />}
-          {activeTab === "projecten" && <ProjectenTab />}
+          {activeTab === "projecten" && <ProjectenTab clientId={clientId} />}
           {activeTab === "documenten" && <DocumentenTab />}
           {activeTab === "communicatie" && <CommunicatieTab client={client} />}
         </div>
@@ -339,43 +285,187 @@ function LogboekTab({ logs, onAddNote }: { logs: any[], onAddNote: () => void })
   );
 }
 
-function ProjectenTab() {
+function ProjectenTab({ clientId }: { clientId: number }) {
+  const [projects, setProjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [allProjects, setAllProjects] = useState<any[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [linkingProject, setLinkingProject] = useState(false);
+
+  // Fetch linked projects
+  useEffect(() => {
+    loadProjects();
+  }, [clientId]);
+
+  async function loadProjects() {
+    try {
+      setLoading(true);
+      const response = await clientService.getClientProjects(clientId);
+      setProjects(response.items || []);
+    } catch (err) {
+      console.error("Failed to load projects:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadAllProjects() {
+    try {
+      const response = await projectService.listProjects({ per_page: 100 });
+      setAllProjects(response.items || []);
+    } catch (err) {
+      console.error("Failed to load all projects:", err);
+    }
+  }
+
+  async function handleLinkProject() {
+    if (!selectedProjectId) return;
+    
+    try {
+      setLinkingProject(true);
+      await clientService.linkProjectToClient(clientId, selectedProjectId);
+      await loadProjects();
+      setShowLinkModal(false);
+      setSelectedProjectId(null);
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.detail || "Fout bij koppelen van project";
+      alert(errorMessage);
+    } finally {
+      setLinkingProject(false);
+    }
+  }
+
+  async function handleUnlinkProject(projectId: number) {
+    if (!confirm("Weet je zeker dat je dit project wilt ontkoppelen?")) return;
+
+    try {
+      await clientService.unlinkProjectFromClient(clientId, projectId);
+      await loadProjects();
+    } catch (err) {
+      alert("Fout bij ontkoppelen van project");
+    }
+  }
+
   return (
     <>
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
           Gekoppelde projecten
         </h3>
-        <button className="text-xs text-sky-600 hover:text-sky-700">
-          Project koppelen
+        <button
+          onClick={() => {
+            loadAllProjects();
+            setShowLinkModal(true);
+          }}
+          className="text-xs text-sky-600 hover:text-sky-700"
+        >
+          + Project koppelen
         </button>
       </div>
-      <div className="grid gap-3 md:grid-cols-2">
-        {mockProjects.map((p) => (
-          <article
-            key={p.id}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm"
+      
+      {loading ? (
+        <div className="text-center py-4 text-sm text-slate-500">Laden...</div>
+      ) : projects.length === 0 ? (
+        <div className="text-center py-8 text-slate-500">
+          <p className="text-sm">Nog geen projecten gekoppeld</p>
+          <button
+            onClick={() => {
+              loadAllProjects();
+              setShowLinkModal(true);
+            }}
+            className="mt-2 text-xs text-sky-600 hover:text-sky-700"
           >
-            <p className="text-sm font-semibold text-slate-900">
-              {p.name}
-            </p>
-            <p className="mt-1 text-xs text-slate-500">
-              {p.year} · {p.level} · {p.className}
-            </p>
-            <p className="mt-1 text-xs text-slate-500">
-              Teams: {p.teams} · Rol: {p.role}
-            </p>
-            <div className="mt-2 flex justify-between items-center text-xs">
-              <button className="text-sky-600 hover:text-sky-700">
-                Ga naar project
+            Koppel je eerste project
+          </button>
+        </div>
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2">
+          {projects.map((p) => (
+            <article
+              key={p.id}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm"
+            >
+              <p className="text-sm font-semibold text-slate-900">
+                {p.title}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Rol: {p.role}
+              </p>
+              {(p.start_date || p.end_date) && (
+                <p className="mt-1 text-xs text-slate-500">
+                  {p.start_date ? new Date(p.start_date).toLocaleDateString('nl-NL') : ''} 
+                  {p.start_date && p.end_date ? ' - ' : ''}
+                  {p.end_date ? new Date(p.end_date).toLocaleDateString('nl-NL') : ''}
+                </p>
+              )}
+              <div className="mt-2 flex justify-between items-center text-xs">
+                <button
+                  onClick={() => window.location.href = `/teacher/projects/${p.id}`}
+                  className="text-sky-600 hover:text-sky-700"
+                >
+                  Ga naar project
+                </button>
+                <button
+                  onClick={() => handleUnlinkProject(p.id)}
+                  className="text-slate-500 hover:text-slate-700"
+                >
+                  Ontkoppel
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+
+      {/* Link Project Modal */}
+      {showLinkModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full mx-4 p-6">
+            <h2 className="text-lg font-semibold mb-4">Project koppelen</h2>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">
+                Selecteer een project
+              </label>
+              <select
+                value={selectedProjectId || ""}
+                onChange={(e) => setSelectedProjectId(e.target.value ? Number(e.target.value) : null)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              >
+                <option value="">Kies een project...</option>
+                {allProjects
+                  .filter(proj => !projects.some(p => p.id === proj.id))
+                  .map(proj => (
+                    <option key={proj.id} value={proj.id}>
+                      {proj.title}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => {
+                  setShowLinkModal(false);
+                  setSelectedProjectId(null);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                disabled={linkingProject}
+              >
+                Annuleren
               </button>
-              <button className="text-slate-500 hover:text-slate-700">
-                Ontkoppel
+              <button
+                onClick={handleLinkProject}
+                disabled={!selectedProjectId || linkingProject}
+                className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {linkingProject ? "Bezig..." : "Koppelen"}
               </button>
             </div>
-          </article>
-        ))}
-      </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

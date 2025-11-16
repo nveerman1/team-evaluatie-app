@@ -9,6 +9,8 @@ import type { ClientListItem } from "@/dtos/client.dto";
 import type { RubricListItem } from "@/dtos/rubric.dto";
 import type { Competency } from "@/dtos";
 import { Loading } from "@/components";
+import { MultiSelect } from "@/components/form/MultiSelect";
+import { SearchableMultiSelect } from "@/components/form/SearchableMultiSelect";
 
 export default function NewProjectWizardPage() {
   const router = useRouter();
@@ -241,13 +243,7 @@ export default function NewProjectWizardPage() {
     }
   }
 
-  function toggleClient(clientId: number) {
-    if (selectedClientIds.includes(clientId)) {
-      setSelectedClientIds(selectedClientIds.filter(id => id !== clientId));
-    } else {
-      setSelectedClientIds([...selectedClientIds, clientId]);
-    }
-  }
+
 
   // Success screen
   if (success) {
@@ -652,15 +648,18 @@ export default function NewProjectWizardPage() {
 
                 {/* Competency Scan */}
                 <div className="border rounded-lg p-4">
-                  <label className="flex items-start gap-3 cursor-pointer">
+                  <div className="flex items-start gap-3">
                     <input
                       type="checkbox"
                       checked={competencyScanEnabled}
                       onChange={(e) => setCompetencyScanEnabled(e.target.checked)}
                       className="mt-1"
+                      id="competency-scan-checkbox"
                     />
                     <div className="flex-1">
-                      <div className="font-medium">Competentiescan</div>
+                      <label htmlFor="competency-scan-checkbox" className="font-medium cursor-pointer">
+                        Competentiescan
+                      </label>
                       <div className="text-sm text-gray-600 mb-3">
                         Studenten vullen een competentiescan in voor dit project
                       </div>
@@ -709,32 +708,24 @@ export default function NewProjectWizardPage() {
                           </div>
                           <div>
                             <label className="block text-xs font-medium mb-1">Competenties</label>
-                            <div className="max-h-40 overflow-y-auto border rounded p-2 space-y-1">
-                              {competencies.map(comp => (
-                                <label key={comp.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 p-1 rounded">
-                                  <input
-                                    type="checkbox"
-                                    checked={competencyScanCompetencyIds.includes(comp.id)}
-                                    onChange={(e) => {
-                                      if (e.target.checked) {
-                                        setCompetencyScanCompetencyIds([...competencyScanCompetencyIds, comp.id]);
-                                      } else {
-                                        setCompetencyScanCompetencyIds(competencyScanCompetencyIds.filter(id => id !== comp.id));
-                                      }
-                                    }}
-                                  />
-                                  <span>{comp.name}</span>
-                                </label>
-                              ))}
-                              {competencies.length === 0 && (
-                                <p className="text-xs text-gray-500 italic">Geen competenties beschikbaar</p>
-                              )}
-                            </div>
+                            <MultiSelect
+                              options={competencies.map(comp => ({
+                                id: comp.id,
+                                label: comp.name
+                              }))}
+                              value={competencyScanCompetencyIds}
+                              onChange={setCompetencyScanCompetencyIds}
+                              placeholder="Selecteer competenties..."
+                              className="w-full"
+                            />
+                            {competencies.length === 0 && (
+                              <p className="text-xs text-gray-500 italic mt-1">Geen competenties beschikbaar</p>
+                            )}
                           </div>
                         </div>
                       )}
                     </div>
-                  </label>
+                  </div>
                 </div>
               </div>
             )}
@@ -767,37 +758,22 @@ export default function NewProjectWizardPage() {
                 </div>
               )}
 
-              {loadingClients ? (
-                <Loading />
-              ) : clients.length === 0 && !clientsLoadError ? (
-                <p className="text-sm text-gray-500 italic">
+              <SearchableMultiSelect
+                options={clients.map(client => ({
+                  id: client.id,
+                  label: client.organization,
+                  subtitle: client.contact_name
+                }))}
+                value={selectedClientIds}
+                onChange={setSelectedClientIds}
+                placeholder="Zoek en selecteer opdrachtgevers..."
+                loading={loadingClients}
+                className="w-full"
+              />
+              {clients.length === 0 && !loadingClients && !clientsLoadError && (
+                <p className="text-sm text-gray-500 italic mt-2">
                   Geen opdrachtgevers beschikbaar.
                 </p>
-              ) : (
-                clients.length > 0 && (
-                  <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-3">
-                    {clients.map((client) => (
-                      <label
-                        key={client.id}
-                        className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedClientIds.includes(client.id)}
-                          onChange={() => toggleClient(client.id)}
-                        />
-                        <div className="flex-1">
-                          <div className="font-medium text-sm">{client.organization}</div>
-                          {client.contact_name && (
-                            <div className="text-xs text-gray-600">
-                              {client.contact_name}
-                            </div>
-                          )}
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                )
               )}
             </div>
 
