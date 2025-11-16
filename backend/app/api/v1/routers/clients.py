@@ -4,7 +4,10 @@ Clients (Opdrachtgevers) API endpoints
 
 from __future__ import annotations
 from typing import Optional
+from io import StringIO
+import csv
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, desc
 from datetime import datetime
@@ -21,7 +24,10 @@ from app.api.v1.schemas.clients import (
     ClientLogOut,
     ClientLogListOut,
     ReminderListOut,
+    ReminderOut,
 )
+from app.infra.services.reminder_service import ReminderService
+from app.infra.services.email_template_service import EmailTemplateService
 
 router = APIRouter(prefix="/clients", tags=["clients"])
 
@@ -30,14 +36,19 @@ router = APIRouter(prefix="/clients", tags=["clients"])
 def get_upcoming_reminders(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
+    days_ahead: int = Query(30, ge=1, le=90),
 ):
     """
     Get upcoming client communication reminders based on project deadlines
     """
-    # For now, return empty list as we need to implement the reminder generation logic
-    # based on project assessment phases and deadlines
-    # TODO: Implement reminder generation based on project_assessments table
-    return ReminderListOut(items=[], total=0)
+    reminders_data = ReminderService.generate_reminders(
+        db, user.school_id, days_ahead=days_ahead
+    )
+    
+    # Convert to ReminderOut schema
+    items = [ReminderOut(**reminder) for reminder in reminders_data]
+    
+    return ReminderListOut(items=items, total=len(items))
 
 
 @router.get("", response_model=ClientListOut)
@@ -411,3 +422,127 @@ def delete_client(
     db.commit()
     
     return None
+
+
+@router.get("/export/csv")
+def export_clients_csv(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    level: Optional[str] = None,
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+):
+    """
+    Export clients to CSV file
+    """
+    # Build query with same filters as list endpoint
+    query = db.query(Client).filter(Client.school_id == user.school_id)
+    
+    if level and level != "Alle":
+        query = query.filter(Client.level == level)
+    
+    if status:
+        if status == "Actief":
+            query = query.filter(Client.active.is_(True))
+        elif status == "Inactief":
+            query = query.filter(Client.active.is_(False))
+    
+    if search:
+        search_filter = or_(
+            Client.organization.ilike(f"%{search}%"),
+            Client.contact_name.ilike(f"%{search}%"),
+        )
+        query = query.filter(search_filter)
+    
+    clients = query.all()
+    
+    # Create CSV in memory
+    output = StringIO()
+    writer = csv.writer(output)
+    
+    # Write header
+    writer.writerow([
+        "ID",
+        "Organisatie",
+        "Contactpersoon",
+        "Email",
+        "Telefoon",
+        "Niveau",
+        "Sector",
+        "Tags",
+        "Actief",
+        "Aangemaakt",
+        "Laatst bijgewerkt",
+    ])
+    
+    # Write data
+    for client in clients:
+        writer.writerow([
+            client.id,
+            client.organization,
+            client.contact_name or "",
+            client.email or "",
+            client.phone or "",
+            client.level or "",
+            client.sector or "",
+            ", ".join(client.tags) if client.tags else "",
+            "Ja" if client.active else "Nee",
+            client.created_at.strftime("%Y-%m-%d %H:%M") if client.created_at else "",
+            client.updated_at.strftime("%Y-%m-%d %H:%M") if client.updated_at else "",
+        ])
+    
+    # Prepare response
+    output.seek(0)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"opdrachtgevers_{timestamp}.csv"
+    
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@router.get("/templates")
+def list_email_templates(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """
+    List all available email templates
+    """
+    templates = EmailTemplateService.list_templates()
+    
+    # Format for response
+    template_list = [
+        {
+            "key": key,
+            "name": template["name"],
+            "subject": template["subject"],
+            "variables": EmailTemplateService.get_template_variables(key),
+        }
+        for key, template in templates.items()
+    ]
+    
+    return {"templates": template_list}
+
+
+@router.post("/templates/{template_key}/render")
+def render_email_template(
+    template_key: str,
+    variables: dict,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """
+    Render an email template with provided variables
+    """
+    rendered = EmailTemplateService.render_template(template_key, variables)
+    
+    if not rendered:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Template not found",
+        )
+    
+    return rendered

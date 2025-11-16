@@ -156,8 +156,10 @@ class ReminderOut(BaseModel):
     text: str
     client_name: str
     client_email: Optional[str]
+    client_id: int
     due_date: str
     template: str
+    project_title: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

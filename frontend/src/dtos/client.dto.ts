@@ -99,8 +99,26 @@ export type Reminder = {
   text: string;
   client_name: string;
   client_email?: string;
+  client_id: number;
   due_date: string;
   template: string;
+  project_title?: string;
+};
+
+export type EmailTemplate = {
+  key: string;
+  name: string;
+  subject: string;
+  variables: string[];
+};
+
+export type EmailTemplateListResponse = {
+  templates: EmailTemplate[];
+};
+
+export type RenderedEmail = {
+  subject: string;
+  body: string;
 };
 
 export type ReminderListResponse = {
