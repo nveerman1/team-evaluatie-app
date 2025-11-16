@@ -31,6 +31,7 @@ from app.api.v1.routers import teachers as teachers_router
 from app.api.v1.routers import project_notes as project_notes_router
 from app.api.v1.routers import clients as clients_router
 from app.api.v1.routers import projects as projects_router
+from app.api.v1.routers import omza as omza_router
 from app.integrations.somtoday import router as somtoday_router
 
 
@@ -81,5 +82,6 @@ api_v1.include_router(teachers_router.router)
 api_v1.include_router(project_notes_router.router)
 api_v1.include_router(clients_router.router)
 api_v1.include_router(projects_router.router)
+api_v1.include_router(omza_router.router)
 api_v1.include_router(somtoday_router.router)
 app.include_router(api_v1)
