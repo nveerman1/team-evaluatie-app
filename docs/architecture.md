@@ -44,38 +44,38 @@ Teachers are explicitly assigned to courses via the **TeacherCourse** junction t
 │ name        │  │
 └─────────────┘  │
                  │
-        ┌────────┴────────┬───────────────┬──────────────┐
-        │                 │               │              │
-        ▼                 ▼               ▼              ▼
-┌─────────────┐   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-│    User     │   │   Course    │ │   Rubric    │ │  AuditLog   │
-│─────────────│   │─────────────│ │─────────────│ │─────────────│
-│ id          │   │ id          │ │ id          │ │ id          │
-│ school_id   │◄──┤ school_id   │ │ school_id   │ │ school_id   │
-│ email       │   │ name        │ │ title       │ │ user_id     │
-│ name        │   │ code        │ │ scope       │ │ action      │
-│ role        │   │ level       │ │ target_level│ │ entity_type │
-│ class_name  │   │ year        │ └─────────────┘ │ entity_id   │
-│ team_number │   │ is_active   │                 │ details     │
-│ archived    │   └─────────────┘                 │ created_at  │
-└─────────────┘          │                        └─────────────┘
-      │                  │
-      │          ┌───────┴────────┐
-      │          │                │
-      │          ▼                ▼
-      │   ┌─────────────┐  ┌─────────────┐
-      │   │TeacherCourse│  │   Group     │
-      │   │─────────────│  │─────────────│
-      └──►│ teacher_id  │  │ id          │
-          │ course_id   │  │ school_id   │
-          │ role        │  │ course_id   │
-          │ is_active   │  │ name        │
-          └─────────────┘  │ team_number │
-                           └─────────────┘
-                                  │
-                                  ▼
-                           ┌─────────────┐
-                           │GroupMember  │
+        ┌────────┴────────┬───────────────┬──────────────┬──────────────┐
+        │                 │               │              │              │
+        ▼                 ▼               ▼              ▼              ▼
+┌─────────────┐   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│    User     │   │   Course    │ │   Rubric    │ │  AuditLog   │ │   Client    │
+│─────────────│   │─────────────│ │─────────────│ │─────────────│ │─────────────│
+│ id          │   │ id          │ │ id          │ │ id          │ │ id          │
+│ school_id   │◄──┤ school_id   │ │ school_id   │ │ school_id   │ │ school_id   │
+│ email       │   │ name        │ │ title       │ │ user_id     │ │ organization│
+│ name        │   │ code        │ │ scope       │ │ action      │ │ contact_name│
+│ role        │   │ level       │ │ target_level│ │ entity_type │ │ email       │
+│ class_name  │   │ year        │ └─────────────┘ │ entity_id   │ │ phone       │
+│ team_number │   │ is_active   │                 │ details     │ │ level       │
+│ archived    │   └─────────────┘                 │ created_at  │ │ sector      │
+└─────────────┘          │                        └─────────────┘ │ tags        │
+      │                  │                                         │ active      │
+      │          ┌───────┴────────┐                                └─────────────┘
+      │          │                │                                       │
+      │          ▼                ▼                              ┌────────┴────────┐
+      │   ┌─────────────┐  ┌─────────────┐                      │                 │
+      │   │TeacherCourse│  │   Group     │                      ▼                 ▼
+      │   │─────────────│  │─────────────│              ┌─────────────┐   ┌─────────────┐
+      └──►│ teacher_id  │  │ id          │              │ ClientLog   │   │ClientProject│
+          │ course_id   │  │ school_id   │              │─────────────│   │    Link     │
+          │ role        │  │ course_id   │              │ id          │   │─────────────│
+          │ is_active   │  │ name        │              │ client_id   │   │ id          │
+          └─────────────┘  │ team_number │              │ author_id   │   │ client_id   │
+                           └─────────────┘              │ log_type    │   │ project_id  │
+                                  │                     │ text        │   │ role        │
+                                  ▼                     │ created_at  │   │ start_date  │
+                           ┌─────────────┐              └─────────────┘   │ end_date    │
+                           │GroupMember  │                                └─────────────┘
                            │─────────────│
                            │ group_id    │
                            │ user_id     │
@@ -170,6 +170,87 @@ Teachers are explicitly assigned to courses via the **TeacherCourse** junction t
 - `ip_address`: User IP address
 - `user_agent`: User agent string
 - `created_at`: Timestamp
+
+### Client
+- `id`: Primary key
+- `school_id`: Foreign key to School
+- `organization`: Organization name
+- `contact_name`: Contact person name
+- `email`: Contact email
+- `phone`: Contact phone number
+- `level`: Educational level (e.g., "Bovenbouw", "Onderbouw")
+- `sector`: Industry sector (e.g., "Vastgoed", "Zorg", "Technology")
+- `tags`: Array of tags (e.g., ["Duurzaamheid", "Innovatie"])
+- `active`: Active status flag
+- **Indexes**: 
+  - `(school_id, active)`
+  - `organization`
+
+### ClientLog
+- `id`: Primary key
+- `client_id`: Foreign key to Client
+- `author_id`: Foreign key to User
+- `log_type`: Type of log entry (e.g., "Notitie", "Mail (template)", "Telefoongesprek")
+- `text`: Log entry content
+- `created_at`: Timestamp
+- **Indexes**: 
+  - `client_id`
+  - `created_at`
+
+### ClientProjectLink
+- `id`: Primary key
+- `client_id`: Foreign key to Client
+- `project_assessment_id`: Foreign key to ProjectAssessment
+- `role`: Client role (e.g., "main", "secondary")
+- `start_date`: Project start date
+- `end_date`: Project end date
+- **Unique constraint**: `(client_id, project_assessment_id)`
+
+## Clients (Opdrachtgevers) Module
+
+The Clients module manages external organizations that provide projects to students, with full database integration and automation features.
+
+### Features
+
+#### Client Management
+- Create and manage client organizations with contact information
+- Classify by educational level (Bovenbouw/Onderbouw)
+- Organize by sector (e.g., Vastgoed, Zorg, Technology)
+- Tag-based categorization for flexible filtering
+- Active/inactive status tracking
+
+#### Client Logs
+- Track all interactions with clients
+- Multiple log types: Notitie, Mail (template), Telefoongesprek
+- Full audit trail with timestamps and author tracking
+
+#### Project Links
+- Link clients to project assessments
+- Support for main and secondary clients (hoofdopdrachtgever/nevenopdrachtgever)
+- Track project timeline (start_date, end_date)
+
+#### Automated Reminders
+The system automatically generates reminders based on project phases:
+- **Tussenpresentatie**: 7 days after midterm assessment is published
+- **Eindpresentatie**: 7 days after final assessment is published
+- **Bedankmail**: 21 days after final assessment is published
+- **Project Ending**: Generated when project end_date is approaching
+
+#### Email Templates
+Five pre-configured templates with variable substitution:
+1. **opvolgmail**: Follow-up for new school year
+2. **tussenpresentatie**: Midterm presentation invitation
+3. **eindpresentatie**: Final presentation invitation
+4. **bedankmail**: Thank you after project
+5. **kennismakingsmail**: Introduction to new client
+
+Templates support variables like `{contactpersoon}`, `{project_naam}`, `{datum}`, etc.
+
+#### Search & Export
+- Real-time search with automatic debouncing (500ms)
+- Filter by level, status, and search query
+- CSV export with all client data
+- Pagination support for large datasets
 
 ## Role-Based Access Control (RBAC)
 
@@ -270,6 +351,34 @@ Audit logs include:
 - `POST /courses/{id}/teachers` - Assign teacher to course
 - `DELETE /courses/{id}/teachers/{teacher_id}` - Remove teacher from course
 
+### Clients API (`/api/v1/clients`)
+
+- `GET /clients` - List clients (with pagination, filters, and search)
+  - Query params: `page`, `per_page`, `level`, `status`, `search`
+- `POST /clients` - Create a new client
+- `GET /clients/{id}` - Get client details
+- `PUT /clients/{id}` - Update client
+- `DELETE /clients/{id}` - Delete client (admin only)
+- `GET /clients/{id}/log` - Get client log entries
+- `POST /clients/{id}/log` - Create log entry for client
+- `GET /clients/{id}/projects` - Get projects linked to client
+- `GET /clients/upcoming-reminders` - Get upcoming reminders based on project phases
+  - Query params: `days_ahead` (default: 30)
+- `GET /clients/export/csv` - Export clients to CSV
+  - Query params: same as list endpoint
+- `GET /clients/templates` - List available email templates
+- `POST /clients/templates/{template_key}/render` - Render email template with variables
+
+**Email Templates:**
+1. `opvolgmail` - Follow-up for new school year
+2. `tussenpresentatie` - Midterm presentation invitation
+3. `eindpresentatie` - Final presentation invitation
+4. `bedankmail` - Thank you after project
+5. `kennismakingsmail` - Introduction to new client
+
+**Template Variables:**
+- `{contactpersoon}`, `{schooljaar}`, `{project_naam}`, `{datum}`, `{tijd}`, `{locatie}`, `{klas_naam}`, `{docent_naam}`, `{school_naam}`
+
 ### Somtoday Integration (`/api/v1/integrations/somtoday`)
 
 **Note**: These endpoints are placeholders for future implementation
@@ -296,21 +405,27 @@ See `MIGRATION_NOTES.md` for detailed migration instructions.
 
 ## Future Enhancements
 
-### Phase 1 (Current)
+### Phase 1 (Completed)
 - ✅ Multi-tenant schema
 - ✅ Course management
 - ✅ Teacher-course mapping
 - ✅ RBAC framework
 - ✅ Audit logging
 - ✅ Somtoday integration preparation
+- ✅ Clients (Opdrachtgevers) module
+- ✅ Email template system with variable substitution
+- ✅ Automatic reminder generation for project phases
+- ✅ CSV export functionality
+- ✅ Real-time search with debouncing
 
-### Phase 2 (Planned)
+### Phase 2 (Current/Planned)
 - Analytics dashboards per course and school
 - Learning objective coverage tracking
 - Grade export/import (CSV, Excel)
 - Bulk student management
 - Custom rubric templates per course
-- Email notifications
+- Email notifications integration (SMTP)
+- Email sending UI with template selection
 
 ### Phase 3 (Future)
 - Full Somtoday integration
