@@ -31,6 +31,7 @@ class EvaluationOut(BaseModel):
     cluster: str
     rubric_id: int
     title: str
+    evaluation_type: str  # "peer" | "project" | "competency"
     status: str
     created_at: datetime
     settings: Dict[str, Any]

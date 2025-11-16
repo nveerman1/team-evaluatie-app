@@ -1,5 +1,6 @@
 // frontend/src/dtos/evaluation.dto.ts
 export type EvalStatus = "draft" | "open" | "closed"; // align met backend
+export type EvaluationType = "peer" | "project" | "competency";
 
 export type Evaluation = {
   id: number;
@@ -7,6 +8,7 @@ export type Evaluation = {
   rubric_id: number;
   course_id: number;
   cluster: string; // kept for backward compatibility (populated from course_name)
+  evaluation_type: EvaluationType;
   status: EvalStatus;
   created_at: string; // ISO
   settings?: {

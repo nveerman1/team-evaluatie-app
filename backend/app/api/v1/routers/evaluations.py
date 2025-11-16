@@ -56,6 +56,7 @@ def _to_out(ev: Evaluation) -> EvaluationOut:
             or "",  # compat voor oude frontend
             "rubric_id": ev.rubric_id,
             "title": ev.title,
+            "evaluation_type": ev.evaluation_type,
             "status": ev.status,
             "created_at": ev.created_at,
             "settings": ev.settings or {},
@@ -146,6 +147,7 @@ def list_evaluations(
         None, pattern="^(draft|open|closed)$", description="Filter op status"
     ),
     course_id: Optional[int] = Query(None, description="Filter op course_id"),
+    evaluation_type: Optional[str] = Query(None, description="Filter op evaluation_type (peer, project, competency)"),
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
 ):
@@ -179,6 +181,8 @@ def list_evaluations(
         stmt = stmt.where(Evaluation.status == status_)
     if course_id is not None:
         stmt = stmt.where(Evaluation.course_id == course_id)
+    if evaluation_type:
+        stmt = stmt.where(Evaluation.evaluation_type == evaluation_type)
     stmt = stmt.order_by(Evaluation.id.desc()).limit(limit).offset((page - 1) * limit)
     rows = db.execute(stmt).scalars().all()
     return [_to_out(ev) for ev in rows]

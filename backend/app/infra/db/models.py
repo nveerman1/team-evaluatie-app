@@ -12,6 +12,7 @@ from sqlalchemy import (
     SmallInteger,
     Float,
     Text,
+    Date,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import sqlalchemy as sa
@@ -177,6 +178,54 @@ class GroupMember(Base):
     )
 
 
+class Project(Base):
+    """
+    Project - Container that links evaluations, assessments, notes, and clients
+    """
+
+    __tablename__ = "projects"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = mapped_column(
+        ForeignKey("schools.id", ondelete="CASCADE"), index=True
+    )
+    course_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("courses.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+
+    # Basic info
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    slug: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    class_name: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+
+    # Dates
+    start_date: Mapped[Optional[datetime]] = mapped_column(Date, nullable=True)
+    end_date: Mapped[Optional[datetime]] = mapped_column(Date, nullable=True)
+
+    # Status
+    status: Mapped[str] = mapped_column(
+        String(30), default="concept", nullable=False
+    )  # "concept" | "active" | "completed" | "archived"
+
+    # Creator
+    created_by_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+
+    # Relationships
+    school: Mapped["School"] = relationship()
+    course: Mapped["Course"] = relationship()
+    created_by: Mapped["User"] = relationship()
+
+    __table_args__ = (
+        Index("ix_project_school", "school_id"),
+        Index("ix_project_course", "course_id"),
+        Index("ix_project_status", "status"),
+        Index("ix_project_school_course", "school_id", "course_id"),
+    )
+
+
 class Rubric(Base):
     __tablename__ = "rubrics"
     id: Mapped[int] = id_pk()
@@ -229,6 +278,12 @@ class Evaluation(Base):
         nullable=True,  # ← aangepast
     )
 
+    project_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+
     rubric_id: Mapped[int] = mapped_column(
         ForeignKey("rubrics.id", ondelete="RESTRICT")
     )
@@ -245,10 +300,12 @@ class Evaluation(Base):
     )  # draft|open|closed
 
     course: Mapped["Course"] = relationship()
+    project: Mapped["Project"] = relationship()
     rubric: Mapped["Rubric"] = relationship()
 
     __table_args__ = (
         Index("ix_eval_course", "course_id"),
+        Index("ix_eval_project", "project_id"),
         Index("ix_eval_rubric", "rubric_id"),
         Index("ix_eval_type", "evaluation_type"),
         Index("ix_eval_school_type", "school_id", "evaluation_type"),
@@ -1059,6 +1116,11 @@ class ProjectNotesContext(Base):
     description: Mapped[Optional[str]] = mapped_column(Text)
 
     # Links
+    project_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     course_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("courses.id", ondelete="SET NULL"),
         index=True,
@@ -1090,6 +1152,7 @@ class ProjectNotesContext(Base):
         back_populates="context",
         cascade="all, delete-orphan",
     )
+    project: Mapped[Optional["Project"]] = relationship()
     course: Mapped[Optional["Course"]] = relationship()
     evaluation: Mapped[Optional["Evaluation"]] = relationship()
     creator: Mapped["User"] = relationship()
@@ -1260,7 +1323,7 @@ class ClientLog(Base):
 
 class ClientProjectLink(Base):
     """
-    Links clients to projects (ProjectAssessments) with role information
+    Links clients to projects with role information
     """
 
     __tablename__ = "client_project_links"
@@ -1269,8 +1332,8 @@ class ClientProjectLink(Base):
     client_id: Mapped[int] = mapped_column(
         ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    project_assessment_id: Mapped[int] = mapped_column(
-        ForeignKey("project_assessments.id", ondelete="CASCADE"),
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
@@ -1279,19 +1342,19 @@ class ClientProjectLink(Base):
     role: Mapped[str] = mapped_column(
         String(50), default="main"
     )  # "main" (hoofdopdrachtgever) or "secondary" (nevenopdrachtgever)
-    start_date: Mapped[Optional[datetime]] = mapped_column()
-    end_date: Mapped[Optional[datetime]] = mapped_column()
+    start_date: Mapped[Optional[datetime]] = mapped_column(Date, nullable=True)
+    end_date: Mapped[Optional[datetime]] = mapped_column(Date, nullable=True)
 
     # Relationships
     client: Mapped["Client"] = relationship(back_populates="project_links")
-    project_assessment: Mapped["ProjectAssessment"] = relationship()
+    project: Mapped["Project"] = relationship()
 
     __table_args__ = (
         UniqueConstraint(
             "client_id",
-            "project_assessment_id",
+            "project_id",
             name="uq_client_project_once",
         ),
         Index("ix_client_project_client", "client_id"),
-        Index("ix_client_project_project", "project_assessment_id"),
+        Index("ix_client_project_project", "project_id"),
     )

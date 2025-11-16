@@ -26,11 +26,12 @@ export default function EvaluationsListInner() {
   const { q: query, status, course_id: courseIdStr, setParams } = useUrlState();
   const courseIdNum = courseIdStr ? Number(courseIdStr) : undefined;
 
-  // Evaluations met filters
+  // Evaluations met filters - only show peer evaluations on this page
   const { evaluations, loading, error, setEvaluations } = useEvaluations({
     query,
     status,
     course_id: courseIdNum,
+    evaluation_type: "peer",
   });
 
   // Courses via hook

@@ -14,16 +14,19 @@ export const evaluationService = {
    * - q?: string
    * - status?: string ('draft' | 'open' | 'closed' | 'archived')
    * - course_id?: number
+   * - evaluation_type?: string ('peer' | 'project' | 'competency')
    */
   async getEvaluations(params?: {
     q?: string;
     status?: string;
     course_id?: number;
+    evaluation_type?: string;
   }): Promise<EvaluationListResponse> {
     const sp = new URLSearchParams();
     if (params?.q) sp.set("q", params.q);
     if (params?.status) sp.set("status", params.status);
     if (params?.course_id) sp.set("course_id", String(params.course_id));
+    if (params?.evaluation_type) sp.set("evaluation_type", params.evaluation_type);
 
     const { data } = await api.get<EvaluationListResponse>(
       `/evaluations${sp.size ? `?${sp.toString()}` : ""}`,

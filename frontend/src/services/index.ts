@@ -12,3 +12,4 @@ export * from "./feedback-summary.service";
 export * from "./learning-objective.service";
 export * from "./project-notes.service";
 export * from "./client.service";
+export * from "./project.service";
