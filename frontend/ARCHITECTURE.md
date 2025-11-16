@@ -55,6 +55,7 @@ src/
 - **Location**: `src/dtos/`
 - **Files**:
   - `allocation.dto.ts` - MyAllocation, Criterion, ScoreItem
+  - `client.dto.ts` - Client, ClientLog, ClientProjectLink, ClientListResponse, ReminderItem
   - `course.dto.ts` - CourseLite
   - `dashboard.dto.ts` - DashboardRow, DashboardResponse, FlagsResponse, GradePreviewResponse
   - `evaluation.dto.ts` - Evaluation, EvalStatus, EvaluationListResponse
@@ -64,25 +65,35 @@ src/
 - **Purpose**: Handle all API communication and business logic
 - **Location**: `src/services/`
 - **Pattern**: Each service exports an object with methods for related API calls
+- **Services**:
+  - `client.service.ts` - Client CRUD, logs, projects, reminders, CSV export, email templates
+  - `evaluation.service.ts` - Evaluation management
+  - `course.service.ts` - Course management
+  - `rubric.service.ts` - Rubric operations
+  - And more...
 - **Example**:
   ```typescript
-  import { evaluationService } from '@/services';
+  import { evaluationService, clientService } from '@/services';
   
   const evals = await evaluationService.getEvaluations({ status: 'open' });
   await evaluationService.updateStatus(id, 'closed');
+  
+  const clients = await clientService.getClients({ level: 'Bovenbouw' });
+  const csv = await clientService.exportClientsCSV({ status: 'Actief' });
   ```
 
 ### 3. Hooks
 - **Purpose**: Encapsulate reusable stateful logic
 - **Location**: `src/hooks/`
 - **Types**:
-  - Data fetching hooks (useEvaluations, useCourses, useDashboardData)
+  - Data fetching hooks (useEvaluations, useCourses, useClients, useDashboardData)
   - State management hooks (useUrlState)
 - **Example**:
   ```typescript
-  import { useEvaluations } from '@/hooks';
+  import { useEvaluations, useClients } from '@/hooks';
   
   const { evaluations, loading, error } = useEvaluations({ status: 'open' });
+  const { data: clients } = useClients({ level: 'Bovenbouw', search: 'tech' });
   ```
 
 ### 4. Components
@@ -94,11 +105,17 @@ src/
   - `Loading` - Loading state indicator
   - `ErrorMessage` - Error display component
   - `Toast` - Notification toast
+  - `clients/ClientsList` - Full-featured client list with search, filters, and export
+  - `clients/ClientFormModal` - Client creation/edit form
+  - `clients/ClientEditModal` - Quick edit modal
+  - `clients/AddNoteModal` - Add log entry to client
 - **Example**:
   ```typescript
   import { StatusBadge, Loading } from '@/components';
+  import { ClientsList } from '@/components/clients/ClientsList';
   
   {loading ? <Loading /> : <StatusBadge status="open" />}
+  <ClientsList />
   ```
 
 ### 5. Utils
