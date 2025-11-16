@@ -34,7 +34,7 @@ from app.api.v1.schemas.omza import (
     StandardCommentOut,
 )
 from app.core.rbac import require_role
-from app.core.audit import log_create, log_update
+from app.core.audit import log_create, log_update, log_delete
 
 router = APIRouter(prefix="/omza", tags=["omza"])
 
