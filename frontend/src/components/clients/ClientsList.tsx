@@ -50,6 +50,30 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
 
   return (
     <div className="space-y-4">
+      {/* Expertise tags */}
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h3 className="text-sm font-semibold text-slate-800 mb-3">Expertise-tags</h3>
+        <div className="flex flex-wrap gap-2">
+          {[
+            "Duurzaamheid",
+            "AI/Tech",
+            "Healthcare",
+            "Mobiliteit",
+            "Circulaire economie",
+            "Defensie",
+            "Mixed-use",
+            "Stadsontwikkeling",
+          ].map((tag, idx) => (
+            <span
+              key={idx}
+              className="inline-flex items-center rounded-full bg-purple-50 border border-purple-200 px-3 py-1 text-xs font-medium text-purple-700 cursor-pointer hover:bg-purple-100"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      </section>
+
       {/* Search & Filters */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -61,7 +85,6 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
             />
-            <p className="mt-1 text-xs text-slate-500">Zoeken met 500ms debounce</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
