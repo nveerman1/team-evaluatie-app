@@ -8,6 +8,7 @@ type UseEvaluationsArgs = {
   query?: string;
   status?: string;
   course_id?: number;
+  evaluation_type?: string;
 };
 
 export function useEvaluations(filters?: UseEvaluationsArgs) {
@@ -15,7 +16,7 @@ export function useEvaluations(filters?: UseEvaluationsArgs) {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { query, status, course_id } = filters ?? {};
+  const { query, status, course_id, evaluation_type } = filters ?? {};
 
   useEffect(() => {
     let mounted = true;
@@ -27,6 +28,7 @@ export function useEvaluations(filters?: UseEvaluationsArgs) {
           q: query?.trim() ? query.trim() : undefined,
           status: status?.trim() ? status.trim() : undefined,
           course_id: course_id,
+          evaluation_type: evaluation_type?.trim() ? evaluation_type.trim() : undefined,
         });
         if (!mounted) return;
         setEvaluations(Array.isArray(data) ? data : []);
@@ -44,7 +46,7 @@ export function useEvaluations(filters?: UseEvaluationsArgs) {
     return () => {
       mounted = false;
     };
-  }, [query, status, course_id]);
+  }, [query, status, course_id, evaluation_type]);
 
   return { evaluations, loading, error, setEvaluations };
 }
