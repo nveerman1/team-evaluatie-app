@@ -397,9 +397,16 @@ async def get_standard_comments(
     standard_comments = evaluation.settings.get("omza_standard_comments", {})
 
     results = []
-    for cat, comments in standard_comments.items():
+    # Ensure categories are in the correct order: O, M, Z, A
+    category_order = ["O", "M", "Z", "A"]
+    ordered_categories = [cat for cat in category_order if cat in standard_comments]
+    # Add any other categories that might exist
+    ordered_categories.extend([cat for cat in standard_comments.keys() if cat not in category_order])
+    
+    for cat in ordered_categories:
         if category and cat != category:
             continue
+        comments = standard_comments[cat]
         for idx, text in enumerate(comments):
             results.append(
                 StandardCommentOut(
