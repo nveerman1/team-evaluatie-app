@@ -7,7 +7,7 @@ from typing import List, Dict, Any
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 
-from app.infra.db.models import Client, ClientProjectLink, ProjectAssessment, Group
+from app.infra.db.models import Client, ClientProjectLink, Project, ProjectAssessment, Group
 
 
 class ReminderService:
@@ -34,22 +34,40 @@ class ReminderService:
         now = datetime.now()
         future_date = now + timedelta(days=days_ahead)
 
-        # Get all active client project links with published assessments
+        # Get all active client project links
         project_links = (
             db.query(ClientProjectLink)
-            .join(ProjectAssessment)
+            .join(Project)
             .join(Client)
             .filter(
                 Client.school_id == school_id,
                 Client.active.is_(True),
-                ProjectAssessment.status == "published",
             )
             .all()
         )
 
         for link in project_links:
-            assessment = link.project_assessment
+            # Note: ClientProjectLink now links to Project, not ProjectAssessment
+            # For reminders, we need to find related ProjectAssessment through the project
+            # For now, skip links without assessments as reminders are assessment-specific
+            project = link.project
             client = link.client
+            
+            # Try to find a related ProjectAssessment (this is a simplified approach)
+            # In reality, a Project can have multiple assessments
+            assessment = (
+                db.query(ProjectAssessment)
+                .join(Group)
+                .filter(
+                    Group.course_id == project.course_id,
+                    ProjectAssessment.status == "published",
+                )
+                .first()
+            )
+            
+            # Skip if no assessment found
+            if not assessment:
+                continue
 
             # Get the group/class name
             group = db.query(Group).filter(Group.id == assessment.group_id).first()
@@ -126,20 +144,20 @@ class ReminderService:
 
         for link in ending_soon:
             client = link.client
-            assessment = link.project_assessment
+            project = link.project
             
             # Only add if not already in reminders
             reminder_id = f"reminder-ending-{link.id}"
             if not any(r["id"] == reminder_id for r in reminders):
                 reminders.append({
                     "id": reminder_id,
-                    "text": f"Project eindigt binnenkort: {client.organization} - {assessment.title}",
+                    "text": f"Project eindigt binnenkort: {client.organization} - {project.title}",
                     "client_name": client.organization,
                     "client_email": client.email,
                     "client_id": client.id,
                     "due_date": link.end_date.strftime("%Y-%m-%d"),
                     "template": "bedankmail",
-                    "project_title": assessment.title,
+                    "project_title": project.title,
                 })
 
         # Sort reminders by due date

@@ -13,7 +13,7 @@ from sqlalchemy import func, or_, desc
 from datetime import datetime
 
 from app.api.v1.deps import get_db, get_current_user
-from app.infra.db.models import User, Client, ClientLog, ClientProjectLink, ProjectAssessment
+from app.infra.db.models import User, Client, ClientLog, ClientProjectLink, Project
 from app.api.v1.schemas.clients import (
     ClientCreate,
     ClientUpdate,
@@ -103,10 +103,10 @@ def list_clients(
         # Count projects this year
         projects_this_year = (
             db.query(func.count(ClientProjectLink.id))
-            .join(ProjectAssessment)
+            .join(Project)
             .filter(
                 ClientProjectLink.client_id == client.id,
-                func.extract("year", ProjectAssessment.created_at) == current_year,
+                func.extract("year", Project.created_at) == current_year,
             )
             .scalar()
             or 0
@@ -115,16 +115,16 @@ def list_clients(
         # Get last active date (most recent project end_date or created_at)
         last_project = (
             db.query(ClientProjectLink)
-            .join(ProjectAssessment)
+            .join(Project)
             .filter(ClientProjectLink.client_id == client.id)
-            .order_by(desc(ProjectAssessment.created_at))
+            .order_by(desc(Project.created_at))
             .first()
         )
         
         last_active = None
         if last_project:
             last_active = (
-                last_project.end_date or last_project.project_assessment.created_at
+                last_project.end_date or last_project.project.created_at
             ).strftime("%Y-%m-%d")
         
         # Determine status based on activity
@@ -211,14 +211,13 @@ def get_client_projects(
         .all()
     )
     
-    # TODO: Format project data with assessment details
-    # For now, return basic structure
+    # Format project data
     items = []
     for link in project_links:
-        assessment = link.project_assessment
+        project = link.project
         items.append({
-            "id": assessment.id,
-            "title": assessment.title,
+            "id": project.id,
+            "title": project.title,
             "role": link.role,
             "start_date": link.start_date.isoformat() if link.start_date else None,
             "end_date": link.end_date.isoformat() if link.end_date else None,
