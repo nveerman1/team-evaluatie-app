@@ -130,13 +130,47 @@ class ProjectNoteOut(ProjectNoteBase):
 # ============ Wizard Schemas ============
 
 
+class PeerEvaluationConfig(BaseModel):
+    """Configuration for peer evaluation in wizard"""
+
+    enabled: bool = False
+    deadline: Optional[datetime] = None
+    rubric_id: Optional[int] = None
+    title_suffix: str = ""  # e.g., "tussentijds" or "eind"
+
+
+class ProjectAssessmentConfig(BaseModel):
+    """Configuration for project assessment in wizard"""
+
+    enabled: bool = False
+    rubric_id: int  # Required for project assessment
+    deadline: Optional[datetime] = None
+    version: Optional[str] = None  # e.g., "tussentijds", "eind"
+
+
+class CompetencyScanConfig(BaseModel):
+    """Configuration for competency scan in wizard"""
+
+    enabled: bool = False
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None  # Can also serve as deadline
+    deadline: Optional[datetime] = None  # Optional separate deadline
+    competency_ids: List[int] = Field(default_factory=list)
+    title: Optional[str] = None
+
+
 class EvaluationConfig(BaseModel):
     """Configuration for evaluation creation in wizard"""
 
-    create_peer_tussen: bool = False
-    create_peer_eind: bool = False
-    create_project_assessment: bool = False
-    create_competency_scan: bool = False
+    # Peer evaluations (still create Evaluation records)
+    peer_tussen: Optional[PeerEvaluationConfig] = None
+    peer_eind: Optional[PeerEvaluationConfig] = None
+
+    # Project assessment (creates ProjectAssessment records)
+    project_assessment: Optional[ProjectAssessmentConfig] = None
+
+    # Competency scan (creates CompetencyWindow records)
+    competency_scan: Optional[CompetencyScanConfig] = None
 
 
 class WizardProjectCreate(BaseModel):
@@ -162,12 +196,46 @@ class WizardEvaluationOut(BaseModel):
     title: str
     evaluation_type: str
     status: str
+    deadline: Optional[datetime] = None
+
+
+class WizardProjectAssessmentOut(BaseModel):
+    """Output schema for project assessment created by wizard"""
+
+    id: int
+    title: str
+    group_id: int
+    group_name: Optional[str] = None
+    rubric_id: int
+    version: Optional[str] = None
+    status: str
+    deadline: Optional[datetime] = None
+
+
+class WizardCompetencyWindowOut(BaseModel):
+    """Output schema for competency window created by wizard"""
+
+    id: int
+    title: str
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    deadline: Optional[datetime] = None
+    status: str
+    competency_ids: List[int] = Field(default_factory=list)
+
+
+class WizardEntityOut(BaseModel):
+    """Wrapper for mixed entity types with discriminator"""
+
+    type: str  # "peer" | "project_assessment" | "competency_scan"
+    data: Dict[str, Any]
 
 
 class WizardProjectOut(BaseModel):
     """Schema for wizard project creation response"""
 
     project: ProjectOut
-    evaluations: List[WizardEvaluationOut]
+    entities: List[WizardEntityOut]
     note: Optional[ProjectNoteOut] = None
     linked_clients: List[int]
+    warnings: List[str] = Field(default_factory=list)  # For edge case warnings
