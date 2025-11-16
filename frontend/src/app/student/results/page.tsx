@@ -1,136 +1,88 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { StudentResult } from "@/dtos";
-import { ResultsView } from "@/components/student";
-import { Loading, ErrorMessage } from "@/components";
-import { studentService } from "@/services";
-import Link from "next/link";
+import { useState, useMemo } from "react";
+import { EvaluationResult } from "@/dtos";
+import {
+  PageHeader,
+  Filters,
+  EvaluationCard,
+  DetailModal,
+} from "@/components/student/peer-results";
+import { mockData } from "@/components/student/peer-results/mockData";
 
-// Mock user ID - in a real app, this would come from auth context
-const MOCK_USER_ID = 1;
+// --- Main Page
+export default function PeerFeedbackResultsPage() {
+  const [items, setItems] = useState<EvaluationResult[]>(mockData);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [active, setActive] = useState<EvaluationResult | undefined>();
+  const [filters, setFilters] = useState<{
+    q: string;
+    course: string;
+    status: string;
+  }>({ q: "", course: "", status: "" });
 
-export default function StudentResults() {
-  const [results, setResults] = useState<StudentResult[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedResultId, setSelectedResultId] = useState<number | null>(null);
+  const filteredItems = useMemo(() => {
+    return items.filter((i) => {
+      const qOk =
+        !filters.q ||
+        i.title.toLowerCase().includes(filters.q.toLowerCase()) ||
+        i.course.toLowerCase().includes(filters.q.toLowerCase());
+      const cOk = !filters.course || i.course === filters.course;
+      const sOk = !filters.status || i.status === filters.status;
+      return qOk && cOk && sOk;
+    });
+  }, [items, filters]);
 
-  useEffect(() => {
-    studentService
-      .getAllResults(MOCK_USER_ID)
-      .then((data) => {
-        setResults(data);
-        if (data.length > 0) {
-          setSelectedResultId(data[0].evaluation_id);
-        }
-      })
-      .catch((e) => {
-        setError(
-          e?.response?.data?.detail || e?.message || "Kon resultaten niet laden"
-        );
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  // TODO – vervang door echte fetch
+  const handleRefresh = () => {
+    setItems((s) => [...s]);
+  };
 
-  if (loading) return <Loading />;
-  if (error) return <ErrorMessage message={error} />;
+  const handleExportAll = () => {
+    alert("Export alle resultaten naar PDF – TODO: hooken aan jouw export endpoint");
+  };
 
-  const selectedResult = results.find(
-    (r) => r.evaluation_id === selectedResultId
-  );
+  const openDetails = (ev: EvaluationResult) => {
+    setActive(ev);
+    setDetailOpen(true);
+  };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
-        <header className="px-6 py-6 max-w-6xl mx-auto">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
-                Mijn Resultaten
-              </h1>
-              <p className="text-gray-600 mt-1 text-sm">
-                Bekijk je cijfers, feedback en reflecties
-              </p>
+    <>
+      <PageHeader onRefresh={handleRefresh} onExportAll={handleExportAll} />
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {/* Filters (Styling Guide order: Search → Course → Status) */}
+        <Filters items={items} onFilter={(next) => setFilters(next)} />
+
+        {/* Subtle info banner */}
+        <div className="rounded-xl border border-gray-200/80 bg-white shadow-sm p-4">
+          <p className="text-sm text-gray-700">
+            Je hebt evaluaties toegewezen gekregen. Zodra resultaten binnen zijn, verschijnen ze hieronder.{" "}
+            <span className="ml-1 text-blue-700 underline decoration-dotted underline-offset-2 hover:text-blue-800 cursor-pointer">
+              Bekijk alle ruwe feedback
+            </span>
+          </p>
+        </div>
+
+        {/* Cards */}
+        <div className="space-y-3">
+          {filteredItems.map((ev) => (
+            <EvaluationCard key={ev.id} data={ev} onOpen={openDetails} />
+          ))}
+          {filteredItems.length === 0 && (
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6 text-sm text-gray-600">
+              Geen resultaten voor deze filters.
             </div>
-            <Link
-              href="/student"
-              className="px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-            >
-              ← Terug naar Dashboard
-            </Link>
-          </div>
-        </header>
+          )}
+        </div>
       </div>
 
-      {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-6 py-6">
-        {results.length === 0 ? (
-        <div className="p-12 border rounded-xl bg-gray-50 text-center">
-          <p className="text-gray-500 text-lg">
-            Je hebt nog geen voltooide evaluaties met resultaten.
-          </p>
-          <Link
-            href="/student"
-            className="mt-4 inline-block px-6 py-3 rounded-xl bg-black text-white hover:bg-gray-800 transition-colors"
-          >
-            Ga naar Open Evaluaties
-          </Link>
-        </div>
-      ) : (
-        <div className="grid md:grid-cols-4 gap-6">
-          {/* Sidebar - Evaluation List */}
-          <div className="md:col-span-1 space-y-2">
-            <h2 className="text-sm font-semibold text-gray-600 mb-3">
-              EVALUATIES ({results.length})
-            </h2>
-            {results.map((result) => (
-              <button
-                key={result.evaluation_id}
-                onClick={() => setSelectedResultId(result.evaluation_id)}
-                className={`
-                  w-full text-left p-3 rounded-lg border transition-all
-                  ${
-                    selectedResultId === result.evaluation_id
-                      ? "bg-black text-white border-black"
-                      : "bg-white hover:bg-gray-50 border-gray-200"
-                  }
-                `}
-              >
-                <div className="font-medium text-sm truncate">
-                  {result.evaluation_title}
-                </div>
-                {result.final_grade !== undefined &&
-                  result.final_grade !== null && (
-                    <div className="text-2xl font-bold mt-1">
-                      {result.final_grade.toFixed(1)}
-                    </div>
-                  )}
-              </button>
-            ))}
-          </div>
-
-          {/* Main Content - Result Detail */}
-          <div className="md:col-span-3">
-            {selectedResult ? (
-              <>
-                <h2 className="text-2xl font-bold mb-6">
-                  {selectedResult.evaluation_title}
-                </h2>
-                <ResultsView result={selectedResult} />
-              </>
-            ) : (
-              <div className="p-8 border rounded-xl bg-gray-50 text-center">
-                <p className="text-gray-500">
-                  Selecteer een evaluatie om de resultaten te bekijken.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-        )}
-      </main>
-    </div>
+      <DetailModal
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        evaluation={active}
+      />
+    </>
   );
 }
