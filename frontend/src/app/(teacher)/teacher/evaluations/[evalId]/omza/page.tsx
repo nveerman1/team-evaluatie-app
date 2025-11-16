@@ -600,7 +600,7 @@ export default function OMZAOverviewPage() {
                             <td className="px-5 py-3 align-top text-xs text-gray-500">
                               {student.team_number && (
                                 <span className="inline-flex items-center justify-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700">
-                                  #{student.team_number}
+                                  {student.team_number}
                                 </span>
                               )}
                             </td>
