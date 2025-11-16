@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useClient, useClientLogs } from "@/hooks/useClients";
+import { ClientEditModal } from "@/components/clients/ClientEditModal";
+import { AddNoteModal } from "@/components/clients/AddNoteModal";
+import { clientService } from "@/services";
 
 // Helper function for building mailto links
 function buildMailto({ to, subject, body }: { to: string; subject: string; body: string }) {
@@ -63,8 +68,44 @@ const mockLog = [
 ];
 
 export default function ClientDetailPage() {
+  const params = useParams();
+  const clientId = parseInt(params.clientId as string);
+  
   const [activeTab, setActiveTab] = useState<"logboek" | "projecten" | "documenten" | "communicatie">("logboek");
-  const c = mockClient;
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const { data: client, loading, error } = useClient(clientId);
+  const { data: logsData, refetch: refetchLogs } = useClientLogs(clientId);
+
+  const handleEditSuccess = () => {
+    setRefreshKey(prev => prev + 1);
+  };
+
+  const handleNoteSuccess = () => {
+    refetchLogs();
+  };
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        <div className="text-center py-8">Laden...</div>
+      </div>
+    );
+  }
+
+  if (error || !client) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          Fout bij laden van opdrachtgever
+        </div>
+      </div>
+    );
+  }
+
+  const c = client;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
@@ -110,16 +151,52 @@ export default function ClientDetailPage() {
         </div>
 
         <div className="flex flex-wrap gap-2 justify-start md:justify-end">
-          <button className="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 shadow-sm hover:bg-slate-50">
+          <button 
+            onClick={() => setIsEditModalOpen(true)}
+            className="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 shadow-sm hover:bg-slate-50"
+          >
             Bewerken
           </button>
-          <button className="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 shadow-sm hover:bg-slate-50">
-            Verplaats naar archief
+          <button 
+            onClick={async () => {
+              if (confirm(`Weet je zeker dat je ${c.organization} wilt ${c.active ? 'archiveren' : 'activeren'}?`)) {
+                try {
+                  await clientService.updateClient(client.id, { active: !c.active });
+                  setRefreshKey(prev => prev + 1);
+                } catch (err) {
+                  alert('Fout bij bijwerken van status');
+                }
+              }
+            }}
+            className="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 shadow-sm hover:bg-slate-50"
+          >
+            {c.active ? 'Verplaats naar archief' : 'Activeer'}
           </button>
-          <button className="inline-flex items-center rounded-xl border border-sky-500 bg-sky-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-sky-700">
+          <button 
+            onClick={() => setIsNoteModalOpen(true)}
+            className="inline-flex items-center rounded-xl border border-sky-500 bg-sky-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-sky-700"
+          >
             + Nieuwe notitie
           </button>
         </div>
+
+        {/* Modals */}
+        {client && (
+          <>
+            <ClientEditModal
+              isOpen={isEditModalOpen}
+              onClose={() => setIsEditModalOpen(false)}
+              onSuccess={handleEditSuccess}
+              client={client}
+            />
+            <AddNoteModal
+              isOpen={isNoteModalOpen}
+              onClose={() => setIsNoteModalOpen(false)}
+              onSuccess={handleNoteSuccess}
+              clientId={client.id}
+            />
+          </>
+        )}
       </div>
 
       {/* Bovenste rij kaarten */}
@@ -217,42 +294,46 @@ export default function ClientDetailPage() {
 
         {/* Tab content */}
         <div className="px-4 py-4">
-          {activeTab === "logboek" && <LogboekTab />}
+          {activeTab === "logboek" && <LogboekTab logs={logsData?.items || []} onAddNote={() => setIsNoteModalOpen(true)} />}
           {activeTab === "projecten" && <ProjectenTab />}
           {activeTab === "documenten" && <DocumentenTab />}
-          {activeTab === "communicatie" && <CommunicatieTab />}
+          {activeTab === "communicatie" && <CommunicatieTab client={client} />}
         </div>
       </section>
     </div>
   );
 }
 
-function LogboekTab() {
+function LogboekTab({ logs, onAddNote }: { logs: any[], onAddNote: () => void }) {
   return (
     <>
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
           Contactmomenten & notities
         </h3>
-        <button className="text-xs text-sky-600 hover:text-sky-700">
+        <button onClick={onAddNote} className="text-xs text-sky-600 hover:text-sky-700">
           + Notitie toevoegen
         </button>
       </div>
       <div className="space-y-3">
-        {mockLog.map((item, i) => (
-          <article
-            key={i}
-            className="rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-1 text-xs text-slate-500 mb-1.5">
-              <span>{item.date}</span>
-              <span>
-                {item.type} · {item.author}
-              </span>
-            </div>
-            <p className="text-sm text-slate-800">{item.text}</p>
-          </article>
-        ))}
+        {logs.length === 0 ? (
+          <p className="text-sm text-slate-500">Geen notities gevonden.</p>
+        ) : (
+          logs.map((item) => (
+            <article
+              key={item.id}
+              className="rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-1 text-xs text-slate-500 mb-1.5">
+                <span>{new Date(item.created_at).toLocaleDateString('nl-NL')}</span>
+                <span>
+                  {item.log_type} {item.author_name && `· ${item.author_name}`}
+                </span>
+              </div>
+              <p className="text-sm text-slate-800">{item.text}</p>
+            </article>
+          ))
+        )}
       </div>
     </>
   );
@@ -307,7 +388,7 @@ function DocumentenTab() {
   );
 }
 
-function CommunicatieTab() {
+function CommunicatieTab({ client }: { client: any }) {
   const [selectedTemplate, setSelectedTemplate] = useState("startproject");
   const [selectedModule, setSelectedModule] = useState("");
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
@@ -338,7 +419,7 @@ function CommunicatieTab() {
     const module = mockModules.find(m => m.id === selectedModule)?.label || "N/A";
     const teams = selectedTeams.map(t => mockTeams.find(mt => mt.id === t)?.label || t).join(", ");
     
-    const preview = `Beste ${mockClient.contactName},
+    const preview = `Beste ${client.contact_name || 'opdrachtgever'},
 
 Hierbij nodigen wij u uit voor de ${template.toLowerCase()} van het project.
 
@@ -352,16 +433,16 @@ Het docententeam`;
   };
 
   const handleOpenInOutlook = () => {
-    const subject = `${templates[selectedTemplate as keyof typeof templates]} - ${mockClient.organization}`;
+    const subject = `${templates[selectedTemplate as keyof typeof templates]} - ${client.organization}`;
     const mailtoLink = buildMailto({
-      to: mockClient.email,
+      to: client.email || "",
       subject,
       body: emailPreview,
     });
     
     window.open(mailtoLink, '_self');
     
-    // Mock: add entry to log
+    // Log entry could be added here
     console.log("Log entry added: Mail verzonden via Outlook");
   };
 

@@ -10,3 +10,5 @@ export * from "./useStudentResults";
 export * from "./useStudentProjectAssessments";
 export * from "./useCurrentUser";
 export * from "./useAuth";
+export * from "./useClients";
+export * from "./useDebounce";
