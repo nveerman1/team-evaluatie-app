@@ -29,32 +29,30 @@ export function EvaluationCard({ data, onOpen }: EvaluationCardProps) {
   }, [data]);
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 hover:shadow-md transition-shadow">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-gray-900">{data.title}</h3>
-            {data.status === "open" && <Badge color="green">Open</Badge>}
-            {data.status === "closed" && <Badge color="gray">Afgerond</Badge>}
-            {data.status === "processing" && (
-              <Badge color="amber">In verwerking</Badge>
-            )}
-          </div>
-          <p className="mt-0.5 text-sm text-gray-600">{data.course}</p>
-          {data.deadlineISO && (
-            <p className="text-xs text-gray-500">
-              Deadline: {new Date(data.deadlineISO).toLocaleDateString()}
-            </p>
+    <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 hover:shadow-md transition-shadow relative">
+      {/* Bekijk detail button - top right */}
+      <button
+        className="absolute top-4 right-4 px-3 py-1.5 text-sm rounded-lg border hover:bg-gray-50"
+        onClick={() => onOpen(data)}
+      >
+        Bekijk detail
+      </button>
+
+      <div className="pr-32">
+        <div className="flex items-center gap-2">
+          <h3 className="font-semibold text-gray-900">{data.title}</h3>
+          {data.status === "open" && <Badge color="green">Open</Badge>}
+          {data.status === "closed" && <Badge color="gray">Afgerond</Badge>}
+          {data.status === "processing" && (
+            <Badge color="amber">In verwerking</Badge>
           )}
         </div>
-        <div className="flex gap-2">
-          <button
-            className="px-3 py-1.5 text-sm rounded-lg border hover:bg-gray-50"
-            onClick={() => onOpen(data)}
-          >
-            Bekijk detail
-          </button>
-        </div>
+        <p className="mt-0.5 text-sm text-gray-600">{data.course}</p>
+        {data.deadlineISO && (
+          <p className="text-xs text-gray-500">
+            Deadline: {new Date(data.deadlineISO).toLocaleDateString()}
+          </p>
+        )}
       </div>
 
       {data.aiSummary && (

@@ -76,16 +76,17 @@ export function DetailModal({ open, onClose, evaluation }: DetailModalProps) {
           {tab === "summary" && (
             <div className="space-y-5">
               {evaluation.aiSummary && (
-                <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4 text-sm leading-relaxed text-gray-800">
-                  <div className="mb-1 font-medium text-blue-900">
-                    AI-samenvatting
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                  <div className="flex-1 rounded-xl border border-blue-100 bg-blue-50/60 p-4 text-sm leading-relaxed text-gray-800">
+                    <div className="mb-1 font-medium text-blue-900">
+                      AI-samenvatting
+                    </div>
+                    <p>{evaluation.aiSummary}</p>
                   </div>
-                  <p>{evaluation.aiSummary}</p>
+                  {typeof evaluation.gcfScore === "number" && (
+                    <GcfMiniCard value={evaluation.gcfScore} />
+                  )}
                 </div>
-              )}
-
-              {typeof evaluation.gcfScore === "number" && (
-                <GcfMiniCard value={evaluation.gcfScore} />
               )}
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
