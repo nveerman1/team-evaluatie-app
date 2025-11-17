@@ -113,20 +113,20 @@ export default function ReflectionsPageInner() {
   return (
     <>
       {/* Page Header */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-slate-200/70">
         <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-slate-900">
               Reflecties
             </h1>
-            <p className="text-gray-600 mt-1 text-sm">
+            <p className="text-slate-600 mt-1 text-sm">
               Bekijk en exporteer studentreflecties
             </p>
           </div>
           {evalIdNum != null && (
             <a
               href={`/api/v1/evaluations/${evalIdStr}/reflections/export.csv`}
-              className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm"
             >
               Export CSV
             </a>
@@ -138,20 +138,17 @@ export default function ReflectionsPageInner() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         
         {/* Tabs Navigation */}
-        <div className="border-b border-gray-200">
-          <nav className="flex gap-8" aria-label="Tabs">
+        <div className="border-b border-slate-200">
+          <nav className="flex gap-6 text-sm" aria-label="Tabs">
             {tabs.map((tab) => (
               <Link
                 key={tab.id}
                 href={tab.href}
-                className={`
-                  py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                  ${
-                    tab.id === "reflections"
-                      ? "border-black text-black"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }
-                `}
+                className={`py-3 border-b-2 -mb-px transition-colors ${
+                  tab.id === "reflections"
+                    ? "border-blue-600 text-blue-700 font-medium"
+                    : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
+                }`}
                 aria-current={tab.id === "reflections" ? "page" : undefined}
               >
                 {tab.label}
@@ -161,15 +158,15 @@ export default function ReflectionsPageInner() {
         </div>
 
         {/* Filters */}
-        <div className="sticky top-0 bg-white/80 backdrop-blur border rounded-2xl p-3 flex flex-wrap items-center gap-3">
+        <div className="sticky top-0 bg-white/80 backdrop-blur border border-slate-200 rounded-2xl p-3 flex flex-wrap items-center gap-3 shadow-sm">
         <input
-          className="px-3 py-2 border rounded-lg w-80"
+          className="px-3 py-2 border border-slate-200 rounded-xl w-80 focus:outline-none focus:ring-2 focus:ring-blue-600"
           placeholder="Zoek op student/tekst…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
         <select
-          className="px-3 py-2 border rounded-lg"
+          className="px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600"
           value={sort}
           onChange={(e) => setSort(e.target.value as any)}
         >
@@ -180,7 +177,7 @@ export default function ReflectionsPageInner() {
           <option value="words_hi">Woorden hoog → laag</option>
           <option value="words_lo">Woorden laag → hoog</option>
         </select>
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-sm text-slate-700">
           <input
             type="checkbox"
             checked={onlySubmitted}
@@ -191,7 +188,7 @@ export default function ReflectionsPageInner() {
           />
           Alleen ingeleverd
         </label>
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-sm text-slate-700">
           <input
             type="checkbox"
             checked={onlyMissing}
@@ -203,24 +200,24 @@ export default function ReflectionsPageInner() {
           Alleen ontbrekend
         </label>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Min. woorden</span>
+          <span className="text-sm text-slate-600">Min. woorden</span>
           <input
             type="number"
             min={0}
-            className="px-2 py-1 border rounded w-20"
+            className="px-2 py-1 border border-slate-200 rounded w-20 focus:outline-none focus:ring-2 focus:ring-blue-600"
             value={minWords}
             onChange={(e) => setMinWords(Number(e.target.value || 0))}
           />
         </div>
         <div className="ml-auto flex gap-2">
           <button
-            className="px-3 py-2 border rounded-lg"
+            className="px-3 py-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 text-sm shadow-sm"
             onClick={() => toggleAll(true)}
           >
             Alles uitklappen
           </button>
           <button
-            className="px-3 py-2 border rounded-lg"
+            className="px-3 py-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 text-sm shadow-sm"
             onClick={() => toggleAll(false)}
           >
             Alles inklappen
@@ -228,19 +225,19 @@ export default function ReflectionsPageInner() {
         </div>
       </div>
 
-      {loading && <div className="text-gray-500">Laden…</div>}
+      {loading && <div className="text-slate-500">Laden…</div>}
       {err && (
-        <div className="p-3 rounded-lg bg-red-50 text-red-700">{err}</div>
+        <div className="p-3 rounded-xl bg-red-50 text-red-700 border border-red-200">{err}</div>
       )}
 
       {!loading && !err && (
         <>
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-slate-600">
             {submittedCount}/{filtered.length} ingeleverd
           </div>
 
           {filtered.length === 0 ? (
-            <div className="text-gray-500">Geen reflecties gevonden.</div>
+            <div className="text-slate-500">Geen reflecties gevonden.</div>
           ) : (
             <ul className="space-y-4">
               {filtered.map((r) => {
@@ -253,10 +250,10 @@ export default function ReflectionsPageInner() {
                 return (
                   <li
                     key={r.student_id}
-                    className="border rounded-2xl bg-white"
+                    className="border border-slate-200 rounded-2xl bg-white shadow-sm"
                   >
                     <button
-                      className="w-full px-4 py-3 border-b flex items-center justify-between text-left"
+                      className="w-full px-4 py-3 border-b border-slate-200 flex items-center justify-between text-left hover:bg-slate-50"
                       onClick={() =>
                         setExpanded((prev) => ({
                           ...prev,
@@ -265,12 +262,12 @@ export default function ReflectionsPageInner() {
                       }
                     >
                       <div className="flex items-center gap-3">
-                        <span className="font-semibold">{r.student_name}</span>
+                        <span className="font-semibold text-slate-900">{r.student_name}</span>
                         <span
                           className={`text-xs px-2 py-0.5 rounded-full ring-1 ${
                             r.submitted_at
                               ? "ring-green-200 bg-green-50 text-green-700"
-                              : "ring-gray-200 bg-gray-50 text-gray-600"
+                              : "ring-slate-200 bg-slate-50 text-slate-600"
                           }`}
                         >
                           {r.submitted_at ? "ingeleverd" : "ontbreekt"}
@@ -279,27 +276,27 @@ export default function ReflectionsPageInner() {
                           className={`text-xs px-2 py-0.5 rounded-full ring-1 ${
                             underMin
                               ? "ring-amber-200 bg-amber-50 text-amber-700"
-                              : "ring-gray-200 bg-gray-50 text-gray-700"
+                              : "ring-slate-200 bg-slate-50 text-slate-700"
                           }`}
                         >
                           {words} woorden
                         </span>
                       </div>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-slate-500">
                         {dateLabel} {open ? "▾" : "▸"}
                       </span>
                     </button>
 
                     {open && (
                       <div className="p-4">
-                        <p className="whitespace-pre-wrap">
+                        <p className="whitespace-pre-wrap text-slate-800">
                           {r.text || (
-                            <em className="text-gray-500">Geen tekst</em>
+                            <em className="text-slate-500">Geen tekst</em>
                           )}
                         </p>
                         <div className="mt-3 flex gap-2">
                           <button
-                            className="px-2 py-1 border rounded text-sm"
+                            className="px-2 py-1 border border-slate-200 rounded-xl text-sm bg-white hover:bg-slate-50 shadow-sm"
                             onClick={() =>
                               navigator.clipboard.writeText(r.text || "")
                             }
@@ -307,7 +304,7 @@ export default function ReflectionsPageInner() {
                             Kopieer tekst
                           </button>
                           <a
-                            className="px-2 py-1 border rounded text-sm"
+                            className="px-2 py-1 border border-slate-200 rounded-xl text-sm bg-white hover:bg-slate-50 shadow-sm"
                             href={`data:text/plain;charset=utf-8,${encodeURIComponent(r.text || "")}`}
                             download={`${(r.student_name || "student").replace(/\s+/g, "_")}_reflectie.txt`}
                           >
@@ -325,7 +322,7 @@ export default function ReflectionsPageInner() {
       )}
 
         {evalIdNum == null && (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-500">
             Geen geldige evaluatie geselecteerd.
           </p>
         )}
