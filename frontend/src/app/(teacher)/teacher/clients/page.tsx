@@ -89,7 +89,7 @@ export default function ClientsPage() {
       </div>
 
       {/* Tab Content */}
-      {activeTab === "dashboard" && <DashboardTab />}
+      {activeTab === "dashboard" && <DashboardTab onNavigateToList={() => setActiveTab("list")} />}
       {activeTab === "list" && <ListTab refreshKey={refreshKey} />}
       {activeTab === "communication" && <CommunicationTab />}
     </div>
@@ -97,7 +97,7 @@ export default function ClientsPage() {
 }
 
 // Tab 1: Dashboard - Inzicht & relatie-health
-function DashboardTab() {
+function DashboardTab({ onNavigateToList }: { onNavigateToList: () => void }) {
   const [kpiData, setKpiData] = useState<any>(null);
   const [newClients, setNewClients] = useState<any>(null);
   const [topCollaborations, setTopCollaborations] = useState<any>(null);
@@ -203,7 +203,7 @@ function DashboardTab() {
           </div>
           {newClients?.has_more && (
             <button 
-              onClick={() => {/* Navigate to list view */}}
+              onClick={onNavigateToList}
               className="mt-3 w-full text-xs text-emerald-700 hover:text-emerald-800 font-medium"
             >
               Bekijk alle {newClients.total} opdrachtgevers →
@@ -238,7 +238,7 @@ function DashboardTab() {
           </div>
           {topCollaborations?.has_more && (
             <button 
-              onClick={() => {/* Navigate to list view */}}
+              onClick={onNavigateToList}
               className="mt-3 w-full text-xs text-sky-700 hover:text-sky-800 font-medium"
             >
               Bekijk alle {topCollaborations.total} opdrachtgevers →
@@ -272,7 +272,7 @@ function DashboardTab() {
           </div>
           {atRiskClients?.has_more && (
             <button 
-              onClick={() => {/* Navigate to list view */}}
+              onClick={onNavigateToList}
               className="mt-3 w-full text-xs text-amber-700 hover:text-amber-800 font-medium"
             >
               Bekijk alle {atRiskClients.total} opdrachtgevers →
