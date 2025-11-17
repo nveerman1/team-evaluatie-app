@@ -526,6 +526,34 @@ export default function OMZAOverviewPage() {
 
         {!loading && !error && omzaData && (
           <>
+            {/* Legend */}
+            <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mb-4">
+              <div className="flex items-center gap-1.5">
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[11px] text-green-700">
+                  🙂
+                </span>
+                <span>Gaat goed</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[11px] text-green-700">
+                  V
+                </span>
+                <span>Voldoet aan verwachting</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-amber-400 bg-amber-100 text-[11px] text-amber-700">
+                  !
+                </span>
+                <span>Let op / bespreken</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-rose-500 bg-rose-100 text-[11px] text-rose-700">
+                  !!
+                </span>
+                <span>Urgent</span>
+              </div>
+            </div>
+
             {/* Filters bar */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
               <div className="flex flex-wrap gap-3 items-center">
@@ -559,41 +587,15 @@ export default function OMZAOverviewPage() {
                     </option>
                   ))}
                 </select>
-                <button
-                  type="button"
-                  className="h-9 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-xs md:text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-100 hover:border-indigo-300"
-                  onClick={applyPeerScoresAll}
-                >
-                  Neem peer score over
-                </button>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[11px] text-green-700">
-                    🙂
-                  </span>
-                  <span>Gaat goed</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[11px] text-green-700">
-                    V
-                  </span>
-                  <span>Voldoet aan verwachting</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-amber-400 bg-amber-100 text-[11px] text-amber-700">
-                    !
-                  </span>
-                  <span>Let op / bespreken</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-rose-500 bg-rose-100 text-[11px] text-rose-700">
-                    !!
-                  </span>
-                  <span>Urgent</span>
-                </div>
-              </div>
+              <button
+                type="button"
+                className="h-9 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-xs md:text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-100 hover:border-indigo-300"
+                onClick={applyPeerScoresAll}
+              >
+                Neem peer score over
+              </button>
             </div>
 
             {/* Table */}
