@@ -526,34 +526,6 @@ export default function OMZAOverviewPage() {
 
         {!loading && !error && omzaData && (
           <>
-            {/* Legend */}
-            <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mb-4">
-              <div className="flex items-center gap-1.5">
-                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[11px] text-green-700">
-                  🙂
-                </span>
-                <span>Gaat goed</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[11px] text-green-700">
-                  V
-                </span>
-                <span>Voldoet aan verwachting</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-amber-400 bg-amber-100 text-[11px] text-amber-700">
-                  !
-                </span>
-                <span>Let op / bespreken</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-rose-500 bg-rose-100 text-[11px] text-rose-700">
-                  !!
-                </span>
-                <span>Urgent</span>
-              </div>
-            </div>
-
             {/* Filters bar */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
               <div className="flex flex-wrap gap-3 items-center">
@@ -781,7 +753,33 @@ export default function OMZAOverviewPage() {
 
               {/* Footer */}
               <div className="border-t border-slate-100 bg-slate-50/70 px-4 py-3 text-xs text-slate-500">
-                <p className="mb-1 font-medium">Leeswijzer</p>
+                <p className="mb-2 font-medium">Leeswijzer</p>
+                <div className="flex flex-wrap items-center gap-3 mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[11px] text-green-700">
+                      🙂
+                    </span>
+                    <span>Gaat goed</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[11px] text-green-700">
+                      V
+                    </span>
+                    <span>Voldoet aan verwachting</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-amber-400 bg-amber-100 text-[11px] text-amber-700">
+                      !
+                    </span>
+                    <span>Let op / bespreken</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-rose-500 bg-rose-100 text-[11px] text-rose-700">
+                      !!
+                    </span>
+                    <span>Urgent</span>
+                  </div>
+                </div>
                 <p>
                   De icoontjes geven per categorie het niveau aan dat jij als docent
                   inschat. Peer- en selfscores uit de peerreview worden apart
