@@ -48,9 +48,9 @@ def get_dashboard_kpi(
     """
     Get KPI statistics for dashboard: active clients, projects this year, at-risk count
     """
-    current_year = datetime.now().year
+    current_year = datetime.utcnow().year
     last_year = current_year - 1
-    one_year_ago = datetime.now() - timedelta(days=365)
+    one_year_ago = datetime.utcnow() - timedelta(days=365)
     
     # Active clients
     active_clients = (
@@ -201,7 +201,11 @@ def get_top_collaborations(
         # Calculate years active
         years_active = 0
         if first_project:
-            years_active = max(1, (datetime.now() - first_project).days // 365)
+            # Handle timezone-aware datetime
+            first_project_naive = first_project
+            if first_project.tzinfo is not None:
+                first_project_naive = first_project.replace(tzinfo=None)
+            years_active = max(1, (datetime.utcnow() - first_project_naive).days // 365)
         
         items.append(
             ClientInsightItem(
@@ -229,7 +233,7 @@ def get_at_risk_clients(
     """
     Get clients at risk of dropping out (no projects in > 1 year)
     """
-    one_year_ago = datetime.now() - timedelta(days=365)
+    one_year_ago = datetime.utcnow() - timedelta(days=365)
     
     # Get all active clients
     all_clients = (
@@ -250,20 +254,29 @@ def get_at_risk_clients(
         )
         
         # Check if last project is more than a year ago (or no projects at all)
-        if not last_project or last_project.project.created_at < one_year_ago:
-            last_active = None
-            if last_project:
-                last_active = last_project.project.created_at.strftime("%Y-%m-%d")
-            
+        if not last_project:
             at_risk_clients.append({
                 "client": client,
-                "last_active": last_active,
-                "last_project_date": last_project.project.created_at if last_project else None,
+                "last_active": None,
+                "last_project_date": None,
             })
+        else:
+            # Handle timezone-aware datetime comparison
+            project_created_at = last_project.project.created_at
+            if project_created_at.tzinfo is not None:
+                # Make timezone-naive for comparison
+                project_created_at = project_created_at.replace(tzinfo=None)
+            
+            if project_created_at < one_year_ago:
+                at_risk_clients.append({
+                    "client": client,
+                    "last_active": last_project.project.created_at.strftime("%Y-%m-%d"),
+                    "last_project_date": last_project.project.created_at,
+                })
     
     # Sort by last active date (oldest first)
     at_risk_clients.sort(
-        key=lambda x: x["last_project_date"] if x["last_project_date"] else datetime.min
+        key=lambda x: x["last_project_date"].replace(tzinfo=None) if x["last_project_date"] and x["last_project_date"].tzinfo else (x["last_project_date"] if x["last_project_date"] else datetime.min)
     )
     
     total = len(at_risk_clients)
