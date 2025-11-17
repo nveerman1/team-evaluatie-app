@@ -163,7 +163,7 @@ export default function EvaluationSettingsPageInner() {
   }
 
   const anyLoading = loading;
-  const evalIdStr = String(params.evalId);
+  const evalIdStr = String(evalId);
 
   if (loading) return <main className="p-6">Laden…</main>;
   
