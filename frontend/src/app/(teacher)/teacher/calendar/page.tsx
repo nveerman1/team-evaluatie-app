@@ -258,93 +258,63 @@ export default function CalendarPage() {
   }
 
   return (
-    <>
+    <div className="min-h-screen bg-slate-100">
       {/* Page Header */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
-        <header className="px-6 py-6 max-w-7xl mx-auto">
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">Kalender</h1>
-          <p className="text-gray-600 mt-1 text-sm">
-            Overzicht van alle projecten, evaluaties en deadlines 📅
-          </p>
-        </header>
-      </div>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Quick Actions */}
-        <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
-          <h2 className="text-xl font-semibold mb-4">🧩 Snelle acties</h2>
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/teacher/projects/new"
-              className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-blue-700 hover:to-purple-700"
-            >
-              ➕ Nieuw project
-            </Link>
-            <Link
-              href="/teacher/project-assessments/create"
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
-            >
-              ➕ Nieuwe projectbeoordeling
-            </Link>
-            <Link
-              href="/teacher/evaluations/create"
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              ➕ Nieuwe peerevaluatie
-            </Link>
-            <Link
-              href="/teacher/competencies/windows/create"
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              ➕ Nieuw competentievenster
-            </Link>
+      <header className="bg-white/80 border-b border-slate-200 backdrop-blur-sm">
+        <div className="mx-auto max-w-7xl px-6 py-5 flex justify-between items-end">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight">Kalender</h1>
+            <p className="text-sm text-slate-600 mt-1">
+              Overzicht van projecten, evaluaties en deadlines.
+            </p>
           </div>
-        </section>
+        </div>
+      </header>
 
-        {/* Views and Filters */}
-        <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      {/* Main Layout - Two Column Grid */}
+      <main className="mx-auto max-w-7xl px-6 py-6 grid gap-6 sm:grid-cols-12">
+        {/* LEFT COLUMN - Filters and Quick Actions */}
+        <aside className="space-y-4 sm:col-span-4 lg:col-span-3">
+          {/* Filters Section */}
+          <section className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-4">
             {/* View Mode Selector */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => setViewMode("agenda")}
-                className={`px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${
-                  viewMode === "agenda"
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                }`}
-              >
-                📋 Agenda
-              </button>
-              <button
-                onClick={() => setViewMode("week")}
-                className={`px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${
-                  viewMode === "week"
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                }`}
-              >
-                📅 Week
-              </button>
-              <button
-                onClick={() => setViewMode("month")}
-                className={`px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${
-                  viewMode === "month"
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                }`}
-              >
-                📆 Maand
-              </button>
+            <div>
+              <p className="uppercase text-xs tracking-wide font-semibold text-slate-500 mb-2">Weergave</p>
+              <div className="inline-flex bg-slate-100 rounded-full p-1 text-xs font-medium">
+                <button
+                  onClick={() => setViewMode("month")}
+                  className={`px-3 py-1 rounded-full transition-all ${
+                    viewMode === "month" ? "bg-white shadow-sm" : ""
+                  }`}
+                >
+                  📆 Maand
+                </button>
+                <button
+                  onClick={() => setViewMode("week")}
+                  className={`px-3 py-1 rounded-full transition-all ${
+                    viewMode === "week" ? "bg-white shadow-sm" : ""
+                  }`}
+                >
+                  📅 Week
+                </button>
+                <button
+                  onClick={() => setViewMode("agenda")}
+                  className={`px-3 py-1 rounded-full transition-all ${
+                    viewMode === "agenda" ? "bg-white shadow-sm" : ""
+                  }`}
+                >
+                  📋 Agenda
+                </button>
+              </div>
             </div>
 
-            {/* Filters */}
-            <div className="flex flex-wrap gap-3">
+            {/* Project Filter */}
+            <div className="space-y-1 text-sm">
+              <label className="text-xs font-medium text-slate-500">Project</label>
               <select
                 value={selectedProject}
                 onChange={(e) => setSelectedProject(e.target.value)}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 shadow-inner text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">Alle projecten</option>
                 {projects.map((p) => (
@@ -353,11 +323,15 @@ export default function CalendarPage() {
                   </option>
                 ))}
               </select>
+            </div>
 
+            {/* Course Filter */}
+            <div className="space-y-1 text-sm">
+              <label className="text-xs font-medium text-slate-500">Vak / klas</label>
               <select
                 value={selectedCourse}
                 onChange={(e) => setSelectedCourse(e.target.value)}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 shadow-inner text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">Alle vakken</option>
                 {courses.map((c) => (
@@ -366,11 +340,15 @@ export default function CalendarPage() {
                   </option>
                 ))}
               </select>
+            </div>
 
+            {/* Event Type Filter */}
+            <div className="space-y-1 text-sm">
+              <label className="text-xs font-medium text-slate-500">Type event</label>
               <select
                 value={selectedEventType}
                 onChange={(e) => setSelectedEventType(e.target.value)}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 shadow-inner text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">Alle events</option>
                 <option value="project_start">Project start</option>
@@ -380,57 +358,129 @@ export default function CalendarPage() {
                 <option value="competency_deadline">Competentiescan deadline</option>
               </select>
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* Calendar Navigation */}
-        {viewMode !== "agenda" && (
-          <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => navigateDate("prev")}
-                className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50"
+          {/* Quick Actions Section */}
+          <section className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+            <h2 className="uppercase tracking-wide text-xs font-semibold text-slate-500 mb-3">
+              Snelle acties
+            </h2>
+            <div className="flex flex-col gap-2">
+              <Link
+                href="/teacher/projects/new"
+                className="rounded-xl px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium shadow hover:from-blue-700 hover:to-indigo-700 text-center"
               >
-                ← Vorige
-              </button>
-              <div className="flex items-center gap-3">
-                <h3 className="text-lg font-semibold">
-                  {viewMode === "month"
-                    ? currentDate.toLocaleDateString("nl-NL", { month: "long", year: "numeric" })
-                    : `Week van ${currentDate.toLocaleDateString("nl-NL")}`}
-                </h3>
+                Nieuw project
+              </Link>
+              <Link
+                href="/teacher/project-assessments/create"
+                className="rounded-xl px-3 py-2 bg-blue-50 border border-blue-100 text-blue-900 text-sm font-medium hover:bg-blue-100 text-center"
+              >
+                Nieuwe projectbeoordeling
+              </Link>
+              <Link
+                href="/teacher/evaluations/create"
+                className="rounded-xl px-3 py-2 bg-white border border-slate-200 text-sm hover:bg-slate-50 text-center"
+              >
+                Nieuwe peerevaluatie
+              </Link>
+              <Link
+                href="/teacher/competencies/windows/create"
+                className="rounded-xl px-3 py-2 bg-white border border-slate-200 text-sm hover:bg-slate-50 text-center"
+              >
+                Nieuw competentievenster
+              </Link>
+            </div>
+          </section>
+        </aside>
+
+        {/* RIGHT COLUMN - Calendar */}
+        <section className="space-y-4 sm:col-span-8 lg:col-span-9">
+          {/* Navigation Bar Above Calendar */}
+          {viewMode !== "agenda" && (
+            <div className="bg-white border border-slate-200 rounded-2xl p-3 flex items-center justify-between shadow-sm">
+              <div className="flex gap-2 text-xs">
+                <button
+                  onClick={() => navigateDate("prev")}
+                  className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100"
+                >
+                  ← Vorige
+                </button>
                 <button
                   onClick={goToToday}
-                  className="px-3 py-1 text-xs font-medium rounded-lg border border-gray-300 hover:bg-gray-50"
+                  className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
                 >
                   Vandaag
                 </button>
+                <button
+                  onClick={() => navigateDate("next")}
+                  className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100"
+                >
+                  Volgende →
+                </button>
               </div>
-              <button
-                onClick={() => navigateDate("next")}
-                className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50"
-              >
-                Volgende →
-              </button>
+              <div className="text-right text-sm">
+                <p className="font-semibold">
+                  {viewMode === "month"
+                    ? currentDate.toLocaleDateString("nl-NL", { month: "long", year: "numeric" })
+                    : `Week van ${currentDate.toLocaleDateString("nl-NL")}`}
+                </p>
+                {viewMode === "month" && (
+                  <p className="text-xs text-slate-500">Zaterdag en zondag zijn verborgen</p>
+                )}
+              </div>
             </div>
-          </section>
-        )}
+          )}
 
-        {/* Calendar View */}
-        {viewMode === "agenda" ? (
-          <AgendaView events={viewEvents} onEventClick={setSelectedEvent} />
-        ) : viewMode === "week" ? (
-          <WeekView events={viewEvents} currentDate={currentDate} onEventClick={setSelectedEvent} />
-        ) : (
-          <MonthView events={viewEvents} currentDate={currentDate} onEventClick={setSelectedEvent} />
-        )}
+          {/* Calendar View */}
+          <div className="space-y-3">
+            {viewMode === "agenda" ? (
+              <AgendaView events={viewEvents} onEventClick={setSelectedEvent} />
+            ) : viewMode === "week" ? (
+              <WeekView events={viewEvents} currentDate={currentDate} onEventClick={setSelectedEvent} />
+            ) : (
+              <MonthView events={viewEvents} currentDate={currentDate} onEventClick={setSelectedEvent} />
+            )}
+
+            {/* Legend Section */}
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl px-3 py-2 text-[11px] text-slate-700 flex flex-wrap gap-3">
+              <span className="inline-flex items-center gap-1 bg-white px-2 py-1 rounded-full">
+                🚀 Project start
+              </span>
+              <span className="inline-flex items-center gap-1 bg-white px-2 py-1 rounded-full">
+                🏁 Project einde
+              </span>
+              <span className="inline-flex items-center gap-1 bg-white px-2 py-1 rounded-full">
+                📝 Peer-review
+              </span>
+              <span className="inline-flex items-center gap-1 bg-white px-2 py-1 rounded-full">
+                💭 Reflectie
+              </span>
+              <span className="inline-flex items-center gap-1 bg-white px-2 py-1 rounded-full">
+                🎯 Competentiescan
+              </span>
+              <span className="inline-flex items-center gap-1 bg-slate-200 px-2 py-1 rounded-full">
+                <span className="h-2 w-2 rounded-full bg-slate-400" />
+                Niet gestart
+              </span>
+              <span className="inline-flex items-center gap-1 bg-amber-100 px-2 py-1 rounded-full">
+                <span className="h-2 w-2 rounded-full bg-amber-500" />
+                Bezig
+              </span>
+              <span className="inline-flex items-center gap-1 bg-emerald-100 px-2 py-1 rounded-full">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                Afgerond
+              </span>
+            </div>
+          </div>
+        </section>
       </main>
 
       {/* Event Detail Modal */}
       {selectedEvent && (
         <EventDetailModal event={selectedEvent} onClose={() => setSelectedEvent(null)} />
       )}
-    </>
+    </div>
   );
 }
 
@@ -438,36 +488,48 @@ export default function CalendarPage() {
 function AgendaView({ events, onEventClick }: { events: CalendarEvent[]; onEventClick: (event: CalendarEvent) => void }) {
   if (events.length === 0) {
     return (
-      <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
-        <p className="text-gray-500 text-center py-8">Geen aankomende events.</p>
-      </section>
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <p className="text-slate-500 text-center py-8">Geen aankomende events.</p>
+      </div>
     );
   }
 
   return (
-    <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
+    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
       <div className="space-y-3">
         {events.map((event) => (
           <div
             key={event.id}
             onClick={() => onEventClick(event)}
             className={`p-4 border-2 rounded-xl cursor-pointer hover:shadow-md transition-all ${
-              STATUS_COLORS[event.status || "not_started"]
+              event.status === "completed"
+                ? "bg-emerald-50 border-emerald-200"
+                : event.status === "in_progress"
+                ? "bg-amber-50 border-amber-200"
+                : "bg-slate-50 border-slate-200"
             }`}
           >
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-xl">{EVENT_ICONS[event.type]}</span>
-                  <h3 className="font-semibold">{event.title}</h3>
+                  <h3 className="font-semibold text-slate-900">{event.title}</h3>
                   {event.status && (
-                    <span className="text-xs px-2 py-1 rounded-full bg-white/50">
+                    <span
+                      className={`text-xs px-2 py-1 rounded-full ${
+                        event.status === "completed"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : event.status === "in_progress"
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-slate-100 text-slate-700"
+                      }`}
+                    >
                       {event.status === "completed" ? "✓ Afgerond" : event.status === "in_progress" ? "⏳ Bezig" : "○ Niet gestart"}
                     </span>
                   )}
                 </div>
-                <div className="text-sm text-gray-600 mb-1">{event.description}</div>
-                <div className="text-xs text-gray-500">
+                <div className="text-sm text-slate-600 mb-1">{event.description}</div>
+                <div className="text-xs text-slate-500">
                   {formatDate(event.date.toISOString())}
                   {event.courseName && ` • ${event.courseName}`}
                   {event.projectName && ` • ${event.projectName}`}
@@ -480,16 +542,20 @@ function AgendaView({ events, onEventClick }: { events: CalendarEvent[]; onEvent
           </div>
         ))}
       </div>
-    </section>
+    </div>
   );
 }
 
-// Week View Component
+// Week View Component (Weekdays Only - Monday to Friday)
 function WeekView({ events, currentDate, onEventClick }: { events: CalendarEvent[]; currentDate: Date; onEventClick: (event: CalendarEvent) => void }) {
+  // Find the Monday of the current week
   const startOfWeek = new Date(currentDate);
-  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+  const day = startOfWeek.getDay();
+  const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+  startOfWeek.setDate(diff);
 
-  const days = Array.from({ length: 7 }, (_, i) => {
+  // Create array of 5 weekdays (Monday-Friday)
+  const days = Array.from({ length: 5 }, (_, i) => {
     const day = new Date(startOfWeek);
     day.setDate(day.getDate() + i);
     return day;
@@ -507,29 +573,36 @@ function WeekView({ events, currentDate, onEventClick }: { events: CalendarEvent
   };
 
   return (
-    <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
-      <div className="grid grid-cols-7 gap-2">
+    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+      <div className="grid grid-cols-5 gap-3">
         {days.map((day, i) => {
           const dayEvents = getEventsForDay(day);
           const isToday = day.toDateString() === new Date().toDateString();
 
           return (
-            <div key={i} className={`border rounded-lg p-3 min-h-[150px] ${isToday ? "border-blue-500 bg-blue-50" : ""}`}>
-              <div className={`text-center font-semibold mb-2 ${isToday ? "text-blue-700" : ""}`}>
-                {day.toLocaleDateString("nl-NL", { weekday: "short" })}
-                <div className="text-lg">{day.getDate()}</div>
+            <div
+              key={i}
+              className={`border rounded-xl p-3 min-h-[200px] ${
+                isToday ? "border-blue-500 bg-blue-50" : "border-slate-200"
+              }`}
+            >
+              <div className={`text-center mb-3 ${isToday ? "text-blue-700" : ""}`}>
+                <div className="text-xs font-medium text-slate-500">
+                  {day.toLocaleDateString("nl-NL", { weekday: "short" })}
+                </div>
+                <div className="text-2xl font-semibold">{day.getDate()}</div>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-2">
                 {dayEvents.map((event) => (
                   <div
                     key={event.id}
                     onClick={() => onEventClick(event)}
-                    className={`text-xs p-2 rounded border-l-4 cursor-pointer hover:shadow-sm transition-all ${
+                    className={`text-xs p-2 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition-all ${
                       event.status === "completed"
-                        ? "border-l-green-500 bg-green-50"
+                        ? "border-l-emerald-500 bg-emerald-50"
                         : event.status === "in_progress"
-                        ? "border-l-yellow-500 bg-yellow-50"
-                        : "border-l-gray-500 bg-gray-50"
+                        ? "border-l-amber-500 bg-amber-50"
+                        : "border-l-slate-400 bg-slate-50"
                     }`}
                     title={`${event.title} - ${event.description}`}
                   >
@@ -543,28 +616,28 @@ function WeekView({ events, currentDate, onEventClick }: { events: CalendarEvent
           );
         })}
       </div>
-    </section>
+    </div>
   );
 }
 
-// Month View Component
+// Month View Component (Weekdays Only - Monday to Friday)
 function MonthView({ events, currentDate, onEventClick }: { events: CalendarEvent[]; currentDate: Date; onEventClick: (event: CalendarEvent) => void }) {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
   const firstDayOfMonth = new Date(year, month, 1);
   const lastDayOfMonth = new Date(year, month + 1, 0);
-  const startDay = firstDayOfMonth.getDay();
   const daysInMonth = lastDayOfMonth.getDate();
 
-  const days = [];
-  // Add empty cells for days before month starts
-  for (let i = 0; i < startDay; i++) {
-    days.push(null);
-  }
-  // Add all days of the month
+  // Build array of weekdays only (Monday-Friday)
+  const weekdays = [];
   for (let i = 1; i <= daysInMonth; i++) {
-    days.push(new Date(year, month, i));
+    const day = new Date(year, month, i);
+    const dayOfWeek = day.getDay();
+    // Only include Monday (1) through Friday (5)
+    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+      weekdays.push(day);
+    }
   }
 
   const getEventsForDay = (day: Date) => {
@@ -579,38 +652,42 @@ function MonthView({ events, currentDate, onEventClick }: { events: CalendarEven
   };
 
   return (
-    <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
-      <div className="grid grid-cols-7 gap-2">
-        {/* Day headers */}
-        {["Zo", "Ma", "Di", "Wo", "Do", "Vr", "Za"].map((day) => (
-          <div key={day} className="text-center font-semibold text-gray-600 py-2">
-            {day}
-          </div>
-        ))}
+    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm min-h-[420px]">
+      <div className="grid grid-cols-5 text-xs font-medium text-slate-500 mb-2">
+        <div className="text-center">Ma</div>
+        <div className="text-center">Di</div>
+        <div className="text-center">Wo</div>
+        <div className="text-center">Do</div>
+        <div className="text-center">Vr</div>
+      </div>
 
-        {/* Calendar days */}
-        {days.map((day, i) => {
-          if (!day) {
-            return <div key={`empty-${i}`} className="border rounded-lg p-2 bg-gray-50 min-h-[100px]" />;
-          }
-
+      {/* Calendar grid - 5 columns for weekdays */}
+      <div className="grid grid-cols-5 gap-2">
+        {weekdays.map((day, i) => {
           const dayEvents = getEventsForDay(day);
           const isToday = day.toDateString() === new Date().toDateString();
 
           return (
-            <div key={i} className={`border rounded-lg p-2 min-h-[100px] ${isToday ? "border-blue-500 bg-blue-50" : ""}`}>
-              <div className={`text-right font-semibold mb-1 ${isToday ? "text-blue-700" : ""}`}>{day.getDate()}</div>
+            <div
+              key={i}
+              className={`rounded-xl border p-2 h-[100px] text-[10px] ${
+                isToday ? "border-blue-500 bg-blue-50" : "border-slate-200 bg-slate-50"
+              }`}
+            >
+              <span className={`block text-slate-600 font-medium mb-1 ${isToday ? "text-blue-700" : ""}`}>
+                {day.getDate()}
+              </span>
               <div className="space-y-1">
-                {dayEvents.slice(0, 3).map((event) => (
+                {dayEvents.slice(0, 2).map((event) => (
                   <div
                     key={event.id}
                     onClick={() => onEventClick(event)}
-                    className={`text-xs p-1 rounded border-l-2 cursor-pointer hover:shadow-sm transition-all ${
+                    className={`text-[9px] px-1 py-0.5 rounded border-l-2 cursor-pointer hover:shadow-sm transition-all ${
                       event.status === "completed"
-                        ? "border-l-green-500 bg-green-50"
+                        ? "border-l-emerald-500 bg-emerald-50"
                         : event.status === "in_progress"
-                        ? "border-l-yellow-500 bg-yellow-50"
-                        : "border-l-gray-500 bg-gray-50"
+                        ? "border-l-amber-500 bg-amber-50"
+                        : "border-l-slate-400 bg-slate-100"
                     }`}
                     title={`${event.title} - ${event.description}`}
                   >
@@ -619,15 +696,15 @@ function MonthView({ events, currentDate, onEventClick }: { events: CalendarEven
                     </div>
                   </div>
                 ))}
-                {dayEvents.length > 3 && (
-                  <div className="text-xs text-gray-500 text-center">+{dayEvents.length - 3} meer</div>
+                {dayEvents.length > 2 && (
+                  <div className="text-[9px] text-slate-500 text-center">+{dayEvents.length - 2}</div>
                 )}
               </div>
             </div>
           );
         })}
       </div>
-    </section>
+    </div>
   );
 }
 
