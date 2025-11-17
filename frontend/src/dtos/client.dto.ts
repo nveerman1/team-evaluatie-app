@@ -125,3 +125,41 @@ export type ReminderListResponse = {
   items: Reminder[];
   total: number;
 };
+
+// Dashboard types
+export type DashboardKPI = {
+  active_clients: number;
+  projects_this_year: number;
+  at_risk_count: number;
+  change_from_last_year: number;
+};
+
+export type ClientInsightItem = {
+  id: number;
+  organization: string;
+  sector?: string;
+  created_at?: string; // For new clients
+  last_active?: string; // For at-risk clients
+  project_count?: number; // For top collaborations
+  years_active?: number; // For top collaborations
+};
+
+export type ClientInsightListResponse = {
+  items: ClientInsightItem[];
+  total: number;
+  has_more: boolean;
+};
+
+export type RecentCommunicationItem = {
+  id: number;
+  title: string;
+  organization: string;
+  client_id: number;
+  date: string;
+  log_type: string;
+};
+
+export type RecentCommunicationListResponse = {
+  items: RecentCommunicationItem[];
+  total: number;
+};

@@ -172,4 +172,62 @@ export const clientService = {
   ): Promise<void> {
     await api.delete(`/clients/${clientId}/projects/${projectId}`);
   },
+
+  /**
+   * Get dashboard KPI statistics
+   */
+  async getDashboardKPI(): Promise<import("@/dtos/client.dto").DashboardKPI> {
+    const response = await api.get<import("@/dtos/client.dto").DashboardKPI>(
+      "/clients/dashboard/kpi"
+    );
+    return response.data;
+  },
+
+  /**
+   * Get new clients for dashboard
+   */
+  async getNewClients(
+    limit: number = 3
+  ): Promise<import("@/dtos/client.dto").ClientInsightListResponse> {
+    const response = await api.get<
+      import("@/dtos/client.dto").ClientInsightListResponse
+    >("/clients/dashboard/new-clients", { params: { limit } });
+    return response.data;
+  },
+
+  /**
+   * Get top collaborations for dashboard
+   */
+  async getTopCollaborations(
+    limit: number = 3
+  ): Promise<import("@/dtos/client.dto").ClientInsightListResponse> {
+    const response = await api.get<
+      import("@/dtos/client.dto").ClientInsightListResponse
+    >("/clients/dashboard/top-collaborations", { params: { limit } });
+    return response.data;
+  },
+
+  /**
+   * Get at-risk clients for dashboard
+   */
+  async getAtRiskClients(
+    limit: number = 3
+  ): Promise<import("@/dtos/client.dto").ClientInsightListResponse> {
+    const response = await api.get<
+      import("@/dtos/client.dto").ClientInsightListResponse
+    >("/clients/dashboard/at-risk", { params: { limit } });
+    return response.data;
+  },
+
+  /**
+   * Get recent communications for dashboard
+   */
+  async getRecentCommunications(
+    limit: number = 10
+  ): Promise<import("@/dtos/client.dto").RecentCommunicationListResponse> {
+    const response = await api.get<
+      import("@/dtos/client.dto").RecentCommunicationListResponse
+    >("/clients/dashboard/recent-communications", { params: { limit } });
+    return response.data;
+  },
 };

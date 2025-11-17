@@ -169,3 +169,53 @@ class ReminderListOut(BaseModel):
 
     items: List[ReminderOut]
     total: int
+
+
+# ============ Dashboard Schemas ============
+
+
+class DashboardKPIOut(BaseModel):
+    """Schema for dashboard KPI statistics"""
+
+    active_clients: int
+    projects_this_year: int
+    at_risk_count: int
+    change_from_last_year: int
+
+
+class ClientInsightItem(BaseModel):
+    """Schema for client insight items (new clients, top collaborations, at-risk)"""
+
+    id: int
+    organization: str
+    sector: Optional[str] = None
+    created_at: Optional[str] = None  # For new clients
+    last_active: Optional[str] = None  # For at-risk clients
+    project_count: Optional[int] = None  # For top collaborations
+    years_active: Optional[int] = None  # For top collaborations
+
+
+class ClientInsightListOut(BaseModel):
+    """Schema for client insight list with pagination support"""
+
+    items: List[ClientInsightItem]
+    total: int
+    has_more: bool
+
+
+class RecentCommunicationItem(BaseModel):
+    """Schema for recent communication log entries"""
+
+    id: int
+    title: str  # Based on log_type
+    organization: str
+    client_id: int
+    date: str  # created_at formatted
+    log_type: str
+
+
+class RecentCommunicationListOut(BaseModel):
+    """Schema for recent communication list"""
+
+    items: List[RecentCommunicationItem]
+    total: int
