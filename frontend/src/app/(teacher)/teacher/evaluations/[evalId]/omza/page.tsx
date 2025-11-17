@@ -6,6 +6,7 @@ import { useNumericEvalId } from "@/utils";
 import { Loading, ErrorMessage } from "@/components";
 import { omzaService } from "@/services/omza.service";
 import { OmzaDataResponse, OmzaStudentData, StandardComment } from "@/dtos/omza.dto";
+import { mapPeerScoreToIconLevel, ICON_LABELS, ICON_DESCRIPTIONS } from "@/utils/omza.utils";
 
 // Helper to get badge color based on score
 const getBadgeColor = (value: number | null) => {
@@ -22,6 +23,44 @@ const CATEGORY_LABELS: Record<string, string> = {
   Z: "Zelfvertrouwen",
   A: "Autonomie",
 };
+
+// LevelSelector component for icon-based scoring
+function LevelSelector({
+  value,
+  onChange,
+}: {
+  value: number | null;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {ICON_LABELS.map((label, index) => {
+        const level = index + 1;
+        const isActive = value === level;
+        return (
+          <button
+            key={label}
+            type="button"
+            onClick={() => onChange(level)}
+            className={
+              "group flex h-7 w-7 items-center justify-center rounded-full border text-xs font-medium transition " +
+              (isActive
+                ? label === "!!"
+                  ? "border-rose-500 bg-rose-100 text-rose-700 shadow-sm"
+                  : label === "!"
+                  ? "border-amber-400 bg-amber-100 text-amber-700 shadow-sm"
+                  : "border-green-500 bg-green-100 text-green-700 shadow-sm"
+                : "border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700")
+            }
+            aria-label={ICON_DESCRIPTIONS[index]}
+          >
+            <span>{label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 // Component for quick comments grid
 function OmzaQuickCommentsGrid({
@@ -131,7 +170,7 @@ export default function OMZAOverviewPage() {
   const [classFilter, setClassFilter] = useState<string>("all");
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
   
-  const [teacherScores, setTeacherScores] = useState<Record<string, number | "">>({});
+  const [teacherScores, setTeacherScores] = useState<Record<string, number | null>>({});
   const [teacherComments, setTeacherComments] = useState<Record<string, string>>({});
   const [standardComments, setStandardComments] = useState<Record<string, StandardComment[]>>({});
   
@@ -183,7 +222,7 @@ export default function OMZAOverviewPage() {
         setOmzaData(data);
         
         // Initialize teacher scores and comments from loaded data
-        const scores: Record<string, number | ""> = {};
+        const scores: Record<string, number | null> = {};
         const comments: Record<string, string> = {};
         
         data.students.forEach((student) => {
@@ -233,12 +272,11 @@ export default function OMZAOverviewPage() {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  // Debounced save teacher score
-  const handleScoreChange = useCallback((studentId: number, category: string, value: string) => {
+  // Save teacher score (icon level)
+  const handleScoreChange = useCallback((studentId: number, category: string, level: number) => {
     const key = `${studentId}-${category}`;
-    const numValue = value === "" ? "" : Number(value);
     
-    setTeacherScores((prev) => ({ ...prev, [key]: numValue }));
+    setTeacherScores((prev) => ({ ...prev, [key]: level }));
     
     // Clear existing timeout
     if (scoreTimeouts.current[key]) {
@@ -246,27 +284,25 @@ export default function OMZAOverviewPage() {
     }
     
     // Set new timeout for autosave
-    if (value !== "") {
-      scoreTimeouts.current[key] = setTimeout(() => {
-        setSavingScores((prev) => ({ ...prev, [key]: true }));
-        
-        omzaService
-          .saveTeacherScore(evalIdNum!, {
-            student_id: studentId,
-            category,
-            score: Number(value),
-          })
-          .then(() => {
-            showToast("Docentscore opgeslagen");
-          })
-          .catch((err) => {
-            showToast(`Fout bij opslaan: ${err?.message || "Onbekende fout"}`);
-          })
-          .finally(() => {
-            setSavingScores((prev) => ({ ...prev, [key]: false }));
-          });
-      }, 500);
-    }
+    scoreTimeouts.current[key] = setTimeout(() => {
+      setSavingScores((prev) => ({ ...prev, [key]: true }));
+      
+      omzaService
+        .saveTeacherScore(evalIdNum!, {
+          student_id: studentId,
+          category,
+          score: level,
+        })
+        .then(() => {
+          showToast("Docentscore opgeslagen");
+        })
+        .catch((err) => {
+          showToast(`Fout bij opslaan: ${err?.message || "Onbekende fout"}`);
+        })
+        .finally(() => {
+          setSavingScores((prev) => ({ ...prev, [key]: false }));
+        });
+    }, 500);
   }, [evalIdNum, showToast]);
 
   // Debounced save teacher comment
@@ -299,28 +335,27 @@ export default function OMZAOverviewPage() {
     }, 500);
   }, [evalIdNum, showToast]);
 
-  // Apply weighted average for all students
-  const applyWeightedAverageAll = useCallback(() => {
+  // Apply peer scores for all students (map to icon levels)
+  const applyPeerScoresAll = useCallback(() => {
     if (!omzaData || !evalIdNum) return;
     
     const updates: Array<Promise<any>> = [];
-    const newScores: Record<string, number | ""> = { ...teacherScores };
+    const newScores: Record<string, number | null> = { ...teacherScores };
     
     omzaData.students.forEach((student) => {
       omzaData.categories.forEach((cat) => {
         const catScore = student.category_scores[cat];
-        if (catScore && catScore.peer_avg != null && catScore.self_avg != null) {
-          const weighted = 0.75 * catScore.peer_avg + 0.25 * catScore.self_avg;
-          const roundedScore = Math.round(weighted * 100) / 100;
+        if (catScore && catScore.peer_avg != null) {
+          const iconLevel = mapPeerScoreToIconLevel(catScore.peer_avg);
           
           const key = `${student.student_id}-${cat}`;
-          newScores[key] = roundedScore;
+          newScores[key] = iconLevel;
           
           updates.push(
             omzaService.saveTeacherScore(evalIdNum, {
               student_id: student.student_id,
               category: cat,
-              score: roundedScore,
+              score: iconLevel,
             })
           );
         }
@@ -331,7 +366,7 @@ export default function OMZAOverviewPage() {
     
     Promise.all(updates)
       .then(() => {
-        showToast("Docentscores ingevuld op basis van peer/self");
+        showToast("Docentscores overgenomen van peer scores");
       })
       .catch((err) => {
         showToast(`Fout bij opslaan: ${err?.message || "Onbekende fout"}`);
@@ -524,29 +559,15 @@ export default function OMZAOverviewPage() {
                     </option>
                   ))}
                 </select>
-                <button
-                  type="button"
-                  className="h-9 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-xs md:text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-100 hover:border-indigo-300"
-                  onClick={applyWeightedAverageAll}
-                >
-                  Neem 75% peer + 25% self over
-                </button>
               </div>
 
-              <div className="flex flex-wrap gap-2 text-xs text-gray-500">
-                <span className="inline-flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                  Peer ≥ 3,0
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-amber-400" />
-                  2,0 – 2,9
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-red-400" />
-                  &lt; 2,0
-                </span>
-              </div>
+              <button
+                type="button"
+                className="h-9 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-xs md:text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-100 hover:border-indigo-300"
+                onClick={applyPeerScoresAll}
+              >
+                Neem peer score over
+              </button>
             </div>
 
             {/* Table */}
@@ -593,9 +614,9 @@ export default function OMZAOverviewPage() {
                           key={cat}
                           className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide"
                         >
-                          <div className="flex flex-col">
+                          <div className="flex flex-col gap-0.5">
                             <span>{CATEGORY_LABELS[cat] || cat}</span>
-                            <span className="text-[10px] text-gray-400 font-normal">
+                            <span className="text-[11px] font-normal text-slate-400">
                               Peer • Self • Docent
                             </span>
                           </div>
@@ -652,41 +673,24 @@ export default function OMZAOverviewPage() {
                               const catScore = student.category_scores[cat];
                               const key = `${student.student_id}-${cat}`;
                               const teacherValue = teacherScores[key];
-                              const isSaving = savingScores[key];
 
                               return (
-                                <td key={cat} className="px-4 py-3 align-top">
-                                  <div className="flex flex-col gap-1 text-[11px] text-gray-500">
-                                    <div className="flex items-center gap-1">
-                                      <span
-                                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${getBadgeColor(
-                                          catScore?.peer_avg || null
-                                        )}`}
-                                      >
-                                        Peer: {catScore?.peer_avg?.toFixed(1) || "-"}
+                                <td key={cat} className="px-4 py-3 align-middle">
+                                  <div className="flex flex-col gap-1.5">
+                                    <div className="flex flex-wrap gap-1 text-[11px] text-slate-500">
+                                      <span className="rounded-full bg-slate-100 px-2 py-0.5">
+                                        Peer: {catScore?.peer_avg?.toFixed(1) || "—"}
                                       </span>
-                                      <span className="text-gray-400">
-                                        Self: {catScore?.self_avg?.toFixed(1) || "-"}
+                                      <span className="rounded-full bg-slate-100 px-2 py-0.5">
+                                        Self: {catScore?.self_avg?.toFixed(1) || "—"}
                                       </span>
                                     </div>
-                                    <div className="flex items-center gap-1">
-                                      <span className="text-[11px] text-gray-500">
-                                        Docent:
-                                      </span>
-                                      <input
-                                        className="h-7 w-14 rounded-md border border-gray-300 bg-white px-1.5 text-[11px] text-right shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-                                        value={
-                                          teacherValue === "" || teacherValue == null
-                                            ? ""
-                                            : teacherValue
-                                        }
-                                        onChange={(e) =>
-                                          handleScoreChange(student.student_id, cat, e.target.value)
-                                        }
-                                        placeholder={catScore?.peer_avg?.toFixed(1) || ""}
-                                        disabled={isSaving}
-                                      />
-                                    </div>
+                                    <LevelSelector
+                                      value={teacherValue ?? null}
+                                      onChange={(level) =>
+                                        handleScoreChange(student.student_id, cat, level)
+                                      }
+                                    />
                                   </div>
                                 </td>
                               );
@@ -748,10 +752,39 @@ export default function OMZAOverviewPage() {
               </div>
 
               {/* Footer */}
-              <div className="border-t border-gray-200 bg-gray-50 px-5 py-3 text-xs text-gray-600">
-                <span className="font-semibold text-gray-700 mr-1">Leeswijzer:</span>
-                Peer- en selfscores zijn gemiddelden van de peerreview. De docent
-                kan per categorie een eigen score invullen en één notitieveld per leerling gebruiken.
+              <div className="border-t border-slate-100 bg-slate-50/70 px-4 py-3 text-xs text-slate-500">
+                <p className="mb-2 font-medium">Leeswijzer</p>
+                <div className="flex flex-wrap items-center gap-3 mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[11px] text-green-700">
+                      🙂
+                    </span>
+                    <span>Gaat goed</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[11px] text-green-700">
+                      V
+                    </span>
+                    <span>Voldoet aan verwachting</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-amber-400 bg-amber-100 text-[11px] text-amber-700">
+                      !
+                    </span>
+                    <span>Let op / bespreken</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-rose-500 bg-rose-100 text-[11px] text-rose-700">
+                      !!
+                    </span>
+                    <span>Urgent</span>
+                  </div>
+                </div>
+                <p>
+                  De icoontjes geven per categorie het niveau aan dat jij als docent
+                  inschat. Peer- en selfscores uit de peerreview worden apart
+                  weergegeven op de detailpagina van de leerling.
+                </p>
               </div>
             </div>
           </>
