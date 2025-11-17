@@ -6,7 +6,7 @@ import Link from "next/link";
 
 import { useNumericEvalId } from "@/lib/id";
 import { gradesService } from "@/services/grades.service";
-import type { GradePreviewItem, PublishedGradeOut } from "@/dtos/grades.dto";
+import type { GradePreviewItem } from "@/dtos/grades.dto";
 
 type Row = {
   user_id: number;
@@ -39,7 +39,12 @@ export default function GradesPageInner() {
   const [sortBy, setSortBy] = useState<SortKey>("team");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
+  const [autoSaveState, setAutoSaveState] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("saved");
+
   const round1 = (n: number) => Math.round(n * 10) / 10;
+
   function finalGrade(r: Row): number {
     if (r.override != null) return round1(r.override);
     if (r.rowGroupGrade != null) return round1(r.rowGroupGrade * r.gcf);
@@ -59,7 +64,7 @@ export default function GradesPageInner() {
         // Always fetch fresh preview data for latest GCF and suggested grade calculations
         const preview = await gradesService.previewGrades(evalIdNum);
         const items: GradePreviewItem[] = preview?.items ?? [];
-        
+
         // Also fetch existing saved grades to preserve manual inputs
         const existing = await gradesService.listGrades(evalIdNum);
         const existingMap = new Map(
@@ -70,9 +75,9 @@ export default function GradesPageInner() {
               comment: g.reason ?? "",
               rowGroupGrade: g.meta?.group_grade ?? null,
             },
-          ])
+          ]),
         );
-        
+
         // Merge: use fresh calculations (GCF, suggested) with preserved manual inputs
         setRows(
           items.map((i) => {
@@ -82,12 +87,12 @@ export default function GradesPageInner() {
               name: i.user_name,
               teamNumber: i.team_number ?? null,
               className: i.class_name ?? null,
-              gcf: i.gcf,  // Always fresh from preview
-              peerPct: i.avg_score,  // Always fresh from preview
-              serverSuggested: i.suggested_grade ?? 0,  // Always fresh from preview
-              override: saved?.override ?? null,  // Preserved from saved
-              comment: saved?.comment ?? "",  // Preserved from saved
-              rowGroupGrade: saved?.rowGroupGrade ?? null,  // Preserved from saved
+              gcf: i.gcf, // Always fresh from preview
+              peerPct: i.avg_score, // Always fresh from preview
+              serverSuggested: i.suggested_grade ?? 0, // Always fresh from preview
+              override: saved?.override ?? null, // Preserved from saved
+              comment: saved?.comment ?? "", // Preserved from saved
+              rowGroupGrade: saved?.rowGroupGrade ?? null, // Preserved from saved
             };
           }),
         );
@@ -119,12 +124,17 @@ export default function GradesPageInner() {
       });
     } catch (err: any) {
       console.warn("Concept opslaan mislukt:", err?.message ?? err);
+      setAutoSaveState("error");
+      return;
     }
+    setAutoSaveState("saved");
   }
 
+  // autosave om de 30s
   useEffect(() => {
     if (evalIdNum == null) return;
     const timer = setInterval(() => {
+      setAutoSaveState("saving");
       handleDraftSave();
       console.log("Draft opgeslagen");
     }, 30000);
@@ -176,6 +186,24 @@ export default function GradesPageInner() {
     return list.sort(cmp);
   }, [rows, filterTeam, filterClass, searchName, sortBy, sortDir]);
 
+  const stats = useMemo(() => {
+    const list = filteredSorted;
+    const count = list.length || 1;
+    const avgProposal =
+      list.reduce((sum, r) => sum + (r.serverSuggested ?? 0), 0) / count;
+    const avgGroupGrade =
+      list.reduce((sum, r) => sum + (r.rowGroupGrade ?? 0), 0) / count;
+    const avgGcf = list.reduce((sum, r) => sum + (r.gcf ?? 0), 0) / count;
+    const avgFinal = list.reduce((sum, r) => sum + finalGrade(r), 0) / count;
+    return {
+      hasData: list.length > 0,
+      avgProposal,
+      avgGroupGrade,
+      avgGcf,
+      avgFinal,
+    };
+  }, [filteredSorted]);
+
   async function handlePublish() {
     if (evalIdNum == null) return;
     setSaving(true);
@@ -200,13 +228,52 @@ export default function GradesPageInner() {
   }
 
   const tabs = [
-    { id: "dashboard", label: "Dashboard", href: `/teacher/evaluations/${evalIdStr}/dashboard` },
-    { id: "omza", label: "OMZA", href: `/teacher/evaluations/${evalIdStr}/omza` },
-    { id: "grades", label: "Cijfers", href: `/teacher/evaluations/${evalIdStr}/grades` },
-    { id: "feedback", label: "Feedback", href: `/teacher/evaluations/${evalIdStr}/feedback` },
-    { id: "reflections", label: "Reflecties", href: `/teacher/evaluations/${evalIdStr}/reflections` },
-    { id: "settings", label: "Instellingen", href: `/teacher/evaluations/${evalIdStr}/settings` },
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      href: `/teacher/evaluations/${evalIdStr}/dashboard`,
+    },
+    {
+      id: "omza",
+      label: "OMZA",
+      href: `/teacher/evaluations/${evalIdStr}/omza`,
+    },
+    {
+      id: "grades",
+      label: "Cijfers",
+      href: `/teacher/evaluations/${evalIdStr}/grades`,
+    },
+    {
+      id: "feedback",
+      label: "Feedback",
+      href: `/teacher/evaluations/${evalIdStr}/feedback`,
+    },
+    {
+      id: "reflections",
+      label: "Reflecties",
+      href: `/teacher/evaluations/${evalIdStr}/reflections`,
+    },
+    {
+      id: "settings",
+      label: "Instellingen",
+      href: `/teacher/evaluations/${evalIdStr}/settings`,
+    },
   ];
+
+  const autoSaveLabel =
+    {
+      idle: "",
+      saving: "Concept wordt opgeslagen…",
+      saved: "✔ Concept opgeslagen (laatste 30s)",
+      error: "⚠ Niet opgeslagen – controleer je verbinding",
+    }[autoSaveState] ?? "";
+
+  const pillClass = (active: boolean) =>
+    `px-3 py-1.5 text-xs rounded-full border transition inline-flex items-center gap-1 ${
+      active
+        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+    }`;
 
   return (
     <>
@@ -218,48 +285,46 @@ export default function GradesPageInner() {
               Cijfers
             </h1>
             <p className="text-gray-600 mt-1 text-sm">
-              Beheer en publiceer eindcijfers voor deze evaluatie
+              Beheer en publiceer eindcijfers voor deze evaluatie.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={async () => {
-                await handleDraftSave();
-                alert("Concept opgeslagen!");
-              }}
-              className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Concept opslaan
-            </button>
-            <button
-              onClick={handlePublish}
-              disabled={saving || loading || evalIdNum == null}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
-            >
-              {saving ? "Publiceren…" : "Publiceer cijfers"}
-            </button>
+          <div className="flex flex-col items-end gap-2">
+            <div className="text-xs text-gray-500 min-h-[1.2rem]">
+              {autoSaveLabel}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleDraftSave}
+                className="rounded-full border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Concept opslaan
+              </button>
+              <button
+                onClick={handlePublish}
+                disabled={saving || loading || evalIdNum == null}
+                className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
+              >
+                {saving ? "Publiceren…" : "Publiceer cijfers"}
+              </button>
+            </div>
           </div>
         </header>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        
+      <div className="max-w-6xl mx-auto px-6 py-6 space-y-5">
         {/* Tabs Navigation */}
         <div className="border-b border-gray-200">
-          <nav className="flex gap-8" aria-label="Tabs">
+          <nav className="flex gap-6 text-sm" aria-label="Tabs">
             {tabs.map((tab) => (
               <Link
                 key={tab.id}
                 href={tab.href}
-                className={`
-                  py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                  ${
-                    tab.id === "grades"
-                      ? "border-black text-black"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }
-                `}
+                className={`py-3 border-b-2 -mb-px transition-colors ${
+                  tab.id === "grades"
+                    ? "border-blue-600 text-blue-700 font-medium"
+                    : "border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300"
+                }`}
                 aria-current={tab.id === "grades" ? "page" : undefined}
               >
                 {tab.label}
@@ -268,17 +333,23 @@ export default function GradesPageInner() {
           </nav>
         </div>
 
-        <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 space-y-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="ml-auto flex flex-wrap items-center gap-2">
-            <input
-              placeholder="Zoek op naam…"
-              className="border rounded-lg px-2 py-1"
-              value={searchName}
-              onChange={(e) => setSearchName(e.target.value)}
-            />
+        {/* Filters */}
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-200 px-4 py-3 flex flex-wrap gap-3 items-center justify-between">
+          <div className="flex gap-3 flex-1 min-w-[230px]">
+            <div className="relative flex-1 min-w-[180px]">
+              <input
+                type="text"
+                className="w-full rounded-full border border-gray-300 px-10 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                placeholder="Zoek op naam…"
+                value={searchName}
+                onChange={(e) => setSearchName(e.target.value)}
+              />
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
+                🔍
+              </span>
+            </div>
             <select
-              className="border rounded-lg px-2 py-1"
+              className="rounded-full border border-gray-300 px-3 py-2 text-sm bg-white min-w-[130px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               value={filterTeam}
               onChange={(e) => setFilterTeam(e.target.value)}
               title="Filter op team"
@@ -291,7 +362,7 @@ export default function GradesPageInner() {
               ))}
             </select>
             <select
-              className="border rounded-lg px-2 py-1"
+              className="rounded-full border border-gray-300 px-3 py-2 text-sm bg-white min-w-[130px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               value={filterClass}
               onChange={(e) => setFilterClass(e.target.value)}
               title="Filter op klas"
@@ -303,167 +374,178 @@ export default function GradesPageInner() {
                 </option>
               ))}
             </select>
-            <select
-              className="border rounded-lg px-2 py-1"
-              value={`${sortBy}:${sortDir}`}
-              onChange={(e) => {
-                const [k, d] = e.target.value.split(":") as [
-                  SortKey,
-                  "asc" | "desc",
-                ];
-                setSortBy(k);
-                setSortDir(d);
-              }}
-              title="Sorteer kolommen"
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-600 mt-2 md:mt-0">
+            <span>Sorteren op</span>
+            <button
+              className={pillClass(sortBy === "team")}
+              onClick={() => toggleSort("team")}
             >
-              <option value="team:asc">Team ↑</option>
-              <option value="team:desc">Team ↓</option>
-              <option value="class:asc">Klas ↑</option>
-              <option value="class:desc">Klas ↓</option>
-              <option value="name:asc">Naam A–Z</option>
-              <option value="name:desc">Naam Z–A</option>
-              <option value="final:asc">Eindcijfer ↑</option>
-              <option value="final:desc">Eindcijfer ↓</option>
-            </select>
+              Team
+            </button>
+            <button
+              className={pillClass(sortBy === "name")}
+              onClick={() => toggleSort("name")}
+            >
+              Naam
+            </button>
+            <button
+              className={pillClass(sortBy === "class")}
+              onClick={() => toggleSort("class")}
+            >
+              Klas
+            </button>
           </div>
-        </div>
+        </section>
 
-        {loading && <p>Laden…</p>}
-        {error && <p className="text-red-600">{error}</p>}
-        {!loading && rows.length === 0 && !error && <p>Geen data gevonden.</p>}
-
-        {!loading && rows.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse min-w-[1000px]">
-              <thead className="border-b text-gray-600">
-                <tr>
-                  <Th
-                    onClick={() => toggleSort("team")}
-                    active={sortBy === "team"}
-                    dir={sortDir}
-                  >
-                    Team#
-                  </Th>
-                  <Th
-                    onClick={() => toggleSort("name")}
-                    active={sortBy === "name"}
-                    dir={sortDir}
-                  >
-                    Naam
-                  </Th>
-                  <Th
-                    onClick={() => toggleSort("class")}
-                    active={sortBy === "class"}
-                    dir={sortDir}
-                  >
-                    Klas
-                  </Th>
-                  <Th
-                    onClick={() => toggleSort("final")}
-                    active={sortBy === "final"}
-                    dir={sortDir}
-                  >
-                    Voorstel
-                  </Th>
-                  <th className="text-left py-2 px-2">Groepscijfer</th>
-                  <th className="text-left py-2 px-2">GCF</th>
-                  <th className="text-left py-2 px-2">Handmatige correctie</th>
-                  <th className="text-left py-2 px-2">Eindcijfer</th>
-                  <th className="text-left py-2 px-2">Opmerking docent</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredSorted.map((r) => (
-                  <tr key={r.user_id} className="border-t align-top">
-                    <td className="py-2 px-2">{r.teamNumber ?? "–"}</td>
-                    <td className="py-2 px-2">
-                      <Link
-                        href={`/teacher/evaluations/${evalIdStr}/students/${r.user_id}`}
-                        className="text-blue-600 hover:underline"
-                      >
-                        {r.name}
-                      </Link>
-                    </td>
-                    <td className="py-2 px-2">{r.className ?? "–"}</td>
-                    <td className="py-2 px-2 font-medium">
-                      {r.serverSuggested != null ? r.serverSuggested.toFixed(1) : "–"}
-                    </td>
-                    <td className="py-2 px-2">
-                      <input
-                        type="number"
-                        className="w-24 border rounded-lg px-2 py-1"
-                        placeholder="bijv. 7.5"
-                        title="Optioneel: per leerling een aangepast groepscijfer"
-                        value={r.rowGroupGrade ?? ""}
-                        min={1}
-                        max={10}
-                        step={0.1}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setRows((all) =>
-                            all.map((x) =>
-                              x.user_id === r.user_id
-                                ? {
-                                    ...x,
-                                    rowGroupGrade:
-                                      val === "" ? null : Number(val),
-                                  }
-                                : x,
-                            ),
-                          );
-                        }}
-                      />
-                    </td>
-                    <td className="py-2 px-2">{r.gcf.toFixed(2)}</td>
-                    <td className="py-2 px-2">
-                      <input
-                        type="number"
-                        className="w-24 border rounded-lg px-2 py-1"
-                        placeholder="bijv. 8.0"
-                        title="Handmatig aangepast eindcijfer (1–10)"
-                        value={r.override ?? ""}
-                        min={1}
-                        max={10}
-                        step={0.1}
-                        onChange={(e) => {
-                          const str = e.target.value;
-                          const num =
-                            str === "" ? null : e.target.valueAsNumber;
-                          setRows((all) =>
-                            all.map((x) =>
-                              x.user_id === r.user_id
-                                ? { ...x, override: num }
-                                : x,
-                            ),
-                          );
-                        }}
-                      />
-                    </td>
-                    <td className="py-2 px-2 font-medium">
-                      {finalGrade(r).toFixed(1)}
-                    </td>
-                    <td className="py-2 px-2">
-                      <AutoTextarea
-                        value={r.comment ?? ""}
-                        onChange={(v) =>
-                          setRows((all) =>
-                            all.map((x) =>
-                              x.user_id === r.user_id
-                                ? { ...x, comment: v }
-                                : x,
-                            ),
-                          )
-                        }
-                        placeholder="Toelichting / motivatie (optioneel)"
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        {loading && <p className="text-sm text-gray-500">Laden…</p>}
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        {!loading && rows.length === 0 && !error && (
+          <p className="text-sm text-gray-500">Geen data gevonden.</p>
         )}
+
+        {/* Tabel / grid met cijfers */}
+        {!loading && filteredSorted.length > 0 && (
+          <section className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="divide-y divide-gray-100">
+              {/* header */}
+              <div className="grid grid-cols-12 gap-3 px-4 py-3 text-xs font-semibold text-gray-500 bg-gray-50">
+                <div className="col-span-1 text-right">Team</div>
+                <div className="col-span-2">Leerling</div>
+                <div className="col-span-1 text-right">Klas</div>
+                <div className="col-span-1 text-right">Voorstel</div>
+                <div className="col-span-2 text-right">Groepscijfer</div>
+                <div className="col-span-1 text-right">GCF</div>
+                <div className="col-span-1 text-right">Eindcijfer</div>
+                <div className="col-span-3">Opmerking docent</div>
+              </div>
+
+              {/* rows */}
+              {filteredSorted.map((r, idx) => (
+                <div
+                  key={r.user_id}
+                  className={`grid grid-cols-12 gap-3 px-4 py-3 text-sm items-center ${
+                    idx % 2 === 1 ? "bg-gray-50/50" : "bg-white"
+                  }`}
+                >
+                  <div className="col-span-1 text-right text-xs text-gray-600">
+                    {r.teamNumber != null ? `Team ${r.teamNumber}` : "–"}
+                  </div>
+                  <div className="col-span-2">
+                    <Link
+                      href={`/teacher/evaluations/${evalIdStr}/students/${r.user_id}`}
+                      className="font-medium text-blue-600 hover:underline"
+                    >
+                      {r.name}
+                    </Link>
+                  </div>
+                  <div className="col-span-1 text-right text-xs text-gray-600">
+                    {r.className ?? "–"}
+                  </div>
+                  <div className="col-span-1 text-right">
+                    <span className="text-sm text-gray-800">
+                      {r.serverSuggested != null
+                        ? r.serverSuggested.toFixed(1)
+                        : "–"}
+                    </span>
+                  </div>
+                  <div className="col-span-2 text-right">
+                    <input
+                      type="text"
+                      className="w-20 text-right rounded-full border px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none border-gray-300 bg-white"
+                      placeholder="bijv. 7.5"
+                      value={
+                        r.rowGroupGrade != null &&
+                        !Number.isNaN(r.rowGroupGrade)
+                          ? r.rowGroupGrade.toFixed(1)
+                          : ""
+                      }
+                      onChange={(e) =>
+                        handleUpdateTeamGroupGrade(r.teamNumber, e.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="col-span-1 text-right">
+                    <span
+                      className={`text-sm ${
+                        r.gcf < 0.9
+                          ? "text-red-600"
+                          : r.gcf !== 1
+                            ? "text-amber-600"
+                            : "text-gray-800"
+                      }`}
+                    >
+                      {r.gcf.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="col-span-1 text-right">
+                    <input
+                      type="text"
+                      className={`w-16 text-right rounded-full border px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none ${
+                        finalGrade(r) === 0
+                          ? "border-amber-300 bg-amber-50"
+                          : "border-gray-300 bg-white"
+                      }`}
+                      value={finalGrade(r).toFixed(1)}
+                      onChange={(e) =>
+                        handleUpdateOverride(r.user_id, e.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="col-span-3">
+                    <AutoTextarea
+                      value={r.comment ?? ""}
+                      onChange={(v) => handleUpdateComment(r.user_id, v)}
+                      placeholder="Toelichting / motivatie (optioneel)"
+                    />
+                  </div>
+                </div>
+              ))}
+
+              {/* Gemiddelde rij */}
+              {stats.hasData && (
+                <div className="grid grid-cols-12 gap-3 px-4 py-3 text-sm items-center bg-gray-50 border-t border-gray-200">
+                  <div className="col-span-1 text-right text-xs font-medium text-gray-700">
+                    —
+                  </div>
+                  <div className="col-span-2 font-medium text-gray-900">
+                    Gemiddelde (op basis van filter)
+                  </div>
+                  <div className="col-span-1" />
+                  <div className="col-span-1 text-right font-medium text-gray-800">
+                    {stats.avgProposal.toFixed(1)}
+                  </div>
+                  <div className="col-span-2 text-right font-medium text-gray-800">
+                    {stats.avgGroupGrade.toFixed(1)}
+                  </div>
+                  <div className="col-span-1 text-right font-medium text-gray-800">
+                    {stats.avgGcf.toFixed(2)}
+                  </div>
+                  <div className="col-span-1 text-right font-semibold text-gray-900">
+                    {stats.avgFinal.toFixed(1)}
+                  </div>
+                  <div className="col-span-3 text-xs text-gray-500">—</div>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* Uitleg onder de tabel */}
+        <section className="text-xs text-gray-500 leading-relaxed">
+          <p>
+            Toelichting: het <span className="font-medium">voorstelcijfer</span>{" "}
+            komt uit de beoordeling van de docent en/of berekening in de app.
+            Het <span className="font-medium">groepscijfer</span> vul je per
+            team in en geldt voor alle leerlingen in dat team. De{" "}
+            <span className="font-medium">GCF</span> (Group Correction Factor)
+            is gebaseerd op peer- en self-evaluaties. Het voorgestelde
+            eindcijfer is in de praktijk: groepscijfer × GCF (afgerond op één
+            decimaal). Je kunt het{" "}
+            <span className="font-medium">eindcijfer</span> altijd handmatig
+            corrigeren in de tabel; jouw aanpassing overschrijft dan het
+            voorstel.
+          </p>
         </section>
       </div>
     </>
@@ -476,33 +558,41 @@ export default function GradesPageInner() {
       setSortDir("asc");
     }
   }
+
+  function handleUpdateTeamGroupGrade(
+    teamNumber: number | null | undefined,
+    value: string,
+  ) {
+    if (teamNumber == null) return;
+    setAutoSaveState("saving");
+    const num = Number(value.replace(",", "."));
+    const newGrade = Number.isNaN(num) ? null : num;
+
+    setRows((all) =>
+      all.map((x) =>
+        x.teamNumber === teamNumber ? { ...x, rowGroupGrade: newGrade } : x,
+      ),
+    );
+  }
+
+  function handleUpdateOverride(userId: number, value: string) {
+    setAutoSaveState("saving");
+    const num = Number(value.replace(",", "."));
+    const newVal = Number.isNaN(num) ? null : num;
+    setRows((all) =>
+      all.map((x) => (x.user_id === userId ? { ...x, override: newVal } : x)),
+    );
+  }
+
+  function handleUpdateComment(userId: number, value: string) {
+    setAutoSaveState("saving");
+    setRows((all) =>
+      all.map((x) => (x.user_id === userId ? { ...x, comment: value } : x)),
+    );
+  }
 }
 
 // --- UI helpers ---
-function Th({
-  children,
-  onClick,
-  active,
-  dir,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  active?: boolean;
-  dir?: "asc" | "desc";
-}) {
-  return (
-    <th
-      className="text-left py-2 px-2 cursor-pointer select-none"
-      onClick={onClick}
-    >
-      <span className="inline-flex items-center gap-1">
-        {children}
-        {active && <span>{dir === "asc" ? "▲" : "▼"}</span>}
-      </span>
-    </th>
-  );
-}
-
 function AutoTextarea({
   value,
   onChange,
@@ -523,7 +613,7 @@ function AutoTextarea({
   return (
     <textarea
       ref={ref}
-      className="w-full border rounded-lg px-2 py-1 leading-snug"
+      className="w-full rounded-xl border border-gray-300 px-3 py-2 text-xs leading-snug resize-none h-12 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
       placeholder={placeholder}
       value={value}
       onChange={(e) => {
@@ -531,7 +621,7 @@ function AutoTextarea({
         if (ref.current) resize(ref.current);
       }}
       rows={2}
-      style={{ resize: "vertical", maxHeight: 240 }}
+      style={{ maxHeight: 240 }}
     />
   );
 }
