@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, desc
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import User, Client, ClientLog, ClientProjectLink, Project
@@ -25,11 +25,310 @@ from app.api.v1.schemas.clients import (
     ClientLogListOut,
     ReminderListOut,
     ReminderOut,
+    DashboardKPIOut,
+    ClientInsightItem,
+    ClientInsightListOut,
+    RecentCommunicationItem,
+    RecentCommunicationListOut,
 )
 from app.infra.services.reminder_service import ReminderService
 from app.infra.services.email_template_service import EmailTemplateService
 
 router = APIRouter(prefix="/clients", tags=["clients"])
+
+
+# ============ Dashboard Endpoints ============
+
+
+@router.get("/dashboard/kpi", response_model=DashboardKPIOut)
+def get_dashboard_kpi(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """
+    Get KPI statistics for dashboard: active clients, projects this year, at-risk count
+    """
+    current_year = datetime.now().year
+    last_year = current_year - 1
+    one_year_ago = datetime.now() - timedelta(days=365)
+    
+    # Active clients
+    active_clients = (
+        db.query(func.count(Client.id))
+        .filter(Client.school_id == user.school_id, Client.active.is_(True))
+        .scalar()
+        or 0
+    )
+    
+    # Projects this year
+    projects_this_year = (
+        db.query(func.count(ClientProjectLink.id.distinct()))
+        .join(Project)
+        .join(Client)
+        .filter(
+            Client.school_id == user.school_id,
+            func.extract("year", Project.created_at) == current_year,
+        )
+        .scalar()
+        or 0
+    )
+    
+    # At-risk clients (no project in last year)
+    # Get all clients
+    all_clients = (
+        db.query(Client.id)
+        .filter(Client.school_id == user.school_id, Client.active.is_(True))
+        .all()
+    )
+    
+    at_risk_count = 0
+    for (client_id,) in all_clients:
+        # Check if client has any project in the last year
+        last_project = (
+            db.query(ClientProjectLink)
+            .join(Project)
+            .filter(
+                ClientProjectLink.client_id == client_id,
+                Project.created_at >= one_year_ago,
+            )
+            .first()
+        )
+        if not last_project:
+            at_risk_count += 1
+    
+    # Active clients from last year
+    active_clients_last_year = (
+        db.query(func.count(Client.id))
+        .filter(
+            Client.school_id == user.school_id,
+            Client.active.is_(True),
+            Client.created_at < datetime(current_year, 1, 1),
+        )
+        .scalar()
+        or 0
+    )
+    
+    change_from_last_year = active_clients - active_clients_last_year
+    
+    return DashboardKPIOut(
+        active_clients=active_clients,
+        projects_this_year=projects_this_year,
+        at_risk_count=at_risk_count,
+        change_from_last_year=change_from_last_year,
+    )
+
+
+@router.get("/dashboard/new-clients", response_model=ClientInsightListOut)
+def get_new_clients(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    limit: int = Query(3, ge=1, le=100),
+):
+    """
+    Get recently added clients
+    """
+    # Get total count
+    total = (
+        db.query(func.count(Client.id))
+        .filter(Client.school_id == user.school_id)
+        .scalar()
+        or 0
+    )
+    
+    # Get recent clients ordered by creation date
+    clients = (
+        db.query(Client)
+        .filter(Client.school_id == user.school_id)
+        .order_by(desc(Client.created_at))
+        .limit(limit)
+        .all()
+    )
+    
+    items = [
+        ClientInsightItem(
+            id=client.id,
+            organization=client.organization,
+            sector=client.sector,
+            created_at=client.created_at.strftime("%Y-%m-%d"),
+        )
+        for client in clients
+    ]
+    
+    return ClientInsightListOut(
+        items=items,
+        total=total,
+        has_more=total > limit,
+    )
+
+
+@router.get("/dashboard/top-collaborations", response_model=ClientInsightListOut)
+def get_top_collaborations(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    limit: int = Query(3, ge=1, le=100),
+):
+    """
+    Get clients with most projects/collaborations
+    """
+    # Get clients with project counts
+    client_project_counts = (
+        db.query(
+            Client.id,
+            Client.organization,
+            Client.sector,
+            func.count(ClientProjectLink.id).label("project_count"),
+            func.min(ClientProjectLink.created_at).label("first_project"),
+        )
+        .join(ClientProjectLink, Client.id == ClientProjectLink.client_id)
+        .filter(Client.school_id == user.school_id)
+        .group_by(Client.id, Client.organization, Client.sector)
+        .order_by(desc("project_count"))
+        .limit(limit)
+        .all()
+    )
+    
+    # Get total count of clients with at least one project
+    total = (
+        db.query(func.count(func.distinct(Client.id)))
+        .join(ClientProjectLink, Client.id == ClientProjectLink.client_id)
+        .filter(Client.school_id == user.school_id)
+        .scalar()
+        or 0
+    )
+    
+    items = []
+    for client_id, organization, sector, project_count, first_project in client_project_counts:
+        # Calculate years active
+        years_active = 0
+        if first_project:
+            years_active = max(1, (datetime.now() - first_project).days // 365)
+        
+        items.append(
+            ClientInsightItem(
+                id=client_id,
+                organization=organization,
+                sector=sector,
+                project_count=project_count,
+                years_active=years_active,
+            )
+        )
+    
+    return ClientInsightListOut(
+        items=items,
+        total=total,
+        has_more=total > limit,
+    )
+
+
+@router.get("/dashboard/at-risk", response_model=ClientInsightListOut)
+def get_at_risk_clients(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    limit: int = Query(3, ge=1, le=100),
+):
+    """
+    Get clients at risk of dropping out (no projects in > 1 year)
+    """
+    one_year_ago = datetime.now() - timedelta(days=365)
+    
+    # Get all active clients
+    all_clients = (
+        db.query(Client)
+        .filter(Client.school_id == user.school_id, Client.active.is_(True))
+        .all()
+    )
+    
+    at_risk_clients = []
+    for client in all_clients:
+        # Get the most recent project
+        last_project = (
+            db.query(ClientProjectLink)
+            .join(Project)
+            .filter(ClientProjectLink.client_id == client.id)
+            .order_by(desc(Project.created_at))
+            .first()
+        )
+        
+        # Check if last project is more than a year ago (or no projects at all)
+        if not last_project or last_project.project.created_at < one_year_ago:
+            last_active = None
+            if last_project:
+                last_active = last_project.project.created_at.strftime("%Y-%m-%d")
+            
+            at_risk_clients.append({
+                "client": client,
+                "last_active": last_active,
+                "last_project_date": last_project.project.created_at if last_project else None,
+            })
+    
+    # Sort by last active date (oldest first)
+    at_risk_clients.sort(
+        key=lambda x: x["last_project_date"] if x["last_project_date"] else datetime.min
+    )
+    
+    total = len(at_risk_clients)
+    at_risk_clients = at_risk_clients[:limit]
+    
+    items = [
+        ClientInsightItem(
+            id=item["client"].id,
+            organization=item["client"].organization,
+            sector=item["client"].sector,
+            last_active=item["last_active"],
+        )
+        for item in at_risk_clients
+    ]
+    
+    return ClientInsightListOut(
+        items=items,
+        total=total,
+        has_more=total > limit,
+    )
+
+
+@router.get("/dashboard/recent-communications", response_model=RecentCommunicationListOut)
+def get_recent_communications(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    limit: int = Query(10, ge=1, le=100),
+):
+    """
+    Get recent communication log entries
+    """
+    # Get recent log entries with client information
+    logs = (
+        db.query(ClientLog, Client)
+        .join(Client, ClientLog.client_id == Client.id)
+        .filter(Client.school_id == user.school_id)
+        .order_by(desc(ClientLog.created_at))
+        .limit(limit)
+        .all()
+    )
+    
+    items = [
+        RecentCommunicationItem(
+            id=log.id,
+            title=log.log_type,
+            organization=client.organization,
+            client_id=client.id,
+            date=log.created_at.strftime("%Y-%m-%d"),
+            log_type=log.log_type,
+        )
+        for log, client in logs
+    ]
+    
+    total = (
+        db.query(func.count(ClientLog.id))
+        .join(Client, ClientLog.client_id == Client.id)
+        .filter(Client.school_id == user.school_id)
+        .scalar()
+        or 0
+    )
+    
+    return RecentCommunicationListOut(
+        items=items,
+        total=total,
+    )
 
 
 @router.get("/upcoming-reminders", response_model=ReminderListOut)

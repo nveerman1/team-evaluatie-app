@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ClientFormModal } from "@/components/clients/ClientFormModal";
 import { ClientsList } from "@/components/clients/ClientsList";
+import { clientService } from "@/services/client.service";
 
 // Helper function for building mailto links
 function buildMailto({ to, bcc, subject, body }: { to?: string; bcc?: string; subject: string; body: string }) {
@@ -15,74 +16,6 @@ function buildMailto({ to, bcc, subject, body }: { to?: string; bcc?: string; su
   }
   return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
-
-const mockClients = [
-  {
-    id: "1",
-    organization: "Greystar",
-    contactName: "Sanne de Vries",
-    email: "sanne.devries@greystar.nl",
-    level: "Bovenbouw",
-    sector: "Vastgoed",
-    projectsThisYear: 3,
-    lastActive: "2025-03-10",
-    status: "Actief",
-    tags: ["Duurzaamheid", "Mixed-use"],
-    hadProjectLastYear: true,
-  },
-  {
-    id: "2",
-    organization: "Koninklijke Marine",
-    contactName: "Richard Gans",
-    email: "r.gans@mindef.nl",
-    level: "Bovenbouw",
-    sector: "Defensie",
-    projectsThisYear: 1,
-    lastActive: "2025-01-22",
-    status: "Actief",
-    tags: ["Defensie"],
-    hadProjectLastYear: true,
-  },
-  {
-    id: "3",
-    organization: "Rijndam Revalidatie",
-    contactName: "Lotte Janssen",
-    email: "l.janssen@rijndam.nl",
-    level: "Onderbouw",
-    sector: "Zorg",
-    projectsThisYear: 0,
-    lastActive: "2023-11-05",
-    status: "Inactief",
-    tags: ["Healthcare"],
-    hadProjectLastYear: false,
-  },
-  {
-    id: "4",
-    organization: "NS",
-    contactName: "Pieter Jansen",
-    email: "contact@ns.nl",
-    level: "Bovenbouw",
-    sector: "Mobiliteit",
-    projectsThisYear: 2,
-    lastActive: "2025-02-15",
-    status: "Actief",
-    tags: ["Mobiliteit", "Duurzaamheid"],
-    hadProjectLastYear: true,
-  },
-  {
-    id: "5",
-    organization: "Eneco",
-    contactName: "Maria van den Berg",
-    email: "info@eneco.nl",
-    level: "Onderbouw",
-    sector: "Energie",
-    projectsThisYear: 1,
-    lastActive: "2024-12-10",
-    status: "Actief",
-    tags: ["Duurzaamheid", "Circulaire economie"],
-    hadProjectLastYear: true,
-  },
-];
 
 export default function ClientsPage() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "list" | "communication">("dashboard");
@@ -165,23 +98,78 @@ export default function ClientsPage() {
 
 // Tab 1: Dashboard - Inzicht & relatie-health
 function DashboardTab() {
+  const [kpiData, setKpiData] = useState<any>(null);
+  const [newClients, setNewClients] = useState<any>(null);
+  const [topCollaborations, setTopCollaborations] = useState<any>(null);
+  const [atRiskClients, setAtRiskClients] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true);
+        const [kpi, newClientsData, topCollab, atRisk] = await Promise.all([
+          clientService.getDashboardKPI(),
+          clientService.getNewClients(3),
+          clientService.getTopCollaborations(3),
+          clientService.getAtRiskClients(3),
+        ]);
+        setKpiData(kpi);
+        setNewClients(newClientsData);
+        setTopCollaborations(topCollab);
+        setAtRiskClients(atRisk);
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err);
+        setError("Er is een fout opgetreden bij het laden van de gegevens.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-slate-500">Laden...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+        {error}
+      </div>
+    );
+  }
+
+  const avgProjectsPerClient = kpiData?.active_clients > 0 
+    ? (kpiData.projects_this_year / kpiData.active_clients).toFixed(1)
+    : "0";
+
   return (
     <>
       {/* KPI Cards in one row */}
       <div className="grid grid-cols-3 gap-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs text-slate-500">Actieve opdrachtgevers</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">18</p>
-          <p className="mt-1 text-[11px] text-emerald-600">+4 t.o.v. vorig jaar</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-900">{kpiData?.active_clients || 0}</p>
+          {kpiData?.change_from_last_year !== 0 && (
+            <p className={`mt-1 text-[11px] ${kpiData?.change_from_last_year > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+              {kpiData?.change_from_last_year > 0 ? '+' : ''}{kpiData?.change_from_last_year} t.o.v. vorig jaar
+            </p>
+          )}
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs text-slate-500">Projecten dit jaar</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">32</p>
-          <p className="mt-1 text-[11px] text-slate-500">Gem. 1,8 per opdrachtgever</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-900">{kpiData?.projects_this_year || 0}</p>
+          <p className="mt-1 text-[11px] text-slate-500">Gem. {avgProjectsPerClient} per opdrachtgever</p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs text-slate-500">Risico op afhaak</p>
-          <p className="mt-1 text-2xl font-semibold text-amber-600">5</p>
+          <p className="mt-1 text-2xl font-semibold text-amber-600">{kpiData?.at_risk_count || 0}</p>
           <p className="mt-1 text-[11px] text-amber-600">&gt; 1 jaar geen project</p>
         </div>
       </div>
@@ -195,19 +183,32 @@ function DashboardTab() {
           </h3>
           <p className="text-xs text-slate-600 mb-3">Recent toegevoegde organisaties</p>
           <div className="space-y-2">
-            {[
-              { name: "Deloitte", sector: "Consultancy", date: "2024-09-15" },
-              { name: "Eneco", sector: "Energie", date: "2024-10-03" },
-            ].map((client, idx) => (
-              <div key={idx} className="flex items-center justify-between p-2 bg-white rounded-lg border border-emerald-100">
-                <div>
-                  <span className="text-sm text-slate-800 font-medium">{client.name}</span>
-                  <span className="text-xs text-slate-500 ml-2">· {client.sector}</span>
-                </div>
-                <span className="text-xs text-slate-500">{client.date}</span>
-              </div>
-            ))}
+            {newClients?.items && newClients.items.length > 0 ? (
+              newClients.items.map((client: any) => (
+                <Link 
+                  key={client.id} 
+                  href={`/teacher/clients/${client.id}`}
+                  className="flex items-center justify-between p-2 bg-white rounded-lg border border-emerald-100 hover:bg-emerald-50/50 transition-colors"
+                >
+                  <div>
+                    <span className="text-sm text-slate-800 font-medium">{client.organization}</span>
+                    {client.sector && <span className="text-xs text-slate-500 ml-2">· {client.sector}</span>}
+                  </div>
+                  <span className="text-xs text-slate-500">{client.created_at}</span>
+                </Link>
+              ))
+            ) : (
+              <p className="text-xs text-slate-500 py-2">Geen nieuwe opdrachtgevers</p>
+            )}
           </div>
+          {newClients?.has_more && (
+            <button 
+              onClick={() => {/* Navigate to list view */}}
+              className="mt-3 w-full text-xs text-emerald-700 hover:text-emerald-800 font-medium"
+            >
+              Bekijk alle {newClients.total} opdrachtgevers →
+            </button>
+          )}
         </section>
 
         {/* Top-samenwerkingen */}
@@ -217,20 +218,32 @@ function DashboardTab() {
           </h3>
           <p className="text-xs text-slate-600 mb-3">Organisaties met meeste projecten / jaren samenwerking</p>
           <div className="space-y-2">
-            {[
-              { name: "Greystar", projects: 12, years: "5 jaar" },
-              { name: "Koninklijke Marine", projects: 8, years: "3 jaar" },
-              { name: "NS", projects: 6, years: "4 jaar" },
-            ].map((client, idx) => (
-              <div key={idx} className="flex items-center justify-between p-2 bg-white rounded-lg border border-sky-100">
-                <div>
-                  <span className="text-sm text-slate-800 font-medium">{client.name}</span>
-                  <span className="text-xs text-slate-500 ml-2">· {client.years}</span>
-                </div>
-                <span className="text-xs font-medium text-sky-700">{client.projects} projecten</span>
-              </div>
-            ))}
+            {topCollaborations?.items && topCollaborations.items.length > 0 ? (
+              topCollaborations.items.map((client: any) => (
+                <Link 
+                  key={client.id}
+                  href={`/teacher/clients/${client.id}`}
+                  className="flex items-center justify-between p-2 bg-white rounded-lg border border-sky-100 hover:bg-sky-50/50 transition-colors"
+                >
+                  <div>
+                    <span className="text-sm text-slate-800 font-medium">{client.organization}</span>
+                    {client.years_active && <span className="text-xs text-slate-500 ml-2">· {client.years_active} jaar</span>}
+                  </div>
+                  <span className="text-xs font-medium text-sky-700">{client.project_count} projecten</span>
+                </Link>
+              ))
+            ) : (
+              <p className="text-xs text-slate-500 py-2">Geen samenwerkingen gevonden</p>
+            )}
           </div>
+          {topCollaborations?.has_more && (
+            <button 
+              onClick={() => {/* Navigate to list view */}}
+              className="mt-3 w-full text-xs text-sky-700 hover:text-sky-800 font-medium"
+            >
+              Bekijk alle {topCollaborations.total} opdrachtgevers →
+            </button>
+          )}
         </section>
 
         {/* Risico op afhaak */}
@@ -240,17 +253,31 @@ function DashboardTab() {
           </h3>
           <p className="text-xs text-slate-600 mb-3">Organisaties waarbij lastActive &gt; 1 jaar geleden</p>
           <div className="space-y-2">
-            {[
-              { name: "Rijndam Revalidatie", lastActive: "2023-11-05" },
-              { name: "Havenbedrijf Rotterdam", lastActive: "2023-09-12" },
-              { name: "Gemeente Den Haag", lastActive: "2023-08-20" },
-            ].map((client, idx) => (
-              <div key={idx} className="flex flex-col p-2 bg-white rounded-lg border border-amber-100">
-                <span className="text-sm text-slate-800 font-medium">{client.name}</span>
-                <span className="text-xs text-slate-500">Laatst: {client.lastActive}</span>
-              </div>
-            ))}
+            {atRiskClients?.items && atRiskClients.items.length > 0 ? (
+              atRiskClients.items.map((client: any) => (
+                <Link 
+                  key={client.id}
+                  href={`/teacher/clients/${client.id}`}
+                  className="flex flex-col p-2 bg-white rounded-lg border border-amber-100 hover:bg-amber-50/50 transition-colors"
+                >
+                  <span className="text-sm text-slate-800 font-medium">{client.organization}</span>
+                  <span className="text-xs text-slate-500">
+                    Laatst: {client.last_active || "Nooit"}
+                  </span>
+                </Link>
+              ))
+            ) : (
+              <p className="text-xs text-slate-500 py-2">Geen risico-opdrachtgevers</p>
+            )}
           </div>
+          {atRiskClients?.has_more && (
+            <button 
+              onClick={() => {/* Navigate to list view */}}
+              className="mt-3 w-full text-xs text-amber-700 hover:text-amber-800 font-medium"
+            >
+              Bekijk alle {atRiskClients.total} opdrachtgevers →
+            </button>
+          )}
         </section>
       </div>
     </>
@@ -268,16 +295,35 @@ function CommunicationTab() {
   const [schoolYear, setSchoolYear] = useState("2025–2026");
   const [level, setLevel] = useState("Alle");
   const [template, setTemplate] = useState("opvolgmail");
-  const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [selectedClients, setSelectedClients] = useState<number[]>([]);
+  const [allClients, setAllClients] = useState<any[]>([]);
+  const [clientsLoading, setClientsLoading] = useState(true);
+
+  // Fetch all clients
+  useEffect(() => {
+    async function fetchClients() {
+      try {
+        setClientsLoading(true);
+        const data = await clientService.listClients({ per_page: 100 });
+        setAllClients(data.items);
+      } catch (err) {
+        console.error("Error fetching clients:", err);
+      } finally {
+        setClientsLoading(false);
+      }
+    }
+    fetchClients();
+  }, []);
 
   // Filter clients based on criteria
-  const filteredClients = mockClients.filter(client => {
-    if (!client.hadProjectLastYear) return false;
+  // For simplicity, we'll show all active clients that can be filtered by level
+  const filteredClients = allClients.filter(client => {
+    if (!client.active) return false;
     if (level !== "Alle" && client.level !== level) return false;
     return true;
   });
 
-  const toggleClient = (clientId: string) => {
+  const toggleClient = (clientId: number) => {
     if (selectedClients.includes(clientId)) {
       setSelectedClients(selectedClients.filter(id => id !== clientId));
     } else {
@@ -332,30 +378,24 @@ function CommunicationTab() {
     window.open(mailtoLink, '_self');
   };
 
-  // Mock recent communications
-  const recentCommunications = [
-    {
-      id: "1",
-      title: "Bedankmail eindpresentatie",
-      organization: "Greystar",
-      date: "2025-03-10",
-      clientId: "1",
-    },
-    {
-      id: "2",
-      title: "Uitnodiging tussenpresentatie",
-      organization: "Koninklijke Marine",
-      date: "2025-02-15",
-      clientId: "2",
-    },
-    {
-      id: "3",
-      title: "Startproject-mail",
-      organization: "NS",
-      date: "2025-01-20",
-      clientId: "4",
-    },
-  ];
+  // Fetch recent communications
+  const [recentCommunications, setRecentCommunications] = useState<any[]>([]);
+  const [communicationsLoading, setCommunicationsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchCommunications() {
+      try {
+        setCommunicationsLoading(true);
+        const data = await clientService.getRecentCommunications(3);
+        setRecentCommunications(data.items);
+      } catch (err) {
+        console.error("Error fetching communications:", err);
+      } finally {
+        setCommunicationsLoading(false);
+      }
+    }
+    fetchCommunications();
+  }, []);
 
   return (
     <>
@@ -425,7 +465,11 @@ function CommunicationTab() {
           </div>
 
           <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 max-h-80 overflow-y-auto">
-            {filteredClients.length === 0 ? (
+            {clientsLoading ? (
+              <div className="p-4 text-center text-slate-500 text-sm">
+                Laden...
+              </div>
+            ) : filteredClients.length === 0 ? (
               <div className="p-4 text-center text-slate-500 text-sm">
                 Geen opdrachtgevers gevonden die aan de criteria voldoen.
               </div>
@@ -443,9 +487,9 @@ function CommunicationTab() {
                   />
                   <div className="flex-1">
                     <div className="text-sm font-medium text-slate-900">{client.organization}</div>
-                    <div className="text-xs text-slate-500">{client.email}</div>
+                    <div className="text-xs text-slate-500">{client.email || 'Geen email'}</div>
                   </div>
-                  <div className="text-xs text-slate-500">{client.level}</div>
+                  <div className="text-xs text-slate-500">{client.level || 'N/A'}</div>
                 </label>
               ))
             )}
@@ -471,27 +515,33 @@ function CommunicationTab() {
       {/* Recent communications */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900 mb-4">Laatste communicatie</h2>
-        <div className="space-y-3">
-          {recentCommunications.map((comm) => (
-            <div 
-              key={comm.id}
-              className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50"
-            >
-              <div className="flex-1">
-                <div className="text-sm font-medium text-slate-900">{comm.title}</div>
-                <div className="text-xs text-slate-500 mt-0.5">
-                  {comm.organization} · {comm.date}
-                </div>
-              </div>
-              <Link
-                href={`/teacher/clients/${comm.clientId}`}
-                className="text-xs font-medium text-sky-600 hover:text-sky-700 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-white"
+        {communicationsLoading ? (
+          <div className="text-center py-8 text-slate-500">Laden...</div>
+        ) : recentCommunications.length > 0 ? (
+          <div className="space-y-3">
+            {recentCommunications.map((comm) => (
+              <div 
+                key={comm.id}
+                className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50"
               >
-                Opdrachtgever openen
-              </Link>
-            </div>
-          ))}
-        </div>
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-slate-900">{comm.title}</div>
+                  <div className="text-xs text-slate-500 mt-0.5">
+                    {comm.organization} · {comm.date}
+                  </div>
+                </div>
+                <Link
+                  href={`/teacher/clients/${comm.client_id}`}
+                  className="text-xs font-medium text-sky-600 hover:text-sky-700 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-white"
+                >
+                  Opdrachtgever openen
+                </Link>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-slate-500">Nog geen communicatie gelogd</div>
+        )}
       </section>
     </>
   );
