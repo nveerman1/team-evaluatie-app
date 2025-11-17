@@ -200,12 +200,12 @@ export default function EvaluationDashboardPage() {
   return (
     <>
       {/* Page Header */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-slate-200/70">
         <header className="px-6 py-6 max-w-6xl mx-auto">
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-slate-900">
             Evaluatie Dashboard
           </h1>
-          <p className="text-gray-600 mt-1 text-sm">
+          <p className="text-slate-600 mt-1 text-sm">
             Bekijk de voortgang en resultaten van deze evaluatie
           </p>
         </header>
@@ -215,20 +215,17 @@ export default function EvaluationDashboardPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         
         {/* Tabs Navigation */}
-        <div className="border-b border-gray-200">
-          <nav className="flex gap-8" aria-label="Tabs">
+        <div className="border-b border-slate-200">
+          <nav className="flex gap-6 text-sm" aria-label="Tabs">
             {tabs.map((tab) => (
               <Link
                 key={tab.id}
                 href={tab.href}
-                className={`
-                  py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                  ${
-                    activeTab === tab.id
-                      ? "border-black text-black"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }
-                `}
+                className={`py-3 border-b-2 -mb-px transition-colors ${
+                  activeTab === tab.id
+                    ? "border-blue-600 text-blue-700 font-medium"
+                    : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
+                }`}
                 aria-current={activeTab === tab.id ? "page" : undefined}
               >
                 {tab.label}
@@ -253,19 +250,19 @@ export default function EvaluationDashboardPage() {
           {/* Student Progress Table */}
           <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">
+              <h2 className="text-lg font-semibold text-slate-900">
                 Voortgang per leerling
               </h2>
               <div className="flex gap-2">
                 <button
                   onClick={handleSendReminders}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm font-medium shadow-sm"
                 >
                   ✉️ Stuur herinnering
                 </button>
                 <button
                   onClick={handleExportCSV}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium"
+                  className="px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 text-sm font-medium shadow-sm"
                 >
                   📥 Export naar CSV
                 </button>
@@ -274,13 +271,13 @@ export default function EvaluationDashboardPage() {
 
             {/* Filters */}
             <div className="flex gap-2 items-center">
-              <label className="text-sm font-medium">Filter:</label>
+              <label className="text-sm font-medium text-slate-600">Filter:</label>
               <button
                 onClick={() => setFilterType("all")}
                 className={`px-3 py-1 rounded-lg text-sm ${
                   filterType === "all"
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-100 hover:bg-gray-200"
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-100 hover:bg-slate-200"
                 }`}
               >
                 Alle leerlingen
@@ -289,8 +286,8 @@ export default function EvaluationDashboardPage() {
                 onClick={() => setFilterType("not_started")}
                 className={`px-3 py-1 rounded-lg text-sm ${
                   filterType === "not_started"
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-100 hover:bg-gray-200"
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-100 hover:bg-slate-200"
                 }`}
               >
                 Niet gestart
@@ -299,8 +296,8 @@ export default function EvaluationDashboardPage() {
                 onClick={() => setFilterType("partial")}
                 className={`px-3 py-1 rounded-lg text-sm ${
                   filterType === "partial"
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-100 hover:bg-gray-200"
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-100 hover:bg-slate-200"
                 }`}
               >
                 Deels voltooid
@@ -309,8 +306,8 @@ export default function EvaluationDashboardPage() {
                 onClick={() => setFilterType("completed")}
                 className={`px-3 py-1 rounded-lg text-sm ${
                   filterType === "completed"
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-100 hover:bg-gray-200"
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-100 hover:bg-slate-200"
                 }`}
               >
                 Voltooid
@@ -318,118 +315,150 @@ export default function EvaluationDashboardPage() {
             </div>
 
             {/* Table */}
-            <div className="overflow-x-auto border rounded-xl">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th
-                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort("name")}
-                    >
-                      Naam {sortField === "name" && (sortDirection === "asc" ? "↑" : "↓")}
-                    </th>
-                    <th
-                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort("class")}
-                    >
-                      Klas {sortField === "class" && (sortDirection === "asc" ? "↑" : "↓")}
-                    </th>
-                    <th
-                      className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort("self_assessment")}
-                    >
-                      Zelfbeoordeling{" "}
-                      {sortField === "self_assessment" && (sortDirection === "asc" ? "↑" : "↓")}
-                    </th>
-                    <th
-                      className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort("peer_reviews")}
-                    >
-                      Peer reviews{" "}
-                      {sortField === "peer_reviews" && (sortDirection === "asc" ? "↑" : "↓")}
-                    </th>
-                    <th
-                      className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort("reflection")}
-                    >
-                      Reflectie{" "}
-                      {sortField === "reflection" && (sortDirection === "asc" ? "↑" : "↓")}
-                    </th>
-                    <th
-                      className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort("progress")}
-                    >
-                      Totaal %{" "}
-                      {sortField === "progress" && (sortDirection === "asc" ? "↑" : "↓")}
-                    </th>
-                    <th
-                      className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort("last_activity")}
-                    >
-                      Laatste activiteit{" "}
-                      {sortField === "last_activity" && (sortDirection === "asc" ? "↑" : "↓")}
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-                      Signaal
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {filteredStudents.length === 0 ? (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-200 text-sm">
+                  <thead className="bg-slate-50">
                     <tr>
-                      <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
-                        Geen studenten gevonden
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredStudents.map((student) => (
-                      <tr key={student.user_id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-sm">
-                          {student.user_name}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
-                          {student.class_name || "-"}
-                        </td>
-                        <td className="px-4 py-3 text-center text-lg">
-                          {getStatusIcon(student.self_assessment_status)}
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm">
-                          {student.peer_reviews_given}/
-                          {student.peer_reviews_given_expected}
-                        </td>
-                        <td className="px-4 py-3 text-center text-lg">
-                          {getStatusIcon(student.reflection_status)}
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm font-medium">
-                          {student.total_progress_percent}%
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm text-gray-600">
-                          {formatLastActivity(student.last_activity)}
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm">
-                          {student.flags.length > 0 ? (
-                            <span
-                              className="cursor-help text-lg"
-                              title={student.flags.map(getFlagDescription).join("\n• ")}
-                            >
-                              ⚠️ {student.flags.length}
-                            </span>
-                          ) : (
-                            "-"
+                      <th
+                        className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                        onClick={() => handleSort("name")}
+                      >
+                        <div className="flex items-center gap-1">
+                          Naam
+                          {sortField === "name" && (
+                            <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
                           )}
+                        </div>
+                      </th>
+                      <th
+                        className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                        onClick={() => handleSort("class")}
+                      >
+                        <div className="flex items-center gap-1">
+                          Klas
+                          {sortField === "class" && (
+                            <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </div>
+                      </th>
+                      <th
+                        className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                        onClick={() => handleSort("self_assessment")}
+                      >
+                        <div className="flex items-center justify-center gap-1">
+                          Zelfbeoordeling
+                          {sortField === "self_assessment" && (
+                            <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </div>
+                      </th>
+                      <th
+                        className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                        onClick={() => handleSort("peer_reviews")}
+                      >
+                        <div className="flex items-center justify-center gap-1">
+                          Peer reviews
+                          {sortField === "peer_reviews" && (
+                            <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </div>
+                      </th>
+                      <th
+                        className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                        onClick={() => handleSort("reflection")}
+                      >
+                        <div className="flex items-center justify-center gap-1">
+                          Reflectie
+                          {sortField === "reflection" && (
+                            <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </div>
+                      </th>
+                      <th
+                        className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                        onClick={() => handleSort("progress")}
+                      >
+                        <div className="flex items-center justify-center gap-1">
+                          Totaal %
+                          {sortField === "progress" && (
+                            <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </div>
+                      </th>
+                      <th
+                        className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                        onClick={() => handleSort("last_activity")}
+                      >
+                        <div className="flex items-center justify-center gap-1">
+                          Laatste activiteit
+                          {sortField === "last_activity" && (
+                            <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                          )}
+                        </div>
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                        Signaal
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredStudents.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
+                          Geen studenten gevonden
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      filteredStudents.map((student) => (
+                        <tr key={student.user_id} className="bg-white hover:bg-slate-50">
+                          <td className="px-5 py-3 text-sm text-slate-800 font-medium">
+                            {student.user_name}
+                          </td>
+                          <td className="px-5 py-3 text-sm text-slate-600">
+                            {student.class_name || "-"}
+                          </td>
+                          <td className="px-4 py-3 text-center text-lg">
+                            {getStatusIcon(student.self_assessment_status)}
+                          </td>
+                          <td className="px-4 py-3 text-center text-sm text-slate-800">
+                            {student.peer_reviews_given}/
+                            {student.peer_reviews_given_expected}
+                          </td>
+                          <td className="px-4 py-3 text-center text-lg">
+                            {getStatusIcon(student.reflection_status)}
+                          </td>
+                          <td className="px-4 py-3 text-center text-sm font-medium text-slate-900">
+                            {student.total_progress_percent}%
+                          </td>
+                          <td className="px-4 py-3 text-center text-sm text-slate-600">
+                            {formatLastActivity(student.last_activity)}
+                          </td>
+                          <td className="px-4 py-3 text-center text-sm">
+                            {student.flags.length > 0 ? (
+                              <span
+                                className="cursor-help text-lg"
+                                title={student.flags.map(getFlagDescription).join("\n• ")}
+                              >
+                                ⚠️ {student.flags.length}
+                              </span>
+                            ) : (
+                              "-"
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </section>
         </>
         )}
 
         {evalIdNum == null && (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-500">
             Geen geldige evaluatie geselecteerd. Open het dashboard via een
             bestaande evaluatie.
           </p>
