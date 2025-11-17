@@ -50,12 +50,6 @@ const EVENT_LABELS: Record<EventType, string> = {
   reminder: "Reminder",
 };
 
-const STATUS_COLORS = {
-  not_started: "bg-gray-100 border-gray-300 text-gray-700",
-  in_progress: "bg-yellow-50 border-yellow-300 text-yellow-800",
-  completed: "bg-green-50 border-green-300 text-green-700",
-};
-
 export default function CalendarPage() {
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -625,7 +619,6 @@ function MonthView({ events, currentDate, onEventClick }: { events: CalendarEven
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  const firstDayOfMonth = new Date(year, month, 1);
   const lastDayOfMonth = new Date(year, month + 1, 0);
   const daysInMonth = lastDayOfMonth.getDate();
 
