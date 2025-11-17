@@ -327,21 +327,16 @@ export default function GradesPageInner() {
         </div>
 
         {/* Filters */}
-        <section className="bg-white rounded-2xl shadow-sm border border-gray-200 px-4 py-3 flex flex-wrap gap-3 items-center">
-          <div className="relative flex-1 min-w-[180px]">
-            <input
-              type="text"
-              className="w-full rounded-lg border border-gray-300 px-10 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none shadow-sm"
-              placeholder="Zoek op naam…"
-              value={searchName}
-              onChange={(e) => setSearchName(e.target.value)}
-            />
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
-              🔍
-            </span>
-          </div>
+        <div className="flex flex-wrap gap-3 items-center mb-4">
+          <input
+            type="text"
+            className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Zoek op naam…"
+            value={searchName}
+            onChange={(e) => setSearchName(e.target.value)}
+          />
           <select
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white min-w-[130px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+            className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             value={filterTeam}
             onChange={(e) => setFilterTeam(e.target.value)}
             title="Filter op team"
@@ -354,7 +349,7 @@ export default function GradesPageInner() {
             ))}
           </select>
           <select
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white min-w-[130px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+            className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             value={filterClass}
             onChange={(e) => setFilterClass(e.target.value)}
             title="Filter op klas"
@@ -366,7 +361,7 @@ export default function GradesPageInner() {
               </option>
             ))}
           </select>
-        </section>
+        </div>
 
         {loading && <p className="text-sm text-gray-500">Laden…</p>}
         {error && <p className="text-sm text-red-600">{error}</p>}
@@ -511,11 +506,10 @@ export default function GradesPageInner() {
                                   ? "border-amber-300 bg-amber-50"
                                   : "border-gray-300 bg-white"
                             }`}
-                            placeholder="auto"
                             value={
                               r.override != null && !Number.isNaN(r.override)
                                 ? r.override.toFixed(1)
-                                : ""
+                                : finalGrade(r).toFixed(1)
                             }
                             onChange={(e) =>
                               handleUpdateOverride(r.user_id, e.target.value)
@@ -572,27 +566,25 @@ export default function GradesPageInner() {
                 </div>
               </div>
             )}
+
+            {/* Legend footer */}
+            <div className="border-t border-slate-100 bg-slate-50/70 px-4 py-3 text-xs text-slate-500">
+              <p className="mb-2 font-medium">Leeswijzer</p>
+              <p>
+                Het <span className="font-medium">voorstelcijfer</span> komt uit de beoordeling van de docent en/of berekening in de app.
+                Het <span className="font-medium">groepscijfer</span> vul je per
+                team in en geldt voor alle leerlingen in dat team. De{" "}
+                <span className="font-medium">GCF</span> (Group Correction Factor)
+                is gebaseerd op peer- en self-evaluaties. Het voorgestelde
+                eindcijfer is in de praktijk: groepscijfer × GCF (afgerond op één
+                decimaal). Je kunt het{" "}
+                <span className="font-medium">eindcijfer</span> altijd handmatig
+                corrigeren in de tabel; jouw aanpassing overschrijft dan het
+                voorstel. Klik op het ✕ symbool om een individuele override te verwijderen.
+              </p>
+            </div>
           </section>
         )}
-
-        {/* Uitleg onder de tabel */}
-        <section className="bg-white rounded-2xl shadow-sm border border-gray-200 px-4 py-3">
-          <div className="border-t border-slate-100 bg-slate-50/70 px-4 py-3 text-xs text-slate-500 rounded-lg">
-            <p className="mb-2 font-medium">Leeswijzer</p>
-            <p>
-              Het <span className="font-medium">voorstelcijfer</span> komt uit de beoordeling van de docent en/of berekening in de app.
-              Het <span className="font-medium">groepscijfer</span> vul je per
-              team in en geldt voor alle leerlingen in dat team. De{" "}
-              <span className="font-medium">GCF</span> (Group Correction Factor)
-              is gebaseerd op peer- en self-evaluaties. Het voorgestelde
-              eindcijfer is in de praktijk: groepscijfer × GCF (afgerond op één
-              decimaal). Je kunt het{" "}
-              <span className="font-medium">eindcijfer</span> altijd handmatig
-              corrigeren in de tabel; jouw aanpassing overschrijft dan het
-              voorstel. Klik op het ✕ symbool om een individuele override te verwijderen.
-            </p>
-          </div>
-        </section>
       </div>
     </>
   );
@@ -611,6 +603,16 @@ export default function GradesPageInner() {
   ) {
     if (teamNumber == null) return;
     setAutoSaveState("saving");
+    // Handle empty string as null (clearing the group grade)
+    if (value.trim() === "") {
+      setRows((all) =>
+        all.map((x) =>
+          x.teamNumber === teamNumber ? { ...x, rowGroupGrade: null } : x,
+        ),
+      );
+      return;
+    }
+    // Replace comma with dot for decimal numbers
     const num = Number(value.replace(",", "."));
     const newGrade = Number.isNaN(num) ? null : num;
 
@@ -669,7 +671,7 @@ function AutoTextarea({
   }, [value]);
   function resize(el: HTMLTextAreaElement) {
     el.style.height = "0px";
-    el.style.height = Math.max(60, el.scrollHeight) + "px";
+    el.style.height = Math.max(40, el.scrollHeight) + "px";
   }
   return (
     <textarea
@@ -681,8 +683,8 @@ function AutoTextarea({
         onChange(e.target.value);
         if (ref.current) resize(ref.current);
       }}
-      rows={3}
-      style={{ minHeight: 60, maxHeight: 240 }}
+      rows={2}
+      style={{ minHeight: 40, maxHeight: 240 }}
     />
   );
 }
