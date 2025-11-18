@@ -121,7 +121,7 @@ export default function FeedbackPageInner() {
         const gs = normalizeToGroups(r.data);
         setGroups(gs);
         const map: Record<number, boolean> = {};
-        gs.forEach((g) => (map[g.student_id] = true)); // standaard alles open
+        gs.forEach((g) => (map[g.student_id] = false)); // standaard alles inklappen
         setExpanded(map);
       })
       .catch((e: any) =>
@@ -243,20 +243,20 @@ export default function FeedbackPageInner() {
   return (
     <>
       {/* Page Header */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-slate-200/70">
         <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-slate-900">
               Feedback
             </h1>
-            <p className="text-gray-600 mt-1 text-sm">
+            <p className="text-slate-600 mt-1 text-sm">
               Bekijk ontvangen peer- en zelfevaluaties
             </p>
           </div>
           {evalIdNum != null && (
             <a
               href={`/api/v1/evaluations/${evalIdStr}/feedback/export.csv`}
-              className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm"
             >
               Export CSV
             </a>
@@ -268,20 +268,17 @@ export default function FeedbackPageInner() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         
         {/* Tabs Navigation */}
-        <div className="border-b border-gray-200">
-          <nav className="flex gap-8" aria-label="Tabs">
+        <div className="border-b border-slate-200">
+          <nav className="flex gap-6 text-sm" aria-label="Tabs">
             {tabs.map((tab) => (
               <Link
                 key={tab.id}
                 href={tab.href}
-                className={`
-                  py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                  ${
-                    tab.id === "feedback"
-                      ? "border-black text-black"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }
-                `}
+                className={`py-3 border-b-2 -mb-px transition-colors ${
+                  tab.id === "feedback"
+                    ? "border-blue-600 text-blue-700 font-medium"
+                    : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
+                }`}
                 aria-current={tab.id === "feedback" ? "page" : undefined}
               >
                 {tab.label}
@@ -293,10 +290,10 @@ export default function FeedbackPageInner() {
         {/* View Mode Toggle */}
         <div className="flex items-center justify-between">
         <button
-          className={`px-4 py-2 rounded-lg border font-medium ${
+          className={`px-4 py-2 rounded-xl border border-slate-200 font-medium shadow-sm ${
             viewMode === "table"
-              ? "bg-blue-500 text-white"
-              : "bg-white hover:bg-gray-50"
+              ? "bg-blue-600 text-white hover:bg-blue-700"
+              : "bg-white text-slate-700 hover:bg-slate-50"
           }`}
           onClick={() => setViewMode(viewMode === "card" ? "table" : "card")}
         >
@@ -307,13 +304,13 @@ export default function FeedbackPageInner() {
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-3">
         <input
-          className="px-3 py-2 border rounded-lg w-80"
+          className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           placeholder="Zoek op student/criterium/tekst…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
         <select
-          className="px-3 py-2 border rounded-lg"
+          className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value as any)}
         >
@@ -324,7 +321,7 @@ export default function FeedbackPageInner() {
         {viewMode === "card" && (
           <>
             <button
-              className="px-3 py-2 border rounded-lg"
+              className="px-3 py-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 text-sm shadow-sm"
               onClick={() => setSortAsc((s) => !s)}
               title="Sorteer op studentnaam"
             >
@@ -332,13 +329,13 @@ export default function FeedbackPageInner() {
             </button>
             <div className="ml-auto flex gap-2">
               <button
-                className="px-3 py-2 border rounded-lg"
+                className="px-3 py-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 text-sm shadow-sm"
                 onClick={() => toggleAll(true)}
               >
                 Alles uitklappen
               </button>
               <button
-                className="px-3 py-2 border rounded-lg"
+                className="px-3 py-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 text-sm shadow-sm"
                 onClick={() => toggleAll(false)}
               >
                 Alles inklappen
@@ -348,15 +345,15 @@ export default function FeedbackPageInner() {
         )}
       </div>
 
-      {loading && <div className="text-gray-500">Laden…</div>}
+      {loading && <div className="text-slate-500">Laden…</div>}
       {err && (
-        <div className="p-3 rounded-lg bg-red-50 text-red-700">{err}</div>
+        <div className="p-3 rounded-xl bg-red-50 text-red-700 border border-red-200">{err}</div>
       )}
       {!loading && !err && viewMode === "card" && filteredSorted.length === 0 && (
-        <div className="text-gray-500">Geen feedback gevonden.</div>
+        <div className="text-slate-500">Geen feedback gevonden.</div>
       )}
       {!loading && !err && viewMode === "table" && filteredSortedComments.length === 0 && (
-        <div className="text-gray-500">Geen feedback gevonden.</div>
+        <div className="text-slate-500">Geen feedback gevonden.</div>
       )}
 
       {/* Card View */}
@@ -365,24 +362,24 @@ export default function FeedbackPageInner() {
           {filteredSorted.map((g) => {
             const open = !!expanded[g.student_id];
             return (
-              <article key={g.student_id} className="border rounded-2xl bg-white">
+              <article key={g.student_id} className="border border-slate-200 rounded-2xl bg-white shadow-sm">
                 <button
-                  className="w-full px-4 py-3 border-b flex items-center justify-between text-left"
+                  className="w-full px-4 py-3 border-b border-slate-200 flex items-center justify-between text-left hover:bg-slate-50"
                   onClick={() =>
                     setExpanded((prev) => ({ ...prev, [g.student_id]: !open }))
                   }
                 >
-                  <span className="font-semibold">{g.student_name}</span>
-                  <span className="text-sm text-gray-500">
+                  <span className="font-semibold text-slate-900">{g.student_name}</span>
+                  <span className="text-sm text-slate-500">
                     {g.comments.length} reacties {open ? "▾" : "▸"}
                   </span>
                 </button>
 
                 {open && (
-                  <ul className="divide-y">
+                  <ul className="divide-y divide-slate-100">
                     {g.comments.map((c, idx) => (
                       <li key={idx} className="p-4">
-                        <div className="text-xs text-gray-500 flex flex-wrap items-center gap-2">
+                        <div className="text-xs text-slate-500 flex flex-wrap items-center gap-2">
                           <span
                             className={`px-2 py-0.5 rounded-full ring-1 ${
                               c.type === "self"
@@ -401,17 +398,17 @@ export default function FeedbackPageInner() {
                             <span>van: {c.from_student_name}</span>
                           )}
                           {c.criterion_name && (
-                            <span className="px-2 py-0.5 rounded-full ring-1 ring-gray-200 bg-gray-50">
+                            <span className="px-2 py-0.5 rounded-full ring-1 ring-slate-200 bg-slate-50">
                               {c.criterion_name}
                             </span>
                           )}
                           {c.created_at && (
-                            <span className="text-gray-400">
+                            <span className="text-slate-400">
                               {formatDate(c.created_at)}
                             </span>
                           )}
                         </div>
-                        <p className="mt-2 whitespace-pre-wrap">{c.text}</p>
+                        <p className="mt-2 whitespace-pre-wrap text-slate-800">{c.text}</p>
                       </li>
                     ))}
                   </ul>
@@ -424,60 +421,60 @@ export default function FeedbackPageInner() {
 
       {/* Table View */}
       {viewMode === "table" && (
-        <section className="overflow-x-auto border rounded-2xl bg-white">
+        <section className="overflow-x-auto border border-slate-200 rounded-2xl bg-white shadow-sm">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
                 <th
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                  className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide uppercase cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort("student")}
                 >
                   Student {sortField === "student" && (sortAsc ? "↑" : "↓")}
                 </th>
                 <th
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                  className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide uppercase cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort("criterion")}
                 >
                   Criterium {sortField === "criterion" && (sortAsc ? "↑" : "↓")}
                 </th>
                 <th
-                  className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                  className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide uppercase cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort("type")}
                 >
                   Type {sortField === "type" && (sortAsc ? "↑" : "↓")}
                 </th>
                 <th
-                  className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                  className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide uppercase cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort("score")}
                 >
                   Score {sortField === "score" && (sortAsc ? "↑" : "↓")}
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide uppercase">
                   Feedbacktekst
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide uppercase">
                   Van
                 </th>
                 <th
-                  className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                  className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide uppercase cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort("date")}
                 >
                   Datum {sortField === "date" && (sortAsc ? "↑" : "↓")}
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody className="divide-y divide-slate-100">
               {filteredSortedComments.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
                     Geen feedback gevonden
                   </td>
                 </tr>
               ) : (
                 filteredSortedComments.map((c, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm">{c.to_student_name}</td>
-                    <td className="px-4 py-3 text-sm">{c.criterion_name || "-"}</td>
+                  <tr key={idx} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 text-sm text-slate-800">{c.to_student_name}</td>
+                    <td className="px-4 py-3 text-sm text-slate-800">{c.criterion_name || "-"}</td>
                     <td className="px-4 py-3 text-center">
                       <span
                         className={`px-2 py-0.5 rounded-full text-xs ring-1 ${
@@ -489,16 +486,16 @@ export default function FeedbackPageInner() {
                         {c.type === "self" ? "Zelf" : "Peer"}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-center text-sm font-medium">
+                    <td className="px-4 py-3 text-center text-sm font-medium text-slate-900">
                       {c.score != null ? c.score : "-"}
                     </td>
-                    <td className="px-4 py-3 text-sm max-w-md truncate" title={c.text}>
+                    <td className="px-4 py-3 text-sm text-slate-800 max-w-md truncate" title={c.text}>
                       {c.text}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-4 py-3 text-sm text-slate-600">
                       {c.from_student_name || "-"}
                     </td>
-                    <td className="px-4 py-3 text-center text-sm text-gray-600">
+                    <td className="px-4 py-3 text-center text-sm text-slate-600">
                       {formatDate(c.created_at)}
                     </td>
                   </tr>
@@ -510,7 +507,7 @@ export default function FeedbackPageInner() {
       )}
 
         {evalIdNum == null && (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-500">
             Geen geldige evaluatie geselecteerd.
           </p>
         )}

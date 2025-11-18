@@ -179,27 +179,27 @@ export default function EvaluationSettingsPageInner() {
   return (
     <>
       {/* Page Header */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-slate-200/70">
         <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-slate-900">
               Instellingen
             </h1>
-            <p className="text-gray-600 mt-1 text-sm">
+            <p className="text-slate-600 mt-1 text-sm">
               Evaluatie #{evaluation?.id} — {evaluation?.title}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <Link
               href="/teacher/evaluations"
-              className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm"
             >
               Terug
             </Link>
             <button
               onClick={handleSave}
               disabled={saving || anyLoading || !courseId || rubricId === ""}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
+              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
             >
               {saving ? "Opslaan…" : "Opslaan"}
             </button>
@@ -211,20 +211,17 @@ export default function EvaluationSettingsPageInner() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         
         {/* Tabs Navigation */}
-        <div className="border-b border-gray-200">
-          <nav className="flex gap-8" aria-label="Tabs">
+        <div className="border-b border-slate-200">
+          <nav className="flex gap-6 text-sm" aria-label="Tabs">
             {tabs.map((tab) => (
               <Link
                 key={tab.id}
                 href={tab.href}
-                className={`
-                  py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                  ${
-                    tab.id === "settings"
-                      ? "border-black text-black"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }
-                `}
+                className={`py-3 border-b-2 -mb-px transition-colors ${
+                  tab.id === "settings"
+                    ? "border-blue-600 text-blue-700 font-medium"
+                    : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
+                }`}
                 aria-current={tab.id === "settings" ? "page" : undefined}
               >
                 {tab.label}
@@ -234,23 +231,23 @@ export default function EvaluationSettingsPageInner() {
         </div>
 
         {error && (
-          <div className="p-3 rounded-lg bg-red-50 text-red-700">
+          <div className="p-3 rounded-xl bg-red-50 text-red-700 border border-red-200">
             {error}
           </div>
         )}
         {info && (
-          <div className="p-3 rounded-lg bg-green-50 text-green-700">{info}</div>
+          <div className="p-3 rounded-xl bg-green-50 text-green-700 border border-green-200">{info}</div>
         )}
 
         <form
           onSubmit={handleSave}
-          className="bg-white border rounded-2xl p-5 space-y-6"
+          className="bg-white border border-slate-200 rounded-2xl p-5 space-y-6 shadow-sm"
         >
         {/* Titel */}
         <div className="space-y-1">
-          <label className="block text-sm font-medium">Titel</label>
+          <label className="block text-sm font-medium text-slate-900">Titel</label>
           <input
-            className="w-full border rounded-lg px-3 py-2"
+            className="w-full border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
@@ -260,9 +257,9 @@ export default function EvaluationSettingsPageInner() {
         {/* Course (verplicht) + Rubric */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="block text-sm font-medium">Course</label>
+            <label className="block text-sm font-medium text-slate-900">Course</label>
             <select
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600"
               value={courseId === "" ? "" : Number(courseId)}
               onChange={(e) => setCourseId(e.target.value ? Number(e.target.value) : "")}
               required
@@ -275,16 +272,16 @@ export default function EvaluationSettingsPageInner() {
                 </option>
               ))}
             </select>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-slate-500">
               Dit bepaalt welke leerlingen in de cijfers-/reviewpagina’s
               verschijnen.
             </p>
           </div>
 
           <div className="space-y-1">
-            <label className="block text-sm font-medium">Rubric</label>
+            <label className="block text-sm font-medium text-slate-900">Rubric</label>
             <select
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600"
               value={rubricId === "" ? "" : Number(rubricId)}
               onChange={(e) =>
                 setRubricId(e.target.value ? Number(e.target.value) : "")
@@ -300,7 +297,7 @@ export default function EvaluationSettingsPageInner() {
               ))}
             </select>
             {selectedRubric && (
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 Gekozen: {selectedRubric.title} (id: {selectedRubric.id})
               </p>
             )}
@@ -310,23 +307,23 @@ export default function EvaluationSettingsPageInner() {
         {/* Deadlines */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="block text-sm font-medium">
+            <label className="block text-sm font-medium text-slate-900">
               Deadline Reviews
             </label>
             <input
               type="datetime-local"
-              className="w-full border rounded-lg px-3 py-2"
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
               value={reviewDeadline}
               onChange={(e) => setReviewDeadline(e.target.value)}
             />
           </div>
           <div className="space-y-1">
-            <label className="block text-sm font-medium">
+            <label className="block text-sm font-medium text-slate-900">
               Deadline Reflectie
             </label>
             <input
               type="datetime-local"
-              className="w-full border rounded-lg px-3 py-2"
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
               value={reflectionDeadline}
               onChange={(e) => setReflectionDeadline(e.target.value)}
             />
@@ -334,87 +331,54 @@ export default function EvaluationSettingsPageInner() {
         </div>
 
         {/* Overige instellingen */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="block text-sm font-medium">Anonimiteit</label>
-            <select
-              className="w-full border rounded-lg px-3 py-2"
-              value={anonymity}
-              onChange={(e) => setAnonymity(e.target.value as any)}
-            >
-              <option value="none">Geen</option>
-              <option value="pseudonym">Pseudoniem</option>
-              <option value="full">Volledig anoniem</option>
-            </select>
-          </div>
-          <div className="space-y-1">
-            <label className="block text-sm font-medium">
+            <label className="block text-sm font-medium text-slate-900">
               Minimum woorden/review
             </label>
             <input
               type="number"
-              className="w-full border rounded-lg px-3 py-2"
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
               value={minWords}
               onChange={(e) => setMinWords(e.target.valueAsNumber || 0)}
               min={0}
             />
           </div>
           <div className="space-y-1">
-            <label className="block text-sm font-medium">
+            <label className="block text-sm font-medium text-slate-900">
               Correctiefactor-range
             </label>
             <div className="flex gap-2">
               <input
                 type="number"
                 step="0.1"
-                className="w-full border rounded-lg px-3 py-2"
+                className="w-full border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
                 value={minCf}
                 onChange={(e) => setMinCf(e.target.valueAsNumber || 0)}
               />
               <input
                 type="number"
                 step="0.1"
-                className="w-full border rounded-lg px-3 py-2"
+                className="w-full border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
                 value={maxCf}
                 onChange={(e) => setMaxCf(e.target.valueAsNumber || 0)}
               />
             </div>
-            <p className="text-xs text-gray-500">Bijv. 0.6 – 1.4</p>
+            <p className="text-xs text-slate-500">Bijv. 0.6 – 1.4</p>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              className="size-4"
-              checked={smoothing}
-              onChange={(e) => setSmoothing(e.target.checked)}
-            />
-            <span className="text-sm">Smoothing (stabiliseer cijfers)</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              className="size-4"
-              checked={reviewerRating}
-              onChange={(e) => setReviewerRating(e.target.checked)}
-            />
-            <span className="text-sm">Beoordeel reviewers mee</span>
-          </label>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             type="submit"
             disabled={saving || anyLoading || !courseId || rubricId === ""}
-            className="px-4 py-2 rounded-xl bg-black text-white disabled:opacity-60"
+            className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 shadow-sm"
           >
             {saving ? "Opslaan…" : "Opslaan"}
           </button>
           <a
             href="/teacher/evaluations"
-            className="px-4 py-2 rounded-xl border"
+            className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 shadow-sm"
           >
             Terug
           </a>
