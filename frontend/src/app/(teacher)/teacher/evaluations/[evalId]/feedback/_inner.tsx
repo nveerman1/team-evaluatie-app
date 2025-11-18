@@ -304,13 +304,13 @@ export default function FeedbackPageInner() {
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-3">
         <input
-          className="px-3 py-2 border border-slate-200 rounded-xl w-80 focus:outline-none focus:ring-2 focus:ring-blue-600"
+          className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           placeholder="Zoek op student/criterium/tekst…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
         <select
-          className="px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600"
+          className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value as any)}
         >

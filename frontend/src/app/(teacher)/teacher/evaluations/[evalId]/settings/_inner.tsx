@@ -331,19 +331,7 @@ export default function EvaluationSettingsPageInner() {
         </div>
 
         {/* Overige instellingen */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-slate-900">Anonimiteit</label>
-            <select
-              className="w-full border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
-              value={anonymity}
-              onChange={(e) => setAnonymity(e.target.value as any)}
-            >
-              <option value="none">Geen</option>
-              <option value="pseudonym">Pseudoniem</option>
-              <option value="full">Volledig anoniem</option>
-            </select>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
             <label className="block text-sm font-medium text-slate-900">
               Minimum woorden/review
@@ -378,27 +366,6 @@ export default function EvaluationSettingsPageInner() {
             </div>
             <p className="text-xs text-slate-500">Bijv. 0.6 – 1.4</p>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              className="size-4"
-              checked={smoothing}
-              onChange={(e) => setSmoothing(e.target.checked)}
-            />
-            <span className="text-sm">Smoothing (stabiliseer cijfers)</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              className="size-4"
-              checked={reviewerRating}
-              onChange={(e) => setReviewerRating(e.target.checked)}
-            />
-            <span className="text-sm">Beoordeel reviewers mee</span>
-          </label>
         </div>
 
         <div className="flex items-center gap-2">

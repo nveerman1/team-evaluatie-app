@@ -22,9 +22,7 @@ export default function ReflectionsPageInner() {
 
   // UI state
   const [query, setQuery] = useState("");
-  const [onlySubmitted, setOnlySubmitted] = useState(false);
-  const [onlyMissing, setOnlyMissing] = useState(false);
-  const [minWords, setMinWords] = useState<number>(0);
+  const [statusFilter, setStatusFilter] = useState<"all" | "submitted" | "missing">("all");
   const [sort, setSort] = useState<
     "name_asc" | "name_desc" | "date_new" | "date_old" | "words_hi" | "words_lo"
   >("name_asc");
@@ -58,9 +56,8 @@ export default function ReflectionsPageInner() {
     const q = query.trim().toLowerCase();
     let arr = rows.filter((r) => {
       const submitted = !!r.submitted_at && (r.text?.trim()?.length ?? 0) > 0;
-      if (onlySubmitted && !submitted) return false;
-      if (onlyMissing && submitted) return false;
-      if (minWords && (r.words ?? 0) < minWords) return false;
+      if (statusFilter === "submitted" && !submitted) return false;
+      if (statusFilter === "missing" && submitted) return false;
       if (q) {
         const hay = `${r.student_name ?? ""} ${r.text ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
@@ -89,7 +86,7 @@ export default function ReflectionsPageInner() {
       }
     });
     return arr;
-  }, [rows, query, onlySubmitted, onlyMissing, minWords, sort]);
+  }, [rows, query, statusFilter, sort]);
 
   const submittedCount = filtered.filter(
     (r) => !!r.submitted_at && (r.text?.trim()?.length ?? 0) > 0,
@@ -167,6 +164,15 @@ export default function ReflectionsPageInner() {
         />
         <select
           className="px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as any)}
+        >
+          <option value="all">Alle reflecties</option>
+          <option value="submitted">Ingeleverd</option>
+          <option value="missing">Ontbrekend</option>
+        </select>
+        <select
+          className="px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600"
           value={sort}
           onChange={(e) => setSort(e.target.value as any)}
         >
@@ -177,38 +183,6 @@ export default function ReflectionsPageInner() {
           <option value="words_hi">Woorden hoog → laag</option>
           <option value="words_lo">Woorden laag → hoog</option>
         </select>
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input
-            type="checkbox"
-            checked={onlySubmitted}
-            onChange={(e) => {
-              setOnlySubmitted(e.target.checked);
-              if (e.target.checked) setOnlyMissing(false);
-            }}
-          />
-          Alleen ingeleverd
-        </label>
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input
-            type="checkbox"
-            checked={onlyMissing}
-            onChange={(e) => {
-              setOnlyMissing(e.target.checked);
-              if (e.target.checked) setOnlySubmitted(false);
-            }}
-          />
-          Alleen ontbrekend
-        </label>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-600">Min. woorden</span>
-          <input
-            type="number"
-            min={0}
-            className="px-2 py-1 border border-slate-200 rounded w-20 focus:outline-none focus:ring-2 focus:ring-blue-600"
-            value={minWords}
-            onChange={(e) => setMinWords(Number(e.target.value || 0))}
-          />
-        </div>
         <div className="ml-auto flex gap-2">
           <button
             className="px-3 py-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 text-sm shadow-sm"
@@ -243,7 +217,6 @@ export default function ReflectionsPageInner() {
               {filtered.map((r) => {
                 const open = !!expanded[r.student_id];
                 const words = r.words ?? 0;
-                const underMin = minWords > 0 && words < minWords;
                 const dateLabel = r.submitted_at
                   ? new Date(r.submitted_at).toLocaleString()
                   : "—";
@@ -272,13 +245,7 @@ export default function ReflectionsPageInner() {
                         >
                           {r.submitted_at ? "ingeleverd" : "ontbreekt"}
                         </span>
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full ring-1 ${
-                            underMin
-                              ? "ring-amber-200 bg-amber-50 text-amber-700"
-                              : "ring-slate-200 bg-slate-50 text-slate-700"
-                          }`}
-                        >
+                        <span className="text-xs px-2 py-0.5 rounded-full ring-1 ring-slate-200 bg-slate-50 text-slate-700">
                           {words} woorden
                         </span>
                       </div>
