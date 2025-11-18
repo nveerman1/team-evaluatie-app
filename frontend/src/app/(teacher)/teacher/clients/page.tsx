@@ -297,8 +297,8 @@ function DashboardTab({ onNavigateToList }: { onNavigateToList: () => void }) {
 
 // Tab 2: Running Projects
 function RunningProjectsTab() {
-  const [kpiData, setKpiData] = useState<any>(null);
-  const [projects, setProjects] = useState<any[]>([]);
+  const [kpiData, setKpiData] = useState<{running_projects: number; active_clients_now: number; upcoming_moments: number} | null>(null);
+  const [projects, setProjects] = useState<{project_id: number; project_title: string; course_name?: string; client_organization?: string; client_email?: string; class_name?: string; team_number?: number; student_names: string[]; start_date?: string; end_date?: string; next_moment_type?: string; next_moment_date?: string; project_status: string}[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -319,7 +319,7 @@ function RunningProjectsTab() {
   const perPage = 20;
   
   // Available courses for filter
-  const [courses, setCourses] = useState<any[]>([]);
+  const [courses, setCourses] = useState<{id: number; name: string}[]>([]);
   
   useEffect(() => {
     async function fetchCourses() {
@@ -345,7 +345,15 @@ function RunningProjectsTab() {
         setKpiData(kpi);
         
         // Fetch projects with filters
-        const params: any = {
+        const params: {
+          page: number;
+          per_page: number;
+          search?: string;
+          sort_by?: string;
+          sort_order: "asc" | "desc";
+          course_id?: number;
+          school_year?: string;
+        } = {
           page,
           per_page: perPage,
           search: searchFilter || undefined,
