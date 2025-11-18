@@ -239,3 +239,54 @@ class WizardProjectOut(BaseModel):
     note: Optional[ProjectNoteOut] = None
     linked_clients: List[int]
     warnings: List[str] = Field(default_factory=list)  # For edge case warnings
+
+
+# ============ Running Projects Overview Schemas ============
+
+
+class RunningProjectKPIOut(BaseModel):
+    """Schema for running projects KPI statistics"""
+
+    running_projects: int = Field(..., description="Total running projects count")
+    active_clients_now: int = Field(..., description="Number of unique active clients in running projects")
+    upcoming_moments: int = Field(..., description="Number of upcoming presentations/moments")
+
+
+class RunningProjectItem(BaseModel):
+    """Schema for running project in overview table"""
+
+    # Project info
+    project_id: int
+    project_title: str
+    project_status: str
+    course_name: Optional[str] = None
+    
+    # Client info
+    client_id: Optional[int] = None
+    client_organization: Optional[str] = None
+    client_email: Optional[str] = None
+    
+    # Team info
+    class_name: Optional[str] = None
+    team_number: Optional[int] = None
+    student_names: List[str] = Field(default_factory=list)
+    
+    # Period
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    
+    # Next moment
+    next_moment_type: Optional[str] = None  # "Tussenpresentatie", "Eindpresentatie", "Contactmoment"
+    next_moment_date: Optional[date] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RunningProjectsListOut(BaseModel):
+    """Schema for paginated running projects list"""
+
+    items: List[RunningProjectItem]
+    total: int
+    page: int
+    per_page: int
+    pages: int

@@ -8,6 +8,8 @@ import {
   ProjectDetailOut,
   WizardProjectCreate,
   WizardProjectOut,
+  RunningProjectKPI,
+  RunningProjectsListResponse,
 } from "@/dtos/project.dto";
 
 export const projectService = {
@@ -69,6 +71,31 @@ export const projectService = {
    */
   async wizardCreateProject(data: WizardProjectCreate): Promise<WizardProjectOut> {
     const response = await api.post<WizardProjectOut>("/projects/wizard-create", data);
+    return response.data;
+  },
+
+  /**
+   * Get KPI statistics for running projects overview
+   */
+  async getRunningProjectsKPI(): Promise<RunningProjectKPI> {
+    const response = await api.get<RunningProjectKPI>("/projects/running-overview/kpi");
+    return response.data;
+  },
+
+  /**
+   * Get running projects overview with filtering and sorting
+   */
+  async getRunningProjectsOverview(params?: {
+    page?: number;
+    per_page?: number;
+    course_id?: number;
+    school_year?: string;
+    status?: string;
+    search?: string;
+    sort_by?: string;
+    sort_order?: "asc" | "desc";
+  }): Promise<RunningProjectsListResponse> {
+    const response = await api.get<RunningProjectsListResponse>("/projects/running-overview", { params });
     return response.data;
   },
 };

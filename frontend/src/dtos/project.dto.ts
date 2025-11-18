@@ -173,3 +173,35 @@ export type WizardProjectOut = {
   linked_clients: number[];
   warnings?: string[];
 };
+
+// Running Projects Overview Types
+export type RunningProjectKPI = {
+  running_projects: number;
+  active_clients_now: number;
+  upcoming_moments: number;
+};
+
+export type RunningProjectItem = {
+  project_id: number;
+  project_title: string;
+  project_status: string;
+  course_name?: string;
+  client_id?: number;
+  client_organization?: string;
+  client_email?: string;
+  class_name?: string;
+  team_number?: number;
+  student_names: string[];
+  start_date?: string;
+  end_date?: string;
+  next_moment_type?: string;
+  next_moment_date?: string;
+};
+
+export type RunningProjectsListResponse = {
+  items: RunningProjectItem[];
+  total: number;
+  page: number;
+  per_page: number;
+  pages: number;
+};

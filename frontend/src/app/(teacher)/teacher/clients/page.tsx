@@ -18,7 +18,7 @@ function buildMailto({ to, bcc, subject, body }: { to?: string; bcc?: string; su
 }
 
 export default function ClientsPage() {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "list" | "communication">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "running" | "list" | "communication">("dashboard");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -67,6 +67,16 @@ export default function ClientsPage() {
           Inzicht &amp; relatie-health
         </button>
         <button
+          onClick={() => setActiveTab("running")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "running"
+              ? "border-sky-500 text-sky-700"
+              : "border-transparent text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          Lopende Projecten
+        </button>
+        <button
           onClick={() => setActiveTab("list")}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === "list"
@@ -90,6 +100,7 @@ export default function ClientsPage() {
 
       {/* Tab Content */}
       {activeTab === "dashboard" && <DashboardTab onNavigateToList={() => setActiveTab("list")} />}
+      {activeTab === "running" && <RunningProjectsTab />}
       {activeTab === "list" && <ListTab refreshKey={refreshKey} />}
       {activeTab === "communication" && <CommunicationTab />}
     </div>
@@ -284,13 +295,377 @@ function DashboardTab({ onNavigateToList }: { onNavigateToList: () => void }) {
   );
 }
 
-// Tab 2: List & filters
+// Tab 2: Running Projects
+function RunningProjectsTab() {
+  const [kpiData, setKpiData] = useState<any>(null);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Filters
+  const [courseFilter, setCourseFilter] = useState<string>("Alle vakken");
+  const [schoolYearFilter, setSchoolYearFilter] = useState<string>("2025–2026");
+  const [statusFilter, setStatusFilter] = useState<string>("Alle");
+  const [searchFilter, setSearchFilter] = useState<string>("");
+  
+  // Sorting
+  const [sortBy, setSortBy] = useState<string>("");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [pages, setPages] = useState(0);
+  const perPage = 20;
+  
+  // Available courses for filter
+  const [courses, setCourses] = useState<any[]>([]);
+  
+  useEffect(() => {
+    async function fetchCourses() {
+      try {
+        const { courseService } = await import("@/services/course.service");
+        const data = await courseService.listCourses({ per_page: 100 });
+        setCourses(data.items || []);
+      } catch (err) {
+        console.error("Error fetching courses:", err);
+      }
+    }
+    fetchCourses();
+  }, []);
+  
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true);
+        const { projectService } = await import("@/services/project.service");
+        
+        // Fetch KPIs
+        const kpi = await projectService.getRunningProjectsKPI();
+        setKpiData(kpi);
+        
+        // Fetch projects with filters
+        const params: any = {
+          page,
+          per_page: perPage,
+          search: searchFilter || undefined,
+          sort_by: sortBy || undefined,
+          sort_order: sortOrder,
+        };
+        
+        if (courseFilter && courseFilter !== "Alle vakken") {
+          const selectedCourse = courses.find(c => c.name === courseFilter);
+          if (selectedCourse) {
+            params.course_id = selectedCourse.id;
+          }
+        }
+        
+        if (schoolYearFilter && schoolYearFilter !== "Alle jaren") {
+          params.school_year = schoolYearFilter;
+        }
+        
+        const projectsData = await projectService.getRunningProjectsOverview(params);
+        setProjects(projectsData.items || []);
+        setTotal(projectsData.total || 0);
+        setPages(projectsData.pages || 0);
+      } catch (err) {
+        console.error("Error fetching running projects data:", err);
+        setError("Er is een fout opgetreden bij het laden van de gegevens.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, [page, courseFilter, schoolYearFilter, statusFilter, searchFilter, sortBy, sortOrder, courses]);
+  
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+  };
+  
+  const handleExport = () => {
+    // TODO: Implement export functionality
+    alert("Export functionaliteit komt binnenkort beschikbaar");
+  };
+  
+  if (loading && !kpiData) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-slate-500">Laden...</div>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+        {error}
+      </div>
+    );
+  }
+  
+  return (
+    <>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-xs text-slate-500">Lopende projecten</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-900">{kpiData?.running_projects || 0}</p>
+          <p className="mt-1 text-[11px] text-slate-500">Inclusief boven- en onderbouw</p>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-xs text-slate-500">Actieve opdrachtgevers nu</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-900">{kpiData?.active_clients_now || 0}</p>
+          <p className="mt-1 text-[11px] text-slate-500">Bij lopende projecten</p>
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-xs text-slate-500">Aankomende momenten</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-900">{kpiData?.upcoming_moments || 0}</p>
+          <p className="mt-1 text-[11px] text-slate-500">Presentaties en contactmomenten</p>
+        </div>
+      </div>
+      
+      {/* Filters */}
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div>
+            <label className="text-xs font-medium text-slate-600 block mb-1.5">Vak</label>
+            <select 
+              value={courseFilter}
+              onChange={(e) => setCourseFilter(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+            >
+              <option>Alle vakken</option>
+              {courses.map(course => (
+                <option key={course.id} value={course.name}>{course.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-600 block mb-1.5">Schooljaar</label>
+            <select 
+              value={schoolYearFilter}
+              onChange={(e) => setSchoolYearFilter(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+            >
+              <option>2025–2026</option>
+              <option>2024–2025</option>
+              <option>2023–2024</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-600 block mb-1.5">Status</label>
+            <select 
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+            >
+              <option>Alle</option>
+              <option>Net gestart</option>
+              <option>Halverwege</option>
+              <option>Afsluitfase</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-600 block mb-1.5">Zoeken</label>
+            <input 
+              type="text"
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              placeholder="Zoek leerling, team of opdrachtgever…"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+            />
+          </div>
+        </div>
+      </div>
+      
+      {/* Table Header */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-slate-600">{total} lopende projecten</p>
+        <button 
+          onClick={handleExport}
+          className="text-xs font-medium text-slate-600 hover:text-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-white"
+        >
+          Exporteer overzicht
+        </button>
+      </div>
+      
+      {/* Table */}
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th 
+                  className="px-4 py-3 text-left font-medium text-slate-600 cursor-pointer hover:bg-slate-100"
+                  onClick={() => handleSort("course")}
+                >
+                  <div className="flex items-center gap-1">
+                    Vak
+                    {sortBy === "course" && (
+                      <span className="text-xs">{sortOrder === "asc" ? "▲" : "▼"}</span>
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="px-4 py-3 text-left font-medium text-slate-600 cursor-pointer hover:bg-slate-100"
+                  onClick={() => handleSort("project")}
+                >
+                  <div className="flex items-center gap-1">
+                    Project
+                    {sortBy === "project" && (
+                      <span className="text-xs">{sortOrder === "asc" ? "▲" : "▼"}</span>
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="px-4 py-3 text-left font-medium text-slate-600 cursor-pointer hover:bg-slate-100"
+                  onClick={() => handleSort("client")}
+                >
+                  <div className="flex items-center gap-1">
+                    Opdrachtgever
+                    {sortBy === "client" && (
+                      <span className="text-xs">{sortOrder === "asc" ? "▲" : "▼"}</span>
+                    )}
+                  </div>
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-slate-600">
+                  Team &amp; Leerlingen
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-slate-600">
+                  Periode
+                </th>
+                <th 
+                  className="px-4 py-3 text-left font-medium text-slate-600 cursor-pointer hover:bg-slate-100"
+                  onClick={() => handleSort("next_moment")}
+                >
+                  <div className="flex items-center gap-1">
+                    Volgend moment
+                    {sortBy === "next_moment" && (
+                      <span className="text-xs">{sortOrder === "asc" ? "▲" : "▼"}</span>
+                    )}
+                  </div>
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-slate-600">
+                  Mail opdrachtgever
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+                    Laden...
+                  </td>
+                </tr>
+              ) : projects.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+                    Geen lopende projecten gevonden
+                  </td>
+                </tr>
+              ) : (
+                projects.map((project, idx) => (
+                  <tr key={project.project_id} className={idx % 2 === 1 ? "bg-slate-50/50" : ""}>
+                    <td className="px-4 py-3 text-slate-700">
+                      {project.course_name || "-"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-slate-900">{project.project_title}</div>
+                      <div className="text-xs text-slate-500 mt-0.5">{project.project_status}</div>
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {project.client_organization || "-"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-slate-700">
+                        {project.class_name || "-"}
+                        {project.team_number && ` · Team ${project.team_number}`}
+                      </div>
+                      {project.student_names && project.student_names.length > 0 && (
+                        <div className="text-xs text-slate-500 mt-0.5 truncate max-w-xs">
+                          {project.student_names.join(", ")}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-slate-700 whitespace-nowrap">
+                      {project.start_date && project.end_date ? (
+                        <>
+                          {new Date(project.start_date).toLocaleDateString("nl-NL", { month: "short", year: "numeric" })} – {new Date(project.end_date).toLocaleDateString("nl-NL", { month: "short", year: "numeric" })}
+                        </>
+                      ) : "-"}
+                    </td>
+                    <td className="px-4 py-3">
+                      {project.next_moment_type ? (
+                        <>
+                          <div className="text-slate-700 font-medium">{project.next_moment_type}</div>
+                          {project.next_moment_date && (
+                            <div className="text-xs text-slate-500 mt-0.5">
+                              {new Date(project.next_moment_date).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-slate-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {project.client_email ? (
+                        <a
+                          href={`mailto:${project.client_email}?subject=Project: ${encodeURIComponent(project.project_title)}`}
+                          className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-slate-700 rounded-lg border border-slate-200 hover:bg-slate-50"
+                        >
+                          📧 Mail
+                        </a>
+                      ) : (
+                        <span className="text-slate-400">-</span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      {/* Pagination */}
+      {pages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <button
+            onClick={() => setPage(Math.max(1, page - 1))}
+            disabled={page === 1}
+            className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Vorige
+          </button>
+          <span className="text-sm text-slate-600">
+            Pagina {page} van {pages}
+          </span>
+          <button
+            onClick={() => setPage(Math.min(pages, page + 1))}
+            disabled={page === pages}
+            className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Volgende
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
+// Tab 3: List & filters
 function ListTab({ refreshKey }: { refreshKey?: number }) {
   return <ClientsList refreshKey={refreshKey} />;
 }
 
 
-// Tab 3: Communication
+// Tab 4: Communication
 function CommunicationTab() {
   const [schoolYear, setSchoolYear] = useState("2025–2026");
   const [level, setLevel] = useState("Alle");
