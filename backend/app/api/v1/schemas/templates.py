@@ -15,12 +15,14 @@ class PeerEvaluationCriterionTemplateBase(BaseModel):
     """Base schema for peer evaluation criterion template"""
 
     omza_category: str = Field(
-        ..., description="OMZA category: Organiseren, Meedoen, Zelfvertrouwen, Autonomie"
+        ...,
+        description="OMZA category: Organiseren, Meedoen, Zelfvertrouwen, Autonomie",
     )
     title: str = Field(..., min_length=1, max_length=200)
     description: Optional[str] = None
     level_descriptors: Dict[str, str] = Field(
-        default_factory=dict, description="5-level descriptors: {'1': '...', '2': '...'}"
+        default_factory=dict,
+        description="5-level descriptors: {'1': '...', '2': '...'}",
     )
 
 
@@ -210,9 +212,7 @@ class CompetencyReflectionQuestionTemplateUpdate(BaseModel):
     question_text: Optional[str] = Field(None, min_length=1)
 
 
-class CompetencyReflectionQuestionTemplateOut(
-    CompetencyReflectionQuestionTemplateBase
-):
+class CompetencyReflectionQuestionTemplateOut(CompetencyReflectionQuestionTemplateBase):
     """Schema for competency reflection question template output"""
 
     id: int
@@ -288,7 +288,10 @@ class MailTemplateBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     type: str = Field(
         ...,
-        description="Type: start_opdrachtgever, tussenpresentatie, eindpresentatie, bedankmail, herinnering",
+        description=(
+            "Type: start_opdrachtgever, tussenpresentatie, "
+            "eindpresentatie, bedankmail, herinnering"
+        ),
     )
     subject: str = Field(..., min_length=1, max_length=500)
     body: str = Field(..., min_length=1)
@@ -344,7 +347,9 @@ class StandardRemarkBase(BaseModel):
     type: str = Field(
         ..., description="Type: peer, project, competency, project_feedback, omza"
     )
-    category: str = Field(..., description="Category: positief, aandachtspunt, aanbeveling")
+    category: str = Field(
+        ..., description="Category: positief, aandachtspunt, aanbeveling"
+    )
     text: str = Field(..., min_length=1)
     order: int = 0
 
@@ -442,7 +447,10 @@ class TemplateTagLinkBase(BaseModel):
     tag_id: int
     target_type: str = Field(
         ...,
-        description="Target type: peer_criterion, project_criterion, competency, learning_objective",
+        description=(
+            "Target type: peer_criterion, project_criterion, "
+            "competency, learning_objective"
+        ),
     )
     target_id: int
 

@@ -3,10 +3,9 @@ Templates API endpoints for admin template management
 """
 
 from __future__ import annotations
-from typing import Optional, List
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import (
@@ -33,21 +32,11 @@ from app.api.v1.schemas.templates import (
     ProjectRubricTemplateUpdate,
     ProjectRubricTemplateOut,
     ProjectRubricTemplateListOut,
-    ProjectRubricCriterionTemplateCreate,
-    ProjectRubricCriterionTemplateUpdate,
-    ProjectRubricCriterionTemplateOut,
     # Competency
     CompetencyTemplateCreate,
     CompetencyTemplateUpdate,
     CompetencyTemplateOut,
     CompetencyTemplateListOut,
-    CompetencyLevelDescriptorTemplateCreate,
-    CompetencyLevelDescriptorTemplateUpdate,
-    CompetencyLevelDescriptorTemplateOut,
-    CompetencyReflectionQuestionTemplateCreate,
-    CompetencyReflectionQuestionTemplateUpdate,
-    CompetencyReflectionQuestionTemplateOut,
-    # Mail
     MailTemplateCreate,
     MailTemplateUpdate,
     MailTemplateOut,
@@ -100,10 +89,17 @@ def list_peer_criteria_templates(
 
     total = query.count()
     offset = (page - 1) * per_page
-    templates = query.order_by(PeerEvaluationCriterionTemplate.title).offset(offset).limit(per_page).all()
+    templates = (
+        query.order_by(PeerEvaluationCriterionTemplate.title)
+        .offset(offset)
+        .limit(per_page)
+        .all()
+    )
 
     return PeerEvaluationCriterionTemplateListOut(
-        templates=[PeerEvaluationCriterionTemplateOut.model_validate(t) for t in templates],
+        templates=[
+            PeerEvaluationCriterionTemplateOut.model_validate(t) for t in templates
+        ],
         total=total,
         page=page,
         per_page=per_page,
@@ -149,7 +145,9 @@ def create_peer_criterion_template(
     return PeerEvaluationCriterionTemplateOut.model_validate(template)
 
 
-@router.get("/peer-criteria/{template_id}", response_model=PeerEvaluationCriterionTemplateOut)
+@router.get(
+    "/peer-criteria/{template_id}", response_model=PeerEvaluationCriterionTemplateOut
+)
 def get_peer_criterion_template(
     template_id: int,
     db: Session = Depends(get_db),
@@ -168,12 +166,16 @@ def get_peer_criterion_template(
     )
 
     if not template:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
+        )
 
     return PeerEvaluationCriterionTemplateOut.model_validate(template)
 
 
-@router.patch("/peer-criteria/{template_id}", response_model=PeerEvaluationCriterionTemplateOut)
+@router.patch(
+    "/peer-criteria/{template_id}", response_model=PeerEvaluationCriterionTemplateOut
+)
 def update_peer_criterion_template(
     template_id: int,
     payload: PeerEvaluationCriterionTemplateUpdate,
@@ -194,7 +196,9 @@ def update_peer_criterion_template(
     )
 
     if not template:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
+        )
 
     update_data = payload.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -235,7 +239,9 @@ def delete_peer_criterion_template(
     )
 
     if not template:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
+        )
 
     log_delete(
         db=db,
@@ -276,7 +282,9 @@ def list_project_rubric_templates(
 
     total = query.count()
     offset = (page - 1) * per_page
-    templates = query.order_by(ProjectRubricTemplate.name).offset(offset).limit(per_page).all()
+    templates = (
+        query.order_by(ProjectRubricTemplate.name).offset(offset).limit(per_page).all()
+    )
 
     return ProjectRubricTemplateListOut(
         templates=[ProjectRubricTemplateOut.model_validate(t) for t in templates],
@@ -357,7 +365,9 @@ def get_project_rubric_template(
     )
 
     if not template:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
+        )
 
     return ProjectRubricTemplateOut.model_validate(template)
 
@@ -383,7 +393,9 @@ def update_project_rubric_template(
     )
 
     if not template:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
+        )
 
     update_data = payload.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -424,7 +436,9 @@ def delete_project_rubric_template(
     )
 
     if not template:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
+        )
 
     log_delete(
         db=db,
@@ -439,7 +453,9 @@ def delete_project_rubric_template(
     db.commit()
 
 
-@router.post("/project-rubrics/{template_id}/duplicate", response_model=ProjectRubricTemplateOut)
+@router.post(
+    "/project-rubrics/{template_id}/duplicate", response_model=ProjectRubricTemplateOut
+)
 def duplicate_project_rubric_template(
     template_id: int,
     db: Session = Depends(get_db),
@@ -459,7 +475,9 @@ def duplicate_project_rubric_template(
     )
 
     if not original:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
+        )
 
     # Create duplicate
     duplicate = ProjectRubricTemplate(
@@ -523,7 +541,9 @@ def list_competency_templates(
 
     total = query.count()
     offset = (page - 1) * per_page
-    templates = query.order_by(CompetencyTemplate.name).offset(offset).limit(per_page).all()
+    templates = (
+        query.order_by(CompetencyTemplate.name).offset(offset).limit(per_page).all()
+    )
 
     return CompetencyTemplateListOut(
         templates=[CompetencyTemplateOut.model_validate(t) for t in templates],
@@ -610,7 +630,9 @@ def get_competency_template(
     )
 
     if not template:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
+        )
 
     return CompetencyTemplateOut.model_validate(template)
 
@@ -636,7 +658,9 @@ def update_competency_template(
     )
 
     if not template:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
+        )
 
     update_data = payload.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -677,7 +701,9 @@ def delete_competency_template(
     )
 
     if not template:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
+        )
 
     log_delete(
         db=db,
@@ -789,7 +815,9 @@ def get_mail_template(
     )
 
     if not template:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
+        )
 
     return MailTemplateOut.model_validate(template)
 
@@ -815,7 +843,9 @@ def update_mail_template(
     )
 
     if not template:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
+        )
 
     update_data = payload.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -856,7 +886,9 @@ def delete_mail_template(
     )
 
     if not template:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
+        )
 
     log_delete(
         db=db,
@@ -898,7 +930,12 @@ def list_standard_remarks(
 
     total = query.count()
     offset = (page - 1) * per_page
-    remarks = query.order_by(StandardRemark.order, StandardRemark.text).offset(offset).limit(per_page).all()
+    remarks = (
+        query.order_by(StandardRemark.order, StandardRemark.text)
+        .offset(offset)
+        .limit(per_page)
+        .all()
+    )
 
     return StandardRemarkListOut(
         remarks=[StandardRemarkOut.model_validate(r) for r in remarks],
@@ -966,7 +1003,9 @@ def get_standard_remark(
     )
 
     if not remark:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Remark not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Remark not found"
+        )
 
     return StandardRemarkOut.model_validate(remark)
 
@@ -992,7 +1031,9 @@ def update_standard_remark(
     )
 
     if not remark:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Remark not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Remark not found"
+        )
 
     update_data = payload.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -1033,7 +1074,9 @@ def delete_standard_remark(
     )
 
     if not remark:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Remark not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Remark not found"
+        )
 
     log_delete(
         db=db,
@@ -1152,7 +1195,9 @@ def get_template_tag(
     )
 
     if not tag:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tag not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tag not found"
+        )
 
     return TemplateTagOut.model_validate(tag)
 
@@ -1178,7 +1223,9 @@ def update_template_tag(
     )
 
     if not tag:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tag not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tag not found"
+        )
 
     update_data = payload.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -1219,7 +1266,9 @@ def delete_template_tag(
     )
 
     if not tag:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tag not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tag not found"
+        )
 
     log_delete(
         db=db,
@@ -1250,7 +1299,9 @@ def list_template_tag_links(
     """List template tag links"""
     require_role(user, ["admin", "teacher"])
 
-    query = db.query(TemplateTagLink).filter(TemplateTagLink.school_id == user.school_id)
+    query = db.query(TemplateTagLink).filter(
+        TemplateTagLink.school_id == user.school_id
+    )
 
     if tag_id:
         query = query.filter(TemplateTagLink.tag_id == tag_id)
@@ -1264,7 +1315,7 @@ def list_template_tag_links(
     links = query.offset(offset).limit(per_page).all()
 
     return TemplateTagLinkListOut(
-        links=[TemplateTagLinkOut.model_validate(l) for l in links],
+        links=[TemplateTagLinkOut.model_validate(link) for link in links],
         total=total,
         page=page,
         per_page=per_page,
@@ -1346,7 +1397,9 @@ def delete_template_tag_link(
     )
 
     if not link:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Link not found"
+        )
 
     log_delete(
         db=db,
