@@ -217,12 +217,14 @@ def delete_learning_objective(
 @router.post("/import", response_model=LearningObjectiveImportResponse)
 def import_learning_objectives(
     payload: LearningObjectiveImportRequest,
+    subject_id: Optional[int] = Query(None, description="Subject ID for template imports"),
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
     """
     Import learning objectives from CSV data.
     Updates existing objectives with matching (domain, order) or creates new ones.
+    If subject_id is provided, imports as subject-specific templates.
     """
     created = 0
     updated = 0
@@ -230,17 +232,22 @@ def import_learning_objectives(
 
     for idx, item in enumerate(payload.items):
         try:
-            # Try to find existing by domain + order
+            # Try to find existing by domain + order + subject_id
             existing = None
             if item.domain and item.order:
-                existing = db.execute(
-                    select(LearningObjective)
-                    .where(
-                        LearningObjective.school_id == user.school_id,
-                        LearningObjective.domain == item.domain,
-                        LearningObjective.order == item.order,
-                    )
-                ).scalar_one_or_none()
+                query = select(LearningObjective).where(
+                    LearningObjective.school_id == user.school_id,
+                    LearningObjective.domain == item.domain,
+                    LearningObjective.order == item.order,
+                )
+                
+                # Match subject_id scope
+                if subject_id is not None:
+                    query = query.where(LearningObjective.subject_id == subject_id)
+                else:
+                    query = query.where(LearningObjective.subject_id.is_(None))
+                
+                existing = db.execute(query).scalar_one_or_none()
 
             if existing:
                 # Update existing
@@ -252,6 +259,7 @@ def import_learning_objectives(
                 # Create new
                 new_obj = LearningObjective(
                     school_id=user.school_id,
+                    subject_id=subject_id,
                     domain=item.domain,
                     title=item.title,
                     description=item.description,

@@ -67,11 +67,14 @@ export async function deleteLearningObjective(
 // ============ Import ============
 
 export async function importLearningObjectives(
-  data: LearningObjectiveImportRequest
+  data: LearningObjectiveImportRequest,
+  subject_id?: number
 ): Promise<LearningObjectiveImportResponse> {
+  const params = subject_id ? { subject_id } : {};
   const response = await api.post<LearningObjectiveImportResponse>(
     `/learning-objectives/import`,
-    data
+    data,
+    { params }
   );
   return response.data;
 }

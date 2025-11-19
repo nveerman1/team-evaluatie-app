@@ -7,10 +7,12 @@ import { Subject } from "@/dtos/subject.dto";
 import {
   createLearningObjective,
   listLearningObjectives,
+  importLearningObjectives,
 } from "@/services/learning-objective.service";
 import type {
   LearningObjectiveDto,
   LearningObjectiveCreateDto,
+  LearningObjectiveImportItem,
 } from "@/dtos/learning-objective.dto";
 
 type TabType =
@@ -44,6 +46,7 @@ export default function TemplatesPage() {
 
   // Modal state for learning objectives
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [learningObjectives, setLearningObjectives] = useState<
     LearningObjectiveDto[]
   >([]);
@@ -55,6 +58,14 @@ export default function TemplatesPage() {
     order: 0,
     phase: "",
   });
+  
+  // Import state
+  const [importText, setImportText] = useState("");
+  const [importResult, setImportResult] = useState<{
+    created: number;
+    updated: number;
+    errors: string[];
+  } | null>(null);
 
   // Sync state with URL params
   useEffect(() => {
@@ -148,6 +159,108 @@ export default function TemplatesPage() {
     } catch (err) {
       console.error("Error creating learning objective:", err);
       alert("Er is een fout opgetreden bij het aanmaken van het leerdoel.");
+    }
+  };
+
+  const parseCSVLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    let fieldStart = true;
+
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+
+      if (char === '"' && (fieldStart || inQuotes)) {
+        if (fieldStart && !inQuotes) {
+          inQuotes = true;
+          fieldStart = false;
+        } else if (inQuotes) {
+          if (i + 1 < line.length && line[i + 1] === '"') {
+            current += '"';
+            i++;
+          } else {
+            inQuotes = false;
+          }
+        }
+      } else if (char === "," && !inQuotes) {
+        result.push(current.trim());
+        current = "";
+        fieldStart = true;
+      } else {
+        current += char;
+        fieldStart = false;
+      }
+    }
+    result.push(current.trim());
+
+    return result;
+  };
+
+  const handleImport = async () => {
+    if (!importText.trim()) {
+      alert("Voer CSV-gegevens in");
+      return;
+    }
+
+    if (!selectedSubjectId) {
+      alert("Selecteer eerst een sectie");
+      return;
+    }
+
+    try {
+      const lines = importText.trim().split("\n");
+      const items: LearningObjectiveImportItem[] = [];
+
+      const firstLine = lines[0].toLowerCase();
+      const hasHeader =
+        firstLine.includes("domein") ||
+        firstLine.includes("domain") ||
+        firstLine.includes("nummer") ||
+        firstLine.includes("titel") ||
+        firstLine.includes("title");
+      const startIdx = hasHeader ? 1 : 0;
+
+      for (let i = startIdx; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        const parts = parseCSVLine(line);
+        if (parts.length < 2) continue;
+
+        let phase = parts[4] || null;
+        if (phase) {
+          const phaseUpper = phase.toUpperCase();
+          if (phaseUpper === "B" || phaseUpper === "ONDERBOUW") {
+            phase = "onderbouw";
+          } else if (phaseUpper === "E" || phaseUpper === "BOVENBOUW") {
+            phase = "bovenbouw";
+          }
+          if (phase.length > 20) {
+            phase = phase.substring(0, 20);
+          }
+        }
+
+        items.push({
+          domain: parts[0] || null,
+          order: parts[1] ? parseInt(parts[1], 10) : 0,
+          title: parts[2] || parts[1],
+          description: parts[3] || null,
+          phase: phase,
+        });
+      }
+
+      const result = await importLearningObjectives(
+        { items },
+        selectedSubjectId
+      );
+      setImportResult(result);
+      if (result.errors.length === 0) {
+        fetchLearningObjectives();
+      }
+    } catch (err) {
+      console.error("Error importing learning objectives:", err);
+      alert("Er is een fout opgetreden bij het importeren.");
     }
   };
 
@@ -418,21 +531,31 @@ export default function TemplatesPage() {
             </p>
           </div>
           {selectedSubjectId && (
-            <button
-              onClick={() => {
-                if (activeTab === "objectives") {
-                  openCreateModal();
-                } else {
-                  // TODO: Implement create modal/form for other template types
-                  alert(
-                    `Create new ${TABS.find((t) => t.key === activeTab)?.label}`
-                  );
-                }
-              }}
-              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
-            >
-              {getNewButtonLabel()}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  if (activeTab === "objectives") {
+                    openCreateModal();
+                  } else {
+                    // TODO: Implement create modal/form for other template types
+                    alert(
+                      `Create new ${TABS.find((t) => t.key === activeTab)?.label}`
+                    );
+                  }
+                }}
+                className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+              >
+                {getNewButtonLabel()}
+              </button>
+              {activeTab === "objectives" && (
+                <button
+                  onClick={() => setIsImportModalOpen(true)}
+                  className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Importeer CSV
+                </button>
+              )}
+            </div>
           )}
         </header>
       </div>
@@ -589,6 +712,69 @@ export default function TemplatesPage() {
                 className="flex-1 px-4 py-2 border rounded hover:bg-gray-50"
               >
                 Annuleren
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Learning Objective Modal */}
+      {isImportModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-4">
+              Importeer Leerdoelen (CSV)
+            </h2>
+            <p className="text-sm text-gray-600 mb-2">
+              <strong>Let op:</strong> Deze leerdoelen worden toegevoegd aan het geselecteerde
+              subject ({subjects.find((s) => s.id === selectedSubjectId)?.name}).
+            </p>
+            <p className="text-sm text-gray-600 mb-4">
+              Formaat: domein,nummer,titel,beschrijving,fase
+              <br />
+              Bijvoorbeeld: D,9,Conceptontwikkeling,Ontwerprichtingen genereren en
+              onderbouwen,onderbouw
+            </p>
+            <textarea
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+              placeholder="Plak CSV-gegevens hier..."
+              className="w-full px-3 py-2 border rounded font-mono text-sm"
+              rows={10}
+            />
+            {importResult && (
+              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
+                <p className="font-medium">Resultaat:</p>
+                <p>Aangemaakt: {importResult.created}</p>
+                <p>Bijgewerkt: {importResult.updated}</p>
+                {importResult.errors.length > 0 && (
+                  <div className="mt-2">
+                    <p className="font-medium text-red-600">Fouten:</p>
+                    <ul className="list-disc list-inside text-sm">
+                      {importResult.errors.map((err, idx) => (
+                        <li key={idx}>{err}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={handleImport}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              >
+                Importeren
+              </button>
+              <button
+                onClick={() => {
+                  setIsImportModalOpen(false);
+                  setImportText("");
+                  setImportResult(null);
+                }}
+                className="flex-1 px-4 py-2 border rounded hover:bg-gray-50"
+              >
+                Sluiten
               </button>
             </div>
           </div>
