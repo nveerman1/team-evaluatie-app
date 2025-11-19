@@ -309,7 +309,6 @@ function RunningProjectsTab() {
   // Filters
   const [courseFilter, setCourseFilter] = useState<string>("Alle vakken");
   const [schoolYearFilter, setSchoolYearFilter] = useState<string>("2025–2026");
-  const [statusFilter, setStatusFilter] = useState<string>("Alle");
   const [searchFilter, setSearchFilter] = useState<string>("");
   
   // Sorting
@@ -360,7 +359,7 @@ function RunningProjectsTab() {
         } = {
           page,
           per_page: perPage,
-          search: searchFilter || undefined,
+          search: searchFilter.trim() || undefined,
           sort_by: sortBy || undefined,
           sort_order: sortOrder,
         };
@@ -387,8 +386,11 @@ function RunningProjectsTab() {
         setLoading(false);
       }
     }
-    fetchData();
-  }, [page, courseFilter, schoolYearFilter, statusFilter, searchFilter, sortBy, sortOrder, courses]);
+    // Only fetch when courses are loaded and other dependencies change
+    if (courses.length > 0 || courseFilter === "Alle vakken") {
+      fetchData();
+    }
+  }, [page, courseFilter, schoolYearFilter, searchFilter, sortBy, sortOrder, courses]);
   
   const handleSort = (field: string) => {
     if (sortBy === field) {
@@ -485,7 +487,17 @@ function RunningProjectsTab() {
     <>
       {/* Filters */}
       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <label className="text-xs font-medium text-slate-600 block mb-1.5">Zoeken</label>
+            <input 
+              type="text"
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              placeholder="Zoek leerling, team of opdrachtgever…"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+            />
+          </div>
           <div>
             <label className="text-xs font-medium text-slate-600 block mb-1.5">Vak</label>
             <select 
@@ -510,29 +522,6 @@ function RunningProjectsTab() {
               <option>2024–2025</option>
               <option>2023–2024</option>
             </select>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1.5">Status</label>
-            <select 
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-            >
-              <option>Alle</option>
-              <option>Net gestart</option>
-              <option>Halverwege</option>
-              <option>Afsluitfase</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1.5">Zoeken</label>
-            <input 
-              type="text"
-              value={searchFilter}
-              onChange={(e) => setSearchFilter(e.target.value)}
-              placeholder="Zoek leerling, team of opdrachtgever…"
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-            />
           </div>
         </div>
       </div>
