@@ -6,6 +6,7 @@ export type CourseLite = {
 export type Course = {
   id: number;
   school_id: number;
+  subject_id?: number;
   name: string;
   code?: string;
   period?: string;
@@ -25,6 +26,7 @@ export type CourseCreate = {
   level?: string;
   year?: number;
   description?: string;
+  subject_id?: number;
 };
 
 export type CourseUpdate = {
@@ -34,6 +36,7 @@ export type CourseUpdate = {
   level?: string;
   year?: number;
   description?: string;
+  subject_id?: number;
   is_active?: boolean;
 };
 
