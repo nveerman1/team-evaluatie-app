@@ -19,7 +19,7 @@ export async function listPeerCriteria(
     throw new Error("Failed to fetch peer criteria");
   }
   const data = await response.json();
-  return data.items || [];
+  return data.templates || [];
 }
 
 export async function createPeerCriterion(
