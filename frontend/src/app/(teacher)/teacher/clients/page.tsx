@@ -308,7 +308,7 @@ function RunningProjectsTab() {
   
   // Filters
   const [courseFilter, setCourseFilter] = useState<string>("Alle vakken");
-  const [schoolYearFilter, setSchoolYearFilter] = useState<string>("2025–2026");
+  const [schoolYearFilter, setSchoolYearFilter] = useState<string>("2025-2026");
   const [searchFilter, setSearchFilter] = useState<string>("");
   const [debouncedSearchFilter, setDebouncedSearchFilter] = useState<string>("");
   
@@ -346,25 +346,41 @@ function RunningProjectsTab() {
         const { projectService } = await import("@/services/project.service");
         
         // Build params for API call - don't send search to backend, we'll filter client-side
-        const params: {
+        const baseParams: {
           page: number;
           per_page: number;
           sort_by?: string;
           sort_order: "asc" | "desc";
           school_year?: string;
         } = {
-          page: 1, // Always get first page since we'll filter client-side
-          per_page: 1000, // Get all projects for client-side filtering
+          page: 1,
+          per_page: 100, // Max allowed by backend
           sort_by: sortBy || undefined,
           sort_order: sortOrder,
         };
         
         if (schoolYearFilter && schoolYearFilter !== "Alle jaren") {
-          params.school_year = schoolYearFilter;
+          baseParams.school_year = schoolYearFilter;
         }
         
-        const projectsData = await projectService.getRunningProjectsOverview(params);
-        let allProjects = projectsData.items || [];
+        // Fetch first page to get total count
+        const firstPageData = await projectService.getRunningProjectsOverview(baseParams);
+        let allProjects = [...(firstPageData.items || [])];
+        
+        // Fetch remaining pages if needed
+        const totalPages = firstPageData.pages || 1;
+        if (totalPages > 1) {
+          const remainingPages = [];
+          for (let p = 2; p <= totalPages; p++) {
+            remainingPages.push(
+              projectService.getRunningProjectsOverview({ ...baseParams, page: p })
+            );
+          }
+          const remainingData = await Promise.all(remainingPages);
+          remainingData.forEach(data => {
+            allProjects = allProjects.concat(data.items || []);
+          });
+        }
         
         // Client-side search filter - search across all visible fields
         if (debouncedSearchFilter.trim()) {
@@ -398,8 +414,10 @@ function RunningProjectsTab() {
         setPages(Math.ceil(filteredProjects.length / perPage));
         
         // Extract unique course names from all projects for dropdown (before filtering)
+        // Use the original full data set
+        const allProjectsForCourses = allProjects;
         const uniqueCourses = Array.from(new Set(
-          projectsData.items
+          allProjectsForCourses
             .map(p => p.course_name)
             .filter((name): name is string => !!name)
         )).sort();
@@ -540,9 +558,9 @@ function RunningProjectsTab() {
               onChange={(e) => setSchoolYearFilter(e.target.value)}
               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
             >
-              <option>2025–2026</option>
-              <option>2024–2025</option>
-              <option>2023–2024</option>
+              <option>2025-2026</option>
+              <option>2024-2025</option>
+              <option>2023-2024</option>
             </select>
           </div>
         </div>
@@ -758,7 +776,7 @@ function ListTab({ refreshKey }: { refreshKey?: number }) {
 
 // Tab 4: Communication
 function CommunicationTab() {
-  const [schoolYear, setSchoolYear] = useState("2025–2026");
+  const [schoolYear, setSchoolYear] = useState("2025-2026");
   const [level, setLevel] = useState("Alle");
   const [template, setTemplate] = useState("opvolgmail");
   const [selectedClients, setSelectedClients] = useState<number[]>([]);
@@ -883,9 +901,9 @@ function CommunicationTab() {
               onChange={(e) => setSchoolYear(e.target.value)}
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
             >
-              <option>2025–2026</option>
-              <option>2024–2025</option>
-              <option>2023–2024</option>
+              <option>2025-2026</option>
+              <option>2024-2025</option>
+              <option>2023-2024</option>
             </select>
           </div>
           <div className="flex-1">
