@@ -326,22 +326,8 @@ function RunningProjectsTab() {
   const [selectedProjects, setSelectedProjects] = useState<number[]>([]);
   const [emailTemplate, setEmailTemplate] = useState("opvolgmail");
   
-  // Available courses for filter
-  const [courses, setCourses] = useState<{id: number; name: string}[]>([]);
-  
-  // Fetch courses on mount
-  useEffect(() => {
-    async function fetchCourses() {
-      try {
-        const { courseService } = await import("@/services/course.service");
-        const data = await courseService.listCourses({ per_page: 100 });
-        setCourses(data.items || []);
-      } catch (err) {
-        console.error("Error fetching courses:", err);
-      }
-    }
-    fetchCourses();
-  }, []);
+  // Available courses for filter - extracted from actual project data
+  const [availableCourses, setAvailableCourses] = useState<string[]>([]);
   
   // Debounce search filter
   useEffect(() => {
@@ -359,38 +345,65 @@ function RunningProjectsTab() {
         setLoading(true);
         const { projectService } = await import("@/services/project.service");
         
-        // Build params for API call
+        // Build params for API call - don't send search to backend, we'll filter client-side
         const params: {
           page: number;
           per_page: number;
-          search?: string;
           sort_by?: string;
           sort_order: "asc" | "desc";
-          course_id?: number;
           school_year?: string;
         } = {
-          page,
-          per_page: perPage,
-          search: debouncedSearchFilter.trim() || undefined,
+          page: 1, // Always get first page since we'll filter client-side
+          per_page: 1000, // Get all projects for client-side filtering
           sort_by: sortBy || undefined,
           sort_order: sortOrder,
         };
-        
-        if (courseFilter && courseFilter !== "Alle vakken") {
-          const selectedCourse = courses.find(c => c.name === courseFilter);
-          if (selectedCourse) {
-            params.course_id = selectedCourse.id;
-          }
-        }
         
         if (schoolYearFilter && schoolYearFilter !== "Alle jaren") {
           params.school_year = schoolYearFilter;
         }
         
         const projectsData = await projectService.getRunningProjectsOverview(params);
-        setProjects(projectsData.items || []);
-        setTotal(projectsData.total || 0);
-        setPages(projectsData.pages || 0);
+        let allProjects = projectsData.items || [];
+        
+        // Client-side search filter - search across all visible fields
+        if (debouncedSearchFilter.trim()) {
+          const searchTerm = debouncedSearchFilter.trim().toLowerCase();
+          allProjects = allProjects.filter(p => {
+            const searchableText = [
+              p.project_title,
+              p.course_name,
+              p.client_organization,
+              p.class_name,
+              p.team_number?.toString(),
+              ...(p.student_names || [])
+            ].filter(Boolean).join(' ').toLowerCase();
+            
+            return searchableText.includes(searchTerm);
+          });
+        }
+        
+        // Filter by course on frontend
+        let filteredProjects = allProjects;
+        if (courseFilter && courseFilter !== "Alle vakken") {
+          filteredProjects = allProjects.filter(p => p.course_name === courseFilter);
+        }
+        
+        // Apply pagination client-side
+        const startIdx = (page - 1) * perPage;
+        const paginatedProjects = filteredProjects.slice(startIdx, startIdx + perPage);
+        
+        setProjects(paginatedProjects);
+        setTotal(filteredProjects.length);
+        setPages(Math.ceil(filteredProjects.length / perPage));
+        
+        // Extract unique course names from all projects for dropdown (before filtering)
+        const uniqueCourses = Array.from(new Set(
+          projectsData.items
+            .map(p => p.course_name)
+            .filter((name): name is string => !!name)
+        )).sort();
+        setAvailableCourses(uniqueCourses);
       } catch (err) {
         console.error("Error fetching running projects data:", err);
         setError("Er is een fout opgetreden bij het laden van de gegevens.");
@@ -399,7 +412,7 @@ function RunningProjectsTab() {
       }
     }
     fetchData();
-  }, [page, courseFilter, schoolYearFilter, debouncedSearchFilter, sortBy, sortOrder, courses]);
+  }, [page, courseFilter, schoolYearFilter, debouncedSearchFilter, sortBy, sortOrder, perPage]);
   
   const handleSort = (field: string) => {
     if (sortBy === field) {
@@ -515,8 +528,8 @@ function RunningProjectsTab() {
               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
             >
               <option>Alle vakken</option>
-              {courses.map(course => (
-                <option key={course.id} value={course.name}>{course.name}</option>
+              {availableCourses.map(courseName => (
+                <option key={courseName} value={courseName}>{courseName}</option>
               ))}
             </select>
           </div>
