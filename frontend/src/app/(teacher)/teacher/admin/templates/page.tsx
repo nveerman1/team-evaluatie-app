@@ -86,8 +86,10 @@ export default function TemplatesPage() {
     null
   );
   const [editingCriterion, setEditingCriterion] = useState<number | null>(null);
+  const [editFilterPhase, setEditFilterPhase] = useState<string | undefined>(undefined);
+  const [editLearningObjectiveIds, setEditLearningObjectiveIds] = useState<number[]>([]);
   const [isCreatingPeerCriterion, setIsCreatingPeerCriterion] = useState(false);
-  const [peerFormData, setPeerFormData] = useState<Partial<PeerEvaluationCriterionTemplateCreateDto>>({
+  const [peerFormData, setPeerFormData] = useState<Partial<PeerEvaluationCriterionTemplateCreateDto> & { _filterPhase?: string }>({
     omza_category: "organiseren",
     title: "",
     description: "",
@@ -99,6 +101,7 @@ export default function TemplatesPage() {
       "5": "",
     },
     learning_objective_ids: [],
+    _filterPhase: undefined,
   });
 
   // Sync state with URL params
@@ -549,6 +552,90 @@ export default function TemplatesPage() {
                             ))}
                           </div>
                         </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Leerdoelen koppelen
+                          </label>
+                          <div className="space-y-2">
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setPeerFormData({ ...peerFormData, _filterPhase: "onderbouw" })}
+                                className={`px-3 py-1 text-sm rounded ${
+                                  peerFormData._filterPhase === "onderbouw"
+                                    ? "bg-blue-600 text-white"
+                                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                }`}
+                              >
+                                Onderbouw
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setPeerFormData({ ...peerFormData, _filterPhase: "bovenbouw" })}
+                                className={`px-3 py-1 text-sm rounded ${
+                                  peerFormData._filterPhase === "bovenbouw"
+                                    ? "bg-blue-600 text-white"
+                                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                }`}
+                              >
+                                Bovenbouw
+                              </button>
+                            </div>
+                            {peerFormData._filterPhase && (
+                              <select
+                                value=""
+                                onChange={(e) => {
+                                  const id = parseInt(e.target.value);
+                                  if (id && !peerFormData.learning_objective_ids.includes(id)) {
+                                    setPeerFormData({
+                                      ...peerFormData,
+                                      learning_objective_ids: [...peerFormData.learning_objective_ids, id],
+                                    });
+                                  }
+                                }}
+                                className="w-full px-3 py-2 border rounded"
+                              >
+                                <option value="">Selecteer een leerdoel...</option>
+                                {learningObjectives
+                                  .filter((obj) => obj.phase === peerFormData._filterPhase)
+                                  .map((obj) => (
+                                    <option key={obj.id} value={obj.id}>
+                                      {obj.domain || ""} {obj.order} - {obj.title}
+                                    </option>
+                                  ))}
+                              </select>
+                            )}
+                            {peerFormData.learning_objective_ids.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {peerFormData.learning_objective_ids.map((id) => {
+                                  const obj = learningObjectives.find((o) => o.id === id);
+                                  return (
+                                    <span
+                                      key={id}
+                                      className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
+                                    >
+                                      {obj ? `${obj.domain || ""} ${obj.order} - ${obj.title}` : `ID: ${id}`}
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setPeerFormData({
+                                            ...peerFormData,
+                                            learning_objective_ids: peerFormData.learning_objective_ids.filter(
+                                              (objId) => objId !== id
+                                            ),
+                                          })
+                                        }
+                                        className="text-blue-600 hover:text-blue-800"
+                                      >
+                                        ×
+                                      </button>
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                         <div className="flex gap-2 pt-2">
                           <button
                             onClick={handleCreatePeerCriterion}
@@ -662,6 +749,84 @@ export default function TemplatesPage() {
                                           ))}
                                         </div>
                                       </div>
+                                      <div>
+                                        <label className="block text-sm font-medium mb-2">
+                                          Leerdoelen koppelen
+                                        </label>
+                                        <div className="space-y-2">
+                                          <div className="flex gap-2">
+                                            <button
+                                              type="button"
+                                              onClick={() => setEditFilterPhase("onderbouw")}
+                                              className={`px-3 py-1 text-sm rounded ${
+                                                editFilterPhase === "onderbouw"
+                                                  ? "bg-blue-600 text-white"
+                                                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                              }`}
+                                            >
+                                              Onderbouw
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => setEditFilterPhase("bovenbouw")}
+                                              className={`px-3 py-1 text-sm rounded ${
+                                                editFilterPhase === "bovenbouw"
+                                                  ? "bg-blue-600 text-white"
+                                                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                              }`}
+                                            >
+                                              Bovenbouw
+                                            </button>
+                                          </div>
+                                          {editFilterPhase && (
+                                            <select
+                                              value=""
+                                              onChange={(e) => {
+                                                const id = parseInt(e.target.value);
+                                                if (id && !editLearningObjectiveIds.includes(id)) {
+                                                  setEditLearningObjectiveIds([...editLearningObjectiveIds, id]);
+                                                }
+                                              }}
+                                              className="w-full px-3 py-2 border rounded"
+                                            >
+                                              <option value="">Selecteer een leerdoel...</option>
+                                              {learningObjectives
+                                                .filter((obj) => obj.phase === editFilterPhase)
+                                                .map((obj) => (
+                                                  <option key={obj.id} value={obj.id}>
+                                                    {obj.domain || ""} {obj.order} - {obj.title}
+                                                  </option>
+                                                ))}
+                                            </select>
+                                          )}
+                                          {editLearningObjectiveIds.length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-2">
+                                              {editLearningObjectiveIds.map((id) => {
+                                                const obj = learningObjectives.find((o) => o.id === id);
+                                                return (
+                                                  <span
+                                                    key={id}
+                                                    className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
+                                                  >
+                                                    {obj ? `${obj.domain || ""} ${obj.order} - ${obj.title}` : `ID: ${id}`}
+                                                    <button
+                                                      type="button"
+                                                      onClick={() =>
+                                                        setEditLearningObjectiveIds(
+                                                          editLearningObjectiveIds.filter((objId) => objId !== id)
+                                                        )
+                                                      }
+                                                      className="text-blue-600 hover:text-blue-800"
+                                                    >
+                                                      ×
+                                                    </button>
+                                                  </span>
+                                                );
+                                              })}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
                                       <div className="flex gap-2">
                                         <button
                                           onClick={() => {
@@ -678,6 +843,7 @@ export default function TemplatesPage() {
                                             handleUpdatePeerCriterion(criterion.id, {
                                               title: titleEl.value,
                                               level_descriptors: levels,
+                                              learning_objective_ids: editLearningObjectiveIds,
                                             });
                                           }}
                                           className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
@@ -685,7 +851,11 @@ export default function TemplatesPage() {
                                           Opslaan
                                         </button>
                                         <button
-                                          onClick={() => setEditingCriterion(null)}
+                                          onClick={() => {
+                                            setEditingCriterion(null);
+                                            setEditFilterPhase(undefined);
+                                            setEditLearningObjectiveIds([]);
+                                          }}
                                           className="px-3 py-1.5 border text-sm rounded hover:bg-gray-100"
                                         >
                                           Annuleren
@@ -739,7 +909,11 @@ export default function TemplatesPage() {
                                       </div>
                                       <div className="flex gap-2">
                                         <button
-                                          onClick={() => setEditingCriterion(criterion.id)}
+                                          onClick={() => {
+                                            setEditingCriterion(criterion.id);
+                                            setEditLearningObjectiveIds(criterion.learning_objective_ids);
+                                            setEditFilterPhase(undefined);
+                                          }}
                                           className="px-3 py-1.5 bg-gray-100 text-sm rounded hover:bg-gray-200"
                                         >
                                           Bewerken
