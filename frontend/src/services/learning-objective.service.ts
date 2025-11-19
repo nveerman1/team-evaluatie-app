@@ -28,6 +28,7 @@ export async function listLearningObjectives(
     domain?: string;
     phase?: string;
     search?: string;
+    subject_id?: number;
   }
 ): Promise<LearningObjectiveListResponse> {
   const response = await api.get<LearningObjectiveListResponse>(

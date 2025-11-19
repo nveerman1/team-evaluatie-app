@@ -1023,12 +1023,21 @@ class LearningObjective(Base):
     """
     Learning objectives / eindtermen that can be linked to rubric criteria
     to track student progress per learning goal.
+    
+    Can be school-wide (subject_id=NULL) or subject-specific (subject_id set).
     """
 
     __tablename__ = "learning_objectives"
 
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
+    
+    # Subject linkage for template-specific learning objectives
+    subject_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("subjects.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
     # Domain (e.g., "A", "B", "C", "D - Ontwerpen", "E")
     domain: Mapped[Optional[str]] = mapped_column(String(50))
@@ -1048,7 +1057,8 @@ class LearningObjective(Base):
     # Additional metadata
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
 
-    # Relationship to rubric criteria
+    # Relationships
+    subject: Mapped[Optional["Subject"]] = relationship()
     rubric_criteria: Mapped[list["RubricCriterion"]] = relationship(
         secondary="rubric_criterion_learning_objectives",
         back_populates="learning_objectives",
@@ -1056,6 +1066,7 @@ class LearningObjective(Base):
 
     __table_args__ = (
         Index("ix_learning_objective_school", "school_id"),
+        Index("ix_learning_objective_subject", "subject_id"),
         Index("ix_learning_objective_domain", "school_id", "domain"),
         Index("ix_learning_objective_phase", "school_id", "phase"),
     )

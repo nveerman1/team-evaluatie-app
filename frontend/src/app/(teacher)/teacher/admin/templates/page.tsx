@@ -97,11 +97,14 @@ export default function TemplatesPage() {
   };
 
   const fetchLearningObjectives = async () => {
+    if (!selectedSubjectId) return;
+    
     setLoadingObjectives(true);
     try {
       const response = await listLearningObjectives({
         page: 1,
         limit: 50,
+        subject_id: selectedSubjectId,  // Filter by selected subject
       });
       setLearningObjectives(response.items);
     } catch (err) {
@@ -118,6 +121,7 @@ export default function TemplatesPage() {
       description: "",
       order: 0,
       phase: "",
+      subject_id: selectedSubjectId,  // Set subject_id from selected subject
     });
     setIsCreateModalOpen(true);
   };
@@ -128,8 +132,17 @@ export default function TemplatesPage() {
       return;
     }
 
+    if (!selectedSubjectId) {
+      alert("Selecteer eerst een sectie");
+      return;
+    }
+
     try {
-      await createLearningObjective(formData);
+      // Ensure subject_id is set when creating
+      await createLearningObjective({
+        ...formData,
+        subject_id: selectedSubjectId,
+      });
       setIsCreateModalOpen(false);
       fetchLearningObjectives();
     } catch (err) {

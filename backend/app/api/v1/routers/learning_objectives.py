@@ -61,6 +61,7 @@ def create_learning_objective(
     """Create a new learning objective"""
     obj = LearningObjective(
         school_id=user.school_id,
+        subject_id=payload.subject_id,
         domain=payload.domain,
         title=payload.title,
         description=payload.description,
@@ -81,13 +82,25 @@ def list_learning_objectives(
     domain: Optional[str] = None,
     phase: Optional[str] = None,
     search: Optional[str] = None,
+    subject_id: Optional[int] = None,
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    """List learning objectives with filtering and pagination"""
+    """List learning objectives with filtering and pagination
+    
+    If subject_id is provided, returns only learning objectives for that subject.
+    If subject_id is not provided, returns school-wide learning objectives (subject_id=NULL).
+    """
     query = select(LearningObjective).where(
         LearningObjective.school_id == user.school_id
     )
+
+    # Filter by subject_id - if provided, show only subject-specific ones
+    # if not provided, show only school-wide ones (NULL subject_id)
+    if subject_id is not None:
+        query = query.where(LearningObjective.subject_id == subject_id)
+    else:
+        query = query.where(LearningObjective.subject_id.is_(None))
 
     if domain is not None:
         query = query.where(LearningObjective.domain == domain)
