@@ -34,7 +34,7 @@ def list_subjects(
 ):
     """
     List all subjects accessible to the user
-    
+
     - Admin/Teacher/Student: sees all subjects in their school
     """
     if not user or not user.school_id:
@@ -50,8 +50,7 @@ def list_subjects(
         query = query.filter(Subject.is_active == is_active)
     if search:
         query = query.filter(
-            (Subject.name.ilike(f"%{search}%"))
-            | (Subject.code.ilike(f"%{search}%"))
+            (Subject.name.ilike(f"%{search}%")) | (Subject.code.ilike(f"%{search}%"))
         )
 
     # Get total count
@@ -88,7 +87,7 @@ def get_subject(
         .filter(Subject.id == subject_id, Subject.school_id == user.school_id)
         .first()
     )
-    
+
     if not subject:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found"
@@ -118,7 +117,7 @@ def get_subject_courses(
         .filter(Subject.id == subject_id, Subject.school_id == user.school_id)
         .first()
     )
-    
+
     if not subject:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found"
@@ -126,12 +125,12 @@ def get_subject_courses(
 
     # Query courses for this subject
     query = db.query(Course).filter(Course.subject_id == subject_id)
-    
+
     if is_active is not None:
         query = query.filter(Course.is_active == is_active)
-    
+
     courses = query.order_by(Course.name).all()
-    
+
     return [CourseOut.model_validate(c) for c in courses]
 
 
@@ -146,7 +145,7 @@ def create_subject(
     Create a new subject (admin/teacher only)
     """
     require_role(user, ["admin", "teacher"])
-    
+
     if not user.school_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="User has no school"
@@ -161,7 +160,7 @@ def create_subject(
         )
         .first()
     )
-    
+
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -177,11 +176,11 @@ def create_subject(
         icon=subject_data.icon,
         is_active=True,
     )
-    
+
     db.add(new_subject)
     db.commit()
     db.refresh(new_subject)
-    
+
     # Audit log
     log_create(db, user, "subject", new_subject.id, request)
 
@@ -200,7 +199,7 @@ def update_subject(
     Update a subject (admin/teacher only)
     """
     require_role(user, ["admin", "teacher"])
-    
+
     if not user.school_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="User has no school"
@@ -212,7 +211,7 @@ def update_subject(
         .filter(Subject.id == subject_id, Subject.school_id == user.school_id)
         .first()
     )
-    
+
     if not subject:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found"
@@ -229,7 +228,7 @@ def update_subject(
             )
             .first()
         )
-        
+
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -240,10 +239,10 @@ def update_subject(
     update_data = subject_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(subject, field, value)
-    
+
     db.commit()
     db.refresh(subject)
-    
+
     # Audit log
     log_update(db, user, "subject", subject.id, request)
 
@@ -259,12 +258,12 @@ def delete_subject(
 ):
     """
     Delete (soft delete) a subject (admin only)
-    
+
     Sets is_active to False. Courses linked to this subject will have
     subject_id set to NULL due to ON DELETE SET NULL.
     """
     require_role(user, ["admin"])
-    
+
     if not user.school_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="User has no school"
@@ -276,7 +275,7 @@ def delete_subject(
         .filter(Subject.id == subject_id, Subject.school_id == user.school_id)
         .first()
     )
-    
+
     if not subject:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found"
@@ -285,8 +284,8 @@ def delete_subject(
     # Soft delete: set is_active to False
     subject.is_active = False
     db.commit()
-    
+
     # Audit log
     log_delete(db, user, "subject", subject.id, request)
-    
+
     return None
