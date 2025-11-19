@@ -1,74 +1,48 @@
+import api from "@/lib/api";
 import type {
   PeerEvaluationCriterionTemplateDto,
   PeerEvaluationCriterionTemplateCreateDto,
   PeerEvaluationCriterionTemplateUpdateDto,
 } from "@/dtos/peer-evaluation-criterion-template.dto";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+interface PeerCriteriaListResponse {
+  templates: PeerEvaluationCriterionTemplateDto[];
+  total: number;
+  page: number;
+  per_page: number;
+  pages: number;
+}
 
 export async function listPeerCriteria(
   subjectId: number
 ): Promise<PeerEvaluationCriterionTemplateDto[]> {
-  const response = await fetch(
-    `${API_BASE}/api/v1/templates/peer-criteria?subject_id=${subjectId}`,
-    {
-      credentials: "include",
-    }
+  const response = await api.get<PeerCriteriaListResponse>(
+    `/templates/peer-criteria?subject_id=${subjectId}`
   );
-  if (!response.ok) {
-    throw new Error("Failed to fetch peer criteria");
-  }
-  const data = await response.json();
-  return data.templates || [];
+  return response.data.templates || [];
 }
 
 export async function createPeerCriterion(
   data: PeerEvaluationCriterionTemplateCreateDto
 ): Promise<PeerEvaluationCriterionTemplateDto> {
-  const response = await fetch(`${API_BASE}/api/v1/templates/peer-criteria`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "include",
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) {
-    throw new Error("Failed to create peer criterion");
-  }
-  return response.json();
+  const response = await api.post<PeerEvaluationCriterionTemplateDto>(
+    `/templates/peer-criteria`,
+    data
+  );
+  return response.data;
 }
 
 export async function updatePeerCriterion(
   id: number,
   data: PeerEvaluationCriterionTemplateUpdateDto
 ): Promise<PeerEvaluationCriterionTemplateDto> {
-  const response = await fetch(
-    `${API_BASE}/api/v1/templates/peer-criteria/${id}`,
-    {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify(data),
-    }
+  const response = await api.patch<PeerEvaluationCriterionTemplateDto>(
+    `/templates/peer-criteria/${id}`,
+    data
   );
-  if (!response.ok) {
-    throw new Error("Failed to update peer criterion");
-  }
-  return response.json();
+  return response.data;
 }
 
 export async function deletePeerCriterion(id: number): Promise<void> {
-  const response = await fetch(
-    `${API_BASE}/api/v1/templates/peer-criteria/${id}`,
-    {
-      method: "DELETE",
-      credentials: "include",
-    }
-  );
-  if (!response.ok) {
-    throw new Error("Failed to delete peer criterion");
-  }
+  await api.delete(`/templates/peer-criteria/${id}`);
 }
