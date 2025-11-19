@@ -14,6 +14,16 @@ import type {
   LearningObjectiveCreateDto,
   LearningObjectiveImportItem,
 } from "@/dtos/learning-objective.dto";
+import {
+  listPeerCriteria,
+  createPeerCriterion,
+  updatePeerCriterion,
+  deletePeerCriterion,
+} from "@/services/peer-evaluation-criterion-template.service";
+import type {
+  PeerEvaluationCriterionTemplateDto,
+  PeerEvaluationCriterionTemplateCreateDto,
+} from "@/dtos/peer-evaluation-criterion-template.dto";
 
 type TabType =
   | "peer"
@@ -67,6 +77,30 @@ export default function TemplatesPage() {
     errors: string[];
   } | null>(null);
 
+  // Peer criteria state
+  const [peerCriteria, setPeerCriteria] = useState<
+    PeerEvaluationCriterionTemplateDto[]
+  >([]);
+  const [loadingPeerCriteria, setLoadingPeerCriteria] = useState(false);
+  const [expandedCriterion, setExpandedCriterion] = useState<number | null>(
+    null
+  );
+  const [editingCriterion, setEditingCriterion] = useState<number | null>(null);
+  const [isCreatingPeerCriterion, setIsCreatingPeerCriterion] = useState(false);
+  const [peerFormData, setPeerFormData] = useState<Partial<PeerEvaluationCriterionTemplateCreateDto>>({
+    omza_category: "organiseren",
+    title: "",
+    description: "",
+    level_descriptors: {
+      "1": "",
+      "2": "",
+      "3": "",
+      "4": "",
+      "5": "",
+    },
+    learning_objective_ids: [],
+  });
+
   // Sync state with URL params
   useEffect(() => {
     const subjectIdParam = searchParams.get("subjectId");
@@ -89,6 +123,13 @@ export default function TemplatesPage() {
   useEffect(() => {
     if (activeTab === "objectives" && selectedSubjectId) {
       fetchLearningObjectives();
+    }
+  }, [activeTab, selectedSubjectId]);
+
+  // Load peer criteria when tab changes to peer
+  useEffect(() => {
+    if (activeTab === "peer" && selectedSubjectId) {
+      fetchPeerCriteria();
     }
   }, [activeTab, selectedSubjectId]);
 
@@ -264,6 +305,80 @@ export default function TemplatesPage() {
     }
   };
 
+  // Peer criteria functions
+  const fetchPeerCriteria = async () => {
+    if (!selectedSubjectId) return;
+    
+    setLoadingPeerCriteria(true);
+    try {
+      const criteria = await listPeerCriteria(selectedSubjectId);
+      setPeerCriteria(criteria);
+    } catch (err) {
+      console.error("Error fetching peer criteria:", err);
+    } finally {
+      setLoadingPeerCriteria(false);
+    }
+  };
+
+  const handleCreatePeerCriterion = async () => {
+    if (!peerFormData.title) {
+      alert("Titel is verplicht");
+      return;
+    }
+    if (!selectedSubjectId) {
+      alert("Selecteer eerst een sectie");
+      return;
+    }
+
+    try {
+      await createPeerCriterion({
+        ...peerFormData as PeerEvaluationCriterionTemplateCreateDto,
+        subject_id: selectedSubjectId,
+      });
+      setIsCreatingPeerCriterion(false);
+      setPeerFormData({
+        omza_category: "organiseren",
+        title: "",
+        description: "",
+        level_descriptors: { "1": "", "2": "", "3": "", "4": "", "5": "" },
+        learning_objective_ids: [],
+      });
+      fetchPeerCriteria();
+    } catch (err) {
+      console.error("Error creating peer criterion:", err);
+      alert("Er is een fout opgetreden bij het aanmaken.");
+    }
+  };
+
+  const handleUpdatePeerCriterion = async (id: number, data: Partial<PeerEvaluationCriterionTemplateCreateDto>) => {
+    try {
+      await updatePeerCriterion(id, data);
+      setEditingCriterion(null);
+      fetchPeerCriteria();
+    } catch (err) {
+      console.error("Error updating peer criterion:", err);
+      alert("Er is een fout opgetreden bij het bijwerken.");
+    }
+  };
+
+  const handleDeletePeerCriterion = async (id: number) => {
+    if (!confirm("Weet je zeker dat je dit criterium wilt verwijderen?")) {
+      return;
+    }
+    try {
+      await deletePeerCriterion(id);
+      fetchPeerCriteria();
+    } catch (err) {
+      console.error("Error deleting peer criterion:", err);
+      alert("Er is een fout opgetreden bij het verwijderen.");
+    }
+  };
+
+  const toggleCriterionExpand = (id: number) => {
+    setExpandedCriterion(expandedCriterion === id ? null : id);
+    setEditingCriterion(null);
+  };
+
   const updateURL = (subjectId: number | null, tab: TabType) => {
     const params = new URLSearchParams();
     if (subjectId) params.set("subjectId", subjectId.toString());
@@ -341,10 +456,314 @@ export default function TemplatesPage() {
                 </ul>
                 <p className="text-xs text-blue-700 mt-2">Elk criterium heeft 5 niveaus en kan gekoppeld worden aan leerdoelen</p>
               </div>
-              <div className="text-center py-8 text-gray-500">
-                <p className="mb-4">Peer evaluation criteria templates worden hier weergegeven</p>
-                <p className="text-xs">API Endpoint: GET /api/v1/templates/peer-criteria?subject_id={selectedSubjectId}</p>
-              </div>
+
+              {loadingPeerCriteria ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Criteria laden...</p>
+                </div>
+              ) : (
+                <>
+                  {/* Create new criterion form */}
+                  {isCreatingPeerCriterion && (
+                    <div className="bg-white border-2 border-blue-500 rounded-lg p-4 mb-4">
+                      <h4 className="font-semibold mb-3">Nieuw Criterium</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            OMZA Categorie
+                          </label>
+                          <select
+                            value={peerFormData.omza_category}
+                            onChange={(e) =>
+                              setPeerFormData({
+                                ...peerFormData,
+                                omza_category: e.target.value as any,
+                              })
+                            }
+                            className="w-full px-3 py-2 border rounded"
+                          >
+                            <option value="organiseren">Organiseren</option>
+                            <option value="meedoen">Meedoen</option>
+                            <option value="zelfvertrouwen">Zelfvertrouwen</option>
+                            <option value="autonomie">Autonomie</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            Titel *
+                          </label>
+                          <input
+                            type="text"
+                            value={peerFormData.title}
+                            onChange={(e) =>
+                              setPeerFormData({
+                                ...peerFormData,
+                                title: e.target.value,
+                              })
+                            }
+                            className="w-full px-3 py-2 border rounded"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            Beschrijving
+                          </label>
+                          <textarea
+                            value={peerFormData.description || ""}
+                            onChange={(e) =>
+                              setPeerFormData({
+                                ...peerFormData,
+                                description: e.target.value,
+                              })
+                            }
+                            className="w-full px-3 py-2 border rounded"
+                            rows={2}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium">
+                            Niveaubeschrijvingen (1-5)
+                          </label>
+                          {[1, 2, 3, 4, 5].map((level) => (
+                            <div key={level}>
+                              <label className="text-xs text-gray-600">Niveau {level}</label>
+                              <input
+                                type="text"
+                                placeholder={`Beschrijving niveau ${level}`}
+                                value={peerFormData.level_descriptors?.[level.toString() as "1" | "2" | "3" | "4" | "5"] || ""}
+                                onChange={(e) =>
+                                  setPeerFormData({
+                                    ...peerFormData,
+                                    level_descriptors: {
+                                      ...peerFormData.level_descriptors,
+                                      [level.toString()]: e.target.value,
+                                    } as any,
+                                  })
+                                }
+                                className="w-full px-2 py-1 border rounded text-sm"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                          <button
+                            onClick={handleCreatePeerCriterion}
+                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                          >
+                            Opslaan
+                          </button>
+                          <button
+                            onClick={() => setIsCreatingPeerCriterion(false)}
+                            className="px-4 py-2 border rounded hover:bg-gray-50"
+                          >
+                            Annuleren
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* List of criteria by category */}
+                  {["organiseren", "meedoen", "zelfvertrouwen", "autonomie"].map((category) => {
+                    const categoryCriteria = peerCriteria.filter(
+                      (c) => c.omza_category === category
+                    );
+                    if (categoryCriteria.length === 0) return null;
+
+                    return (
+                      <div key={category} className="mb-6">
+                        <h4 className="font-semibold text-lg mb-2 capitalize">
+                          {category}
+                        </h4>
+                        <div className="space-y-2">
+                          {categoryCriteria.map((criterion) => (
+                            <div
+                              key={criterion.id}
+                              className="border rounded-lg overflow-hidden"
+                            >
+                              {/* Criterion header - clickable to expand */}
+                              <div
+                                onClick={() => toggleCriterionExpand(criterion.id)}
+                                className="bg-white p-4 cursor-pointer hover:bg-gray-50 flex justify-between items-center"
+                              >
+                                <div className="flex-1">
+                                  <h5 className="font-medium">{criterion.title}</h5>
+                                  {criterion.description && (
+                                    <p className="text-sm text-gray-600 mt-1">
+                                      {criterion.description}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-gray-500">
+                                    {criterion.learning_objective_ids.length} leerdoel(en)
+                                  </span>
+                                  <svg
+                                    className={`w-5 h-5 transition-transform ${
+                                      expandedCriterion === criterion.id
+                                        ? "rotate-180"
+                                        : ""
+                                    }`}
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M19 9l-7 7-7-7"
+                                    />
+                                  </svg>
+                                </div>
+                              </div>
+
+                              {/* Expanded content */}
+                              {expandedCriterion === criterion.id && (
+                                <div className="bg-gray-50 p-4 border-t">
+                                  {editingCriterion === criterion.id ? (
+                                    <div className="space-y-3">
+                                      <div>
+                                        <label className="block text-sm font-medium mb-1">
+                                          Titel
+                                        </label>
+                                        <input
+                                          type="text"
+                                          defaultValue={criterion.title}
+                                          id={`edit-title-${criterion.id}`}
+                                          className="w-full px-3 py-2 border rounded"
+                                        />
+                                      </div>
+                                      <div className="space-y-2">
+                                        <label className="block text-sm font-medium">
+                                          Niveaubeschrijvingen
+                                        </label>
+                                        {[1, 2, 3, 4, 5].map((level) => (
+                                          <div key={level}>
+                                            <label className="text-xs text-gray-600">
+                                              Niveau {level}
+                                            </label>
+                                            <input
+                                              type="text"
+                                              defaultValue={
+                                                criterion.level_descriptors[
+                                                  level.toString() as "1" | "2" | "3" | "4" | "5"
+                                                ] || ""
+                                              }
+                                              id={`edit-level-${criterion.id}-${level}`}
+                                              className="w-full px-2 py-1 border rounded text-sm"
+                                            />
+                                          </div>
+                                        ))}
+                                      </div>
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => {
+                                            const titleEl = document.getElementById(
+                                              `edit-title-${criterion.id}`
+                                            ) as HTMLInputElement;
+                                            const levels: any = {};
+                                            [1, 2, 3, 4, 5].forEach((level) => {
+                                              const el = document.getElementById(
+                                                `edit-level-${criterion.id}-${level}`
+                                              ) as HTMLInputElement;
+                                              levels[level.toString()] = el.value;
+                                            });
+                                            handleUpdatePeerCriterion(criterion.id, {
+                                              title: titleEl.value,
+                                              level_descriptors: levels,
+                                            });
+                                          }}
+                                          className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                                        >
+                                          Opslaan
+                                        </button>
+                                        <button
+                                          onClick={() => setEditingCriterion(null)}
+                                          className="px-3 py-1.5 border text-sm rounded hover:bg-gray-100"
+                                        >
+                                          Annuleren
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="mb-4">
+                                        <h6 className="font-medium text-sm mb-2">
+                                          Niveaubeschrijvingen:
+                                        </h6>
+                                        <div className="space-y-1">
+                                          {[1, 2, 3, 4, 5].map((level) => (
+                                            <div key={level} className="text-sm">
+                                              <span className="font-medium">
+                                                Niveau {level}:
+                                              </span>{" "}
+                                              {criterion.level_descriptors[
+                                                level.toString() as "1" | "2" | "3" | "4" | "5"
+                                              ] || <em className="text-gray-500">Niet ingevuld</em>}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                      <div className="mb-4">
+                                        <h6 className="font-medium text-sm mb-2">
+                                          Gekoppelde leerdoelen:
+                                        </h6>
+                                        {criterion.learning_objective_ids.length > 0 ? (
+                                          <div className="flex flex-wrap gap-1">
+                                            {criterion.learning_objective_ids.map((id) => {
+                                              const obj = learningObjectives.find((o) => o.id === id);
+                                              return (
+                                                <span
+                                                  key={id}
+                                                  className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
+                                                >
+                                                  {obj ? `${obj.domain || ""} ${obj.order} - ${obj.title}` : `ID: ${id}`}
+                                                </span>
+                                              );
+                                            })}
+                                          </div>
+                                        ) : (
+                                          <p className="text-sm text-gray-500">
+                                            Geen leerdoelen gekoppeld
+                                          </p>
+                                        )}
+                                      </div>
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => setEditingCriterion(criterion.id)}
+                                          className="px-3 py-1.5 bg-gray-100 text-sm rounded hover:bg-gray-200"
+                                        >
+                                          Bewerken
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeletePeerCriterion(criterion.id)}
+                                          className="px-3 py-1.5 bg-red-100 text-red-700 text-sm rounded hover:bg-red-200"
+                                        >
+                                          Verwijderen
+                                        </button>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {peerCriteria.length === 0 && !isCreatingPeerCriterion && (
+                    <div className="text-center py-8 text-gray-500">
+                      <p>Nog geen criteria aangemaakt voor dit vak.</p>
+                      <p className="text-xs mt-2">
+                        Klik op &quot;+ Nieuw Peerevaluatie Criterium&quot; om te beginnen.
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
 
@@ -536,6 +955,15 @@ export default function TemplatesPage() {
                 onClick={() => {
                   if (activeTab === "objectives") {
                     openCreateModal();
+                  } else if (activeTab === "peer") {
+                    setIsCreatingPeerCriterion(true);
+                    setPeerFormData({
+                      omza_category: "organiseren",
+                      title: "",
+                      description: "",
+                      level_descriptors: { "1": "", "2": "", "3": "", "4": "", "5": "" },
+                      learning_objective_ids: [],
+                    });
                   } else {
                     // TODO: Implement create modal/form for other template types
                     alert(
