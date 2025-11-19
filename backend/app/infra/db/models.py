@@ -74,10 +74,42 @@ class User(Base):
     )
 
 
+class Subject(Base):
+    """
+    Subject (NL: sectie) - Organizational level between School and Course
+    Groups courses by subject area (e.g., "Onderzoek & Ontwerpen", "Biologie")
+    """
+
+    __tablename__ = "subjects"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = mapped_column(
+        ForeignKey("schools.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    code: Mapped[str] = mapped_column(String(50), nullable=False)  # e.g., "O&O", "BIO"
+    color: Mapped[Optional[str]] = mapped_column(String(20))  # hex color for UI
+    icon: Mapped[Optional[str]] = mapped_column(String(100))  # icon name/path
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    # Relationships
+    school: Mapped["School"] = relationship()
+    courses: Mapped[list["Course"]] = relationship(back_populates="subject")
+
+    __table_args__ = (
+        UniqueConstraint("school_id", "code", name="uq_subject_code_per_school"),
+        Index("ix_subject_school_active", "school_id", "is_active"),
+    )
+
+
 class Course(Base):
     __tablename__ = "courses"
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
+    # New: optional FK to Subject - nullable for backward compatibility
+    subject_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("subjects.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     code: Mapped[Optional[str]] = mapped_column(
         String(50)
@@ -90,10 +122,14 @@ class Course(Base):
     description: Mapped[Optional[str]] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
+    # Relationships
+    subject: Mapped[Optional["Subject"]] = relationship(back_populates="courses")
+
     __table_args__ = (
         UniqueConstraint("school_id", "name", "period", name="uq_course_name_period"),
         UniqueConstraint("school_id", "code", name="uq_course_code_per_school"),
         Index("ix_course_school_active", "school_id", "is_active"),
+        Index("ix_course_subject", "subject_id"),
     )
 
 
