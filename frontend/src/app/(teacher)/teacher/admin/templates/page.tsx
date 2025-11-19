@@ -4,6 +4,14 @@ import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { subjectService } from "@/services/subject.service";
 import { Subject } from "@/dtos/subject.dto";
+import {
+  createLearningObjective,
+  listLearningObjectives,
+} from "@/services/learning-objective.service";
+import type {
+  LearningObjectiveDto,
+  LearningObjectiveCreateDto,
+} from "@/dtos/learning-objective.dto";
 
 type TabType =
   | "peer"
@@ -34,6 +42,20 @@ export default function TemplatesPage() {
   );
   const [activeTab, setActiveTab] = useState<TabType>("peer");
 
+  // Modal state for learning objectives
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [learningObjectives, setLearningObjectives] = useState<
+    LearningObjectiveDto[]
+  >([]);
+  const [loadingObjectives, setLoadingObjectives] = useState(false);
+  const [formData, setFormData] = useState<LearningObjectiveCreateDto>({
+    domain: "",
+    title: "",
+    description: "",
+    order: 0,
+    phase: "",
+  });
+
   // Sync state with URL params
   useEffect(() => {
     const subjectIdParam = searchParams.get("subjectId");
@@ -52,6 +74,13 @@ export default function TemplatesPage() {
     loadSubjects();
   }, []);
 
+  // Load learning objectives when tab changes to objectives
+  useEffect(() => {
+    if (activeTab === "objectives" && selectedSubjectId) {
+      fetchLearningObjectives();
+    }
+  }, [activeTab, selectedSubjectId]);
+
   const loadSubjects = async () => {
     try {
       setLoading(true);
@@ -64,6 +93,48 @@ export default function TemplatesPage() {
       console.error("Failed to load subjects:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchLearningObjectives = async () => {
+    setLoadingObjectives(true);
+    try {
+      const response = await listLearningObjectives({
+        page: 1,
+        limit: 50,
+      });
+      setLearningObjectives(response.items);
+    } catch (err) {
+      console.error("Error fetching learning objectives:", err);
+    } finally {
+      setLoadingObjectives(false);
+    }
+  };
+
+  const openCreateModal = () => {
+    setFormData({
+      domain: "",
+      title: "",
+      description: "",
+      order: 0,
+      phase: "",
+    });
+    setIsCreateModalOpen(true);
+  };
+
+  const handleCreateObjective = async () => {
+    if (!formData.title) {
+      alert("Titel is verplicht");
+      return;
+    }
+
+    try {
+      await createLearningObjective(formData);
+      setIsCreateModalOpen(false);
+      fetchLearningObjectives();
+    } catch (err) {
+      console.error("Error creating learning objective:", err);
+      alert("Er is een fout opgetreden bij het aanmaken van het leerdoel.");
     }
   };
 
@@ -205,15 +276,69 @@ export default function TemplatesPage() {
                 Beheer leerdoelen en eindtermen die gekoppeld kunnen worden aan
                 criteria
               </p>
-              <div className="text-center py-8 text-gray-500">
-                <p className="mb-4">
-                  Leerdoelen worden beheerd via het bestaande Leerdoelen menu
-                </p>
-                <p className="text-xs">
-                  Deze tab kan gebruikt worden als snelle toegang of kan
-                  verwijzen naar het leerdoelen menu
-                </p>
-              </div>
+
+              {loadingObjectives ? (
+                <div className="text-center py-8">
+                  <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
+                  <p className="mt-2 text-sm text-gray-500">Laden...</p>
+                </div>
+              ) : learningObjectives.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Domein
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Nummer
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Titel
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Fase
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {learningObjectives.map((obj) => (
+                        <tr key={obj.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 text-sm font-medium">
+                            {obj.domain || "-"}
+                          </td>
+                          <td className="px-6 py-4 text-sm">{obj.order}</td>
+                          <td className="px-6 py-4 text-sm">{obj.title}</td>
+                          <td className="px-6 py-4 text-sm">
+                            {obj.phase ? (
+                              <span
+                                className={`px-2 py-1 rounded text-xs ${
+                                  obj.phase === "onderbouw"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : "bg-purple-100 text-purple-800"
+                                }`}
+                              >
+                                {obj.phase === "onderbouw"
+                                  ? "Onderbouw"
+                                  : "Bovenbouw"}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="mb-4">Nog geen leerdoelen aangemaakt</p>
+                  <p className="text-xs">
+                    Klik op "+ Nieuw Leerdoel" om te beginnen
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -282,8 +407,14 @@ export default function TemplatesPage() {
           {selectedSubjectId && (
             <button
               onClick={() => {
-                // TODO: Implement create modal/form for each template type
-                alert(`Create new ${TABS.find((t) => t.key === activeTab)?.label}`);
+                if (activeTab === "objectives") {
+                  openCreateModal();
+                } else {
+                  // TODO: Implement create modal/form for other template types
+                  alert(
+                    `Create new ${TABS.find((t) => t.key === activeTab)?.label}`
+                  );
+                }
               }}
               className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
             >
@@ -353,6 +484,103 @@ export default function TemplatesPage() {
           {renderTabContent()}
         </div>
       </div>
+
+      {/* Create Learning Objective Modal */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-4">Nieuw Leerdoel</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Domein
+                </label>
+                <input
+                  type="text"
+                  value={formData.domain || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, domain: e.target.value })
+                  }
+                  placeholder="A, B, C, D, E"
+                  className="w-full px-3 py-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Nummer</label>
+                <input
+                  type="number"
+                  value={formData.order || 0}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      order: parseInt(e.target.value, 10),
+                    })
+                  }
+                  placeholder="9, 11, 13, 14, 16..."
+                  className="w-full px-3 py-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Titel *
+                </label>
+                <input
+                  type="text"
+                  value={formData.title || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, title: e.target.value })
+                  }
+                  placeholder="Conceptontwikkeling"
+                  className="w-full px-3 py-2 border rounded"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Beschrijving
+                </label>
+                <textarea
+                  value={formData.description || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  placeholder="Ontwerprichtingen genereren en onderbouwen"
+                  className="w-full px-3 py-2 border rounded"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Fase</label>
+                <select
+                  value={formData.phase || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phase: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border rounded"
+                >
+                  <option value="">Niet gespecificeerd</option>
+                  <option value="onderbouw">Onderbouw</option>
+                  <option value="bovenbouw">Bovenbouw</option>
+                </select>
+              </div>
+            </div>
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={handleCreateObjective}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Aanmaken
+              </button>
+              <button
+                onClick={() => setIsCreateModalOpen(false)}
+                className="flex-1 px-4 py-2 border rounded hover:bg-gray-50"
+              >
+                Annuleren
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
