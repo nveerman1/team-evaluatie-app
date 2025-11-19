@@ -15,12 +15,41 @@ The application is fully multi-tenant at the school level:
 - Users can only access data within their own school
 - Queries are automatically filtered by `school_id` for security
 
+### Data Hierarchy
+
+The application uses a hierarchical organizational structure:
+
+```
+School
+  └── Subject (optional organizational layer)
+       └── Course
+            └── Group/Team
+                 └── Students
+```
+
+- **School**: Top-level tenant (e.g., a specific school)
+- **Subject**: Optional grouping by subject area (e.g., "Biologie", "Talen")
+- **Course**: Specific course offering (e.g., "O&O Periode 1 2024")
+- **Group/Team**: Student groups within a course
+- **Students**: Individual learners assigned to groups
+
+### Subjects (Secties)
+
+Each school can organize courses into **Subjects** (NL: secties):
+
+- Subjects group related courses by subject area
+- Examples: "Onderzoek & Ontwerpen", "Biologie", "Talen"
+- Subjects have properties: code, name, color, icon, is_active
+- Subjects are optional - courses can exist without being linked to a subject
+- Useful for organizing templates, rubrics, and navigation flows
+
 ### Courses
 
 Each school can have multiple **Courses** (vakken):
 
 - Examples: O&O, XPLR, Biologie, Nederlands, Engels
-- Courses can have properties: code, period, level (onderbouw/bovenbouw), year
+- Courses can optionally be linked to a Subject via `subject_id`
+- Courses have properties: code, period, level (onderbouw/bovenbouw), year
 - Courses can be active or inactive (soft delete)
 
 ### Teacher-Course Assignment
@@ -44,43 +73,57 @@ Teachers are explicitly assigned to courses via the **TeacherCourse** junction t
 │ name        │  │
 └─────────────┘  │
                  │
-        ┌────────┴────────┬───────────────┬──────────────┬──────────────┐
-        │                 │               │              │              │
-        ▼                 ▼               ▼              ▼              ▼
-┌─────────────┐   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-│    User     │   │   Course    │ │   Rubric    │ │  AuditLog   │ │   Client    │
-│─────────────│   │─────────────│ │─────────────│ │─────────────│ │─────────────│
-│ id          │   │ id          │ │ id          │ │ id          │ │ id          │
-│ school_id   │◄──┤ school_id   │ │ school_id   │ │ school_id   │ │ school_id   │
-│ email       │   │ name        │ │ title       │ │ user_id     │ │ organization│
-│ name        │   │ code        │ │ scope       │ │ action      │ │ contact_name│
-│ role        │   │ level       │ │ target_level│ │ entity_type │ │ email       │
-│ class_name  │   │ year        │ └─────────────┘ │ entity_id   │ │ phone       │
+        ┌────────┴────────┬───────────────┬──────────────┬──────────────┬──────────────┐
+        │                 │               │              │              │              │
+        ▼                 ▼               ▼              ▼              ▼              ▼
+┌─────────────┐   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│    User     │   │   Subject   │ │   Rubric    │ │  AuditLog   │ │   Client    │ │   Project   │
+│─────────────│   │─────────────│ │─────────────│ │─────────────│ │─────────────│ │─────────────│
+│ id          │   │ id          │ │ id          │ │ id          │ │ id          │ │ id          │
+│ school_id   │   │ school_id   │ │ school_id   │ │ school_id   │ │ school_id   │ │ school_id   │
+│ email       │   │ name        │ │ title       │ │ user_id     │ │ organization│ │ course_id   │
+│ name        │   │ code        │ │ scope       │ │ action      │ │ contact_name│ │ title       │
+│ role        │   │ color       │ │ target_level│ │ entity_type │ │ email       │ │ status      │
+│ class_name  │   │ icon        │ └─────────────┘ │ entity_id   │ │ phone       │ └─────────────┘
 │ team_number │   │ is_active   │                 │ details     │ │ level       │
 │ archived    │   └─────────────┘                 │ created_at  │ │ sector      │
 └─────────────┘          │                        └─────────────┘ │ tags        │
       │                  │                                         │ active      │
-      │          ┌───────┴────────┐                                └─────────────┘
-      │          │                │                                       │
-      │          ▼                ▼                              ┌────────┴────────┐
-      │   ┌─────────────┐  ┌─────────────┐                      │                 │
-      │   │TeacherCourse│  │   Group     │                      ▼                 ▼
-      │   │─────────────│  │─────────────│              ┌─────────────┐   ┌─────────────┐
-      └──►│ teacher_id  │  │ id          │              │ ClientLog   │   │ClientProject│
-          │ course_id   │  │ school_id   │              │─────────────│   │    Link     │
-          │ role        │  │ course_id   │              │ id          │   │─────────────│
-          │ is_active   │  │ name        │              │ client_id   │   │ id          │
-          └─────────────┘  │ team_number │              │ author_id   │   │ client_id   │
-                           └─────────────┘              │ log_type    │   │ project_id  │
-                                  │                     │ text        │   │ role        │
-                                  ▼                     │ created_at  │   │ start_date  │
-                           ┌─────────────┐              └─────────────┘   │ end_date    │
-                           │GroupMember  │                                └─────────────┘
-                           │─────────────│
-                           │ group_id    │
-                           │ user_id     │
-                           │ active      │
-                           └─────────────┘
+      │                  ▼                                         └─────────────┘
+      │          ┌─────────────┐                                          │
+      │          │   Course    │                                  ┌───────┴────────┐
+      │          │─────────────│                                  │                │
+      │          │ id          │                                  ▼                ▼
+      │          │ school_id   │                          ┌─────────────┐   ┌─────────────┐
+      │          │ subject_id  │◄── Optional link         │ ClientLog   │   │ClientProject│
+      │          │ name        │                          │─────────────│   │    Link     │
+      │          │ code        │                          │ id          │   │─────────────│
+      │          │ level       │                          │ client_id   │   │ id          │
+      │          │ year        │                          │ author_id   │   │ client_id   │
+      │          │ is_active   │                          │ log_type    │   │ project_id  │
+      │          └─────────────┘                          │ text        │   │ role        │
+      │                 │                                 │ created_at  │   │ start_date  │
+      │         ┌───────┴────────┐                        └─────────────┘   │ end_date    │
+      │         │                │                                          └─────────────┘
+      │         ▼                ▼
+      │  ┌─────────────┐  ┌─────────────┐
+      │  │TeacherCourse│  │   Group     │
+      │  │─────────────│  │─────────────│
+      └─►│ teacher_id  │  │ id          │
+         │ course_id   │  │ school_id   │
+         │ role        │  │ course_id   │
+         │ is_active   │  │ name        │
+         └─────────────┘  │ team_number │
+                          └─────────────┘
+                                 │
+                                 ▼
+                          ┌─────────────┐
+                          │GroupMember  │
+                          │─────────────│
+                          │ group_id    │
+                          │ user_id     │
+                          │ active      │
+                          └─────────────┘
 
 ┌─────────────┐
 │ Evaluation  │
@@ -125,9 +168,21 @@ Teachers are explicitly assigned to courses via the **TeacherCourse** junction t
 - `archived`: Soft delete flag
 - **Unique constraint**: `(school_id, email)`
 
+### Subject
+- `id`: Primary key
+- `school_id`: Foreign key to School
+- `name`: Subject name (e.g., "Onderzoek & Ontwerpen", "Biologie")
+- `code`: Short code (e.g., "O&O", "BIO", "NE")
+- `color`: Hex color for UI display (e.g., "#3B82F6")
+- `icon`: Icon name or path for UI
+- `is_active`: Active flag (soft delete)
+- **Unique constraint**: `(school_id, code)`
+- **Index**: `(school_id, is_active)`
+
 ### Course
 - `id`: Primary key
 - `school_id`: Foreign key to School
+- `subject_id`: Foreign key to Subject (optional, nullable)
 - `name`: Course name (e.g., "Onderzoek & Ontwerpen")
 - `code`: Short code (e.g., "O&O", "XPLR")
 - `level`: "onderbouw" | "bovenbouw"
@@ -138,6 +193,7 @@ Teachers are explicitly assigned to courses via the **TeacherCourse** junction t
 - **Unique constraints**: 
   - `(school_id, name, period)`
   - `(school_id, code)`
+- **Index**: `subject_id`
 
 ### TeacherCourse
 - `id`: Primary key
@@ -340,12 +396,24 @@ Audit logs include:
 
 ## API Endpoints
 
+### Subjects API (`/api/v1/subjects`)
+
+- `GET /subjects` - List subjects (with pagination and filters)
+  - Query params: `page`, `per_page`, `is_active`, `search`
+- `POST /subjects` - Create a subject (admin/teacher only)
+- `GET /subjects/{id}` - Get subject details
+- `PATCH /subjects/{id}` - Update subject (admin/teacher only)
+- `DELETE /subjects/{id}` - Soft delete subject (admin only)
+- `GET /subjects/{id}/courses` - List courses for subject
+  - Query params: `is_active`
+
 ### Courses API (`/api/v1/courses`)
 
 - `GET /courses` - List courses (with pagination and filters)
+  - Query params: `page`, `per_page`, `level`, `year`, `is_active`, `search`
 - `POST /courses` - Create a course
 - `GET /courses/{id}` - Get course details
-- `PATCH /courses/{id}` - Update course
+- `PATCH /courses/{id}` - Update course (can include `subject_id`)
 - `DELETE /courses/{id}` - Soft delete course
 - `GET /courses/{id}/teachers` - List teachers for course
 - `POST /courses/{id}/teachers` - Assign teacher to course
@@ -408,6 +476,7 @@ See `MIGRATION_NOTES.md` for detailed migration instructions.
 ### Phase 1 (Completed)
 - ✅ Multi-tenant schema
 - ✅ Course management
+- ✅ Subject (Sectie) organization layer
 - ✅ Teacher-course mapping
 - ✅ RBAC framework
 - ✅ Audit logging
@@ -417,6 +486,7 @@ See `MIGRATION_NOTES.md` for detailed migration instructions.
 - ✅ Automatic reminder generation for project phases
 - ✅ CSV export functionality
 - ✅ Real-time search with debouncing
+- ✅ Subject management UI for admins/teachers
 
 ### Phase 2 (Current/Planned)
 - Analytics dashboards per course and school
