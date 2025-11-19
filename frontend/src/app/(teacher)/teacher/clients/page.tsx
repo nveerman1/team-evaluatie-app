@@ -310,6 +310,7 @@ function RunningProjectsTab() {
   const [courseFilter, setCourseFilter] = useState<string>("Alle vakken");
   const [schoolYearFilter, setSchoolYearFilter] = useState<string>("2025–2026");
   const [searchFilter, setSearchFilter] = useState<string>("");
+  const [debouncedSearchFilter, setDebouncedSearchFilter] = useState<string>("");
   
   // Sorting
   const [sortBy, setSortBy] = useState<string>("");
@@ -328,6 +329,7 @@ function RunningProjectsTab() {
   // Available courses for filter
   const [courses, setCourses] = useState<{id: number; name: string}[]>([]);
   
+  // Fetch courses on mount
   useEffect(() => {
     async function fetchCourses() {
       try {
@@ -341,13 +343,23 @@ function RunningProjectsTab() {
     fetchCourses();
   }, []);
   
+  // Debounce search filter
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchFilter(searchFilter);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [searchFilter]);
+  
+  // Fetch projects with filters
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
         const { projectService } = await import("@/services/project.service");
         
-        // Fetch projects with filters
+        // Build params for API call
         const params: {
           page: number;
           per_page: number;
@@ -359,7 +371,7 @@ function RunningProjectsTab() {
         } = {
           page,
           per_page: perPage,
-          search: searchFilter.trim() || undefined,
+          search: debouncedSearchFilter.trim() || undefined,
           sort_by: sortBy || undefined,
           sort_order: sortOrder,
         };
@@ -386,11 +398,8 @@ function RunningProjectsTab() {
         setLoading(false);
       }
     }
-    // Only fetch when courses are loaded and other dependencies change
-    if (courses.length > 0 || courseFilter === "Alle vakken") {
-      fetchData();
-    }
-  }, [page, courseFilter, schoolYearFilter, searchFilter, sortBy, sortOrder, courses]);
+    fetchData();
+  }, [page, courseFilter, schoolYearFilter, debouncedSearchFilter, sortBy, sortOrder, courses]);
   
   const handleSort = (field: string) => {
     if (sortBy === field) {
