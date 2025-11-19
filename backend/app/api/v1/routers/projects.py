@@ -136,9 +136,25 @@ def get_running_projects_kpi(
     """
     require_role(user, ["admin", "teacher"])
     
-    # Count running projects (status = "active")
+    # Count running projects
     query = scope_query_by_school(db.query(Project), Project, user)
-    query = query.filter(Project.status == "active")
+    
+    # Filter for running projects: 
+    # - status is "active", OR
+    # - current date is between start_date and end_date (if both dates are set)
+    from datetime import datetime as dt
+    today = dt.utcnow().date()
+    query = query.filter(
+        or_(
+            Project.status == "active",
+            (
+                (Project.start_date.isnot(None)) & 
+                (Project.end_date.isnot(None)) &
+                (Project.start_date <= today) & 
+                (Project.end_date >= today)
+            )
+        )
+    )
     
     # Apply teacher course access restrictions
     if user.role == "teacher":
@@ -222,9 +238,25 @@ def get_running_projects_overview(
     """
     require_role(user, ["admin", "teacher"])
     
-    # Base query - filter by school and active status
+    # Base query - filter by school
     query = scope_query_by_school(db.query(Project), Project, user)
-    query = query.filter(Project.status == "active")
+    
+    # Filter for running projects: 
+    # - status is "active", OR
+    # - current date is between start_date and end_date (if both dates are set)
+    from datetime import datetime as dt
+    today = dt.utcnow().date()
+    query = query.filter(
+        or_(
+            Project.status == "active",
+            (
+                (Project.start_date.isnot(None)) & 
+                (Project.end_date.isnot(None)) &
+                (Project.start_date <= today) & 
+                (Project.end_date >= today)
+            )
+        )
+    )
     
     # Apply teacher course access restrictions
     if user.role == "teacher":
