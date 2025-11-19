@@ -21,6 +21,7 @@ from app.infra.db.models import (
     ProjectAssessment,
     CompetencyWindow,
     Competency,
+    Course,
 )
 from app.api.v1.schemas.projects import (
     ProjectCreate,
@@ -33,6 +34,9 @@ from app.api.v1.schemas.projects import (
     WizardProjectOut,
     WizardEntityOut,
     ProjectNoteOut,
+    RunningProjectKPIOut,
+    RunningProjectItem,
+    RunningProjectsListOut,
 )
 from app.core.rbac import (
     require_role,
@@ -120,6 +124,317 @@ def list_projects(
     ]
 
     return ProjectListOut(items=items, total=total, page=page, per_page=per_page)
+
+
+@router.get("/running-overview/kpi", response_model=RunningProjectKPIOut)
+def get_running_projects_kpi(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """
+    Get KPI statistics for running projects overview
+    """
+    require_role(user, ["admin", "teacher"])
+    
+    # Count running projects
+    query = scope_query_by_school(db.query(Project), Project, user)
+    
+    # Filter for running projects: 
+    # - status is "active", OR
+    # - current date is between start_date and end_date (if both dates are set)
+    from datetime import datetime as dt
+    today = dt.utcnow().date()
+    query = query.filter(
+        or_(
+            Project.status == "active",
+            (
+                (Project.start_date.isnot(None)) & 
+                (Project.end_date.isnot(None)) &
+                (Project.start_date <= today) & 
+                (Project.end_date >= today)
+            )
+        )
+    )
+    
+    # Apply teacher course access restrictions
+    if user.role == "teacher":
+        accessible_courses = get_accessible_course_ids(db, user)
+        if not accessible_courses:
+            return RunningProjectKPIOut(
+                running_projects=0,
+                active_clients_now=0,
+                upcoming_moments=0,
+            )
+        query = query.filter(
+            (Project.course_id.in_(accessible_courses)) | (Project.course_id.is_(None))
+        )
+    
+    running_projects = query.count()
+    
+    # Get unique active clients from running projects
+    active_client_ids = set()
+    for project in query.all():
+        client_links = (
+            db.query(ClientProjectLink)
+            .filter(ClientProjectLink.project_id == project.id)
+            .all()
+        )
+        for link in client_links:
+            active_client_ids.add(link.client_id)
+    
+    active_clients_now = len(active_client_ids)
+    
+    # Count upcoming moments (evaluations with future deadlines in running projects)
+    from datetime import datetime, timedelta
+    thirty_days_ahead = datetime.utcnow() + timedelta(days=30)
+    
+    running_project_ids = [p.id for p in query.all()]
+    
+    upcoming_moments = 0
+    if running_project_ids:
+        # Count evaluations with upcoming deadlines
+        upcoming_evals = (
+            db.query(Evaluation)
+            .filter(
+                Evaluation.project_id.in_(running_project_ids),
+                Evaluation.settings.isnot(None),
+            )
+            .all()
+        )
+        
+        for ev in upcoming_evals:
+            settings = ev.settings or {}
+            deadline_str = settings.get("deadline")
+            if deadline_str:
+                try:
+                    deadline = datetime.fromisoformat(deadline_str.replace('Z', '+00:00'))
+                    if deadline.replace(tzinfo=None) >= datetime.utcnow() and deadline.replace(tzinfo=None) <= thirty_days_ahead:
+                        upcoming_moments += 1
+                except:
+                    pass
+    
+    return RunningProjectKPIOut(
+        running_projects=running_projects,
+        active_clients_now=active_clients_now,
+        upcoming_moments=upcoming_moments,
+    )
+
+
+@router.get("/running-overview", response_model=RunningProjectsListOut)
+def get_running_projects_overview(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    course_id: Optional[int] = None,
+    school_year: Optional[str] = None,  # e.g., "2025-2026"
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    sort_by: Optional[str] = Query(None, description="Sort field: course, project, client, next_moment"),
+    sort_order: Optional[str] = Query("asc", description="Sort order: asc or desc"),
+):
+    """
+    Get running projects overview with client, team, and moment information
+    """
+    require_role(user, ["admin", "teacher"])
+    
+    # Base query - filter by school
+    query = scope_query_by_school(db.query(Project), Project, user)
+    
+    # Filter for running projects: 
+    # - status is "active", OR
+    # - current date is between start_date and end_date (if both dates are set)
+    from datetime import datetime as dt
+    today = dt.utcnow().date()
+    query = query.filter(
+        or_(
+            Project.status == "active",
+            (
+                (Project.start_date.isnot(None)) & 
+                (Project.end_date.isnot(None)) &
+                (Project.start_date <= today) & 
+                (Project.end_date >= today)
+            )
+        )
+    )
+    
+    # Apply teacher course access restrictions
+    if user.role == "teacher":
+        accessible_courses = get_accessible_course_ids(db, user)
+        if not accessible_courses:
+            return RunningProjectsListOut(
+                items=[], total=0, page=page, per_page=per_page, pages=0
+            )
+        query = query.filter(
+            (Project.course_id.in_(accessible_courses)) | (Project.course_id.is_(None))
+        )
+    
+    # Filter by course
+    if course_id:
+        if not can_access_course(db, user, course_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have access to this course",
+            )
+        query = query.filter(Project.course_id == course_id)
+    
+    # Filter by school year
+    if school_year:
+        # Parse school year (e.g., "2025-2026" -> year 2025)
+        try:
+            year_start = int(school_year.split("–")[0]) if "–" in school_year else int(school_year.split("-")[0])
+            query = query.join(Project.course).filter(func.extract("year", Project.start_date) == year_start)
+        except:
+            pass
+    
+    # Filter by status (already filtered to active, but can add more granular status filtering)
+    # For now, we'll keep it simple
+    
+    # Search filter
+    if search:
+        search_filter = or_(
+            Project.title.ilike(f"%{search}%"),
+            Project.class_name.ilike(f"%{search}%"),
+        )
+        query = query.filter(search_filter)
+    
+    # Count total before pagination
+    total = query.count()
+    
+    # Sorting - we'll apply after fetching for complex sorts involving joins
+    projects = query.all()
+    
+    # Build items with all required information
+    items = []
+    for project in projects:
+        # Get course info
+        course_name = None
+        if project.course_id:
+            course = db.query(Course).filter(Course.id == project.course_id).first()
+            course_name = course.name if course else None
+        
+        # Get first client (main client)
+        client_link = (
+            db.query(ClientProjectLink)
+            .filter(ClientProjectLink.project_id == project.id)
+            .order_by(desc(ClientProjectLink.role == "main"))
+            .first()
+        )
+        
+        client_id = None
+        client_organization = None
+        client_email = None
+        if client_link:
+            client = db.query(Client).filter(Client.id == client_link.client_id).first()
+            if client:
+                client_id = client.id
+                client_organization = client.organization
+                client_email = client.email
+        
+        # Get team/group info from course
+        team_number = None
+        student_names = []
+        if project.course_id:
+            # Get groups for this course
+            groups = (
+                db.query(Group)
+                .filter(Group.course_id == project.course_id)
+                .first()
+            )
+            if groups:
+                team_number = groups.team_number
+                # Get group members
+                from app.infra.db.models import GroupMember
+                members = (
+                    db.query(GroupMember)
+                    .filter(GroupMember.group_id == groups.id, GroupMember.active.is_(True))
+                    .all()
+                )
+                student_names = [m.user.name for m in members if m.user]
+        
+        # Get next moment from evaluations
+        next_moment_type = None
+        next_moment_date = None
+        
+        evaluations = (
+            db.query(Evaluation)
+            .filter(Evaluation.project_id == project.id)
+            .all()
+        )
+        
+        from datetime import datetime
+        upcoming_evals = []
+        for ev in evaluations:
+            settings = ev.settings or {}
+            deadline_str = settings.get("deadline")
+            if deadline_str:
+                try:
+                    deadline = datetime.fromisoformat(deadline_str.replace('Z', '+00:00'))
+                    if deadline.replace(tzinfo=None) >= datetime.utcnow():
+                        upcoming_evals.append((deadline, ev))
+                except:
+                    pass
+        
+        if upcoming_evals:
+            # Sort by date and get the nearest
+            upcoming_evals.sort(key=lambda x: x[0])
+            nearest_deadline, nearest_eval = upcoming_evals[0]
+            next_moment_date = nearest_deadline.date()
+            
+            # Determine type based on evaluation title or type
+            if "tussen" in nearest_eval.title.lower():
+                next_moment_type = "Tussenpresentatie"
+            elif "eind" in nearest_eval.title.lower() or "final" in nearest_eval.title.lower():
+                next_moment_type = "Eindpresentatie"
+            else:
+                next_moment_type = "Contactmoment"
+        
+        items.append(
+            RunningProjectItem(
+                project_id=project.id,
+                project_title=project.title,
+                project_status=project.status,
+                course_name=course_name,
+                client_id=client_id,
+                client_organization=client_organization,
+                client_email=client_email,
+                class_name=project.class_name,
+                team_number=team_number,
+                student_names=student_names,
+                start_date=project.start_date,
+                end_date=project.end_date,
+                next_moment_type=next_moment_type,
+                next_moment_date=next_moment_date,
+            )
+        )
+    
+    # Apply sorting
+    if sort_by:
+        reverse = sort_order == "desc"
+        if sort_by == "course":
+            items.sort(key=lambda x: x.course_name or "", reverse=reverse)
+        elif sort_by == "project":
+            items.sort(key=lambda x: x.project_title, reverse=reverse)
+        elif sort_by == "client":
+            items.sort(key=lambda x: x.client_organization or "", reverse=reverse)
+        elif sort_by == "next_moment":
+            items.sort(key=lambda x: x.next_moment_date or datetime.max.date(), reverse=reverse)
+    
+    # Apply pagination
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
+    paginated_items = items[start_idx:end_idx]
+    
+    # Calculate pages
+    pages = (total + per_page - 1) // per_page if total > 0 else 0
+    
+    return RunningProjectsListOut(
+        items=paginated_items,
+        total=total,
+        page=page,
+        per_page=per_page,
+        pages=pages,
+    )
 
 
 @router.post("", response_model=ProjectOut, status_code=status.HTTP_201_CREATED)
