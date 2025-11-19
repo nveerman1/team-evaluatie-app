@@ -42,6 +42,7 @@ def _to_out(obj: LearningObjective) -> LearningObjectiveOut:
             "description": obj.description,
             "order": obj.order,
             "phase": obj.phase,
+            "subject_id": getattr(obj, "subject_id", None),
             "metadata_json": obj.metadata_json or {},
         }
     )
