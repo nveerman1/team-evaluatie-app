@@ -308,9 +308,9 @@ function RunningProjectsTab() {
   
   // Filters
   const [courseFilter, setCourseFilter] = useState<string>("Alle vakken");
-  const [schoolYearFilter, setSchoolYearFilter] = useState<string>("2025–2026");
-  const [statusFilter, setStatusFilter] = useState<string>("Alle");
+  const [schoolYearFilter, setSchoolYearFilter] = useState<string>("2025-2026");
   const [searchFilter, setSearchFilter] = useState<string>("");
+  const [debouncedSearchFilter, setDebouncedSearchFilter] = useState<string>("");
   
   // Sorting
   const [sortBy, setSortBy] = useState<string>("");
@@ -326,60 +326,102 @@ function RunningProjectsTab() {
   const [selectedProjects, setSelectedProjects] = useState<number[]>([]);
   const [emailTemplate, setEmailTemplate] = useState("opvolgmail");
   
-  // Available courses for filter
-  const [courses, setCourses] = useState<{id: number; name: string}[]>([]);
+  // Available courses for filter - extracted from actual project data
+  const [availableCourses, setAvailableCourses] = useState<string[]>([]);
   
+  // Debounce search filter
   useEffect(() => {
-    async function fetchCourses() {
-      try {
-        const { courseService } = await import("@/services/course.service");
-        const data = await courseService.listCourses({ per_page: 100 });
-        setCourses(data.items || []);
-      } catch (err) {
-        console.error("Error fetching courses:", err);
-      }
-    }
-    fetchCourses();
-  }, []);
+    const timer = setTimeout(() => {
+      setDebouncedSearchFilter(searchFilter);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [searchFilter]);
   
+  // Fetch projects with filters
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
         const { projectService } = await import("@/services/project.service");
         
-        // Fetch projects with filters
-        const params: {
+        // Build params for API call - don't send search to backend, we'll filter client-side
+        const baseParams: {
           page: number;
           per_page: number;
-          search?: string;
           sort_by?: string;
           sort_order: "asc" | "desc";
-          course_id?: number;
           school_year?: string;
         } = {
-          page,
-          per_page: perPage,
-          search: searchFilter || undefined,
+          page: 1,
+          per_page: 100, // Max allowed by backend
           sort_by: sortBy || undefined,
           sort_order: sortOrder,
         };
         
-        if (courseFilter && courseFilter !== "Alle vakken") {
-          const selectedCourse = courses.find(c => c.name === courseFilter);
-          if (selectedCourse) {
-            params.course_id = selectedCourse.id;
-          }
-        }
-        
         if (schoolYearFilter && schoolYearFilter !== "Alle jaren") {
-          params.school_year = schoolYearFilter;
+          baseParams.school_year = schoolYearFilter;
         }
         
-        const projectsData = await projectService.getRunningProjectsOverview(params);
-        setProjects(projectsData.items || []);
-        setTotal(projectsData.total || 0);
-        setPages(projectsData.pages || 0);
+        // Fetch first page to get total count
+        const firstPageData = await projectService.getRunningProjectsOverview(baseParams);
+        let allProjects = [...(firstPageData.items || [])];
+        
+        // Fetch remaining pages if needed
+        const totalPages = firstPageData.pages || 1;
+        if (totalPages > 1) {
+          const remainingPages = [];
+          for (let p = 2; p <= totalPages; p++) {
+            remainingPages.push(
+              projectService.getRunningProjectsOverview({ ...baseParams, page: p })
+            );
+          }
+          const remainingData = await Promise.all(remainingPages);
+          remainingData.forEach(data => {
+            allProjects = allProjects.concat(data.items || []);
+          });
+        }
+        
+        // Client-side search filter - search across all visible fields
+        if (debouncedSearchFilter.trim()) {
+          const searchTerm = debouncedSearchFilter.trim().toLowerCase();
+          allProjects = allProjects.filter(p => {
+            const searchableText = [
+              p.project_title,
+              p.course_name,
+              p.client_organization,
+              p.class_name,
+              p.team_number?.toString(),
+              ...(p.student_names || [])
+            ].filter(Boolean).join(' ').toLowerCase();
+            
+            return searchableText.includes(searchTerm);
+          });
+        }
+        
+        // Filter by course on frontend
+        let filteredProjects = allProjects;
+        if (courseFilter && courseFilter !== "Alle vakken") {
+          filteredProjects = allProjects.filter(p => p.course_name === courseFilter);
+        }
+        
+        // Apply pagination client-side
+        const startIdx = (page - 1) * perPage;
+        const paginatedProjects = filteredProjects.slice(startIdx, startIdx + perPage);
+        
+        setProjects(paginatedProjects);
+        setTotal(filteredProjects.length);
+        setPages(Math.ceil(filteredProjects.length / perPage));
+        
+        // Extract unique course names from all projects for dropdown (before filtering)
+        // Use the original full data set
+        const allProjectsForCourses = allProjects;
+        const uniqueCourses = Array.from(new Set(
+          allProjectsForCourses
+            .map(p => p.course_name)
+            .filter((name): name is string => !!name)
+        )).sort();
+        setAvailableCourses(uniqueCourses);
       } catch (err) {
         console.error("Error fetching running projects data:", err);
         setError("Er is een fout opgetreden bij het laden van de gegevens.");
@@ -388,7 +430,7 @@ function RunningProjectsTab() {
       }
     }
     fetchData();
-  }, [page, courseFilter, schoolYearFilter, statusFilter, searchFilter, sortBy, sortOrder, courses]);
+  }, [page, courseFilter, schoolYearFilter, debouncedSearchFilter, sortBy, sortOrder, perPage]);
   
   const handleSort = (field: string) => {
     if (sortBy === field) {
@@ -485,7 +527,17 @@ function RunningProjectsTab() {
     <>
       {/* Filters */}
       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <label className="text-xs font-medium text-slate-600 block mb-1.5">Zoeken</label>
+            <input 
+              type="text"
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              placeholder="Zoek leerling, team of opdrachtgever…"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+            />
+          </div>
           <div>
             <label className="text-xs font-medium text-slate-600 block mb-1.5">Vak</label>
             <select 
@@ -494,8 +546,8 @@ function RunningProjectsTab() {
               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
             >
               <option>Alle vakken</option>
-              {courses.map(course => (
-                <option key={course.id} value={course.name}>{course.name}</option>
+              {availableCourses.map(courseName => (
+                <option key={courseName} value={courseName}>{courseName}</option>
               ))}
             </select>
           </div>
@@ -506,33 +558,10 @@ function RunningProjectsTab() {
               onChange={(e) => setSchoolYearFilter(e.target.value)}
               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
             >
-              <option>2025–2026</option>
-              <option>2024–2025</option>
-              <option>2023–2024</option>
+              <option>2025-2026</option>
+              <option>2024-2025</option>
+              <option>2023-2024</option>
             </select>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1.5">Status</label>
-            <select 
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-            >
-              <option>Alle</option>
-              <option>Net gestart</option>
-              <option>Halverwege</option>
-              <option>Afsluitfase</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1.5">Zoeken</label>
-            <input 
-              type="text"
-              value={searchFilter}
-              onChange={(e) => setSearchFilter(e.target.value)}
-              placeholder="Zoek leerling, team of opdrachtgever…"
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-            />
           </div>
         </div>
       </div>
@@ -747,7 +776,7 @@ function ListTab({ refreshKey }: { refreshKey?: number }) {
 
 // Tab 4: Communication
 function CommunicationTab() {
-  const [schoolYear, setSchoolYear] = useState("2025–2026");
+  const [schoolYear, setSchoolYear] = useState("2025-2026");
   const [level, setLevel] = useState("Alle");
   const [template, setTemplate] = useState("opvolgmail");
   const [selectedClients, setSelectedClients] = useState<number[]>([]);
@@ -872,9 +901,9 @@ function CommunicationTab() {
               onChange={(e) => setSchoolYear(e.target.value)}
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
             >
-              <option>2025–2026</option>
-              <option>2024–2025</option>
-              <option>2023–2024</option>
+              <option>2025-2026</option>
+              <option>2024-2025</option>
+              <option>2023-2024</option>
             </select>
           </div>
           <div className="flex-1">
