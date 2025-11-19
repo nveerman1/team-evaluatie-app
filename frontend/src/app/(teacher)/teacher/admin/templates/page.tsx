@@ -520,30 +520,34 @@ export default function TemplatesPage() {
                             rows={2}
                           />
                         </div>
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
                             Niveaubeschrijvingen (1-5)
                           </label>
-                          {[1, 2, 3, 4, 5].map((level) => (
-                            <div key={level}>
-                              <label className="text-xs text-gray-600">Niveau {level}</label>
-                              <input
-                                type="text"
-                                placeholder={`Beschrijving niveau ${level}`}
-                                value={peerFormData.level_descriptors?.[level.toString() as "1" | "2" | "3" | "4" | "5"] || ""}
-                                onChange={(e) =>
-                                  setPeerFormData({
-                                    ...peerFormData,
-                                    level_descriptors: {
-                                      ...peerFormData.level_descriptors,
-                                      [level.toString()]: e.target.value,
-                                    } as any,
-                                  })
-                                }
-                                className="w-full px-2 py-1 border rounded text-sm"
-                              />
-                            </div>
-                          ))}
+                          <div className="grid grid-cols-5 gap-2">
+                            {[1, 2, 3, 4, 5].map((level) => (
+                              <div key={level} className="flex flex-col">
+                                <label className="text-xs font-medium text-gray-700 mb-1">
+                                  Niveau {level}
+                                </label>
+                                <textarea
+                                  placeholder={`Niveau ${level}`}
+                                  value={peerFormData.level_descriptors?.[level.toString() as "1" | "2" | "3" | "4" | "5"] || ""}
+                                  onChange={(e) =>
+                                    setPeerFormData({
+                                      ...peerFormData,
+                                      level_descriptors: {
+                                        ...peerFormData.level_descriptors,
+                                        [level.toString()]: e.target.value,
+                                      } as any,
+                                    })
+                                  }
+                                  className="w-full px-2 py-1 border rounded text-sm resize-y min-h-[80px]"
+                                  rows={4}
+                                />
+                              </div>
+                            ))}
+                          </div>
                         </div>
                         <div className="flex gap-2 pt-2">
                           <button
@@ -634,27 +638,29 @@ export default function TemplatesPage() {
                                           className="w-full px-3 py-2 border rounded"
                                         />
                                       </div>
-                                      <div className="space-y-2">
-                                        <label className="block text-sm font-medium">
+                                      <div>
+                                        <label className="block text-sm font-medium mb-2">
                                           Niveaubeschrijvingen
                                         </label>
-                                        {[1, 2, 3, 4, 5].map((level) => (
-                                          <div key={level}>
-                                            <label className="text-xs text-gray-600">
-                                              Niveau {level}
-                                            </label>
-                                            <input
-                                              type="text"
-                                              defaultValue={
-                                                criterion.level_descriptors[
-                                                  level.toString() as "1" | "2" | "3" | "4" | "5"
-                                                ] || ""
-                                              }
-                                              id={`edit-level-${criterion.id}-${level}`}
-                                              className="w-full px-2 py-1 border rounded text-sm"
-                                            />
-                                          </div>
-                                        ))}
+                                        <div className="grid grid-cols-5 gap-2">
+                                          {[1, 2, 3, 4, 5].map((level) => (
+                                            <div key={level} className="flex flex-col">
+                                              <label className="text-xs font-medium text-gray-700 mb-1">
+                                                Niveau {level}
+                                              </label>
+                                              <textarea
+                                                defaultValue={
+                                                  criterion.level_descriptors[
+                                                    level.toString() as "1" | "2" | "3" | "4" | "5"
+                                                  ] || ""
+                                                }
+                                                id={`edit-level-${criterion.id}-${level}`}
+                                                className="w-full px-2 py-1 border rounded text-sm resize-y min-h-[80px]"
+                                                rows={4}
+                                              />
+                                            </div>
+                                          ))}
+                                        </div>
                                       </div>
                                       <div className="flex gap-2">
                                         <button
@@ -692,15 +698,17 @@ export default function TemplatesPage() {
                                         <h6 className="font-medium text-sm mb-2">
                                           Niveaubeschrijvingen:
                                         </h6>
-                                        <div className="space-y-1">
+                                        <div className="grid grid-cols-5 gap-3">
                                           {[1, 2, 3, 4, 5].map((level) => (
-                                            <div key={level} className="text-sm">
-                                              <span className="font-medium">
-                                                Niveau {level}:
-                                              </span>{" "}
-                                              {criterion.level_descriptors[
-                                                level.toString() as "1" | "2" | "3" | "4" | "5"
-                                              ] || <em className="text-gray-500">Niet ingevuld</em>}
+                                            <div key={level} className="border rounded p-2 bg-white">
+                                              <div className="text-xs font-semibold text-gray-700 mb-1">
+                                                Niveau {level}
+                                              </div>
+                                              <div className="text-sm text-gray-800">
+                                                {criterion.level_descriptors[
+                                                  level.toString() as "1" | "2" | "3" | "4" | "5"
+                                                ] || <em className="text-gray-400">Niet ingevuld</em>}
+                                              </div>
                                             </div>
                                           ))}
                                         </div>
