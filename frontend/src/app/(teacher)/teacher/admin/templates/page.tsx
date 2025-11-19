@@ -134,6 +134,16 @@ export default function TemplatesPage() {
                 Beheer templates voor peer evaluatie criteria (OMZA:
                 Organiseren, Meedoen, Zelfvertrouwen, Autonomie)
               </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <h4 className="font-semibold text-blue-900 mb-2">OMZA Categorieën:</h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• <strong>Organiseren</strong> - Planning, tijdmanagement, structuur</li>
+                  <li>• <strong>Meedoen</strong> - Participatie, samenwerking, bijdrage</li>
+                  <li>• <strong>Zelfvertrouwen</strong> - Initiatief, verantwoordelijkheid</li>
+                  <li>• <strong>Autonomie</strong> - Zelfstandigheid, reflectie</li>
+                </ul>
+                <p className="text-xs text-blue-700 mt-2">Elk criterium heeft 5 niveaus en kan gekoppeld worden aan leerdoelen</p>
+              </div>
               <div className="text-center py-8 text-gray-500">
                 <p className="mb-4">Peer evaluation criteria templates worden hier weergegeven</p>
                 <p className="text-xs">API Endpoint: GET /api/v1/templates/peer-criteria?subject_id={selectedSubjectId}</p>
@@ -147,6 +157,15 @@ export default function TemplatesPage() {
                 Beheer projectrubric templates met criteria voor projectproces,
                 eindresultaat en communicatie
               </p>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                <h4 className="font-semibold text-green-900 mb-2">Categorieën:</h4>
+                <ul className="text-sm text-green-800 space-y-1">
+                  <li>• <strong>Projectproces</strong> - Planning, uitvoering, samenwerking</li>
+                  <li>• <strong>Eindresultaat</strong> - Kwaliteit, volledigheid, innovatie</li>
+                  <li>• <strong>Communicatie</strong> - Presentatie, rapportage, reflectie</li>
+                </ul>
+                <p className="text-xs text-green-700 mt-2">Elk criterium heeft 5 niveaus en kan gekoppeld worden aan leerdoelen</p>
+              </div>
               <div className="text-center py-8 text-gray-500">
                 <p className="mb-4">Project rubric templates worden hier weergegeven</p>
                 <p className="text-xs">API Endpoint: GET /api/v1/templates/project-rubrics?subject_id={selectedSubjectId}</p>
@@ -226,11 +245,32 @@ export default function TemplatesPage() {
     );
   };
 
+  const getNewButtonLabel = () => {
+    switch (activeTab) {
+      case "peer":
+        return "+ Nieuw Peerevaluatie Criterium";
+      case "rubrics":
+        return "+ Nieuwe Projectrubric";
+      case "competencies":
+        return "+ Nieuwe Competentie";
+      case "mail":
+        return "+ Nieuwe Mail-template";
+      case "objectives":
+        return "+ Nieuw Leerdoel";
+      case "remarks":
+        return "+ Nieuwe Standaardopmerking";
+      case "tags":
+        return "+ Nieuwe Tag";
+      default:
+        return "+ Nieuw Item";
+    }
+  };
+
   return (
     <>
       {/* Page Header */}
       <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
-        <header className="px-6 py-6 max-w-6xl mx-auto">
+        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
               Templates
@@ -239,6 +279,17 @@ export default function TemplatesPage() {
               Beheer sjablonen per sectie/vakgebied.
             </p>
           </div>
+          {selectedSubjectId && (
+            <button
+              onClick={() => {
+                // TODO: Implement create modal/form for each template type
+                alert(`Create new ${TABS.find((t) => t.key === activeTab)?.label}`);
+              }}
+              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+            >
+              {getNewButtonLabel()}
+            </button>
+          )}
         </header>
       </div>
 

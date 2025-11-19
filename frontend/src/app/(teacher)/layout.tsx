@@ -54,11 +54,11 @@ export default function TeacherLayout({
                 </div>
                 <div className="space-y-1">
                   <NavItem href="/teacher/admin/subjects" label="Secties beheren" />
-                  <NavItem href="/teacher/admin/templates" label="Templates" />
                   <NavItem href="/teacher/courses" label="Vakken beheren" />
                   <NavItem href="/teacher/teachers" label="Docenten beheren" />
                   <NavItem href="/teacher/learning-objectives" label="Leerdoelen" />
                   <NavItem href="/teacher/rubrics" label="Rubrics" />
+                  <NavItem href="/teacher/admin/templates" label="Templates" />
                 </div>
               </div>
             )}
