@@ -100,7 +100,7 @@ export default function TemplatesPage() {
       "4": "",
       "5": "",
     },
-    learning_objective_ids: [],
+    learning_objective_ids: [] as number[],
     _filterPhase: undefined,
   });
 
@@ -133,6 +133,7 @@ export default function TemplatesPage() {
   useEffect(() => {
     if (activeTab === "peer" && selectedSubjectId) {
       fetchPeerCriteria();
+      fetchLearningObjectives(); // Also load learning objectives for linking
     }
   }, [activeTab, selectedSubjectId]);
 
