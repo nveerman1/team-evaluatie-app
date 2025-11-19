@@ -285,7 +285,7 @@ def get_running_projects_overview(
         client_link = (
             db.query(ClientProjectLink)
             .filter(ClientProjectLink.project_id == project.id)
-            .order_by(ClientProjectLink.role == "main")
+            .order_by(desc(ClientProjectLink.role == "main"))
             .first()
         )
         

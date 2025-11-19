@@ -28,34 +28,38 @@ export default function ClientsPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-slate-900">
-            Opdrachtgevers
-          </h1>
-          <p className="text-slate-600 mt-1 text-sm md:text-base">
-            Beheer contactgegevens, projecten en samenwerkingen met externe partners.
-          </p>
-        </div>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50"
-        >
-          + Nieuwe opdrachtgever
-        </button>
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-slate-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-slate-900">
+              Opdrachtgevers
+            </h1>
+            <p className="text-slate-600 mt-1 text-sm">
+              Beheer contactgegevens, projecten en samenwerkingen met externe partners.
+            </p>
+          </div>
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm"
+          >
+            + Nieuwe opdrachtgever
+          </button>
+        </header>
       </div>
 
-      {/* Modal for creating new client */}
-      <ClientFormModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSuccess={handleClientCreated}
-      />
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+        {/* Modal for creating new client */}
+        <ClientFormModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSuccess={handleClientCreated}
+        />
 
-      {/* Tab Navigation */}
-      <div className="flex border-b border-slate-200">
+        {/* Tab Navigation */}
+        <div className="flex border-b border-slate-200">
         <button
           onClick={() => setActiveTab("dashboard")}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
@@ -98,12 +102,13 @@ export default function ClientsPage() {
         </button>
       </div>
 
-      {/* Tab Content */}
-      {activeTab === "dashboard" && <DashboardTab onNavigateToList={() => setActiveTab("list")} />}
-      {activeTab === "running" && <RunningProjectsTab />}
-      {activeTab === "list" && <ListTab refreshKey={refreshKey} />}
-      {activeTab === "communication" && <CommunicationTab />}
-    </div>
+        {/* Tab Content */}
+        {activeTab === "dashboard" && <DashboardTab onNavigateToList={() => setActiveTab("list")} />}
+        {activeTab === "running" && <RunningProjectsTab />}
+        {activeTab === "list" && <ListTab refreshKey={refreshKey} />}
+        {activeTab === "communication" && <CommunicationTab />}
+      </div>
+    </>
   );
 }
 
