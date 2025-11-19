@@ -19,6 +19,7 @@ class CourseBase(BaseModel):
     )
     year: Optional[int] = Field(None, ge=2020, le=2100)
     description: Optional[str] = None
+    subject_id: Optional[int] = Field(None, description="Optional FK to Subject")
 
 
 class CourseCreate(CourseBase):
@@ -36,6 +37,7 @@ class CourseUpdate(BaseModel):
     level: Optional[str] = Field(None, max_length=50)
     year: Optional[int] = Field(None, ge=2020, le=2100)
     description: Optional[str] = None
+    subject_id: Optional[int] = None
     is_active: Optional[bool] = None
 
 
