@@ -302,7 +302,6 @@ function DashboardTab({ onNavigateToList }: { onNavigateToList: () => void }) {
 
 // Tab 2: Running Projects
 function RunningProjectsTab() {
-  const [kpiData, setKpiData] = useState<{running_projects: number; active_clients_now: number; upcoming_moments: number} | null>(null);
   const [projects, setProjects] = useState<{project_id: number; project_title: string; course_name?: string; client_organization?: string; client_email?: string; class_name?: string; team_number?: number; student_names: string[]; start_date?: string; end_date?: string; next_moment_type?: string; next_moment_date?: string; project_status: string}[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -322,6 +321,10 @@ function RunningProjectsTab() {
   const [total, setTotal] = useState(0);
   const [pages, setPages] = useState(0);
   const perPage = 20;
+  
+  // Bulk email
+  const [selectedProjects, setSelectedProjects] = useState<number[]>([]);
+  const [emailTemplate, setEmailTemplate] = useState("opvolgmail");
   
   // Available courses for filter
   const [courses, setCourses] = useState<{id: number; name: string}[]>([]);
@@ -344,10 +347,6 @@ function RunningProjectsTab() {
       try {
         setLoading(true);
         const { projectService } = await import("@/services/project.service");
-        
-        // Fetch KPIs
-        const kpi = await projectService.getRunningProjectsKPI();
-        setKpiData(kpi);
         
         // Fetch projects with filters
         const params: {
@@ -405,7 +404,68 @@ function RunningProjectsTab() {
     alert("Export functionaliteit komt binnenkort beschikbaar");
   };
   
-  if (loading && !kpiData) {
+  const toggleProject = (projectId: number) => {
+    if (selectedProjects.includes(projectId)) {
+      setSelectedProjects(selectedProjects.filter(id => id !== projectId));
+    } else {
+      setSelectedProjects([...selectedProjects, projectId]);
+    }
+  };
+  
+  const toggleAll = () => {
+    if (selectedProjects.length === projects.length) {
+      setSelectedProjects([]);
+    } else {
+      setSelectedProjects(projects.map(p => p.project_id));
+    }
+  };
+  
+  const handleSendBulkEmail = () => {
+    const selectedEmails = projects
+      .filter(p => selectedProjects.includes(p.project_id) && p.client_email)
+      .map(p => p.client_email)
+      .filter((email): email is string => !!email)
+      .join(";");
+    
+    if (!selectedEmails) {
+      alert("Geen opdrachtgevers met email geselecteerd");
+      return;
+    }
+    
+    const templates: Record<string, { subject: string; body: string }> = {
+      opvolgmail: {
+        subject: `Samenwerking schooljaar ${schoolYearFilter}`,
+        body: `Beste opdrachtgever,\n\nHet schooljaar ${schoolYearFilter} staat voor de deur en wij willen graag onze samenwerking voortzetten.\n\nHeeft u interesse om opnieuw een project met onze leerlingen te doen?\n\nMet vriendelijke groet,\nHet docententeam`,
+      },
+      startproject: {
+        subject: "Uitnodiging startproject",
+        body: `Beste opdrachtgever,\n\nGraag nodigen wij u uit voor de start van ons nieuwe project.\n\nWe kijken uit naar de samenwerking!\n\nMet vriendelijke groet,\nHet docententeam`,
+      },
+      tussenpresentatie: {
+        subject: "Uitnodiging tussenpresentatie",
+        body: `Beste opdrachtgever,\n\nGraag nodigen wij u uit voor de tussenpresentatie van ons project.\n\nMet vriendelijke groet,\nHet docententeam`,
+      },
+      eindpresentatie: {
+        subject: "Uitnodiging eindpresentatie",
+        body: `Beste opdrachtgever,\n\nGraag nodigen wij u uit voor de eindpresentatie van ons project.\n\nMet vriendelijke groet,\nHet docententeam`,
+      },
+      bedankmail: {
+        subject: "Bedankt voor de samenwerking",
+        body: `Beste opdrachtgever,\n\nHartelijk dank voor de prettige samenwerking.\n\nMet vriendelijke groet,\nHet docententeam`,
+      },
+    };
+    
+    const selectedTemplate = templates[emailTemplate] || templates.opvolgmail;
+    const mailtoLink = buildMailto({
+      to: selectedEmails,
+      subject: selectedTemplate.subject,
+      body: selectedTemplate.body,
+    });
+    
+    window.open(mailtoLink, '_self');
+  };
+  
+  if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-slate-500">Laden...</div>
@@ -423,25 +483,6 @@ function RunningProjectsTab() {
   
   return (
     <>
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs text-slate-500">Lopende projecten</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">{kpiData?.running_projects || 0}</p>
-          <p className="mt-1 text-[11px] text-slate-500">Inclusief boven- en onderbouw</p>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs text-slate-500">Actieve opdrachtgevers nu</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">{kpiData?.active_clients_now || 0}</p>
-          <p className="mt-1 text-[11px] text-slate-500">Bij lopende projecten</p>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs text-slate-500">Aankomende momenten</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">{kpiData?.upcoming_moments || 0}</p>
-          <p className="mt-1 text-[11px] text-slate-500">Presentaties en contactmomenten</p>
-        </div>
-      </div>
-      
       {/* Filters */}
       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -496,6 +537,41 @@ function RunningProjectsTab() {
         </div>
       </div>
       
+      {/* Bulk Email Section */}
+      {selectedProjects.length > 0 && (
+        <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-center gap-4">
+            <div className="flex-1">
+              <p className="text-sm font-medium text-slate-900">
+                {selectedProjects.length} project{selectedProjects.length > 1 ? "en" : ""} geselecteerd
+              </p>
+              <p className="text-xs text-slate-600 mt-0.5">
+                {projects.filter(p => selectedProjects.includes(p.project_id) && p.client_email).length} opdrachtgever(s) met email
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <select
+                value={emailTemplate}
+                onChange={(e) => setEmailTemplate(e.target.value)}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+              >
+                <option value="opvolgmail">Opvolgmail</option>
+                <option value="startproject">Startproject uitnodiging</option>
+                <option value="tussenpresentatie">Tussenpresentatie uitnodiging</option>
+                <option value="eindpresentatie">Eindpresentatie uitnodiging</option>
+                <option value="bedankmail">Bedankmail</option>
+              </select>
+              <button
+                onClick={handleSendBulkEmail}
+                className="rounded-xl border border-sky-300 bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 shadow-sm"
+              >
+                📧 Mail versturen via Outlook
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Table Header */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-600">{total} lopende projecten</p>
@@ -513,6 +589,14 @@ function RunningProjectsTab() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
+                <th className="px-4 py-3 text-left font-medium text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={projects.length > 0 && selectedProjects.length === projects.length}
+                    onChange={toggleAll}
+                    className="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                  />
+                </th>
                 <th 
                   className="px-4 py-3 text-left font-medium text-slate-600 cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort("course")}
@@ -552,17 +636,6 @@ function RunningProjectsTab() {
                 <th className="px-4 py-3 text-left font-medium text-slate-600">
                   Periode
                 </th>
-                <th 
-                  className="px-4 py-3 text-left font-medium text-slate-600 cursor-pointer hover:bg-slate-100"
-                  onClick={() => handleSort("next_moment")}
-                >
-                  <div className="flex items-center gap-1">
-                    Volgend moment
-                    {sortBy === "next_moment" && (
-                      <span className="text-xs">{sortOrder === "asc" ? "▲" : "▼"}</span>
-                    )}
-                  </div>
-                </th>
                 <th className="px-4 py-3 text-left font-medium text-slate-600">
                   Mail opdrachtgever
                 </th>
@@ -584,6 +657,14 @@ function RunningProjectsTab() {
               ) : (
                 projects.map((project, idx) => (
                   <tr key={project.project_id} className={idx % 2 === 1 ? "bg-slate-50/50" : ""}>
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedProjects.includes(project.project_id)}
+                        onChange={() => toggleProject(project.project_id)}
+                        className="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                      />
+                    </td>
                     <td className="px-4 py-3 text-slate-700">
                       {project.course_name || "-"}
                     </td>
@@ -611,20 +692,6 @@ function RunningProjectsTab() {
                           {new Date(project.start_date).toLocaleDateString("nl-NL", { month: "short", year: "numeric" })} – {new Date(project.end_date).toLocaleDateString("nl-NL", { month: "short", year: "numeric" })}
                         </>
                       ) : "-"}
-                    </td>
-                    <td className="px-4 py-3">
-                      {project.next_moment_type ? (
-                        <>
-                          <div className="text-slate-700 font-medium">{project.next_moment_type}</div>
-                          {project.next_moment_date && (
-                            <div className="text-xs text-slate-500 mt-0.5">
-                              {new Date(project.next_moment_date).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <span className="text-slate-400">-</span>
-                      )}
                     </td>
                     <td className="px-4 py-3">
                       {project.client_email ? (
