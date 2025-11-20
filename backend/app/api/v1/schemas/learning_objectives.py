@@ -14,6 +14,7 @@ class LearningObjectiveCreate(BaseModel):
     description: Optional[str] = None
     order: int = 0
     phase: Optional[str] = None  # "onderbouw" | "bovenbouw"
+    subject_id: Optional[int] = None  # For template-specific learning objectives
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -23,6 +24,7 @@ class LearningObjectiveUpdate(BaseModel):
     description: Optional[str] = None
     order: Optional[int] = None
     phase: Optional[str] = None  # "onderbouw" | "bovenbouw"
+    subject_id: Optional[int] = None  # For template-specific learning objectives
     metadata_json: Optional[Dict[str, Any]] = None
 
 
@@ -33,6 +35,7 @@ class LearningObjectiveOut(BaseModel):
     description: Optional[str]
     order: int
     phase: Optional[str]
+    subject_id: Optional[int]  # For template-specific learning objectives
     metadata_json: Dict[str, Any]
 
     class Config:

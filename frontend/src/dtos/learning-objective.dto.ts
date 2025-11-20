@@ -5,6 +5,7 @@ export interface LearningObjectiveDto {
   description: string | null;
   order: number;
   phase: string | null;  // "onderbouw" | "bovenbouw"
+  subject_id: number | null;  // For template-specific learning objectives
   metadata_json: Record<string, unknown>;
 }
 
@@ -14,6 +15,7 @@ export interface LearningObjectiveCreateDto {
   description?: string | null;
   order?: number;
   phase?: string | null;  // "onderbouw" | "bovenbouw"
+  subject_id?: number | null;  // For template-specific learning objectives
   metadata_json?: Record<string, unknown>;
 }
 
@@ -23,6 +25,7 @@ export interface LearningObjectiveUpdateDto {
   description?: string | null;
   order?: number;
   phase?: string | null;  // "onderbouw" | "bovenbouw"
+  subject_id?: number | null;  // For template-specific learning objectives
   metadata_json?: Record<string, unknown>;
 }
 
