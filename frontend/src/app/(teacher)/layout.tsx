@@ -38,10 +38,20 @@ export default function TeacherLayout({
                 Projecttools
               </div>
               <div className="space-y-1">
-                <NavItem href="/teacher/project-assessments" label="Projectbeoordeling" />
+                <NavItem href="/teacher/projects" label="Projecten" />
+                <NavItem
+                  href="/teacher/project-assessments"
+                  label="Projectbeoordeling"
+                />
                 <NavItem href="/teacher/evaluations" label="Peerevaluaties" />
-                <NavItem href="/teacher/competencies" label="Competentiemonitor" />
-                <NavItem href="/teacher/project-notes" label="Projectaantekeningen" />
+                <NavItem
+                  href="/teacher/competencies"
+                  label="Competentiemonitor"
+                />
+                <NavItem
+                  href="/teacher/project-notes"
+                  label="Projectaantekeningen"
+                />
                 <NavItem href="/teacher/clients" label="Opdrachtgevers" />
               </div>
             </div>
@@ -53,10 +63,16 @@ export default function TeacherLayout({
                   Beheer
                 </div>
                 <div className="space-y-1">
-                  <NavItem href="/teacher/admin/subjects" label="Secties beheren" />
+                  <NavItem
+                    href="/teacher/admin/subjects"
+                    label="Secties beheren"
+                  />
                   <NavItem href="/teacher/courses" label="Vakken beheren" />
                   <NavItem href="/teacher/teachers" label="Docenten beheren" />
-                  <NavItem href="/teacher/learning-objectives" label="Leerdoelen" />
+                  <NavItem
+                    href="/teacher/learning-objectives"
+                    label="Leerdoelen"
+                  />
                   <NavItem href="/teacher/rubrics" label="Rubrics" />
                 </div>
               </div>
@@ -69,8 +85,14 @@ export default function TeacherLayout({
                   Beheer
                 </div>
                 <div className="space-y-1">
-                  <NavItem href="/teacher/class-teams" label="Klas- & Teambeheer" />
-                  <NavItem href="/teacher/learning-objectives" label="Leerdoelen" />
+                  <NavItem
+                    href="/teacher/class-teams"
+                    label="Klas- & Teambeheer"
+                  />
+                  <NavItem
+                    href="/teacher/learning-objectives"
+                    label="Leerdoelen"
+                  />
                   <NavItem href="/teacher/rubrics" label="Rubrics" />
                 </div>
               </div>
