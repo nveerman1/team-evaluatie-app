@@ -26,7 +26,7 @@ export default function AssignTeacherModal({
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTeachers, setSelectedTeachers] = useState<Teacher[]>([]);
-  const [role, setRole] = useState<"teacher" | "admin">("teacher");
+  const [role, setRole] = useState<"teacher" | "coordinator">("teacher");
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +48,7 @@ export default function AssignTeacherModal({
         
         const response = await teacherService.listTeachers({
           search: searchTerm,
+          role: "teacher", // Only search for teachers, admins cannot be assigned to courses
           per_page: 20,
         });
         
@@ -102,7 +103,7 @@ export default function AssignTeacherModal({
       for (const teacher of selectedTeachers) {
         await assignTeacher(courseId, {
           teacher_id: teacher.id,
-          role: role === "admin" ? "coordinator" : "teacher",
+          role: role,
         });
       }
       onSuccess();
@@ -272,19 +273,19 @@ export default function AssignTeacherModal({
               htmlFor="role"
               className="block text-sm font-medium text-gray-700"
             >
-              Rol *
+              Vakrol *
             </label>
             <select
               id="role"
               value={role}
-              onChange={(e) => setRole(e.target.value as "teacher" | "admin")}
+              onChange={(e) => setRole(e.target.value as "teacher" | "coordinator")}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value="teacher">Docent</option>
-              <option value="admin">Admin</option>
+              <option value="coordinator">Coördinator</option>
             </select>
             <p className="mt-1 text-sm text-gray-500">
-              Admins hebben extra rechten voor dit vak
+              Coördinatoren hebben extra rechten voor dit vak
             </p>
           </div>
 
