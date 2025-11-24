@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { User } from "@/dtos/user.dto";
 import { TeacherCourseCreate } from "@/dtos/course.dto";
+import { teacherService, Teacher } from "@/services/teacher.service";
 
 interface AssignTeacherModalProps {
   courseId: number;
@@ -22,78 +23,74 @@ export default function AssignTeacherModal({
   onSuccess,
   assignTeacher,
 }: AssignTeacherModalProps) {
-  const [teachers, setTeachers] = useState<User[]>([]);
-  const [filteredTeachers, setFilteredTeachers] = useState<User[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTeacherIds, setSelectedTeacherIds] = useState<number[]>([]);
+  const [selectedTeachers, setSelectedTeachers] = useState<Teacher[]>([]);
   const [role, setRole] = useState<"teacher" | "coordinator">("teacher");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Load teachers when search term changes
   useEffect(() => {
-    loadTeachers();
+    const loadTeachers = async () => {
+      if (searchTerm.length < 2) {
+        setTeachers([]);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const response = await teacherService.listTeachers({
+          search: searchTerm,
+          status: "active",
+          per_page: 20,
+        });
+        
+        // Filter out already selected teachers
+        const filtered = response.teachers.filter(
+          (teacher) => !selectedTeachers.find((t) => t.id === teacher.id)
+        );
+        
+        setTeachers(filtered);
+      } catch (err) {
+        console.error("Failed to load teachers:", err);
+        setError("Kon docenten niet laden");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(loadTeachers, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [searchTerm, selectedTeachers]);
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node) &&
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target as Node)
+      ) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  useEffect(() => {
-    // Filter teachers based on search term
-    if (searchTerm.trim() === "") {
-      setFilteredTeachers(teachers);
-    } else {
-      const filtered = teachers.filter(
-        (teacher) =>
-          teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          teacher.email.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredTeachers(filtered);
-    }
-  }, [searchTerm, teachers]);
-
-  const loadTeachers = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Mock data for now - in real implementation, this would be an API call
-      // TODO: Implement GET /api/v1/users?role=teacher endpoint
-      const mockTeachers: User[] = [
-        {
-          id: 1,
-          school_id: 1,
-          email: "teacher1@demo.school",
-          name: "Jan de Vries",
-          role: "teacher",
-        },
-        {
-          id: 2,
-          school_id: 1,
-          email: "teacher2@demo.school",
-          name: "Maria Jansen",
-          role: "teacher",
-        },
-        {
-          id: 3,
-          school_id: 1,
-          email: "teacher3@demo.school",
-          name: "Piet van Dam",
-          role: "teacher",
-        },
-      ];
-      
-      setTeachers(mockTeachers);
-      setFilteredTeachers(mockTeachers);
-    } catch (err) {
-      console.error("Failed to load teachers:", err);
-      setError("Kon docenten niet laden");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (selectedTeacherIds.length === 0) {
+    if (selectedTeachers.length === 0) {
       setError("Selecteer minimaal één docent");
       return;
     }
@@ -103,9 +100,9 @@ export default function AssignTeacherModal({
 
     try {
       // Assign each teacher sequentially
-      for (const teacherId of selectedTeacherIds) {
+      for (const teacher of selectedTeachers) {
         await assignTeacher(courseId, {
-          teacher_id: teacherId,
+          teacher_id: teacher.id,
           role: role,
         });
       }
@@ -121,19 +118,21 @@ export default function AssignTeacherModal({
     }
   };
 
-  const handleTeacherToggle = (teacherId: number) => {
-    setSelectedTeacherIds((prev) => {
-      if (prev.includes(teacherId)) {
-        return prev.filter((id) => id !== teacherId);
-      } else {
-        return [...prev, teacherId];
-      }
-    });
+  const handleSelectTeacher = (teacher: Teacher) => {
+    setSelectedTeachers((prev) => [...prev, teacher]);
+    setSearchTerm("");
+    setTeachers([]);
+    setShowDropdown(false);
+    searchInputRef.current?.focus();
+  };
+
+  const handleRemoveTeacher = (teacherId: number) => {
+    setSelectedTeachers((prev) => prev.filter((t) => t.id !== teacherId));
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
+      <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-2xl font-bold text-gray-900">
             Docent toewijzen
@@ -163,70 +162,110 @@ export default function AssignTeacherModal({
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Search input */}
-          <div>
+          {/* Autocomplete search input */}
+          <div className="relative">
             <label
               htmlFor="search"
-              className="block text-sm font-medium text-gray-700"
+              className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Zoek docent
+              Zoek en selecteer docenten *
             </label>
             <input
+              ref={searchInputRef}
               id="search"
               type="text"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Zoek op naam of email..."
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setShowDropdown(true);
+              }}
+              onFocus={() => setShowDropdown(true)}
+              placeholder="Type minimaal 2 karakters om te zoeken..."
+              className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
-          </div>
-
-          {/* Teacher list */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Selecteer docent(en) * ({selectedTeacherIds.length} geselecteerd)
-            </label>
             
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
-              </div>
-            ) : (
-              <div className="max-h-64 overflow-y-auto rounded-md border border-gray-300">
-                {filteredTeachers.length === 0 ? (
-                  <div className="p-4 text-center text-gray-500">
+            {/* Dropdown with search results */}
+            {showDropdown && searchTerm.length >= 2 && (
+              <div
+                ref={dropdownRef}
+                className="absolute z-10 mt-1 w-full rounded-md border border-gray-300 bg-white shadow-lg max-h-60 overflow-y-auto"
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
+                  </div>
+                ) : teachers.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500 text-sm">
                     Geen docenten gevonden
                   </div>
                 ) : (
                   <div className="divide-y divide-gray-200">
-                    {filteredTeachers.map((teacher) => (
-                      <label
+                    {teachers.map((teacher) => (
+                      <button
                         key={teacher.id}
-                        className={`flex cursor-pointer items-center gap-3 p-3 transition-colors hover:bg-gray-50 ${
-                          selectedTeacherIds.includes(teacher.id) ? "bg-blue-50" : ""
-                        }`}
+                        type="button"
+                        onClick={() => handleSelectTeacher(teacher)}
+                        className="w-full text-left p-3 hover:bg-gray-50 transition-colors"
                       >
-                        <input
-                          type="checkbox"
-                          checked={selectedTeacherIds.includes(teacher.id)}
-                          onChange={() => handleTeacherToggle(teacher.id)}
-                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <div className="flex-1">
-                          <div className="font-medium text-gray-900">
-                            {teacher.name}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {teacher.email}
-                          </div>
+                        <div className="font-medium text-gray-900">
+                          {teacher.name}
                         </div>
-                      </label>
+                        <div className="text-sm text-gray-500">
+                          {teacher.email}
+                        </div>
+                      </button>
                     ))}
                   </div>
                 )}
               </div>
             )}
           </div>
+
+          {/* Selected teachers */}
+          {selectedTeachers.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Geselecteerde docenten ({selectedTeachers.length})
+              </label>
+              <div className="space-y-2">
+                {selectedTeachers.map((teacher) => (
+                  <div
+                    key={teacher.id}
+                    className="flex items-center justify-between rounded-md border border-gray-200 bg-gray-50 p-3"
+                  >
+                    <div>
+                      <div className="font-medium text-gray-900">
+                        {teacher.name}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {teacher.email}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTeacher(teacher.id)}
+                      className="text-red-600 hover:text-red-800"
+                      title="Verwijderen"
+                    >
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Role selection */}
           <div>
@@ -256,7 +295,7 @@ export default function AssignTeacherModal({
             </div>
           )}
 
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
               onClick={onClose}
@@ -267,10 +306,10 @@ export default function AssignTeacherModal({
             </button>
             <button
               type="submit"
-              disabled={submitting || selectedTeacherIds.length === 0}
+              disabled={submitting || selectedTeachers.length === 0}
               className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {submitting ? "Toewijzen..." : "Docent toewijzen"}
+              {submitting ? "Toewijzen..." : `${selectedTeachers.length} docent${selectedTeachers.length !== 1 ? 'en' : ''} toewijzen`}
             </button>
           </div>
         </form>
