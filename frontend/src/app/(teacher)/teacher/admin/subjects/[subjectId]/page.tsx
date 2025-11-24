@@ -9,6 +9,7 @@ import { subjectService } from "@/services/subject.service";
 import { courseService } from "@/services/course.service";
 import SubjectFormModal from "@/components/admin/SubjectFormModal";
 import AddCourseToSubjectModal from "@/components/admin/AddCourseToSubjectModal";
+import CourseFormModal from "@/components/admin/CourseFormModal";
 
 export default function SubjectDetailPage() {
   const params = useParams();
@@ -21,6 +22,7 @@ export default function SubjectDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddCourseModal, setShowAddCourseModal] = useState(false);
+  const [showCreateCourseModal, setShowCreateCourseModal] = useState(false);
 
   useEffect(() => {
     if (subjectId) {
@@ -137,10 +139,16 @@ export default function SubjectDetailPage() {
               Bewerken
             </button>
             <button
+              onClick={() => setShowCreateCourseModal(true)}
+              className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              + Nieuw vak
+            </button>
+            <button
               onClick={() => setShowAddCourseModal(true)}
               className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
             >
-              + Course toevoegen
+              + Bestaand vak toevoegen
             </button>
           </div>
         </header>
@@ -368,6 +376,15 @@ export default function SubjectDetailPage() {
           onAdd={handleAddCourse}
           subjectId={subjectId}
           existingCourseIds={courses.map(c => c.id)}
+        />
+        <CourseFormModal
+          isOpen={showCreateCourseModal}
+          onClose={() => setShowCreateCourseModal(false)}
+          onSuccess={() => {
+            setShowCreateCourseModal(false);
+            loadSubjectData();
+          }}
+          subjectId={subjectId}
         />
       </div>
     </>
