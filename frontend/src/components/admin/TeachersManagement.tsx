@@ -403,7 +403,7 @@ export default function TeachersManagement() {
                           Docent
                         </span>
                       )}
-                      {selectedTeacher.status === "actief" ? (
+                      {!selectedTeacher.archived ? (
                         <span className="inline-flex rounded-full border border-green-100 bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
                           Actief
                         </span>
