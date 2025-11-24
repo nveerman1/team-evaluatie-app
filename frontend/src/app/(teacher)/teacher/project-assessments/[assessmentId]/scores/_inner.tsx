@@ -400,86 +400,33 @@ export default function ScoresOverviewInner() {
     });
   }
 
-  const tabs = [
-    { id: "overzicht", label: "Overzicht", href: `/teacher/project-assessments/${assessmentId}/overview` },
-    { id: "bewerken", label: "Rubric Invullen", href: `/teacher/project-assessments/${assessmentId}/edit` },
-    { id: "scores", label: "Scores", href: `/teacher/project-assessments/${assessmentId}/scores` },
-    { id: "reflecties", label: "Reflecties", href: `/teacher/project-assessments/${assessmentId}/reflections` },
-  ];
-
   return (
     <>
-      {/* Page Header */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
-        <header className="px-6 py-6 max-w-[1600px] mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-          <div>
-            <div className="mb-2">
-              <Link
-                href={`/teacher/project-assessments/${assessmentId}/overview`}
-                className="text-gray-500 hover:text-gray-700 text-sm"
-              >
-                ← Terug naar overzicht
-              </Link>
-            </div>
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
-              {currentData.assessment.title} – Scores
-            </h1>
-            <p className="text-gray-600 mt-1 text-sm">
-              Rubric: {currentData.rubric_title} (schaal {currentData.rubric_scale_min}-{currentData.rubric_scale_max})
-            </p>
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={() => viewMode === "teams" ? loadTeamsData() : loadStudentsData()}
-              className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              disabled={loading}
-            >
-              ⟳ Verversen
-            </button>
-            <button
-              onClick={exportToCSV}
-              className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              🧾 CSV
-            </button>
-            <button
-              onClick={exportToXLSX}
-              className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              📥 Excel
-            </button>
-          </div>
-        </header>
+      {/* Action buttons */}
+      <div className="flex gap-2 flex-wrap justify-end">
+        <button
+          onClick={() => viewMode === "teams" ? loadTeamsData() : loadStudentsData()}
+          className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          disabled={loading}
+        >
+          ⟳ Verversen
+        </button>
+        <button
+          onClick={exportToCSV}
+          className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          🧾 CSV
+        </button>
+        <button
+          onClick={exportToXLSX}
+          className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          📥 Excel
+        </button>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-6 space-y-6">
-        
-        {/* Tabs Navigation */}
-        <div className="border-b border-gray-200">
-          <nav className="flex gap-8" aria-label="Tabs">
-            {tabs.map((tab) => (
-              <Link
-                key={tab.id}
-                href={tab.href}
-                className={`
-                  py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                  ${
-                    tab.id === "scores"
-                      ? "border-black text-black"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }
-                `}
-                aria-current={tab.id === "scores" ? "page" : undefined}
-              >
-                {tab.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-
-        {/* View Mode Toggle */}
-        <div className="flex gap-2 border-b border-gray-200">
+      {/* View Mode Toggle */}
+      <div className="flex gap-2 border-b border-gray-200">
         <button
           onClick={() => {
             setViewMode("teams");
@@ -1018,7 +965,6 @@ export default function ScoresOverviewInner() {
           </>
         )}
         </section>
-      </div>
     </>
   );
 }
