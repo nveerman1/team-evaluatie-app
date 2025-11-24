@@ -293,6 +293,9 @@ class RubricCriterion(Base):
     category: Mapped[Optional[str]] = mapped_column(
         String(100), nullable=True, index=True
     )
+    visible_to_external: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False
+    )  # Whether this criterion is visible to external evaluators
 
     # Relationship to learning objectives
     learning_objectives: Mapped[list["LearningObjective"]] = relationship(
@@ -516,8 +519,11 @@ class ProjectAssessment(Base):
     rubric_id: Mapped[int] = mapped_column(
         ForeignKey("rubrics.id", ondelete="RESTRICT"), nullable=False
     )
-    teacher_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    teacher_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
+    external_evaluator_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("external_evaluators.id", ondelete="CASCADE"), nullable=True
     )
 
     # Assessment data
@@ -528,12 +534,25 @@ class ProjectAssessment(Base):
     status: Mapped[str] = mapped_column(String(30), default="draft")  # draft|published
     published_at: Mapped[Optional[datetime]] = mapped_column()
 
+    # Role: who is creating this assessment
+    role: Mapped[str] = mapped_column(
+        String(20), default="TEACHER", nullable=False
+    )  # TEACHER | EXTERNAL
+    is_advisory: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )  # True for external assessments
+
     # Metadata
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
+
+    # Relationships
+    external_evaluator: Mapped["ExternalEvaluator"] = relationship()
 
     __table_args__ = (
         Index("ix_project_assessment_group", "group_id"),
         Index("ix_project_assessment_teacher", "teacher_id"),
+        Index("ix_project_assessment_external", "external_evaluator_id"),
+        Index("ix_project_assessment_role", "role"),
     )
 
 
@@ -1393,4 +1412,106 @@ class ClientProjectLink(Base):
         ),
         Index("ix_client_project_client", "client_id"),
         Index("ix_client_project_project", "project_id"),
+    )
+
+
+# ============ External Project Assessment ============
+
+
+class ExternalEvaluator(Base):
+    """
+    External evaluator/opdrachtgever for project assessments
+    Can assess one or multiple teams based on configuration
+    """
+
+    __tablename__ = "external_evaluators"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = mapped_column(
+        ForeignKey("schools.id", ondelete="CASCADE"), index=True
+    )
+
+    # Contact information
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    email: Mapped[str] = mapped_column(String(320), nullable=False)
+    organisation: Mapped[Optional[str]] = mapped_column(String(200))
+
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(
+        default=datetime.utcnow, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    # Relationships
+    school: Mapped["School"] = relationship()
+    team_links: Mapped[list["ProjectTeamExternal"]] = relationship(
+        back_populates="external_evaluator", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        Index("ix_external_evaluator_school_email", "school_id", "email"),
+        Index("ix_external_evaluator_email", "email"),
+    )
+
+
+class ProjectTeamExternal(Base):
+    """
+    Links project teams (groups) to external evaluators with invitation tokens
+    Supports both bovenbouw (different evaluators per team) and onderbouw (one evaluator for all teams)
+    """
+
+    __tablename__ = "project_team_externals"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = tenant_fk()
+
+    # Relationships
+    group_id: Mapped[int] = mapped_column(
+        ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    external_evaluator_id: Mapped[int] = mapped_column(
+        ForeignKey("external_evaluators.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    project_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+
+    # Token for external access
+    invitation_token: Mapped[str] = mapped_column(
+        String(128), nullable=False, unique=True, index=True
+    )
+    token_expires_at: Mapped[Optional[datetime]] = mapped_column()
+
+    # Status tracking
+    status: Mapped[str] = mapped_column(
+        String(30), default="NOT_INVITED", nullable=False
+    )  # NOT_INVITED | INVITED | IN_PROGRESS | SUBMITTED
+
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(
+        default=datetime.utcnow, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+    invited_at: Mapped[Optional[datetime]] = mapped_column()
+    submitted_at: Mapped[Optional[datetime]] = mapped_column()
+
+    # Relationships
+    group: Mapped["Group"] = relationship()
+    external_evaluator: Mapped["ExternalEvaluator"] = relationship(
+        back_populates="team_links"
+    )
+    project: Mapped["Project"] = relationship()
+
+    __table_args__ = (
+        Index("ix_project_team_external_group", "group_id"),
+        Index("ix_project_team_external_evaluator", "external_evaluator_id"),
+        Index("ix_project_team_external_project", "project_id"),
+        Index("ix_project_team_external_status", "status"),
+        Index("ix_project_team_external_token", "invitation_token"),
     )
