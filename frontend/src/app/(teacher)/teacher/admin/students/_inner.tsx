@@ -122,28 +122,52 @@ export default function StudentsAdminInner() {
   );
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Admin • Leerlingen</h1>
-        <div className="flex items-center gap-2">
-          <label className="inline-flex items-center gap-2">
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              className="hidden"
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => onImport(e.target.files?.[0] ?? null)}
-              disabled={importBusy}
-            />
-            <Button as="span" aria-label="Importeer CSV" disabled={importBusy}>
-              {importBusy ? "Importeren…" : "Importeer CSV"}
-            </Button>
-          </label>
-          <Button onClick={onExport}>Exporteer CSV</Button>
-          <Link href="/teacher/admin/students/create">
-            <Button variant="primary">+ Nieuwe leerling</Button>
-          </Link>
-        </div>
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+              Leerlingen beheren
+            </h1>
+            <p className="text-gray-600 mt-1 text-sm">
+              Beheer alle leerlingen van jouw school
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => onImport(e.target.files?.[0] ?? null)}
+                disabled={importBusy}
+              />
+              <button
+                type="button"
+                disabled={importBusy}
+                className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {importBusy ? "Importeren…" : "Importeer CSV"}
+              </button>
+            </label>
+            <button
+              onClick={onExport}
+              className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Exporteer CSV
+            </button>
+            <Link href="/teacher/admin/students/create">
+              <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
+                + Nieuwe leerling
+              </button>
+            </Link>
+          </div>
+        </header>
       </div>
+
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-5">
 
       {/* Filterbalk */}
       <div className="flex flex-wrap items-end gap-3 bg-white border rounded-2xl p-3">
@@ -341,7 +365,8 @@ export default function StudentsAdminInner() {
           }}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 
