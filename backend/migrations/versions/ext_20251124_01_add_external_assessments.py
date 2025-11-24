@@ -1,7 +1,7 @@
 """add_external_assessments
 
 Revision ID: ext_20251124_01
-Revises: subj_20251119_01
+Revises: lo_20251119_02
 Create Date: 2025-11-24 16:30:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "ext_20251124_01"
-down_revision = "subj_20251119_01"
+down_revision = "lo_20251119_02"
 branch_labels = None
 depends_on = None
 

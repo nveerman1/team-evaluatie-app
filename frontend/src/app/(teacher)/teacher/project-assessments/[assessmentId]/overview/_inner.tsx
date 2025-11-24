@@ -1,5 +1,5 @@
 "use client";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ApiAuthError } from "@/lib/api";
@@ -9,7 +9,6 @@ import { Loading, ErrorMessage } from "@/components";
 
 export default function ProjectAssessmentOverviewInner() {
   const params = useParams();
-  const router = useRouter();
   const assessmentId = Number(params?.assessmentId);
 
   const [loading, setLoading] = useState(true);
@@ -20,15 +19,6 @@ export default function ProjectAssessmentOverviewInner() {
   const [sortBy, setSortBy] = useState<"team" | "status" | "progress" | "updated">("team");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
-  const [activeTab, setActiveTab] = useState("overzicht");
-
-  const tabs = [
-    { id: "overzicht", label: "Overzicht", href: `/teacher/project-assessments/${assessmentId}/overview` },
-    { id: "bewerken", label: "Rubric Invullen", href: `/teacher/project-assessments/${assessmentId}/edit` },
-    { id: "scores", label: "Scores", href: `/teacher/project-assessments/${assessmentId}/scores` },
-    { id: "reflecties", label: "Reflecties", href: `/teacher/project-assessments/${assessmentId}/reflections` },
-  ];
-
   useEffect(() => {
     async function loadData() {
       setLoading(true);
@@ -36,11 +26,12 @@ export default function ProjectAssessmentOverviewInner() {
       try {
         const result = await projectAssessmentService.getTeamOverview(assessmentId);
         setData(result);
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (e instanceof ApiAuthError) {
           setError(e.originalMessage);
         } else {
-          setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
+          const err = e as { response?: { data?: { detail?: string } }; message?: string };
+          setError(err?.response?.data?.detail || err?.message || "Laden mislukt");
         }
       } finally {
         setLoading(false);
@@ -103,62 +94,8 @@ export default function ProjectAssessmentOverviewInner() {
 
   return (
     <>
-      {/* Page Header */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
-        <header className="px-6 py-6 max-w-6xl mx-auto">
-          <div className="mb-4">
-            <Link
-              href="/teacher/project-assessments"
-              className="text-gray-500 hover:text-gray-700 text-sm"
-            >
-              ← Terug naar overzicht
-            </Link>
-          </div>
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
-            {data.assessment.title}
-          </h1>
-          <p className="text-gray-600 mt-1 text-sm">
-            Rubric: {data.rubric_title} (schaal {data.rubric_scale_min}-{data.rubric_scale_max})
-          </p>
-        </header>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        
-        {/* Tabs Navigation */}
-        <div className="border-b border-gray-200">
-          <nav className="flex gap-8" aria-label="Tabs">
-            <Link
-              href={`/teacher/project-assessments/${assessmentId}/overview`}
-              className="py-4 px-1 border-b-2 font-medium text-sm transition-colors border-black text-black"
-              aria-current="page"
-            >
-              Overzicht
-            </Link>
-            <Link
-              href={`/teacher/project-assessments/${assessmentId}/scores`}
-              className="py-4 px-1 border-b-2 font-medium text-sm transition-colors border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            >
-              Scores
-            </Link>
-            <Link
-              href={`/teacher/project-assessments/${assessmentId}/reflections`}
-              className="py-4 px-1 border-b-2 font-medium text-sm transition-colors border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            >
-              Reflecties
-            </Link>
-            <Link
-              href={`/teacher/project-assessments/${assessmentId}/edit`}
-              className="py-4 px-1 border-b-2 font-medium text-sm transition-colors border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            >
-              Bewerken
-            </Link>
-          </nav>
-        </div>
-
-        {/* Filters and Search */}
-        <div className="flex items-center gap-4 bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex-wrap">
+      {/* Filters and Search */}
+      <div className="flex items-center gap-4 bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex-wrap">
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium">Zoeken:</label>
           <input
@@ -312,8 +249,7 @@ export default function ProjectAssessmentOverviewInner() {
             </tbody>
           </table>
         </div>
-        </section>
-      </div>
+      </section>
     </>
   );
 }
