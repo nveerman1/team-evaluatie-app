@@ -83,20 +83,36 @@ export default function SubjectDetailPage() {
     <>
       {/* Page Header */}
       <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
-        <header className="px-6 py-6 max-w-6xl mx-auto">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-            <Link
-              href="/teacher/admin/subjects"
-              className="hover:text-blue-600 transition-colors"
-            >
-              Secties
-            </Link>
-            <span>/</span>
-            <span className="text-gray-900">{subject.name}</span>
+        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+              <Link
+                href="/teacher/admin/schoolbeheer?tab=secties"
+                className="hover:text-blue-600 transition-colors"
+              >
+                Secties
+              </Link>
+              <span>/</span>
+              <span className="text-gray-900">{subject.name}</span>
+            </div>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+              {subject.name}
+            </h1>
           </div>
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
-            {subject.name}
-          </h1>
+          <div className="flex gap-3">
+            <button
+              onClick={() => alert("Sectie bewerken - functionaliteit komt binnenkort")}
+              className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Bewerken
+            </button>
+            <button
+              onClick={() => alert("Course toevoegen - functionaliteit komt binnenkort")}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+            >
+              + Course toevoegen
+            </button>
+          </div>
         </header>
       </div>
 
