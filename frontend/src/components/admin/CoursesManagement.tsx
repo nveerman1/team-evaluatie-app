@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Course, CourseCreate } from "@/dtos/course.dto";
 import { courseService } from "@/services/course.service";
 
-export default function CoursesManagement() {
+const CoursesManagement = forwardRef((props, ref) => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,18 +67,13 @@ export default function CoursesManagement() {
     }
   };
 
+  // Expose methods to parent component
+  useImperativeHandle(ref, () => ({
+    handleCreate: handleCreateCourse,
+  }));
+
   return (
     <div className="space-y-4">
-      {/* Action Button */}
-      <div className="flex justify-end">
-        <button
-          onClick={handleCreateCourse}
-          className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
-        >
-          + Nieuw vak
-        </button>
-      </div>
-
       {/* Filters */}
       <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -307,7 +302,9 @@ export default function CoursesManagement() {
       )}
     </div>
   );
-}
+});
+
+CoursesManagement.displayName = "CoursesManagement";
 
 // Create Course Modal Component
 function CreateCourseModal({
@@ -491,3 +488,5 @@ function CreateCourseModal({
     </div>
   );
 }
+
+export default CoursesManagement;

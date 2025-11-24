@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import {
   teacherService,
@@ -12,7 +12,7 @@ import TeacherFormModal from "@/components/teacher/TeacherFormModal";
 import SubjectAssignmentModal from "@/components/teacher/SubjectAssignmentModal";
 import CSVImportModal from "@/components/teacher/CSVImportModal";
 
-export default function TeachersManagement() {
+const TeachersManagement = forwardRef((props, ref) => {
   // State
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -143,6 +143,13 @@ export default function TeachersManagement() {
     }
   };
 
+  // Expose methods to parent component
+  useImperativeHandle(ref, () => ({
+    handleCreate: () => setShowCreateModal(true),
+    handleExportCSV: handleExportCSV,
+    handleImportCSV: () => setShowImportModal(true),
+  }));
+
   const totalPages = Math.ceil(totalTeachers / 20);
 
   if (isLoading) {
@@ -187,28 +194,6 @@ export default function TeachersManagement() {
       />
 
       <div className="space-y-6">
-        {/* Action Buttons */}
-        <div className="flex gap-3 justify-end">
-          <button
-            onClick={handleExportCSV}
-            className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Exporteer CSV
-          </button>
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Importeer CSV
-          </button>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
-          >
-            + Nieuwe docent
-          </button>
-        </div>
-
         <div className="flex flex-col gap-6 lg:flex-row">
           {/* Left Column */}
           <div className="flex-1 space-y-6">
@@ -536,4 +521,8 @@ export default function TeachersManagement() {
       </div>
     </>
   );
-}
+});
+
+TeachersManagement.displayName = "TeachersManagement";
+
+export default TeachersManagement;

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import Link from "next/link";
 import { Subject } from "@/dtos/subject.dto";
 import { subjectService } from "@/services/subject.service";
 
-export default function SectionsManagement() {
+const SectionsManagement = forwardRef((props, ref) => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +46,14 @@ export default function SectionsManagement() {
       setLoading(false);
     }
   };
+
+  // Expose methods to parent component
+  useImperativeHandle(ref, () => ({
+    handleCreate: () => {
+      // For now, navigate to create page (to be implemented)
+      alert("Nieuwe sectie aanmaken - functionaliteit komt binnenkort");
+    },
+  }));
 
   return (
     <div className="space-y-4">
@@ -200,4 +208,8 @@ export default function SectionsManagement() {
       )}
     </div>
   );
-}
+});
+
+SectionsManagement.displayName = "SectionsManagement";
+
+export default SectionsManagement;
