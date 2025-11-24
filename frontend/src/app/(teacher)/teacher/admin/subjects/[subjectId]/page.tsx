@@ -3,9 +3,12 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Subject } from "@/dtos/subject.dto";
+import { Subject, SubjectUpdate } from "@/dtos/subject.dto";
 import { Course } from "@/dtos/course.dto";
 import { subjectService } from "@/services/subject.service";
+import { courseService } from "@/services/course.service";
+import SubjectFormModal from "@/components/admin/SubjectFormModal";
+import AddCourseToSubjectModal from "@/components/admin/AddCourseToSubjectModal";
 
 export default function SubjectDetailPage() {
   const params = useParams();
@@ -16,6 +19,8 @@ export default function SubjectDetailPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showAddCourseModal, setShowAddCourseModal] = useState(false);
 
   useEffect(() => {
     if (subjectId) {
@@ -42,6 +47,31 @@ export default function SubjectDetailPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleUpdateSubject = async (data: SubjectUpdate) => {
+    await subjectService.updateSubject(subjectId, data);
+    await loadSubjectData();
+  };
+
+  const handleAddCourse = async (courseId: number) => {
+    // Update the course to link it to this subject
+    await courseService.updateCourse(courseId, {
+      subject_id: subjectId,
+    });
+    await loadSubjectData();
+  };
+
+  const handleRemoveCourse = async (courseId: number) => {
+    if (!confirm("Weet je zeker dat je deze course wilt ontkoppelen van deze sectie?")) {
+      return;
+    }
+    
+    // Update the course to unlink it from this subject
+    await courseService.updateCourse(courseId, {
+      subject_id: null,
+    });
+    await loadSubjectData();
   };
 
   if (loading) {
@@ -101,13 +131,13 @@ export default function SubjectDetailPage() {
           </div>
           <div className="flex gap-3">
             <button
-              onClick={() => alert("Sectie bewerken - functionaliteit komt binnenkort")}
+              onClick={() => setShowEditModal(true)}
               className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               Bewerken
             </button>
             <button
-              onClick={() => alert("Course toevoegen - functionaliteit komt binnenkort")}
+              onClick={() => setShowAddCourseModal(true)}
               className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
             >
               + Course toevoegen
@@ -301,12 +331,20 @@ export default function SubjectDetailPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <Link
-                          href={`/teacher/courses/${course.id}`}
-                          className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                        >
-                          Bekijken
-                        </Link>
+                        <div className="flex gap-2 justify-end">
+                          <Link
+                            href={`/teacher/courses/${course.id}`}
+                            className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                          >
+                            Bekijken
+                          </Link>
+                          <button
+                            onClick={() => handleRemoveCourse(course.id)}
+                            className="inline-flex items-center rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
+                          >
+                            Ontkoppelen
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -315,6 +353,22 @@ export default function SubjectDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Modals */}
+        <SubjectFormModal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onSubmit={handleUpdateSubject}
+          subject={subject}
+          mode="edit"
+        />
+        <AddCourseToSubjectModal
+          isOpen={showAddCourseModal}
+          onClose={() => setShowAddCourseModal(false)}
+          onAdd={handleAddCourse}
+          subjectId={subjectId}
+          existingCourseIds={courses.map(c => c.id)}
+        />
       </div>
     </>
   );

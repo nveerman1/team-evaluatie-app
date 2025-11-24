@@ -2,14 +2,16 @@
 
 import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import Link from "next/link";
-import { Subject } from "@/dtos/subject.dto";
+import { Subject, SubjectCreate } from "@/dtos/subject.dto";
 import { subjectService } from "@/services/subject.service";
+import SubjectFormModal from "@/components/admin/SubjectFormModal";
 
 const SectionsManagement = forwardRef((props, ref) => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [courseCounts, setCourseCounts] = useState<Record<number, number>>({});
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     loadSubjects();
@@ -47,12 +49,14 @@ const SectionsManagement = forwardRef((props, ref) => {
     }
   };
 
+  const handleCreateSubject = async (data: SubjectCreate) => {
+    await subjectService.createSubject(data);
+    await loadSubjects();
+  };
+
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
-    handleCreate: () => {
-      // For now, navigate to create page (to be implemented)
-      alert("Nieuwe sectie aanmaken - functionaliteit komt binnenkort");
-    },
+    handleCreate: () => setShowCreateModal(true),
   }));
 
   return (
@@ -206,6 +210,14 @@ const SectionsManagement = forwardRef((props, ref) => {
           )}
         </>
       )}
+
+      {/* Create Modal */}
+      <SubjectFormModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSubmit={handleCreateSubject}
+        mode="create"
+      />
     </div>
   );
 });
