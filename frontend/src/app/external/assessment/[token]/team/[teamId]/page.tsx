@@ -308,7 +308,7 @@ export default function ExternalAssessmentTeamPage() {
                           <div className="text-center">
                             <div className="text-xl font-bold">{level}</div>
                             {descriptor && (
-                              <div className="text-xs mt-1 line-clamp-2">
+                              <div className="text-xs mt-1 overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                                 {descriptor}
                               </div>
                             )}
