@@ -2,7 +2,6 @@
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, useCallback, useRef } from "react";
-import Link from "next/link";
 import { ApiAuthError } from "@/lib/api";
 import { projectAssessmentService } from "@/services";
 import {
@@ -477,29 +476,6 @@ export default function EditProjectAssessmentInner() {
   if (!data || !currentTeam)
     return <ErrorMessage message="Geen data gevonden" />;
 
-  const tabs = [
-    {
-      id: "overzicht",
-      label: "Overzicht",
-      href: `/teacher/project-assessments/${assessmentId}/overview`,
-    },
-    {
-      id: "bewerken",
-      label: "Rubric Invullen",
-      href: `/teacher/project-assessments/${assessmentId}/edit`,
-    },
-    {
-      id: "scores",
-      label: "Scores",
-      href: `/teacher/project-assessments/${assessmentId}/scores`,
-    },
-    {
-      id: "reflecties",
-      label: "Reflecties",
-      href: `/teacher/project-assessments/${assessmentId}/reflections`,
-    },
-  ];
-
   const scaleMin = data.rubric_scale_min;
   const scaleMax = data.rubric_scale_max;
 
@@ -519,85 +495,55 @@ export default function EditProjectAssessmentInner() {
 
   return (
     <>
-      {/* Page Header */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
-        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
-              Rubric Invullen
-            </h1>
-            <p className="text-gray-600 mt-1 text-sm">
-              {data.rubric_title} • Schaal: {scaleMin}-{scaleMax}
+      {/* Status and publish actions */}
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
+        <div>
+          <p className="text-gray-600 text-sm">
+            {data.rubric_title} • Schaal: {scaleMin}-{scaleMax}
+          </p>
+          {autoSaving && (
+            <p className="text-sm text-blue-600 mt-1">
+              💾 Autosave actief...
             </p>
-            {autoSaving && (
-              <p className="text-sm text-blue-600 mt-1">
-                💾 Autosave actief...
-              </p>
-            )}
-          </div>
-          <div className="flex gap-2">
-            {status === "draft" && (
-              <button
-                onClick={handlePublish}
-                disabled={saving}
-                className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 disabled:opacity-60"
-              >
-                ✅ Publiceer voor studenten
-              </button>
-            )}
-            {status === "published" && (
-              <span className="rounded-lg bg-green-100 px-4 py-2 text-sm font-medium text-green-700">
-                ✅ Gepubliceerd
-              </span>
-            )}
-          </div>
-        </header>
+          )}
+        </div>
+        <div className="flex gap-2">
+          {status === "draft" && (
+            <button
+              onClick={handlePublish}
+              disabled={saving}
+              className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 disabled:opacity-60"
+            >
+              ✅ Publiceer voor studenten
+            </button>
+          )}
+          {status === "published" && (
+            <span className="rounded-lg bg-green-100 px-4 py-2 text-sm font-medium text-green-700">
+              ✅ Gepubliceerd
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Tabs Navigation */}
-        <div className="border-b border-gray-200">
-          <nav className="flex gap-8" aria-label="Tabs">
-            {tabs.map((tab) => (
-              <Link
-                key={tab.id}
-                href={tab.href}
-                className={`
-                  py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                  ${
-                    tab.id === "bewerken"
-                      ? "border-black text-black"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }
-                `}
-                aria-current={tab.id === "bewerken" ? "page" : undefined}
-              >
-                {tab.label}
-              </Link>
-            ))}
-          </nav>
+      {/* Team kaart */}
+      <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-slate-900">
+            Team {teamNumber}
+          </p>
+          <p className="text-xs text-slate-500">
+            {currentTeamIndex + 1} van {teamsData?.teams.length || 0}
+          </p>
+          <p className="text-xs text-slate-600">
+            <span className="font-medium">Teamleden: </span>
+            {currentTeam.members.map((m) => m.name).join(", ")}
+          </p>
         </div>
-
-        {/* Team kaart */}
-        <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-slate-900">
-              Team {teamNumber}
-            </p>
-            <p className="text-xs text-slate-500">
-              {currentTeamIndex + 1} van {teamsData?.teams.length || 0}
-            </p>
-            <p className="text-xs text-slate-600">
-              <span className="font-medium">Teamleden: </span>
-              {currentTeam.members.map((m) => m.name).join(", ")}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => prevTeamNumber && navigateToTeam(prevTeamNumber)}
-              disabled={!hasPrevTeam}
-              className="rounded-full border border-slate-200 px-4 py-1.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => prevTeamNumber && navigateToTeam(prevTeamNumber)}
+            disabled={!hasPrevTeam}
+            className="rounded-full border border-slate-200 px-4 py-1.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               ← Vorig team
             </button>
@@ -741,7 +687,6 @@ export default function EditProjectAssessmentInner() {
             </div>
           </div>
         </section>
-      </div>
     </>
   );
 }

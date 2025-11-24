@@ -1,0 +1,68 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const tabs = [
+  { id: "overview", label: "Overzicht", href: (id: string) => `/teacher/project-assessments/${id}/overview` },
+  { id: "edit", label: "Rubric invullen", href: (id: string) => `/teacher/project-assessments/${id}/edit` },
+  { id: "scores", label: "Scores", href: (id: string) => `/teacher/project-assessments/${id}/scores` },
+  { id: "reflections", label: "Reflecties", href: (id: string) => `/teacher/project-assessments/${id}/reflections` },
+  { id: "external", label: "Externe beoordeling", href: (id: string) => `/teacher/project-assessments/${id}/external` },
+  { id: "settings", label: "Bewerken", href: (id: string) => `/teacher/project-assessments/${id}/settings` },
+];
+
+type ProjectAssessmentTabsProps = {
+  assessmentId: string;
+};
+
+export function ProjectAssessmentTabs({ assessmentId }: ProjectAssessmentTabsProps) {
+  const pathname = usePathname();
+
+  // Determine active tab based on pathname segment after [assessmentId]
+  const getActiveTab = () => {
+    if (!pathname) return "overview";
+    
+    // Extract the segment after /project-assessments/[id]/
+    const segments = pathname.split("/");
+    const assessmentIdIndex = segments.findIndex((s) => s === assessmentId);
+    const tabSegment = assessmentIdIndex >= 0 ? segments[assessmentIdIndex + 1] : null;
+    
+    // Match the segment to a tab id
+    if (tabSegment === "edit") return "edit";
+    if (tabSegment === "scores") return "scores";
+    if (tabSegment === "reflections") return "reflections";
+    if (tabSegment === "external") return "external";
+    if (tabSegment === "settings") return "settings";
+    return "overview";
+  };
+
+  const activeTab = getActiveTab();
+
+  return (
+    <div className="border-b border-gray-200">
+      <nav className="flex gap-8" aria-label="Tabs">
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <Link
+              key={tab.id}
+              href={tab.href(assessmentId)}
+              className={`
+                py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                ${
+                  isActive
+                    ? "border-black text-black"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }
+              `}
+              aria-current={isActive ? "page" : undefined}
+            >
+              {tab.label}
+            </Link>
+          );
+        })}
+      </nav>
+    </div>
+  );
+}
