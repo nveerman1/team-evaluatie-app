@@ -53,9 +53,7 @@ export default function TeacherLayout({
                   Beheer
                 </div>
                 <div className="space-y-1">
-                  <NavItem href="/teacher/admin/subjects" label="Secties beheren" />
-                  <NavItem href="/teacher/courses" label="Vakken beheren" />
-                  <NavItem href="/teacher/teachers" label="Docenten beheren" />
+                  <NavItem href="/teacher/admin/schoolbeheer" label="Schoolbeheer" />
                   <NavItem href="/teacher/learning-objectives" label="Leerdoelen" />
                   <NavItem href="/teacher/rubrics" label="Rubrics" />
                 </div>
@@ -69,6 +67,7 @@ export default function TeacherLayout({
                   Beheer
                 </div>
                 <div className="space-y-1">
+                  <NavItem href="/teacher/courses" label="Vakken beheren" />
                   <NavItem href="/teacher/class-teams" label="Klas- & Teambeheer" />
                   <NavItem href="/teacher/learning-objectives" label="Leerdoelen" />
                   <NavItem href="/teacher/rubrics" label="Rubrics" />
