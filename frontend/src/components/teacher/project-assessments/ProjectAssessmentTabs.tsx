@@ -19,22 +19,16 @@ type ProjectAssessmentTabsProps = {
 export function ProjectAssessmentTabs({ assessmentId }: ProjectAssessmentTabsProps) {
   const pathname = usePathname();
 
-  // Determine active tab based on pathname segment after [assessmentId]
+  // Determine active tab based on pathname
   const getActiveTab = () => {
     if (!pathname) return "overview";
     
-    // Extract the segment after /project-assessments/[id]/
-    const segments = pathname.split("/");
-    const assessmentIdIndex = segments.findIndex((s) => s === assessmentId);
-    const tabSegment = assessmentIdIndex >= 0 ? segments[assessmentIdIndex + 1] : null;
+    // Use regex to extract the segment after /project-assessments/{id}/
+    const match = pathname.match(/\/project-assessments\/[^/]+\/([^/?]+)/);
+    const tabSegment = match?.[1];
     
-    // Match the segment to a tab id
-    if (tabSegment === "edit") return "edit";
-    if (tabSegment === "scores") return "scores";
-    if (tabSegment === "reflections") return "reflections";
-    if (tabSegment === "external") return "external";
-    if (tabSegment === "settings") return "settings";
-    return "overview";
+    // Match the segment to a valid tab id from the tabs array
+    return tabs.find(tab => tab.id === tabSegment)?.id || "overview";
   };
 
   const activeTab = getActiveTab();
