@@ -26,7 +26,7 @@ export default function AssignTeacherModal({
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTeachers, setSelectedTeachers] = useState<Teacher[]>([]);
-  const [role, setRole] = useState<"teacher" | "coordinator">("teacher");
+  const [role, setRole] = useState<"teacher" | "admin">("teacher");
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +48,6 @@ export default function AssignTeacherModal({
         
         const response = await teacherService.listTeachers({
           search: searchTerm,
-          status: "active",
           per_page: 20,
         });
         
@@ -103,7 +102,7 @@ export default function AssignTeacherModal({
       for (const teacher of selectedTeachers) {
         await assignTeacher(courseId, {
           teacher_id: teacher.id,
-          role: role,
+          role: role === "admin" ? "coordinator" : "teacher",
         });
       }
       onSuccess();
@@ -278,14 +277,14 @@ export default function AssignTeacherModal({
             <select
               id="role"
               value={role}
-              onChange={(e) => setRole(e.target.value as "teacher" | "coordinator")}
+              onChange={(e) => setRole(e.target.value as "teacher" | "admin")}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value="teacher">Docent</option>
-              <option value="coordinator">Coördinator</option>
+              <option value="admin">Admin</option>
             </select>
             <p className="mt-1 text-sm text-gray-500">
-              Coördinatoren hebben extra rechten voor dit vak
+              Admins hebben extra rechten voor dit vak
             </p>
           </div>
 
