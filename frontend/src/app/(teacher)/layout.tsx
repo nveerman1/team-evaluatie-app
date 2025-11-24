@@ -58,6 +58,7 @@ export default function TeacherLayout({
                   <NavItem href="/teacher/teachers" label="Docenten beheren" />
                   <NavItem href="/teacher/learning-objectives" label="Leerdoelen" />
                   <NavItem href="/teacher/rubrics" label="Rubrics" />
+                  <NavItem href="/teacher/admin/templates" label="Templates" />
                 </div>
               </div>
             )}
