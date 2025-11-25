@@ -1946,7 +1946,7 @@ class ProjectTeamExternal(Base):
 
     # Token for external access
     invitation_token: Mapped[str] = mapped_column(
-        String(128), nullable=False, unique=True, index=True
+        String(128), nullable=False, index=True
     )
     token_expires_at: Mapped[Optional[datetime]] = mapped_column()
 
