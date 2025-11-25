@@ -113,6 +113,7 @@ export interface ProjectTeamExternal {
   id: number;
   school_id: number;
   group_id: number;
+  team_number?: number;
   external_evaluator_id: number;
   project_id?: number;
   invitation_token: string;
@@ -124,8 +125,14 @@ export interface ProjectTeamExternal {
   submitted_at?: string;
 }
 
+export interface TeamIdentifier {
+  group_id: number;
+  team_number: number;
+}
+
 export interface ExternalAssessmentPerTeamConfig {
   group_id: number;
+  team_number: number;
   evaluator_name: string;
   evaluator_email: string;
   evaluator_organisation?: string;
@@ -135,7 +142,7 @@ export interface ExternalAssessmentAllTeamsConfig {
   evaluator_name: string;
   evaluator_email: string;
   evaluator_organisation?: string;
-  group_ids: number[];
+  teams: TeamIdentifier[];
   rubric_id?: number;
 }
 
@@ -147,6 +154,7 @@ export interface BulkInviteRequest {
 
 export interface ExternalAssessmentStatus {
   team_id: number;
+  team_number: number;
   team_name: string;
   members?: string;
   external_evaluator?: ExternalEvaluator;

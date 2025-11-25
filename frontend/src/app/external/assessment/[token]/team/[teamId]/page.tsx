@@ -356,58 +356,56 @@ export default function ExternalAssessmentTeamPage() {
                   </div>
 
                   {/* Score buttons with descriptions - matching teacher edit style */}
-                  <div className="grid grid-cols-[minmax(0,3fr)_minmax(260px,2fr)] gap-4 items-stretch">
+                  <div className="flex flex-col gap-4">
                     {/* Levels */}
-                    <div className="flex flex-col gap-2">
-                      <div className="grid grid-cols-5 gap-2">
-                        {Array.from(
-                          { length: detail.rubric.scale_max - detail.rubric.scale_min + 1 },
-                          (_, i) => i + detail.rubric.scale_min
-                        ).map((level) => {
-                          const isSelected = currentScore === level;
-                          const descriptor = getDescriptorForLevel(
-                            criterion,
-                            level,
-                            detail.rubric.scale_min
-                          );
+                    <div className="grid grid-cols-5 gap-2">
+                      {Array.from(
+                        { length: detail.rubric.scale_max - detail.rubric.scale_min + 1 },
+                        (_, i) => i + detail.rubric.scale_min
+                      ).map((level) => {
+                        const isSelected = currentScore === level;
+                        const descriptor = getDescriptorForLevel(
+                          criterion,
+                          level,
+                          detail.rubric.scale_min
+                        );
 
-                          return (
-                            <button
-                              key={level}
-                              type="button"
-                              disabled={isReadOnly}
-                              onClick={() => handleScoreChange(criterion.id, level)}
-                              className={`group flex flex-col items-center justify-start rounded-xl border px-3 py-2 text-center text-xs transition-all hover:border-emerald-500 hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-1 ${
+                        return (
+                          <button
+                            key={level}
+                            type="button"
+                            disabled={isReadOnly}
+                            onClick={() => handleScoreChange(criterion.id, level)}
+                            className={`group flex flex-col items-center justify-start rounded-xl border px-3 py-2 text-center text-xs transition-all hover:border-emerald-500 hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-1 ${
+                              isSelected
+                                ? "border-emerald-600 bg-emerald-50 shadow-[0_0_0_1px_rgba(16,185,129,0.5)]"
+                                : "border-slate-200 bg-white"
+                            } ${
+                              isReadOnly
+                                ? "cursor-not-allowed opacity-60"
+                                : "cursor-pointer"
+                            }`}
+                          >
+                            <span
+                              className={`mb-1 flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold group-hover:border-emerald-500 group-hover:text-emerald-700 ${
                                 isSelected
-                                  ? "border-emerald-600 bg-emerald-50 shadow-[0_0_0_1px_rgba(16,185,129,0.5)]"
-                                  : "border-slate-200 bg-white"
-                              } ${
-                                isReadOnly
-                                  ? "cursor-not-allowed opacity-60"
-                                  : "cursor-pointer"
+                                  ? "border-emerald-600 bg-emerald-600 text-white"
+                                  : "border-slate-300 text-slate-700 bg-slate-50"
                               }`}
                             >
-                              <span
-                                className={`mb-1 flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold group-hover:border-emerald-500 group-hover:text-emerald-700 ${
-                                  isSelected
-                                    ? "border-emerald-600 bg-emerald-600 text-white"
-                                    : "border-slate-300 text-slate-700 bg-slate-50"
-                                }`}
-                              >
-                                {level}
+                              {level}
+                            </span>
+                            {descriptor && (
+                              <span className="line-clamp-3 text-[11px] leading-snug text-slate-600">
+                                {descriptor}
                               </span>
-                              {descriptor && (
-                                <span className="line-clamp-3 text-[11px] leading-snug text-slate-600">
-                                  {descriptor}
-                                </span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
 
-                    {/* Comment - right side */}
+                    {/* Comment - below scores */}
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-xs font-medium text-slate-600">
@@ -424,7 +422,7 @@ export default function ExternalAssessmentTeamPage() {
                         }
                         disabled={isReadOnly}
                         placeholder="Schrijf hier een korte, concrete terugkoppeling..."
-                        className="h-full min-h-[96px] w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 shadow-inner outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        className="min-h-[80px] w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 shadow-inner outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100 disabled:bg-gray-100 disabled:cursor-not-allowed"
                       />
                       <div className="flex items-center justify-between text-[11px] text-slate-400">
                         <span>Tip: benoem zowel wat goed gaat als 1 verbeterpunt.</span>

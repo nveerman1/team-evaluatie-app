@@ -74,20 +74,20 @@ def _get_all_team_links_for_token(db: Session, token: str) -> List[ProjectTeamEx
     ).all()
 
 
-def _get_member_names(db: Session, group_id: int) -> str:
+def _get_member_names(db: Session, group_id: int, team_number: int) -> str:
     """
-    Get comma-separated member names for a group/team.
+    Get comma-separated member names for a team (identified by group_id + team_number).
     """
-    members = db.query(GroupMember).filter(
+    members = db.query(User).join(
+        GroupMember, GroupMember.user_id == User.id
+    ).filter(
         GroupMember.group_id == group_id,
-        GroupMember.active == True
+        GroupMember.active == True,
+        User.team_number == team_number,
+        User.archived == False,
     ).all()
     
-    member_names = []
-    for member in members:
-        user = db.get(User, member.user_id)
-        if user:
-            member_names.append(user.name)
+    member_names = [m.name for m in members if m.name]
     
     return ", ".join(member_names) if member_names else ""
 
@@ -130,6 +130,11 @@ def resolve_token_and_list_teams(
         if not group:
             continue
         
+        # Get the team_number from the link (not from group)
+        team_number = link.team_number
+        if not team_number:
+            continue  # Skip links without team_number
+        
         # Get project info if available
         project = None
         if link.project_id:
@@ -146,16 +151,16 @@ def resolve_token_and_list_teams(
             status = "IN_PROGRESS"
         
         # Create proper team name from team_number
-        team_name = f"Team {group.team_number}" if group.team_number else group.name
+        team_name = f"Team {team_number}"
         
-        # Get member names
-        members = _get_member_names(db, group.id)
+        # Get member names (filtered by team_number)
+        members = _get_member_names(db, group.id, team_number)
         
         teams.append(
             ExternalAssessmentTeamInfo(
-                team_id=group.id,
+                team_id=link.id,  # Use link.id as team_id for routing
                 team_name=team_name,
-                team_number=group.team_number,
+                team_number=team_number,
                 members=members,
                 project_id=project.id if project else None,
                 project_title=project.title if project else None,
@@ -178,7 +183,7 @@ def resolve_token_and_list_teams(
 @router.get("/{token}/teams/{team_id}", response_model=ExternalAssessmentDetail)
 def get_team_assessment_detail(
     token: str,
-    team_id: int,
+    team_id: int,  # This is now the ProjectTeamExternal.id
     db: Session = Depends(get_db),
 ):
     """
@@ -186,13 +191,16 @@ def get_team_assessment_detail(
     
     This endpoint is public (no auth required) but requires a valid token
     and validates that the team is associated with this token.
+    team_id is the ProjectTeamExternal.id.
     """
     # Validate token
     _validate_token(db, token)
     
-    # Get all team links for this token and verify team_id is in the list
-    team_links = _get_all_team_links_for_token(db, token)
-    team_link = next((link for link in team_links if link.group_id == team_id), None)
+    # Get the team link by id and verify it matches the token
+    team_link = db.query(ProjectTeamExternal).filter(
+        ProjectTeamExternal.id == team_id,
+        ProjectTeamExternal.invitation_token == token,
+    ).first()
     
     if not team_link:
         raise HTTPException(
@@ -201,9 +209,13 @@ def get_team_assessment_detail(
         )
     
     # Get group/team
-    group = db.get(Group, team_id)
+    group = db.get(Group, team_link.group_id)
     if not group:
         raise HTTPException(status_code=404, detail="Team not found")
+    
+    team_number = team_link.team_number
+    if not team_number:
+        raise HTTPException(status_code=404, detail="Team number not found")
     
     # Get project if available
     project = None
@@ -212,7 +224,7 @@ def get_team_assessment_detail(
     
     # Find existing external assessment for this evaluator + team
     existing_assessment = db.query(ProjectAssessment).filter(
-        ProjectAssessment.group_id == team_id,
+        ProjectAssessment.group_id == team_link.group_id,
         ProjectAssessment.external_evaluator_id == team_link.external_evaluator_id,
         ProjectAssessment.role == "EXTERNAL",
     ).first()
@@ -288,15 +300,15 @@ def get_team_assessment_detail(
         status = "IN_PROGRESS"
     
     # Create proper team name from team_number
-    team_name = f"Team {group.team_number}" if group.team_number else group.name
+    team_name = f"Team {team_number}"
     
-    # Get member names
-    members = _get_member_names(db, group.id)
+    # Get member names (filtered by team_number)
+    members = _get_member_names(db, group.id, team_number)
     
     return ExternalAssessmentDetail(
         team_id=team_id,
         team_name=team_name,
-        team_number=group.team_number,
+        team_number=team_number,
         members=members,
         project_title=project.title if project else None,
         project_description=project.description if project else None,
@@ -310,7 +322,7 @@ def get_team_assessment_detail(
 @router.post("/{token}/teams/{team_id}", response_model=ExternalAssessmentSubmitResponse)
 def submit_team_assessment(
     token: str,
-    team_id: int,
+    team_id: int,  # This is now the ProjectTeamExternal.id
     payload: ExternalAssessmentSubmit,
     db: Session = Depends(get_db),
 ):
@@ -319,13 +331,16 @@ def submit_team_assessment(
     
     If submit=True, marks the assessment as final submission.
     If submit=False, saves as draft (IN_PROGRESS status).
+    team_id is the ProjectTeamExternal.id.
     """
     # Validate token
     _validate_token(db, token)
     
-    # Get team link and verify access
-    team_links = _get_all_team_links_for_token(db, token)
-    team_link = next((link for link in team_links if link.group_id == team_id), None)
+    # Get the team link by id and verify it matches the token
+    team_link = db.query(ProjectTeamExternal).filter(
+        ProjectTeamExternal.id == team_id,
+        ProjectTeamExternal.invitation_token == token,
+    ).first()
     
     if not team_link:
         raise HTTPException(
@@ -341,13 +356,13 @@ def submit_team_assessment(
         )
     
     # Get group
-    group = db.get(Group, team_id)
+    group = db.get(Group, team_link.group_id)
     if not group:
         raise HTTPException(status_code=404, detail="Team not found")
     
     # Get or create ProjectAssessment
     assessment = db.query(ProjectAssessment).filter(
-        ProjectAssessment.group_id == team_id,
+        ProjectAssessment.group_id == team_link.group_id,
         ProjectAssessment.external_evaluator_id == team_link.external_evaluator_id,
         ProjectAssessment.role == "EXTERNAL",
     ).first()
@@ -371,7 +386,7 @@ def submit_team_assessment(
         
         assessment = ProjectAssessment(
             school_id=group.school_id,
-            group_id=team_id,
+            group_id=team_link.group_id,
             rubric_id=rubric.id,
             external_evaluator_id=team_link.external_evaluator_id,
             title=f"External Assessment - {evaluator.name if evaluator else 'External'}",

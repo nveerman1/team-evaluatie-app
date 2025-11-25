@@ -48,6 +48,7 @@ class ProjectTeamExternalBase(BaseModel):
     group_id: int
     external_evaluator_id: int
     project_id: Optional[int] = None
+    team_number: Optional[int] = None  # Team number within the group
 
 
 class ProjectTeamExternalCreate(ProjectTeamExternalBase):
@@ -62,6 +63,7 @@ class ProjectTeamExternalOut(ProjectTeamExternalBase):
     invitation_token: str
     token_expires_at: Optional[datetime]
     status: str
+    team_number: Optional[int]
     created_at: datetime
     updated_at: datetime
     invited_at: Optional[datetime]
@@ -175,9 +177,16 @@ class ExternalAssessmentConfigBase(BaseModel):
 class ExternalAssessmentPerTeamConfig(BaseModel):
     """Configuration for per-team external assessment"""
     group_id: int
+    team_number: int  # Team number within the group
     evaluator_name: str
     evaluator_email: EmailStr
     evaluator_organisation: Optional[str] = None
+
+
+class TeamIdentifier(BaseModel):
+    """Identifies a team by group_id and team_number"""
+    group_id: int
+    team_number: int
 
 
 class ExternalAssessmentAllTeamsConfig(BaseModel):
@@ -185,7 +194,7 @@ class ExternalAssessmentAllTeamsConfig(BaseModel):
     evaluator_name: str
     evaluator_email: EmailStr
     evaluator_organisation: Optional[str] = None
-    group_ids: List[int]
+    teams: List[TeamIdentifier]  # List of group_id + team_number pairs
     rubric_id: Optional[int] = None
 
 
@@ -198,7 +207,8 @@ class BulkInviteRequest(BaseModel):
 
 class ExternalAssessmentStatus(BaseModel):
     """Status of external assessment for a team"""
-    team_id: int
+    team_id: int  # This is the group_id for backward compatibility
+    team_number: int  # The actual team number within the group
     team_name: str
     members: Optional[str] = None  # Comma-separated member names
     external_evaluator: Optional[ExternalEvaluatorOut]

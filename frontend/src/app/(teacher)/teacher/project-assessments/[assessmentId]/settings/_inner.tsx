@@ -6,13 +6,14 @@ import { ApiAuthError } from "@/lib/api";
 import { projectAssessmentService, rubricService } from "@/services";
 import { externalAssessmentService } from "@/services/external-assessment.service";
 import { ProjectAssessmentTeamOverview } from "@/dtos";
-import type { BulkInviteRequest } from "@/dtos/external-assessment.dto";
+import type { BulkInviteRequest, TeamIdentifier } from "@/dtos/external-assessment.dto";
 import { Loading, ErrorMessage } from "@/components";
 
 type ExternalMode = "none" | "all_teams" | "per_team";
 
 type PerTeamConfig = {
   group_id: number;
+  team_number: number;
   team_name: string;
   members: string[];
   evaluator_name: string;
@@ -46,7 +47,7 @@ export default function SettingsPageInner() {
     evaluator_email: "",
     evaluator_organisation: "",
     rubric_id: 0,
-    selected_team_ids: [] as number[],
+    selected_teams: [] as TeamIdentifier[],
   });
 
   // State for "Per Team" mode
@@ -74,6 +75,7 @@ export default function SettingsPageInner() {
         // Initialize per-team configs from team data
         const initialPerTeamConfigs: PerTeamConfig[] = teamOverview.teams.map((team) => ({
           group_id: team.group_id,
+          team_number: team.team_number || 0,
           team_name: team.group_name || `Team ${team.team_number}`,
           members: team.members.map((m) => m.name),
           evaluator_name: "",
@@ -86,7 +88,10 @@ export default function SettingsPageInner() {
         // Initialize all-teams selected teams (all checked by default)
         setAllTeamsConfig((prev) => ({
           ...prev,
-          selected_team_ids: teamOverview.teams.map((t) => t.group_id),
+          selected_teams: teamOverview.teams.map((t) => ({
+            group_id: t.group_id,
+            team_number: t.team_number || 0,
+          })),
         }));
       } catch (e: unknown) {
         if (e instanceof ApiAuthError) {
@@ -115,18 +120,29 @@ export default function SettingsPageInner() {
     if (!data) return;
     setAllTeamsConfig((prev) => ({
       ...prev,
-      selected_team_ids: checked ? data.teams.map((t) => t.group_id) : [],
+      selected_teams: checked
+        ? data.teams.map((t) => ({ group_id: t.group_id, team_number: t.team_number || 0 }))
+        : [],
     }));
   };
 
   // Handle individual team checkbox in "All Teams" mode
-  const handleTeamToggle = (teamId: number, checked: boolean) => {
+  const handleTeamToggle = (groupId: number, teamNumber: number, checked: boolean) => {
     setAllTeamsConfig((prev) => ({
       ...prev,
-      selected_team_ids: checked
-        ? [...prev.selected_team_ids, teamId]
-        : prev.selected_team_ids.filter((id) => id !== teamId),
+      selected_teams: checked
+        ? [...prev.selected_teams, { group_id: groupId, team_number: teamNumber }]
+        : prev.selected_teams.filter(
+            (t) => !(t.group_id === groupId && t.team_number === teamNumber)
+          ),
     }));
+  };
+
+  // Check if a team is selected in All Teams mode
+  const isTeamSelected = (groupId: number, teamNumber: number) => {
+    return allTeamsConfig.selected_teams.some(
+      (t) => t.group_id === groupId && t.team_number === teamNumber
+    );
   };
 
   // Handle updating per-team config
@@ -148,7 +164,7 @@ export default function SettingsPageInner() {
       setSubmitError("Vul de naam en e-mail van de opdrachtgever in.");
       return;
     }
-    if (allTeamsConfig.selected_team_ids.length === 0) {
+    if (allTeamsConfig.selected_teams.length === 0) {
       setSubmitError("Selecteer ten minste één team.");
       return;
     }
@@ -164,14 +180,14 @@ export default function SettingsPageInner() {
           evaluator_name: allTeamsConfig.evaluator_name,
           evaluator_email: allTeamsConfig.evaluator_email,
           evaluator_organisation: allTeamsConfig.evaluator_organisation || undefined,
-          group_ids: allTeamsConfig.selected_team_ids,
+          teams: allTeamsConfig.selected_teams,
           rubric_id: allTeamsConfig.rubric_id || undefined,
         },
       };
 
       await externalAssessmentService.createBulkInvitations(request);
       setSuccessMessage(
-        `Uitnodiging verstuurd naar ${allTeamsConfig.evaluator_name} voor ${allTeamsConfig.selected_team_ids.length} team(s).`
+        `Uitnodiging verstuurd naar ${allTeamsConfig.evaluator_name} voor ${allTeamsConfig.selected_teams.length} team(s).`
       );
     } catch (e: any) {
       console.error("Failed to send invitation:", e);
@@ -204,6 +220,7 @@ export default function SettingsPageInner() {
         per_team_configs: [
           {
             group_id: config.group_id,
+            team_number: config.team_number,
             evaluator_name: config.evaluator_name,
             evaluator_email: config.evaluator_email,
             evaluator_organisation: config.evaluator_organisation || undefined,
@@ -240,7 +257,7 @@ export default function SettingsPageInner() {
 
   const allTeamsSelected =
     data.teams.length > 0 &&
-    allTeamsConfig.selected_team_ids.length === data.teams.length;
+    allTeamsConfig.selected_teams.length === data.teams.length;
 
   return (
     <div className="space-y-6">
@@ -461,16 +478,21 @@ export default function SettingsPageInner() {
                     </label>
                     {data.teams.map((team, index) => (
                       <label
-                        key={`team-${team.group_id}-${index}`}
+                        key={`team-${team.group_id}-${team.team_number}-${index}`}
                         className="flex items-center gap-2 cursor-pointer"
                       >
                         <input
                           type="checkbox"
-                          checked={allTeamsConfig.selected_team_ids.includes(
-                            team.group_id
+                          checked={isTeamSelected(
+                            team.group_id,
+                            team.team_number || 0
                           )}
                           onChange={(e) =>
-                            handleTeamToggle(team.group_id, e.target.checked)
+                            handleTeamToggle(
+                              team.group_id,
+                              team.team_number || 0,
+                              e.target.checked
+                            )
                           }
                           className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
@@ -530,7 +552,7 @@ export default function SettingsPageInner() {
                     <tbody>
                       {perTeamConfigs.map((config, index) => (
                         <tr
-                          key={`perteam-${config.group_id}-${index}`}
+                          key={`perteam-${config.group_id}-${config.team_number}-${index}`}
                           className="border-b last:border-b-0"
                         >
                           <td className="px-4 py-3">

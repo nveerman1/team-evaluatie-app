@@ -1944,6 +1944,9 @@ class ProjectTeamExternal(Base):
         ForeignKey("projects.id", ondelete="CASCADE"), nullable=True, index=True
     )
 
+    # Team number within the group (identifies specific team, not just the course group)
+    team_number: Mapped[Optional[int]] = mapped_column(nullable=True, index=True)
+
     # Token for external access
     invitation_token: Mapped[str] = mapped_column(
         String(128), nullable=False, index=True
@@ -1978,4 +1981,5 @@ class ProjectTeamExternal(Base):
         Index("ix_project_team_external_project", "project_id"),
         Index("ix_project_team_external_status", "status"),
         Index("ix_project_team_external_token", "invitation_token"),
+        Index("ix_project_team_external_group_team", "group_id", "team_number"),
     )

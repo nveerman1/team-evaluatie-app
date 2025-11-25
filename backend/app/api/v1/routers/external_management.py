@@ -193,9 +193,10 @@ def create_bulk_invitations(
                 db.add(evaluator)
                 db.flush()
             
-            # Check if link already exists
+            # Check if link already exists for this group + team_number
             existing_link = db.query(ProjectTeamExternal).filter(
                 ProjectTeamExternal.group_id == config.group_id,
+                ProjectTeamExternal.team_number == config.team_number,
                 ProjectTeamExternal.external_evaluator_id == evaluator.id,
             ).first()
             
@@ -212,6 +213,7 @@ def create_bulk_invitations(
             link = ProjectTeamExternal(
                 school_id=user.school_id,
                 group_id=config.group_id,
+                team_number=config.team_number,
                 external_evaluator_id=evaluator.id,
                 invitation_token=token,
                 token_expires_at=datetime.utcnow() + timedelta(days=90),
@@ -260,19 +262,20 @@ def create_bulk_invitations(
         token = generate_external_token()
         created_links = []
         
-        for group_id in config.group_ids:
+        for team_info in config.teams:
             # Verify group exists
             group = db.query(Group).filter(
-                Group.id == group_id,
+                Group.id == team_info.group_id,
                 Group.school_id == user.school_id,
             ).first()
             
             if not group:
                 continue
             
-            # Check if link already exists
+            # Check if link already exists for this group + team_number
             existing_link = db.query(ProjectTeamExternal).filter(
-                ProjectTeamExternal.group_id == group_id,
+                ProjectTeamExternal.group_id == team_info.group_id,
+                ProjectTeamExternal.team_number == team_info.team_number,
                 ProjectTeamExternal.external_evaluator_id == evaluator.id,
             ).first()
             
@@ -289,7 +292,8 @@ def create_bulk_invitations(
             # Create new link with shared token
             link = ProjectTeamExternal(
                 school_id=user.school_id,
-                group_id=group_id,
+                group_id=team_info.group_id,
+                team_number=team_info.team_number,
                 external_evaluator_id=evaluator.id,
                 invitation_token=token,  # Same token for all teams
                 token_expires_at=datetime.utcnow() + timedelta(days=90),
@@ -325,6 +329,7 @@ def get_project_external_status(
 ):
     """
     Get external assessment status for all teams in a project.
+    Teams are identified by group_id + team_number.
     """
     require_role(user, ["teacher", "admin"])
     
@@ -343,56 +348,78 @@ def get_project_external_status(
     
     from app.infra.db.models import GroupMember, User as UserModel
     
+    # Get the group (course/cluster)
     groups = db.query(Group).filter(
         Group.course_id == project.course_id,
         Group.school_id == user.school_id,
     ).all()
     
+    if not groups:
+        return []
+    
     status_list = []
+    
     for group in groups:
-        # Get group members
-        members = db.query(UserModel).join(
+        # Get all users in this group, grouped by team_number
+        members_in_group = db.query(UserModel).join(
             GroupMember, GroupMember.user_id == UserModel.id
         ).filter(
-            GroupMember.group_id == group.id
+            GroupMember.group_id == group.id,
+            GroupMember.school_id == user.school_id,
+            GroupMember.active == True,
+            UserModel.team_number.isnot(None),
+            UserModel.archived == False,
         ).all()
-        member_names = ", ".join([m.name or m.email for m in members])
         
-        # Get external link if exists
-        link = db.query(ProjectTeamExternal).filter(
-            ProjectTeamExternal.group_id == group.id,
-        ).first()
+        # Group users by team_number
+        teams_dict: dict[int, list] = {}
+        for u in members_in_group:
+            if u.team_number is not None:
+                if u.team_number not in teams_dict:
+                    teams_dict[u.team_number] = []
+                teams_dict[u.team_number].append(u)
         
-        # Create proper team name from team_number
-        team_name = f"Team {group.team_number}" if group.team_number else group.name
-        
-        if link:
-            evaluator = db.get(ExternalEvaluator, link.external_evaluator_id)
-            status_list.append(
-                ExternalAssessmentStatus(
-                    team_id=group.id,
-                    team_name=team_name,
-                    members=member_names,
-                    external_evaluator=ExternalEvaluatorOut.model_validate(evaluator) if evaluator else None,
-                    status=link.status,
-                    invitation_sent=(link.status != "NOT_INVITED"),
-                    submitted_at=link.submitted_at,
-                    updated_at=link.updated_at,
+        # Build status for each team
+        for team_num in sorted(teams_dict.keys()):
+            team_members = teams_dict[team_num]
+            member_names = ", ".join([m.name or m.email for m in team_members])
+            team_name = f"Team {team_num}"
+            
+            # Get external link if exists for this group + team_number
+            link = db.query(ProjectTeamExternal).filter(
+                ProjectTeamExternal.group_id == group.id,
+                ProjectTeamExternal.team_number == team_num,
+            ).first()
+            
+            if link:
+                evaluator = db.get(ExternalEvaluator, link.external_evaluator_id)
+                status_list.append(
+                    ExternalAssessmentStatus(
+                        team_id=group.id,
+                        team_number=team_num,
+                        team_name=team_name,
+                        members=member_names,
+                        external_evaluator=ExternalEvaluatorOut.model_validate(evaluator) if evaluator else None,
+                        status=link.status,
+                        invitation_sent=(link.status != "NOT_INVITED"),
+                        submitted_at=link.submitted_at,
+                        updated_at=link.updated_at,
+                    )
                 )
-            )
-        else:
-            status_list.append(
-                ExternalAssessmentStatus(
-                    team_id=group.id,
-                    team_name=team_name,
-                    members=member_names,
-                    external_evaluator=None,
-                    status="NOT_INVITED",
-                    invitation_sent=False,
-                    submitted_at=None,
-                    updated_at=None,
+            else:
+                status_list.append(
+                    ExternalAssessmentStatus(
+                        team_id=group.id,
+                        team_number=team_num,
+                        team_name=team_name,
+                        members=member_names,
+                        external_evaluator=None,
+                        status="NOT_INVITED",
+                        invitation_sent=False,
+                        submitted_at=None,
+                        updated_at=None,
+                    )
                 )
-            )
     
     return status_list
 
