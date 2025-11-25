@@ -125,10 +125,13 @@ def resolve_token_and_list_teams(
         elif link.status == "IN_PROGRESS":
             status = "IN_PROGRESS"
         
+        # Create proper team name from team_number
+        team_name = f"Team {group.team_number}" if group.team_number else group.name
+        
         teams.append(
             ExternalAssessmentTeamInfo(
                 team_id=group.id,
-                team_name=group.name,
+                team_name=team_name,
                 project_id=project.id if project else None,
                 project_title=project.title if project else None,
                 class_name=project.class_name if project else None,
@@ -259,9 +262,12 @@ def get_team_assessment_detail(
     elif team_link.status == "IN_PROGRESS" or existing_scores:
         status = "IN_PROGRESS"
     
+    # Create proper team name from team_number
+    team_name = f"Team {group.team_number}" if group.team_number else group.name
+    
     return ExternalAssessmentDetail(
         team_id=team_id,
-        team_name=group.name,
+        team_name=team_name,
         project_title=project.title if project else None,
         project_description=project.description if project else None,
         rubric=rubric_out,

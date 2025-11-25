@@ -165,9 +165,9 @@ export default function ExternalAssessmentOverviewPage() {
         {/* Teams List */}
         <div className="space-y-4">
           <h2 className="text-lg font-semibold text-gray-900">Teams</h2>
-          {tokenInfo.teams.map((team) => (
+          {tokenInfo.teams.map((team, index) => (
             <div
-              key={team.team_id}
+              key={`external-team-${team.team_id}-${index}`}
               className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
             >
               <div className="p-6">

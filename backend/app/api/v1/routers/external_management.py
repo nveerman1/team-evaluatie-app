@@ -363,12 +363,15 @@ def get_project_external_status(
             ProjectTeamExternal.group_id == group.id,
         ).first()
         
+        # Create proper team name from team_number
+        team_name = f"Team {group.team_number}" if group.team_number else group.name
+        
         if link:
             evaluator = db.get(ExternalEvaluator, link.external_evaluator_id)
             status_list.append(
                 ExternalAssessmentStatus(
                     team_id=group.id,
-                    team_name=group.name,
+                    team_name=team_name,
                     members=member_names,
                     external_evaluator=ExternalEvaluatorOut.model_validate(evaluator) if evaluator else None,
                     status=link.status,
@@ -381,7 +384,7 @@ def get_project_external_status(
             status_list.append(
                 ExternalAssessmentStatus(
                     team_id=group.id,
-                    team_name=group.name,
+                    team_name=team_name,
                     members=member_names,
                     external_evaluator=None,
                     status="NOT_INVITED",
