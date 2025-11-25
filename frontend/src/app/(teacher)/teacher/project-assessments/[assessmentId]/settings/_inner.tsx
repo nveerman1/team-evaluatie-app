@@ -459,9 +459,9 @@ export default function SettingsPageInner() {
                         Alle teams selecteren
                       </span>
                     </label>
-                    {data.teams.map((team) => (
+                    {data.teams.map((team, index) => (
                       <label
-                        key={team.group_id}
+                        key={`team-${team.group_id}-${index}`}
                         className="flex items-center gap-2 cursor-pointer"
                       >
                         <input
@@ -530,7 +530,7 @@ export default function SettingsPageInner() {
                     <tbody>
                       {perTeamConfigs.map((config, index) => (
                         <tr
-                          key={config.group_id}
+                          key={`perteam-${config.group_id}-${index}`}
                           className="border-b last:border-b-0"
                         >
                           <td className="px-4 py-3">
