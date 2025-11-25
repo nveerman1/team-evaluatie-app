@@ -356,7 +356,7 @@ def get_project_external_status(
         ).filter(
             GroupMember.group_id == group.id
         ).all()
-        member_names = ", ".join([m.display_name or m.email for m in members])
+        member_names = ", ".join([m.name or m.email for m in members])
         
         # Get external link if exists
         link = db.query(ProjectTeamExternal).filter(
