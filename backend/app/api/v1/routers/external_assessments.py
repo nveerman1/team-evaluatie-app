@@ -18,6 +18,8 @@ from app.infra.db.models import (
     ProjectAssessment,
     ProjectAssessmentScore,
     Group,
+    GroupMember,
+    User,
     Project,
     Rubric,
     RubricCriterion,
@@ -70,6 +72,24 @@ def _get_all_team_links_for_token(db: Session, token: str) -> List[ProjectTeamEx
     return db.query(ProjectTeamExternal).filter(
         ProjectTeamExternal.invitation_token == token
     ).all()
+
+
+def _get_member_names(db: Session, group_id: int) -> str:
+    """
+    Get comma-separated member names for a group/team.
+    """
+    members = db.query(GroupMember).filter(
+        GroupMember.group_id == group_id,
+        GroupMember.active == True
+    ).all()
+    
+    member_names = []
+    for member in members:
+        user = db.get(User, member.user_id)
+        if user:
+            member_names.append(user.name)
+    
+    return ", ".join(member_names) if member_names else ""
 
 
 # ============ Public External Assessment Endpoints ============
@@ -128,10 +148,15 @@ def resolve_token_and_list_teams(
         # Create proper team name from team_number
         team_name = f"Team {group.team_number}" if group.team_number else group.name
         
+        # Get member names
+        members = _get_member_names(db, group.id)
+        
         teams.append(
             ExternalAssessmentTeamInfo(
                 team_id=group.id,
                 team_name=team_name,
+                team_number=group.team_number,
+                members=members,
                 project_id=project.id if project else None,
                 project_title=project.title if project else None,
                 class_name=project.class_name if project else None,
@@ -265,9 +290,14 @@ def get_team_assessment_detail(
     # Create proper team name from team_number
     team_name = f"Team {group.team_number}" if group.team_number else group.name
     
+    # Get member names
+    members = _get_member_names(db, group.id)
+    
     return ExternalAssessmentDetail(
         team_id=team_id,
         team_name=team_name,
+        team_number=group.team_number,
+        members=members,
         project_title=project.title if project else None,
         project_description=project.description if project else None,
         rubric=rubric_out,

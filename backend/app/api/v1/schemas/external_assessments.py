@@ -77,6 +77,8 @@ class ExternalAssessmentTeamInfo(BaseModel):
     """Info about a team for external assessment"""
     team_id: int
     team_name: str
+    team_number: Optional[int] = None
+    members: Optional[str] = None  # Comma-separated member names
     project_id: Optional[int]
     project_title: Optional[str]
     class_name: Optional[str]
@@ -127,6 +129,8 @@ class ExternalAssessmentDetail(BaseModel):
     """Detail view for external assessment of a specific team"""
     team_id: int
     team_name: str
+    team_number: Optional[int] = None
+    members: Optional[str] = None  # Comma-separated member names
     project_title: Optional[str]
     project_description: Optional[str]
     rubric: RubricForExternal

@@ -31,6 +31,8 @@ export interface ExternalEvaluatorUpdate {
 export interface ExternalAssessmentTeamInfo {
   team_id: number;
   team_name: string;
+  team_number?: number;
+  members?: string;
   project_id?: number;
   project_title?: string;
   class_name?: string;
@@ -75,6 +77,8 @@ export interface ExternalAssessmentScoreOut {
 export interface ExternalAssessmentDetail {
   team_id: number;
   team_name: string;
+  team_number?: number;
+  members?: string;
   project_title?: string;
   project_description?: string;
   rubric: RubricForExternal;

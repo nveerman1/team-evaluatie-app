@@ -173,9 +173,14 @@ export default function ExternalAssessmentOverviewPage() {
               <div className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      {team.team_name}
+                    <h3 className="text-lg font-medium text-gray-900 mb-1">
+                      {team.team_number ? `Team ${team.team_number}` : team.team_name}
                     </h3>
+                    {team.members && (
+                      <p className="text-sm text-gray-500 mb-2">
+                        {team.members}
+                      </p>
+                    )}
                     {team.project_title && (
                       <p className="text-sm text-gray-600 mb-1">
                         <span className="font-medium">Project:</span>{" "}
