@@ -12,6 +12,7 @@ import type {
   ExternalEvaluatorUpdate,
   BulkInviteRequest,
   ExternalAssessmentStatus,
+  ExternalAdvisoryDetail,
 } from "@/dtos/external-assessment.dto";
 
 export const externalAssessmentService = {
@@ -119,6 +120,18 @@ export const externalAssessmentService = {
   ): Promise<ExternalAssessmentStatus[]> {
     const response = await api.get(
       `/projects/external-management/projects/${projectId}/external-status`
+    );
+    return response.data;
+  },
+
+  /**
+   * Get external advisory assessment detail for a specific team
+   */
+  async getExternalAdvisoryDetail(
+    groupId: number
+  ): Promise<ExternalAdvisoryDetail> {
+    const response = await api.get(
+      `/projects/external-management/groups/${groupId}/external-advisory`
     );
     return response.data;
   },

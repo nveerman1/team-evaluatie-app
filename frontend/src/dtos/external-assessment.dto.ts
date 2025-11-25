@@ -144,8 +144,33 @@ export interface BulkInviteRequest {
 export interface ExternalAssessmentStatus {
   team_id: number;
   team_name: string;
+  members?: string;
   external_evaluator?: ExternalEvaluator;
   status: string;
   invitation_sent: boolean;
   submitted_at?: string;
+  updated_at?: string;
+}
+
+// ============ External Advisory Detail (Teacher View) ============
+
+export interface ExternalAdvisoryScoreOut {
+  criterion_id: number;
+  criterion_name: string;
+  category?: string;
+  score: number;
+  comment?: string;
+}
+
+export interface ExternalAdvisoryDetail {
+  team_id: number;
+  team_name: string;
+  external_evaluator: ExternalEvaluator;
+  rubric_title: string;
+  rubric_scale_min: number;
+  rubric_scale_max: number;
+  scores: ExternalAdvisoryScoreOut[];
+  general_comment?: string;
+  submitted_at?: string;
+  status: string;
 }

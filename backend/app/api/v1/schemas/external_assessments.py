@@ -196,7 +196,32 @@ class ExternalAssessmentStatus(BaseModel):
     """Status of external assessment for a team"""
     team_id: int
     team_name: str
+    members: Optional[str] = None  # Comma-separated member names
     external_evaluator: Optional[ExternalEvaluatorOut]
     status: str
     invitation_sent: bool
     submitted_at: Optional[datetime]
+    updated_at: Optional[datetime] = None
+
+
+class ExternalAdvisoryScoreOut(BaseModel):
+    """Score from external advisory assessment"""
+    criterion_id: int
+    criterion_name: str
+    category: Optional[str]
+    score: int
+    comment: Optional[str]
+
+
+class ExternalAdvisoryDetail(BaseModel):
+    """Full external advisory assessment detail for a team (teacher view)"""
+    team_id: int
+    team_name: str
+    external_evaluator: ExternalEvaluatorOut
+    rubric_title: str
+    rubric_scale_min: int
+    rubric_scale_max: int
+    scores: List[ExternalAdvisoryScoreOut]
+    general_comment: Optional[str]
+    submitted_at: Optional[datetime]
+    status: str
