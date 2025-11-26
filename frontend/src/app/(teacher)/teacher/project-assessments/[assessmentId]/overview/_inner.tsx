@@ -209,7 +209,7 @@ export default function ProjectAssessmentOverviewInner() {
                         style={{
                           width: `${
                             team.total_criteria > 0
-                              ? (team.scores_count / team.total_criteria) * 100
+                              ? Math.min(100, (team.scores_count / team.total_criteria) * 100)
                               : 0
                           }%`,
                         }}
