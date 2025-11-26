@@ -203,6 +203,12 @@ function RubricLevelsRow({
               onClick={() => {
                 const trimmed = newQuick.trim();
                 if (!trimmed) return;
+                // Prevent duplicate quick comments
+                if (quickComments.includes(trimmed)) {
+                  setNewQuick("");
+                  setIsAddingQuick(false);
+                  return;
+                }
                 setQuickComments((prev) => [...prev, trimmed]);
                 setNewQuick("");
                 setIsAddingQuick(false);
