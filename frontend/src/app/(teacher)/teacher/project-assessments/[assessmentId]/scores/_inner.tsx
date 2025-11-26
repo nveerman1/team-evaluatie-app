@@ -671,7 +671,7 @@ export default function ScoresOverviewInner() {
                               handleCellClick(
                                 team.team_number,
                                 cs.criterion_id,
-                                cs.score ?? undefined
+                                cs.score !== null ? cs.score : undefined
                               )
                             }
                             className={`px-3 py-1 rounded-full border text-xs font-medium transition ${
@@ -842,13 +842,15 @@ export default function ScoresOverviewInner() {
                             />
                           ) : (
                             <button
-                              onClick={() =>
-                                handleCellClick(
-                                  student.team_number ?? 0,
-                                  cs.criterion_id,
-                                  cs.score ?? undefined
-                                )
-                              }
+                              onClick={() => {
+                                if (student.team_number !== null && student.team_number !== undefined) {
+                                  handleCellClick(
+                                    student.team_number,
+                                    cs.criterion_id,
+                                    cs.score !== null ? cs.score : undefined
+                                  );
+                                }
+                              }}
                               className={`px-3 py-1 rounded-full border text-xs font-medium transition ${
                                 cs.score !== null && cs.score !== undefined
                                   ? getScoreColor(cs.score, studentsData.rubric_scale_min, studentsData.rubric_scale_max)
