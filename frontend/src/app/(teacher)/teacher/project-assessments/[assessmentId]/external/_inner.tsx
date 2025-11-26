@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { ApiAuthError } from "@/lib/api";
 import { projectAssessmentService } from "@/services";
@@ -28,6 +28,10 @@ export default function ExternalAssessmentPageInner() {
     ExternalTeamStatus[]
   >([]);
 
+  // State for filters
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
   // State for detail slide-over
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
   const [selectedTeamNumber, setSelectedTeamNumber] = useState<number | null>(null);
@@ -49,56 +53,57 @@ export default function ExternalAssessmentPageInner() {
   };
 
   // Load initial data
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      setError(null);
-      try {
-        // First get assessment overview to get project_id
-        const overview =
-          await projectAssessmentService.getTeamOverview(assessmentId);
-        setAssessmentData(overview);
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // First get assessment overview to get project_id
+      const overview =
+        await projectAssessmentService.getTeamOverview(assessmentId);
+      setAssessmentData(overview);
 
-        // For now, we use a placeholder project_id. In a real implementation,
-        // we would need to get the project_id from the assessment or group.
-        // Let's try to get external status using the assessment's group_id first team
-        // as the project context
-        if (overview.teams.length > 0) {
-          // Try to fetch external status using assessment's metadata or course info
-          // For now, assume project_id might be in assessment metadata or we need to derive it
-          try {
-            // Use a reasonable project_id - in practice this should come from assessment metadata
-            // For this demo, let's use the course_id or a derived value
-            const projectId = overview.assessment.metadata_json?.project_id || 1;
-            const statuses =
-              await externalAssessmentService.getProjectExternalStatus(
-                projectId
-              );
-            setExternalStatuses(statuses);
-          } catch (statusErr) {
-            // If we can't get external status, show empty state
-            console.warn("Could not fetch external status:", statusErr);
-            setExternalStatuses([]);
-          }
+      // For now, we use a placeholder project_id. In a real implementation,
+      // we would need to get the project_id from the assessment or group.
+      // Let's try to get external status using the assessment's group_id first team
+      // as the project context
+      if (overview.teams.length > 0) {
+        // Try to fetch external status using assessment's metadata or course info
+        // For now, assume project_id might be in assessment metadata or we need to derive it
+        try {
+          // Use a reasonable project_id - in practice this should come from assessment metadata
+          // For this demo, let's use the course_id or a derived value
+          const projectId = overview.assessment.metadata_json?.project_id || 1;
+          const statuses =
+            await externalAssessmentService.getProjectExternalStatus(
+              projectId
+            );
+          setExternalStatuses(statuses);
+        } catch (statusErr) {
+          // If we can't get external status, show empty state
+          console.warn("Could not fetch external status:", statusErr);
+          setExternalStatuses([]);
         }
-      } catch (e: unknown) {
-        if (e instanceof ApiAuthError) {
-          setError(e.originalMessage);
-        } else {
-          const err = e as {
-            response?: { data?: { detail?: string } };
-            message?: string;
-          };
-          setError(
-            err?.response?.data?.detail || err?.message || "Laden mislukt"
-          );
-        }
-      } finally {
-        setLoading(false);
       }
+    } catch (e: unknown) {
+      if (e instanceof ApiAuthError) {
+        setError(e.originalMessage);
+      } else {
+        const err = e as {
+          response?: { data?: { detail?: string } };
+          message?: string;
+        };
+        setError(
+          err?.response?.data?.detail || err?.message || "Laden mislukt"
+        );
+      }
+    } finally {
+      setLoading(false);
     }
-    loadData();
   }, [assessmentId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // Load detail when team is selected
   useEffect(() => {
@@ -138,22 +143,6 @@ export default function ExternalAssessmentPageInner() {
     loadDetail();
   }, [selectedTeamId, selectedTeamNumber]);
 
-  // Compute KPIs
-  const submittedCount = externalStatuses.filter(
-    (s) => s.status === "SUBMITTED"
-  ).length;
-  const pendingCount = externalStatuses.filter(
-    (s) => s.status === "INVITED" || s.status === "IN_PROGRESS"
-  ).length;
-  const notInvitedCount = externalStatuses.filter(
-    (s) => s.status === "NOT_INVITED"
-  ).length;
-  const totalExternals = new Set(
-    externalStatuses
-      .filter((s) => s.external_evaluator)
-      .map((s) => s.external_evaluator?.email)
-  ).size;
-
   // Format date
   const formatDate = (dateStr: string | null | undefined) => {
     if (!dateStr) return "—";
@@ -171,31 +160,31 @@ export default function ExternalAssessmentPageInner() {
     switch (status) {
       case "NOT_INVITED":
         return (
-          <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">
+          <span className="px-3 py-1 rounded-full border text-xs font-medium bg-gray-100 text-gray-600">
             Geen uitnodiging
           </span>
         );
       case "INVITED":
         return (
-          <span className="px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs">
+          <span className="px-3 py-1 rounded-full border text-xs font-medium bg-blue-100 text-blue-800">
             Uitgenodigd
           </span>
         );
       case "IN_PROGRESS":
         return (
-          <span className="px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 text-xs">
+          <span className="px-3 py-1 rounded-full border text-xs font-medium bg-orange-100 text-orange-800">
             Bezig
           </span>
         );
       case "SUBMITTED":
         return (
-          <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs">
+          <span className="px-3 py-1 rounded-full border text-xs font-medium bg-green-100 text-green-800">
             Ingeleverd
           </span>
         );
       default:
         return (
-          <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">
+          <span className="px-3 py-1 rounded-full border text-xs font-medium bg-gray-100 text-gray-600">
             {status}
           </span>
         );
@@ -211,43 +200,61 @@ export default function ExternalAssessmentPageInner() {
     return email;
   };
 
+  // Filter external statuses
+  let filteredStatuses = externalStatuses;
+  
+  // Apply status filter
+  if (statusFilter !== "all") {
+    filteredStatuses = filteredStatuses.filter((s) => {
+      if (statusFilter === "submitted") return s.status === "SUBMITTED";
+      if (statusFilter === "pending") return s.status === "INVITED" || s.status === "IN_PROGRESS";
+      if (statusFilter === "not_invited") return s.status === "NOT_INVITED";
+      return true;
+    });
+  }
+  
+  // Apply search filter
+  if (searchQuery.trim()) {
+    const query = searchQuery.toLowerCase();
+    filteredStatuses = filteredStatuses.filter((s) => {
+      const teamMatch = s.team_name?.toLowerCase().includes(query);
+      const membersMatch = s.members?.toLowerCase().includes(query);
+      const evaluatorMatch = getEvaluatorDisplay(s).toLowerCase().includes(query);
+      return teamMatch || membersMatch || evaluatorMatch;
+    });
+  }
+
   if (loading) return <Loading />;
   if (error && !assessmentData) return <ErrorMessage message={error} />;
   if (!assessmentData) return <ErrorMessage message="Geen data gevonden" />;
 
   return (
     <>
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white border rounded-xl p-4">
-          <div className="text-sm text-gray-600 mb-1">Teams met extern advies</div>
-          <div className="text-2xl font-semibold text-green-600">
-            {submittedCount}
-          </div>
-        </div>
-        <div className="bg-white border rounded-xl p-4">
-          <div className="text-sm text-gray-600 mb-1">Nog te beoordelen teams</div>
-          <div className="text-2xl font-semibold text-yellow-600">
-            {pendingCount}
-          </div>
-        </div>
-        <div className="bg-white border rounded-xl p-4">
-          <div className="text-sm text-gray-600 mb-1">Geen extern gekoppeld</div>
-          <div className="text-2xl font-semibold text-gray-600">
-            {notInvitedCount}
-          </div>
-        </div>
-        <div className="bg-white border rounded-xl p-4">
-          <div className="text-sm text-gray-600 mb-1">Aantal externen</div>
-          <div className="text-2xl font-semibold text-blue-600">
-            {totalExternals}
-          </div>
+      {/* Search and Filters - styled like OMZA */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="flex flex-wrap gap-3 items-center">
+          <input
+            className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Zoek op team, lid of opdrachtgever..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <select
+            className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="all">Alle</option>
+            <option value="submitted">✅ Ingeleverd</option>
+            <option value="pending">⏳ Wachtend</option>
+            <option value="not_invited">⬜ Geen uitnodiging</option>
+          </select>
         </div>
       </div>
 
       {/* Empty State */}
       {externalStatuses.length === 0 && (
-        <section className="bg-white border rounded-2xl p-8 text-center">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
           <div className="text-gray-500 mb-4">
             Er zijn nog geen externe beoordelingen gekoppeld.
           </div>
@@ -261,52 +268,52 @@ export default function ExternalAssessmentPageInner() {
             </Link>
             .
           </p>
-        </section>
+        </div>
       )}
 
-      {/* Teams Table */}
-      {externalStatuses.length > 0 && (
-        <section className="bg-white border rounded-2xl overflow-hidden">
+      {/* Teams Table - styled like OMZA */}
+      {filteredStatuses.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide sticky left-0 bg-gray-50">
                     Team
                   </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide min-w-[200px]">
                     Leden
                   </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
                     Opdrachtgever
                   </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
                     Status extern
                   </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
                     Laatste update
                   </th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 tracking-wide">
                     Acties
                   </th>
                 </tr>
               </thead>
-              <tbody>
-                {externalStatuses.map((team, index) => (
+              <tbody className="divide-y divide-gray-100">
+                {filteredStatuses.map((team, index) => (
                   <tr
                     key={`team-${team.team_id}-${team.team_number ?? index}`}
-                    className="border-b last:border-b-0 hover:bg-gray-50"
+                    className="bg-white hover:bg-gray-50"
                   >
-                    <td className="px-4 py-3">
-                      <div className="font-medium">{team.team_name}</div>
+                    <td className="px-5 py-3 font-medium sticky left-0 bg-white">
+                      {team.team_name}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-5 py-3">
                       <div className="text-sm text-gray-600">
                         {team.members || "—"}
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="text-sm">{getEvaluatorDisplay(team)}</div>
+                      <div className="text-sm text-gray-900">{getEvaluatorDisplay(team)}</div>
                     </td>
                     <td className="px-4 py-3">{getStatusBadge(team.status)}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">
@@ -316,7 +323,7 @@ export default function ExternalAssessmentPageInner() {
                       {team.status === "SUBMITTED" && (
                         <button
                           onClick={() => handleSelectTeam(team.team_id, team.team_number)}
-                          className="px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm"
+                          className="px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm font-medium shadow-sm"
                         >
                           Bekijk advies
                         </button>
@@ -324,7 +331,7 @@ export default function ExternalAssessmentPageInner() {
                       {(team.status === "INVITED" ||
                         team.status === "IN_PROGRESS") && (
                         <button
-                          className="px-3 py-1.5 rounded-lg border text-gray-700 hover:bg-gray-100 text-sm"
+                          className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-sm font-medium shadow-sm"
                           title="Herinnering sturen (nog niet geïmplementeerd)"
                         >
                           Herinnering
@@ -336,7 +343,7 @@ export default function ExternalAssessmentPageInner() {
               </tbody>
             </table>
           </div>
-        </section>
+        </div>
       )}
 
       {/* Slide-over Panel */}
@@ -428,22 +435,22 @@ export default function ExternalAssessmentPageInner() {
                       <h3 className="text-sm font-medium text-gray-700 mb-3">
                         Scores per criterium
                       </h3>
-                      <div className="border rounded-lg overflow-hidden">
-                        <table className="w-full text-sm">
-                          <thead className="bg-gray-50 border-b">
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <table className="min-w-full divide-y divide-gray-200 text-sm">
+                          <thead className="bg-gray-50">
                             <tr>
-                              <th className="px-3 py-2 text-left font-medium text-gray-600">
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">
                                 Criterium
                               </th>
-                              <th className="px-3 py-2 text-center font-medium text-gray-600 w-16">
+                              <th className="px-3 py-2 text-center text-xs font-semibold text-gray-500 w-16">
                                 Score
                               </th>
-                              <th className="px-3 py-2 text-left font-medium text-gray-600">
+                              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">
                                 Opmerking
                               </th>
                             </tr>
                           </thead>
-                          <tbody>
+                          <tbody className="divide-y divide-gray-100">
                             {detailData.scores.map((score, idx) => (
                               <tr
                                 key={score.criterion_id}

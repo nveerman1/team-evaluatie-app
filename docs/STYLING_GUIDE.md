@@ -12,6 +12,7 @@ This guide documents the unified design system for all admin and teacher pages i
 7. [Typography](#typography)
 8. [Spacing](#spacing)
 9. [Colors](#colors)
+10. [Project Assessment Pages](#project-assessment-pages)
 
 ---
 
@@ -439,6 +440,201 @@ import { NavItem } from "@/components/admin/NavItem";
 
 ---
 
+## Project Assessment Pages
+
+The project assessment pages (`/teacher/project-assessments/[id]/*`) follow a streamlined design with consistent filter patterns.
+
+### Overview Tab (`/overview`)
+
+Filter bar with search, sort, and status filter dropdowns:
+```tsx
+<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+  <div className="flex flex-wrap gap-3 items-center">
+    {/* Search Input */}
+    <input
+      className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      placeholder="Zoek op teamnummer of naam..."
+    />
+    
+    {/* Sort Dropdown */}
+    <select className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm">
+      <option value="team">Teamnummer</option>
+      <option value="status">Status</option>
+      <option value="progress">Voortgang</option>
+      <option value="updated">Laatste bewerking</option>
+    </select>
+    
+    {/* Status Filter Dropdown */}
+    <select className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm">
+      <option value="all">Alle</option>
+      <option value="not_started">⬜ Niet gestart</option>
+      <option value="in_progress">⚠️ In progress</option>
+      <option value="completed">✅ Afgerond</option>
+    </select>
+    
+    {/* Sort Order Toggle */}
+    <button className="h-9 px-3 rounded-lg border border-gray-300 bg-white text-sm shadow-sm hover:bg-slate-50">
+      ↑ / ↓
+    </button>
+  </div>
+</div>
+```
+
+Teams table with OMZA styling:
+```tsx
+<div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+  <table className="min-w-full divide-y divide-gray-200 text-sm">
+    <thead className="bg-gray-50">
+      <tr>
+        <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
+          Team
+        </th>
+        {/* More headers... */}
+      </tr>
+    </thead>
+    <tbody className="divide-y divide-gray-100">
+      {/* Table rows */}
+    </tbody>
+  </table>
+</div>
+```
+
+### External Tab (`/external`)
+
+Search and filter in one row:
+```tsx
+<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+  <div className="flex flex-wrap gap-3 items-center">
+    {/* Search Input */}
+    <input
+      className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      placeholder="Zoek op team, lid of opdrachtgever..."
+    />
+    
+    {/* Status Filter Dropdown */}
+    <select className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm">
+      <option value="all">Alle</option>
+      <option value="submitted">✅ Ingeleverd</option>
+      <option value="pending">⏳ Wachtend</option>
+      <option value="not_invited">⬜ Geen uitnodiging</option>
+    </select>
+  </div>
+</div>
+```
+
+### Settings Tab (`/settings`)
+
+Cards with header sections:
+```tsx
+<div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+  <div className="px-6 py-4 border-b border-gray-100">
+    <h2 className="text-lg font-semibold text-gray-900">
+      Section Title
+    </h2>
+  </div>
+  <div className="p-6 space-y-4">
+    {/* Form content */}
+  </div>
+</div>
+```
+
+Form inputs:
+```tsx
+<input
+  type="text"
+  className="w-full h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+/>
+
+<select className="w-full h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm">
+  {/* Options */}
+</select>
+```
+
+Toggle buttons for mode selection:
+```tsx
+<div className="flex flex-wrap gap-2">
+  <button className={`px-4 py-2 rounded-xl border font-medium shadow-sm ${
+    isActive
+      ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+  }`}>
+    Option Label
+  </button>
+</div>
+```
+
+### Edit Tab (`/edit`)
+
+Team navigation card:
+```tsx
+<div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
+  <div className="space-y-1">
+    <p className="text-sm font-semibold text-slate-900">Team {teamNumber}</p>
+    <p className="text-xs text-slate-500">1 van 10</p>
+    <p className="text-xs text-slate-600">
+      <span className="font-medium">Teamleden: </span>
+      Student 1, Student 2
+    </p>
+  </div>
+  <div className="flex items-center gap-2">
+    <button className="rounded-full border border-slate-200 px-4 py-1.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40">
+      ← Vorig team
+    </button>
+    <button className="rounded-full border border-slate-200 px-4 py-1.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40">
+      Volgend team →
+    </button>
+  </div>
+</div>
+```
+
+### Status Badges
+
+```tsx
+// Completed
+<span className="px-3 py-1 rounded-full border text-xs font-medium bg-green-100 text-green-800">
+  ✅ Gereed
+</span>
+
+// In Progress
+<span className="px-3 py-1 rounded-full border text-xs font-medium bg-orange-100 text-orange-800">
+  ⚠️ In progress
+</span>
+
+// Not Started
+<span className="px-3 py-1 rounded-full border text-xs font-medium bg-gray-100 text-gray-600">
+  ⬜ Niet gestart
+</span>
+
+// External - Submitted
+<span className="px-3 py-1 rounded-full border text-xs font-medium bg-green-100 text-green-800">
+  Ingeleverd
+</span>
+
+// External - Invited
+<span className="px-3 py-1 rounded-full border text-xs font-medium bg-blue-100 text-blue-800">
+  Uitgenodigd
+</span>
+
+// External - In Progress
+<span className="px-3 py-1 rounded-full border text-xs font-medium bg-orange-100 text-orange-800">
+  Bezig
+</span>
+
+// External - Not Invited
+<span className="px-3 py-1 rounded-full border text-xs font-medium bg-gray-100 text-gray-600">
+  Geen uitnodiging
+</span>
+```
+
+### Design Decisions
+
+1. **No KPI cards** - The project assessment pages use a streamlined design without KPI summary cards
+2. **Dropdown filters** - Status filters are implemented as dropdowns next to other filters, not as button toggles
+3. **Table styling** - Uses `rounded-2xl` for table containers with `divide-y divide-gray-200` for rows
+4. **Consistent height** - All filter inputs use `h-9` for consistent vertical alignment
+
+---
+
 ## Migration Checklist
 
 When updating a page to use this design system:
@@ -452,8 +648,10 @@ When updating a page to use this design system:
 - [ ] Update button styles (primary and secondary)
 - [ ] Ensure max-width is `max-w-6xl`
 - [ ] Test responsive layout on mobile
+- [ ] For project assessment pages: use dropdown filters instead of button toggles
+- [ ] For project assessment pages: remove KPI cards for streamlined design
 
 ---
 
 **Last Updated**: November 2024
-**Version**: 1.0
+**Version**: 1.1

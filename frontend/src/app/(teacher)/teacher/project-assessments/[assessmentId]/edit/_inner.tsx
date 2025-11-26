@@ -586,36 +586,6 @@ export default function EditProjectAssessmentInner() {
 
   return (
     <>
-      {/* Status and publish actions */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
-        <div>
-          <p className="text-gray-600 text-sm">
-            {data.rubric_title} • Schaal: {scaleMin}-{scaleMax}
-          </p>
-          {autoSaving && (
-            <p className="text-sm text-blue-600 mt-1">
-              💾 Autosave actief...
-            </p>
-          )}
-        </div>
-        <div className="flex gap-2">
-          {status === "draft" && (
-            <button
-              onClick={handlePublish}
-              disabled={saving}
-              className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 disabled:opacity-60"
-            >
-              ✅ Publiceer voor studenten
-            </button>
-          )}
-          {status === "published" && (
-            <span className="rounded-lg bg-green-100 px-4 py-2 text-sm font-medium text-green-700">
-              ✅ Gepubliceerd
-            </span>
-          )}
-        </div>
-      </div>
-
       {/* Team kaart */}
       <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-1">
