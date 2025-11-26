@@ -7,6 +7,7 @@ import type {
   ExternalAssessmentDetail,
   ExternalAssessmentScoreSubmit,
   RubricCriterionForExternal,
+  ExternalAssessmentTeamInfo,
 } from "@/dtos/external-assessment.dto";
 
 /**
@@ -78,6 +79,7 @@ export default function ExternalAssessmentTeamPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [detail, setDetail] = useState<ExternalAssessmentDetail | null>(null);
+  const [allTeams, setAllTeams] = useState<ExternalAssessmentTeamInfo[]>([]);
   const [scores, setScores] = useState<Record<number, number>>({});
   const [comments, setComments] = useState<Record<number, string>>({});
   const [generalComment, setGeneralComment] = useState("");
@@ -86,7 +88,18 @@ export default function ExternalAssessmentTeamPage() {
 
   useEffect(() => {
     loadDetail();
+    loadAllTeams();
   }, [token, teamId]);
+
+  const loadAllTeams = async () => {
+    try {
+      const tokenInfo = await externalAssessmentService.resolveToken(token);
+      setAllTeams(tokenInfo.teams);
+    } catch {
+      // Silently ignore - navigation will just be unavailable
+      setAllTeams([]);
+    }
+  };
 
   const loadDetail = async () => {
     try {
@@ -193,9 +206,15 @@ export default function ExternalAssessmentTeamPage() {
 
   const isReadOnly = detail?.status === "SUBMITTED";
 
+  // Calculate previous and next teams for navigation
+  const currentTeamIndex = allTeams.findIndex((t) => t.team_id === teamId);
+  const showNavigation = allTeams.length > 1 && currentTeamIndex !== -1;
+  const prevTeam = currentTeamIndex > 0 ? allTeams[currentTeamIndex - 1] : null;
+  const nextTeam = currentTeamIndex < allTeams.length - 1 ? allTeams[currentTeamIndex + 1] : null;
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Laden...</p>
@@ -206,7 +225,7 @@ export default function ExternalAssessmentTeamPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
           <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
             <svg
@@ -243,10 +262,10 @@ export default function ExternalAssessmentTeamPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-100">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <button
               onClick={() => router.push(`/external/assessment/${token}`)}
@@ -292,6 +311,63 @@ export default function ExternalAssessmentTeamPage() {
               {detail.project_description}
             </p>
           )}
+          
+          {/* Team Navigation Buttons */}
+          {showNavigation && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => prevTeam && router.push(`/external/assessment/${token}/team/${prevTeam.team_id}`)}
+                disabled={!prevTeam}
+                className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md ${
+                  prevTeam
+                    ? "text-gray-700 bg-gray-100 hover:bg-gray-200"
+                    : "text-gray-400 bg-gray-50 cursor-not-allowed"
+                }`}
+              >
+                <svg
+                  className="w-4 h-4 mr-1"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Vorige team
+              </button>
+              <span className="text-sm text-gray-500">
+                {currentTeamIndex + 1} / {allTeams.length}
+              </span>
+              <button
+                onClick={() => nextTeam && router.push(`/external/assessment/${token}/team/${nextTeam.team_id}`)}
+                disabled={!nextTeam}
+                className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md ${
+                  nextTeam
+                    ? "text-gray-700 bg-gray-100 hover:bg-gray-200"
+                    : "text-gray-400 bg-gray-50 cursor-not-allowed"
+                }`}
+              >
+                Volgende team
+                <svg
+                  className="w-4 h-4 ml-1"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Validation Error */}
@@ -319,7 +395,7 @@ export default function ExternalAssessmentTeamPage() {
         )}
 
         {/* Rubric */}
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden mb-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-6">
           <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/80">
             <h2 className="text-lg font-bold text-gray-900">
               {detail.rubric.title}
@@ -437,7 +513,7 @@ export default function ExternalAssessmentTeamPage() {
         </div>
 
         {/* General Comment */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
           <label
             htmlFor="general-comment"
             className="block text-lg font-medium text-gray-900 mb-3"
