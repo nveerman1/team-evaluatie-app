@@ -472,12 +472,21 @@ def get_assessment_teams_overview(
             for u in team_members
         ]
         
-        # Get scores count for this team
+        # Get scores count for this team (only count team-level scores, not individual overrides)
         scores_count = db.query(func.count(ProjectAssessmentScore.id)).filter(
             ProjectAssessmentScore.assessment_id == pa.id,
             ProjectAssessmentScore.team_number == team_num,
             ProjectAssessmentScore.school_id == user.school_id,
+            ProjectAssessmentScore.student_id.is_(None),  # Only count team scores, not individual overrides
         ).scalar() or 0
+        
+        # Get the most recent update timestamp for this team's scores (only team-level scores)
+        latest_update = db.query(func.max(ProjectAssessmentScore.updated_at)).filter(
+            ProjectAssessmentScore.assessment_id == pa.id,
+            ProjectAssessmentScore.team_number == team_num,
+            ProjectAssessmentScore.school_id == user.school_id,
+            ProjectAssessmentScore.student_id.is_(None),  # Only team-level scores
+        ).scalar()
         
         # Determine status
         if scores_count == 0:
@@ -495,7 +504,7 @@ def get_assessment_teams_overview(
             scores_count=scores_count,
             total_criteria=total_criteria,
             status=team_status,
-            updated_at=pa.published_at if pa.status == "published" and scores_count > 0 else None,
+            updated_at=latest_update if scores_count > 0 else None,
             updated_by=teacher_name if scores_count > 0 else None,
         )
         teams.append(team)
