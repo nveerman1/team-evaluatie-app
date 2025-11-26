@@ -42,8 +42,8 @@ def score_to_grade(
     scale_range = scale_max - scale_min
     if scale_range <= 0:
         return None
-    normalized = (avg_score - scale_min) / scale_range
-    # Defensive clamp to [0, 1]
-    normalized = max(0.0, min(1.0, normalized))
+    # Clamp score to valid scale range before normalization
+    clamped_score = max(float(scale_min), min(float(scale_max), avg_score))
+    normalized = (clamped_score - scale_min) / scale_range
     curved = 1 + (normalized ** exponent) * 9
     return round(curved, 1)
