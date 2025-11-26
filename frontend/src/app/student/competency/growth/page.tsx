@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useStudentGrowth } from "@/hooks";
-import { ErrorMessage } from "@/components";
 import {
   CompetencyRadarChart,
   CATEGORY_COLORS,
@@ -12,8 +11,94 @@ import type {
   GrowthGoal,
   GrowthReflection,
   GrowthCategoryScore,
+  StudentGrowthData,
 } from "@/dtos";
 import Link from "next/link";
+
+// Development mock data - used when API is unavailable
+const DEV_MOCK_DATA: StudentGrowthData = {
+  scans: [
+    {
+      id: "1",
+      title: "Startscan Q1 2025",
+      date: "30-09-2025",
+      type: "start",
+      omza: { organiseren: 2.8, meedoen: 3.2, zelfvertrouwen: 2.5, autonomie: 2.7 },
+      gcf: 3.0,
+      has_reflection: true,
+      goals_linked: 1,
+    },
+    {
+      id: "2",
+      title: "Test externen",
+      date: "09-11-2025",
+      type: "los",
+      omza: { organiseren: 3.1, meedoen: 3.6, zelfvertrouwen: 3.2, autonomie: 3.0 },
+      gcf: 3.5,
+      has_reflection: true,
+      goals_linked: 2,
+    },
+    {
+      id: "3",
+      title: "Tussenscan Q2 2025",
+      date: "15-01-2026",
+      type: "tussen",
+      omza: { organiseren: 3.4, meedoen: 3.8, zelfvertrouwen: 3.5, autonomie: 3.3 },
+      gcf: 3.8,
+      has_reflection: false,
+      goals_linked: 2,
+    },
+  ],
+  competency_profile: [
+    { name: "Samenwerken", value: 3.7 },
+    { name: "Plannen & Organiseren", value: 3.1 },
+    { name: "Creatief denken & probleemoplossen", value: 3.9 },
+    { name: "Technische vaardigheden", value: 3.5 },
+    { name: "Communicatie & Presenteren", value: 3.3 },
+    { name: "Reflectie & Professionele houding", value: 3.2 },
+  ],
+  goals: [
+    {
+      id: "g1",
+      title: "Ik plan mijn werk in kleine stappen",
+      status: "active",
+      related_competencies: ["Plannen & Organiseren", "Reflectie & Professionele houding"],
+      progress: 65,
+    },
+    {
+      id: "g2",
+      title: "Ik durf vaker mijn idee te delen in het team",
+      status: "active",
+      related_competencies: ["Samenwerken", "Communicatie & Presenteren"],
+      progress: 40,
+    },
+    {
+      id: "g3",
+      title: "Ik vraag gericht feedback op mijn tussenproducten",
+      status: "completed",
+      related_competencies: ["Samenwerken", "Reflectie & Professionele houding"],
+      progress: 100,
+    },
+  ],
+  reflections: [
+    {
+      id: "r1",
+      date: "09-11-2025",
+      scan_title: "Test externen",
+      snippet:
+        "Ik merk dat samenwerken met externen mij helpt om duidelijker te communiceren en beter te plannen...",
+    },
+    {
+      id: "r2",
+      date: "30-09-2025",
+      scan_title: "Startscan Q1 2025",
+      snippet:
+        "Bij de startscan zie ik dat plannen en organiseren nog een ontwikkelpunt is. Ik wil tijdens dit project beter bijhouden wat ik af heb...",
+    },
+  ],
+  ai_summary:
+    "Je laat de meeste groei zien in Samenwerken en Creatief denken: je neemt vaker initiatief in je team en onderzoekt meerdere oplossingen. Plannen & Organiseren blijft nog een aandachtspunt; je geeft zelf aan dat je planning niet altijd haalbaar is. Een passend leerdoel is: \"Ik plan mijn werk in kleinere stappen en controleer aan het einde van het blok wat af is.\" Probeer in je volgende reflectie concreet op te schrijven wat je anders hebt aangepakt.",
+};
 
 // Helper function to find the strongest and weakest OMZA domains
 function analyzeOMZA(omza: GrowthScanSummary["omza"]) {
@@ -55,9 +140,12 @@ function CardSkeleton({ className = "" }: { className?: string }) {
 }
 
 export default function GrowthPage() {
-  const { data, isLoading, error, regenerateSummary, isRegenerating } =
+  const { data: apiData, isLoading, error, regenerateSummary, isRegenerating } =
     useStudentGrowth();
   const [rangeView, setRangeView] = useState<"recent" | "all">("recent");
+
+  // Use mock data when API fails (for development/preview)
+  const data = apiData || (error ? DEV_MOCK_DATA : null);
 
   // Determine which scans to show based on toggle
   const scansToShow =
@@ -132,8 +220,12 @@ export default function GrowthPage() {
 
       {/* Content */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Error state */}
-        {error && <ErrorMessage message={error} />}
+        {/* Dev mode indicator when using mock data */}
+        {error && !apiData && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 text-xs text-amber-700">
+            ⚠️ Voorbeeldmodus: Backend niet beschikbaar, mockdata wordt getoond.
+          </div>
+        )}
 
         {/* Loading skeleton */}
         {isLoading && (
