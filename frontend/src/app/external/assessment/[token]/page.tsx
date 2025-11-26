@@ -111,7 +111,7 @@ export default function ExternalAssessmentOverviewPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
             Externe Beoordeling
           </h1>
@@ -168,7 +168,7 @@ export default function ExternalAssessmentOverviewPage() {
           {tokenInfo.teams.map((team, index) => (
             <div
               key={`external-team-${team.team_id}-${index}`}
-              className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
+              className="bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
             >
               <div className="p-6">
                 <div className="flex items-start justify-between">
