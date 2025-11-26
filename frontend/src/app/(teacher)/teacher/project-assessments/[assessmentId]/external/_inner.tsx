@@ -30,11 +30,23 @@ export default function ExternalAssessmentPageInner() {
 
   // State for detail slide-over
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
+  const [selectedTeamNumber, setSelectedTeamNumber] = useState<number | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailData, setDetailData] = useState<ExternalAdvisoryDetail | null>(
     null
   );
   const [detailError, setDetailError] = useState<string | null>(null);
+
+  // Handler for selecting a team to view details
+  const handleSelectTeam = (teamId: number, teamNumber: number | undefined) => {
+    setSelectedTeamId(teamId);
+    setSelectedTeamNumber(teamNumber ?? null);
+  };
+
+  const handleCloseDetail = () => {
+    setSelectedTeamId(null);
+    setSelectedTeamNumber(null);
+  };
 
   // Load initial data
   useEffect(() => {
@@ -101,7 +113,8 @@ export default function ExternalAssessmentPageInner() {
       try {
         const detail =
           await externalAssessmentService.getExternalAdvisoryDetail(
-            selectedTeamId
+            selectedTeamId,
+            selectedTeamNumber ?? undefined
           );
         setDetailData(detail);
       } catch (e: unknown) {
@@ -123,7 +136,7 @@ export default function ExternalAssessmentPageInner() {
       }
     }
     loadDetail();
-  }, [selectedTeamId]);
+  }, [selectedTeamId, selectedTeamNumber]);
 
   // Compute KPIs
   const submittedCount = externalStatuses.filter(
@@ -302,7 +315,7 @@ export default function ExternalAssessmentPageInner() {
                     <td className="px-4 py-3 text-right">
                       {team.status === "SUBMITTED" && (
                         <button
-                          onClick={() => setSelectedTeamId(team.team_id)}
+                          onClick={() => handleSelectTeam(team.team_id, team.team_number)}
                           className="px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm"
                         >
                           Bekijk advies
@@ -332,7 +345,7 @@ export default function ExternalAssessmentPageInner() {
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/30"
-            onClick={() => setSelectedTeamId(null)}
+            onClick={handleCloseDetail}
           />
 
           {/* Panel */}
@@ -345,7 +358,7 @@ export default function ExternalAssessmentPageInner() {
                   {detailData ? `- ${detailData.team_name}` : ""}
                 </h2>
                 <button
-                  onClick={() => setSelectedTeamId(null)}
+                  onClick={handleCloseDetail}
                   className="p-2 hover:bg-gray-100 rounded-lg"
                 >
                   <svg
