@@ -102,12 +102,7 @@ function RubricLevelsRow({
   );
 
   // Quick comments local state
-  const [quickComments, setQuickComments] = useState<string[]>([
-    "Doet goed mee.",
-    "Neemt initiatief.",
-    "Mag nog actiever meedoen.",
-    "Goede samenwerking.",
-  ]);
+  const [quickComments, setQuickComments] = useState<string[]>([]);
   const [isAddingQuick, setIsAddingQuick] = useState(false);
   const [newQuick, setNewQuick] = useState("");
 
