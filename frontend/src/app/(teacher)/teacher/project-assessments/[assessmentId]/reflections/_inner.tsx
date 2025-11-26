@@ -80,6 +80,8 @@ export default function ProjectAssessmentReflectionsInner() {
           return bWords - aWords;
         case "words_lo":
           return aWords - bWords;
+        default:
+          return 0;
       }
     });
     return arr;
