@@ -25,6 +25,9 @@ type RubricLevelsRowProps = {
   comment: string;
   onChange: (score: number) => void;
   onCommentChange: (comment: string) => void;
+  quickComments: string[];
+  onAddQuickComment: (text: string) => void;
+  onDeleteQuickComment: (text: string) => void;
 };
 
 /**
@@ -95,14 +98,16 @@ function RubricLevelsRow({
   comment,
   onChange,
   onCommentChange,
+  quickComments,
+  onAddQuickComment,
+  onDeleteQuickComment,
 }: RubricLevelsRowProps) {
   const levels = Array.from(
     { length: scaleMax - scaleMin + 1 },
     (_, i) => scaleMin + i,
   );
 
-  // Quick comments local state
-  const [quickComments, setQuickComments] = useState<string[]>([]);
+  // Local state for adding new quick comments
   const [isAddingQuick, setIsAddingQuick] = useState(false);
   const [newQuick, setNewQuick] = useState("");
 
@@ -164,14 +169,26 @@ function RubricLevelsRow({
         {/* Quick comments chips */}
         <div className="flex flex-wrap items-center gap-2">
           {quickComments.map((qc, idx) => (
-            <button
-              key={`${qc}-${idx}`}
-              type="button"
-              onClick={() => onCommentChange(comment ? comment + " " + qc : qc)}
-              className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] text-slate-700 shadow-sm hover:border-slate-300 hover:bg-white"
-            >
-              {qc}
-            </button>
+            <div key={`${qc}-${idx}`} className="group relative inline-flex">
+              <button
+                type="button"
+                onClick={() => onCommentChange(comment ? comment + " " + qc : qc)}
+                className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] text-slate-700 shadow-sm hover:border-slate-300 hover:bg-white"
+              >
+                {qc}
+              </button>
+              <button
+                type="button"
+                className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] flex items-center justify-center hover:bg-red-600 transition-opacity"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteQuickComment(qc);
+                }}
+                title="Verwijder opmerking"
+              >
+                ×
+              </button>
+            </div>
           ))}
           {/* Plus button */}
           <button
@@ -204,7 +221,7 @@ function RubricLevelsRow({
                   setIsAddingQuick(false);
                   return;
                 }
-                setQuickComments((prev) => [...prev, trimmed]);
+                onAddQuickComment(trimmed);
                 setNewQuick("");
                 setIsAddingQuick(false);
               }}
@@ -244,6 +261,9 @@ type CategoryCardProps = {
   >;
   onScoreChange: (criterionId: number, score: number) => void;
   onCommentChange: (criterionId: number, comment: string) => void;
+  quickCommentsByCriterion: Record<number, string[]>;
+  onAddQuickComment: (criterionId: number, text: string) => void;
+  onDeleteQuickComment: (criterionId: number, text: string) => void;
 };
 
 function CategoryCard({
@@ -254,6 +274,9 @@ function CategoryCard({
   scores,
   onScoreChange,
   onCommentChange,
+  quickCommentsByCriterion,
+  onAddQuickComment,
+  onDeleteQuickComment,
 }: CategoryCardProps) {
   return (
     <section className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm overflow-hidden">
@@ -300,6 +323,9 @@ function CategoryCard({
                   onCommentChange={(newComment) =>
                     onCommentChange(criterion.id, newComment)
                   }
+                  quickComments={quickCommentsByCriterion[criterion.id] || []}
+                  onAddQuickComment={(text) => onAddQuickComment(criterion.id, text)}
+                  onDeleteQuickComment={(text) => onDeleteQuickComment(criterion.id, text)}
                 />
               </div>
             </div>
@@ -338,6 +364,11 @@ export default function EditProjectAssessmentInner() {
   // Scores: map criterion_id -> {score, comment}
   const [scores, setScores] = useState<
     Record<number, { score: number; comment: string }>
+  >({});
+
+  // Quick comments: map criterion_id -> array of quick comment strings
+  const [quickCommentsByCriterion, setQuickCommentsByCriterion] = useState<
+    Record<number, string[]>
   >({});
 
   // Autosave timer
@@ -688,6 +719,19 @@ export default function EditProjectAssessmentInner() {
                       score: prev[criterionId]?.score ?? scaleMin,
                       comment: newComment,
                     },
+                  }))
+                }
+                quickCommentsByCriterion={quickCommentsByCriterion}
+                onAddQuickComment={(criterionId, text) =>
+                  setQuickCommentsByCriterion((prev) => ({
+                    ...prev,
+                    [criterionId]: [...(prev[criterionId] || []), text],
+                  }))
+                }
+                onDeleteQuickComment={(criterionId, text) =>
+                  setQuickCommentsByCriterion((prev) => ({
+                    ...prev,
+                    [criterionId]: (prev[criterionId] || []).filter((qc) => qc !== text),
                   }))
                 }
               />
