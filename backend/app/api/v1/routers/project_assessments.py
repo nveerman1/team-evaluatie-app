@@ -182,13 +182,16 @@ def list_project_assessments(
         ).all():
             course_map[c.id] = c.name
     
-    teacher_map = {
-        t.id: t.name
-        for t in db.query(User).filter(
-            User.school_id == user.school_id,
-            User.id.in_([r.teacher_id for r in rows]),
-        ).all()
-    }
+    teacher_ids = [r.teacher_id for r in rows if r.teacher_id is not None]
+    teacher_map = {}
+    if teacher_ids:
+        teacher_map = {
+            t.id: t.name
+            for t in db.query(User).filter(
+                User.school_id == user.school_id,
+                User.id.in_(teacher_ids),
+            ).all()
+        }
     
     # Get score counts and criteria counts
     score_counts = {}

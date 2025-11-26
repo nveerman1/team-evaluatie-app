@@ -2,7 +2,7 @@ export type ProjectAssessmentOut = {
   id: number;
   group_id: number;
   rubric_id: number;
-  teacher_id: number;
+  teacher_id?: number | null;
   title: string;
   version?: string | null;
   status: string; // "draft" | "published"

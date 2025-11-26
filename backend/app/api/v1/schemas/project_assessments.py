@@ -26,7 +26,7 @@ class ProjectAssessmentOut(BaseModel):
     id: int
     group_id: int
     rubric_id: int
-    teacher_id: int
+    teacher_id: Optional[int]
     title: str
     version: Optional[str]
     status: str
