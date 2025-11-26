@@ -1,4 +1,5 @@
 from __future__ import annotations
+import os
 from typing import List, Optional
 from datetime import datetime
 
@@ -45,6 +46,46 @@ from app.api.v1.schemas.project_assessments import (
 )
 
 router = APIRouter(prefix="/project-assessments", tags=["project-assessments"])
+
+# Configurable exponent for curved grade mapping
+# α ≈ 0.85 makes 3/5 → 6.0 on a 1–5 rubric scale
+GRADE_CURVE_EXPONENT = float(os.getenv("GRADE_CURVE_EXPONENT", "0.85"))
+
+
+def _score_to_grade(
+    avg_score: float | None,
+    scale_min: int,
+    scale_max: int,
+    exponent: float = GRADE_CURVE_EXPONENT,
+) -> float | None:
+    """
+    Convert an average rubric score to a 1–10 grade using a curved mapping.
+
+    The curved mapping uses: grade = 1 + (normalized ** exponent) * 9
+    With the default exponent ≈ 0.85:
+      - 1/5 → 1.0
+      - 3/5 → 6.0
+      - 5/5 → 10.0
+
+    Args:
+        avg_score: The weighted average score on the rubric scale (e.g. 1–5)
+        scale_min: Minimum value of the rubric scale
+        scale_max: Maximum value of the rubric scale
+        exponent: Curve exponent (default 0.85, lower = more lift in middle)
+
+    Returns:
+        Grade on 1–10 scale, rounded to 1 decimal, or None if avg_score is None
+    """
+    if avg_score is None:
+        return None
+    scale_range = scale_max - scale_min
+    if scale_range <= 0:
+        return None
+    normalized = (avg_score - scale_min) / scale_range
+    # Defensive clamp to [0, 1]
+    normalized = max(0.0, min(1.0, normalized))
+    curved = 1 + (normalized ** exponent) * 9
+    return round(curved, 1)
 
 
 def _to_out_assessment(pa: ProjectAssessment) -> ProjectAssessmentOut:
@@ -311,16 +352,8 @@ def get_project_assessment(
             
             total_score = weighted_sum / total_weight
             
-            # Convert to grade (1-10 scale)
-            # Map rubric scale to 1-10
-            scale_range = rubric.scale_max - rubric.scale_min
-            if scale_range > 0:
-                # Clamp total_score to rubric range
-                clamped_score = max(rubric.scale_min, min(rubric.scale_max, total_score))
-                normalized = (clamped_score - rubric.scale_min) / scale_range
-                grade = 1 + (normalized * 9)  # Map to 1-10
-                # Ensure grade is within bounds
-                grade = max(1.0, min(10.0, grade))
+            # Convert to grade (1-10 scale) using curved mapping
+            grade = _score_to_grade(total_score, rubric.scale_min, rubric.scale_max)
     
     return ProjectAssessmentDetailOut(
         assessment=_to_out_assessment(pa),
@@ -823,14 +856,8 @@ def get_assessment_scores_overview(
         # Calculate weighted average score
         avg_score = total_score / total_weight if total_weight > 0 else None
         
-        # Calculate grade (simple linear mapping: score 1-5 -> grade 1-10)
-        # Formula: grade = (score - scale_min) / (scale_max - scale_min) * 9 + 1
-        grade = None
-        if avg_score is not None:
-            scale_range = rubric.scale_max - rubric.scale_min
-            if scale_range > 0:
-                grade = ((avg_score - rubric.scale_min) / scale_range) * 9 + 1
-                grade = round(grade, 1)
+        # Calculate grade using curved mapping
+        grade = _score_to_grade(avg_score, rubric.scale_min, rubric.scale_max)
         
         team_score = TeamScoreOverview(
             team_number=team_num,
@@ -1034,14 +1061,10 @@ def get_assessment_students_overview(
         # Calculate weighted average score
         avg_score = total_score / total_weight if total_weight > 0 else None
         
-        # Calculate grade (simple linear mapping: score 1-5 -> grade 1-10)
-        grade = None
-        if avg_score is not None:
-            scale_range = rubric.scale_max - rubric.scale_min
-            if scale_range > 0:
-                grade = ((avg_score - rubric.scale_min) / scale_range) * 9 + 1
-                grade = round(grade, 1)
-                all_grades.append(grade)
+        # Calculate grade using curved mapping
+        grade = _score_to_grade(avg_score, rubric.scale_min, rubric.scale_max)
+        if grade is not None:
+            all_grades.append(grade)
         else:
             pending_count += 1
         
