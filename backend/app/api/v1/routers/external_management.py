@@ -486,13 +486,11 @@ def get_external_advisory_detail(
     if not rubric:
         raise HTTPException(status_code=404, detail="Rubric not found")
     
-    # Get scores with criterion info - filter by team_number if provided
-    scores_query = db.query(ProjectAssessmentScore).filter(
+    # Get scores with criterion info
+    # Note: Scores are associated with the assessment which is already scoped to the evaluator/team
+    scores = db.query(ProjectAssessmentScore).filter(
         ProjectAssessmentScore.assessment_id == assessment.id
-    )
-    if team_number is not None:
-        scores_query = scores_query.filter(ProjectAssessmentScore.team_number == team_number)
-    scores = scores_query.all()
+    ).all()
     
     score_outputs = []
     for score in scores:
@@ -512,9 +510,12 @@ def get_external_advisory_detail(
     if assessment.metadata_json:
         general_comment = assessment.metadata_json.get("general_comment")
     
+    # Construct team name - use "Team X" format when team_number is provided, otherwise use group name
+    team_display_name = f"Team {team_number}" if team_number is not None else group.name
+    
     return ExternalAdvisoryDetail(
         team_id=group_id,
-        team_name=group.name,
+        team_name=team_display_name,
         external_evaluator=ExternalEvaluatorOut.model_validate(evaluator),
         rubric_title=rubric.title,
         rubric_scale_min=rubric.scale_min,
