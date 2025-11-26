@@ -147,7 +147,7 @@ export default function SettingsPageInner() {
       setSubmitError("Titel mag niet leeg zijn.");
       return;
     }
-    if (!editRubricId) {
+    if (editRubricId <= 0) {
       setSubmitError("Selecteer een rubric.");
       return;
     }
