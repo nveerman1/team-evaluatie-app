@@ -577,7 +577,12 @@ def batch_create_update_scores(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    """Batch create/update scores for project assessment (teacher/admin only)"""
+    """Batch create/update scores for project assessment (teacher/admin only)
+    
+    Supports both team scores and individual student overrides.
+    - Team score: set team_number, leave student_id as None
+    - Individual override: set both team_number and student_id
+    """
     if user.role not in ("teacher", "admin"):
         raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen scores toevoegen")
     
@@ -591,13 +596,21 @@ def batch_create_update_scores(
     
     result = []
     for score_data in payload.scores:
-        # Check if score exists for this assessment, criterion, and team_number
-        existing = db.query(ProjectAssessmentScore).filter(
+        # Build filter based on whether this is a student override or team score
+        filters = [
             ProjectAssessmentScore.assessment_id == assessment_id,
             ProjectAssessmentScore.criterion_id == score_data.criterion_id,
             ProjectAssessmentScore.team_number == score_data.team_number,
             ProjectAssessmentScore.school_id == user.school_id,
-        ).first()
+        ]
+        
+        # Handle student_id filtering (None vs specific value)
+        if score_data.student_id is not None:
+            filters.append(ProjectAssessmentScore.student_id == score_data.student_id)
+        else:
+            filters.append(ProjectAssessmentScore.student_id.is_(None))
+        
+        existing = db.query(ProjectAssessmentScore).filter(*filters).first()
         
         if existing:
             existing.score = score_data.score
@@ -613,6 +626,7 @@ def batch_create_update_scores(
                 score=score_data.score,
                 comment=score_data.comment,
                 team_number=score_data.team_number,
+                student_id=score_data.student_id,
             )
             db.add(new_score)
             db.flush()
@@ -880,7 +894,11 @@ def get_assessment_students_overview(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    """Get individual students overview for a project assessment (teacher/admin only)"""
+    """Get individual students overview for a project assessment (teacher/admin only)
+    
+    Shows individual student scores. If a student has an individual override for a criterion,
+    that override is shown (with is_override=True). Otherwise, the team score is shown.
+    """
     if user.role not in ("teacher", "admin"):
         raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen leerlingenoverzicht bekijken")
     
@@ -930,11 +948,21 @@ def get_assessment_students_overview(
         ProjectAssessmentScore.school_id == user.school_id,
     ).all()
     
-    # Organize scores by team and criterion
-    scores_by_team = {}  # (team_number, criterion_id) -> score
+    # Organize scores:
+    # - Team scores: (team_number, criterion_id) -> score (where student_id is None)
+    # - Student overrides: (student_id, criterion_id) -> score (where student_id is set)
+    team_scores_map = {}  # (team_number, criterion_id) -> score
+    student_scores_map = {}  # (student_id, criterion_id) -> score
+    
     for score in all_scores:
-        key = (score.team_number, score.criterion_id)
-        scores_by_team[key] = score
+        if score.student_id is not None:
+            # Individual student override
+            key = (score.student_id, score.criterion_id)
+            student_scores_map[key] = score
+        else:
+            # Team score
+            key = (score.team_number, score.criterion_id)
+            team_scores_map[key] = score
     
     # Get teacher name
     teacher = db.query(User).filter(User.id == pa.teacher_id).first()
@@ -945,7 +973,7 @@ def get_assessment_students_overview(
     all_grades = []
     criterion_totals = {c.id: {"sum": 0, "count": 0, "name": c.name} for c in criteria}
     pending_count = 0
-    deviating_count = 0  # Currently no mechanism to track deviations, so always 0
+    deviating_count = 0  # Count students with at least one override
     
     for student in students:
         # Get scores for this student's team
@@ -957,32 +985,51 @@ def get_assessment_students_overview(
         total_score = 0.0
         total_weight = 0.0
         scores_count = 0
+        has_override = False
         
         for criterion in criteria:
-            key = (team_num, criterion.id)
-            if key in scores_by_team:
-                score_obj = scores_by_team[key]
-                criterion_scores_list.append(CriterionScore(
-                    criterion_id=criterion.id,
-                    criterion_name=criterion.name,
-                    category=getattr(criterion, "category", None),
-                    score=score_obj.score,
-                    comment=score_obj.comment,
-                ))
-                # Use weighted average
-                total_score += score_obj.score * criterion.weight
-                total_weight += criterion.weight
-                scores_count += 1
-                criterion_totals[criterion.id]["sum"] += score_obj.score
-                criterion_totals[criterion.id]["count"] += 1
+            # Check for individual student override first
+            student_key = (student.id, criterion.id)
+            team_key = (team_num, criterion.id)
+            
+            if student_key in student_scores_map:
+                # Use student override
+                score_obj = student_scores_map[student_key]
+                is_override = True
+                has_override = True
+            elif team_key in team_scores_map:
+                # Fall back to team score
+                score_obj = team_scores_map[team_key]
+                is_override = False
             else:
+                # No score available
                 criterion_scores_list.append(CriterionScore(
                     criterion_id=criterion.id,
                     criterion_name=criterion.name,
                     category=getattr(criterion, "category", None),
                     score=None,
                     comment=None,
+                    is_override=False,
                 ))
+                continue
+            
+            criterion_scores_list.append(CriterionScore(
+                criterion_id=criterion.id,
+                criterion_name=criterion.name,
+                category=getattr(criterion, "category", None),
+                score=score_obj.score,
+                comment=score_obj.comment,
+                is_override=is_override,
+            ))
+            # Use weighted average
+            total_score += score_obj.score * criterion.weight
+            total_weight += criterion.weight
+            scores_count += 1
+            criterion_totals[criterion.id]["sum"] += score_obj.score
+            criterion_totals[criterion.id]["count"] += 1
+        
+        if has_override:
+            deviating_count += 1
         
         # Calculate weighted average score
         avg_score = total_score / total_weight if total_weight > 0 else None
