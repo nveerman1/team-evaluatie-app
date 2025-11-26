@@ -7,6 +7,8 @@ import { OverviewMatrixResponse, MatrixFilters, MatrixCell, MatrixColumn } from 
 import { Loading } from "@/components";
 import { formatDate } from "@/utils";
 
+const FILTER_DEBOUNCE_MS = 300;
+
 export default function AllItemsTab() {
   const [matrixData, setMatrixData] = useState<OverviewMatrixResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,8 +43,9 @@ export default function AllItemsTab() {
   // Apply filters automatically when inputs change (debounced)
   useEffect(() => {
     const timer = setTimeout(() => {
+      const courseId = filterInputs.course_id ? Number(filterInputs.course_id) : undefined;
       setFilters({
-        course_id: filterInputs.course_id ? parseInt(filterInputs.course_id) : undefined,
+        course_id: courseId && !isNaN(courseId) ? courseId : undefined,
         class_name: filterInputs.class_name || undefined,
         student_name: filterInputs.student_name || undefined,
         date_from: filterInputs.date_from || undefined,
@@ -50,7 +53,7 @@ export default function AllItemsTab() {
         sort_by: sortBy || undefined,
         sort_order: sortOrder,
       });
-    }, 300);
+    }, FILTER_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [filterInputs, sortBy, sortOrder]);
 
