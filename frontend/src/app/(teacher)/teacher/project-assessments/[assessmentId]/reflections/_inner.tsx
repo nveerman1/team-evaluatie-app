@@ -87,10 +87,6 @@ export default function ProjectAssessmentReflectionsInner() {
     return arr;
   }, [data, query, statusFilter, sort]);
 
-  const submittedCount = filtered.filter(
-    (r) => !!r.submitted_at && (r.text?.trim()?.length ?? 0) > 0
-  ).length;
-
   const toggleAll = (open: boolean) => {
     const map: Record<number, boolean> = {};
     filtered.forEach((r) => (map[r.id] = open));
@@ -146,11 +142,6 @@ export default function ProjectAssessmentReflectionsInner() {
             Alles inklappen
           </button>
         </div>
-      </div>
-
-      {/* Status count */}
-      <div className="text-sm text-gray-600">
-        {submittedCount}/{filtered.length} ingeleverd
       </div>
 
       {/* Reflections List */}
