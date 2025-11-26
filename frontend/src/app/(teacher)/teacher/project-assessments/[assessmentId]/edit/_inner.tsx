@@ -25,6 +25,9 @@ type RubricLevelsRowProps = {
   comment: string;
   onChange: (score: number) => void;
   onCommentChange: (comment: string) => void;
+  quickComments: string[];
+  onAddQuickComment: (text: string) => void;
+  onDeleteQuickComment: (text: string) => void;
 };
 
 /**
@@ -95,11 +98,18 @@ function RubricLevelsRow({
   comment,
   onChange,
   onCommentChange,
+  quickComments,
+  onAddQuickComment,
+  onDeleteQuickComment,
 }: RubricLevelsRowProps) {
   const levels = Array.from(
     { length: scaleMax - scaleMin + 1 },
     (_, i) => scaleMin + i,
   );
+
+  // Local state for adding new quick comments
+  const [isAddingQuick, setIsAddingQuick] = useState(false);
+  const [newQuick, setNewQuick] = useState("");
 
   return (
     <div className="grid grid-cols-[minmax(0,3fr)_minmax(260px,2fr)] gap-4 items-stretch">
@@ -155,6 +165,73 @@ function RubricLevelsRow({
             Optioneel
           </span>
         </div>
+
+        {/* Quick comments chips */}
+        <div className="flex flex-wrap items-center gap-2">
+          {quickComments.map((qc, idx) => (
+            <div key={`${qc}-${idx}`} className="group relative inline-flex">
+              <button
+                type="button"
+                onClick={() => onCommentChange(comment ? comment + " " + qc : qc)}
+                className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] text-slate-700 shadow-sm hover:border-slate-300 hover:bg-white"
+              >
+                {qc}
+              </button>
+              <button
+                type="button"
+                className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] flex items-center justify-center hover:bg-red-600 transition-opacity"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteQuickComment(qc);
+                }}
+                title="Verwijder opmerking"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          {/* Plus button */}
+          <button
+            type="button"
+            onClick={() => setIsAddingQuick((prev) => !prev)}
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-400 text-xs font-semibold text-slate-700 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-colors"
+          >
+            +
+          </button>
+        </div>
+
+        {/* Add new quick comment input */}
+        {isAddingQuick && (
+          <div className="mt-1 flex items-center gap-2">
+            <input
+              type="text"
+              value={newQuick}
+              onChange={(e) => setNewQuick(e.target.value)}
+              placeholder="Nieuwe snelle opmerking..."
+              className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-700 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-200"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const trimmed = newQuick.trim();
+                if (!trimmed) return;
+                // Prevent duplicate quick comments
+                if (quickComments.includes(trimmed)) {
+                  setNewQuick("");
+                  setIsAddingQuick(false);
+                  return;
+                }
+                onAddQuickComment(trimmed);
+                setNewQuick("");
+                setIsAddingQuick(false);
+              }}
+              className="rounded-lg bg-emerald-600 px-3 py-1 text-[11px] font-medium text-white hover:bg-emerald-700"
+            >
+              Voeg toe
+            </button>
+          </div>
+        )}
+
         <textarea
           value={comment}
           onChange={(e) => onCommentChange(e.target.value)}
@@ -184,6 +261,9 @@ type CategoryCardProps = {
   >;
   onScoreChange: (criterionId: number, score: number) => void;
   onCommentChange: (criterionId: number, comment: string) => void;
+  quickCommentsByCriterion: Record<number, string[]>;
+  onAddQuickComment: (criterionId: number, text: string) => void;
+  onDeleteQuickComment: (criterionId: number, text: string) => void;
 };
 
 function CategoryCard({
@@ -194,6 +274,9 @@ function CategoryCard({
   scores,
   onScoreChange,
   onCommentChange,
+  quickCommentsByCriterion,
+  onAddQuickComment,
+  onDeleteQuickComment,
 }: CategoryCardProps) {
   return (
     <section className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm overflow-hidden">
@@ -240,6 +323,9 @@ function CategoryCard({
                   onCommentChange={(newComment) =>
                     onCommentChange(criterion.id, newComment)
                   }
+                  quickComments={quickCommentsByCriterion[criterion.id] || []}
+                  onAddQuickComment={(text) => onAddQuickComment(criterion.id, text)}
+                  onDeleteQuickComment={(text) => onDeleteQuickComment(criterion.id, text)}
                 />
               </div>
             </div>
@@ -278,6 +364,11 @@ export default function EditProjectAssessmentInner() {
   // Scores: map criterion_id -> {score, comment}
   const [scores, setScores] = useState<
     Record<number, { score: number; comment: string }>
+  >({});
+
+  // Quick comments: map criterion_id -> array of quick comment strings
+  const [quickCommentsByCriterion, setQuickCommentsByCriterion] = useState<
+    Record<number, string[]>
   >({});
 
   // Autosave timer
@@ -628,6 +719,19 @@ export default function EditProjectAssessmentInner() {
                       score: prev[criterionId]?.score ?? scaleMin,
                       comment: newComment,
                     },
+                  }))
+                }
+                quickCommentsByCriterion={quickCommentsByCriterion}
+                onAddQuickComment={(criterionId, text) =>
+                  setQuickCommentsByCriterion((prev) => ({
+                    ...prev,
+                    [criterionId]: [...(prev[criterionId] || []), text],
+                  }))
+                }
+                onDeleteQuickComment={(criterionId, text) =>
+                  setQuickCommentsByCriterion((prev) => ({
+                    ...prev,
+                    [criterionId]: (prev[criterionId] || []).filter((qc) => qc !== text),
                   }))
                 }
               />
