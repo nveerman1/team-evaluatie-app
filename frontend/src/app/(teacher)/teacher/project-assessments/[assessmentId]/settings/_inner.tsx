@@ -37,9 +37,15 @@ export default function SettingsPageInner() {
   const [data, setData] = useState<ProjectAssessmentTeamOverview | null>(null);
   const [rubrics, setRubrics] = useState<RubricOption[]>([]);
 
+  // State for basic settings (editable)
+  const [editTitle, setEditTitle] = useState("");
+  const [editRubricId, setEditRubricId] = useState<number>(0);
+  const [savingBasicSettings, setSavingBasicSettings] = useState(false);
+
   // State for external assessment configuration
   const [externalEnabled, setExternalEnabled] = useState(false);
   const [externalMode, setExternalMode] = useState<ExternalMode>("none");
+  const [savingExternalSettings, setSavingExternalSettings] = useState(false);
 
   // State for "All Teams" mode
   const [allTeamsConfig, setAllTeamsConfig] = useState({
@@ -71,6 +77,26 @@ export default function SettingsPageInner() {
         
         setData(teamOverview);
         setRubrics(rubricList.items?.map((r: any) => ({ id: r.id, title: r.title })) || []);
+
+        // Initialize editable basic settings
+        setEditTitle(teamOverview.assessment.title);
+        setEditRubricId(teamOverview.assessment.rubric_id);
+
+        // Initialize external assessment settings from metadata_json
+        const externalSettings = teamOverview.assessment.metadata_json?.external_assessment;
+        if (externalSettings) {
+          setExternalEnabled(externalSettings.enabled || false);
+          setExternalMode(externalSettings.mode || "none");
+          if (externalSettings.all_teams_config) {
+            setAllTeamsConfig((prev) => ({
+              ...prev,
+              evaluator_name: externalSettings.all_teams_config.evaluator_name || "",
+              evaluator_email: externalSettings.all_teams_config.evaluator_email || "",
+              evaluator_organisation: externalSettings.all_teams_config.evaluator_organisation || "",
+              rubric_id: externalSettings.all_teams_config.rubric_id || 0,
+            }));
+          }
+        }
 
         // Initialize per-team configs from team data
         const initialPerTeamConfigs: PerTeamConfig[] = teamOverview.teams.map((team) => ({
@@ -112,6 +138,102 @@ export default function SettingsPageInner() {
     setExternalEnabled(enabled);
     if (!enabled) {
       setExternalMode("none");
+    }
+  };
+
+  // Handle saving basic settings (title and rubric)
+  const handleSaveBasicSettings = async () => {
+    if (!editTitle.trim()) {
+      setSubmitError("Titel mag niet leeg zijn.");
+      return;
+    }
+    if (editRubricId <= 0) {
+      setSubmitError("Selecteer een rubric.");
+      return;
+    }
+
+    setSavingBasicSettings(true);
+    setSubmitError(null);
+    setSuccessMessage(null);
+
+    try {
+      await projectAssessmentService.updateProjectAssessment(assessmentId, {
+        title: editTitle,
+        rubric_id: editRubricId,
+      });
+      
+      // Update local data to reflect changes
+      if (data) {
+        const selectedRubric = rubrics.find(r => r.id === editRubricId);
+        setData({
+          ...data,
+          assessment: {
+            ...data.assessment,
+            title: editTitle,
+            rubric_id: editRubricId,
+          },
+          rubric_title: selectedRubric?.title || data.rubric_title,
+        });
+      }
+      
+      setSuccessMessage("Basisinstellingen opgeslagen.");
+    } catch (e: any) {
+      console.error("Failed to save basic settings:", e);
+      setSubmitError(
+        e?.response?.data?.detail ||
+          "Kon instellingen niet opslaan. Probeer het opnieuw."
+      );
+    } finally {
+      setSavingBasicSettings(false);
+    }
+  };
+
+  // Handle saving external assessment settings
+  const handleSaveExternalSettings = async () => {
+    setSavingExternalSettings(true);
+    setSubmitError(null);
+    setSuccessMessage(null);
+
+    try {
+      const currentMetadata = data?.assessment.metadata_json || {};
+      const updatedMetadata = {
+        ...currentMetadata,
+        external_assessment: {
+          enabled: externalEnabled,
+          mode: externalMode,
+          all_teams_config: externalMode === "all_teams" ? {
+            evaluator_name: allTeamsConfig.evaluator_name,
+            evaluator_email: allTeamsConfig.evaluator_email,
+            evaluator_organisation: allTeamsConfig.evaluator_organisation,
+            rubric_id: allTeamsConfig.rubric_id,
+          } : undefined,
+        },
+      };
+
+      await projectAssessmentService.updateProjectAssessment(assessmentId, {
+        metadata_json: updatedMetadata,
+      });
+
+      // Update local data to reflect changes
+      if (data) {
+        setData({
+          ...data,
+          assessment: {
+            ...data.assessment,
+            metadata_json: updatedMetadata,
+          },
+        });
+      }
+
+      setSuccessMessage("Externe beoordeling instellingen opgeslagen.");
+    } catch (e: any) {
+      console.error("Failed to save external settings:", e);
+      setSubmitError(
+        e?.response?.data?.detail ||
+          "Kon instellingen niet opslaan. Probeer het opnieuw."
+      );
+    } finally {
+      setSavingExternalSettings(false);
     }
   };
 
@@ -278,26 +400,41 @@ export default function SettingsPageInner() {
         <h2 className="text-xl font-semibold text-gray-900 mb-4">
           Basis instellingen beoordeling
         </h2>
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-600">Titel</label>
-            <p className="text-gray-900">{data.assessment.title}</p>
+            <label className="block text-sm font-medium text-gray-600 mb-1">Titel</label>
+            <input
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="Titel van de beoordeling"
+            />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-600">Rubric</label>
-            <p className="text-gray-900">{data.rubric_title}</p>
+            <label className="block text-sm font-medium text-gray-600 mb-1">Rubric</label>
+            <select
+              value={editRubricId}
+              onChange={(e) => setEditRubricId(Number(e.target.value))}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value={0}>Selecteer een rubric</option>
+              {rubrics.map((rubric) => (
+                <option key={rubric.id} value={rubric.id}>
+                  {rubric.title}
+                </option>
+              ))}
+            </select>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-600">Schaal</label>
-            <p className="text-gray-900">
-              {data.rubric_scale_min} - {data.rubric_scale_max}
-            </p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-600">
-              Aantal teams
-            </label>
-            <p className="text-gray-900">{data.teams.length}</p>
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={handleSaveBasicSettings}
+              disabled={savingBasicSettings}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            >
+              {savingBasicSettings ? "Opslaan..." : "Opslaan"}
+            </button>
           </div>
         </div>
       </section>
@@ -642,6 +779,18 @@ export default function SettingsPageInner() {
             Schakel externe beoordeling in om opdrachtgevers uit te nodigen.
           </div>
         )}
+
+        {/* Save External Settings Button */}
+        <div className="pt-6 border-t mt-6">
+          <button
+            type="button"
+            onClick={handleSaveExternalSettings}
+            disabled={savingExternalSettings}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+          >
+            {savingExternalSettings ? "Opslaan..." : "Instellingen opslaan"}
+          </button>
+        </div>
       </section>
     </div>
   );

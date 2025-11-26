@@ -16,6 +16,7 @@ class ProjectAssessmentCreate(BaseModel):
 
 class ProjectAssessmentUpdate(BaseModel):
     title: Optional[str] = None
+    rubric_id: Optional[int] = None
     version: Optional[str] = None
     status: Optional[str] = None  # draft|published
     metadata_json: Optional[Dict[str, Any]] = None
