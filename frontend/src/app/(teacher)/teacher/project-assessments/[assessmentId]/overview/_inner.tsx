@@ -1,6 +1,6 @@
 "use client";
 import { useParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { ApiAuthError } from "@/lib/api";
 import { projectAssessmentService } from "@/services";
@@ -19,26 +19,27 @@ export default function ProjectAssessmentOverviewInner() {
   const [sortBy, setSortBy] = useState<"team" | "status" | "progress" | "updated">("team");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      setError(null);
-      try {
-        const result = await projectAssessmentService.getTeamOverview(assessmentId);
-        setData(result);
-      } catch (e: unknown) {
-        if (e instanceof ApiAuthError) {
-          setError(e.originalMessage);
-        } else {
-          const err = e as { response?: { data?: { detail?: string } }; message?: string };
-          setError(err?.response?.data?.detail || err?.message || "Laden mislukt");
-        }
-      } finally {
-        setLoading(false);
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await projectAssessmentService.getTeamOverview(assessmentId);
+      setData(result);
+    } catch (e: unknown) {
+      if (e instanceof ApiAuthError) {
+        setError(e.originalMessage);
+      } else {
+        const err = e as { response?: { data?: { detail?: string } }; message?: string };
+        setError(err?.response?.data?.detail || err?.message || "Laden mislukt");
       }
+    } finally {
+      setLoading(false);
     }
-    loadData();
   }, [assessmentId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   if (loading) return <Loading />;
   if (error && !data) return <ErrorMessage message={error} />;
@@ -92,39 +93,85 @@ export default function ProjectAssessmentOverviewInner() {
     return sortOrder === "asc" ? comparison : -comparison;
   });
 
+  // Calculate KPI statistics
+  const totalTeams = data.teams.length;
+  const completedTeams = data.teams.filter(t => t.status === "completed").length;
+  const inProgressTeams = data.teams.filter(t => t.status === "in_progress").length;
+  const notStartedTeams = data.teams.filter(t => t.status === "not_started").length;
+
   return (
     <>
-      {/* Filters and Search */}
-      <div className="flex items-center gap-4 bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 flex-wrap">
+      {/* Action buttons - aligned right */}
+      <div className="flex items-center justify-between">
+        {/* Status Filter Toggle - styled like scores tab */}
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium">Zoeken:</label>
+          <button
+            onClick={() => setStatusFilter("all")}
+            className={`px-4 py-2 rounded-xl border font-medium shadow-sm ${
+              statusFilter === "all"
+                ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+            }`}
+          >
+            Alle
+          </button>
+          <button
+            onClick={() => setStatusFilter("not_started")}
+            className={`px-4 py-2 rounded-xl border font-medium shadow-sm ${
+              statusFilter === "not_started"
+                ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+            }`}
+          >
+            ⬜ Niet gestart
+          </button>
+          <button
+            onClick={() => setStatusFilter("in_progress")}
+            className={`px-4 py-2 rounded-xl border font-medium shadow-sm ${
+              statusFilter === "in_progress"
+                ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+            }`}
+          >
+            ⚠️ In progress
+          </button>
+          <button
+            onClick={() => setStatusFilter("completed")}
+            className={`px-4 py-2 rounded-xl border font-medium shadow-sm ${
+              statusFilter === "completed"
+                ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+            }`}
+          >
+            ✅ Afgerond
+          </button>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => loadData()}
+            className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+            disabled={loading}
+          >
+            ⟳ Verversen
+          </button>
+        </div>
+      </div>
+
+      {/* Search and Filters - styled like OMZA */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="flex flex-wrap gap-3 items-center">
           <input
-            type="text"
-            className="border rounded-lg px-3 py-2 w-64"
-            placeholder="Teamnummer of naam..."
+            className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Zoek op teamnummer of naam..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium">Status:</label>
           <select
-            className="border rounded-lg px-3 py-2"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">Alle</option>
-            <option value="not_started">⬜ Niet gestart</option>
-            <option value="in_progress">⚠️ In progress</option>
-            <option value="completed">✅ Afgerond</option>
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium">Sorteer op:</label>
-          <select
-            className="border rounded-lg px-3 py-2"
+            className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm"
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
+            onChange={(e) => setSortBy(e.target.value as "team" | "status" | "progress" | "updated")}
           >
             <option value="team">Teamnummer</option>
             <option value="status">Status</option>
@@ -133,81 +180,86 @@ export default function ProjectAssessmentOverviewInner() {
           </select>
           <button
             onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-            className="px-3 py-2 border rounded-lg hover:bg-gray-50"
+            className="h-9 px-3 rounded-lg border border-gray-300 bg-white text-sm shadow-sm hover:bg-slate-50"
           >
             {sortOrder === "asc" ? "↑" : "↓"}
           </button>
         </div>
       </div>
 
-      {/* Teams Table */}
-      <section className="bg-white border rounded-2xl overflow-hidden">
+      {/* Teams Table - styled like OMZA */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+          <table className="min-w-full divide-y divide-gray-200 text-sm">
+            <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide sticky left-0 bg-gray-50">
                   Team
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide min-w-[200px]">
                   Leden
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
                   Status
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide min-w-[150px]">
                   Voortgang
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
                   Laatste bewerking
                 </th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">
+                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 tracking-wide">
                   Acties
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-gray-100">
               {sortedTeams.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={6} className="px-5 py-8 text-center text-gray-500">
                     Geen teams gevonden voor dit filter
                   </td>
                 </tr>
               )}
               {sortedTeams.map((team) => (
-                <tr key={team.team_number || team.group_id} className="border-b last:border-b-0 hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <div className="font-medium">Team {team.team_number}</div>
+                <tr key={team.team_number || team.group_id} className="bg-white hover:bg-gray-50">
+                  <td className="px-5 py-3 font-medium sticky left-0 bg-white">
+                    <Link
+                      href={`/teacher/project-assessments/${assessmentId}/edit?team=${team.team_number}`}
+                      className="text-blue-600 hover:underline"
+                    >
+                      Team {team.team_number}
+                    </Link>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-5 py-3">
                     <div className="text-sm text-gray-600">
                       {team.members.map((m) => m.name).join(", ")}
                     </div>
                   </td>
                   <td className="px-4 py-3">
                     {team.status === "completed" && (
-                      <span className="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs">
+                      <span className="px-3 py-1 rounded-full border text-xs font-medium bg-green-100 text-green-800">
                         ✅ Gereed
                       </span>
                     )}
                     {team.status === "in_progress" && (
-                      <span className="px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 text-xs">
+                      <span className="px-3 py-1 rounded-full border text-xs font-medium bg-orange-100 text-orange-800">
                         ⚠️ In progress
                       </span>
                     )}
                     {team.status === "not_started" && (
-                      <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs">
+                      <span className="px-3 py-1 rounded-full border text-xs font-medium bg-gray-100 text-gray-600">
                         ⬜ Niet gestart
                       </span>
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="text-sm">
+                    <div className="text-sm text-gray-600 mb-1">
                       {team.scores_count}/{team.total_criteria} criteria
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                    <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
-                        className="bg-blue-600 h-2 rounded-full"
+                        className="bg-blue-600 h-2 rounded-full transition-all"
                         style={{
                           width: `${
                             team.total_criteria > 0
@@ -221,7 +273,9 @@ export default function ProjectAssessmentOverviewInner() {
                   <td className="px-4 py-3 text-sm">
                     {team.updated_at ? (
                       <>
-                        {new Date(team.updated_at).toLocaleDateString("nl-NL")}
+                        <div className="text-gray-900">
+                          {new Date(team.updated_at).toLocaleDateString("nl-NL")}
+                        </div>
                         {team.updated_by && (
                           <div className="text-xs text-gray-500">
                             {team.updated_by}
@@ -235,7 +289,7 @@ export default function ProjectAssessmentOverviewInner() {
                   <td className="px-4 py-3 text-right">
                     <Link
                       href={`/teacher/project-assessments/${assessmentId}/edit?team=${team.team_number}`}
-                      className="px-3 py-1.5 rounded-lg border hover:bg-gray-100 text-sm inline-block"
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-sm font-medium text-slate-700 shadow-sm inline-block"
                     >
                       {team.status === "not_started"
                         ? "Start beoordeling"
@@ -249,7 +303,43 @@ export default function ProjectAssessmentOverviewInner() {
             </tbody>
           </table>
         </div>
-      </section>
+      </div>
+
+      {/* Statistics Summary - styled like OMZA KPIs */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="rounded-xl border border-blue-100 bg-white/70 p-4 shadow-sm">
+          <h3 className="text-xs font-semibold text-gray-500 mb-1">
+            Totaal teams
+          </h3>
+          <p className="text-2xl font-bold text-gray-900">
+            {totalTeams}
+          </p>
+        </div>
+        <div className="rounded-xl border border-green-100 bg-white/70 p-4 shadow-sm">
+          <h3 className="text-xs font-semibold text-gray-500 mb-1">
+            Afgerond
+          </h3>
+          <p className="text-2xl font-bold text-green-600">
+            {completedTeams}
+          </p>
+        </div>
+        <div className="rounded-xl border border-amber-100 bg-white/70 p-4 shadow-sm">
+          <h3 className="text-xs font-semibold text-gray-500 mb-1">
+            In progress
+          </h3>
+          <p className="text-2xl font-bold text-amber-600">
+            {inProgressTeams}
+          </p>
+        </div>
+        <div className="rounded-xl border border-gray-100 bg-white/70 p-4 shadow-sm">
+          <h3 className="text-xs font-semibold text-gray-500 mb-1">
+            Niet gestart
+          </h3>
+          <p className="text-2xl font-bold text-gray-900">
+            {notStartedTeams}
+          </p>
+        </div>
+      </div>
     </>
   );
 }
