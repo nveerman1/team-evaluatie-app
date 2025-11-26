@@ -471,15 +471,12 @@ def get_external_advisory_detail(
     if not evaluator:
         raise HTTPException(status_code=404, detail="External evaluator not found")
     
-    # Get external assessment - also filter by team_number if provided
-    assessment_query = db.query(ProjectAssessment).filter(
+    # Get external assessment
+    assessment = db.query(ProjectAssessment).filter(
         ProjectAssessment.group_id == group_id,
         ProjectAssessment.external_evaluator_id == link.external_evaluator_id,
         ProjectAssessment.role == "EXTERNAL",
-    )
-    if team_number is not None:
-        assessment_query = assessment_query.filter(ProjectAssessment.team_number == team_number)
-    assessment = assessment_query.first()
+    ).first()
     
     if not assessment:
         raise HTTPException(status_code=404, detail="No external assessment found for this team")
@@ -489,10 +486,13 @@ def get_external_advisory_detail(
     if not rubric:
         raise HTTPException(status_code=404, detail="Rubric not found")
     
-    # Get scores with criterion info
-    scores = db.query(ProjectAssessmentScore).filter(
+    # Get scores with criterion info - filter by team_number if provided
+    scores_query = db.query(ProjectAssessmentScore).filter(
         ProjectAssessmentScore.assessment_id == assessment.id
-    ).all()
+    )
+    if team_number is not None:
+        scores_query = scores_query.filter(ProjectAssessmentScore.team_number == team_number)
+    scores = scores_query.all()
     
     score_outputs = []
     for score in scores:
