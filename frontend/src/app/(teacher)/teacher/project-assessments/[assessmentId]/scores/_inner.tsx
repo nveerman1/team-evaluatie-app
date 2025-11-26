@@ -402,77 +402,69 @@ export default function ScoresOverviewInner() {
 
   return (
     <>
-      {/* Action buttons */}
-      <div className="flex gap-2 flex-wrap justify-end">
-        <button
-          onClick={() => viewMode === "teams" ? loadTeamsData() : loadStudentsData()}
-          className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          disabled={loading}
-        >
-          ⟳ Verversen
-        </button>
-        <button
-          onClick={exportToCSV}
-          className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
-          🧾 CSV
-        </button>
-        <button
-          onClick={exportToXLSX}
-          className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
-          📥 Excel
-        </button>
-      </div>
-
-      {/* View Mode Toggle */}
-      <div className="flex gap-2 border-b border-gray-200">
-        <button
-          onClick={() => {
-            setViewMode("teams");
-            setSortBy("team");
-            setSearchQuery("");
-          }}
-          className={`px-6 py-3 font-medium transition-colors ${
-            viewMode === "teams"
-              ? "border-b-2 border-blue-500 text-blue-600"
-              : "text-gray-600 hover:text-gray-900"
-          }`}
-        >
-          Teams
-        </button>
-        <button
-          onClick={() => {
-            setViewMode("students");
-            setSortBy("name");
-            setSearchQuery("");
-          }}
-          className={`px-6 py-3 font-medium transition-colors ${
-            viewMode === "students"
-              ? "border-b-2 border-blue-500 text-blue-600"
-              : "text-gray-600 hover:text-gray-900"
-          }`}
-        >
-          Leerlingen
-        </button>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="flex items-center gap-4 bg-white p-4 rounded-2xl border flex-wrap">
+      {/* Action buttons - aligned right */}
+      <div className="flex items-center justify-between">
+        {/* View Mode Toggle - styled like Tabelweergave button */}
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium">Zoeken:</label>
+          <button
+            onClick={() => {
+              setViewMode("teams");
+              setSortBy("team");
+              setSearchQuery("");
+            }}
+            className={`px-4 py-2 rounded-xl border font-medium shadow-sm ${
+              viewMode === "teams"
+                ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+            }`}
+          >
+            Teams
+          </button>
+          <button
+            onClick={() => {
+              setViewMode("students");
+              setSortBy("name");
+              setSearchQuery("");
+            }}
+            className={`px-4 py-2 rounded-xl border font-medium shadow-sm ${
+              viewMode === "students"
+                ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+            }`}
+          >
+            Leerlingen
+          </button>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => viewMode === "teams" ? loadTeamsData() : loadStudentsData()}
+            className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+            disabled={loading}
+          >
+            ⟳ Verversen
+          </button>
+          <button
+            onClick={exportToCSV}
+            className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+          >
+            📄 CSV
+          </button>
+        </div>
+      </div>
+
+      {/* Search and Filters - styled like OMZA */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="flex flex-wrap gap-3 items-center">
           <input
-            type="text"
-            className="border rounded-lg px-3 py-2 w-64"
-            placeholder={viewMode === "teams" ? "Teamnaam of leerling..." : "Naam, team of klas..."}
+            className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder={viewMode === "teams" ? "Zoek op teamnaam of leerling..." : "Zoek op naam, team of klas..."}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium">Sorteer op:</label>
           <select
-            className="border rounded-lg px-3 py-2"
+            className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
           >
@@ -481,7 +473,6 @@ export default function ScoresOverviewInner() {
                 <option value="team">Teamnummer</option>
                 <option value="total">Totaalscore</option>
                 <option value="grade">Cijfer</option>
-                <option value="updated">Laatste bewerking</option>
                 {data && data.criteria.map((c) => (
                   <option key={c.id} value={`criterion-${c.id}`}>
                     {c.name}
@@ -495,7 +486,6 @@ export default function ScoresOverviewInner() {
                 <option value="team">Team</option>
                 <option value="grade">Cijfer</option>
                 <option value="total">Totaalscore</option>
-                <option value="updated">Laatste bewerking</option>
                 {studentsData && studentsData.criteria.map((c) => (
                   <option key={c.id} value={`criterion-${c.id}`}>
                     {c.name}
@@ -506,15 +496,15 @@ export default function ScoresOverviewInner() {
           </select>
           <button
             onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-            className="px-3 py-2 border rounded-lg hover:bg-gray-50"
+            className="h-9 px-3 rounded-lg border border-gray-300 bg-white text-sm shadow-sm hover:bg-slate-50"
           >
             {sortOrder === "asc" ? "↑" : "↓"}
           </button>
         </div>
       </div>
 
-      {/* Scores Table */}
-      <section className="bg-white border rounded-2xl overflow-hidden">
+      {/* Scores Table - styled like OMZA */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           {viewMode === "teams" && data && (() => {
             // Group criteria by category
@@ -527,33 +517,30 @@ export default function ScoresOverviewInner() {
             const categories = Object.keys(grouped);
 
             return (
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
                 {/* Category header row */}
                 <tr>
-                  <th rowSpan={2} className="px-4 py-3 text-left text-sm font-medium text-gray-600 sticky left-0 bg-gray-50 border-b">
+                  <th rowSpan={2} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide sticky left-0 bg-gray-50">
                     Team
                   </th>
-                  <th rowSpan={2} className="px-4 py-3 text-left text-sm font-medium text-gray-600 min-w-[200px] border-b">
+                  <th rowSpan={2} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide min-w-[200px]">
                     Teamleden
                   </th>
                   {categories.map((category) => (
                     <th
                       key={category}
                       colSpan={grouped[category].length}
-                      className="px-4 py-2 text-center text-sm font-semibold text-gray-700 bg-gray-100 border-l border-r"
+                      className="px-4 py-2 text-center text-xs font-semibold text-gray-700 bg-gray-100 border-l border-r border-gray-200"
                     >
                       {category}
                     </th>
                   ))}
-                  <th rowSpan={2} className="px-4 py-3 text-center text-sm font-medium text-gray-600 border-b border-l">
+                  <th rowSpan={2} className="px-4 py-3 text-center text-xs font-semibold text-gray-500 tracking-wide border-l border-gray-200">
                     Totaal
                   </th>
-                  <th rowSpan={2} className="px-4 py-3 text-center text-sm font-medium text-gray-600 border-b">
+                  <th rowSpan={2} className="px-4 py-3 text-center text-xs font-semibold text-gray-500 tracking-wide">
                     Cijfer
-                  </th>
-                  <th rowSpan={2} className="px-4 py-3 text-left text-sm font-medium text-gray-600 border-b">
-                    Laatst bewerkt
                   </th>
                 </tr>
                 {/* Criterion header row */}
@@ -561,30 +548,30 @@ export default function ScoresOverviewInner() {
                   {data.criteria.map((criterion) => (
                     <th
                       key={criterion.id}
-                      className="px-4 py-3 text-center text-xs font-medium text-gray-600 min-w-[100px] border-b"
+                      className="px-4 py-3 text-center text-xs font-medium text-gray-500 min-w-[100px] border-t border-gray-200"
                     >
                       {criterion.name}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-100">
                 {filteredItems.length === 0 && (
                   <tr>
                     <td
-                      colSpan={data.criteria.length + 5}
-                      className="px-4 py-8 text-center text-gray-500"
+                      colSpan={data.criteria.length + 4}
+                      className="px-5 py-8 text-center text-gray-500"
                     >
                       Geen teams gevonden voor dit filter
                     </td>
                   </tr>
                 )}
-                {filteredItems.map((team: any) => (
+                {filteredItems.map((team: typeof data.team_scores[0]) => (
                 <tr
                   key={team.team_number}
-                  className="border-b last:border-b-0 hover:bg-gray-50"
+                  className="bg-white hover:bg-gray-50"
                 >
-                  <td className="px-4 py-3 font-medium sticky left-0 bg-white">
+                  <td className="px-5 py-3 font-medium sticky left-0 bg-white">
                     <Link
                       href={`/teacher/project-assessments/${assessmentId}/edit?team=${team.team_number}`}
                       className="text-blue-600 hover:underline"
@@ -592,7 +579,7 @@ export default function ScoresOverviewInner() {
                       {team.team_name}
                     </Link>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-5 py-3">
                     <div className="text-sm text-gray-600">
                       {team.members.map((m) => m.name).join(", ")}
                     </div>
@@ -617,7 +604,7 @@ export default function ScoresOverviewInner() {
                             onBlur={handleCellBlur}
                             onKeyDown={handleCellKeyDown}
                             autoFocus
-                            className="w-16 px-2 py-1 border rounded text-center"
+                            className="w-16 px-2 py-1 border rounded text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
                             disabled={saving}
                           />
                         ) : (
@@ -626,13 +613,13 @@ export default function ScoresOverviewInner() {
                               handleCellClick(
                                 team.team_number,
                                 cs.criterion_id,
-                                cs.score || undefined
+                                cs.score !== null ? cs.score : undefined
                               )
                             }
-                            className={`px-3 py-1 rounded-lg hover:opacity-80 ${
+                            className={`px-3 py-1 rounded-full border text-xs font-medium transition ${
                               cs.score !== null && cs.score !== undefined
                                 ? getScoreColor(cs.score, data.rubric_scale_min, data.rubric_scale_max)
-                                : "text-gray-400"
+                                : "border-gray-200 text-gray-400 bg-gray-50"
                             }`}
                             title={cs.comment || "Klik om score in te voeren"}
                           >
@@ -642,47 +629,33 @@ export default function ScoresOverviewInner() {
                       </td>
                     );
                   })}
-                  <td className="px-4 py-3 text-center font-medium">
+                  <td className="px-4 py-3 text-center font-medium text-gray-900">
                     {team.total_score !== null && team.total_score !== undefined
                       ? team.total_score.toFixed(1)
                       : "—"}
                   </td>
-                  <td className="px-4 py-3 text-center font-medium">
+                  <td className="px-4 py-3 text-center font-medium text-gray-900">
                     {team.grade !== null && team.grade !== undefined
                       ? team.grade.toFixed(1)
                       : "—"}
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    {team.updated_at ? (
-                      <>
-                        {new Date(team.updated_at).toLocaleDateString("nl-NL")}
-                        {team.updated_by && (
-                          <div className="text-xs text-gray-500">
-                            {team.updated_by}
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-gray-400">—</span>
-                    )}
                   </td>
                 </tr>
               ))}
             </tbody>
             {/* Statistics Footer */}
             {data.team_scores.length > 0 && (
-              <tfoot className="bg-gray-50 border-t font-medium">
+              <tfoot className="bg-gray-50 border-t border-gray-200 font-medium">
                 <tr>
-                  <td className="px-4 py-3 sticky left-0 bg-gray-50">
+                  <td className="px-5 py-3 sticky left-0 bg-gray-50 text-xs font-semibold text-gray-700">
                     Gemiddelde
                   </td>
-                  <td className="px-4 py-3"></td>
+                  <td className="px-5 py-3"></td>
                   {data.criteria.map((criterion) => (
-                    <td key={criterion.id} className="px-4 py-3 text-center">
+                    <td key={criterion.id} className="px-4 py-3 text-center text-sm">
                       {data.statistics.average_per_criterion[criterion.name]?.toFixed(1) || "—"}
                     </td>
                   ))}
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-4 py-3 text-center text-sm">
                     {(() => {
                       const validScores = data.team_scores
                         .filter(t => t.total_score !== null && t.total_score !== undefined)
@@ -692,7 +665,6 @@ export default function ScoresOverviewInner() {
                       return avg.toFixed(1);
                     })()}
                   </td>
-                  <td className="px-4 py-3"></td>
                   <td className="px-4 py-3"></td>
                 </tr>
               </tfoot>
@@ -712,36 +684,33 @@ export default function ScoresOverviewInner() {
             const categories = Object.keys(grouped);
 
             return (
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
                 {/* Category header row */}
                 <tr>
-                  <th rowSpan={2} className="px-4 py-3 text-left text-sm font-medium text-gray-600 sticky left-0 bg-gray-50 border-b">
+                  <th rowSpan={2} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide sticky left-0 bg-gray-50">
                     Team
                   </th>
-                  <th rowSpan={2} className="px-4 py-3 text-left text-sm font-medium text-gray-600 min-w-[200px] border-b">
+                  <th rowSpan={2} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide min-w-[200px]">
                     Leerling
                   </th>
-                  <th rowSpan={2} className="px-4 py-3 text-left text-sm font-medium text-gray-600 min-w-[80px] border-b">
+                  <th rowSpan={2} className="px-3 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide min-w-[80px]">
                     Klas
                   </th>
                   {categories.map((category) => (
                     <th
                       key={category}
                       colSpan={grouped[category].length}
-                      className="px-4 py-2 text-center text-sm font-semibold text-gray-700 bg-gray-100 border-l border-r"
+                      className="px-4 py-2 text-center text-xs font-semibold text-gray-700 bg-gray-100 border-l border-r border-gray-200"
                     >
                       {category}
                     </th>
                   ))}
-                  <th rowSpan={2} className="px-4 py-3 text-center text-sm font-medium text-gray-600 border-b border-l">
+                  <th rowSpan={2} className="px-4 py-3 text-center text-xs font-semibold text-gray-500 tracking-wide border-l border-gray-200">
                     Totaal
                   </th>
-                  <th rowSpan={2} className="px-4 py-3 text-center text-sm font-medium text-gray-600 border-b">
+                  <th rowSpan={2} className="px-4 py-3 text-center text-xs font-semibold text-gray-500 tracking-wide">
                     Cijfer
-                  </th>
-                  <th rowSpan={2} className="px-4 py-3 text-left text-sm font-medium text-gray-600 border-b">
-                    Laatst bewerkt
                   </th>
                 </tr>
                 {/* Criterion header row */}
@@ -749,30 +718,30 @@ export default function ScoresOverviewInner() {
                   {studentsData.criteria.map((criterion) => (
                     <th
                       key={criterion.id}
-                      className="px-4 py-3 text-center text-xs font-medium text-gray-600 min-w-[100px] border-b"
+                      className="px-4 py-3 text-center text-xs font-medium text-gray-500 min-w-[100px] border-t border-gray-200"
                     >
                       {criterion.name}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-100">
                 {filteredItems.length === 0 && (
                   <tr>
                     <td
-                      colSpan={studentsData.criteria.length + 6}
-                      className="px-4 py-8 text-center text-gray-500"
+                      colSpan={studentsData.criteria.length + 5}
+                      className="px-5 py-8 text-center text-gray-500"
                     >
                       Geen leerlingen gevonden voor dit filter
                     </td>
                   </tr>
                 )}
-                {filteredItems.map((student: any) => (
+                {filteredItems.map((student: typeof studentsData.student_scores[0]) => (
                   <tr
                     key={student.student_id}
-                    className="border-b last:border-b-0 hover:bg-gray-50"
+                    className="bg-white hover:bg-gray-50"
                   >
-                    <td className="px-4 py-3 sticky left-0 bg-white">
+                    <td className="px-5 py-3 sticky left-0 bg-white">
                       {student.team_name ? (
                         <Link
                           href={`/teacher/project-assessments/${assessmentId}/edit?team=${student.team_number}`}
@@ -784,13 +753,13 @@ export default function ScoresOverviewInner() {
                         "—"
                       )}
                     </td>
-                    <td className="px-4 py-3 font-medium">
+                    <td className="px-5 py-3 font-medium text-gray-900">
                       {student.student_name}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-3 py-3 text-sm text-gray-600">
                       {student.class_name || "—"}
                     </td>
-                    {student.criterion_scores.map((cs: any) => {
+                    {student.criterion_scores.map((cs) => {
                       const isEditing =
                         editingCell?.teamNumber === student.team_number &&
                         editingCell?.criterionId === cs.criterion_id;
@@ -810,22 +779,24 @@ export default function ScoresOverviewInner() {
                               onBlur={handleCellBlur}
                               onKeyDown={handleCellKeyDown}
                               autoFocus
-                              className="w-16 px-2 py-1 border rounded text-center"
+                              className="w-16 px-2 py-1 border rounded text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
                               disabled={saving}
                             />
                           ) : (
                             <button
-                              onClick={() =>
-                                handleCellClick(
-                                  student.team_number,
-                                  cs.criterion_id,
-                                  cs.score || undefined
-                                )
-                              }
-                              className={`px-3 py-1 rounded-lg hover:opacity-80 ${
+                              onClick={() => {
+                                if (student.team_number !== null && student.team_number !== undefined) {
+                                  handleCellClick(
+                                    student.team_number,
+                                    cs.criterion_id,
+                                    cs.score !== null ? cs.score : undefined
+                                  );
+                                }
+                              }}
+                              className={`px-3 py-1 rounded-full border text-xs font-medium transition ${
                                 cs.score !== null && cs.score !== undefined
                                   ? getScoreColor(cs.score, studentsData.rubric_scale_min, studentsData.rubric_scale_max)
-                                  : "text-gray-400"
+                                  : "border-gray-200 text-gray-400 bg-gray-50"
                               }`}
                               title={cs.comment || "Klik om score in te voeren"}
                             >
@@ -835,52 +806,37 @@ export default function ScoresOverviewInner() {
                         </td>
                       );
                     })}
-                    <td className="px-4 py-3 text-center font-medium">
+                    <td className="px-4 py-3 text-center font-medium text-gray-900">
                       {student.total_score !== null && student.total_score !== undefined
                         ? student.total_score.toFixed(1)
                         : "—"}
                     </td>
-                    <td className="px-4 py-3 text-center font-medium">
+                    <td className="px-4 py-3 text-center font-medium text-gray-900">
                       {student.grade !== null && student.grade !== undefined
                         ? student.grade.toFixed(1)
                         : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      {student.updated_at ? (
-                        <>
-                          {new Date(student.updated_at).toLocaleDateString("nl-NL")}
-                          {student.updated_by && (
-                            <div className="text-xs text-gray-500">
-                              {student.updated_by}
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
                     </td>
                   </tr>
                 ))}
               </tbody>
               {/* Statistics Footer */}
               {studentsData.student_scores.length > 0 && (
-                <tfoot className="bg-gray-50 border-t font-medium">
+                <tfoot className="bg-gray-50 border-t border-gray-200 font-medium">
                   <tr>
-                    <td className="px-4 py-3 sticky left-0 bg-gray-50"></td>
-                    <td className="px-4 py-3">
+                    <td className="px-5 py-3 sticky left-0 bg-gray-50"></td>
+                    <td className="px-5 py-3 text-xs font-semibold text-gray-700">
                       Gemiddelde
                     </td>
-                    <td className="px-4 py-3"></td>
+                    <td className="px-3 py-3"></td>
                     {studentsData.criteria.map((criterion) => (
-                      <td key={criterion.id} className="px-4 py-3 text-center">
+                      <td key={criterion.id} className="px-4 py-3 text-center text-sm">
                         {studentsData.statistics.average_per_criterion[criterion.name]?.toFixed(1) || "—"}
                       </td>
                     ))}
-                    <td className="px-4 py-3 text-center"></td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-4 py-3 text-center text-sm"></td>
+                    <td className="px-4 py-3 text-center text-sm">
                       {studentsData.statistics.average_grade?.toFixed(1) || "—"}
                     </td>
-                    <td className="px-4 py-3"></td>
                   </tr>
                 </tfoot>
               )}
@@ -888,41 +844,41 @@ export default function ScoresOverviewInner() {
             );
           })()}
         </div>
-      </section>
+      </div>
 
-      {/* Statistics Summary */}
-      <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Statistics Summary - styled like OMZA KPIs */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {viewMode === "teams" && data && (
           <>
-            <div className="bg-white border rounded-2xl p-4">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">
+            <div className="rounded-xl border border-blue-100 bg-white/70 p-4 shadow-sm">
+              <h3 className="text-xs font-semibold text-gray-500 mb-1">
                 Gemiddeld cijfer
               </h3>
-              <p className="text-2xl font-semibold">
+              <p className="text-2xl font-bold text-gray-900">
                 {data.statistics.average_grade?.toFixed(1) || "—"}
               </p>
             </div>
-            <div className="bg-white border rounded-2xl p-4">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">
+            <div className="rounded-xl border border-green-100 bg-white/70 p-4 shadow-sm">
+              <h3 className="text-xs font-semibold text-gray-500 mb-1">
                 Hoogste cijfer
               </h3>
-              <p className="text-2xl font-semibold">
+              <p className="text-2xl font-bold text-green-600">
                 {data.statistics.highest_grade?.toFixed(1) || "—"}
               </p>
             </div>
-            <div className="bg-white border rounded-2xl p-4">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">
+            <div className="rounded-xl border border-amber-100 bg-white/70 p-4 shadow-sm">
+              <h3 className="text-xs font-semibold text-gray-500 mb-1">
                 Laagste cijfer
               </h3>
-              <p className="text-2xl font-semibold">
+              <p className="text-2xl font-bold text-amber-600">
                 {data.statistics.lowest_grade?.toFixed(1) || "—"}
               </p>
             </div>
-            <div className="bg-white border rounded-2xl p-4">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">
-                Aantal openstaand
+            <div className="rounded-xl border border-gray-100 bg-white/70 p-4 shadow-sm">
+              <h3 className="text-xs font-semibold text-gray-500 mb-1">
+                Openstaand
               </h3>
-              <p className="text-2xl font-semibold">
+              <p className="text-2xl font-bold text-gray-900">
                 {data.statistics.pending_assessments}
               </p>
             </div>
@@ -930,41 +886,41 @@ export default function ScoresOverviewInner() {
         )}
         {viewMode === "students" && studentsData && (
           <>
-            <div className="bg-white border rounded-2xl p-4">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">
+            <div className="rounded-xl border border-blue-100 bg-white/70 p-4 shadow-sm">
+              <h3 className="text-xs font-semibold text-gray-500 mb-1">
                 Gemiddeld cijfer
               </h3>
-              <p className="text-2xl font-semibold">
+              <p className="text-2xl font-bold text-gray-900">
                 {studentsData.statistics.average_grade?.toFixed(1) || "—"}
               </p>
             </div>
-            <div className="bg-white border rounded-2xl p-4">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">
+            <div className="rounded-xl border border-green-100 bg-white/70 p-4 shadow-sm">
+              <h3 className="text-xs font-semibold text-gray-500 mb-1">
                 Hoogste cijfer
               </h3>
-              <p className="text-2xl font-semibold">
+              <p className="text-2xl font-bold text-green-600">
                 {studentsData.statistics.highest_grade?.toFixed(1) || "—"}
               </p>
             </div>
-            <div className="bg-white border rounded-2xl p-4">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">
+            <div className="rounded-xl border border-amber-100 bg-white/70 p-4 shadow-sm">
+              <h3 className="text-xs font-semibold text-gray-500 mb-1">
                 Laagste cijfer
               </h3>
-              <p className="text-2xl font-semibold">
+              <p className="text-2xl font-bold text-amber-600">
                 {studentsData.statistics.lowest_grade?.toFixed(1) || "—"}
               </p>
             </div>
-            <div className="bg-white border rounded-2xl p-4">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">
-                Aantal openstaand
+            <div className="rounded-xl border border-gray-100 bg-white/70 p-4 shadow-sm">
+              <h3 className="text-xs font-semibold text-gray-500 mb-1">
+                Openstaand
               </h3>
-              <p className="text-2xl font-semibold">
+              <p className="text-2xl font-bold text-gray-900">
                 {studentsData.statistics.pending_assessments}
               </p>
             </div>
           </>
         )}
-        </section>
+      </div>
     </>
   );
 }
