@@ -143,22 +143,6 @@ export default function ExternalAssessmentPageInner() {
     loadDetail();
   }, [selectedTeamId, selectedTeamNumber]);
 
-  // Compute KPIs
-  const submittedCount = externalStatuses.filter(
-    (s) => s.status === "SUBMITTED"
-  ).length;
-  const pendingCount = externalStatuses.filter(
-    (s) => s.status === "INVITED" || s.status === "IN_PROGRESS"
-  ).length;
-  const notInvitedCount = externalStatuses.filter(
-    (s) => s.status === "NOT_INVITED"
-  ).length;
-  const totalExternals = new Set(
-    externalStatuses
-      .filter((s) => s.external_evaluator)
-      .map((s) => s.external_evaluator?.email)
-  ).size;
-
   // Format date
   const formatDate = (dateStr: string | null | undefined) => {
     if (!dateStr) return "—";
@@ -246,64 +230,6 @@ export default function ExternalAssessmentPageInner() {
 
   return (
     <>
-      {/* Action buttons - aligned right */}
-      <div className="flex items-center justify-between">
-        {/* Status Filter Toggle - styled like scores tab */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setStatusFilter("all")}
-            className={`px-4 py-2 rounded-xl border font-medium shadow-sm ${
-              statusFilter === "all"
-                ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
-                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-            }`}
-          >
-            Alle
-          </button>
-          <button
-            onClick={() => setStatusFilter("submitted")}
-            className={`px-4 py-2 rounded-xl border font-medium shadow-sm ${
-              statusFilter === "submitted"
-                ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
-                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-            }`}
-          >
-            ✅ Ingeleverd
-          </button>
-          <button
-            onClick={() => setStatusFilter("pending")}
-            className={`px-4 py-2 rounded-xl border font-medium shadow-sm ${
-              statusFilter === "pending"
-                ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
-                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-            }`}
-          >
-            ⏳ Wachtend
-          </button>
-          <button
-            onClick={() => setStatusFilter("not_invited")}
-            className={`px-4 py-2 rounded-xl border font-medium shadow-sm ${
-              statusFilter === "not_invited"
-                ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
-                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-            }`}
-          >
-            ⬜ Geen uitnodiging
-          </button>
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex gap-2 flex-wrap">
-          <button
-            onClick={() => loadData()}
-            className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-            disabled={loading}
-          >
-            ⟳ Verversen
-          </button>
-        </div>
-      </div>
-
       {/* Search and Filters - styled like OMZA */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="flex flex-wrap gap-3 items-center">
@@ -313,42 +239,16 @@ export default function ExternalAssessmentPageInner() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-        </div>
-      </div>
-
-      {/* KPI Cards - styled like OMZA */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="rounded-xl border border-green-100 bg-white/70 p-4 shadow-sm">
-          <h3 className="text-xs font-semibold text-gray-500 mb-1">
-            Teams met extern advies
-          </h3>
-          <p className="text-2xl font-bold text-green-600">
-            {submittedCount}
-          </p>
-        </div>
-        <div className="rounded-xl border border-amber-100 bg-white/70 p-4 shadow-sm">
-          <h3 className="text-xs font-semibold text-gray-500 mb-1">
-            Nog te beoordelen teams
-          </h3>
-          <p className="text-2xl font-bold text-amber-600">
-            {pendingCount}
-          </p>
-        </div>
-        <div className="rounded-xl border border-gray-100 bg-white/70 p-4 shadow-sm">
-          <h3 className="text-xs font-semibold text-gray-500 mb-1">
-            Geen extern gekoppeld
-          </h3>
-          <p className="text-2xl font-bold text-gray-900">
-            {notInvitedCount}
-          </p>
-        </div>
-        <div className="rounded-xl border border-blue-100 bg-white/70 p-4 shadow-sm">
-          <h3 className="text-xs font-semibold text-gray-500 mb-1">
-            Aantal externen
-          </h3>
-          <p className="text-2xl font-bold text-blue-600">
-            {totalExternals}
-          </p>
+          <select
+            className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="all">Alle</option>
+            <option value="submitted">✅ Ingeleverd</option>
+            <option value="pending">⏳ Wachtend</option>
+            <option value="not_invited">⬜ Geen uitnodiging</option>
+          </select>
         </div>
       </div>
 

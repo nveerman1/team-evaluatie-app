@@ -93,72 +93,8 @@ export default function ProjectAssessmentOverviewInner() {
     return sortOrder === "asc" ? comparison : -comparison;
   });
 
-  // Calculate KPI statistics
-  const totalTeams = data.teams.length;
-  const completedTeams = data.teams.filter(t => t.status === "completed").length;
-  const inProgressTeams = data.teams.filter(t => t.status === "in_progress").length;
-  const notStartedTeams = data.teams.filter(t => t.status === "not_started").length;
-
   return (
     <>
-      {/* Action buttons - aligned right */}
-      <div className="flex items-center justify-between">
-        {/* Status Filter Toggle - styled like scores tab */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setStatusFilter("all")}
-            className={`px-4 py-2 rounded-xl border font-medium shadow-sm ${
-              statusFilter === "all"
-                ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
-                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-            }`}
-          >
-            Alle
-          </button>
-          <button
-            onClick={() => setStatusFilter("not_started")}
-            className={`px-4 py-2 rounded-xl border font-medium shadow-sm ${
-              statusFilter === "not_started"
-                ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
-                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-            }`}
-          >
-            ⬜ Niet gestart
-          </button>
-          <button
-            onClick={() => setStatusFilter("in_progress")}
-            className={`px-4 py-2 rounded-xl border font-medium shadow-sm ${
-              statusFilter === "in_progress"
-                ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
-                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-            }`}
-          >
-            ⚠️ In progress
-          </button>
-          <button
-            onClick={() => setStatusFilter("completed")}
-            className={`px-4 py-2 rounded-xl border font-medium shadow-sm ${
-              statusFilter === "completed"
-                ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
-                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-            }`}
-          >
-            ✅ Afgerond
-          </button>
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex gap-2 flex-wrap">
-          <button
-            onClick={() => loadData()}
-            className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-            disabled={loading}
-          >
-            ⟳ Verversen
-          </button>
-        </div>
-      </div>
-
       {/* Search and Filters - styled like OMZA */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="flex flex-wrap gap-3 items-center">
@@ -177,6 +113,16 @@ export default function ProjectAssessmentOverviewInner() {
             <option value="status">Status</option>
             <option value="progress">Voortgang</option>
             <option value="updated">Laatste bewerking</option>
+          </select>
+          <select
+            className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="all">Alle</option>
+            <option value="not_started">⬜ Niet gestart</option>
+            <option value="in_progress">⚠️ In progress</option>
+            <option value="completed">✅ Afgerond</option>
           </select>
           <button
             onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
@@ -302,42 +248,6 @@ export default function ProjectAssessmentOverviewInner() {
               ))}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* Statistics Summary - styled like OMZA KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="rounded-xl border border-blue-100 bg-white/70 p-4 shadow-sm">
-          <h3 className="text-xs font-semibold text-gray-500 mb-1">
-            Totaal teams
-          </h3>
-          <p className="text-2xl font-bold text-gray-900">
-            {totalTeams}
-          </p>
-        </div>
-        <div className="rounded-xl border border-green-100 bg-white/70 p-4 shadow-sm">
-          <h3 className="text-xs font-semibold text-gray-500 mb-1">
-            Afgerond
-          </h3>
-          <p className="text-2xl font-bold text-green-600">
-            {completedTeams}
-          </p>
-        </div>
-        <div className="rounded-xl border border-amber-100 bg-white/70 p-4 shadow-sm">
-          <h3 className="text-xs font-semibold text-gray-500 mb-1">
-            In progress
-          </h3>
-          <p className="text-2xl font-bold text-amber-600">
-            {inProgressTeams}
-          </p>
-        </div>
-        <div className="rounded-xl border border-gray-100 bg-white/70 p-4 shadow-sm">
-          <h3 className="text-xs font-semibold text-gray-500 mb-1">
-            Niet gestart
-          </h3>
-          <p className="text-2xl font-bold text-gray-900">
-            {notStartedTeams}
-          </p>
         </div>
       </div>
     </>

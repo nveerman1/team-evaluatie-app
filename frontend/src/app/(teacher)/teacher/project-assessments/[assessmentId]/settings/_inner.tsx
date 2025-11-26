@@ -386,25 +386,8 @@ export default function SettingsPageInner() {
     data.teams.length > 0 &&
     allTeamsConfig.selected_teams.length === data.teams.length;
 
-  // Calculate KPI statistics
-  const totalTeams = data.teams.length;
-  const teamsWithRubric = totalTeams; // All teams share the same rubric
-
   return (
     <>
-      {/* Action buttons - aligned right */}
-      <div className="flex items-center justify-end">
-        <div className="flex gap-2 flex-wrap">
-          <button
-            onClick={() => loadData()}
-            className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-            disabled={loading}
-          >
-            ⟳ Verversen
-          </button>
-        </div>
-      </div>
-
       {/* Success/Error Messages */}
       {successMessage && (
         <div className="rounded-xl bg-green-50 border border-green-200 p-4 text-green-800 shadow-sm">
@@ -416,42 +399,6 @@ export default function SettingsPageInner() {
           ❌ {submitError}
         </div>
       )}
-
-      {/* KPI Cards - styled like OMZA */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="rounded-xl border border-blue-100 bg-white/70 p-4 shadow-sm">
-          <h3 className="text-xs font-semibold text-gray-500 mb-1">
-            Totaal teams
-          </h3>
-          <p className="text-2xl font-bold text-gray-900">
-            {totalTeams}
-          </p>
-        </div>
-        <div className="rounded-xl border border-green-100 bg-white/70 p-4 shadow-sm">
-          <h3 className="text-xs font-semibold text-gray-500 mb-1">
-            Met rubric
-          </h3>
-          <p className="text-2xl font-bold text-green-600">
-            {teamsWithRubric}
-          </p>
-        </div>
-        <div className="rounded-xl border border-amber-100 bg-white/70 p-4 shadow-sm">
-          <h3 className="text-xs font-semibold text-gray-500 mb-1">
-            Extern ingeschakeld
-          </h3>
-          <p className="text-2xl font-bold text-amber-600">
-            {externalEnabled ? "Ja" : "Nee"}
-          </p>
-        </div>
-        <div className="rounded-xl border border-gray-100 bg-white/70 p-4 shadow-sm">
-          <h3 className="text-xs font-semibold text-gray-500 mb-1">
-            Extern modus
-          </h3>
-          <p className="text-2xl font-bold text-gray-900">
-            {externalMode === "all_teams" ? "Alle teams" : externalMode === "per_team" ? "Per team" : "Geen"}
-          </p>
-        </div>
-      </div>
 
       {/* Card 1: Basis instellingen beoordeling */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
