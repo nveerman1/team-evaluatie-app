@@ -12,3 +12,4 @@ export * from "./useCurrentUser";
 export * from "./useAuth";
 export * from "./useClients";
 export * from "./useDebounce";
+export * from "./student/useStudentGrowth";
