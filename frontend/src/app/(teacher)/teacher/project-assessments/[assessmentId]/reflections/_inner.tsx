@@ -103,13 +103,6 @@ export default function ProjectAssessmentReflectionsInner() {
 
   return (
     <>
-      {/* Info bar */}
-      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
-        <p className="text-gray-600 text-sm">
-          Team: {data.group_name} • {data.reflections.length} reflectie(s)
-        </p>
-      </div>
-
       {/* Search and Filter bar */}
       <div className="sticky top-0 bg-white/80 backdrop-blur border border-gray-200 rounded-2xl p-3 flex flex-wrap items-center gap-3 shadow-sm">
         <input
