@@ -27,8 +27,6 @@ export default function ScoresOverviewInner() {
   } | null>(null);
   const [editValue, setEditValue] = useState<string>("");
   const [saving, setSaving] = useState(false);
-  const [publishing, setPublishing] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
 
   const loadTeamsData = useCallback(async () => {
     setLoading(true);
@@ -73,42 +71,6 @@ export default function ScoresOverviewInner() {
       loadStudentsData();
     }
   }, [viewMode, loadTeamsData, loadStudentsData]);
-
-  // Show toast notification
-  const showToast = useCallback((message: string) => {
-    setToast(message);
-    setTimeout(() => setToast(null), 3000);
-  }, []);
-
-  // Toggle publish status
-  async function handleTogglePublish() {
-    const currentData = viewMode === "teams" ? data : studentsData;
-    if (!currentData) return;
-
-    const currentStatus = currentData.assessment.status;
-    const newStatus = currentStatus === "published" ? "draft" : "published";
-    
-    setPublishing(true);
-    try {
-      await projectAssessmentService.updateProjectAssessment(assessmentId, {
-        status: newStatus,
-      });
-      
-      // Reload data to get updated status
-      if (viewMode === "teams") {
-        await loadTeamsData();
-      } else {
-        await loadStudentsData();
-      }
-      
-      showToast(newStatus === "published" ? "Beoordeling gepubliceerd" : "Beoordeling teruggezet naar concept");
-    } catch (e: unknown) {
-      const err = e as { response?: { data?: { detail?: string } }; message?: string };
-      showToast(err?.response?.data?.detail || err?.message || "Status wijzigen mislukt");
-    } finally {
-      setPublishing(false);
-    }
-  }
 
   async function handleSaveScore(
     teamNumber: number,
@@ -440,56 +402,7 @@ export default function ScoresOverviewInner() {
 
   return (
     <>
-      {/* Toast notification */}
-      {toast && (
-        <div className="fixed top-4 right-4 z-50 animate-fade-in">
-          <div className="bg-gray-900 text-white px-4 py-2 rounded-lg shadow-lg">
-            {toast}
-          </div>
-        </div>
-      )}
-
-      {/* Page Header with Publiceer button - styled like /teacher/evaluations pages */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70 -mx-4 sm:-mx-6 -mt-6 mb-6 px-4 sm:px-6">
-        <div className="py-4 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-          <div>
-            <h2 className="text-xl font-semibold tracking-tight text-gray-900">
-              Scores Overzicht
-            </h2>
-            <p className="text-gray-600 mt-0.5 text-sm">
-              Bekijk en bewerk scores per team of per leerling.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => viewMode === "teams" ? loadTeamsData() : loadStudentsData()}
-              className="rounded-full border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              disabled={loading}
-            >
-              ⟳ Verversen
-            </button>
-            <button
-              onClick={exportToCSV}
-              className="rounded-full border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              📄 CSV
-            </button>
-            <button
-              onClick={handleTogglePublish}
-              disabled={publishing}
-              className={`rounded-full px-4 py-2 text-sm font-semibold shadow-sm ${
-                currentData.assessment.status === "published"
-                  ? "bg-amber-500 text-white hover:bg-amber-600"
-                  : "bg-blue-600 text-white hover:bg-blue-700"
-              } disabled:opacity-60`}
-            >
-              {publishing ? "..." : currentData.assessment.status === "published" ? "📝 Concept" : "✅ Publiceer"}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* View Mode Toggle and Filters row */}
+      {/* Action buttons - aligned right */}
       <div className="flex items-center justify-between">
         {/* View Mode Toggle - styled like Tabelweergave button */}
         <div className="flex items-center gap-2">
@@ -520,6 +433,23 @@ export default function ScoresOverviewInner() {
             }`}
           >
             Leerlingen
+          </button>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => viewMode === "teams" ? loadTeamsData() : loadStudentsData()}
+            className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+            disabled={loading}
+          >
+            ⟳ Verversen
+          </button>
+          <button
+            onClick={exportToCSV}
+            className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+          >
+            📄 CSV
           </button>
         </div>
       </div>
