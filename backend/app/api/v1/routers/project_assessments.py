@@ -487,11 +487,12 @@ def get_assessment_teams_overview(
             ProjectAssessmentScore.student_id.is_(None),  # Only count team scores, not individual overrides
         ).scalar() or 0
         
-        # Get the most recent update timestamp for this team's scores
+        # Get the most recent update timestamp for this team's scores (only team-level scores)
         latest_update = db.query(func.max(ProjectAssessmentScore.updated_at)).filter(
             ProjectAssessmentScore.assessment_id == pa.id,
             ProjectAssessmentScore.team_number == team_num,
             ProjectAssessmentScore.school_id == user.school_id,
+            ProjectAssessmentScore.student_id.is_(None),  # Only team-level scores
         ).scalar()
         
         # Determine status
