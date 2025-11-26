@@ -6,7 +6,7 @@ import Link from "next/link";
 import { ApiAuthError } from "@/lib/api";
 import { projectAssessmentService } from "@/services";
 import { ProjectAssessmentTeamOverview } from "@/dtos";
-import { Loading, ErrorMessage } from "@/components";
+import { Loading, ErrorMessage, StatusToggle } from "@/components";
 import { ProjectAssessmentTabs } from "@/components/teacher/project-assessments/ProjectAssessmentTabs";
 
 type LayoutProps = {
@@ -52,12 +52,12 @@ export default function ProjectAssessmentLayout({ children }: LayoutProps) {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  // Toggle publish status
-  async function handleTogglePublish() {
-    if (!data) return;
-
-    const currentStatus = data.assessment.status;
-    const newStatus = currentStatus === "published" ? "draft" : "published";
+  // Handle status change from toggle
+  async function handleStatusChange(newStatus: string) {
+    if (!data || publishing) return;
+    
+    // Don't do anything if status is the same
+    if (data.assessment.status === newStatus) return;
     
     setPublishing(true);
     try {
@@ -113,17 +113,15 @@ export default function ProjectAssessmentLayout({ children }: LayoutProps) {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={handleTogglePublish}
+              <StatusToggle
+                options={[
+                  { value: "draft", label: "Concept" },
+                  { value: "published", label: "Gepubliceerd" },
+                ]}
+                value={data.assessment.status}
+                onChange={handleStatusChange}
                 disabled={publishing}
-                className={`rounded-full px-4 py-2 text-sm font-semibold shadow-sm disabled:opacity-60 ${
-                  data.assessment.status === "published"
-                    ? "bg-amber-500 text-white hover:bg-amber-600"
-                    : "bg-blue-600 text-white hover:bg-blue-700"
-                }`}
-              >
-                {publishing ? "..." : data.assessment.status === "published" ? "📝 Concept" : "✅ Publiceer"}
-              </button>
+              />
             </div>
           </div>
         </header>
