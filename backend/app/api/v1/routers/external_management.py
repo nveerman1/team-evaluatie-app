@@ -427,12 +427,18 @@ def get_project_external_status(
 @router.get("/groups/{group_id}/external-advisory")
 def get_external_advisory_detail(
     group_id: int,
+    team_number: Optional[int] = None,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
     """
     Get external advisory assessment detail for a specific team.
     Returns the rubric scores and general comment from the external evaluator.
+    
+    Args:
+        group_id: The group/course ID
+        team_number: The team number within the group (recommended for proper team identification
+                     when multiple teams exist in the same group)
     """
     from app.infra.db.models import ProjectAssessment, ProjectAssessmentScore, RubricCriterion
     from app.api.v1.schemas.external_assessments import ExternalAdvisoryScoreOut, ExternalAdvisoryDetail
@@ -448,13 +454,17 @@ def get_external_advisory_detail(
     if not group:
         raise HTTPException(status_code=404, detail="Team not found")
     
-    # Get external link
-    link = db.query(ProjectTeamExternal).filter(
+    # Get external link - filter by both group_id and team_number
+    link_query = db.query(ProjectTeamExternal).filter(
         ProjectTeamExternal.group_id == group_id,
-    ).first()
+    )
+    if team_number is not None:
+        link_query = link_query.filter(ProjectTeamExternal.team_number == team_number)
+    link = link_query.first()
     
     if not link:
-        raise HTTPException(status_code=404, detail="No external evaluator linked to this team")
+        detail_msg = f"No external evaluator linked to team {team_number}" if team_number is not None else "No external evaluator linked to this group"
+        raise HTTPException(status_code=404, detail=detail_msg)
     
     # Get external evaluator
     evaluator = db.get(ExternalEvaluator, link.external_evaluator_id)
@@ -477,6 +487,7 @@ def get_external_advisory_detail(
         raise HTTPException(status_code=404, detail="Rubric not found")
     
     # Get scores with criterion info
+    # Note: Scores are associated with the assessment which is already scoped to the evaluator/team
     scores = db.query(ProjectAssessmentScore).filter(
         ProjectAssessmentScore.assessment_id == assessment.id
     ).all()
@@ -499,9 +510,12 @@ def get_external_advisory_detail(
     if assessment.metadata_json:
         general_comment = assessment.metadata_json.get("general_comment")
     
+    # Construct team name - use "Team X" format when team_number is provided, otherwise use group name
+    team_display_name = f"Team {team_number}" if team_number is not None else group.name
+    
     return ExternalAdvisoryDetail(
         team_id=group_id,
-        team_name=group.name,
+        team_name=team_display_name,
         external_evaluator=ExternalEvaluatorOut.model_validate(evaluator),
         rubric_title=rubric.title,
         rubric_scale_min=rubric.scale_min,

@@ -128,10 +128,13 @@ export const externalAssessmentService = {
    * Get external advisory assessment detail for a specific team
    */
   async getExternalAdvisoryDetail(
-    groupId: number
+    groupId: number,
+    teamNumber?: number
   ): Promise<ExternalAdvisoryDetail> {
+    const params = teamNumber !== undefined ? { team_number: teamNumber } : {};
     const response = await api.get(
-      `/projects/external-management/groups/${groupId}/external-advisory`
+      `/projects/external-management/groups/${groupId}/external-advisory`,
+      { params }
     );
     return response.data;
   },
