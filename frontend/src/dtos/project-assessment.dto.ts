@@ -50,6 +50,7 @@ export type ProjectAssessmentScoreOut = {
   score: number;
   comment?: string | null;
   team_number?: number | null;
+  student_id?: number | null;
 };
 
 export type ProjectAssessmentScoreCreate = {
@@ -57,6 +58,7 @@ export type ProjectAssessmentScoreCreate = {
   score: number;
   comment?: string | null;
   team_number?: number | null;
+  student_id?: number | null;  // If set, this is an individual student override
 };
 
 export type ProjectAssessmentScoreBatchRequest = {
@@ -143,6 +145,7 @@ export type CriterionScore = {
   category?: string | null;
   score?: number | null;
   comment?: string | null;
+  is_override?: boolean;  // True if this is an individual student override
 };
 
 export type TeamScoreOverview = {

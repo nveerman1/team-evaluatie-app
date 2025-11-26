@@ -558,7 +558,11 @@ class ProjectAssessment(Base):
 
 class ProjectAssessmentScore(Base):
     """
-    Scores for project assessment criteria
+    Scores for project assessment criteria.
+    
+    A score can be either:
+    - A team score: when student_id is NULL (applies to all team members)
+    - An individual student override: when student_id is set (overrides team score for that student)
     """
 
     __tablename__ = "project_assessment_scores"
@@ -573,19 +577,26 @@ class ProjectAssessmentScore(Base):
         ForeignKey("rubric_criteria.id", ondelete="CASCADE"), nullable=False
     )
     team_number: Mapped[Optional[int]] = mapped_column(nullable=True)
+    student_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
 
     score: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     comment: Mapped[Optional[str]] = mapped_column(Text)
 
     __table_args__ = (
+        # Allow one team score per criterion (student_id NULL)
+        # Allow one individual override per student per criterion (student_id set)
         UniqueConstraint(
             "assessment_id",
             "criterion_id",
             "team_number",
-            name="uq_project_score_per_criterion_team",
+            "student_id",
+            name="uq_project_score_per_criterion_team_student",
         ),
         Index("ix_project_score_assessment", "assessment_id"),
         Index("ix_project_score_team", "assessment_id", "team_number"),
+        Index("ix_project_score_student", "assessment_id", "student_id"),
     )
 
 

@@ -61,6 +61,7 @@ class ProjectAssessmentScoreCreate(BaseModel):
     score: int
     comment: Optional[str] = None
     team_number: Optional[int] = None
+    student_id: Optional[int] = None  # If set, this is an individual student override
 
 
 class ProjectAssessmentScoreUpdate(BaseModel):
@@ -75,6 +76,7 @@ class ProjectAssessmentScoreOut(BaseModel):
     score: int
     comment: Optional[str]
     team_number: Optional[int]
+    student_id: Optional[int] = None  # If set, this is an individual student override
 
     class Config:
         from_attributes = True
@@ -178,6 +180,7 @@ class CriterionScore(BaseModel):
     category: Optional[str] = None
     score: Optional[int] = None
     comment: Optional[str] = None
+    is_override: bool = False  # True if this is an individual student override
 
 
 class TeamScoreOverview(BaseModel):

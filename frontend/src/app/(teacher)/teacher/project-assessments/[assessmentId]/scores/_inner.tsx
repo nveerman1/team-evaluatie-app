@@ -21,8 +21,11 @@ export default function ScoresOverviewInner() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("team");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  // For teams view: teamNumber and criterionId
+  // For students view: studentId and criterionId
   const [editingCell, setEditingCell] = useState<{
-    teamNumber: number;
+    teamNumber?: number;
+    studentId?: number;
     criterionId: number;
   } | null>(null);
   const [editValue, setEditValue] = useState<string>("");
@@ -76,7 +79,8 @@ export default function ScoresOverviewInner() {
     teamNumber: number,
     criterionId: number,
     newScore: number,
-    comment?: string
+    comment?: string,
+    studentId?: number  // If provided, saves as individual student override
   ) {
     if (!data && !studentsData) return;
     
@@ -89,6 +93,7 @@ export default function ScoresOverviewInner() {
             score: newScore,
             comment: comment || null,
             team_number: teamNumber,
+            student_id: studentId || null,  // null for team score, set for individual override
           },
         ],
       });
@@ -108,8 +113,13 @@ export default function ScoresOverviewInner() {
     }
   }
 
-  function handleCellClick(teamNumber: number, criterionId: number, currentScore?: number) {
-    setEditingCell({ teamNumber, criterionId });
+  function handleCellClick(
+    criterionId: number,
+    currentScore?: number,
+    teamNumber?: number,
+    studentId?: number
+  ) {
+    setEditingCell({ teamNumber, studentId, criterionId });
     setEditValue(currentScore?.toString() || "");
   }
 
@@ -119,7 +129,14 @@ export default function ScoresOverviewInner() {
       if (!isNaN(score) && score >= currentData.rubric_scale_min && score <= currentData.rubric_scale_max) {
         // Scores are stored as integers, so round the value
         const finalScore = Math.round(score);
-        handleSaveScore(editingCell.teamNumber, editingCell.criterionId, finalScore);
+        // Pass studentId for individual overrides in students view
+        handleSaveScore(
+          editingCell.teamNumber || 0,
+          editingCell.criterionId,
+          finalScore,
+          undefined,
+          editingCell.studentId
+        );
       } else {
         setEditingCell(null);
       }
@@ -611,9 +628,10 @@ export default function ScoresOverviewInner() {
                           <button
                             onClick={() =>
                               handleCellClick(
-                                team.team_number,
                                 cs.criterion_id,
-                                cs.score !== null ? cs.score : undefined
+                                cs.score !== null ? cs.score : undefined,
+                                team.team_number,
+                                undefined  // no studentId for team scores
                               )
                             }
                             className={`px-3 py-1 rounded-full border text-xs font-medium transition ${
@@ -760,8 +778,9 @@ export default function ScoresOverviewInner() {
                       {student.class_name || "—"}
                     </td>
                     {student.criterion_scores.map((cs) => {
+                      // In students view, we edit by studentId
                       const isEditing =
-                        editingCell?.teamNumber === student.team_number &&
+                        editingCell?.studentId === student.student_id &&
                         editingCell?.criterionId === cs.criterion_id;
 
                       return (
@@ -785,22 +804,23 @@ export default function ScoresOverviewInner() {
                           ) : (
                             <button
                               onClick={() => {
-                                if (student.team_number !== null && student.team_number !== undefined) {
-                                  handleCellClick(
-                                    student.team_number,
-                                    cs.criterion_id,
-                                    cs.score !== null ? cs.score : undefined
-                                  );
-                                }
+                                // Save as individual student override
+                                handleCellClick(
+                                  cs.criterion_id,
+                                  cs.score !== null ? cs.score : undefined,
+                                  student.team_number ?? undefined,
+                                  student.student_id
+                                );
                               }}
                               className={`px-3 py-1 rounded-full border text-xs font-medium transition ${
                                 cs.score !== null && cs.score !== undefined
                                   ? getScoreColor(cs.score, studentsData.rubric_scale_min, studentsData.rubric_scale_max)
                                   : "border-gray-200 text-gray-400 bg-gray-50"
-                              }`}
-                              title={cs.comment || "Klik om score in te voeren"}
+                              } ${cs.is_override ? "ring-2 ring-purple-400" : ""}`}
+                              title={cs.is_override ? "Individuele aanpassing" : (cs.comment || "Klik om score aan te passen")}
                             >
                               {cs.score !== null && cs.score !== undefined ? cs.score : "—"}
+                              {cs.is_override && <span className="ml-1 text-purple-600">✱</span>}
                             </button>
                           )}
                         </td>
