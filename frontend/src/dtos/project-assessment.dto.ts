@@ -37,6 +37,7 @@ export type ProjectAssessmentCreate = {
 
 export type ProjectAssessmentUpdate = {
   title?: string | null;
+  rubric_id?: number | null;
   version?: string | null;
   status?: string | null;
   metadata_json?: Record<string, any>;

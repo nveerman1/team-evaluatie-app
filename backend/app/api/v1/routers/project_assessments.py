@@ -362,6 +362,17 @@ def update_project_assessment(
     
     if payload.title is not None:
         pa.title = payload.title
+    if payload.rubric_id is not None:
+        # Verify rubric exists and has scope='project'
+        rubric = db.query(Rubric).filter(
+            Rubric.id == payload.rubric_id,
+            Rubric.school_id == user.school_id,
+        ).first()
+        if not rubric:
+            raise HTTPException(status_code=404, detail="Rubric not found")
+        if rubric.scope != "project":
+            raise HTTPException(status_code=400, detail="Rubric must have scope='project'")
+        pa.rubric_id = payload.rubric_id
     if payload.version is not None:
         pa.version = payload.version
     if payload.status is not None:
