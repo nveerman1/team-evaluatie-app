@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import Optional
 
 from app.api.v1.deps import get_db, get_current_user
+from app.core.grading import score_to_grade as _score_to_grade
 from app.infra.db.models import (
     User,
     Course,
@@ -32,7 +33,7 @@ router = APIRouter(prefix="/overview", tags=["overview"])
 def _calculate_project_score(db: Session, assessment_id: int, rubric_id: int, team_number: int) -> Optional[float]:
     """
     Calculate final grade for a project assessment for a specific team
-    Uses weighted average based on criterion weights, then normalizes to 1-10 scale
+    Uses weighted average based on criterion weights, then normalizes to 1-10 scale using curved mapping
     """
     # Get rubric scale
     rubric = db.query(Rubric).filter(Rubric.id == rubric_id).first()
@@ -73,13 +74,8 @@ def _calculate_project_score(db: Session, assessment_id: int, rubric_id: int, te
     
     avg_score = total_weighted_score / total_weight
     
-    # Normalize to 1-10 scale (grade)
-    scale_range = rubric.scale_max - rubric.scale_min
-    if scale_range > 0:
-        grade = ((avg_score - rubric.scale_min) / scale_range) * 9 + 1
-        return round(grade, 1)
-    
-    return round(avg_score, 1)
+    # Normalize to 1-10 scale using curved mapping
+    return _score_to_grade(avg_score, rubric.scale_min, rubric.scale_max)
 
 
 def _calculate_peer_score(db: Session, evaluation_id: int, user_id: int) -> Optional[float]:

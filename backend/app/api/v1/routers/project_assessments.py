@@ -7,6 +7,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_db, get_current_user
+from app.core.grading import score_to_grade as _score_to_grade
 from app.infra.db.models import (
     ProjectAssessment,
     ProjectAssessmentScore,
@@ -311,16 +312,8 @@ def get_project_assessment(
             
             total_score = weighted_sum / total_weight
             
-            # Convert to grade (1-10 scale)
-            # Map rubric scale to 1-10
-            scale_range = rubric.scale_max - rubric.scale_min
-            if scale_range > 0:
-                # Clamp total_score to rubric range
-                clamped_score = max(rubric.scale_min, min(rubric.scale_max, total_score))
-                normalized = (clamped_score - rubric.scale_min) / scale_range
-                grade = 1 + (normalized * 9)  # Map to 1-10
-                # Ensure grade is within bounds
-                grade = max(1.0, min(10.0, grade))
+            # Convert to grade (1-10 scale) using curved mapping
+            grade = _score_to_grade(total_score, rubric.scale_min, rubric.scale_max)
     
     return ProjectAssessmentDetailOut(
         assessment=_to_out_assessment(pa),
@@ -823,14 +816,8 @@ def get_assessment_scores_overview(
         # Calculate weighted average score
         avg_score = total_score / total_weight if total_weight > 0 else None
         
-        # Calculate grade (simple linear mapping: score 1-5 -> grade 1-10)
-        # Formula: grade = (score - scale_min) / (scale_max - scale_min) * 9 + 1
-        grade = None
-        if avg_score is not None:
-            scale_range = rubric.scale_max - rubric.scale_min
-            if scale_range > 0:
-                grade = ((avg_score - rubric.scale_min) / scale_range) * 9 + 1
-                grade = round(grade, 1)
+        # Calculate grade using curved mapping
+        grade = _score_to_grade(avg_score, rubric.scale_min, rubric.scale_max)
         
         team_score = TeamScoreOverview(
             team_number=team_num,
@@ -1034,14 +1021,10 @@ def get_assessment_students_overview(
         # Calculate weighted average score
         avg_score = total_score / total_weight if total_weight > 0 else None
         
-        # Calculate grade (simple linear mapping: score 1-5 -> grade 1-10)
-        grade = None
-        if avg_score is not None:
-            scale_range = rubric.scale_max - rubric.scale_min
-            if scale_range > 0:
-                grade = ((avg_score - rubric.scale_min) / scale_range) * 9 + 1
-                grade = round(grade, 1)
-                all_grades.append(grade)
+        # Calculate grade using curved mapping
+        grade = _score_to_grade(avg_score, rubric.scale_min, rubric.scale_max)
+        if grade is not None:
+            all_grades.append(grade)
         else:
             pending_count += 1
         
