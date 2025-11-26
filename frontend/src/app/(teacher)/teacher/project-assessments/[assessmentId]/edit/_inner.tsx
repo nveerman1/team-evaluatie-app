@@ -101,6 +101,16 @@ function RubricLevelsRow({
     (_, i) => scaleMin + i,
   );
 
+  // Quick comments local state
+  const [quickComments, setQuickComments] = useState<string[]>([
+    "Doet goed mee.",
+    "Neemt initiatief.",
+    "Mag nog actiever meedoen.",
+    "Goede samenwerking.",
+  ]);
+  const [isAddingQuick, setIsAddingQuick] = useState(false);
+  const [newQuick, setNewQuick] = useState("");
+
   return (
     <div className="grid grid-cols-[minmax(0,3fr)_minmax(260px,2fr)] gap-4 items-stretch">
       {/* Niveaus */}
@@ -155,6 +165,55 @@ function RubricLevelsRow({
             Optioneel
           </span>
         </div>
+
+        {/* Quick comments chips */}
+        <div className="flex flex-wrap items-center gap-2">
+          {quickComments.map((qc, idx) => (
+            <button
+              key={`${qc}-${idx}`}
+              type="button"
+              onClick={() => onCommentChange(comment ? comment + " " + qc : qc)}
+              className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] text-slate-700 shadow-sm hover:border-slate-300 hover:bg-white"
+            >
+              {qc}
+            </button>
+          ))}
+          {/* Plus button */}
+          <button
+            type="button"
+            onClick={() => setIsAddingQuick((prev) => !prev)}
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-400 text-xs font-semibold text-slate-700 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-colors"
+          >
+            +
+          </button>
+        </div>
+
+        {/* Add new quick comment input */}
+        {isAddingQuick && (
+          <div className="mt-1 flex items-center gap-2">
+            <input
+              type="text"
+              value={newQuick}
+              onChange={(e) => setNewQuick(e.target.value)}
+              placeholder="Nieuwe snelle opmerking..."
+              className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-700 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-200"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const trimmed = newQuick.trim();
+                if (!trimmed) return;
+                setQuickComments((prev) => [...prev, trimmed]);
+                setNewQuick("");
+                setIsAddingQuick(false);
+              }}
+              className="rounded-lg bg-emerald-600 px-3 py-1 text-[11px] font-medium text-white hover:bg-emerald-700"
+            >
+              Voeg toe
+            </button>
+          </div>
+        )}
+
         <textarea
           value={comment}
           onChange={(e) => onCommentChange(e.target.value)}
