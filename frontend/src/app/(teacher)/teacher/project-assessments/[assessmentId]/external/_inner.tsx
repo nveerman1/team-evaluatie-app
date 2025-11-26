@@ -279,9 +279,9 @@ export default function ExternalAssessmentPageInner() {
                 </tr>
               </thead>
               <tbody>
-                {externalStatuses.map((team) => (
+                {externalStatuses.map((team, index) => (
                   <tr
-                    key={team.team_id}
+                    key={`team-${team.team_id}-${team.team_number ?? index}`}
                     className="border-b last:border-b-0 hover:bg-gray-50"
                   >
                     <td className="px-4 py-3">
