@@ -1,7 +1,7 @@
 """add_student_id_to_project_scores for individual score overrides
 
 Revision ID: stud_20251126_01
-Revises: ghi123jkl456
+Revises: ext_20251125_03
 Create Date: 2025-11-26 14:00:00.000000
 
 """
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "stud_20251126_01"
-down_revision = "ghi123jkl456"
+down_revision = "ext_20251125_03"
 branch_labels = None
 depends_on = None
 
@@ -44,7 +44,9 @@ def upgrade():
 
     # Drop old unique constraint
     op.drop_constraint(
-        "uq_project_score_per_criterion_team", "project_assessment_scores", type_="unique"
+        "uq_project_score_per_criterion_team",
+        "project_assessment_scores",
+        type_="unique",
     )
 
     # Create new unique constraint including student_id
