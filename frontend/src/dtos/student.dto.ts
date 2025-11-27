@@ -114,3 +114,79 @@ export type WizardValidation = {
   isValid: boolean;
   errors: string[];
 };
+
+// ============ Growth Page DTOs ============
+
+/**
+ * OMZA scores (Organiseren, Meedoen, Zelfvertrouwen, Autonomie)
+ */
+export type OMZAScores = {
+  organiseren: number;
+  meedoen: number;
+  zelfvertrouwen: number;
+  autonomie: number;
+};
+
+/**
+ * Scan type for competency scans
+ */
+export type ScanType = "start" | "tussen" | "eind" | "los";
+
+/**
+ * Summary of a competency scan for the growth page
+ */
+export type GrowthScanSummary = {
+  id: string;
+  title: string;
+  date: string;
+  type: ScanType;
+  omza: OMZAScores;
+  gcf: number;
+  has_reflection: boolean;
+  goals_linked: number;
+};
+
+/**
+ * Category score for competency profile
+ */
+export type GrowthCategoryScore = {
+  name: string;
+  value: number; // 1-5 scale
+};
+
+/**
+ * Goal status type
+ */
+export type GrowthGoalStatus = "active" | "completed";
+
+/**
+ * Goal for the growth page
+ */
+export type GrowthGoal = {
+  id: string;
+  title: string;
+  status: GrowthGoalStatus;
+  related_competencies: string[];
+  progress: number; // 0-100
+};
+
+/**
+ * Reflection for the growth page
+ */
+export type GrowthReflection = {
+  id: string;
+  date: string;
+  scan_title: string;
+  snippet: string;
+};
+
+/**
+ * Complete student growth data from the API
+ */
+export type StudentGrowthData = {
+  scans: GrowthScanSummary[];
+  competency_profile: GrowthCategoryScore[];
+  goals: GrowthGoal[];
+  reflections: GrowthReflection[];
+  ai_summary: string | null;
+};

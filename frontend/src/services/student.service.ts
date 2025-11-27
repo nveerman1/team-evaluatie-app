@@ -7,6 +7,7 @@ import {
   MyAllocation,
   Criterion,
   ScoreItem,
+  StudentGrowthData,
 } from "@/dtos";
 
 export const studentService = {
@@ -348,5 +349,25 @@ export const studentService = {
     }
     
     return results;
+  },
+
+  /**
+   * Get student growth data (scans, competency profile, goals, reflections, AI summary)
+   */
+  async getGrowthData(): Promise<StudentGrowthData> {
+    const { data } = await api.get<StudentGrowthData>(
+      "/student/competency/growth"
+    );
+    return data;
+  },
+
+  /**
+   * Regenerate AI summary for student growth
+   */
+  async regenerateGrowthSummary(): Promise<{ ai_summary: string }> {
+    const { data } = await api.post<{ ai_summary: string }>(
+      "/student/competency/growth/summary"
+    );
+    return data;
   },
 };
