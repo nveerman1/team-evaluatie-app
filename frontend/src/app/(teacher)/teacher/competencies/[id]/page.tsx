@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { competencyService } from "@/services";
-import type { Competency, CompetencyUpdate } from "@/dtos";
+import type { Competency, CompetencyUpdate, CompetencyCategory } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
 
 interface RubricLevel {
@@ -19,6 +19,7 @@ export default function EditCompetencyPage() {
   const id = Number(params.id);
 
   const [competency, setCompetency] = useState<Competency | null>(null);
+  const [categories, setCategories] = useState<CompetencyCategory[]>([]);
   const [formData, setFormData] = useState<CompetencyUpdate>({});
   const [rubricLevels, setRubricLevels] = useState<RubricLevel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,16 +33,19 @@ export default function EditCompetencyPage() {
   const loadCompetency = async () => {
     try {
       setLoading(true);
-      const [data, levels] = await Promise.all([
+      const [data, levels, cats] = await Promise.all([
         competencyService.getCompetency(id),
         competencyService.getRubricLevels(id),
+        competencyService.getCategories(),
       ]);
       
       setCompetency(data);
+      setCategories(cats);
       setFormData({
         name: data.name,
         description: data.description || "",
         category: data.category || "",
+        category_id: data.category_id,
         order: data.order,
         active: data.active,
         scale_min: data.scale_min,
@@ -149,6 +153,9 @@ export default function EditCompetencyPage() {
     }
   };
 
+  // Get color for selected category
+  const selectedCategory = categories.find(c => c.id === formData.category_id);
+
   if (loading) return <Loading />;
   if (error && !competency) return <ErrorMessage message={error} />;
   if (!competency) return <ErrorMessage message="Competency not found" />;
@@ -164,6 +171,49 @@ export default function EditCompetencyPage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="p-6 border rounded-xl bg-white space-y-4">
+          {/* Category Selection - NEW */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Categorie <span className="text-blue-600">(nieuw)</span>
+            </label>
+            {categories.length > 0 ? (
+              <div className="space-y-2">
+                <select
+                  value={formData.category_id ?? ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      category_id: e.target.value ? Number(e.target.value) : undefined,
+                    })
+                  }
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- Selecteer een categorie --</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+                {selectedCategory && (
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-4 h-4 rounded"
+                      style={{ backgroundColor: selectedCategory.color || "#3B82F6" }}
+                    />
+                    <span className="text-sm text-gray-600">
+                      {selectedCategory.description || "Geen beschrijving"}
+                    </span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 italic">
+                Nog geen categorieën beschikbaar.
+              </p>
+            )}
+          </div>
+
           {/* Name */}
           <div>
             <label className="block text-sm font-medium mb-2">
@@ -197,19 +247,8 @@ export default function EditCompetencyPage() {
             />
           </div>
 
-          {/* Category */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Categorie</label>
-            <input
-              type="text"
-              value={formData.category || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, category: e.target.value })
-              }
-              placeholder="bijv. Domein, Denkwijzen, Werkwijzen"
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          {/* Legacy Category - now hidden */}
+          <input type="hidden" value={formData.category || ""} />
 
           {/* Order */}
           <div>
