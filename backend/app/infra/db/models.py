@@ -297,13 +297,26 @@ class RubricCriterion(Base):
         Boolean, default=True, nullable=False
     )  # Whether this criterion is visible to external evaluators
 
+    # Optional link to a competency for competency tracking
+    competency_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("competencies.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     # Relationship to learning objectives
     learning_objectives: Mapped[list["LearningObjective"]] = relationship(
         secondary="rubric_criterion_learning_objectives",
         back_populates="rubric_criteria",
     )
 
-    __table_args__ = (Index("ix_criterion_rubric", "rubric_id"),)
+    # Relationship to competency
+    competency: Mapped[Optional["Competency"]] = relationship()
+
+    __table_args__ = (
+        Index("ix_criterion_rubric", "rubric_id"),
+        Index("ix_criterion_competency", "competency_id"),
+    )
 
 
 class Evaluation(Base):
@@ -630,6 +643,43 @@ class ProjectAssessmentReflection(Base):
 # ============ Competency Monitor ============
 
 
+class CompetencyCategory(Base):
+    """
+    Fixed categories for organizing competencies.
+    Categories:
+    1. Samenwerken
+    2. Plannen & Organiseren
+    3. Creatief denken & probleemoplossen
+    4. Technische vaardigheden
+    5. Communicatie & Presenteren
+    6. Reflectie & Professionele houding
+    """
+
+    __tablename__ = "competency_categories"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = tenant_fk()
+
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text)
+    color: Mapped[Optional[str]] = mapped_column(String(20))  # hex color for UI
+    icon: Mapped[Optional[str]] = mapped_column(String(100))  # icon name/path
+    order_index: Mapped[int] = mapped_column(Integer, default=0)
+
+    # Relationships
+    competencies: Mapped[list["Competency"]] = relationship(
+        back_populates="competency_category",
+        cascade="all,delete-orphan",
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "school_id", "name", name="uq_competency_category_name_per_school"
+        ),
+        Index("ix_competency_category_school", "school_id"),
+    )
+
+
 class Competency(Base):
     """
     Competency definition (e.g., Samenwerken, Communiceren, etc.)
@@ -640,11 +690,18 @@ class Competency(Base):
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
 
+    # Link to category
+    category_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("competency_categories.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
     category: Mapped[Optional[str]] = mapped_column(
         String(100)
-    )  # e.g., "Domein", "Denkwijzen", "Werkwijzen"
+    )  # Legacy field, kept for backward compatibility
     order: Mapped[int] = mapped_column(Integer, default=0)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
@@ -657,9 +714,15 @@ class Competency(Base):
 
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
 
+    # Relationships
+    competency_category: Mapped[Optional["CompetencyCategory"]] = relationship(
+        back_populates="competencies"
+    )
+
     __table_args__ = (
         UniqueConstraint("school_id", "name", name="uq_competency_name_per_school"),
         Index("ix_competency_school", "school_id"),
+        Index("ix_competency_category_id", "category_id"),
     )
 
 

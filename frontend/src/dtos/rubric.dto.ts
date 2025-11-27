@@ -46,6 +46,7 @@ export type CriterionOut = {
   category?: string | null;
   order?: number | null;
   learning_objective_ids: number[];
+  competency_id?: number | null;
 };
 
 export type CriterionUpsertItem = {
@@ -55,7 +56,8 @@ export type CriterionUpsertItem = {
   descriptors: Record<string, string>;
   category?: string | null;
   order?: number | null;
-  learning_objective_ids: number[];
+  learning_objective_ids?: number[];
+  competency_id?: number | null;
 };
 
 export type CriterionBatchUpsertRequest = {

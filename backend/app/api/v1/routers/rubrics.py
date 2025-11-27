@@ -84,6 +84,7 @@ def _to_out_criterion(c: RubricCriterion) -> CriterionOut:
         "descriptors": _ensure5(c.descriptors),  # <-- altijd 5 niveaus naar buiten
         "category": getattr(c, "category", None),
         "learning_objective_ids": [lo.id for lo in c.learning_objectives] if hasattr(c, "learning_objectives") and c.learning_objectives else [],
+        "competency_id": getattr(c, "competency_id", None),
     }
     if hasattr(c, "order"):
         payload["order"] = getattr(c, "order")
@@ -382,6 +383,7 @@ def add_criterion(
         weight=payload.weight,
         descriptors=payload.descriptors,  # schemas normaliseert naar 5
         category=payload.category,
+        competency_id=payload.competency_id,
     )
     _apply_order(c, payload.order)
     db.add(c)
@@ -429,6 +431,8 @@ def update_criterion(
     update_data = payload.model_dump(exclude_unset=True)
     if 'category' in update_data:
         c.category = payload.category
+    if 'competency_id' in update_data:
+        c.competency_id = payload.competency_id
     if payload.order is not None:
         _apply_order(c, payload.order)
     
@@ -510,6 +514,7 @@ def batch_upsert_criteria(
             c.weight = item.weight
             c.descriptors = item.descriptors  # schemas → 5 levels
             c.category = item.category
+            c.competency_id = item.competency_id
             _apply_order(c, item.order)
             db.add(c)
             db.flush()
@@ -524,6 +529,7 @@ def batch_upsert_criteria(
                 weight=item.weight,
                 descriptors=item.descriptors,  # schemas → 5 levels
                 category=item.category,
+                competency_id=item.competency_id,
             )
             _apply_order(c, item.order)
             db.add(c)

@@ -8,13 +8,14 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy.exc import IntegrityError
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import (
     User,
     Competency,
+    CompetencyCategory,
     CompetencyRubricLevel,
     CompetencyWindow,
     CompetencySelfScore,
@@ -26,9 +27,16 @@ from app.infra.db.models import (
     GroupMember,
 )
 from app.api.v1.schemas.competencies import (
+    CompetencyCategoryCreate,
+    CompetencyCategoryUpdate,
+    CompetencyCategoryOut,
     CompetencyCreate,
     CompetencyUpdate,
     CompetencyOut,
+    CompetencyWithCategoryOut,
+    CompetencyTree,
+    CompetencyCategoryTreeItem,
+    CompetencyTreeItem,
     CompetencyRubricLevelCreate,
     CompetencyRubricLevelUpdate,
     CompetencyRubricLevelOut,
@@ -54,6 +62,180 @@ router = APIRouter(prefix="/competencies", tags=["competencies"])
 
 # Constants
 COMPETENCY_UNIQUE_NAME_CONSTRAINT = "uq_competency_name_per_school"
+CATEGORY_UNIQUE_NAME_CONSTRAINT = "uq_competency_category_name_per_school"
+
+# ============ Competency Category CRUD ============
+
+
+@router.get("/categories", response_model=List[CompetencyCategoryOut])
+def list_categories(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List all competency categories for the school"""
+    query = (
+        select(CompetencyCategory)
+        .where(CompetencyCategory.school_id == current_user.school_id)
+        .order_by(CompetencyCategory.order_index, CompetencyCategory.name)
+    )
+    categories = db.execute(query).scalars().all()
+    return categories
+
+
+@router.post(
+    "/categories", response_model=CompetencyCategoryOut, status_code=status.HTTP_201_CREATED
+)
+def create_category(
+    data: CompetencyCategoryCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Create a new competency category (teacher only)"""
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(
+            status_code=403, detail="Only teachers can create categories"
+        )
+
+    category = CompetencyCategory(school_id=current_user.school_id, **data.model_dump())
+    db.add(category)
+    try:
+        db.commit()
+        db.refresh(category)
+        return category
+    except IntegrityError as e:
+        db.rollback()
+        if CATEGORY_UNIQUE_NAME_CONSTRAINT in str(e.orig):
+            raise HTTPException(
+                status_code=409,
+                detail=f"A category with the name '{data.name}' already exists for this school",
+            )
+        raise HTTPException(status_code=400, detail="Database constraint violation")
+
+
+@router.get("/categories/{category_id}", response_model=CompetencyCategoryOut)
+def get_category(
+    category_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get a specific competency category"""
+    category = db.get(CompetencyCategory, category_id)
+    if not category or category.school_id != current_user.school_id:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return category
+
+
+@router.patch("/categories/{category_id}", response_model=CompetencyCategoryOut)
+def update_category(
+    category_id: int,
+    data: CompetencyCategoryUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update a competency category (teacher only)"""
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(
+            status_code=403, detail="Only teachers can update categories"
+        )
+
+    category = db.get(CompetencyCategory, category_id)
+    if not category or category.school_id != current_user.school_id:
+        raise HTTPException(status_code=404, detail="Category not found")
+
+    for key, value in data.model_dump(exclude_unset=True).items():
+        setattr(category, key, value)
+
+    try:
+        db.commit()
+        db.refresh(category)
+        return category
+    except IntegrityError as e:
+        db.rollback()
+        if CATEGORY_UNIQUE_NAME_CONSTRAINT in str(e.orig):
+            conflicting_name = data.name if data.name is not None else category.name
+            raise HTTPException(
+                status_code=409,
+                detail=f"A category with the name '{conflicting_name}' already exists for this school",
+            )
+        raise HTTPException(status_code=400, detail="Database constraint violation")
+
+
+@router.delete("/categories/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_category(
+    category_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a competency category (admin only)"""
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=403, detail="Only admins can delete categories"
+        )
+
+    category = db.get(CompetencyCategory, category_id)
+    if not category or category.school_id != current_user.school_id:
+        raise HTTPException(status_code=404, detail="Category not found")
+
+    db.delete(category)
+    db.commit()
+    return None
+
+
+# ============ Competency Tree Endpoint ============
+
+
+@router.get("/tree", response_model=CompetencyTree)
+def get_competency_tree(
+    active_only: bool = Query(True),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get the full competency tree: categories → competencies
+    This is useful for dropdown selectors and hierarchical displays.
+    """
+    # Get all categories with their competencies
+    query = (
+        select(CompetencyCategory)
+        .where(CompetencyCategory.school_id == current_user.school_id)
+        .options(selectinload(CompetencyCategory.competencies))
+        .order_by(CompetencyCategory.order_index, CompetencyCategory.name)
+    )
+    categories = db.execute(query).scalars().all()
+
+    # Build tree structure
+    tree_items = []
+    for cat in categories:
+        competencies = cat.competencies
+        if active_only:
+            competencies = [c for c in competencies if c.active]
+        
+        # Sort competencies by order
+        competencies = sorted(competencies, key=lambda c: (c.order, c.name))
+
+        tree_items.append(
+            CompetencyCategoryTreeItem(
+                id=cat.id,
+                name=cat.name,
+                description=cat.description,
+                color=cat.color,
+                icon=cat.icon,
+                order_index=cat.order_index,
+                competencies=[
+                    CompetencyTreeItem(
+                        id=c.id,
+                        name=c.name,
+                        description=c.description,
+                        order=c.order,
+                        active=c.active,
+                    )
+                    for c in competencies
+                ],
+            )
+        )
+
+    return CompetencyTree(categories=tree_items)
+
 
 # ============ Competency CRUD ============
 
