@@ -263,15 +263,17 @@ def upgrade():
                 category_id = row[0]
                 
                 # Insert competencies for this category
+                # Only insert new competencies; don't update existing ones to avoid
+                # overwriting user customizations. Existing competencies without
+                # a category_id are left unchanged.
                 for comp_data in cat_data["competencies"]:
                     conn.execute(
                         sa.text("""
                             INSERT INTO competencies (school_id, category_id, name, description, "order", active)
                             VALUES (:school_id, :category_id, :name, :description, :order, true)
                             ON CONFLICT (school_id, name) DO UPDATE SET
-                                category_id = EXCLUDED.category_id,
-                                description = EXCLUDED.description,
-                                "order" = EXCLUDED."order"
+                                category_id = COALESCE(competencies.category_id, EXCLUDED.category_id),
+                                description = COALESCE(competencies.description, EXCLUDED.description)
                         """),
                         {
                             "school_id": school_id,

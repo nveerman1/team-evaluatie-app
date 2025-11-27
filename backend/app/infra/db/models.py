@@ -666,10 +666,11 @@ class CompetencyCategory(Base):
     icon: Mapped[Optional[str]] = mapped_column(String(100))  # icon name/path
     order_index: Mapped[int] = mapped_column(Integer, default=0)
 
-    # Relationships
+    # Relationships - use save-update only to avoid orphan deletion
+    # Competencies have ondelete="SET NULL" on the FK, so they won't be deleted
     competencies: Mapped[list["Competency"]] = relationship(
         back_populates="competency_category",
-        cascade="all,delete-orphan",
+        cascade="save-update",
     )
 
     __table_args__ = (
