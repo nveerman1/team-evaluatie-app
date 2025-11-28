@@ -232,18 +232,18 @@ export default function RubricsListInner() {
           </section>
         )}
 
-        {/* Competencies Tab Content */}
+        {/* Competencies Tab Content - OMZA Style */}
         {activeTab === "competencies" && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Category Filter Pills */}
             {competencyTree && competencyTree.categories && competencyTree.categories.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setSelectedCategoryFilter("all")}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                  className={`rounded-full border px-3.5 py-1.5 text-sm transition ${
                     selectedCategoryFilter === "all"
-                      ? "bg-sky-100 text-sky-700 border-sky-300"
-                      : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                      ? "border-sky-500 bg-sky-50 text-sky-700 shadow-sm"
+                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                   }`}
                 >
                   Alle ({competencyTree.categories.reduce((acc: number, cat: CompetencyCategoryTreeItem) => acc + (cat.competencies?.length || 0), 0)})
@@ -252,10 +252,10 @@ export default function RubricsListInner() {
                   <button
                     key={category.id}
                     onClick={() => setSelectedCategoryFilter(category.id)}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                    className={`rounded-full border px-3.5 py-1.5 text-sm transition ${
                       selectedCategoryFilter === category.id
-                        ? "bg-sky-100 text-sky-700 border-sky-300"
-                        : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                        ? "border-sky-500 bg-sky-50 text-sky-700 shadow-sm"
+                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                     }`}
                   >
                     {category.name} ({category.competencies?.length || 0})
@@ -289,59 +289,66 @@ export default function RubricsListInner() {
               </div>
             )}
 
-            {/* Category Sections */}
+            {/* Category Sections - OMZA style list cards */}
             {!loading && !error && filteredCategories.length > 0 && (
-              <div className="space-y-8">
+              <div className="space-y-4">
                 {filteredCategories.map((category: CompetencyCategoryTreeItem) => (
-                  <div key={category.id} className="space-y-3">
-                    {/* Category Header */}
-                    <div className="flex items-center gap-3 px-1">
-                      {category.color && (
-                        <div
-                          className="w-3 h-3 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: category.color }}
-                        />
-                      )}
-                      <h3 className="text-lg font-semibold text-gray-800">
-                        {category.name}
-                        <span className="ml-2 text-sm font-normal text-gray-500">
-                          ({category.competencies?.length || 0})
-                        </span>
-                      </h3>
+                  <section
+                    key={category.id}
+                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                  >
+                    {/* Category header */}
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        {category.color && (
+                          <span
+                            className="inline-block h-3 w-3 rounded-full"
+                            style={{ backgroundColor: category.color }}
+                          />
+                        )}
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h2 className="text-sm font-semibold text-slate-900">
+                              {category.name}
+                            </h2>
+                            <span className="text-xs font-medium text-slate-400">
+                              ({category.competencies?.length || 0})
+                            </span>
+                          </div>
+                          {category.description && (
+                            <p className="text-xs text-slate-500">
+                              {category.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    {category.description && (
-                      <p className="text-sm text-gray-500 px-1 -mt-1">
-                        {category.description}
-                      </p>
-                    )}
 
-                    {/* Competency Cards Grid */}
-                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                    {/* Competency rows */}
+                    <div className="divide-y divide-slate-100">
                       {(category.competencies || []).map((competency: CompetencyTreeItem) => (
                         <Link
                           key={competency.id}
                           href={`/teacher/competencies/${competency.id}`}
-                          className="p-4 border rounded-xl bg-white hover:shadow-md hover:border-gray-300 transition-all group"
+                          className="flex w-full items-center justify-between gap-4 px-2 py-3 text-left transition hover:bg-slate-50"
                         >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors truncate">
-                                {competency.name}
-                              </h4>
-                              {competency.description && (
-                                <p className="text-sm text-gray-500 mt-1 line-clamp-2">
-                                  {competency.description}
-                                </p>
-                              )}
-                            </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-slate-900">
+                              {competency.name}
+                            </p>
+                            {competency.description && (
+                              <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">
+                                {competency.description}
+                              </p>
+                            )}
                           </div>
-                          <div className="mt-3 flex items-center text-xs text-gray-400">
-                            <span>Klik om te bewerken →</span>
+                          <div className="shrink-0 text-xs font-medium text-sky-600">
+                            Bewerken →
                           </div>
                         </Link>
                       ))}
                     </div>
-                  </div>
+                  </section>
                 ))}
               </div>
             )}
