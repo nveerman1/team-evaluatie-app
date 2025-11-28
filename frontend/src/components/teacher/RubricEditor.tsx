@@ -316,7 +316,7 @@ export default function RubricEditor({
                 >
                   <div
                     id={`panel-${cat.value}`}
-                    className="divide-y divide-slate-200"
+                    className="divide-y-2 divide-slate-300"
                   >
                     {categoryItems.length === 0 ? (
                       <div className="px-4 py-8 text-center text-gray-500">
