@@ -193,29 +193,35 @@ export default function RubricEditor({
         newCategoryIndex
       );
 
-      // Build new items array maintaining original structure
-      const newItems = [...items];
-      
-      // Update the positions of items in this category
+      // Create a map of original index to new order within category
+      const newOrderMap = new Map<number, number>();
       reorderedCategoryItems.forEach((catItem, newPos) => {
-        const originalIndex = catItem.index;
-        newItems[originalIndex] = {
-          ...newItems[originalIndex],
-          order: newPos + 1,
-        };
+        newOrderMap.set(catItem.index, newPos + 1);
       });
 
-      // Sort items by category and order
-      const sortedItems = [...newItems].sort((a, b) => {
-        // First by category order
-        const catOrder = categories.findIndex((c) => c.value === a.category) -
-          categories.findIndex((c) => c.value === b.category);
-        if (catOrder !== 0) return catOrder;
-        // Then by order within category
+      // Update the items with new order values for the affected category
+      const updatedItems = items.map((item, index) => {
+        if (newOrderMap.has(index)) {
+          return { ...item, order: newOrderMap.get(index)! };
+        }
+        return item;
+      });
+
+      // Create a category order map for efficient sorting
+      const categoryOrderMap = new Map<string, number>();
+      categories.forEach((cat, idx) => {
+        categoryOrderMap.set(cat.value, idx);
+      });
+
+      // Sort items by category and then by order within category
+      const sortedItems = [...updatedItems].sort((a, b) => {
+        const catOrderA = categoryOrderMap.get(a.category || "") ?? 999;
+        const catOrderB = categoryOrderMap.get(b.category || "") ?? 999;
+        if (catOrderA !== catOrderB) return catOrderA - catOrderB;
         return (a.order ?? 0) - (b.order ?? 0);
       });
 
-      onItemsChange(sortedItems.map((it, i) => ({ ...it, order: i + 1 })));
+      onItemsChange(sortedItems);
     },
     [items, categories, onItemsChange]
   );
