@@ -134,11 +134,6 @@ export default function ReflectiesTabPage() {
         </select>
       </div>
 
-      {/* Count */}
-      <div className="text-sm text-slate-600">
-        {filtered.length}/{data.items.length} reflecties
-      </div>
-
       {/* Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         {filtered.length === 0 ? (
