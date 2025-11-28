@@ -1,16 +1,15 @@
 """add competency categories and link to competencies and rubric criteria
 
 Revision ID: comp_20251127_01
-Revises: stud_20251126_01_add_student_id_to_project_scores
+Revises: stud_20251126_01
 Create Date: 2025-11-27 20:00:00.000000
 """
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import JSON
 
 revision = "comp_20251127_01"
-down_revision = "stud_20251126_01_add_student_id_to_project_scores"
+down_revision = "stud_20251126_01"
 branch_labels = None
 depends_on = None
 
@@ -43,9 +42,7 @@ def upgrade():
             "school_id", "name", name="uq_competency_category_name_per_school"
         ),
     )
-    op.create_index(
-        "ix_competency_categories_id", "competency_categories", ["id"]
-    )
+    op.create_index("ix_competency_categories_id", "competency_categories", ["id"])
     op.create_index(
         "ix_competency_category_school", "competency_categories", ["school_id"]
     )
@@ -55,9 +52,7 @@ def upgrade():
         "competencies",
         sa.Column("category_id", sa.Integer(), nullable=True),
     )
-    op.create_index(
-        "ix_competency_category_id", "competencies", ["category_id"]
-    )
+    op.create_index("ix_competency_category_id", "competencies", ["category_id"])
     op.create_foreign_key(
         "fk_competencies_category_id_competency_categories",
         "competencies",
@@ -72,9 +67,7 @@ def upgrade():
         "rubric_criteria",
         sa.Column("competency_id", sa.Integer(), nullable=True),
     )
-    op.create_index(
-        "ix_criterion_competency", "rubric_criteria", ["competency_id"]
-    )
+    op.create_index("ix_criterion_competency", "rubric_criteria", ["competency_id"])
     op.create_foreign_key(
         "fk_rubric_criteria_competency_id_competencies",
         "rubric_criteria",
