@@ -203,7 +203,7 @@ export default function TemplatesPage() {
 
   // Filter categories based on selected filter
   const filteredCategories = useMemo((): CompetencyCategoryTreeItem[] => {
-    if (!competencyTree) return [];
+    if (!competencyTree || !competencyTree.categories) return [];
     if (selectedCategoryFilter === "all") {
       return competencyTree.categories;
     }
@@ -462,7 +462,7 @@ export default function TemplatesPage() {
             </div>
 
             {/* Category Filter Pills */}
-            {competencyTree && competencyTree.categories.length > 0 && (
+            {competencyTree && competencyTree.categories && competencyTree.categories.length > 0 && (
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => setSelectedCategoryFilter("all")}
@@ -472,7 +472,7 @@ export default function TemplatesPage() {
                       : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
                   }`}
                 >
-                  Alle ({competencyTree.categories.reduce((acc: number, cat: CompetencyCategoryTreeItem) => acc + cat.competencies.length, 0)})
+                  Alle ({competencyTree.categories.reduce((acc: number, cat: CompetencyCategoryTreeItem) => acc + (cat.competencies?.length || 0), 0)})
                 </button>
                 {competencyTree.categories.map((category: CompetencyCategoryTreeItem) => (
                   <button
@@ -484,7 +484,7 @@ export default function TemplatesPage() {
                         : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
                     }`}
                   >
-                    {category.name} ({category.competencies.length})
+                    {category.name} ({category.competencies?.length || 0})
                   </button>
                 ))}
               </div>
@@ -499,7 +499,7 @@ export default function TemplatesPage() {
             )}
 
             {/* No data state */}
-            {!loadingCompetencies && (!competencyTree || competencyTree.categories.length === 0) && (
+            {!loadingCompetencies && (!competencyTree || !competencyTree.categories || competencyTree.categories.length === 0) && (
               <div className="text-center py-12 border rounded-xl bg-gray-50">
                 <p className="text-gray-500 mb-4">Nog geen competenties aangemaakt.</p>
                 <Link
@@ -527,7 +527,7 @@ export default function TemplatesPage() {
                       <h3 className="text-lg font-semibold text-gray-800">
                         {category.name}
                         <span className="ml-2 text-sm font-normal text-gray-500">
-                          ({category.competencies.length})
+                          ({category.competencies?.length || 0})
                         </span>
                       </h3>
                     </div>
@@ -539,7 +539,7 @@ export default function TemplatesPage() {
 
                     {/* Competency Cards Grid */}
                     <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                      {category.competencies.map((competency: CompetencyTreeItem) => (
+                      {(category.competencies || []).map((competency: CompetencyTreeItem) => (
                         <Link
                           key={competency.id}
                           href={`/teacher/competencies/${competency.id}`}
