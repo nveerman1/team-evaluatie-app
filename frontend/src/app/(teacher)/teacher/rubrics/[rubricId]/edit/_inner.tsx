@@ -4,6 +4,10 @@ import api from "@/lib/api";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import RubricEditor, { type CriterionItem } from "@/components/teacher/RubricEditor";
+import { subjectService } from "@/services/subject.service";
+import { listPeerCriteria } from "@/services/peer-evaluation-criterion-template.service";
+import type { Subject } from "@/dtos/subject.dto";
+import type { PeerEvaluationCriterionTemplateDto } from "@/dtos/peer-evaluation-criterion-template.dto";
 
 // Types (optioneel importeren uit je lib/types):
 type RubricOut = {
@@ -50,6 +54,15 @@ export default function EditRubricPageInner() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
+  // Template import modal state
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+  const [peerCriteria, setPeerCriteria] = useState<PeerEvaluationCriterionTemplateDto[]>([]);
+  const [selectedCriteriaIds, setSelectedCriteriaIds] = useState<number[]>([]);
+  const [loadingSubjects, setLoadingSubjects] = useState(false);
+  const [loadingCriteria, setLoadingCriteria] = useState(false);
+
   useEffect(() => {
     let mounted = true;
     async function load() {
@@ -73,8 +86,9 @@ export default function EditRubricPageInner() {
             learning_objective_ids: ci.learning_objective_ids || [],
           })),
         );
-      } catch (e: any) {
-        setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
+      } catch (e: unknown) {
+        const err = e as { response?: { data?: { detail?: string } }; message?: string };
+        setError(err?.response?.data?.detail || err?.message || "Laden mislukt");
       } finally {
         setLoading(false);
       }
@@ -84,6 +98,93 @@ export default function EditRubricPageInner() {
       mounted = false;
     };
   }, [rubricId]);
+
+  // Load subjects when modal opens
+  useEffect(() => {
+    if (!showTemplateModal) return;
+    async function loadSubjects() {
+      setLoadingSubjects(true);
+      try {
+        const response = await subjectService.listSubjects({ per_page: 100, is_active: true });
+        setSubjects(response.subjects);
+      } catch (err) {
+        console.error("Failed to load subjects:", err);
+      } finally {
+        setLoadingSubjects(false);
+      }
+    }
+    loadSubjects();
+  }, [showTemplateModal]);
+
+  // Load peer criteria when subject changes
+  useEffect(() => {
+    async function loadCriteria() {
+      if (!selectedSubjectId) {
+        setPeerCriteria([]);
+        return;
+      }
+      setLoadingCriteria(true);
+      try {
+        const criteria = await listPeerCriteria(selectedSubjectId);
+        setPeerCriteria(criteria);
+      } catch (err) {
+        console.error("Failed to load peer criteria:", err);
+      } finally {
+        setLoadingCriteria(false);
+      }
+    }
+    loadCriteria();
+  }, [selectedSubjectId]);
+
+  const toggleCriterion = (id: number) => {
+    setSelectedCriteriaIds(prev =>
+      prev.includes(id) ? prev.filter(cid => cid !== id) : [...prev, id]
+    );
+  };
+
+  const selectAllCriteria = () => {
+    setSelectedCriteriaIds(peerCriteria.map(c => c.id));
+  };
+
+  const deselectAllCriteria = () => {
+    setSelectedCriteriaIds([]);
+  };
+
+  const importSelectedCriteria = () => {
+    const selectedTemplates = peerCriteria.filter(c => selectedCriteriaIds.includes(c.id));
+    
+    // Map OMZA category to proper category format
+    const categoryMap: Record<string, string> = {
+      "organiseren": "Organiseren",
+      "meedoen": "Meedoen",
+      "zelfvertrouwen": "Zelfvertrouwen",
+      "autonomie": "Autonomie",
+    };
+
+    const maxOrder = items.reduce((m, it) => Math.max(m, it.order ?? 0), 0);
+
+    const newItems: CriterionItem[] = selectedTemplates.map((template, idx) => ({
+      name: template.title,
+      weight: 1.0 / (items.length + selectedTemplates.length), // Adjust weight
+      category: categoryMap[template.omza_category] || template.omza_category,
+      order: maxOrder + idx + 1,
+      descriptors: {
+        level1: template.level_descriptors["1"] || "",
+        level2: template.level_descriptors["2"] || "",
+        level3: template.level_descriptors["3"] || "",
+        level4: template.level_descriptors["4"] || "",
+        level5: template.level_descriptors["5"] || "",
+      },
+      learning_objective_ids: template.learning_objective_ids || [],
+    }));
+
+    setItems([...items, ...newItems]);
+    setShowTemplateModal(false);
+    setSelectedCriteriaIds([]);
+    setSelectedSubjectId(null);
+    setInfo(`${newItems.length} criterium/criteria toegevoegd. Vergeet niet op te slaan!`);
+    setTimeout(() => setInfo(null), 4000);
+  };
 
 
 
@@ -128,8 +229,9 @@ export default function EditRubricPageInner() {
       );
       setInfo("Opgeslagen ✔");
       setTimeout(() => setInfo(null), 1800);
-    } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.message || "Opslaan mislukt");
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: string } }; message?: string };
+      setError(err?.response?.data?.detail || err?.message || "Opslaan mislukt");
     } finally {
       setSaving(false);
     }
@@ -141,8 +243,9 @@ export default function EditRubricPageInner() {
       const res = await api.post(`/rubrics/${rubric.id}/duplicate`);
       const newId = res.data?.id;
       if (newId) router.replace(`/teacher/rubrics/${newId}/edit`);
-    } catch (e: any) {
-      alert(e?.response?.data?.detail || e?.message || "Dupliceren mislukt");
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: string } }; message?: string };
+      alert(err?.response?.data?.detail || err?.message || "Dupliceren mislukt");
     }
   }
   async function deleteRubric() {
@@ -151,12 +254,15 @@ export default function EditRubricPageInner() {
     try {
       await api.delete(`/rubrics/${rubric.id}`);
       router.replace("/teacher/rubrics");
-    } catch (e: any) {
-      alert(e?.response?.data?.detail || e?.message || "Verwijderen mislukt");
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: string } }; message?: string };
+      alert(err?.response?.data?.detail || err?.message || "Verwijderen mislukt");
     }
   }
 
   if (loading) return <main className="p-6">Laden…</main>;
+
+  const isPeerRubric = rubric?.scope === "peer";
 
   return (
     <>
@@ -180,6 +286,14 @@ export default function EditRubricPageInner() {
             >
               Terug
             </a>
+            {isPeerRubric && (
+              <button
+                onClick={() => setShowTemplateModal(true)}
+                className="px-3 py-1.5 rounded-lg border border-blue-200 bg-white text-blue-600 hover:bg-blue-50 text-sm font-medium shadow-sm"
+              >
+                + Uit template
+              </button>
+            )}
             <button
               onClick={duplicateRubric}
               className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-sm font-medium shadow-sm"
@@ -221,6 +335,140 @@ export default function EditRubricPageInner() {
           />
         )}
       </main>
+
+      {/* Template Import Modal */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Criteria uit template importeren</h2>
+              <button
+                onClick={() => {
+                  setShowTemplateModal(false);
+                  setSelectedCriteriaIds([]);
+                  setSelectedSubjectId(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 text-xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Subject selector */}
+            <div className="space-y-2 mb-4">
+              <label className="block text-sm font-medium">Vakgebied / Sectie</label>
+              <select
+                className="w-full border rounded-lg px-3 py-2"
+                value={selectedSubjectId || ""}
+                onChange={(e) => {
+                  setSelectedSubjectId(e.target.value ? parseInt(e.target.value) : null);
+                  setSelectedCriteriaIds([]);
+                }}
+                disabled={loadingSubjects}
+              >
+                <option value="">-- Kies een vakgebied --</option>
+                {subjects.map((subject) => (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.name} ({subject.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Criteria list */}
+            {selectedSubjectId && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-medium">Beschikbare criteria</label>
+                  {peerCriteria.length > 0 && (
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={selectAllCriteria}
+                        className="text-xs text-blue-600 hover:text-blue-800"
+                      >
+                        Selecteer alle
+                      </button>
+                      <button
+                        type="button"
+                        onClick={deselectAllCriteria}
+                        className="text-xs text-gray-600 hover:text-gray-800"
+                      >
+                        Deselecteer alle
+                      </button>
+                    </div>
+                  )}
+                </div>
+                
+                {loadingCriteria ? (
+                  <div className="p-4 text-center text-gray-500 text-sm">Criteria laden...</div>
+                ) : peerCriteria.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500 text-sm border rounded-lg bg-gray-50">
+                    Geen criteria templates gevonden voor dit vakgebied.
+                  </div>
+                ) : (
+                  <div className="border rounded-lg max-h-64 overflow-y-auto">
+                    {["organiseren", "meedoen", "zelfvertrouwen", "autonomie"].map((category) => {
+                      const categoryCriteria = peerCriteria.filter(c => c.omza_category === category);
+                      if (categoryCriteria.length === 0) return null;
+                      
+                      return (
+                        <div key={category} className="border-b last:border-b-0">
+                          <div className="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-600 uppercase">
+                            {category}
+                          </div>
+                          {categoryCriteria.map((criterion) => (
+                            <label
+                              key={criterion.id}
+                              className="flex items-start gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedCriteriaIds.includes(criterion.id)}
+                                onChange={() => toggleCriterion(criterion.id)}
+                                className="mt-1"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium">{criterion.title}</div>
+                                {criterion.description && (
+                                  <div className="text-xs text-gray-500 mt-0.5">{criterion.description}</div>
+                                )}
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={importSelectedCriteria}
+                disabled={selectedCriteriaIds.length === 0}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {selectedCriteriaIds.length === 0
+                  ? "Selecteer criteria om te importeren"
+                  : `${selectedCriteriaIds.length} criterium/criteria toevoegen`}
+              </button>
+              <button
+                onClick={() => {
+                  setShowTemplateModal(false);
+                  setSelectedCriteriaIds([]);
+                  setSelectedSubjectId(null);
+                }}
+                className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+              >
+                Annuleren
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
