@@ -1,8 +1,8 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { rubricService, competencyService } from "@/services";
-import { RubricListItem, Competency } from "@/dtos";
+import { RubricListItem, Competency, CompetencyTree, CompetencyCategoryTreeItem, CompetencyTreeItem } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
 
 type TabType = "peer" | "project" | "competencies";
@@ -10,10 +10,12 @@ type TabType = "peer" | "project" | "competencies";
 export default function RubricsListInner() {
   const [data, setData] = useState<RubricListItem[]>([]);
   const [competencies, setCompetencies] = useState<Competency[]>([]);
+  const [competencyTree, setCompetencyTree] = useState<CompetencyTree | null>(null);
   const [q, setQ] = useState("");
   const [activeTab, setActiveTab] = useState<TabType>("peer");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<number | "all">("all");
 
   async function fetchRubrics(query = "", scope: "peer" | "project") {
     setLoading(true);
@@ -32,8 +34,12 @@ export default function RubricsListInner() {
     setLoading(true);
     setError(null);
     try {
-      const comps = await competencyService.getCompetencies(false);
+      const [comps, tree] = await Promise.all([
+        competencyService.getCompetencies(false),
+        competencyService.getCompetencyTree(false),
+      ]);
       setCompetencies(comps);
+      setCompetencyTree(tree);
     } catch (e: any) {
       setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
     } finally {
@@ -52,6 +58,15 @@ export default function RubricsListInner() {
   useEffect(() => {
     fetchList("", activeTab);
   }, [activeTab]);
+
+  // Filter categories based on selected filter
+  const filteredCategories = useMemo((): CompetencyCategoryTreeItem[] => {
+    if (!competencyTree) return [];
+    if (selectedCategoryFilter === "all") {
+      return competencyTree.categories;
+    }
+    return competencyTree.categories.filter((cat: CompetencyCategoryTreeItem) => cat.id === selectedCategoryFilter);
+  }, [competencyTree, selectedCategoryFilter]);
 
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);
@@ -219,66 +234,126 @@ export default function RubricsListInner() {
 
         {/* Competencies Tab Content */}
         {activeTab === "competencies" && (
-          <div className="space-y-4">
-
-          {loading && (
-            <div className="p-6">
-              <Loading />
-            </div>
-          )}
-          {error && !loading && (
-            <div className="p-6">
-              <ErrorMessage message={`Fout: ${error}`} />
-            </div>
-          )}
-          {!loading && !error && competencies.length === 0 && (
-            <div className="p-8 border rounded-xl bg-gray-50 text-center">
-              <p className="text-gray-500">
-                Nog geen competenties aangemaakt. Maak je eerste competentie
-                aan om te beginnen.
-              </p>
-            </div>
-          )}
-          {!loading && !error && competencies.length > 0 && (
-            <div className="grid gap-3">
-              {competencies
-                .sort((a, b) => a.order - b.order)
-                .map((comp) => (
-                  <Link
-                    key={comp.id}
-                    href={`/teacher/competencies/${comp.id}`}
-                    className="block bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 hover:shadow-md transition-shadow"
+          <div className="space-y-6">
+            {/* Category Filter Pills */}
+            {competencyTree && competencyTree.categories.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => setSelectedCategoryFilter("all")}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                    selectedCategoryFilter === "all"
+                      ? "bg-sky-100 text-sky-700 border-sky-300"
+                      : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                  }`}
+                >
+                  Alle ({competencyTree.categories.reduce((acc: number, cat: CompetencyCategoryTreeItem) => acc + cat.competencies.length, 0)})
+                </button>
+                {competencyTree.categories.map((category: CompetencyCategoryTreeItem) => (
+                  <button
+                    key={category.id}
+                    onClick={() => setSelectedCategoryFilter(category.id)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                      selectedCategoryFilter === category.id
+                        ? "bg-sky-100 text-sky-700 border-sky-300"
+                        : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                    }`}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-lg font-semibold">{comp.name}</h3>
-                          {!comp.active && (
-                            <span className="px-2 py-1 rounded bg-gray-100 text-gray-600 text-xs">
-                              Inactief
-                            </span>
-                          )}
-                          {comp.category && (
-                            <span className="px-2 py-1 rounded bg-blue-50 text-blue-700 text-xs">
-                              {comp.category}
-                            </span>
-                          )}
-                        </div>
-                        {comp.description && (
-                          <p className="text-sm text-gray-600 mt-1">
-                            {comp.description}
-                          </p>
-                        )}
-                        <p className="text-xs text-gray-500 mt-2">
-                          Schaal: {comp.scale_min} - {comp.scale_max}
-                        </p>
-                      </div>
-                      <span className="text-gray-400">→</span>
-                    </div>
-                  </Link>
+                    {category.name} ({category.competencies.length})
+                  </button>
                 ))}
-            </div>
-          )}
+              </div>
+            )}
+
+            {loading && (
+              <div className="p-6">
+                <Loading />
+              </div>
+            )}
+            {error && !loading && (
+              <div className="p-6">
+                <ErrorMessage message={`Fout: ${error}`} />
+              </div>
+            )}
+            {!loading && !error && (!competencyTree || competencyTree.categories.length === 0) && (
+              <div className="p-8 border rounded-xl bg-gray-50 text-center">
+                <p className="text-gray-500 mb-4">
+                  Nog geen competenties aangemaakt. Maak je eerste competentie
+                  aan om te beginnen.
+                </p>
+                <Link
+                  href="/teacher/competencies/create"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                >
+                  <span>+</span> Eerste Competentie Aanmaken
+                </Link>
+              </div>
+            )}
+
+            {/* Category Sections */}
+            {!loading && !error && filteredCategories.length > 0 && (
+              <div className="space-y-8">
+                {filteredCategories.map((category: CompetencyCategoryTreeItem) => (
+                  <div key={category.id} className="space-y-3">
+                    {/* Category Header */}
+                    <div className="flex items-center gap-3 px-1">
+                      {category.color && (
+                        <div
+                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: category.color }}
+                        />
+                      )}
+                      <h3 className="text-lg font-semibold text-gray-800">
+                        {category.name}
+                        <span className="ml-2 text-sm font-normal text-gray-500">
+                          ({category.competencies.length})
+                        </span>
+                      </h3>
+                    </div>
+                    {category.description && (
+                      <p className="text-sm text-gray-500 px-1 -mt-1">
+                        {category.description}
+                      </p>
+                    )}
+
+                    {/* Competency Cards Grid */}
+                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                      {category.competencies.map((competency: CompetencyTreeItem) => (
+                        <Link
+                          key={competency.id}
+                          href={`/teacher/competencies/${competency.id}`}
+                          className="p-4 border rounded-xl bg-white hover:shadow-md hover:border-gray-300 transition-all group"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors truncate">
+                                {competency.name}
+                              </h4>
+                              {competency.description && (
+                                <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                                  {competency.description}
+                                </p>
+                              )}
+                            </div>
+                            <span
+                              className={`px-2 py-0.5 text-xs rounded-full flex-shrink-0 ${
+                                competency.active
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-gray-100 text-gray-500"
+                              }`}
+                            >
+                              {competency.active ? "Actief" : "Inactief"}
+                            </span>
+                          </div>
+                          <div className="mt-3 flex items-center text-xs text-gray-400">
+                            <span>Klik om te bewerken →</span>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </main>
