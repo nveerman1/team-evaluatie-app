@@ -14,6 +14,7 @@ export default function LeerdoelenTabPage() {
   const [data, setData] = useState<TeacherGoalsList | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   
   // Filter and search state
   const [query, setQuery] = useState("");
@@ -36,6 +37,16 @@ export default function LeerdoelenTabPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const toggleRow = (id: number) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedRows(newExpanded);
+  };
 
   // Get unique competency names from data for filtering
   const categories = useMemo(() => {
@@ -193,41 +204,88 @@ export default function LeerdoelenTabPage() {
                   <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
                     Laatste update
                   </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 tracking-wide">
+                    Actie
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtered.map((item) => (
-                  <tr key={item.id} className="bg-white hover:bg-slate-50">
-                    <td className="px-5 py-3 text-sm text-slate-800 font-medium">
-                      <Link
-                        href={`/teacher/competencies/windows/${windowId}/student/${item.user_id}`}
-                        className="text-blue-600 hover:text-blue-800 hover:underline"
-                      >
-                        {item.user_name}
-                      </Link>
-                      {item.class_name && (
-                        <span className="ml-2 text-xs text-slate-500">
-                          ({item.class_name})
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3 text-sm text-slate-600">
-                      {item.competency_name || "–"}
-                    </td>
-                    <td className="px-5 py-3 text-sm text-slate-800">
-                      <div className="max-w-md truncate" title={item.goal_text}>
-                        {item.goal_text}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {getStatusBadge(item.status)}
-                    </td>
-                    <td className="px-4 py-3 text-center text-sm text-slate-600">
-                      {item.updated_at
-                        ? new Date(item.updated_at).toLocaleDateString("nl-NL")
-                        : "–"}
-                    </td>
-                  </tr>
+                  <React.Fragment key={item.id}>
+                    <tr className="bg-white hover:bg-slate-50">
+                      <td className="px-5 py-3 text-sm text-slate-800 font-medium">
+                        <Link
+                          href={`/teacher/competencies/windows/${windowId}/student/${item.user_id}`}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {item.user_name}
+                        </Link>
+                        {item.class_name && (
+                          <span className="ml-2 text-xs text-slate-500">
+                            ({item.class_name})
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3 text-sm text-slate-600">
+                        {item.competency_name || "–"}
+                      </td>
+                      <td className="px-5 py-3 text-sm text-slate-800">
+                        <div className="max-w-md truncate" title={item.goal_text}>
+                          {item.goal_text}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {getStatusBadge(item.status)}
+                      </td>
+                      <td className="px-4 py-3 text-center text-sm text-slate-600">
+                        {item.updated_at
+                          ? new Date(item.updated_at).toLocaleDateString("nl-NL")
+                          : "–"}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => toggleRow(item.id)}
+                          className="text-blue-600 hover:text-blue-800 text-sm"
+                        >
+                          {expandedRows.has(item.id) ? "Inklappen" : "Details"}
+                        </button>
+                      </td>
+                    </tr>
+                    {expandedRows.has(item.id) && (
+                      <tr key={`${item.id}-details`} className="bg-slate-50">
+                        <td colSpan={6} className="px-5 py-4">
+                          <div className="space-y-3">
+                            <div>
+                              <span className="text-sm font-medium text-slate-700">
+                                Volledig leerdoel:
+                              </span>
+                              <p className="text-sm text-slate-600 mt-1">
+                                {item.goal_text}
+                              </p>
+                            </div>
+                            {item.success_criteria && (
+                              <div>
+                                <span className="text-sm font-medium text-slate-700">
+                                  Succescriteria:
+                                </span>
+                                <p className="text-sm text-slate-600 mt-1">
+                                  {item.success_criteria}
+                                </p>
+                              </div>
+                            )}
+                            <div className="flex gap-4 text-sm text-slate-500">
+                              {item.submitted_at && (
+                                <span>
+                                  Ingediend:{" "}
+                                  {new Date(item.submitted_at).toLocaleDateString("nl-NL")}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

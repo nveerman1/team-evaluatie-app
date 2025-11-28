@@ -14,6 +14,7 @@ export default function ReflectiesTabPage() {
   const [data, setData] = useState<TeacherReflectionsList | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   
   // Filter and search state
   const [query, setQuery] = useState("");
@@ -35,6 +36,16 @@ export default function ReflectiesTabPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const toggleRow = (id: number) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedRows(newExpanded);
+  };
 
   // Filtered and sorted items
   const filtered = useMemo(() => {
@@ -154,53 +165,102 @@ export default function ReflectiesTabPage() {
                   <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
                     Doel behaald
                   </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 tracking-wide">
+                    Actie
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtered.map((item) => (
-                  <tr key={item.id} className="bg-white hover:bg-slate-50">
-                    <td className="px-5 py-3 text-sm text-slate-800 font-medium">
-                      <Link
-                        href={`/teacher/competencies/windows/${windowId}/student/${item.user_id}`}
-                        className="text-blue-600 hover:text-blue-800 hover:underline"
-                      >
-                        {item.user_name}
-                      </Link>
-                      {item.class_name && (
-                        <span className="ml-2 text-xs text-slate-500">
-                          ({item.class_name})
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3 text-sm text-slate-600">
-                      {item.submitted_at
-                        ? new Date(item.submitted_at).toLocaleDateString("nl-NL")
-                        : "–"}
-                    </td>
-                    <td className="px-5 py-3 text-sm text-slate-800">
-                      <div className="max-w-md" title={item.text}>
-                        {truncateText(item.text)}
-                      </div>
-                    </td>
-                    <td className="px-5 py-3 text-sm text-slate-600">
-                      {item.goal_text ? truncateText(item.goal_text, 50) : "–"}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {item.goal_achieved != null ? (
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full ring-1 ${
-                            item.goal_achieved
-                              ? "ring-green-200 bg-green-50 text-green-700"
-                              : "ring-red-200 bg-red-50 text-red-700"
-                          }`}
+                  <React.Fragment key={item.id}>
+                    <tr className="bg-white hover:bg-slate-50">
+                      <td className="px-5 py-3 text-sm text-slate-800 font-medium">
+                        <Link
+                          href={`/teacher/competencies/windows/${windowId}/student/${item.user_id}`}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
                         >
-                          {item.goal_achieved ? "Ja" : "Nee"}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400">–</span>
-                      )}
-                    </td>
-                  </tr>
+                          {item.user_name}
+                        </Link>
+                        {item.class_name && (
+                          <span className="ml-2 text-xs text-slate-500">
+                            ({item.class_name})
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3 text-sm text-slate-600">
+                        {item.submitted_at
+                          ? new Date(item.submitted_at).toLocaleDateString("nl-NL")
+                          : "–"}
+                      </td>
+                      <td className="px-5 py-3 text-sm text-slate-800">
+                        <div className="max-w-md" title={item.text}>
+                          {truncateText(item.text)}
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 text-sm text-slate-600">
+                        {item.goal_text ? truncateText(item.goal_text, 50) : "–"}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {item.goal_achieved != null ? (
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full ring-1 ${
+                              item.goal_achieved
+                                ? "ring-green-200 bg-green-50 text-green-700"
+                                : "ring-red-200 bg-red-50 text-red-700"
+                            }`}
+                          >
+                            {item.goal_achieved ? "Ja" : "Nee"}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">–</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => toggleRow(item.id)}
+                          className="text-blue-600 hover:text-blue-800 text-sm"
+                        >
+                          {expandedRows.has(item.id) ? "Inklappen" : "Bekijken"}
+                        </button>
+                      </td>
+                    </tr>
+                    {expandedRows.has(item.id) && (
+                      <tr key={`${item.id}-details`} className="bg-slate-50">
+                        <td colSpan={6} className="px-5 py-4">
+                          <div className="space-y-4">
+                            <div>
+                              <span className="text-sm font-medium text-slate-700">
+                                Volledige reflectie:
+                              </span>
+                              <p className="text-sm text-slate-600 mt-1 whitespace-pre-wrap">
+                                {item.text}
+                              </p>
+                            </div>
+                            {item.goal_text && (
+                              <div>
+                                <span className="text-sm font-medium text-slate-700">
+                                  Gekoppeld leerdoel:
+                                </span>
+                                <p className="text-sm text-slate-600 mt-1">
+                                  {item.goal_text}
+                                </p>
+                              </div>
+                            )}
+                            {item.evidence && (
+                              <div>
+                                <span className="text-sm font-medium text-slate-700">
+                                  Bewijs / voorbeelden:
+                                </span>
+                                <p className="text-sm text-slate-600 mt-1 whitespace-pre-wrap">
+                                  {item.evidence}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
