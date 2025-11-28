@@ -229,6 +229,48 @@ export interface ClassHeatmap {
   rows: ClassHeatmapRow[];
 }
 
+// ============ Teacher View DTOs ============
+
+export interface TeacherGoalItem {
+  id: number;
+  user_id: number;
+  user_name: string;
+  class_name?: string;
+  goal_text: string;
+  success_criteria?: string;
+  competency_id?: number;
+  competency_name?: string;
+  status: string;
+  submitted_at?: string;
+  updated_at: string;
+}
+
+export interface TeacherGoalsList {
+  window_id: number;
+  window_title: string;
+  items: TeacherGoalItem[];
+}
+
+export interface TeacherReflectionItem {
+  id: number;
+  user_id: number;
+  user_name: string;
+  class_name?: string;
+  text: string;
+  goal_id?: number;
+  goal_text?: string;
+  goal_achieved?: boolean;
+  evidence?: string;
+  submitted_at?: string;
+  updated_at: string;
+}
+
+export interface TeacherReflectionsList {
+  window_id: number;
+  window_title: string;
+  items: TeacherReflectionItem[];
+}
+
 export interface StudentGrowthCard {
   user_id: number;
   user_name: string;

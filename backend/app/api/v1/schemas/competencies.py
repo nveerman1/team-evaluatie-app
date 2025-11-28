@@ -315,6 +315,53 @@ class ClassHeatmap(BaseModel):
     rows: List[ClassHeatmapRow]
 
 
+# ============ Teacher View Schemas ============
+
+
+class TeacherGoalItem(BaseModel):
+    """Goal item with student info for teacher view"""
+    id: int
+    user_id: int
+    user_name: str
+    class_name: Optional[str] = None
+    goal_text: str
+    success_criteria: Optional[str] = None
+    competency_id: Optional[int] = None
+    competency_name: Optional[str] = None
+    status: str
+    submitted_at: Optional[datetime] = None
+    updated_at: datetime
+
+
+class TeacherGoalsList(BaseModel):
+    """List of goals for teacher view"""
+    window_id: int
+    window_title: str
+    items: List[TeacherGoalItem]
+
+
+class TeacherReflectionItem(BaseModel):
+    """Reflection item with student info for teacher view"""
+    id: int
+    user_id: int
+    user_name: str
+    class_name: Optional[str] = None
+    text: str
+    goal_id: Optional[int] = None
+    goal_text: Optional[str] = None
+    goal_achieved: Optional[bool] = None
+    evidence: Optional[str] = None
+    submitted_at: Optional[datetime] = None
+    updated_at: datetime
+
+
+class TeacherReflectionsList(BaseModel):
+    """List of reflections for teacher view"""
+    window_id: int
+    window_title: str
+    items: List[TeacherReflectionItem]
+
+
 class StudentGrowthCard(BaseModel):
     """Student's growth card across multiple windows"""
     user_id: int

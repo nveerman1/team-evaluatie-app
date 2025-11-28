@@ -48,6 +48,10 @@ from app.api.v1.schemas.competencies import (
     ClassHeatmapRow,
     CompetencyScore,
     StudentCompetencyOverview,
+    TeacherGoalItem,
+    TeacherGoalsList,
+    TeacherReflectionItem,
+    TeacherReflectionsList,
 )
 
 router = APIRouter(prefix="/competencies", tags=["competencies"])
@@ -1083,4 +1087,144 @@ def get_class_heatmap(
         window_title=window.title,
         competencies=competencies,
         rows=rows,
+    )
+
+
+# ============ Teacher View Endpoints ============
+
+
+@router.get("/windows/{window_id}/goals", response_model=TeacherGoalsList)
+def get_window_goals(
+    window_id: int,
+    class_name: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get all goals for a window (teacher only)"""
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(status_code=403, detail="Only teachers can view all goals")
+
+    window = db.get(CompetencyWindow, window_id)
+    if not window or window.school_id != current_user.school_id:
+        raise HTTPException(status_code=404, detail="Window not found")
+
+    # Build query for goals with user info
+    query = (
+        select(CompetencyGoal, User)
+        .join(User, User.id == CompetencyGoal.user_id)
+        .where(
+            CompetencyGoal.window_id == window_id,
+            CompetencyGoal.school_id == current_user.school_id,
+        )
+    )
+
+    if class_name:
+        query = query.where(User.class_name == class_name)
+    if status:
+        query = query.where(CompetencyGoal.status == status)
+
+    query = query.order_by(User.name, CompetencyGoal.updated_at.desc())
+
+    results = db.execute(query).all()
+
+    # Get competency names
+    competency_map = {}
+    if results:
+        comp_ids = [r[0].competency_id for r in results if r[0].competency_id]
+        if comp_ids:
+            competencies = db.execute(
+                select(Competency).where(Competency.id.in_(comp_ids))
+            ).scalars().all()
+            competency_map = {c.id: c.name for c in competencies}
+
+    items = []
+    for goal, user in results:
+        items.append(
+            TeacherGoalItem(
+                id=goal.id,
+                user_id=user.id,
+                user_name=user.name,
+                class_name=user.class_name,
+                goal_text=goal.goal_text,
+                success_criteria=goal.success_criteria,
+                competency_id=goal.competency_id,
+                competency_name=competency_map.get(goal.competency_id) if goal.competency_id else None,
+                status=goal.status,
+                submitted_at=goal.submitted_at,
+                updated_at=goal.updated_at,
+            )
+        )
+
+    return TeacherGoalsList(
+        window_id=window_id,
+        window_title=window.title,
+        items=items,
+    )
+
+
+@router.get("/windows/{window_id}/reflections", response_model=TeacherReflectionsList)
+def get_window_reflections(
+    window_id: int,
+    class_name: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get all reflections for a window (teacher only)"""
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(status_code=403, detail="Only teachers can view all reflections")
+
+    window = db.get(CompetencyWindow, window_id)
+    if not window or window.school_id != current_user.school_id:
+        raise HTTPException(status_code=404, detail="Window not found")
+
+    # Build query for reflections with user info
+    query = (
+        select(CompetencyReflection, User)
+        .join(User, User.id == CompetencyReflection.user_id)
+        .where(
+            CompetencyReflection.window_id == window_id,
+            CompetencyReflection.school_id == current_user.school_id,
+        )
+    )
+
+    if class_name:
+        query = query.where(User.class_name == class_name)
+
+    query = query.order_by(User.name, CompetencyReflection.updated_at.desc())
+
+    results = db.execute(query).all()
+
+    # Get goal texts
+    goal_map = {}
+    if results:
+        goal_ids = [r[0].goal_id for r in results if r[0].goal_id]
+        if goal_ids:
+            goals = db.execute(
+                select(CompetencyGoal).where(CompetencyGoal.id.in_(goal_ids))
+            ).scalars().all()
+            goal_map = {g.id: g.goal_text for g in goals}
+
+    items = []
+    for reflection, user in results:
+        items.append(
+            TeacherReflectionItem(
+                id=reflection.id,
+                user_id=user.id,
+                user_name=user.name,
+                class_name=user.class_name,
+                text=reflection.text,
+                goal_id=reflection.goal_id,
+                goal_text=goal_map.get(reflection.goal_id) if reflection.goal_id else None,
+                goal_achieved=reflection.goal_achieved,
+                evidence=reflection.evidence,
+                submitted_at=reflection.submitted_at,
+                updated_at=reflection.updated_at,
+            )
+        )
+
+    return TeacherReflectionsList(
+        window_id=window_id,
+        window_title=window.title,
+        items=items,
     )
