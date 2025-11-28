@@ -27,6 +27,8 @@ import type {
   ExternalInvite,
   ExternalInvitePublicInfo,
   ExternalScoreSubmit,
+  TeacherGoalsList,
+  TeacherReflectionsList,
 } from "@/dtos";
 
 export const competencyService = {
@@ -211,6 +213,32 @@ export const competencyService = {
     className?: string
   ): Promise<ClassHeatmap> {
     const response = await api.get(`/competencies/windows/${windowId}/heatmap`, {
+      params: className ? { class_name: className } : {},
+    });
+    return response.data;
+  },
+
+  // ============ Teacher View Endpoints ============
+
+  async getWindowGoals(
+    windowId: number,
+    className?: string,
+    status?: string
+  ): Promise<TeacherGoalsList> {
+    const params: Record<string, string> = {};
+    if (className) params.class_name = className;
+    if (status) params.status = status;
+    const response = await api.get(`/competencies/windows/${windowId}/goals`, {
+      params,
+    });
+    return response.data;
+  },
+
+  async getWindowReflections(
+    windowId: number,
+    className?: string
+  ): Promise<TeacherReflectionsList> {
+    const response = await api.get(`/competencies/windows/${windowId}/reflections`, {
       params: className ? { class_name: className } : {},
     });
     return response.data;

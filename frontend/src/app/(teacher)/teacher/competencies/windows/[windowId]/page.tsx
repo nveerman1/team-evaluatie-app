@@ -12,21 +12,20 @@ export default function HeatmapTabPage() {
   const windowId = Number(params.windowId);
 
   const [heatmap, setHeatmap] = useState<ClassHeatmap | null>(null);
-  const [selectedClass, setSelectedClass] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const heat = await competencyService.getClassHeatmap(windowId, selectedClass);
+      const heat = await competencyService.getClassHeatmap(windowId);
       setHeatmap(heat);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
       setLoading(false);
     }
-  }, [windowId, selectedClass]);
+  }, [windowId]);
 
   useEffect(() => {
     loadData();
