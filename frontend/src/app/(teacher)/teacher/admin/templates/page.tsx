@@ -777,9 +777,9 @@ export default function TemplatesPage() {
                                   ))}
                               </select>
                             )}
-                            {peerFormData.learning_objective_ids.length > 0 && (
+                            {(peerFormData.learning_objective_ids?.length ?? 0) > 0 && (
                               <div className="flex flex-wrap gap-1 mt-2">
-                                {peerFormData.learning_objective_ids.map((id) => {
+                                {(peerFormData.learning_objective_ids || []).map((id) => {
                                   const obj = learningObjectives.find((o) => o.id === id);
                                   return (
                                     <span
@@ -792,7 +792,7 @@ export default function TemplatesPage() {
                                         onClick={() =>
                                           setPeerFormData({
                                             ...peerFormData,
-                                            learning_objective_ids: peerFormData.learning_objective_ids.filter(
+                                            learning_objective_ids: (peerFormData.learning_objective_ids || []).filter(
                                               (objId) => objId !== id
                                             ),
                                           })
@@ -859,7 +859,7 @@ export default function TemplatesPage() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <span className="text-xs text-gray-500">
-                                    {criterion.learning_objective_ids.length} leerdoel(en)
+                                  {criterion.learning_objective_ids?.length ?? 0} leerdoel(en)
                                   </span>
                                   <svg
                                     className={`w-5 h-5 transition-transform ${
@@ -1059,9 +1059,9 @@ export default function TemplatesPage() {
                                         <h6 className="font-medium text-sm mb-2">
                                           Gekoppelde leerdoelen:
                                         </h6>
-                                        {criterion.learning_objective_ids.length > 0 ? (
+                                        {(criterion.learning_objective_ids?.length ?? 0) > 0 ? (
                                           <div className="flex flex-wrap gap-1">
-                                            {criterion.learning_objective_ids.map((id) => {
+                                            {(criterion.learning_objective_ids || []).map((id) => {
                                               const obj = learningObjectives.find((o) => o.id === id);
                                               return (
                                                 <span
