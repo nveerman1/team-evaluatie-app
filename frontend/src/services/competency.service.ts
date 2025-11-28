@@ -103,6 +103,19 @@ export const competencyService = {
     await api.delete(`/competencies/${id}`);
   },
 
+  // ============ Competency Reorder ============
+
+  async reorderCompetencies(
+    categoryId: number,
+    items: Array<{ id: number; order_index: number }>
+  ): Promise<Competency[]> {
+    const response = await api.patch("/competencies/reorder", {
+      category_id: categoryId,
+      items,
+    });
+    return response.data;
+  },
+
   // ============ Competency Rubric Level CRUD ============
 
   async getRubricLevels(competencyId: number): Promise<CompetencyRubricLevel[]> {

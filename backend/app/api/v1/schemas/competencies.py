@@ -73,6 +73,21 @@ class CompetencyUpdate(BaseModel):
     metadata_json: Optional[Dict[str, Any]] = None
 
 
+# ============ Competency Reorder Schemas ============
+
+
+class CompetencyReorderItem(BaseModel):
+    """A single item in a reorder request"""
+    id: int
+    order_index: int
+
+
+class CompetencyReorderRequest(BaseModel):
+    """Request to reorder competencies within a category"""
+    category_id: int
+    items: List[CompetencyReorderItem]
+
+
 class CompetencyOut(CompetencyBase):
     id: int
     school_id: int

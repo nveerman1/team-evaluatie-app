@@ -1,11 +1,94 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { rubricService, competencyService } from "@/services";
 import { RubricListItem, Competency, CompetencyTree, CompetencyCategoryTreeItem, CompetencyTreeItem } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 type TabType = "peer" | "project" | "competencies";
+
+// Sortable Competency Row Component
+function SortableCompetencyRow({ competency }: { competency: CompetencyTreeItem }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: competency.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex w-full items-center justify-between gap-4 px-2 py-3 text-left transition ${
+        isDragging ? "bg-sky-50 shadow-lg z-10" : "hover:bg-slate-50"
+      }`}
+    >
+      <Link
+        href={`/teacher/competencies/${competency.id}`}
+        className="flex-1 min-w-0"
+      >
+        <p className="truncate text-sm font-medium text-slate-900">
+          {competency.name}
+        </p>
+        {competency.description && (
+          <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">
+            {competency.description}
+          </p>
+        )}
+      </Link>
+      <div className="flex items-center gap-2 shrink-0">
+        <Link
+          href={`/teacher/competencies/${competency.id}`}
+          className="text-xs font-medium text-sky-600"
+        >
+          Bewerken →
+        </Link>
+        {/* Drag Handle */}
+        <button
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 p-1"
+          title="Sleep om te verplaatsen"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <circle cx="5" cy="3" r="1.5" />
+            <circle cx="11" cy="3" r="1.5" />
+            <circle cx="5" cy="8" r="1.5" />
+            <circle cx="11" cy="8" r="1.5" />
+            <circle cx="5" cy="13" r="1.5" />
+            <circle cx="11" cy="13" r="1.5" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function RubricsListInner() {
   const [data, setData] = useState<RubricListItem[]>([]);
@@ -16,6 +99,20 @@ export default function RubricsListInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<number | "all">("all");
+  const [reorderError, setReorderError] = useState<string | null>(null);
+  const [reorderSuccess, setReorderSuccess] = useState(false);
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   async function fetchRubrics(query = "", scope: "peer" | "project") {
     setLoading(true);
@@ -72,6 +169,66 @@ export default function RubricsListInner() {
     setActiveTab(tab);
     setQ("");
   };
+
+  // Handle drag end for reordering competencies
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent, categoryId: number) => {
+      const { active, over } = event;
+
+      if (!over || active.id === over.id || !competencyTree) {
+        return;
+      }
+
+      // Find the category
+      const categoryIndex = competencyTree.categories.findIndex(
+        (c) => c.id === categoryId
+      );
+      if (categoryIndex === -1) return;
+
+      const category = competencyTree.categories[categoryIndex];
+      const competenciesList = category.competencies || [];
+
+      // Find old and new index
+      const oldIndex = competenciesList.findIndex(
+        (c) => c.id === active.id
+      );
+      const newIndex = competenciesList.findIndex((c) => c.id === over.id);
+
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      // Optimistically update local state
+      const newCompetencies = arrayMove(competenciesList, oldIndex, newIndex);
+      const newCategories = [...competencyTree.categories];
+      newCategories[categoryIndex] = {
+        ...category,
+        competencies: newCompetencies,
+      };
+      setCompetencyTree({
+        ...competencyTree,
+        categories: newCategories,
+      });
+
+      // Call API to persist the new order
+      try {
+        setReorderError(null);
+        const items = newCompetencies.map((c, index) => ({
+          id: c.id,
+          order_index: index + 1,
+        }));
+        await competencyService.reorderCompetencies(categoryId, items);
+        setReorderSuccess(true);
+        setTimeout(() => setReorderSuccess(false), 2000);
+      } catch (e: any) {
+        // Revert on error
+        setReorderError(
+          e?.response?.data?.detail || e?.message || "Volgorde opslaan mislukt"
+        );
+        // Reload the original data
+        await fetchCompetencies();
+      }
+    },
+    [competencyTree]
+  );
 
   return (
     <>
@@ -232,9 +389,21 @@ export default function RubricsListInner() {
           </section>
         )}
 
-        {/* Competencies Tab Content - OMZA Style */}
+        {/* Competencies Tab Content - OMZA Style with Drag & Drop */}
         {activeTab === "competencies" && (
           <div className="space-y-4">
+            {/* Reorder feedback messages */}
+            {reorderSuccess && (
+              <div className="px-4 py-2 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
+                ✓ Volgorde opgeslagen
+              </div>
+            )}
+            {reorderError && (
+              <div className="px-4 py-2 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                ✗ {reorderError}
+              </div>
+            )}
+
             {/* Category Filter Pills */}
             {competencyTree && competencyTree.categories && competencyTree.categories.length > 0 && (
               <div className="flex flex-wrap gap-2">
@@ -289,7 +458,7 @@ export default function RubricsListInner() {
               </div>
             )}
 
-            {/* Category Sections - OMZA style list cards */}
+            {/* Category Sections - OMZA style list cards with drag & drop */}
             {!loading && !error && filteredCategories.length > 0 && (
               <div className="space-y-4">
                 {filteredCategories.map((category: CompetencyCategoryTreeItem) => (
@@ -324,30 +493,26 @@ export default function RubricsListInner() {
                       </div>
                     </div>
 
-                    {/* Competency rows */}
-                    <div className="divide-y divide-slate-100">
-                      {(category.competencies || []).map((competency: CompetencyTreeItem) => (
-                        <Link
-                          key={competency.id}
-                          href={`/teacher/competencies/${competency.id}`}
-                          className="flex w-full items-center justify-between gap-4 px-2 py-3 text-left transition hover:bg-slate-50"
-                        >
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-slate-900">
-                              {competency.name}
-                            </p>
-                            {competency.description && (
-                              <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">
-                                {competency.description}
-                              </p>
-                            )}
-                          </div>
-                          <div className="shrink-0 text-xs font-medium text-sky-600">
-                            Bewerken →
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
+                    {/* Competency rows with drag & drop */}
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={(event) => handleDragEnd(event, category.id)}
+                    >
+                      <SortableContext
+                        items={(category.competencies || []).map((c) => c.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <div className="divide-y divide-slate-100">
+                          {(category.competencies || []).map((competency: CompetencyTreeItem) => (
+                            <SortableCompetencyRow
+                              key={competency.id}
+                              competency={competency}
+                            />
+                          ))}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
                   </section>
                 ))}
               </div>

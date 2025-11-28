@@ -15,17 +15,7 @@ export default function CreateCompetencyPage() {
     description: "",
     category: "",
     category_id: undefined,
-    order: 0,
     active: true,
-    scale_min: 1,
-    scale_max: 5,
-    scale_labels: {
-      "1": "Startend",
-      "2": "Basis",
-      "3": "In opbouw",
-      "4": "Voldoende",
-      "5": "Sterk",
-    },
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -166,52 +156,6 @@ export default function CreateCompetencyPage() {
 
           {/* Legacy Category - now hidden but kept for backward compatibility */}
           <input type="hidden" value={formData.category} />
-
-          {/* Order */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Volgorde</label>
-            <input
-              type="number"
-              value={formData.order}
-              onChange={(e) =>
-                setFormData({ ...formData, order: Number(e.target.value) })
-              }
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <p className="text-sm text-gray-500 mt-1">
-              Bepaalt de volgorde waarin competenties worden getoond
-            </p>
-          </div>
-
-          {/* Scale */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Schaal Min
-              </label>
-              <input
-                type="number"
-                value={formData.scale_min}
-                onChange={(e) =>
-                  setFormData({ ...formData, scale_min: Number(e.target.value) })
-                }
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Schaal Max
-              </label>
-              <input
-                type="number"
-                value={formData.scale_max}
-                onChange={(e) =>
-                  setFormData({ ...formData, scale_max: Number(e.target.value) })
-                }
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
 
           {/* Active */}
           <div className="flex items-center">

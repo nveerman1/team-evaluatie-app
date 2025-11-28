@@ -46,21 +46,17 @@ export default function EditCompetencyPage() {
         description: data.description || "",
         category: data.category || "",
         category_id: data.category_id,
-        order: data.order,
         active: data.active,
-        scale_min: data.scale_min,
-        scale_max: data.scale_max,
-        scale_labels: data.scale_labels,
       });
 
-      // Initialize rubric levels
+      // Initialize rubric levels (always 1-5)
       if (levels.length === 0) {
         const defaultLabels = ["Startend", "Basis", "Competent", "Gevorderd", "Excellent"];
         const initialLevels: RubricLevel[] = [];
-        for (let i = data.scale_min; i <= data.scale_max; i++) {
+        for (let i = 1; i <= 5; i++) {
           initialLevels.push({
             level: i,
-            label: defaultLabels[i - 1] || `Niveau ${i}`,
+            label: defaultLabels[i - 1],
             description: "",
           });
         }
@@ -249,52 +245,6 @@ export default function EditCompetencyPage() {
 
           {/* Legacy Category - now hidden */}
           <input type="hidden" value={formData.category || ""} />
-
-          {/* Order */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Volgorde</label>
-            <input
-              type="number"
-              value={formData.order ?? 0}
-              onChange={(e) =>
-                setFormData({ ...formData, order: Number(e.target.value) })
-              }
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <p className="text-sm text-gray-500 mt-1">
-              Bepaalt de volgorde waarin competenties worden getoond
-            </p>
-          </div>
-
-          {/* Scale */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Schaal Min
-              </label>
-              <input
-                type="number"
-                value={formData.scale_min ?? 1}
-                onChange={(e) =>
-                  setFormData({ ...formData, scale_min: Number(e.target.value) })
-                }
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Schaal Max
-              </label>
-              <input
-                type="number"
-                value={formData.scale_max ?? 5}
-                onChange={(e) =>
-                  setFormData({ ...formData, scale_max: Number(e.target.value) })
-                }
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
 
           {/* Active */}
           <div className="flex items-center">

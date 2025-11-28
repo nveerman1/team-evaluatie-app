@@ -37,6 +37,7 @@ from app.api.v1.schemas.competencies import (
     CompetencyTree,
     CompetencyCategoryTreeItem,
     CompetencyTreeItem,
+    CompetencyReorderRequest,
     CompetencyRubricLevelCreate,
     CompetencyRubricLevelUpdate,
     CompetencyRubricLevelOut,
@@ -356,6 +357,66 @@ def delete_competency(
     db.delete(competency)
     db.commit()
     return None
+
+
+# ============ Competency Reorder ============
+
+
+@router.patch("/reorder", response_model=List[CompetencyOut])
+def reorder_competencies(
+    data: CompetencyReorderRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Reorder competencies within a category (teacher only)"""
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(
+            status_code=403, detail="Only teachers can reorder competencies"
+        )
+
+    # Verify the category exists and belongs to the school
+    category = db.get(CompetencyCategory, data.category_id)
+    if not category or category.school_id != current_user.school_id:
+        raise HTTPException(status_code=404, detail="Category not found")
+
+    # Get all competency IDs from the request
+    requested_ids = {item.id for item in data.items}
+
+    # Fetch all competencies in this category for this school
+    competencies = (
+        db.execute(
+            select(Competency).where(
+                Competency.school_id == current_user.school_id,
+                Competency.category_id == data.category_id,
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    # Validate that all requested competency IDs belong to this category
+    competency_map = {c.id: c for c in competencies}
+    for item in data.items:
+        if item.id not in competency_map:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Competency {item.id} does not belong to category {data.category_id}",
+            )
+
+    # Update order_index for each competency
+    updated = []
+    for item in data.items:
+        comp = competency_map[item.id]
+        comp.order = item.order_index
+        updated.append(comp)
+
+    db.commit()
+
+    # Refresh and return the updated competencies
+    for comp in updated:
+        db.refresh(comp)
+
+    return updated
 
 
 # ============ Competency Rubric Level CRUD ============
