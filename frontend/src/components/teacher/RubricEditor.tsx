@@ -269,22 +269,19 @@ export default function RubricEditor({
         return (
           <section
             key={cat.value}
-            className="rounded-2xl border border-slate-200 bg-white shadow-sm"
+            className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm overflow-hidden"
             role="region"
             aria-label={`${cat.value} sectie`}
           >
             {/* Panel Header */}
-            <header className="flex items-center justify-between gap-4 px-4 py-3 bg-gray-50 border-b">
+            <header className="flex items-center justify-between gap-4 px-5 py-3 bg-slate-50/80 border-b border-slate-100">
               <button
                 onClick={() => togglePanel(cat.value)}
                 className="flex items-center gap-3 flex-1 text-left"
                 aria-expanded={isExpanded}
                 aria-controls={`panel-${cat.value}`}
               >
-                <span className="text-sm font-semibold text-slate-900">{cat.value}</span>
-                <span className="text-xs text-slate-500" title={cat.tooltip}>
-                  ({cat.tooltip})
-                </span>
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{cat.value}</span>
                 <span className="text-xs font-medium text-slate-400 ml-1">
                   ({categoryItems.length})
                 </span>
@@ -298,7 +295,7 @@ export default function RubricEditor({
                 </span>
                 <button
                   onClick={() => addCriterion(cat.value)}
-                  className="px-3 py-1 rounded-lg bg-black text-white text-sm"
+                  className="px-3 py-1 rounded-lg bg-slate-900 text-white text-sm hover:bg-black"
                   aria-label={`Voeg criterium toe aan ${cat.value}`}
                 >
                   + Criterium
@@ -346,7 +343,7 @@ export default function RubricEditor({
       })}
 
       {/* Status Bar */}
-      <div className="sticky bottom-0 bg-white border rounded-2xl p-4 shadow-lg">
+      <div className="sticky bottom-0 bg-white border border-slate-200 rounded-2xl p-4 shadow-lg">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-6">
             <div className="text-sm">
@@ -430,8 +427,8 @@ function SortableCriterionCard({
     <article
       ref={setNodeRef}
       style={style}
-      className={`px-4 py-3 space-y-3 ${
-        isDragging ? "bg-sky-50 shadow-lg z-10" : "hover:bg-slate-50"
+      className={`px-5 py-4 space-y-3 ${
+        isDragging ? "bg-sky-50 shadow-lg z-10" : "hover:bg-slate-50/50"
       }`}
       role="article"
       aria-label={`Criterium: ${item.name}`}
@@ -456,7 +453,7 @@ function SortableCriterionCard({
         </button>
         <input
           type="text"
-          className="flex-1 border rounded-lg px-3 py-2"
+          className="flex-1 border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 focus:bg-white text-sm transition"
           value={item.name || ""}
           onChange={(e) => onUpdate(index, { name: e.target.value })}
           placeholder="Criterium naam"
@@ -545,7 +542,7 @@ function SortableCriterionCard({
             type="number"
             step="0.1"
             min="0"
-            className="w-20 border rounded-lg px-2 py-2"
+            className="w-20 border border-slate-200 rounded-xl px-2 py-2 bg-slate-50 focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 focus:bg-white text-sm transition"
             value={Number.isFinite(item.weight) ? item.weight : 0}
             onChange={(e) => {
               const value = e.target.valueAsNumber;
@@ -557,7 +554,7 @@ function SortableCriterionCard({
         <div className="flex items-center gap-1">
           <button
             onClick={() => onRemove(index)}
-            className="p-2 rounded-lg border text-red-600 hover:bg-red-50"
+            className="p-2 rounded-xl border border-slate-200 text-red-600 hover:bg-red-50 hover:border-red-200"
             title="Verwijder"
             aria-label="Verwijder criterium"
           >
@@ -594,15 +591,13 @@ function SortableCriterionCard({
                   Niveau {idx + 1}
                 </label>
                 <textarea
-                  className="w-full border rounded-lg px-2 py-2 text-sm resize-none"
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-y min-h-[96px] bg-slate-50 focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 focus:bg-white transition"
                   value={text}
                   onChange={(e) => handleDescriptorChange(level, e.target.value)}
                   placeholder={`Beschrijving niveau ${idx + 1}`}
-                  rows={3}
-                  style={{ maxHeight: "120px" }}
                   aria-label={`Niveau ${idx + 1} beschrijving`}
                 />
-                <div className="text-xs text-gray-500 text-right">
+                <div className="text-xs text-gray-400 text-right">
                   {charCount} tekens
                 </div>
               </div>

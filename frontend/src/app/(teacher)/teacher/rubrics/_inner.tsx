@@ -299,37 +299,33 @@ export default function RubricsListInner() {
       </div>
 
       {activeTab !== "competencies" && (
-        <section className="flex items-center gap-3">
-          <input
-            className="border rounded-lg px-3 py-2 w-72"
-            placeholder="Zoek op titel/omschrijving…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                fetchList(q.trim(), activeTab);
-              }
-            }}
-          />
-          <button
-            className="px-3 py-2 rounded-lg border"
-            onClick={() => fetchList(q.trim(), activeTab)}
-          >
-            Zoek
-          </button>
-          {q && (
-            <button
-              className="px-3 py-2 rounded-lg border"
-              onClick={() => {
-                setQ("");
-                fetchList("", activeTab);
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div className="flex flex-wrap gap-3 items-center">
+            <input
+              className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Zoek op titel/omschrijving..."
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  fetchList(q.trim(), activeTab);
+                }
               }}
-            >
-              Reset
-            </button>
-          )}
-        </section>
+            />
+            {q && (
+              <button
+                className="h-9 px-3 rounded-lg border border-gray-300 bg-white text-sm shadow-sm hover:bg-gray-50"
+                onClick={() => {
+                  setQ("");
+                  fetchList("", activeTab);
+                }}
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
       )}
 
         {activeTab !== "competencies" && (
@@ -372,9 +368,6 @@ export default function RubricsListInner() {
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
                           # Criteria
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
-                          Schaal
-                        </th>
                         <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 tracking-wide">
                           Acties
                         </th>
@@ -395,9 +388,6 @@ export default function RubricsListInner() {
                             <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">
                               {r.criteria_count}
                             </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
-                            {r.scale_min} - {r.scale_max}
                           </td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex justify-end gap-2">
