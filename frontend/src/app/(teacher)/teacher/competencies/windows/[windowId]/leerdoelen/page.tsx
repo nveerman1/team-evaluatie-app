@@ -20,17 +20,12 @@ export default function LeerdoelenTabPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "in_progress" | "achieved" | "not_achieved">("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [sort, setSort] = useState<"name_asc" | "name_desc" | "date_new" | "date_old">("name_asc");
-  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const result = await competencyService.getWindowGoals(windowId);
       setData(result);
-      // Initialize expanded state
-      const map: Record<number, boolean> = {};
-      result.items.forEach((i) => (map[i.id] = false));
-      setExpanded(map);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
@@ -91,12 +86,6 @@ export default function LeerdoelenTabPage() {
     });
     return sorted;
   }, [data, query, statusFilter, categoryFilter, sort]);
-
-  const toggleAll = (open: boolean) => {
-    const map: Record<number, boolean> = {};
-    filtered.forEach((i) => (map[i.id] = open));
-    setExpanded(map);
-  };
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -171,20 +160,6 @@ export default function LeerdoelenTabPage() {
           <option value="date_new">Datum nieuw → oud</option>
           <option value="date_old">Datum oud → nieuw</option>
         </select>
-        <div className="ml-auto flex gap-2">
-          <button
-            className="px-3 py-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 text-sm shadow-sm"
-            onClick={() => toggleAll(true)}
-          >
-            Alles uitklappen
-          </button>
-          <button
-            className="px-3 py-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 text-sm shadow-sm"
-            onClick={() => toggleAll(false)}
-          >
-            Alles inklappen
-          </button>
-        </div>
       </div>
 
       {/* Count */}
@@ -192,83 +167,73 @@ export default function LeerdoelenTabPage() {
         {filtered.length}/{data.items.length} leerdoelen
       </div>
 
-      {/* List */}
-      {filtered.length === 0 ? (
-        <div className="text-slate-500">Geen leerdoelen gevonden.</div>
-      ) : (
-        <ul className="space-y-4">
-          {filtered.map((item) => {
-            const open = !!expanded[item.id];
-            const dateLabel = item.updated_at
-              ? new Date(item.updated_at).toLocaleString("nl-NL")
-              : "—";
-            return (
-              <li
-                key={item.id}
-                className="border border-slate-200 rounded-2xl bg-white shadow-sm"
-              >
-                <button
-                  className="w-full px-4 py-3 border-b border-slate-200 flex items-center justify-between text-left hover:bg-slate-50"
-                  onClick={() =>
-                    setExpanded((prev) => ({
-                      ...prev,
-                      [item.id]: !open,
-                    }))
-                  }
-                >
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <Link
-                      href={`/teacher/competencies/windows/${windowId}/student/${item.user_id}`}
-                      className="font-semibold text-slate-900 hover:text-blue-600"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {item.user_name}
-                    </Link>
-                    {item.class_name && (
-                      <span className="text-xs px-2 py-0.5 rounded-full ring-1 ring-slate-200 bg-slate-50 text-slate-600">
-                        {item.class_name}
-                      </span>
-                    )}
-                    {getStatusBadge(item.status)}
-                    {item.competency_name && (
-                      <span className="text-xs px-2 py-0.5 rounded-full ring-1 ring-purple-200 bg-purple-50 text-purple-700">
-                        {item.competency_name}
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-sm text-slate-500">
-                    {dateLabel} {open ? "▾" : "▸"}
-                  </span>
-                </button>
-
-                {open && (
-                  <div className="p-4 space-y-3">
-                    <div>
-                      <span className="text-sm font-medium text-slate-700">Leerdoel:</span>
-                      <p className="whitespace-pre-wrap text-slate-800 mt-1">
+      {/* Table */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        {filtered.length === 0 ? (
+          <div className="p-8 text-center text-slate-500">
+            Geen leerdoelen gevonden.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 text-sm">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
+                    Leerling
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
+                    Competentie
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
+                    Leerdoel
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                    Laatste update
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filtered.map((item) => (
+                  <tr key={item.id} className="bg-white hover:bg-slate-50">
+                    <td className="px-5 py-3 text-sm text-slate-800 font-medium">
+                      <Link
+                        href={`/teacher/competencies/windows/${windowId}/student/${item.user_id}`}
+                        className="text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        {item.user_name}
+                      </Link>
+                      {item.class_name && (
+                        <span className="ml-2 text-xs text-slate-500">
+                          ({item.class_name})
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-sm text-slate-600">
+                      {item.competency_name || "–"}
+                    </td>
+                    <td className="px-5 py-3 text-sm text-slate-800">
+                      <div className="max-w-md truncate" title={item.goal_text}>
                         {item.goal_text}
-                      </p>
-                    </div>
-                    {item.success_criteria && (
-                      <div>
-                        <span className="text-sm font-medium text-slate-700">Succescriteria:</span>
-                        <p className="whitespace-pre-wrap text-slate-600 mt-1">
-                          {item.success_criteria}
-                        </p>
                       </div>
-                    )}
-                    {item.submitted_at && (
-                      <div className="text-sm text-slate-500">
-                        Ingediend: {new Date(item.submitted_at).toLocaleString("nl-NL")}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {getStatusBadge(item.status)}
+                    </td>
+                    <td className="px-4 py-3 text-center text-sm text-slate-600">
+                      {item.updated_at
+                        ? new Date(item.updated_at).toLocaleDateString("nl-NL")
+                        : "–"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

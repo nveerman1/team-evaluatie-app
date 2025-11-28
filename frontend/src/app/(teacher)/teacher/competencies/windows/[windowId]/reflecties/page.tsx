@@ -19,17 +19,12 @@ export default function ReflectiesTabPage() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "with_goal" | "without_goal">("all");
   const [sort, setSort] = useState<"name_asc" | "name_desc" | "date_new" | "date_old">("name_asc");
-  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const result = await competencyService.getWindowReflections(windowId);
       setData(result);
-      // Initialize expanded state
-      const map: Record<number, boolean> = {};
-      result.items.forEach((i) => (map[i.id] = false));
-      setExpanded(map);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
@@ -77,10 +72,9 @@ export default function ReflectiesTabPage() {
     return sorted;
   }, [data, query, statusFilter, sort]);
 
-  const toggleAll = (open: boolean) => {
-    const map: Record<number, boolean> = {};
-    filtered.forEach((i) => (map[i.id] = open));
-    setExpanded(map);
+  const truncateText = (text: string, maxLength: number = 100) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + "...";
   };
 
   if (loading) return <Loading />;
@@ -127,20 +121,6 @@ export default function ReflectiesTabPage() {
           <option value="date_new">Datum nieuw → oud</option>
           <option value="date_old">Datum oud → nieuw</option>
         </select>
-        <div className="ml-auto flex gap-2">
-          <button
-            className="px-3 py-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 text-sm shadow-sm"
-            onClick={() => toggleAll(true)}
-          >
-            Alles uitklappen
-          </button>
-          <button
-            className="px-3 py-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 text-sm shadow-sm"
-            onClick={() => toggleAll(false)}
-          >
-            Alles inklappen
-          </button>
-        </div>
       </div>
 
       {/* Count */}
@@ -148,110 +128,85 @@ export default function ReflectiesTabPage() {
         {filtered.length}/{data.items.length} reflecties
       </div>
 
-      {/* List */}
-      {filtered.length === 0 ? (
-        <div className="text-slate-500">Geen reflecties gevonden.</div>
-      ) : (
-        <ul className="space-y-4">
-          {filtered.map((item) => {
-            const open = !!expanded[item.id];
-            const dateLabel = item.submitted_at
-              ? new Date(item.submitted_at).toLocaleString("nl-NL")
-              : "—";
-            return (
-              <li
-                key={item.id}
-                className="border border-slate-200 rounded-2xl bg-white shadow-sm"
-              >
-                <button
-                  className="w-full px-4 py-3 border-b border-slate-200 flex items-center justify-between text-left hover:bg-slate-50"
-                  onClick={() =>
-                    setExpanded((prev) => ({
-                      ...prev,
-                      [item.id]: !open,
-                    }))
-                  }
-                >
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <Link
-                      href={`/teacher/competencies/windows/${windowId}/student/${item.user_id}`}
-                      className="font-semibold text-slate-900 hover:text-blue-600"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {item.user_name}
-                    </Link>
-                    {item.class_name && (
-                      <span className="text-xs px-2 py-0.5 rounded-full ring-1 ring-slate-200 bg-slate-50 text-slate-600">
-                        {item.class_name}
-                      </span>
-                    )}
-                    {item.goal_id ? (
-                      <span className="text-xs px-2 py-0.5 rounded-full ring-1 ring-green-200 bg-green-50 text-green-700">
-                        met leerdoel
-                      </span>
-                    ) : (
-                      <span className="text-xs px-2 py-0.5 rounded-full ring-1 ring-slate-200 bg-slate-50 text-slate-600">
-                        zonder leerdoel
-                      </span>
-                    )}
-                    {item.goal_achieved != null && (
-                      <span className={`text-xs px-2 py-0.5 rounded-full ring-1 ${
-                        item.goal_achieved
-                          ? "ring-green-200 bg-green-50 text-green-700"
-                          : "ring-red-200 bg-red-50 text-red-700"
-                      }`}>
-                        {item.goal_achieved ? "doel behaald" : "doel niet behaald"}
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-sm text-slate-500">
-                    {dateLabel} {open ? "▾" : "▸"}
-                  </span>
-                </button>
-
-                {open && (
-                  <div className="p-4 space-y-3">
-                    <div>
-                      <span className="text-sm font-medium text-slate-700">Reflectie:</span>
-                      <p className="whitespace-pre-wrap text-slate-800 mt-1">
-                        {item.text || <em className="text-slate-500">Geen tekst</em>}
-                      </p>
-                    </div>
-                    {item.goal_text && (
-                      <div>
-                        <span className="text-sm font-medium text-slate-700">Gekoppeld leerdoel:</span>
-                        <p className="whitespace-pre-wrap text-slate-600 mt-1">
-                          {item.goal_text}
-                        </p>
-                      </div>
-                    )}
-                    {item.evidence && (
-                      <div>
-                        <span className="text-sm font-medium text-slate-700">Bewijs / voorbeelden:</span>
-                        <p className="whitespace-pre-wrap text-slate-600 mt-1">
-                          {item.evidence}
-                        </p>
-                      </div>
-                    )}
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        className="px-2 py-1 border border-slate-200 rounded-xl text-sm bg-white hover:bg-slate-50 shadow-sm"
-                        onClick={() => {
-                          navigator.clipboard.writeText(item.text || "").catch(() => {
-                            // Fallback for browsers that don't support clipboard API
-                          });
-                        }}
+      {/* Table */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        {filtered.length === 0 ? (
+          <div className="p-8 text-center text-slate-500">
+            Geen reflecties gevonden.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 text-sm">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
+                    Leerling
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
+                    Datum
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
+                    Reflectie
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
+                    Gekoppeld leerdoel
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                    Doel behaald
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filtered.map((item) => (
+                  <tr key={item.id} className="bg-white hover:bg-slate-50">
+                    <td className="px-5 py-3 text-sm text-slate-800 font-medium">
+                      <Link
+                        href={`/teacher/competencies/windows/${windowId}/student/${item.user_id}`}
+                        className="text-blue-600 hover:text-blue-800 hover:underline"
                       >
-                        Kopieer tekst
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                        {item.user_name}
+                      </Link>
+                      {item.class_name && (
+                        <span className="ml-2 text-xs text-slate-500">
+                          ({item.class_name})
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-sm text-slate-600">
+                      {item.submitted_at
+                        ? new Date(item.submitted_at).toLocaleDateString("nl-NL")
+                        : "–"}
+                    </td>
+                    <td className="px-5 py-3 text-sm text-slate-800">
+                      <div className="max-w-md" title={item.text}>
+                        {truncateText(item.text)}
+                      </div>
+                    </td>
+                    <td className="px-5 py-3 text-sm text-slate-600">
+                      {item.goal_text ? truncateText(item.goal_text, 50) : "–"}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {item.goal_achieved != null ? (
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full ring-1 ${
+                            item.goal_achieved
+                              ? "ring-green-200 bg-green-50 text-green-700"
+                              : "ring-red-200 bg-red-50 text-red-700"
+                          }`}
+                        >
+                          {item.goal_achieved ? "Ja" : "Nee"}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">–</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
