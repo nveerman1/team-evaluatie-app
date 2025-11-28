@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { competencyService } from "@/services";
 import type { ClassHeatmap } from "@/dtos";
-import { Loading, ErrorMessage } from "@/components";
+import { Loading, ErrorMessage, Tile } from "@/components";
 
 export default function AnalyseTabPage() {
   const params = useParams();
@@ -78,39 +78,27 @@ export default function AnalyseTabPage() {
     };
   });
 
+  const filledScans = heatmap.rows.filter((r) => Object.keys(r.scores).length > 0).length;
+
   return (
     <div className="space-y-6">
-      {/* Stats */}
-      <div className="grid md:grid-cols-4 gap-4">
-        <div className="p-4 border rounded-xl bg-blue-50/80">
-          <div className="text-sm text-gray-600">Totaal leerlingen</div>
-          <div className="text-2xl font-bold">{heatmap.rows.length}</div>
-        </div>
-        <div className="p-4 border rounded-xl bg-purple-50/80">
-          <div className="text-sm text-gray-600">Competenties</div>
-          <div className="text-2xl font-bold">{heatmap.competencies.length}</div>
-        </div>
-        <div className="p-4 border rounded-xl bg-green-50/80">
-          <div className="text-sm text-gray-600">Categorieën</div>
-          <div className="text-2xl font-bold">{categoryAverages.length}</div>
-        </div>
-        <div className="p-4 border rounded-xl bg-orange-50/80">
-          <div className="text-sm text-gray-600">Gemiddeld ingevuld</div>
-          <div className="text-2xl font-bold">
-            {heatmap.rows.filter((r) => Object.keys(r.scores).length > 0).length}
-          </div>
-        </div>
-      </div>
+      {/* KPI tiles */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Tile label="Totaal leerlingen" value={heatmap.rows.length} />
+        <Tile label="Competenties" value={heatmap.competencies.length} />
+        <Tile label="Categorieën" value={categoryAverages.length} />
+        <Tile label="Ingevulde scans" value={filledScans} />
+      </section>
 
       {/* Radar diagram placeholder */}
-      <div className="border rounded-xl bg-white shadow-sm p-6">
-        <h2 className="text-lg font-semibold mb-4">Radardiagram - Klasgemiddelden per categorie</h2>
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">Radardiagram - Klasgemiddelden per categorie</h2>
         <div className="flex flex-col md:flex-row gap-8">
           {/* Placeholder for radar chart */}
-          <div className="flex-1 min-h-[300px] bg-gray-50 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-200">
-            <div className="text-center text-gray-500">
+          <div className="flex-1 min-h-[300px] bg-slate-50 rounded-xl flex items-center justify-center border-2 border-dashed border-slate-200">
+            <div className="text-center text-slate-500">
               <svg
-                className="w-16 h-16 mx-auto mb-4 text-gray-400"
+                className="w-16 h-16 mx-auto mb-4 text-slate-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -135,16 +123,16 @@ export default function AnalyseTabPage() {
           
           {/* Category scores table */}
           <div className="flex-1">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Scores per categorie</h3>
-            <div className="space-y-2">
+            <h3 className="text-sm font-medium text-slate-700 mb-3">Scores per categorie</h3>
+            <div className="space-y-3">
               {categoryAverages
                 .sort((a, b) => b.average - a.average)
                 .map((item) => (
                   <div key={item.category} className="flex items-center gap-3">
-                    <span className="flex-1 text-sm text-gray-700 truncate">
+                    <span className="flex-1 text-sm text-slate-700 truncate">
                       {item.category}
                     </span>
-                    <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full ${
                           item.average >= 4
@@ -156,7 +144,7 @@ export default function AnalyseTabPage() {
                         style={{ width: `${(item.average / 5) * 100}%` }}
                       />
                     </div>
-                    <span className="text-sm font-medium w-12 text-right">
+                    <span className="text-sm font-medium w-12 text-right text-slate-900">
                       {item.average.toFixed(1)}
                     </span>
                   </div>
@@ -167,42 +155,42 @@ export default function AnalyseTabPage() {
       </div>
 
       {/* Competency averages table */}
-      <div className="border rounded-xl bg-white shadow-sm overflow-hidden">
-        <div className="p-4 border-b bg-gray-50">
-          <h2 className="text-lg font-semibold">Gemiddelde scores per competentie</h2>
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
+          <h2 className="text-lg font-semibold text-slate-900">Gemiddelde scores per competentie</h2>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+          <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <thead className="bg-slate-50">
               <tr>
-                <th className="p-4 text-left font-semibold text-sm text-gray-700">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
                   Competentie
                 </th>
-                <th className="p-4 text-left font-semibold text-sm text-gray-700">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
                   Categorie
                 </th>
-                <th className="p-4 text-left font-semibold text-sm text-gray-700">
+                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
                   Ingevuld
                 </th>
-                <th className="p-4 text-left font-semibold text-sm text-gray-700">
+                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
                   Gemiddelde
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-slate-100">
               {competencyAverages
                 .sort((a, b) => b.average - a.average)
                 .map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50/50">
-                    <td className="p-4 font-medium text-sm">{item.name}</td>
-                    <td className="p-4 text-sm text-gray-600">{item.category}</td>
-                    <td className="p-4 text-sm text-gray-600">
+                  <tr key={item.id} className="bg-white hover:bg-slate-50">
+                    <td className="px-5 py-3 text-sm text-slate-800 font-medium">{item.name}</td>
+                    <td className="px-5 py-3 text-sm text-slate-600">{item.category}</td>
+                    <td className="px-4 py-3 text-center text-sm text-slate-600">
                       {item.count} / {heatmap.rows.length}
                     </td>
-                    <td className="p-4">
+                    <td className="px-4 py-3 text-center">
                       {item.count > 0 ? (
                         <span
-                          className={`px-2.5 py-1 rounded-md text-sm font-medium ${
+                          className={`inline-flex px-2.5 py-1 rounded-md text-sm font-medium ${
                             item.average >= 4
                               ? "bg-green-100 text-green-700"
                               : item.average >= 3
@@ -213,7 +201,7 @@ export default function AnalyseTabPage() {
                           {item.average.toFixed(1)}
                         </span>
                       ) : (
-                        <span className="text-gray-400">–</span>
+                        <span className="text-slate-400">–</span>
                       )}
                     </td>
                   </tr>
