@@ -1124,7 +1124,7 @@ def get_window_goals(
     if status:
         query = query.where(CompetencyGoal.status == status)
 
-    query = query.order_by(User.name, CompetencyGoal.submitted_at.desc())
+    query = query.order_by(User.name, CompetencyGoal.updated_at.desc())
 
     results = db.execute(query).all()
 
@@ -1191,7 +1191,7 @@ def get_window_reflections(
     if class_name:
         query = query.where(User.class_name == class_name)
 
-    query = query.order_by(User.name, CompetencyReflection.submitted_at.desc())
+    query = query.order_by(User.name, CompetencyReflection.updated_at.desc())
 
     results = db.execute(query).all()
 

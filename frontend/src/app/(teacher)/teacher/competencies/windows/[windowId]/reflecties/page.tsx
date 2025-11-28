@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { competencyService } from "@/services";
 import type { TeacherReflectionsList } from "@/dtos";
@@ -106,8 +106,8 @@ export default function ReflectiesTabPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {data.items.map((item) => (
-                  <>
-                    <tr key={item.id} className="hover:bg-gray-50/50">
+                  <React.Fragment key={item.id}>
+                    <tr className="hover:bg-gray-50/50">
                       <td className="p-4 font-medium">
                         <Link
                           href={`/teacher/competencies/windows/${windowId}/student/${item.user_id}`}
@@ -135,7 +135,7 @@ export default function ReflectiesTabPage() {
                         {item.goal_text ? truncateText(item.goal_text, 50) : "–"}
                       </td>
                       <td className="p-4">
-                        {item.goal_achieved !== null && item.goal_achieved !== undefined ? (
+                        {item.goal_achieved != null ? (
                           <span
                             className={`px-2.5 py-1 rounded-md text-xs font-medium ${
                               item.goal_achieved
@@ -194,7 +194,7 @@ export default function ReflectiesTabPage() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

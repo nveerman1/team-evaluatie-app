@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { competencyService } from "@/services";
 import type { TeacherGoalsList } from "@/dtos";
@@ -147,8 +147,8 @@ export default function LeerdoelenTabPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {data.items.map((item) => (
-                  <>
-                    <tr key={item.id} className="hover:bg-gray-50/50">
+                  <React.Fragment key={item.id}>
+                    <tr className="hover:bg-gray-50/50">
                       <td className="p-4 font-medium">
                         <Link
                           href={`/teacher/competencies/windows/${windowId}/student/${item.user_id}`}
@@ -221,7 +221,7 @@ export default function LeerdoelenTabPage() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
