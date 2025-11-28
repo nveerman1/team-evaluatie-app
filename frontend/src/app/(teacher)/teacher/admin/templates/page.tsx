@@ -556,15 +556,6 @@ export default function TemplatesPage() {
                                 </p>
                               )}
                             </div>
-                            <span
-                              className={`px-2 py-0.5 text-xs rounded-full flex-shrink-0 ${
-                                competency.active
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {competency.active ? "Actief" : "Inactief"}
-                            </span>
                           </div>
                           <div className="mt-3 flex items-center text-xs text-gray-400">
                             <span>Klik om te bewerken →</span>
