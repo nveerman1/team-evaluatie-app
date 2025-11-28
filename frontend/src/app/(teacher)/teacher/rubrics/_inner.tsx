@@ -299,94 +299,120 @@ export default function RubricsListInner() {
       </div>
 
       {activeTab !== "competencies" && (
-        <section className="flex items-center gap-3">
-          <input
-            className="border rounded-lg px-3 py-2 w-72"
-            placeholder="Zoek op titel/omschrijving…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                fetchList(q.trim(), activeTab);
-              }
-            }}
-          />
-          <button
-            className="px-3 py-2 rounded-lg border"
-            onClick={() => fetchList(q.trim(), activeTab)}
-          >
-            Zoek
-          </button>
-          {q && (
-            <button
-              className="px-3 py-2 rounded-lg border"
-              onClick={() => {
-                setQ("");
-                fetchList("", activeTab);
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div className="flex flex-wrap gap-3 items-center">
+            <input
+              className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Zoek op titel/omschrijving..."
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  fetchList(q.trim(), activeTab);
+                }
               }}
-            >
-              Reset
-            </button>
-          )}
-        </section>
+            />
+            {q && (
+              <button
+                className="h-9 px-3 rounded-lg border border-gray-300 bg-white text-sm shadow-sm hover:bg-gray-50"
+                onClick={() => {
+                  setQ("");
+                  fetchList("", activeTab);
+                }}
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
       )}
 
         {activeTab !== "competencies" && (
-          <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
-        <div className="grid grid-cols-[1fr_140px_160px_140px] gap-0 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">
-          <div>Titel</div>
-          <div># Criteria</div>
-          <div>Schaal</div>
-          <div className="text-right pr-2">Acties</div>
-        </div>
-        {loading && (
-          <div className="p-6">
-            <Loading />
-          </div>
-        )}
-        {error && !loading && (
-          <div className="p-6">
-            <ErrorMessage message={`Fout: ${error}`} />
-          </div>
-        )}
-        {!loading && !error && data.length === 0 && (
-          <div className="p-6 text-gray-500">Geen rubrics gevonden.</div>
-        )}
-        {!loading &&
-          !error &&
-          data.map((r) => (
-            <div
-              key={r.id}
-              className="grid grid-cols-[1fr_140px_160px_140px] items-start gap-0 px-4 py-3 border-t text-sm"
-            >
-              <div>
-                <div className="font-medium">{r.title}</div>
-                {r.description && (
-                  <div className="text-sm text-gray-500">{r.description}</div>
-                )}
+          <>
+            {loading && (
+              <div className="p-6">
+                <Loading />
               </div>
-              <div className="text-gray-600">{r.criteria_count}</div>
-              <div className="text-gray-600">
-                {r.scale_min} - {r.scale_max}
+            )}
+            {error && !loading && (
+              <div className="p-6">
+                <ErrorMessage message={`Fout: ${error}`} />
               </div>
-              <div className="flex justify-end gap-2 pr-2">
+            )}
+            {!loading && !error && data.length === 0 && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
+                <div className="text-gray-500 mb-4">
+                  Geen rubrics gevonden.
+                </div>
                 <Link
-                  href={`/teacher/evaluations/create?rubric_id=${r.id}`}
-                  className="px-2 py-1 rounded-lg border hover:bg-gray-50"
+                  href={`/teacher/rubrics/create?scope=${activeTab}`}
+                  className="text-blue-600 hover:underline"
                 >
-                  Gebruiken
-                </Link>
-                <Link
-                  href={`/teacher/rubrics/${r.id}/edit`}
-                  className="px-2 py-1 rounded-lg border hover:bg-gray-50"
-                >
-                  Bewerken
+                  Maak een nieuwe {activeTab === "peer" ? "team-evaluatie" : "projectbeoordeling"} aan
                 </Link>
               </div>
-            </div>
-          ))}
-          </section>
+            )}
+            {!loading && !error && data.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide sticky left-0 bg-gray-50">
+                          Titel
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
+                          Beschrijving
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
+                          # Criteria
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 tracking-wide">
+                          Acties
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {data.map((r) => (
+                        <tr key={r.id} className="bg-white hover:bg-gray-50">
+                          <td className="px-5 py-3 font-medium sticky left-0 bg-white">
+                            {r.title}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="text-sm text-gray-600">
+                              {r.description || "—"}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">
+                              {r.criteria_count}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex justify-end gap-2">
+                              <Link
+                                href={`/teacher/evaluations/create?rubric_id=${r.id}`}
+                                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-sm font-medium shadow-sm"
+                              >
+                                Gebruiken
+                              </Link>
+                              <Link
+                                href={`/teacher/rubrics/${r.id}/edit`}
+                                className="px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm font-medium shadow-sm"
+                              >
+                                Bewerken
+                              </Link>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Competencies Tab Content - OMZA Style with Drag & Drop */}

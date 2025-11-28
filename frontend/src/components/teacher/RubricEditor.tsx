@@ -1,8 +1,25 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { listLearningObjectives } from "@/services/learning-objective.service";
 import type { LearningObjectiveDto } from "@/dtos/learning-objective.dto";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 type Descriptor = {
   level1?: string;
@@ -63,8 +80,6 @@ export default function RubricEditor({
         : PROJECT_CATEGORIES.map((c) => c.value)
     )
   );
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
   const [learningObjectives, setLearningObjectives] = useState<
     LearningObjectiveDto[]
   >([]);
@@ -72,6 +87,18 @@ export default function RubricEditor({
 
   const categories =
     scope === "peer" ? PEER_CATEGORIES : PROJECT_CATEGORIES;
+
+  // DnD sensors for criteria reordering within categories
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Set mounted state to avoid hydration issues
   useEffect(() => {
@@ -135,66 +162,69 @@ export default function RubricEditor({
     );
   };
 
-  const moveCriterion = (idx: number, dir: -1 | 1) => {
-    const item = items[idx];
-    const category = item.category;
-    
-    // Get all items in the same category
-    const categoryIndices = items
-      .map((it, i) => ({ item: it, index: i }))
-      .filter(({ item: it }) => it.category === category);
-    
-    // Find position within category
-    const categoryPos = categoryIndices.findIndex(({ index }) => index === idx);
-    const targetPos = categoryPos + dir;
-    
-    if (targetPos < 0 || targetPos >= categoryIndices.length) return;
-    
-    // Swap within the category
-    const newItems = [...items];
-    const targetIdx = categoryIndices[targetPos].index;
-    [newItems[idx], newItems[targetIdx]] = [newItems[targetIdx], newItems[idx]];
-    onItemsChange(newItems.map((it, i) => ({ ...it, order: i + 1 })));
-  };
+  // Handle drag end for reordering criteria within a category
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent, categoryValue: string) => {
+      const { active, over } = event;
 
-  const handleDragStart = (idx: number) => {
-    setDraggedIndex(idx);
-  };
+      if (!over || active.id === over.id) {
+        return;
+      }
 
-  const handleDragOver = (e: React.DragEvent, category: string) => {
-    e.preventDefault();
-    setDragOverCategory(category);
-  };
+      // Find items in this category
+      const categoryItems = items
+        .map((item, index) => ({ item, index }))
+        .filter(({ item }) => item.category === categoryValue);
 
-  const handleDragLeave = () => {
-    setDragOverCategory(null);
-  };
+      // Find old and new positions within the category
+      const oldCategoryIndex = categoryItems.findIndex(
+        ({ index }) => index === active.id
+      );
+      const newCategoryIndex = categoryItems.findIndex(
+        ({ index }) => index === over.id
+      );
 
-  const handleDrop = (e: React.DragEvent, targetCategory: string) => {
-    e.preventDefault();
-    setDragOverCategory(null);
-    
-    if (draggedIndex === null) return;
-    
-    const item = items[draggedIndex];
-    if (item.category === targetCategory) return;
-    
-    // Simple confirmation - could be replaced with a custom modal in the future
-    const confirmed = window.confirm(
-      `Wil je dit criterium verplaatsen naar "${targetCategory}"?`
-    );
-    
-    if (confirmed) {
-      updateCriterion(draggedIndex, { category: targetCategory });
-    }
-    
-    setDraggedIndex(null);
-  };
+      if (oldCategoryIndex === -1 || newCategoryIndex === -1) return;
 
-  const handleDragEnd = () => {
-    setDraggedIndex(null);
-    setDragOverCategory(null);
-  };
+      // Reorder within category
+      const reorderedCategoryItems = arrayMove(
+        categoryItems,
+        oldCategoryIndex,
+        newCategoryIndex
+      );
+
+      // Create a map of original index to new order within category
+      const newOrderMap = new Map<number, number>();
+      reorderedCategoryItems.forEach((catItem, newPos) => {
+        newOrderMap.set(catItem.index, newPos + 1);
+      });
+
+      // Update the items with new order values for the affected category
+      const updatedItems = items.map((item, index) => {
+        if (newOrderMap.has(index)) {
+          return { ...item, order: newOrderMap.get(index)! };
+        }
+        return item;
+      });
+
+      // Create a category order map for efficient sorting
+      const categoryOrderMap = new Map<string, number>();
+      categories.forEach((cat, idx) => {
+        categoryOrderMap.set(cat.value, idx);
+      });
+
+      // Sort items by category and then by order within category
+      const sortedItems = [...updatedItems].sort((a, b) => {
+        const catOrderA = categoryOrderMap.get(a.category || "") ?? 999;
+        const catOrderB = categoryOrderMap.get(b.category || "") ?? 999;
+        if (catOrderA !== catOrderB) return catOrderA - catOrderB;
+        return (a.order ?? 0) - (b.order ?? 0);
+      });
+
+      onItemsChange(sortedItems);
+    },
+    [items, categories, onItemsChange]
+  );
 
   const itemsByCategory = useMemo(() => {
     const grouped: Record<string, Array<CriterionItem & { index: number }>> = {};
@@ -235,33 +265,27 @@ export default function RubricEditor({
         const isExpanded = expandedPanels.has(cat.value);
         const categoryItems = itemsByCategory[cat.value] || [];
         const categoryWeight = weightsByCategory[cat.value] || 0;
-        const isDragOver = dragOverCategory === cat.value;
 
         return (
           <section
             key={cat.value}
-            className={`bg-white border rounded-2xl overflow-hidden ${
-              isDragOver ? "ring-2 ring-blue-500" : ""
-            }`}
-            onDragOver={(e) => handleDragOver(e, cat.value)}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, cat.value)}
+            className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm overflow-hidden"
             role="region"
             aria-label={`${cat.value} sectie`}
           >
             {/* Panel Header */}
-            <header className="flex items-center justify-between gap-4 px-4 py-3 bg-gray-50 border-b">
+            <header className="flex items-center justify-between gap-4 px-5 py-3 bg-slate-200 border-b border-slate-300">
               <button
                 onClick={() => togglePanel(cat.value)}
                 className="flex items-center gap-3 flex-1 text-left"
                 aria-expanded={isExpanded}
                 aria-controls={`panel-${cat.value}`}
               >
-                <span className="text-lg font-semibold">{cat.value}</span>
-                <span className="text-sm text-gray-600" title={cat.tooltip}>
-                  ({cat.tooltip})
+                <span className="text-sm font-bold uppercase tracking-wide text-slate-700">{cat.value}</span>
+                <span className="text-xs font-medium text-slate-500 ml-1">
+                  ({categoryItems.length})
                 </span>
-                <span className="ml-auto text-sm text-gray-500">
+                <span className="ml-auto text-sm text-slate-600">
                   {isExpanded ? "▼" : "▶"}
                 </span>
               </button>
@@ -271,7 +295,7 @@ export default function RubricEditor({
                 </span>
                 <button
                   onClick={() => addCriterion(cat.value)}
-                  className="px-3 py-1 rounded-lg bg-black text-white text-sm"
+                  className="px-3 py-1 rounded-lg bg-slate-900 text-white text-sm hover:bg-black"
                   aria-label={`Voeg criterium toe aan ${cat.value}`}
                 >
                   + Criterium
@@ -279,39 +303,47 @@ export default function RubricEditor({
               </div>
             </header>
 
-            {/* Panel Content */}
+            {/* Panel Content with drag & drop */}
             {isExpanded && (
-              <div
-                id={`panel-${cat.value}`}
-                className="divide-y"
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={(event) => handleDragEnd(event, cat.value)}
               >
-                {categoryItems.length === 0 ? (
-                  <div className="px-4 py-8 text-center text-gray-500">
-                    Geen criteria. Klik op &quot;+ Criterium&quot; om toe te voegen.
+                <SortableContext
+                  items={categoryItems.map((item) => item.index)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div
+                    id={`panel-${cat.value}`}
+                    className="divide-y-2 divide-slate-300"
+                  >
+                    {categoryItems.length === 0 ? (
+                      <div className="px-4 py-8 text-center text-gray-500">
+                        Geen criteria. Klik op &quot;+ Criterium&quot; om toe te voegen.
+                      </div>
+                    ) : (
+                      categoryItems.map((item) => (
+                        <SortableCriterionCard
+                          key={item.index}
+                          item={item}
+                          index={item.index}
+                          onUpdate={updateCriterion}
+                          onRemove={removeCriterion}
+                          learningObjectives={learningObjectives}
+                        />
+                      ))
+                    )}
                   </div>
-                ) : (
-                  categoryItems.map((item) => (
-                    <CriterionCard
-                      key={item.index}
-                      item={item}
-                      index={item.index}
-                      onUpdate={updateCriterion}
-                      onRemove={removeCriterion}
-                      onMove={moveCriterion}
-                      onDragStart={handleDragStart}
-                      onDragEnd={handleDragEnd}
-                      learningObjectives={learningObjectives}
-                    />
-                  ))
-                )}
-              </div>
+                </SortableContext>
+              </DndContext>
             )}
           </section>
         );
       })}
 
       {/* Status Bar */}
-      <div className="sticky bottom-0 bg-white border rounded-2xl p-4 shadow-lg">
+      <div className="sticky bottom-0 bg-white border border-slate-200 rounded-2xl p-4 shadow-lg">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-6">
             <div className="text-sm">
@@ -336,27 +368,36 @@ export default function RubricEditor({
   );
 }
 
-type CriterionCardProps = {
+type SortableCriterionCardProps = {
   item: CriterionItem;
   index: number;
   onUpdate: (idx: number, updates: Partial<CriterionItem>) => void;
   onRemove: (idx: number) => void;
-  onMove: (idx: number, dir: -1 | 1) => void;
-  onDragStart: (idx: number) => void;
-  onDragEnd: () => void;
   learningObjectives: LearningObjectiveDto[];
 };
 
-function CriterionCard({
+function SortableCriterionCard({
   item,
   index,
   onUpdate,
   onRemove,
-  onMove,
-  onDragStart,
-  onDragEnd,
   learningObjectives,
-}: CriterionCardProps) {
+}: SortableCriterionCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: index });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
   const [showObjectiveDropdown, setShowObjectiveDropdown] = useState(false);
 
   const handleDescriptorChange = (level: string, value: string) => {
@@ -384,25 +425,35 @@ function CriterionCard({
 
   return (
     <article
-      className="px-4 py-3 space-y-3"
-      draggable
-      onDragStart={() => onDragStart(index)}
-      onDragEnd={onDragEnd}
+      ref={setNodeRef}
+      style={style}
+      className={`px-5 py-4 space-y-3 ${
+        isDragging ? "bg-sky-50 shadow-lg z-10" : "hover:bg-slate-50/50"
+      }`}
       role="article"
       aria-label={`Criterium: ${item.name}`}
     >
-      {/* Top Row: Title, Learning Objectives Icon, Weight, Actions */}
+      {/* Top Row: Drag Handle, Title, Learning Objectives Icon, Weight, Actions */}
       <div className="flex items-center gap-3">
-        <span
-          className="cursor-move text-gray-400 text-lg select-none"
-          aria-hidden="true"
-          title="Sleep om te verplaatsen tussen categorieën"
+        {/* Drag Handle */}
+        <button
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 p-1"
+          title="Sleep om te verplaatsen"
         >
-          ⋮⋮
-        </span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <circle cx="5" cy="3" r="1.5" />
+            <circle cx="11" cy="3" r="1.5" />
+            <circle cx="5" cy="8" r="1.5" />
+            <circle cx="11" cy="8" r="1.5" />
+            <circle cx="5" cy="13" r="1.5" />
+            <circle cx="11" cy="13" r="1.5" />
+          </svg>
+        </button>
         <input
           type="text"
-          className="flex-1 border rounded-lg px-3 py-2"
+          className="flex-1 border border-slate-300 rounded-xl px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 text-base font-semibold text-slate-800 transition"
           value={item.name || ""}
           onChange={(e) => onUpdate(index, { name: e.target.value })}
           placeholder="Criterium naam"
@@ -491,7 +542,7 @@ function CriterionCard({
             type="number"
             step="0.1"
             min="0"
-            className="w-20 border rounded-lg px-2 py-2"
+            className="w-20 border border-slate-200 rounded-xl px-2 py-2 bg-slate-50 focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 focus:bg-white text-sm transition"
             value={Number.isFinite(item.weight) ? item.weight : 0}
             onChange={(e) => {
               const value = e.target.valueAsNumber;
@@ -502,24 +553,8 @@ function CriterionCard({
         </label>
         <div className="flex items-center gap-1">
           <button
-            onClick={() => onMove(index, -1)}
-            className="p-2 rounded-lg border hover:bg-gray-50"
-            title="Omhoog"
-            aria-label="Verplaats omhoog"
-          >
-            ↑
-          </button>
-          <button
-            onClick={() => onMove(index, 1)}
-            className="p-2 rounded-lg border hover:bg-gray-50"
-            title="Omlaag"
-            aria-label="Verplaats omlaag"
-          >
-            ↓
-          </button>
-          <button
             onClick={() => onRemove(index)}
-            className="p-2 rounded-lg border text-red-600 hover:bg-red-50"
+            className="p-2 rounded-xl border border-slate-200 text-red-600 hover:bg-red-50 hover:border-red-200"
             title="Verwijder"
             aria-label="Verwijder criterium"
           >
@@ -556,15 +591,13 @@ function CriterionCard({
                   Niveau {idx + 1}
                 </label>
                 <textarea
-                  className="w-full border rounded-lg px-2 py-2 text-sm resize-none"
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-y min-h-[96px] bg-slate-50 focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 focus:bg-white transition"
                   value={text}
                   onChange={(e) => handleDescriptorChange(level, e.target.value)}
                   placeholder={`Beschrijving niveau ${idx + 1}`}
-                  rows={3}
-                  style={{ maxHeight: "120px" }}
                   aria-label={`Niveau ${idx + 1} beschrijving`}
                 />
-                <div className="text-xs text-gray-500 text-right">
+                <div className="text-xs text-gray-400 text-right">
                   {charCount} tekens
                 </div>
               </div>
