@@ -2,12 +2,69 @@
  * DTOs for Competency Monitor
  */
 
+// ============ Competency Category DTOs ============
+
+export interface CompetencyCategory {
+  id: number;
+  school_id: number;
+  name: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CompetencyCategoryCreate {
+  name: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  order_index?: number;
+}
+
+export interface CompetencyCategoryUpdate {
+  name?: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  order_index?: number;
+}
+
+// ============ Competency Tree DTOs ============
+
+export interface CompetencyTreeItem {
+  id: number;
+  name: string;
+  description?: string;
+  order: number;
+  active: boolean;
+}
+
+export interface CompetencyCategoryTreeItem {
+  id: number;
+  name: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  order_index: number;
+  competencies: CompetencyTreeItem[];
+}
+
+export interface CompetencyTree {
+  categories: CompetencyCategoryTreeItem[];
+}
+
+// ============ Competency DTOs ============
+
 export interface Competency {
   id: number;
   school_id: number;
   name: string;
   description?: string;
-  category?: string;
+  category?: string; // Legacy field
+  category_id?: number; // New FK to CompetencyCategory
   order: number;
   active: boolean;
   scale_min: number;
@@ -22,6 +79,7 @@ export interface CompetencyCreate {
   name: string;
   description?: string;
   category?: string;
+  category_id?: number;
   order?: number;
   active?: boolean;
   scale_min?: number;
@@ -34,6 +92,7 @@ export interface CompetencyUpdate {
   name?: string;
   description?: string;
   category?: string;
+  category_id?: number;
   order?: number;
   active?: boolean;
   scale_min?: number;

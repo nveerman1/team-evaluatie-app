@@ -7,13 +7,47 @@ from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 
 
+# ============ Competency Category Schemas ============
+
+
+class CompetencyCategoryBase(BaseModel):
+    name: str = Field(..., max_length=200)
+    description: Optional[str] = None
+    color: Optional[str] = Field(None, max_length=20)
+    icon: Optional[str] = Field(None, max_length=100)
+    order_index: int = 0
+
+
+class CompetencyCategoryCreate(CompetencyCategoryBase):
+    pass
+
+
+class CompetencyCategoryUpdate(BaseModel):
+    name: Optional[str] = Field(None, max_length=200)
+    description: Optional[str] = None
+    color: Optional[str] = Field(None, max_length=20)
+    icon: Optional[str] = Field(None, max_length=100)
+    order_index: Optional[int] = None
+
+
+class CompetencyCategoryOut(CompetencyCategoryBase):
+    id: int
+    school_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # ============ Competency Schemas ============
 
 
 class CompetencyBase(BaseModel):
     name: str = Field(..., max_length=200)
     description: Optional[str] = None
-    category: Optional[str] = Field(None, max_length=100)
+    category: Optional[str] = Field(None, max_length=100)  # Legacy field
+    category_id: Optional[int] = None  # New FK to CompetencyCategory
     order: int = 0
     active: bool = True
     scale_min: int = 1
@@ -30,12 +64,28 @@ class CompetencyUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=200)
     description: Optional[str] = None
     category: Optional[str] = Field(None, max_length=100)
+    category_id: Optional[int] = None
     order: Optional[int] = None
     active: Optional[bool] = None
     scale_min: Optional[int] = None
     scale_max: Optional[int] = None
     scale_labels: Optional[Dict[str, str]] = None
     metadata_json: Optional[Dict[str, Any]] = None
+
+
+# ============ Competency Reorder Schemas ============
+
+
+class CompetencyReorderItem(BaseModel):
+    """A single item in a reorder request"""
+    id: int
+    order_index: int
+
+
+class CompetencyReorderRequest(BaseModel):
+    """Request to reorder competencies within a category"""
+    category_id: int
+    items: List[CompetencyReorderItem]
 
 
 class CompetencyOut(CompetencyBase):
@@ -46,6 +96,39 @@ class CompetencyOut(CompetencyBase):
 
     class Config:
         from_attributes = True
+
+
+class CompetencyWithCategoryOut(CompetencyOut):
+    """Competency with embedded category info"""
+    competency_category: Optional[CompetencyCategoryOut] = None
+
+
+# ============ Competency Tree Schemas ============
+
+
+class CompetencyTreeItem(BaseModel):
+    """A competency within a category tree"""
+    id: int
+    name: str
+    description: Optional[str] = None
+    order: int = 0
+    active: bool = True
+
+
+class CompetencyCategoryTreeItem(BaseModel):
+    """A category with its competencies"""
+    id: int
+    name: str
+    description: Optional[str] = None
+    color: Optional[str] = None
+    icon: Optional[str] = None
+    order_index: int = 0
+    competencies: List[CompetencyTreeItem] = Field(default_factory=list)
+
+
+class CompetencyTree(BaseModel):
+    """Full tree of categories with their competencies"""
+    categories: List[CompetencyCategoryTreeItem] = Field(default_factory=list)
 
 
 # ============ Competency Rubric Level Schemas ============

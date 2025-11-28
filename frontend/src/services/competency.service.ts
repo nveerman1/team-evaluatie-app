@@ -6,6 +6,10 @@ import type {
   Competency,
   CompetencyCreate,
   CompetencyUpdate,
+  CompetencyCategory,
+  CompetencyCategoryCreate,
+  CompetencyCategoryUpdate,
+  CompetencyTree,
   CompetencyRubricLevel,
   CompetencyRubricLevelCreate,
   CompetencyRubricLevelUpdate,
@@ -32,6 +36,44 @@ import type {
 } from "@/dtos";
 
 export const competencyService = {
+  // ============ Competency Category CRUD ============
+
+  async getCategories(): Promise<CompetencyCategory[]> {
+    const response = await api.get("/competencies/categories");
+    return response.data;
+  },
+
+  async getCategory(id: number): Promise<CompetencyCategory> {
+    const response = await api.get(`/competencies/categories/${id}`);
+    return response.data;
+  },
+
+  async createCategory(data: CompetencyCategoryCreate): Promise<CompetencyCategory> {
+    const response = await api.post("/competencies/categories", data);
+    return response.data;
+  },
+
+  async updateCategory(
+    id: number,
+    data: CompetencyCategoryUpdate
+  ): Promise<CompetencyCategory> {
+    const response = await api.patch(`/competencies/categories/${id}`, data);
+    return response.data;
+  },
+
+  async deleteCategory(id: number): Promise<void> {
+    await api.delete(`/competencies/categories/${id}`);
+  },
+
+  // ============ Competency Tree ============
+
+  async getCompetencyTree(activeOnly: boolean = true): Promise<CompetencyTree> {
+    const response = await api.get("/competencies/tree", {
+      params: { active_only: activeOnly },
+    });
+    return response.data;
+  },
+
   // ============ Competency CRUD ============
 
   async getCompetencies(activeOnly: boolean = true): Promise<Competency[]> {
@@ -61,6 +103,19 @@ export const competencyService = {
 
   async deleteCompetency(id: number): Promise<void> {
     await api.delete(`/competencies/${id}`);
+  },
+
+  // ============ Competency Reorder ============
+
+  async reorderCompetencies(
+    categoryId: number,
+    items: Array<{ id: number; order_index: number }>
+  ): Promise<Competency[]> {
+    const response = await api.patch("/competencies/reorder", {
+      category_id: categoryId,
+      items,
+    });
+    return response.data;
   },
 
   // ============ Competency Rubric Level CRUD ============

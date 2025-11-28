@@ -1,9 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { subjectService } from "@/services/subject.service";
+import { competencyService } from "@/services/competency.service";
 import { Subject } from "@/dtos/subject.dto";
+import type {
+  CompetencyTree,
+  CompetencyCategoryTreeItem,
+  CompetencyTreeItem,
+} from "@/dtos/competency.dto";
 import {
   createLearningObjective,
   listLearningObjectives,
@@ -104,6 +111,11 @@ export default function TemplatesPage() {
     _filterPhase: undefined,
   });
 
+  // Competency state
+  const [competencyTree, setCompetencyTree] = useState<CompetencyTree | null>(null);
+  const [loadingCompetencies, setLoadingCompetencies] = useState(false);
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<number | "all">("all");
+
   // Sync state with URL params
   useEffect(() => {
     const subjectIdParam = searchParams.get("subjectId");
@@ -137,6 +149,13 @@ export default function TemplatesPage() {
     }
   }, [activeTab, selectedSubjectId]);
 
+  // Load competencies when tab changes to competencies
+  useEffect(() => {
+    if (activeTab === "competencies") {
+      fetchCompetencyTree();
+    }
+  }, [activeTab]);
+
   const loadSubjects = async () => {
     try {
       setLoading(true);
@@ -169,6 +188,27 @@ export default function TemplatesPage() {
       setLoadingObjectives(false);
     }
   };
+
+  const fetchCompetencyTree = async () => {
+    setLoadingCompetencies(true);
+    try {
+      const tree = await competencyService.getCompetencyTree(false); // Include inactive
+      setCompetencyTree(tree);
+    } catch (err) {
+      console.error("Error fetching competency tree:", err);
+    } finally {
+      setLoadingCompetencies(false);
+    }
+  };
+
+  // Filter categories based on selected filter
+  const filteredCategories = useMemo((): CompetencyCategoryTreeItem[] => {
+    if (!competencyTree || !competencyTree.categories) return [];
+    if (selectedCategoryFilter === "all") {
+      return competencyTree.categories;
+    }
+    return competencyTree.categories.filter((cat: CompetencyCategoryTreeItem) => cat.id === selectedCategoryFilter);
+  }, [competencyTree, selectedCategoryFilter]);
 
   const openCreateModal = () => {
     setFormData({
@@ -401,6 +441,137 @@ export default function TemplatesPage() {
   };
 
   const renderTabContent = () => {
+    // Competencies are school-wide and don't require a subject selection
+    if (activeTab === "competencies") {
+      return (
+        <div className="p-6">
+          <div className="space-y-6">
+            {/* Header and description */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">
+                  Beheer competentie templates met niveau descriptoren per categorie
+                </p>
+              </div>
+              <Link
+                href="/teacher/competencies/create"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+              >
+                <span>+</span> Nieuwe Competentie
+              </Link>
+            </div>
+
+            {/* Category Filter Pills */}
+            {competencyTree && competencyTree.categories && competencyTree.categories.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => setSelectedCategoryFilter("all")}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                    selectedCategoryFilter === "all"
+                      ? "bg-sky-100 text-sky-700 border-sky-300"
+                      : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                  }`}
+                >
+                  Alle ({competencyTree.categories.reduce((acc: number, cat: CompetencyCategoryTreeItem) => acc + (cat.competencies?.length || 0), 0)})
+                </button>
+                {competencyTree.categories.map((category: CompetencyCategoryTreeItem) => (
+                  <button
+                    key={category.id}
+                    onClick={() => setSelectedCategoryFilter(category.id)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                      selectedCategoryFilter === category.id
+                        ? "bg-sky-100 text-sky-700 border-sky-300"
+                        : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                    }`}
+                  >
+                    {category.name} ({category.competencies?.length || 0})
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Loading state */}
+            {loadingCompetencies && (
+              <div className="text-center py-8">
+                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
+                <p className="mt-2 text-sm text-gray-500">Competenties laden...</p>
+              </div>
+            )}
+
+            {/* No data state */}
+            {!loadingCompetencies && (!competencyTree || !competencyTree.categories || competencyTree.categories.length === 0) && (
+              <div className="text-center py-12 border rounded-xl bg-gray-50">
+                <p className="text-gray-500 mb-4">Nog geen competenties aangemaakt.</p>
+                <Link
+                  href="/teacher/competencies/create"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                >
+                  <span>+</span> Eerste Competentie Aanmaken
+                </Link>
+              </div>
+            )}
+
+            {/* Category Sections */}
+            {!loadingCompetencies && filteredCategories.length > 0 && (
+              <div className="space-y-8">
+                {filteredCategories.map((category: CompetencyCategoryTreeItem) => (
+                  <div key={category.id} className="space-y-3">
+                    {/* Category Header */}
+                    <div className="flex items-center gap-3 px-1">
+                      {category.color && (
+                        <div
+                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: category.color }}
+                        />
+                      )}
+                      <h3 className="text-lg font-semibold text-gray-800">
+                        {category.name}
+                        <span className="ml-2 text-sm font-normal text-gray-500">
+                          ({category.competencies?.length || 0})
+                        </span>
+                      </h3>
+                    </div>
+                    {category.description && (
+                      <p className="text-sm text-gray-500 px-1 -mt-1">
+                        {category.description}
+                      </p>
+                    )}
+
+                    {/* Competency Cards Grid */}
+                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                      {(category.competencies || []).map((competency: CompetencyTreeItem) => (
+                        <Link
+                          key={competency.id}
+                          href={`/teacher/competencies/${competency.id}`}
+                          className="p-4 border rounded-xl bg-white hover:shadow-md hover:border-gray-300 transition-all group"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors truncate">
+                                {competency.name}
+                              </h4>
+                              {competency.description && (
+                                <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                                  {competency.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="mt-3 flex items-center text-xs text-gray-400">
+                            <span>Klik om te bewerken →</span>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
     if (!selectedSubjectId) {
       return (
         <div className="flex items-center justify-center h-64">
@@ -429,7 +600,7 @@ export default function TemplatesPage() {
       );
     }
 
-    const selectedSubject = subjects.find((s) => s.id === selectedSubjectId);
+    const selectedSubject = subjects.find((s: Subject) => s.id === selectedSubjectId);
 
     return (
       <div className="p-6">
@@ -606,9 +777,9 @@ export default function TemplatesPage() {
                                   ))}
                               </select>
                             )}
-                            {peerFormData.learning_objective_ids.length > 0 && (
+                            {(peerFormData.learning_objective_ids?.length ?? 0) > 0 && (
                               <div className="flex flex-wrap gap-1 mt-2">
-                                {peerFormData.learning_objective_ids.map((id) => {
+                                {(peerFormData.learning_objective_ids || []).map((id) => {
                                   const obj = learningObjectives.find((o) => o.id === id);
                                   return (
                                     <span
@@ -621,7 +792,7 @@ export default function TemplatesPage() {
                                         onClick={() =>
                                           setPeerFormData({
                                             ...peerFormData,
-                                            learning_objective_ids: peerFormData.learning_objective_ids.filter(
+                                            learning_objective_ids: (peerFormData.learning_objective_ids || []).filter(
                                               (objId) => objId !== id
                                             ),
                                           })
@@ -688,7 +859,7 @@ export default function TemplatesPage() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <span className="text-xs text-gray-500">
-                                    {criterion.learning_objective_ids.length} leerdoel(en)
+                                  {criterion.learning_objective_ids?.length ?? 0} leerdoel(en)
                                   </span>
                                   <svg
                                     className={`w-5 h-5 transition-transform ${
@@ -888,9 +1059,9 @@ export default function TemplatesPage() {
                                         <h6 className="font-medium text-sm mb-2">
                                           Gekoppelde leerdoelen:
                                         </h6>
-                                        {criterion.learning_objective_ids.length > 0 ? (
+                                        {(criterion.learning_objective_ids?.length ?? 0) > 0 ? (
                                           <div className="flex flex-wrap gap-1">
-                                            {criterion.learning_objective_ids.map((id) => {
+                                            {(criterion.learning_objective_ids || []).map((id) => {
                                               const obj = learningObjectives.find((o) => o.id === id);
                                               return (
                                                 <span
@@ -968,19 +1139,6 @@ export default function TemplatesPage() {
               <div className="text-center py-8 text-gray-500">
                 <p className="mb-4">Project rubric templates worden hier weergegeven</p>
                 <p className="text-xs">API Endpoint: GET /api/v1/templates/project-rubrics?subject_id={selectedSubjectId}</p>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "competencies" && (
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600">
-                Beheer competentie templates met niveau descriptoren en
-                reflectievragen
-              </p>
-              <div className="text-center py-8 text-gray-500">
-                <p className="mb-4">Competency templates worden hier weergegeven</p>
-                <p className="text-xs">API Endpoint: GET /api/v1/templates/competencies?subject_id={selectedSubjectId}</p>
               </div>
             </div>
           )}
