@@ -274,18 +274,18 @@ export default function RubricEditor({
             aria-label={`${cat.value} sectie`}
           >
             {/* Panel Header */}
-            <header className="flex items-center justify-between gap-4 px-5 py-3 bg-slate-50/80 border-b border-slate-100">
+            <header className="flex items-center justify-between gap-4 px-5 py-3 bg-slate-200 border-b border-slate-300">
               <button
                 onClick={() => togglePanel(cat.value)}
                 className="flex items-center gap-3 flex-1 text-left"
                 aria-expanded={isExpanded}
                 aria-controls={`panel-${cat.value}`}
               >
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{cat.value}</span>
-                <span className="text-xs font-medium text-slate-400 ml-1">
+                <span className="text-sm font-bold uppercase tracking-wide text-slate-700">{cat.value}</span>
+                <span className="text-xs font-medium text-slate-500 ml-1">
                   ({categoryItems.length})
                 </span>
-                <span className="ml-auto text-sm text-gray-500">
+                <span className="ml-auto text-sm text-slate-600">
                   {isExpanded ? "▼" : "▶"}
                 </span>
               </button>
@@ -316,7 +316,7 @@ export default function RubricEditor({
                 >
                   <div
                     id={`panel-${cat.value}`}
-                    className="divide-y divide-slate-100"
+                    className="divide-y divide-slate-200"
                   >
                     {categoryItems.length === 0 ? (
                       <div className="px-4 py-8 text-center text-gray-500">
@@ -453,7 +453,7 @@ function SortableCriterionCard({
         </button>
         <input
           type="text"
-          className="flex-1 border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 focus:bg-white text-sm transition"
+          className="flex-1 border border-slate-300 rounded-xl px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 text-base font-semibold text-slate-800 transition"
           value={item.name || ""}
           onChange={(e) => onUpdate(index, { name: e.target.value })}
           placeholder="Criterium naam"
