@@ -42,13 +42,12 @@ export default function LeerdoelenTabPage() {
     loadData();
   }, [loadData]);
 
-  // Get unique categories from data
+  // Get unique competency names from data for filtering
   const categories = useMemo(() => {
     if (!data) return [];
     const cats = new Set<string>();
     data.items.forEach((item) => {
       if (item.competency_name) {
-        // Extract category if present (assuming format "Category: Name" or just name)
         cats.add(item.competency_name);
       }
     });

@@ -236,7 +236,11 @@ export default function ReflectiesTabPage() {
                     <div className="mt-3 flex gap-2">
                       <button
                         className="px-2 py-1 border border-slate-200 rounded-xl text-sm bg-white hover:bg-slate-50 shadow-sm"
-                        onClick={() => navigator.clipboard.writeText(item.text || "")}
+                        onClick={() => {
+                          navigator.clipboard.writeText(item.text || "").catch(() => {
+                            // Fallback for browsers that don't support clipboard API
+                          });
+                        }}
                       >
                         Kopieer tekst
                       </button>
