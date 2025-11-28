@@ -159,57 +159,68 @@ export default function EditRubricPageInner() {
   if (loading) return <main className="p-6">Laden…</main>;
 
   return (
-    <main className="max-w-7xl mx-auto p-6 space-y-6">
-      <header className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Rubric bewerken</h1>
-          {rubric && (
-            <p className="text-gray-600 text-sm">
-              {rubric.title} · schaal {rubric.scale_min}–{rubric.scale_max}
-            </p>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <a href="/teacher/rubrics" className="px-3 py-2 rounded-lg border">
-            Terug
-          </a>
-          <button
-            onClick={duplicateRubric}
-            className="px-3 py-2 rounded-lg border"
-          >
-            Dupliceer
-          </button>
-          <button
-            onClick={deleteRubric}
-            className="px-3 py-2 rounded-lg border text-red-600"
-          >
-            Verwijder
-          </button>
-          <button
-            onClick={saveAll}
-            disabled={saving}
-            className="px-4 py-2 rounded-xl bg-black text-white disabled:opacity-60"
-          >
-            {saving ? "Opslaan…" : "Opslaan"}
-          </button>
-        </div>
-      </header>
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-7xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+              Rubric bewerken
+            </h1>
+            {rubric && (
+              <p className="text-gray-600 mt-1 text-sm">
+                {rubric.title} · schaal {rubric.scale_min}–{rubric.scale_max}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <a 
+              href="/teacher/rubrics" 
+              className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-sm font-medium shadow-sm"
+            >
+              Terug
+            </a>
+            <button
+              onClick={duplicateRubric}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-sm font-medium shadow-sm"
+            >
+              Dupliceer
+            </button>
+            <button
+              onClick={deleteRubric}
+              className="px-3 py-1.5 rounded-lg border border-red-200 bg-white text-red-600 hover:bg-red-50 text-sm font-medium shadow-sm"
+            >
+              Verwijder
+            </button>
+            <button
+              onClick={saveAll}
+              disabled={saving}
+              className="px-4 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm font-medium shadow-sm disabled:opacity-60"
+            >
+              {saving ? "Opslaan…" : "Opslaan"}
+            </button>
+          </div>
+        </header>
+      </div>
 
-      {error && (
-        <div className="p-3 rounded-lg bg-red-50 text-red-700">{error}</div>
-      )}
-      {info && (
-        <div className="p-3 rounded-lg bg-green-50 text-green-700">{info}</div>
-      )}
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {error && (
+          <div className="p-3 rounded-lg bg-red-50 text-red-700">{error}</div>
+        )}
+        {info && (
+          <div className="p-3 rounded-lg bg-green-50 text-green-700">{info}</div>
+        )}
 
-      {rubric && (
-        <RubricEditor
-          scope={(rubric.scope as "peer" | "project") || "peer"}
-          targetLevel={rubric.target_level || null}
-          items={items}
-          onItemsChange={setItems}
-        />
-      )}
-    </main>
+        {rubric && (
+          <RubricEditor
+            scope={(rubric.scope as "peer" | "project") || "peer"}
+            targetLevel={rubric.target_level || null}
+            items={items}
+            onItemsChange={setItems}
+          />
+        )}
+      </main>
+    </>
   );
 }

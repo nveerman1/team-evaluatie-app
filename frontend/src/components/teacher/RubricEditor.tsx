@@ -1,8 +1,25 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { listLearningObjectives } from "@/services/learning-objective.service";
 import type { LearningObjectiveDto } from "@/dtos/learning-objective.dto";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 type Descriptor = {
   level1?: string;
@@ -63,8 +80,6 @@ export default function RubricEditor({
         : PROJECT_CATEGORIES.map((c) => c.value)
     )
   );
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
   const [learningObjectives, setLearningObjectives] = useState<
     LearningObjectiveDto[]
   >([]);
@@ -72,6 +87,18 @@ export default function RubricEditor({
 
   const categories =
     scope === "peer" ? PEER_CATEGORIES : PROJECT_CATEGORIES;
+
+  // DnD sensors for criteria reordering within categories
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Set mounted state to avoid hydration issues
   useEffect(() => {
@@ -135,66 +162,63 @@ export default function RubricEditor({
     );
   };
 
-  const moveCriterion = (idx: number, dir: -1 | 1) => {
-    const item = items[idx];
-    const category = item.category;
-    
-    // Get all items in the same category
-    const categoryIndices = items
-      .map((it, i) => ({ item: it, index: i }))
-      .filter(({ item: it }) => it.category === category);
-    
-    // Find position within category
-    const categoryPos = categoryIndices.findIndex(({ index }) => index === idx);
-    const targetPos = categoryPos + dir;
-    
-    if (targetPos < 0 || targetPos >= categoryIndices.length) return;
-    
-    // Swap within the category
-    const newItems = [...items];
-    const targetIdx = categoryIndices[targetPos].index;
-    [newItems[idx], newItems[targetIdx]] = [newItems[targetIdx], newItems[idx]];
-    onItemsChange(newItems.map((it, i) => ({ ...it, order: i + 1 })));
-  };
+  // Handle drag end for reordering criteria within a category
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent, categoryValue: string) => {
+      const { active, over } = event;
 
-  const handleDragStart = (idx: number) => {
-    setDraggedIndex(idx);
-  };
+      if (!over || active.id === over.id) {
+        return;
+      }
 
-  const handleDragOver = (e: React.DragEvent, category: string) => {
-    e.preventDefault();
-    setDragOverCategory(category);
-  };
+      // Find items in this category
+      const categoryItems = items
+        .map((item, index) => ({ item, index }))
+        .filter(({ item }) => item.category === categoryValue);
 
-  const handleDragLeave = () => {
-    setDragOverCategory(null);
-  };
+      // Find old and new positions within the category
+      const oldCategoryIndex = categoryItems.findIndex(
+        ({ index }) => index === active.id
+      );
+      const newCategoryIndex = categoryItems.findIndex(
+        ({ index }) => index === over.id
+      );
 
-  const handleDrop = (e: React.DragEvent, targetCategory: string) => {
-    e.preventDefault();
-    setDragOverCategory(null);
-    
-    if (draggedIndex === null) return;
-    
-    const item = items[draggedIndex];
-    if (item.category === targetCategory) return;
-    
-    // Simple confirmation - could be replaced with a custom modal in the future
-    const confirmed = window.confirm(
-      `Wil je dit criterium verplaatsen naar "${targetCategory}"?`
-    );
-    
-    if (confirmed) {
-      updateCriterion(draggedIndex, { category: targetCategory });
-    }
-    
-    setDraggedIndex(null);
-  };
+      if (oldCategoryIndex === -1 || newCategoryIndex === -1) return;
 
-  const handleDragEnd = () => {
-    setDraggedIndex(null);
-    setDragOverCategory(null);
-  };
+      // Reorder within category
+      const reorderedCategoryItems = arrayMove(
+        categoryItems,
+        oldCategoryIndex,
+        newCategoryIndex
+      );
+
+      // Build new items array maintaining original structure
+      const newItems = [...items];
+      
+      // Update the positions of items in this category
+      reorderedCategoryItems.forEach((catItem, newPos) => {
+        const originalIndex = catItem.index;
+        newItems[originalIndex] = {
+          ...newItems[originalIndex],
+          order: newPos + 1,
+        };
+      });
+
+      // Sort items by category and order
+      const sortedItems = [...newItems].sort((a, b) => {
+        // First by category order
+        const catOrder = categories.findIndex((c) => c.value === a.category) -
+          categories.findIndex((c) => c.value === b.category);
+        if (catOrder !== 0) return catOrder;
+        // Then by order within category
+        return (a.order ?? 0) - (b.order ?? 0);
+      });
+
+      onItemsChange(sortedItems.map((it, i) => ({ ...it, order: i + 1 })));
+    },
+    [items, categories, onItemsChange]
+  );
 
   const itemsByCategory = useMemo(() => {
     const grouped: Record<string, Array<CriterionItem & { index: number }>> = {};
@@ -235,17 +259,11 @@ export default function RubricEditor({
         const isExpanded = expandedPanels.has(cat.value);
         const categoryItems = itemsByCategory[cat.value] || [];
         const categoryWeight = weightsByCategory[cat.value] || 0;
-        const isDragOver = dragOverCategory === cat.value;
 
         return (
           <section
             key={cat.value}
-            className={`bg-white border rounded-2xl overflow-hidden ${
-              isDragOver ? "ring-2 ring-blue-500" : ""
-            }`}
-            onDragOver={(e) => handleDragOver(e, cat.value)}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, cat.value)}
+            className="rounded-2xl border border-slate-200 bg-white shadow-sm"
             role="region"
             aria-label={`${cat.value} sectie`}
           >
@@ -257,9 +275,12 @@ export default function RubricEditor({
                 aria-expanded={isExpanded}
                 aria-controls={`panel-${cat.value}`}
               >
-                <span className="text-lg font-semibold">{cat.value}</span>
-                <span className="text-sm text-gray-600" title={cat.tooltip}>
+                <span className="text-sm font-semibold text-slate-900">{cat.value}</span>
+                <span className="text-xs text-slate-500" title={cat.tooltip}>
                   ({cat.tooltip})
+                </span>
+                <span className="text-xs font-medium text-slate-400 ml-1">
+                  ({categoryItems.length})
                 </span>
                 <span className="ml-auto text-sm text-gray-500">
                   {isExpanded ? "▼" : "▶"}
@@ -279,32 +300,40 @@ export default function RubricEditor({
               </div>
             </header>
 
-            {/* Panel Content */}
+            {/* Panel Content with drag & drop */}
             {isExpanded && (
-              <div
-                id={`panel-${cat.value}`}
-                className="divide-y"
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={(event) => handleDragEnd(event, cat.value)}
               >
-                {categoryItems.length === 0 ? (
-                  <div className="px-4 py-8 text-center text-gray-500">
-                    Geen criteria. Klik op &quot;+ Criterium&quot; om toe te voegen.
+                <SortableContext
+                  items={categoryItems.map((item) => item.index)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div
+                    id={`panel-${cat.value}`}
+                    className="divide-y divide-slate-100"
+                  >
+                    {categoryItems.length === 0 ? (
+                      <div className="px-4 py-8 text-center text-gray-500">
+                        Geen criteria. Klik op &quot;+ Criterium&quot; om toe te voegen.
+                      </div>
+                    ) : (
+                      categoryItems.map((item) => (
+                        <SortableCriterionCard
+                          key={item.index}
+                          item={item}
+                          index={item.index}
+                          onUpdate={updateCriterion}
+                          onRemove={removeCriterion}
+                          learningObjectives={learningObjectives}
+                        />
+                      ))
+                    )}
                   </div>
-                ) : (
-                  categoryItems.map((item) => (
-                    <CriterionCard
-                      key={item.index}
-                      item={item}
-                      index={item.index}
-                      onUpdate={updateCriterion}
-                      onRemove={removeCriterion}
-                      onMove={moveCriterion}
-                      onDragStart={handleDragStart}
-                      onDragEnd={handleDragEnd}
-                      learningObjectives={learningObjectives}
-                    />
-                  ))
-                )}
-              </div>
+                </SortableContext>
+              </DndContext>
             )}
           </section>
         );
@@ -336,27 +365,36 @@ export default function RubricEditor({
   );
 }
 
-type CriterionCardProps = {
+type SortableCriterionCardProps = {
   item: CriterionItem;
   index: number;
   onUpdate: (idx: number, updates: Partial<CriterionItem>) => void;
   onRemove: (idx: number) => void;
-  onMove: (idx: number, dir: -1 | 1) => void;
-  onDragStart: (idx: number) => void;
-  onDragEnd: () => void;
   learningObjectives: LearningObjectiveDto[];
 };
 
-function CriterionCard({
+function SortableCriterionCard({
   item,
   index,
   onUpdate,
   onRemove,
-  onMove,
-  onDragStart,
-  onDragEnd,
   learningObjectives,
-}: CriterionCardProps) {
+}: SortableCriterionCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: index });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
   const [showObjectiveDropdown, setShowObjectiveDropdown] = useState(false);
 
   const handleDescriptorChange = (level: string, value: string) => {
@@ -384,22 +422,32 @@ function CriterionCard({
 
   return (
     <article
-      className="px-4 py-3 space-y-3"
-      draggable
-      onDragStart={() => onDragStart(index)}
-      onDragEnd={onDragEnd}
+      ref={setNodeRef}
+      style={style}
+      className={`px-4 py-3 space-y-3 ${
+        isDragging ? "bg-sky-50 shadow-lg z-10" : "hover:bg-slate-50"
+      }`}
       role="article"
       aria-label={`Criterium: ${item.name}`}
     >
-      {/* Top Row: Title, Learning Objectives Icon, Weight, Actions */}
+      {/* Top Row: Drag Handle, Title, Learning Objectives Icon, Weight, Actions */}
       <div className="flex items-center gap-3">
-        <span
-          className="cursor-move text-gray-400 text-lg select-none"
-          aria-hidden="true"
-          title="Sleep om te verplaatsen tussen categorieën"
+        {/* Drag Handle */}
+        <button
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 p-1"
+          title="Sleep om te verplaatsen"
         >
-          ⋮⋮
-        </span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <circle cx="5" cy="3" r="1.5" />
+            <circle cx="11" cy="3" r="1.5" />
+            <circle cx="5" cy="8" r="1.5" />
+            <circle cx="11" cy="8" r="1.5" />
+            <circle cx="5" cy="13" r="1.5" />
+            <circle cx="11" cy="13" r="1.5" />
+          </svg>
+        </button>
         <input
           type="text"
           className="flex-1 border rounded-lg px-3 py-2"
@@ -501,22 +549,6 @@ function CriterionCard({
           />
         </label>
         <div className="flex items-center gap-1">
-          <button
-            onClick={() => onMove(index, -1)}
-            className="p-2 rounded-lg border hover:bg-gray-50"
-            title="Omhoog"
-            aria-label="Verplaats omhoog"
-          >
-            ↑
-          </button>
-          <button
-            onClick={() => onMove(index, 1)}
-            className="p-2 rounded-lg border hover:bg-gray-50"
-            title="Omlaag"
-            aria-label="Verplaats omlaag"
-          >
-            ↓
-          </button>
           <button
             onClick={() => onRemove(index)}
             className="p-2 rounded-lg border text-red-600 hover:bg-red-50"
