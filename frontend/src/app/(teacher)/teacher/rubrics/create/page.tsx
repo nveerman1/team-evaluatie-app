@@ -105,8 +105,13 @@ export default function CreateRubricPage() {
       }
       setLoadingCriteria(true);
       try {
-        const criteria = await listPeerCriteria(selectedSubjectId);
+        // Filter by target_level if selected
+        const criteria = await listPeerCriteria(selectedSubjectId, {
+          target_level: targetLevel,
+        });
         setPeerCriteria(criteria);
+        // Reset selected criteria when level changes
+        setSelectedCriteriaIds([]);
       } catch (err) {
         console.error("Failed to load peer criteria:", err);
       } finally {
@@ -114,7 +119,7 @@ export default function CreateRubricPage() {
       }
     }
     loadCriteria();
-  }, [selectedSubjectId, scope]);
+  }, [selectedSubjectId, scope, targetLevel]);
 
   // Toggle a criterion selection
   const handleCriterionToggle = (criterionId: number) => {
@@ -249,6 +254,25 @@ export default function CreateRubricPage() {
           </div>
         )}
 
+        {/* Target level dropdown - moved below Vakgebied/Sectie for peer scope */}
+        {scope === "peer" && (
+          <div className="space-y-1">
+            <label className="block text-sm font-medium">Niveau (Onderbouw/Bovenbouw)</label>
+            <select
+              className="w-full border rounded-lg px-3 py-2"
+              value={targetLevel || ""}
+              onChange={(e) => setTargetLevel(e.target.value as "onderbouw" | "bovenbouw" | null || null)}
+            >
+              <option value="">Geen specifiek niveau</option>
+              <option value="onderbouw">Onderbouw</option>
+              <option value="bovenbouw">Bovenbouw</option>
+            </select>
+            <p className="text-xs text-gray-500">
+              Hiermee filtert de app automatisch de beschikbare criteria en leerdoelen.
+            </p>
+          </div>
+        )}
+
         {/* Peer criteria multi-select dropdown - only show when subject is selected and scope is peer */}
         {scope === "peer" && selectedSubjectId && (
           <div className="space-y-2">
@@ -326,22 +350,6 @@ export default function CreateRubricPage() {
         )}
 
         <div className="space-y-1">
-          <label className="block text-sm font-medium">Type rubric (voor leerdoelen)</label>
-          <select
-            className="w-full border rounded-lg px-3 py-2"
-            value={targetLevel || ""}
-            onChange={(e) => setTargetLevel(e.target.value as "onderbouw" | "bovenbouw" | null || null)}
-          >
-            <option value="">Geen specifiek niveau</option>
-            <option value="onderbouw">Onderbouw</option>
-            <option value="bovenbouw">Bovenbouw</option>
-          </select>
-          <p className="text-xs text-gray-500">
-            Hiermee filtert de app automatisch de beschikbare leerdoelen bij het koppelen aan criteria.
-          </p>
-        </div>
-
-        <div className="space-y-1">
           <label className="block text-sm font-medium">Titel</label>
           <input
             className="w-full border rounded-lg px-3 py-2"
@@ -360,27 +368,6 @@ export default function CreateRubricPage() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label className="block text-sm font-medium">Schaal minimum</label>
-            <input
-              type="number"
-              className="w-full border rounded-lg px-3 py-2"
-              value={scaleMin}
-              onChange={(e) => setScaleMin(e.target.valueAsNumber)}
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="block text-sm font-medium">Schaal maximum</label>
-            <input
-              type="number"
-              className="w-full border rounded-lg px-3 py-2"
-              value={scaleMax}
-              onChange={(e) => setScaleMax(e.target.valueAsNumber)}
-            />
-          </div>
         </div>
 
         <div className="flex items-center gap-3">

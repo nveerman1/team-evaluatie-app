@@ -20,6 +20,9 @@ class PeerEvaluationCriterionTemplateBase(BaseModel):
     )
     title: str = Field(..., min_length=1, max_length=200)
     description: Optional[str] = None
+    target_level: Optional[str] = Field(
+        None, description="Target level: onderbouw or bovenbouw"
+    )
     level_descriptors: Dict[str, str] = Field(
         default_factory=dict,
         description="5-level descriptors: {'1': '...', '2': '...'}",
@@ -38,6 +41,7 @@ class PeerEvaluationCriterionTemplateUpdate(BaseModel):
     omza_category: Optional[str] = None
     title: Optional[str] = Field(None, min_length=1, max_length=200)
     description: Optional[str] = None
+    target_level: Optional[str] = None
     level_descriptors: Optional[Dict[str, str]] = None
 
 

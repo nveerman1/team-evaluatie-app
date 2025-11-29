@@ -96,10 +96,12 @@ export default function TemplatesPage() {
   const [editFilterPhase, setEditFilterPhase] = useState<string | undefined>(undefined);
   const [editLearningObjectiveIds, setEditLearningObjectiveIds] = useState<number[]>([]);
   const [isCreatingPeerCriterion, setIsCreatingPeerCriterion] = useState(false);
+  const [selectedPeerLevelFilter, setSelectedPeerLevelFilter] = useState<"all" | "onderbouw" | "bovenbouw">("all");
   const [peerFormData, setPeerFormData] = useState<Partial<PeerEvaluationCriterionTemplateCreateDto> & { _filterPhase?: string }>({
     omza_category: "organiseren",
     title: "",
     description: "",
+    target_level: null,
     level_descriptors: {
       "1": "",
       "2": "",
@@ -209,6 +211,14 @@ export default function TemplatesPage() {
     }
     return competencyTree.categories.filter((cat: CompetencyCategoryTreeItem) => cat.id === selectedCategoryFilter);
   }, [competencyTree, selectedCategoryFilter]);
+
+  // Filter peer criteria based on selected target level filter
+  const filteredPeerCriteria = useMemo(() => {
+    if (selectedPeerLevelFilter === "all") {
+      return peerCriteria;
+    }
+    return peerCriteria.filter(c => c.target_level === selectedPeerLevelFilter);
+  }, [peerCriteria, selectedPeerLevelFilter]);
 
   const openCreateModal = () => {
     setFormData({
@@ -621,6 +631,42 @@ export default function TemplatesPage() {
                 Beheer templates voor peer evaluatie criteria (OMZA:
                 Organiseren, Meedoen, Zelfvertrouwen, Autonomie)
               </p>
+              
+              {/* Filter pills for Onderbouw/Bovenbouw */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Filter niveau:</span>
+                <button
+                  onClick={() => setSelectedPeerLevelFilter("all")}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                    selectedPeerLevelFilter === "all"
+                      ? "bg-sky-100 text-sky-700 border-sky-300"
+                      : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                  }`}
+                >
+                  Alle ({peerCriteria.length})
+                </button>
+                <button
+                  onClick={() => setSelectedPeerLevelFilter("onderbouw")}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                    selectedPeerLevelFilter === "onderbouw"
+                      ? "bg-blue-100 text-blue-700 border-blue-300"
+                      : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                  }`}
+                >
+                  Onderbouw ({peerCriteria.filter(c => c.target_level === "onderbouw").length})
+                </button>
+                <button
+                  onClick={() => setSelectedPeerLevelFilter("bovenbouw")}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                    selectedPeerLevelFilter === "bovenbouw"
+                      ? "bg-purple-100 text-purple-700 border-purple-300"
+                      : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                  }`}
+                >
+                  Bovenbouw ({peerCriteria.filter(c => c.target_level === "bovenbouw").length})
+                </button>
+              </div>
+
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <h4 className="font-semibold text-blue-900 mb-2">OMZA Categorieën:</h4>
                 <ul className="text-sm text-blue-800 space-y-1">
@@ -661,6 +707,25 @@ export default function TemplatesPage() {
                             <option value="meedoen">Meedoen</option>
                             <option value="zelfvertrouwen">Zelfvertrouwen</option>
                             <option value="autonomie">Autonomie</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            Niveau (Onderbouw/Bovenbouw)
+                          </label>
+                          <select
+                            value={peerFormData.target_level || ""}
+                            onChange={(e) =>
+                              setPeerFormData({
+                                ...peerFormData,
+                                target_level: e.target.value as "onderbouw" | "bovenbouw" | null || null,
+                              })
+                            }
+                            className="w-full px-3 py-2 border rounded"
+                          >
+                            <option value="">Geen specifiek niveau</option>
+                            <option value="onderbouw">Onderbouw</option>
+                            <option value="bovenbouw">Bovenbouw</option>
                           </select>
                         </div>
                         <div>
@@ -758,10 +823,11 @@ export default function TemplatesPage() {
                                 value=""
                                 onChange={(e) => {
                                   const id = parseInt(e.target.value);
-                                  if (id && !peerFormData.learning_objective_ids.includes(id)) {
+                                  const currentIds = peerFormData.learning_objective_ids || [];
+                                  if (id && !currentIds.includes(id)) {
                                     setPeerFormData({
                                       ...peerFormData,
-                                      learning_objective_ids: [...peerFormData.learning_objective_ids, id],
+                                      learning_objective_ids: [...currentIds, id],
                                     });
                                   }
                                 }}
@@ -828,7 +894,7 @@ export default function TemplatesPage() {
 
                   {/* List of criteria by category */}
                   {["organiseren", "meedoen", "zelfvertrouwen", "autonomie"].map((category) => {
-                    const categoryCriteria = peerCriteria.filter(
+                    const categoryCriteria = filteredPeerCriteria.filter(
                       (c) => c.omza_category === category
                     );
                     if (categoryCriteria.length === 0) return null;
@@ -850,7 +916,18 @@ export default function TemplatesPage() {
                                 className="bg-white p-4 cursor-pointer hover:bg-gray-50 flex justify-between items-center"
                               >
                                 <div className="flex-1">
-                                  <h5 className="font-medium">{criterion.title}</h5>
+                                  <div className="flex items-center gap-2">
+                                    <h5 className="font-medium">{criterion.title}</h5>
+                                    {criterion.target_level && (
+                                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                        criterion.target_level === "onderbouw"
+                                          ? "bg-blue-100 text-blue-700"
+                                          : "bg-purple-100 text-purple-700"
+                                      }`}>
+                                        {criterion.target_level === "onderbouw" ? "Onderbouw" : "Bovenbouw"}
+                                      </span>
+                                    )}
+                                  </div>
                                   {criterion.description && (
                                     <p className="text-sm text-gray-600 mt-1">
                                       {criterion.description}
@@ -1108,12 +1185,18 @@ export default function TemplatesPage() {
                     );
                   })}
 
-                  {peerCriteria.length === 0 && !isCreatingPeerCriterion && (
+                  {filteredPeerCriteria.length === 0 && !isCreatingPeerCriterion && (
                     <div className="text-center py-8 text-gray-500">
-                      <p>Nog geen criteria aangemaakt voor dit vak.</p>
-                      <p className="text-xs mt-2">
-                        Klik op &quot;+ Nieuw Peerevaluatie Criterium&quot; om te beginnen.
-                      </p>
+                      {peerCriteria.length === 0 ? (
+                        <>
+                          <p>Nog geen criteria aangemaakt voor dit vak.</p>
+                          <p className="text-xs mt-2">
+                            Klik op &quot;+ Nieuw Peerevaluatie Criterium&quot; om te beginnen.
+                          </p>
+                        </>
+                      ) : (
+                        <p>Geen criteria gevonden voor het geselecteerde niveau.</p>
+                      )}
                     </div>
                   )}
                 </>
@@ -1302,6 +1385,7 @@ export default function TemplatesPage() {
                       omza_category: "organiseren",
                       title: "",
                       description: "",
+                      target_level: null,
                       level_descriptors: { "1": "", "2": "", "3": "", "4": "", "5": "" },
                       learning_objective_ids: [],
                     });
