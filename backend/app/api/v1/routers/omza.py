@@ -337,9 +337,12 @@ async def get_standard_comments(
 ):
     """
     Get standard comments for an evaluation, optionally filtered by category.
-    Standard comments are stored in evaluation settings.
+    Combines template-based remarks from the StandardRemark table (type='omza')
+    with evaluation-specific comments stored in evaluation settings.
     """
     require_role(current_user, ["teacher", "admin"])
+    
+    from app.infra.db.models import StandardRemark, Course
 
     # Get evaluation
     evaluation = (
@@ -356,7 +359,43 @@ async def get_standard_comments(
             detail="Evaluation not found",
         )
 
-    # Initialize default standard comments if not present
+    results = []
+    seen_texts = set()  # Track texts to avoid duplicates
+    
+    # Get subject_id from course if available
+    subject_id = None
+    if evaluation.course_id:
+        course = db.query(Course).filter(Course.id == evaluation.course_id).first()
+        if course:
+            subject_id = course.subject_id
+    
+    # First, fetch template-based standard remarks for OMZA type
+    template_query = db.query(StandardRemark).filter(
+        StandardRemark.school_id == current_user.school_id,
+        StandardRemark.type == "omza",
+    )
+    
+    # Filter by subject if available
+    if subject_id:
+        template_query = template_query.filter(StandardRemark.subject_id == subject_id)
+    
+    if category:
+        template_query = template_query.filter(StandardRemark.category == category)
+    
+    template_remarks = template_query.order_by(StandardRemark.order, StandardRemark.id).all()
+    
+    # Add template remarks first (prefixed with "template_")
+    for remark in template_remarks:
+        results.append(
+            StandardCommentOut(
+                id=f"template_{remark.id}",
+                category=remark.category,
+                text=remark.text,
+            )
+        )
+        seen_texts.add(remark.text.lower().strip())
+
+    # Initialize default standard comments if not present in evaluation settings
     default_comments = {
         "O": [
             "Plant goed en houdt overzicht.",
@@ -396,18 +435,21 @@ async def get_standard_comments(
     
     standard_comments = evaluation.settings.get("omza_standard_comments", {})
 
-    results = []
     # Ensure categories are in the correct order: O, M, Z, A
     category_order = ["O", "M", "Z", "A"]
     ordered_categories = [cat for cat in category_order if cat in standard_comments]
     # Add any other categories that might exist
     ordered_categories.extend([cat for cat in standard_comments.keys() if cat not in category_order])
     
+    # Add evaluation-specific comments (prefixed with category_index)
     for cat in ordered_categories:
         if category and cat != category:
             continue
         comments = standard_comments[cat]
         for idx, text in enumerate(comments):
+            # Skip if this text is already in the results from templates
+            if text.lower().strip() in seen_texts:
+                continue
             results.append(
                 StandardCommentOut(
                     id=f"{cat}_{idx}",
