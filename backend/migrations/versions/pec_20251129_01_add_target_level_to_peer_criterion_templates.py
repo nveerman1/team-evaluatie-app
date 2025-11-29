@@ -1,10 +1,11 @@
 """Add target_level to peer evaluation criterion templates
 
 Revision ID: pec_20251129_01
-Revises: stud_20251126_01
+Revises: comp_20251127_02
 Create Date: 2025-11-29
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -13,7 +14,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = "pec_20251129_01"
-down_revision: Union[str, None] = "stud_20251126_01"
+down_revision: Union[str, None] = "comp_20251127_02"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -24,7 +25,7 @@ def upgrade() -> None:
         "peer_evaluation_criterion_templates",
         sa.Column("target_level", sa.String(20), nullable=True),
     )
-    
+
     # Add index for filtering by target_level
     op.create_index(
         "ix_peer_criterion_template_target_level",
@@ -39,6 +40,6 @@ def downgrade() -> None:
         "ix_peer_criterion_template_target_level",
         table_name="peer_evaluation_criterion_templates",
     )
-    
+
     # Drop the column
     op.drop_column("peer_evaluation_criterion_templates", "target_level")
