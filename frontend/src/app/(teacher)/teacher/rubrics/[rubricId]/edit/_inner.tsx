@@ -99,7 +99,7 @@ export default function EditRubricPageInner() {
     };
   }, [rubricId]);
 
-  // Load subjects when modal opens
+  // Load subjects when modal opens and auto-select first one
   useEffect(() => {
     if (!showTemplateModal) return;
     async function loadSubjects() {
@@ -107,6 +107,10 @@ export default function EditRubricPageInner() {
       try {
         const response = await subjectService.listSubjects({ per_page: 100, is_active: true });
         setSubjects(response.subjects);
+        // Auto-select first subject if we have subjects
+        if (response.subjects.length > 0 && !selectedSubjectId) {
+          setSelectedSubjectId(response.subjects[0].id);
+        }
       } catch (err) {
         console.error("Failed to load subjects:", err);
       } finally {
@@ -135,20 +139,6 @@ export default function EditRubricPageInner() {
     }
     loadCriteria();
   }, [selectedSubjectId]);
-
-  const toggleCriterion = (id: number) => {
-    setSelectedCriteriaIds(prev =>
-      prev.includes(id) ? prev.filter(cid => cid !== id) : [...prev, id]
-    );
-  };
-
-  const selectAllCriteria = () => {
-    setSelectedCriteriaIds(peerCriteria.map(c => c.id));
-  };
-
-  const deselectAllCriteria = () => {
-    setSelectedCriteriaIds([]);
-  };
 
   const importSelectedCriteria = () => {
     const selectedTemplates = peerCriteria.filter(c => selectedCriteriaIds.includes(c.id));
@@ -366,7 +356,6 @@ export default function EditRubricPageInner() {
                 }}
                 disabled={loadingSubjects}
               >
-                <option value="">-- Kies een vakgebied --</option>
                 {subjects.map((subject) => (
                   <option key={subject.id} value={subject.id}>
                     {subject.name} ({subject.code})
@@ -375,30 +364,10 @@ export default function EditRubricPageInner() {
               </select>
             </div>
 
-            {/* Criteria list */}
+            {/* Criteria multi-select dropdown */}
             {selectedSubjectId && (
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="block text-sm font-medium">Beschikbare criteria</label>
-                  {peerCriteria.length > 0 && (
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={selectAllCriteria}
-                        className="text-xs text-blue-600 hover:text-blue-800"
-                      >
-                        Selecteer alle
-                      </button>
-                      <button
-                        type="button"
-                        onClick={deselectAllCriteria}
-                        className="text-xs text-gray-600 hover:text-gray-800"
-                      >
-                        Deselecteer alle
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <label className="block text-sm font-medium">Beschikbare criteria</label>
                 
                 {loadingCriteria ? (
                   <div className="p-4 text-center text-gray-500 text-sm">Criteria laden...</div>
@@ -407,39 +376,35 @@ export default function EditRubricPageInner() {
                     Geen criteria templates gevonden voor dit vakgebied.
                   </div>
                 ) : (
-                  <div className="border rounded-lg max-h-64 overflow-y-auto">
-                    {["organiseren", "meedoen", "zelfvertrouwen", "autonomie"].map((category) => {
-                      const categoryCriteria = peerCriteria.filter(c => c.omza_category === category);
-                      if (categoryCriteria.length === 0) return null;
-                      
-                      return (
-                        <div key={category} className="border-b last:border-b-0">
-                          <div className="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-600 uppercase">
-                            {category}
-                          </div>
-                          {categoryCriteria.map((criterion) => (
-                            <label
-                              key={criterion.id}
-                              className="flex items-start gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selectedCriteriaIds.includes(criterion.id)}
-                                onChange={() => toggleCriterion(criterion.id)}
-                                className="mt-1"
-                              />
-                              <div className="flex-1 min-w-0">
-                                <div className="text-sm font-medium">{criterion.title}</div>
-                                {criterion.description && (
-                                  <div className="text-xs text-gray-500 mt-0.5">{criterion.description}</div>
-                                )}
-                              </div>
-                            </label>
-                          ))}
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <>
+                    <select
+                      multiple
+                      className="w-full border rounded-lg px-3 py-2 min-h-[200px]"
+                      value={selectedCriteriaIds.map(String)}
+                      onChange={(e) => {
+                        const selected = Array.from(e.target.selectedOptions, option => parseInt(option.value));
+                        setSelectedCriteriaIds(selected);
+                      }}
+                    >
+                      {["organiseren", "meedoen", "zelfvertrouwen", "autonomie"].map((category) => {
+                        const categoryCriteria = peerCriteria.filter(c => c.omza_category === category);
+                        if (categoryCriteria.length === 0) return null;
+                        
+                        return (
+                          <optgroup key={category} label={category.charAt(0).toUpperCase() + category.slice(1)}>
+                            {categoryCriteria.map((criterion) => (
+                              <option key={criterion.id} value={criterion.id}>
+                                {criterion.title}
+                              </option>
+                            ))}
+                          </optgroup>
+                        );
+                      })}
+                    </select>
+                    <p className="text-xs text-gray-500">
+                      Houd Ctrl (Windows) of Cmd (Mac) ingedrukt om meerdere criteria te selecteren.
+                    </p>
+                  </>
                 )}
               </div>
             )}

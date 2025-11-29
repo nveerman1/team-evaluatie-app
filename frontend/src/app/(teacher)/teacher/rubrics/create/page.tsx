@@ -13,6 +13,7 @@ export default function CreateRubricPage() {
   const sp = useSearchParams();
   const fromDupId = sp.get("duplicate_of");
   const scopeParam = sp.get("scope") as "peer" | "project" | null;
+  const subjectIdParam = sp.get("subjectId");
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -25,7 +26,9 @@ export default function CreateRubricPage() {
 
   // Subject and peer criteria state
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(
+    subjectIdParam ? parseInt(subjectIdParam) : null
+  );
   const [peerCriteria, setPeerCriteria] = useState<PeerEvaluationCriterionTemplateDto[]>([]);
   const [selectedCriteriaIds, setSelectedCriteriaIds] = useState<number[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(false);
@@ -37,13 +40,17 @@ export default function CreateRubricPage() {
     }
   }, [scopeParam]);
 
-  // Load subjects on mount
+  // Load subjects on mount and auto-select first one if no subjectId param
   useEffect(() => {
     async function loadSubjects() {
       setLoadingSubjects(true);
       try {
         const response = await subjectService.listSubjects({ per_page: 100, is_active: true });
         setSubjects(response.subjects);
+        // Auto-select first subject if none selected and we have subjects
+        if (!selectedSubjectId && response.subjects.length > 0) {
+          setSelectedSubjectId(response.subjects[0].id);
+        }
       } catch (err) {
         console.error("Failed to load subjects:", err);
       } finally {
@@ -73,20 +80,6 @@ export default function CreateRubricPage() {
     }
     loadCriteria();
   }, [selectedSubjectId, scope]);
-
-  const toggleCriterion = (id: number) => {
-    setSelectedCriteriaIds(prev =>
-      prev.includes(id) ? prev.filter(cid => cid !== id) : [...prev, id]
-    );
-  };
-
-  const selectAllCriteria = () => {
-    setSelectedCriteriaIds(peerCriteria.map(c => c.id));
-  };
-
-  const deselectAllCriteria = () => {
-    setSelectedCriteriaIds([]);
-  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -180,50 +173,26 @@ export default function CreateRubricPage() {
         {/* Subject selector - only show for peer scope */}
         {scope === "peer" && (
           <div className="space-y-1">
-            <label className="block text-sm font-medium">Vakgebied / Sectie (voor criteria templates)</label>
+            <label className="block text-sm font-medium">Vakgebied / Sectie</label>
             <select
               className="w-full border rounded-lg px-3 py-2"
               value={selectedSubjectId || ""}
               onChange={(e) => setSelectedSubjectId(e.target.value ? parseInt(e.target.value) : null)}
               disabled={loadingSubjects}
             >
-              <option value="">-- Kies een vakgebied (optioneel) --</option>
               {subjects.map((subject) => (
                 <option key={subject.id} value={subject.id}>
                   {subject.name} ({subject.code})
                 </option>
               ))}
             </select>
-            <p className="text-xs text-gray-500">
-              Selecteer een vakgebied om criteria uit de templates toe te kunnen voegen.
-            </p>
           </div>
         )}
 
-        {/* Peer criteria multi-select - only show when subject is selected and scope is peer */}
+        {/* Peer criteria multi-select dropdown - only show when subject is selected and scope is peer */}
         {scope === "peer" && selectedSubjectId && (
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="block text-sm font-medium">Criteria uit templates</label>
-              {peerCriteria.length > 0 && (
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={selectAllCriteria}
-                    className="text-xs text-blue-600 hover:text-blue-800"
-                  >
-                    Selecteer alle
-                  </button>
-                  <button
-                    type="button"
-                    onClick={deselectAllCriteria}
-                    className="text-xs text-gray-600 hover:text-gray-800"
-                  >
-                    Deselecteer alle
-                  </button>
-                </div>
-              )}
-            </div>
+            <label className="block text-sm font-medium">Criteria uit templates</label>
             
             {loadingCriteria ? (
               <div className="p-4 text-center text-gray-500 text-sm">Criteria laden...</div>
@@ -232,45 +201,40 @@ export default function CreateRubricPage() {
                 Geen criteria templates gevonden voor dit vakgebied.
               </div>
             ) : (
-              <div className="border rounded-lg max-h-64 overflow-y-auto">
-                {["organiseren", "meedoen", "zelfvertrouwen", "autonomie"].map((category) => {
-                  const categoryCriteria = peerCriteria.filter(c => c.omza_category === category);
-                  if (categoryCriteria.length === 0) return null;
-                  
-                  return (
-                    <div key={category} className="border-b last:border-b-0">
-                      <div className="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-600 uppercase">
-                        {category}
-                      </div>
-                      {categoryCriteria.map((criterion) => (
-                        <label
-                          key={criterion.id}
-                          className="flex items-start gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedCriteriaIds.includes(criterion.id)}
-                            onChange={() => toggleCriterion(criterion.id)}
-                            className="mt-1"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium">{criterion.title}</div>
-                            {criterion.description && (
-                              <div className="text-xs text-gray-500 mt-0.5">{criterion.description}</div>
-                            )}
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            
-            {selectedCriteriaIds.length > 0 && (
-              <p className="text-xs text-blue-600">
-                {selectedCriteriaIds.length} criterium/criteria geselecteerd - deze worden direct aan de rubric toegevoegd.
-              </p>
+              <>
+                <select
+                  multiple
+                  className="w-full border rounded-lg px-3 py-2 min-h-[200px]"
+                  value={selectedCriteriaIds.map(String)}
+                  onChange={(e) => {
+                    const selected = Array.from(e.target.selectedOptions, option => parseInt(option.value));
+                    setSelectedCriteriaIds(selected);
+                  }}
+                >
+                  {["organiseren", "meedoen", "zelfvertrouwen", "autonomie"].map((category) => {
+                    const categoryCriteria = peerCriteria.filter(c => c.omza_category === category);
+                    if (categoryCriteria.length === 0) return null;
+                    
+                    return (
+                      <optgroup key={category} label={category.charAt(0).toUpperCase() + category.slice(1)}>
+                        {categoryCriteria.map((criterion) => (
+                          <option key={criterion.id} value={criterion.id}>
+                            {criterion.title}
+                          </option>
+                        ))}
+                      </optgroup>
+                    );
+                  })}
+                </select>
+                <p className="text-xs text-gray-500">
+                  Houd Ctrl (Windows) of Cmd (Mac) ingedrukt om meerdere criteria te selecteren.
+                </p>
+                {selectedCriteriaIds.length > 0 && (
+                  <p className="text-xs text-blue-600">
+                    {selectedCriteriaIds.length} criterium/criteria geselecteerd - deze worden direct aan de rubric toegevoegd.
+                  </p>
+                )}
+              </>
             )}
           </div>
         )}
