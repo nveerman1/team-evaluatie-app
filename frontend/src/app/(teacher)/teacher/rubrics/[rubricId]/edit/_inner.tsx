@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import RubricEditor, { type CriterionItem } from "@/components/teacher/RubricEditor";
 import { subjectService } from "@/services/subject.service";
+import { courseService } from "@/services/course.service";
 import { listPeerCriteria } from "@/services/peer-evaluation-criterion-template.service";
 import type { Subject } from "@/dtos/subject.dto";
 import type { PeerEvaluationCriterionTemplateDto } from "@/dtos/peer-evaluation-criterion-template.dto";
@@ -99,17 +100,34 @@ export default function EditRubricPageInner() {
     };
   }, [rubricId]);
 
-  // Load subjects when modal opens and auto-select first one
+  // Load subjects based on teacher's courses when modal opens and auto-select first one
   useEffect(() => {
     if (!showTemplateModal) return;
-    async function loadSubjects() {
+    async function loadTeacherSubjects() {
       setLoadingSubjects(true);
       try {
-        const response = await subjectService.listSubjects({ per_page: 100, is_active: true });
-        setSubjects(response.subjects);
+        // Get the teacher's courses (API filters by logged-in teacher)
+        const coursesResponse = await courseService.listCourses({ per_page: 100, is_active: true });
+        const courses = coursesResponse.courses;
+        
+        // Extract unique subject IDs from the teacher's courses
+        const teacherSubjectIds = [...new Set(
+          courses
+            .map(c => c.subject_id)
+            .filter((id): id is number => id !== undefined && id !== null)
+        )];
+        
+        // Get all subjects and filter to only show teacher's subjects
+        const subjectsResponse = await subjectService.listSubjects({ per_page: 100, is_active: true });
+        const teacherSubjects = subjectsResponse.subjects.filter(
+          subject => teacherSubjectIds.includes(subject.id)
+        );
+        
+        setSubjects(teacherSubjects);
+        
         // Auto-select first subject if we have subjects
-        if (response.subjects.length > 0 && !selectedSubjectId) {
-          setSelectedSubjectId(response.subjects[0].id);
+        if (teacherSubjects.length > 0 && !selectedSubjectId) {
+          setSelectedSubjectId(teacherSubjects[0].id);
         }
       } catch (err) {
         console.error("Failed to load subjects:", err);
@@ -117,7 +135,7 @@ export default function EditRubricPageInner() {
         setLoadingSubjects(false);
       }
     }
-    loadSubjects();
+    loadTeacherSubjects();
   }, [showTemplateModal]);
 
   // Load peer criteria when subject changes

@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import type { RubricCreate } from "@/lib/rubric-types";
 import { subjectService } from "@/services/subject.service";
+import { courseService } from "@/services/course.service";
 import { listPeerCriteria } from "@/services/peer-evaluation-criterion-template.service";
 import type { Subject } from "@/dtos/subject.dto";
 import type { PeerEvaluationCriterionTemplateDto } from "@/dtos/peer-evaluation-criterion-template.dto";
@@ -40,16 +41,33 @@ export default function CreateRubricPage() {
     }
   }, [scopeParam]);
 
-  // Load subjects on mount and auto-select first one if no subjectId param
+  // Load subjects based on teacher's courses and auto-select first one
   useEffect(() => {
-    async function loadSubjects() {
+    async function loadTeacherSubjects() {
       setLoadingSubjects(true);
       try {
-        const response = await subjectService.listSubjects({ per_page: 100, is_active: true });
-        setSubjects(response.subjects);
+        // Get the teacher's courses (API filters by logged-in teacher)
+        const coursesResponse = await courseService.listCourses({ per_page: 100, is_active: true });
+        const courses = coursesResponse.courses;
+        
+        // Extract unique subject IDs from the teacher's courses
+        const teacherSubjectIds = [...new Set(
+          courses
+            .map(c => c.subject_id)
+            .filter((id): id is number => id !== undefined && id !== null)
+        )];
+        
+        // Get all subjects and filter to only show teacher's subjects
+        const subjectsResponse = await subjectService.listSubjects({ per_page: 100, is_active: true });
+        const teacherSubjects = subjectsResponse.subjects.filter(
+          subject => teacherSubjectIds.includes(subject.id)
+        );
+        
+        setSubjects(teacherSubjects);
+        
         // Auto-select first subject if none selected and we have subjects
-        if (!selectedSubjectId && response.subjects.length > 0) {
-          setSelectedSubjectId(response.subjects[0].id);
+        if (!selectedSubjectId && teacherSubjects.length > 0) {
+          setSelectedSubjectId(teacherSubjects[0].id);
         }
       } catch (err) {
         console.error("Failed to load subjects:", err);
@@ -57,7 +75,7 @@ export default function CreateRubricPage() {
         setLoadingSubjects(false);
       }
     }
-    loadSubjects();
+    loadTeacherSubjects();
   }, []);
 
   // Load peer criteria when subject changes and scope is peer
