@@ -1882,7 +1882,7 @@ class MailTemplate(Base):
 
     # Relationships
     school: Mapped["School"] = relationship()
-    subject: Mapped[Optional["Subject"]] = relationship()
+    subject_rel: Mapped[Optional["Subject"]] = relationship(foreign_keys=[subject_id])
 
     __table_args__ = (
         Index("ix_mail_template_school", "school_id"),
