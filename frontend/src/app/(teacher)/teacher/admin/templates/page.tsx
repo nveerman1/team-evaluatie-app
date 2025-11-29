@@ -718,7 +718,7 @@ export default function TemplatesPage() {
                             onChange={(e) =>
                               setPeerFormData({
                                 ...peerFormData,
-                                target_level: e.target.value as "onderbouw" | "bovenbouw" | null || null,
+                                target_level: e.target.value ? (e.target.value as "onderbouw" | "bovenbouw") : null,
                               })
                             }
                             className="w-full px-3 py-2 border rounded"

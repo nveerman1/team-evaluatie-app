@@ -261,7 +261,7 @@ export default function CreateRubricPage() {
             <select
               className="w-full border rounded-lg px-3 py-2"
               value={targetLevel || ""}
-              onChange={(e) => setTargetLevel(e.target.value as "onderbouw" | "bovenbouw" | null || null)}
+              onChange={(e) => setTargetLevel(e.target.value ? (e.target.value as "onderbouw" | "bovenbouw") : null)}
             >
               <option value="">Geen specifiek niveau</option>
               <option value="onderbouw">Onderbouw</option>
