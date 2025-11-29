@@ -41,6 +41,16 @@ import type {
   ProjectRubricCriterionTemplateDto,
   ProjectRubricCriterionTemplateCreateDto,
 } from "@/dtos/project-rubric-criterion-template.dto";
+import {
+  listMailTemplates,
+  createMailTemplate,
+  updateMailTemplate,
+  deleteMailTemplate,
+} from "@/services/mail-template.service";
+import type {
+  MailTemplateDto,
+  MailTemplateCreateDto,
+} from "@/dtos/mail-template.dto";
 
 type TabType =
   | "peer"
@@ -155,6 +165,19 @@ export default function TemplatesPage() {
   const [loadingCompetencies, setLoadingCompetencies] = useState(false);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<number | "all">("all");
 
+  // Mail template state
+  const [mailTemplates, setMailTemplates] = useState<MailTemplateDto[]>([]);
+  const [loadingMailTemplates, setLoadingMailTemplates] = useState(false);
+  const [isCreatingMailTemplate, setIsCreatingMailTemplate] = useState(false);
+  const [editingMailTemplate, setEditingMailTemplate] = useState<number | null>(null);
+  const [mailFormData, setMailFormData] = useState<Partial<MailTemplateCreateDto>>({
+    name: "",
+    type: "opvolgmail",
+    subject: "",
+    body: "",
+    is_active: true,
+  });
+
   // Sync state with URL params
   useEffect(() => {
     const subjectIdParam = searchParams.get("subjectId");
@@ -193,6 +216,13 @@ export default function TemplatesPage() {
     if (activeTab === "rubrics" && selectedSubjectId) {
       fetchProjectCriteria();
       fetchLearningObjectives(); // Also load learning objectives for linking
+    }
+  }, [activeTab, selectedSubjectId]);
+
+  // Load mail templates when tab changes to mail
+  useEffect(() => {
+    if (activeTab === "mail") {
+      fetchMailTemplates();
     }
   }, [activeTab, selectedSubjectId]);
 
@@ -561,6 +591,76 @@ export default function TemplatesPage() {
     setEditingProjectCriterion(null);
   };
 
+  // Mail template functions
+  const fetchMailTemplates = async () => {
+    setLoadingMailTemplates(true);
+    try {
+      const templates = await listMailTemplates({
+        subject_id: selectedSubjectId,
+      });
+      setMailTemplates(templates);
+    } catch (err) {
+      console.error("Error fetching mail templates:", err);
+    } finally {
+      setLoadingMailTemplates(false);
+    }
+  };
+
+  const handleCreateMailTemplate = async () => {
+    if (!mailFormData.name || !mailFormData.subject || !mailFormData.body || !mailFormData.type) {
+      alert("Naam, type, onderwerp en inhoud zijn verplicht");
+      return;
+    }
+
+    try {
+      const createData: MailTemplateCreateDto = {
+        name: mailFormData.name,
+        type: mailFormData.type,
+        subject: mailFormData.subject,
+        body: mailFormData.body,
+        subject_id: selectedSubjectId ?? undefined,
+        is_active: mailFormData.is_active ?? true,
+      };
+      await createMailTemplate(createData);
+      setIsCreatingMailTemplate(false);
+      setMailFormData({
+        name: "",
+        type: "opvolgmail",
+        subject: "",
+        body: "",
+        is_active: true,
+      });
+      fetchMailTemplates();
+    } catch (err) {
+      console.error("Error creating mail template:", err);
+      alert("Er is een fout opgetreden bij het aanmaken.");
+    }
+  };
+
+  const handleUpdateMailTemplate = async (id: number, data: Partial<MailTemplateCreateDto>) => {
+    try {
+      await updateMailTemplate(id, data);
+      setEditingMailTemplate(null);
+      fetchMailTemplates();
+    } catch (err) {
+      console.error("Error updating mail template:", err);
+      alert("Er is een fout opgetreden bij het bijwerken.");
+    }
+  };
+
+  const handleDeleteMailTemplate = async (id: number) => {
+    if (!confirm("Weet je zeker dat je deze mail template wilt verwijderen?")) {
+      return;
+    }
+    try {
+      await deleteMailTemplate(id);
+      fetchMailTemplates();
+    } catch (err) {
+      console.error("Error deleting mail template:", err);
+      alert("Er is een fout opgetreden bij het verwijderen.");
+    }
+  };
+
   const updateURL = (subjectId: number | null, tab: TabType) => {
     const params = new URLSearchParams();
     if (subjectId) params.set("subjectId", subjectId.toString());
@@ -705,6 +805,304 @@ export default function TemplatesPage() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      );
+    }
+
+    // Mail templates can work with or without a subject selection (school-wide or per subject)
+    if (activeTab === "mail" && !selectedSubjectId) {
+      return (
+        <div className="p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Mail-templates (School-breed)
+            </h3>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Beheer school-brede email templates met variabelen voor verschillende
+                communicatiemomenten. Selecteer een sectie voor vak-specifieke templates.
+              </p>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <h4 className="font-semibold text-blue-900 mb-2">Template types:</h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• <strong>opvolgmail</strong> - Opvolgmail voor volgend schooljaar</li>
+                  <li>• <strong>startproject</strong> - Uitnodiging voor startproject</li>
+                  <li>• <strong>tussenpresentatie</strong> - Uitnodiging tussenpresentatie</li>
+                  <li>• <strong>eindpresentatie</strong> - Uitnodiging eindpresentatie</li>
+                  <li>• <strong>bedankmail</strong> - Bedankmail na samenwerking</li>
+                </ul>
+              </div>
+
+              {loadingMailTemplates ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Templates laden...</p>
+                </div>
+              ) : (
+                <>
+                  {/* Create new mail template form */}
+                  {isCreatingMailTemplate && (
+                    <div className="bg-white border-2 border-blue-500 rounded-lg p-4 mb-4">
+                      <h4 className="font-semibold mb-3">Nieuwe Mail Template (School-breed)</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            Naam *
+                          </label>
+                          <input
+                            type="text"
+                            value={mailFormData.name || ""}
+                            onChange={(e) =>
+                              setMailFormData({
+                                ...mailFormData,
+                                name: e.target.value,
+                              })
+                            }
+                            placeholder="bijv. Opvolgmail volgend schooljaar"
+                            className="w-full px-3 py-2 border rounded"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            Type
+                          </label>
+                          <select
+                            value={mailFormData.type || "opvolgmail"}
+                            onChange={(e) =>
+                              setMailFormData({
+                                ...mailFormData,
+                                type: e.target.value,
+                              })
+                            }
+                            className="w-full px-3 py-2 border rounded"
+                          >
+                            <option value="opvolgmail">Opvolgmail</option>
+                            <option value="startproject">Start project</option>
+                            <option value="tussenpresentatie">Tussenpresentatie</option>
+                            <option value="eindpresentatie">Eindpresentatie</option>
+                            <option value="bedankmail">Bedankmail</option>
+                            <option value="herinnering">Herinnering</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            Onderwerp *
+                          </label>
+                          <input
+                            type="text"
+                            value={mailFormData.subject || ""}
+                            onChange={(e) =>
+                              setMailFormData({
+                                ...mailFormData,
+                                subject: e.target.value,
+                              })
+                            }
+                            placeholder="bijv. Samenwerking schooljaar {schoolYear}"
+                            className="w-full px-3 py-2 border rounded"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            Inhoud *
+                          </label>
+                          <textarea
+                            value={mailFormData.body || ""}
+                            onChange={(e) =>
+                              setMailFormData({
+                                ...mailFormData,
+                                body: e.target.value,
+                              })
+                            }
+                            placeholder="Beste opdrachtgever,&#10;&#10;Het schooljaar {schoolYear} staat voor de deur..."
+                            className="w-full px-3 py-2 border rounded font-mono text-sm"
+                            rows={8}
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="is_active_global"
+                            checked={mailFormData.is_active ?? true}
+                            onChange={(e) =>
+                              setMailFormData({
+                                ...mailFormData,
+                                is_active: e.target.checked,
+                              })
+                            }
+                            className="rounded"
+                          />
+                          <label htmlFor="is_active_global" className="text-sm">
+                            Actief (zichtbaar in dropdowns)
+                          </label>
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                          <button
+                            onClick={handleCreateMailTemplate}
+                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                          >
+                            Opslaan
+                          </button>
+                          <button
+                            onClick={() => setIsCreatingMailTemplate(false)}
+                            className="px-4 py-2 border rounded hover:bg-gray-50"
+                          >
+                            Annuleren
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* List of mail templates */}
+                  {mailTemplates.length > 0 ? (
+                    <div className="space-y-3">
+                      {mailTemplates.map((template) => (
+                        <div
+                          key={template.id}
+                          className="border rounded-lg overflow-hidden"
+                        >
+                          <div className="bg-white p-4">
+                            {editingMailTemplate === template.id ? (
+                              <div className="space-y-3">
+                                <div>
+                                  <label className="block text-sm font-medium mb-1">
+                                    Naam
+                                  </label>
+                                  <input
+                                    type="text"
+                                    defaultValue={template.name}
+                                    id={`edit-mail-name-global-${template.id}`}
+                                    className="w-full px-3 py-2 border rounded"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-1">
+                                    Type
+                                  </label>
+                                  <select
+                                    defaultValue={template.type}
+                                    id={`edit-mail-type-global-${template.id}`}
+                                    className="w-full px-3 py-2 border rounded"
+                                  >
+                                    <option value="opvolgmail">Opvolgmail</option>
+                                    <option value="startproject">Start project</option>
+                                    <option value="tussenpresentatie">Tussenpresentatie</option>
+                                    <option value="eindpresentatie">Eindpresentatie</option>
+                                    <option value="bedankmail">Bedankmail</option>
+                                    <option value="herinnering">Herinnering</option>
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-1">
+                                    Onderwerp
+                                  </label>
+                                  <input
+                                    type="text"
+                                    defaultValue={template.subject}
+                                    id={`edit-mail-subject-global-${template.id}`}
+                                    className="w-full px-3 py-2 border rounded"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-1">
+                                    Inhoud
+                                  </label>
+                                  <textarea
+                                    defaultValue={template.body}
+                                    id={`edit-mail-body-global-${template.id}`}
+                                    className="w-full px-3 py-2 border rounded font-mono text-sm"
+                                    rows={8}
+                                  />
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => {
+                                      const nameEl = document.getElementById(
+                                        `edit-mail-name-global-${template.id}`
+                                      ) as HTMLInputElement;
+                                      const typeEl = document.getElementById(
+                                        `edit-mail-type-global-${template.id}`
+                                      ) as HTMLSelectElement;
+                                      const subjectEl = document.getElementById(
+                                        `edit-mail-subject-global-${template.id}`
+                                      ) as HTMLInputElement;
+                                      const bodyEl = document.getElementById(
+                                        `edit-mail-body-global-${template.id}`
+                                      ) as HTMLTextAreaElement;
+                                      handleUpdateMailTemplate(template.id, {
+                                        name: nameEl.value,
+                                        type: typeEl.value,
+                                        subject: subjectEl.value,
+                                        body: bodyEl.value,
+                                      });
+                                    }}
+                                    className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                                  >
+                                    Opslaan
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingMailTemplate(null)}
+                                    className="px-3 py-1.5 border text-sm rounded hover:bg-gray-100"
+                                  >
+                                    Annuleren
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="flex justify-between items-start">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <h5 className="font-medium">{template.name}</h5>
+                                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                                        {template.type}
+                                      </span>
+                                      {!template.is_active && (
+                                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700">
+                                          Inactief
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-sm text-gray-600 mt-1">
+                                      <strong>Onderwerp:</strong> {template.subject}
+                                    </p>
+                                    <div className="mt-2 p-2 bg-gray-50 rounded text-sm text-gray-700 font-mono whitespace-pre-wrap max-h-32 overflow-y-auto">
+                                      {template.body}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex gap-2 mt-3">
+                                  <button
+                                    onClick={() => setEditingMailTemplate(template.id)}
+                                    className="px-3 py-1.5 bg-gray-100 text-sm rounded hover:bg-gray-200"
+                                  >
+                                    Bewerken
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteMailTemplate(template.id)}
+                                    className="px-3 py-1.5 bg-red-100 text-red-700 text-sm rounded hover:bg-red-200"
+                                  >
+                                    Verwijderen
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : !isCreatingMailTemplate && (
+                    <div className="text-center py-8 text-gray-500">
+                      <p className="mb-4">Nog geen school-brede mail templates aangemaakt.</p>
+                      <p className="text-xs">
+                        Klik op &quot;+ Nieuwe Mail-template&quot; om te beginnen.
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       );
@@ -1919,12 +2317,287 @@ export default function TemplatesPage() {
             <div className="space-y-4">
               <p className="text-sm text-gray-600">
                 Beheer email templates met variabelen voor verschillende
-                communicatiemomenten
+                communicatiemomenten. Gebruik {"{schoolYear}"} als variabele voor het schooljaar.
               </p>
-              <div className="text-center py-8 text-gray-500">
-                <p className="mb-4">Mail templates worden hier weergegeven</p>
-                <p className="text-xs">API Endpoint: GET /api/v1/templates/mail-templates?subject_id={selectedSubjectId}</p>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <h4 className="font-semibold text-blue-900 mb-2">Template types:</h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• <strong>opvolgmail</strong> - Opvolgmail voor volgend schooljaar</li>
+                  <li>• <strong>startproject</strong> - Uitnodiging voor startproject</li>
+                  <li>• <strong>tussenpresentatie</strong> - Uitnodiging tussenpresentatie</li>
+                  <li>• <strong>eindpresentatie</strong> - Uitnodiging eindpresentatie</li>
+                  <li>• <strong>bedankmail</strong> - Bedankmail na samenwerking</li>
+                </ul>
               </div>
+
+              {loadingMailTemplates ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Templates laden...</p>
+                </div>
+              ) : (
+                <>
+                  {/* Create new mail template form */}
+                  {isCreatingMailTemplate && (
+                    <div className="bg-white border-2 border-blue-500 rounded-lg p-4 mb-4">
+                      <h4 className="font-semibold mb-3">Nieuwe Mail Template</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            Naam *
+                          </label>
+                          <input
+                            type="text"
+                            value={mailFormData.name || ""}
+                            onChange={(e) =>
+                              setMailFormData({
+                                ...mailFormData,
+                                name: e.target.value,
+                              })
+                            }
+                            placeholder="bijv. Opvolgmail volgend schooljaar"
+                            className="w-full px-3 py-2 border rounded"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            Type
+                          </label>
+                          <select
+                            value={mailFormData.type || "opvolgmail"}
+                            onChange={(e) =>
+                              setMailFormData({
+                                ...mailFormData,
+                                type: e.target.value,
+                              })
+                            }
+                            className="w-full px-3 py-2 border rounded"
+                          >
+                            <option value="opvolgmail">Opvolgmail</option>
+                            <option value="startproject">Start project</option>
+                            <option value="tussenpresentatie">Tussenpresentatie</option>
+                            <option value="eindpresentatie">Eindpresentatie</option>
+                            <option value="bedankmail">Bedankmail</option>
+                            <option value="herinnering">Herinnering</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            Onderwerp *
+                          </label>
+                          <input
+                            type="text"
+                            value={mailFormData.subject || ""}
+                            onChange={(e) =>
+                              setMailFormData({
+                                ...mailFormData,
+                                subject: e.target.value,
+                              })
+                            }
+                            placeholder="bijv. Samenwerking schooljaar {schoolYear}"
+                            className="w-full px-3 py-2 border rounded"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            Inhoud *
+                          </label>
+                          <textarea
+                            value={mailFormData.body || ""}
+                            onChange={(e) =>
+                              setMailFormData({
+                                ...mailFormData,
+                                body: e.target.value,
+                              })
+                            }
+                            placeholder="Beste opdrachtgever,&#10;&#10;Het schooljaar {schoolYear} staat voor de deur..."
+                            className="w-full px-3 py-2 border rounded font-mono text-sm"
+                            rows={8}
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="is_active"
+                            checked={mailFormData.is_active ?? true}
+                            onChange={(e) =>
+                              setMailFormData({
+                                ...mailFormData,
+                                is_active: e.target.checked,
+                              })
+                            }
+                            className="rounded"
+                          />
+                          <label htmlFor="is_active" className="text-sm">
+                            Actief (zichtbaar in dropdowns)
+                          </label>
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                          <button
+                            onClick={handleCreateMailTemplate}
+                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                          >
+                            Opslaan
+                          </button>
+                          <button
+                            onClick={() => setIsCreatingMailTemplate(false)}
+                            className="px-4 py-2 border rounded hover:bg-gray-50"
+                          >
+                            Annuleren
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* List of mail templates */}
+                  {mailTemplates.length > 0 ? (
+                    <div className="space-y-3">
+                      {mailTemplates.map((template) => (
+                        <div
+                          key={template.id}
+                          className="border rounded-lg overflow-hidden"
+                        >
+                          <div className="bg-white p-4">
+                            {editingMailTemplate === template.id ? (
+                              <div className="space-y-3">
+                                <div>
+                                  <label className="block text-sm font-medium mb-1">
+                                    Naam
+                                  </label>
+                                  <input
+                                    type="text"
+                                    defaultValue={template.name}
+                                    id={`edit-mail-name-${template.id}`}
+                                    className="w-full px-3 py-2 border rounded"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-1">
+                                    Type
+                                  </label>
+                                  <select
+                                    defaultValue={template.type}
+                                    id={`edit-mail-type-${template.id}`}
+                                    className="w-full px-3 py-2 border rounded"
+                                  >
+                                    <option value="opvolgmail">Opvolgmail</option>
+                                    <option value="startproject">Start project</option>
+                                    <option value="tussenpresentatie">Tussenpresentatie</option>
+                                    <option value="eindpresentatie">Eindpresentatie</option>
+                                    <option value="bedankmail">Bedankmail</option>
+                                    <option value="herinnering">Herinnering</option>
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-1">
+                                    Onderwerp
+                                  </label>
+                                  <input
+                                    type="text"
+                                    defaultValue={template.subject}
+                                    id={`edit-mail-subject-${template.id}`}
+                                    className="w-full px-3 py-2 border rounded"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-1">
+                                    Inhoud
+                                  </label>
+                                  <textarea
+                                    defaultValue={template.body}
+                                    id={`edit-mail-body-${template.id}`}
+                                    className="w-full px-3 py-2 border rounded font-mono text-sm"
+                                    rows={8}
+                                  />
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => {
+                                      const nameEl = document.getElementById(
+                                        `edit-mail-name-${template.id}`
+                                      ) as HTMLInputElement;
+                                      const typeEl = document.getElementById(
+                                        `edit-mail-type-${template.id}`
+                                      ) as HTMLSelectElement;
+                                      const subjectEl = document.getElementById(
+                                        `edit-mail-subject-${template.id}`
+                                      ) as HTMLInputElement;
+                                      const bodyEl = document.getElementById(
+                                        `edit-mail-body-${template.id}`
+                                      ) as HTMLTextAreaElement;
+                                      handleUpdateMailTemplate(template.id, {
+                                        name: nameEl.value,
+                                        type: typeEl.value,
+                                        subject: subjectEl.value,
+                                        body: bodyEl.value,
+                                      });
+                                    }}
+                                    className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                                  >
+                                    Opslaan
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingMailTemplate(null)}
+                                    className="px-3 py-1.5 border text-sm rounded hover:bg-gray-100"
+                                  >
+                                    Annuleren
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="flex justify-between items-start">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <h5 className="font-medium">{template.name}</h5>
+                                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                                        {template.type}
+                                      </span>
+                                      {!template.is_active && (
+                                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700">
+                                          Inactief
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-sm text-gray-600 mt-1">
+                                      <strong>Onderwerp:</strong> {template.subject}
+                                    </p>
+                                    <div className="mt-2 p-2 bg-gray-50 rounded text-sm text-gray-700 font-mono whitespace-pre-wrap max-h-32 overflow-y-auto">
+                                      {template.body}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex gap-2 mt-3">
+                                  <button
+                                    onClick={() => setEditingMailTemplate(template.id)}
+                                    className="px-3 py-1.5 bg-gray-100 text-sm rounded hover:bg-gray-200"
+                                  >
+                                    Bewerken
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteMailTemplate(template.id)}
+                                    className="px-3 py-1.5 bg-red-100 text-red-700 text-sm rounded hover:bg-red-200"
+                                  >
+                                    Verwijderen
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : !isCreatingMailTemplate && (
+                    <div className="text-center py-8 text-gray-500">
+                      <p className="mb-4">Nog geen mail templates aangemaakt{selectedSubjectId ? " voor dit vak" : ""}.</p>
+                      <p className="text-xs">
+                        Klik op &quot;+ Nieuwe Mail-template&quot; om te beginnen.
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
 
@@ -2062,7 +2735,7 @@ export default function TemplatesPage() {
               Beheer sjablonen per sectie/vakgebied.
             </p>
           </div>
-          {selectedSubjectId && (
+          {(selectedSubjectId || activeTab === "mail") && (
             <div className="flex gap-2">
               <button
                 onClick={() => {
@@ -2087,6 +2760,15 @@ export default function TemplatesPage() {
                       target_level: null,
                       level_descriptors: { "1": "", "2": "", "3": "", "4": "", "5": "" },
                       learning_objective_ids: [],
+                    });
+                  } else if (activeTab === "mail") {
+                    setIsCreatingMailTemplate(true);
+                    setMailFormData({
+                      name: "",
+                      type: "opvolgmail",
+                      subject: "",
+                      body: "",
+                      is_active: true,
                     });
                   } else {
                     // TODO: Implement create modal/form for other template types
