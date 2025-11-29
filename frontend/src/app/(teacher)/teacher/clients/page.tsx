@@ -5,6 +5,32 @@ import Link from "next/link";
 import { ClientFormModal } from "@/components/clients/ClientFormModal";
 import { ClientsList } from "@/components/clients/ClientsList";
 import { clientService } from "@/services/client.service";
+import { listMailTemplates } from "@/services/mail-template.service";
+import type { MailTemplateDto } from "@/dtos/mail-template.dto";
+
+// Default fallback templates when no templates are available from API
+const DEFAULT_TEMPLATES: Record<string, { subject: string; body: string }> = {
+  opvolgmail: {
+    subject: "Samenwerking volgend schooljaar",
+    body: `Beste opdrachtgever,\n\nHet nieuwe schooljaar staat voor de deur en wij willen graag onze samenwerking voortzetten.\n\nHeeft u interesse om opnieuw een project met onze leerlingen te doen?\n\nMet vriendelijke groet,\nHet docententeam`,
+  },
+  startproject: {
+    subject: "Uitnodiging startproject",
+    body: `Beste opdrachtgever,\n\nGraag nodigen wij u uit voor de start van ons nieuwe project.\n\nWe kijken uit naar de samenwerking!\n\nMet vriendelijke groet,\nHet docententeam`,
+  },
+  tussenpresentatie: {
+    subject: "Uitnodiging tussenpresentatie",
+    body: `Beste opdrachtgever,\n\nGraag nodigen wij u uit voor de tussenpresentatie van ons project.\n\nMet vriendelijke groet,\nHet docententeam`,
+  },
+  eindpresentatie: {
+    subject: "Uitnodiging eindpresentatie",
+    body: `Beste opdrachtgever,\n\nGraag nodigen wij u uit voor de eindpresentatie van ons project.\n\nMet vriendelijke groet,\nHet docententeam`,
+  },
+  bedankmail: {
+    subject: "Bedankt voor de samenwerking",
+    body: `Beste opdrachtgever,\n\nHartelijk dank voor de prettige samenwerking.\n\nMet vriendelijke groet,\nHet docententeam`,
+  },
+};
 
 // Helper function for building mailto links
 function buildMailto({ to, bcc, subject, body }: { to?: string; bcc?: string; subject: string; body: string }) {
@@ -324,10 +350,40 @@ function RunningProjectsTab() {
   
   // Bulk email
   const [selectedProjects, setSelectedProjects] = useState<number[]>([]);
-  const [emailTemplate, setEmailTemplate] = useState("opvolgmail");
+  const [emailTemplate, setEmailTemplate] = useState("");
   
   // Available courses for filter - extracted from actual project data
   const [availableCourses, setAvailableCourses] = useState<string[]>([]);
+  
+  // Mail templates from API
+  const [mailTemplates, setMailTemplates] = useState<MailTemplateDto[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(true);
+  
+  // Fetch mail templates
+  useEffect(() => {
+    async function fetchMailTemplates() {
+      try {
+        setTemplatesLoading(true);
+        const templates = await listMailTemplates({ is_active: true });
+        setMailTemplates(templates);
+        // Set default template to first one if available
+        if (templates.length > 0 && !emailTemplate) {
+          setEmailTemplate(templates[0].type);
+        } else if (templates.length === 0 && !emailTemplate) {
+          setEmailTemplate("opvolgmail");
+        }
+      } catch (err) {
+        console.error("Error fetching mail templates:", err);
+        // Fall back to default template type
+        if (!emailTemplate) {
+          setEmailTemplate("opvolgmail");
+        }
+      } finally {
+        setTemplatesLoading(false);
+      }
+    }
+    fetchMailTemplates();
+  }, []);
   
   // Debounce search filter
   useEffect(() => {
@@ -474,34 +530,26 @@ function RunningProjectsTab() {
       return;
     }
     
-    const templates: Record<string, { subject: string; body: string }> = {
-      opvolgmail: {
-        subject: `Samenwerking schooljaar ${schoolYearFilter}`,
-        body: `Beste opdrachtgever,\n\nHet schooljaar ${schoolYearFilter} staat voor de deur en wij willen graag onze samenwerking voortzetten.\n\nHeeft u interesse om opnieuw een project met onze leerlingen te doen?\n\nMet vriendelijke groet,\nHet docententeam`,
-      },
-      startproject: {
-        subject: "Uitnodiging startproject",
-        body: `Beste opdrachtgever,\n\nGraag nodigen wij u uit voor de start van ons nieuwe project.\n\nWe kijken uit naar de samenwerking!\n\nMet vriendelijke groet,\nHet docententeam`,
-      },
-      tussenpresentatie: {
-        subject: "Uitnodiging tussenpresentatie",
-        body: `Beste opdrachtgever,\n\nGraag nodigen wij u uit voor de tussenpresentatie van ons project.\n\nMet vriendelijke groet,\nHet docententeam`,
-      },
-      eindpresentatie: {
-        subject: "Uitnodiging eindpresentatie",
-        body: `Beste opdrachtgever,\n\nGraag nodigen wij u uit voor de eindpresentatie van ons project.\n\nMet vriendelijke groet,\nHet docententeam`,
-      },
-      bedankmail: {
-        subject: "Bedankt voor de samenwerking",
-        body: `Beste opdrachtgever,\n\nHartelijk dank voor de prettige samenwerking.\n\nMet vriendelijke groet,\nHet docententeam`,
-      },
-    };
+    // First try to find the template from API, then fall back to default
+    const apiTemplate = mailTemplates.find(t => t.type === emailTemplate);
+    let emailSubject: string;
+    let emailBody: string;
     
-    const selectedTemplate = templates[emailTemplate] || templates.opvolgmail;
+    if (apiTemplate) {
+      // Use template from API, replace {schoolYear} variable if present
+      emailSubject = apiTemplate.subject.replace(/\{schoolYear\}/g, schoolYearFilter);
+      emailBody = apiTemplate.body.replace(/\{schoolYear\}/g, schoolYearFilter);
+    } else {
+      // Fall back to default templates
+      const defaultTemplate = DEFAULT_TEMPLATES[emailTemplate] || DEFAULT_TEMPLATES.opvolgmail;
+      emailSubject = defaultTemplate.subject.replace(/volgend schooljaar/g, `schooljaar ${schoolYearFilter}`);
+      emailBody = defaultTemplate.body;
+    }
+    
     const mailtoLink = buildMailto({
       to: selectedEmails,
-      subject: selectedTemplate.subject,
-      body: selectedTemplate.body,
+      subject: emailSubject,
+      body: emailBody,
     });
     
     window.open(mailtoLink, '_self');
@@ -583,12 +631,23 @@ function RunningProjectsTab() {
                 value={emailTemplate}
                 onChange={(e) => setEmailTemplate(e.target.value)}
                 className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+                disabled={templatesLoading}
               >
-                <option value="opvolgmail">Opvolgmail</option>
-                <option value="startproject">Startproject uitnodiging</option>
-                <option value="tussenpresentatie">Tussenpresentatie uitnodiging</option>
-                <option value="eindpresentatie">Eindpresentatie uitnodiging</option>
-                <option value="bedankmail">Bedankmail</option>
+                {templatesLoading ? (
+                  <option>Laden...</option>
+                ) : mailTemplates.length > 0 ? (
+                  mailTemplates.map((t) => (
+                    <option key={t.id} value={t.type}>{t.name}</option>
+                  ))
+                ) : (
+                  <>
+                    <option value="opvolgmail">Opvolgmail</option>
+                    <option value="startproject">Startproject uitnodiging</option>
+                    <option value="tussenpresentatie">Tussenpresentatie uitnodiging</option>
+                    <option value="eindpresentatie">Eindpresentatie uitnodiging</option>
+                    <option value="bedankmail">Bedankmail</option>
+                  </>
+                )}
               </select>
               <button
                 onClick={handleSendBulkEmail}
@@ -778,10 +837,40 @@ function ListTab({ refreshKey }: { refreshKey?: number }) {
 function CommunicationTab() {
   const [schoolYear, setSchoolYear] = useState("2025-2026");
   const [level, setLevel] = useState("Alle");
-  const [template, setTemplate] = useState("opvolgmail");
+  const [template, setTemplate] = useState("");
   const [selectedClients, setSelectedClients] = useState<number[]>([]);
   const [allClients, setAllClients] = useState<any[]>([]);
   const [clientsLoading, setClientsLoading] = useState(true);
+  
+  // Mail templates from API
+  const [mailTemplates, setMailTemplates] = useState<MailTemplateDto[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(true);
+  
+  // Fetch mail templates
+  useEffect(() => {
+    async function fetchMailTemplates() {
+      try {
+        setTemplatesLoading(true);
+        const templates = await listMailTemplates({ is_active: true });
+        setMailTemplates(templates);
+        // Set default template to first one if available
+        if (templates.length > 0 && !template) {
+          setTemplate(templates[0].type);
+        } else if (templates.length === 0 && !template) {
+          setTemplate("opvolgmail");
+        }
+      } catch (err) {
+        console.error("Error fetching mail templates:", err);
+        // Fall back to default template type
+        if (!template) {
+          setTemplate("opvolgmail");
+        }
+      } finally {
+        setTemplatesLoading(false);
+      }
+    }
+    fetchMailTemplates();
+  }, []);
 
   // Fetch all clients
   useEffect(() => {
@@ -829,34 +918,26 @@ function CommunicationTab() {
       .map(c => c.email)
       .join(";");
 
-    const templates: Record<string, { subject: string; body: string }> = {
-      opvolgmail: {
-        subject: `Samenwerking schooljaar ${schoolYear}`,
-        body: `Beste opdrachtgever,\n\nHet schooljaar ${schoolYear} staat voor de deur en wij willen graag onze samenwerking voortzetten.\n\nHeeft u interesse om opnieuw een project met onze leerlingen te doen?\n\nMet vriendelijke groet,\nHet docententeam`,
-      },
-      startproject: {
-        subject: "Uitnodiging startproject",
-        body: `Beste opdrachtgever,\n\nGraag nodigen wij u uit voor de start van ons nieuwe project.\n\nWe kijken uit naar de samenwerking!\n\nMet vriendelijke groet,\nHet docententeam`,
-      },
-      tussenpresentatie: {
-        subject: "Uitnodiging tussenpresentatie",
-        body: `Beste opdrachtgever,\n\nGraag nodigen wij u uit voor de tussenpresentatie van ons project.\n\nMet vriendelijke groet,\nHet docententeam`,
-      },
-      eindpresentatie: {
-        subject: "Uitnodiging eindpresentatie",
-        body: `Beste opdrachtgever,\n\nGraag nodigen wij u uit voor de eindpresentatie van ons project.\n\nMet vriendelijke groet,\nHet docententeam`,
-      },
-      bedankmail: {
-        subject: "Bedankt voor de samenwerking",
-        body: `Beste opdrachtgever,\n\nHartelijk dank voor de prettige samenwerking.\n\nMet vriendelijke groet,\nHet docententeam`,
-      },
-    };
+    // First try to find the template from API, then fall back to default
+    const apiTemplate = mailTemplates.find(t => t.type === template);
+    let emailSubject: string;
+    let emailBody: string;
+    
+    if (apiTemplate) {
+      // Use template from API, replace {schoolYear} variable if present
+      emailSubject = apiTemplate.subject.replace(/\{schoolYear\}/g, schoolYear);
+      emailBody = apiTemplate.body.replace(/\{schoolYear\}/g, schoolYear);
+    } else {
+      // Fall back to default templates
+      const defaultTemplate = DEFAULT_TEMPLATES[template] || DEFAULT_TEMPLATES.opvolgmail;
+      emailSubject = defaultTemplate.subject.replace(/volgend schooljaar/g, `schooljaar ${schoolYear}`);
+      emailBody = defaultTemplate.body;
+    }
 
-    const selectedTemplate = templates[template] || templates.opvolgmail;
     const mailtoLink = buildMailto({
       to: selectedEmails,
-      subject: selectedTemplate.subject,
-      body: selectedTemplate.body,
+      subject: emailSubject,
+      body: emailBody,
     });
 
     window.open(mailtoLink, '_self');
@@ -924,12 +1005,23 @@ function CommunicationTab() {
               value={template}
               onChange={(e) => setTemplate(e.target.value)}
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+              disabled={templatesLoading}
             >
-              <option value="opvolgmail">Opvolgmail volgend schooljaar</option>
-              <option value="startproject">Startproject-mail</option>
-              <option value="tussenpresentatie">Uitnodiging tussenpresentatie</option>
-              <option value="eindpresentatie">Uitnodiging eindpresentatie</option>
-              <option value="bedankmail">Bedankmail</option>
+              {templatesLoading ? (
+                <option>Laden...</option>
+              ) : mailTemplates.length > 0 ? (
+                mailTemplates.map((t) => (
+                  <option key={t.id} value={t.type}>{t.name}</option>
+                ))
+              ) : (
+                <>
+                  <option value="opvolgmail">Opvolgmail volgend schooljaar</option>
+                  <option value="startproject">Startproject-mail</option>
+                  <option value="tussenpresentatie">Uitnodiging tussenpresentatie</option>
+                  <option value="eindpresentatie">Uitnodiging eindpresentatie</option>
+                  <option value="bedankmail">Bedankmail</option>
+                </>
+              )}
             </select>
           </div>
         </div>
