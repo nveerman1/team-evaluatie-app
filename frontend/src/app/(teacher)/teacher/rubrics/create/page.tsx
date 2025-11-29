@@ -1,14 +1,20 @@
 "use client";
 import api from "@/lib/api";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { RubricCreate } from "@/lib/rubric-types";
+import { subjectService } from "@/services/subject.service";
+import { courseService } from "@/services/course.service";
+import { listPeerCriteria } from "@/services/peer-evaluation-criterion-template.service";
+import type { Subject } from "@/dtos/subject.dto";
+import type { PeerEvaluationCriterionTemplateDto } from "@/dtos/peer-evaluation-criterion-template.dto";
 
 export default function CreateRubricPage() {
   const router = useRouter();
   const sp = useSearchParams();
   const fromDupId = sp.get("duplicate_of");
   const scopeParam = sp.get("scope") as "peer" | "project" | null;
+  const subjectIdParam = sp.get("subjectId");
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -19,11 +25,121 @@ export default function CreateRubricPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Subject and peer criteria state
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(
+    subjectIdParam ? parseInt(subjectIdParam) : null
+  );
+  const [peerCriteria, setPeerCriteria] = useState<PeerEvaluationCriterionTemplateDto[]>([]);
+  const [selectedCriteriaIds, setSelectedCriteriaIds] = useState<number[]>([]);
+  const [loadingSubjects, setLoadingSubjects] = useState(false);
+  const [loadingCriteria, setLoadingCriteria] = useState(false);
+  
+  // Multi-select dropdown state
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (scopeParam) {
       setScope(scopeParam);
     }
   }, [scopeParam]);
+
+  // Click outside handler for dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Load subjects based on teacher's courses and auto-select first one
+  useEffect(() => {
+    async function loadTeacherSubjects() {
+      setLoadingSubjects(true);
+      try {
+        // Get the teacher's courses (API filters by logged-in teacher)
+        const coursesResponse = await courseService.listCourses({ per_page: 100, is_active: true });
+        const courses = coursesResponse.courses;
+        
+        // Extract unique subject IDs from the teacher's courses
+        const teacherSubjectIds = [...new Set(
+          courses
+            .map(c => c.subject_id)
+            .filter((id): id is number => id !== undefined && id !== null)
+        )];
+        
+        // Get all subjects and filter to only show teacher's subjects
+        const subjectsResponse = await subjectService.listSubjects({ per_page: 100, is_active: true });
+        const teacherSubjects = subjectsResponse.subjects.filter(
+          subject => teacherSubjectIds.includes(subject.id)
+        );
+        
+        setSubjects(teacherSubjects);
+        
+        // Auto-select first subject if none selected and we have subjects
+        if (!selectedSubjectId && teacherSubjects.length > 0) {
+          setSelectedSubjectId(teacherSubjects[0].id);
+        }
+      } catch (err) {
+        console.error("Failed to load subjects:", err);
+      } finally {
+        setLoadingSubjects(false);
+      }
+    }
+    loadTeacherSubjects();
+  }, []);
+
+  // Load peer criteria when subject changes and scope is peer
+  useEffect(() => {
+    async function loadCriteria() {
+      if (!selectedSubjectId || scope !== "peer") {
+        setPeerCriteria([]);
+        setSelectedCriteriaIds([]);
+        return;
+      }
+      setLoadingCriteria(true);
+      try {
+        const criteria = await listPeerCriteria(selectedSubjectId);
+        setPeerCriteria(criteria);
+      } catch (err) {
+        console.error("Failed to load peer criteria:", err);
+      } finally {
+        setLoadingCriteria(false);
+      }
+    }
+    loadCriteria();
+  }, [selectedSubjectId, scope]);
+
+  // Toggle a criterion selection
+  const handleCriterionToggle = (criterionId: number) => {
+    setSelectedCriteriaIds((prev) => {
+      if (prev.includes(criterionId)) {
+        return prev.filter((id) => id !== criterionId);
+      } else {
+        return [...prev, criterionId];
+      }
+    });
+  };
+
+  // Get display text for selected criteria
+  const getSelectedCriteriaText = () => {
+    if (selectedCriteriaIds.length === 0) {
+      return "Selecteer criteria...";
+    }
+    const names = selectedCriteriaIds
+      .map((id) => peerCriteria.find((c) => c.id === id)?.title)
+      .filter(Boolean);
+    if (names.length <= 2) {
+      return names.join(", ");
+    }
+    return `${names.length} criteria geselecteerd`;
+  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -40,15 +156,46 @@ export default function CreateRubricPage() {
         metadata_json: {},
       };
       const res = await api.post("/rubrics", payload);
-      const id = res.data?.id;
+      const rubricId = res.data?.id;
 
       if (fromDupId) {
         await api.post(`/rubrics/${fromDupId}/duplicate`);
       }
 
-      router.replace(`/teacher/rubrics/${id}/edit`);
-    } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.message || "Opslaan mislukt");
+      // If peer criteria are selected, add them as rubric criteria
+      if (scope === "peer" && selectedCriteriaIds.length > 0) {
+        const selectedTemplates = peerCriteria.filter(c => selectedCriteriaIds.includes(c.id));
+        
+        // Map OMZA category to proper category format
+        const categoryMap: Record<string, string> = {
+          "organiseren": "Organiseren",
+          "meedoen": "Meedoen",
+          "zelfvertrouwen": "Zelfvertrouwen",
+          "autonomie": "Autonomie",
+        };
+
+        const criteriaItems = selectedTemplates.map((template, idx) => ({
+          name: template.title,
+          weight: 1.0 / selectedTemplates.length, // Distribute weight evenly
+          category: categoryMap[template.omza_category] || template.omza_category,
+          order: idx + 1,
+          descriptors: {
+            level1: template.level_descriptors["1"] || "",
+            level2: template.level_descriptors["2"] || "",
+            level3: template.level_descriptors["3"] || "",
+            level4: template.level_descriptors["4"] || "",
+            level5: template.level_descriptors["5"] || "",
+          },
+          learning_objective_ids: template.learning_objective_ids || [],
+        }));
+
+        await api.put(`/rubrics/${rubricId}/criteria/batch`, { items: criteriaItems });
+      }
+
+      router.replace(`/teacher/rubrics/${rubricId}/edit`);
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: string } }; message?: string };
+      setError(err?.response?.data?.detail || err?.message || "Opslaan mislukt");
     } finally {
       setSaving(false);
     }
@@ -82,6 +229,101 @@ export default function CreateRubricPage() {
             <option value="project">Projectbeoordeling</option>
           </select>
         </div>
+
+        {/* Subject selector - only show for peer scope */}
+        {scope === "peer" && (
+          <div className="space-y-1">
+            <label className="block text-sm font-medium">Vakgebied / Sectie</label>
+            <select
+              className="w-full border rounded-lg px-3 py-2"
+              value={selectedSubjectId || ""}
+              onChange={(e) => setSelectedSubjectId(e.target.value ? parseInt(e.target.value) : null)}
+              disabled={loadingSubjects}
+            >
+              {subjects.map((subject) => (
+                <option key={subject.id} value={subject.id}>
+                  {subject.name} ({subject.code})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Peer criteria multi-select dropdown - only show when subject is selected and scope is peer */}
+        {scope === "peer" && selectedSubjectId && (
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Criteria uit templates</label>
+            <p className="text-sm text-gray-500">
+              Selecteer welke criteria je aan deze rubric wilt toevoegen
+            </p>
+            
+            {loadingCriteria ? (
+              <div className="p-4 text-center text-gray-500 text-sm">Criteria laden...</div>
+            ) : peerCriteria.length === 0 ? (
+              <div className="p-4 text-center text-gray-500 text-sm border rounded-lg bg-gray-50">
+                Geen criteria templates gevonden voor dit vakgebied.
+              </div>
+            ) : (
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-left flex justify-between items-center"
+                >
+                  <span className={selectedCriteriaIds.length === 0 ? "text-gray-500" : ""}>
+                    {getSelectedCriteriaText()}
+                  </span>
+                  <svg
+                    className={`w-5 h-5 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {isDropdownOpen && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                    <div className="py-1">
+                      {["organiseren", "meedoen", "zelfvertrouwen", "autonomie"].map((category) => {
+                        const categoryCriteria = peerCriteria.filter(c => c.omza_category === category);
+                        if (categoryCriteria.length === 0) return null;
+                        
+                        return (
+                          <div key={category}>
+                            <div className="px-3 py-1 bg-gray-100 text-xs font-semibold text-gray-600 uppercase">
+                              {category}
+                            </div>
+                            {categoryCriteria.map((criterion) => (
+                              <label
+                                key={criterion.id}
+                                className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedCriteriaIds.includes(criterion.id)}
+                                  onChange={() => handleCriterionToggle(criterion.id)}
+                                  className="mr-3 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <span className="text-sm">{criterion.title}</span>
+                              </label>
+                            ))}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            {selectedCriteriaIds.length > 0 && (
+              <p className="text-sm text-gray-600">
+                {selectedCriteriaIds.length} criterium/criteria geselecteerd - deze worden direct aan de rubric toegevoegd.
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="space-y-1">
           <label className="block text-sm font-medium">Type rubric (voor leerdoelen)</label>

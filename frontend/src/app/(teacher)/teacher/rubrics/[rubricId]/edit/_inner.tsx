@@ -1,9 +1,14 @@
 "use client";
 
 import api from "@/lib/api";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import RubricEditor, { type CriterionItem } from "@/components/teacher/RubricEditor";
+import { subjectService } from "@/services/subject.service";
+import { courseService } from "@/services/course.service";
+import { listPeerCriteria } from "@/services/peer-evaluation-criterion-template.service";
+import type { Subject } from "@/dtos/subject.dto";
+import type { PeerEvaluationCriterionTemplateDto } from "@/dtos/peer-evaluation-criterion-template.dto";
 
 // Types (optioneel importeren uit je lib/types):
 type RubricOut = {
@@ -50,6 +55,32 @@ export default function EditRubricPageInner() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
+  // Template import modal state
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+  const [peerCriteria, setPeerCriteria] = useState<PeerEvaluationCriterionTemplateDto[]>([]);
+  const [selectedCriteriaIds, setSelectedCriteriaIds] = useState<number[]>([]);
+  const [loadingSubjects, setLoadingSubjects] = useState(false);
+  const [loadingCriteria, setLoadingCriteria] = useState(false);
+  
+  // Multi-select dropdown state
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Click outside handler for dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   useEffect(() => {
     let mounted = true;
     async function load() {
@@ -73,8 +104,9 @@ export default function EditRubricPageInner() {
             learning_objective_ids: ci.learning_objective_ids || [],
           })),
         );
-      } catch (e: any) {
-        setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
+      } catch (e: unknown) {
+        const err = e as { response?: { data?: { detail?: string } }; message?: string };
+        setError(err?.response?.data?.detail || err?.message || "Laden mislukt");
       } finally {
         setLoading(false);
       }
@@ -84,6 +116,125 @@ export default function EditRubricPageInner() {
       mounted = false;
     };
   }, [rubricId]);
+
+  // Load subjects based on teacher's courses when modal opens and auto-select first one
+  useEffect(() => {
+    if (!showTemplateModal) return;
+    async function loadTeacherSubjects() {
+      setLoadingSubjects(true);
+      try {
+        // Get the teacher's courses (API filters by logged-in teacher)
+        const coursesResponse = await courseService.listCourses({ per_page: 100, is_active: true });
+        const courses = coursesResponse.courses;
+        
+        // Extract unique subject IDs from the teacher's courses
+        const teacherSubjectIds = [...new Set(
+          courses
+            .map(c => c.subject_id)
+            .filter((id): id is number => id !== undefined && id !== null)
+        )];
+        
+        // Get all subjects and filter to only show teacher's subjects
+        const subjectsResponse = await subjectService.listSubjects({ per_page: 100, is_active: true });
+        const teacherSubjects = subjectsResponse.subjects.filter(
+          subject => teacherSubjectIds.includes(subject.id)
+        );
+        
+        setSubjects(teacherSubjects);
+        
+        // Auto-select first subject if we have subjects
+        if (teacherSubjects.length > 0 && !selectedSubjectId) {
+          setSelectedSubjectId(teacherSubjects[0].id);
+        }
+      } catch (err) {
+        console.error("Failed to load subjects:", err);
+      } finally {
+        setLoadingSubjects(false);
+      }
+    }
+    loadTeacherSubjects();
+  }, [showTemplateModal]);
+
+  // Load peer criteria when subject changes
+  useEffect(() => {
+    async function loadCriteria() {
+      if (!selectedSubjectId) {
+        setPeerCriteria([]);
+        return;
+      }
+      setLoadingCriteria(true);
+      try {
+        const criteria = await listPeerCriteria(selectedSubjectId);
+        setPeerCriteria(criteria);
+      } catch (err) {
+        console.error("Failed to load peer criteria:", err);
+      } finally {
+        setLoadingCriteria(false);
+      }
+    }
+    loadCriteria();
+  }, [selectedSubjectId]);
+
+  // Toggle a criterion selection
+  const handleCriterionToggle = (criterionId: number) => {
+    setSelectedCriteriaIds((prev) => {
+      if (prev.includes(criterionId)) {
+        return prev.filter((id) => id !== criterionId);
+      } else {
+        return [...prev, criterionId];
+      }
+    });
+  };
+
+  // Get display text for selected criteria
+  const getSelectedCriteriaText = () => {
+    if (selectedCriteriaIds.length === 0) {
+      return "Selecteer criteria...";
+    }
+    const names = selectedCriteriaIds
+      .map((id) => peerCriteria.find((c) => c.id === id)?.title)
+      .filter(Boolean);
+    if (names.length <= 2) {
+      return names.join(", ");
+    }
+    return `${names.length} criteria geselecteerd`;
+  };
+
+  const importSelectedCriteria = () => {
+    const selectedTemplates = peerCriteria.filter(c => selectedCriteriaIds.includes(c.id));
+    
+    // Map OMZA category to proper category format
+    const categoryMap: Record<string, string> = {
+      "organiseren": "Organiseren",
+      "meedoen": "Meedoen",
+      "zelfvertrouwen": "Zelfvertrouwen",
+      "autonomie": "Autonomie",
+    };
+
+    const maxOrder = items.reduce((m, it) => Math.max(m, it.order ?? 0), 0);
+
+    const newItems: CriterionItem[] = selectedTemplates.map((template, idx) => ({
+      name: template.title,
+      weight: 1.0 / (items.length + selectedTemplates.length), // Adjust weight
+      category: categoryMap[template.omza_category] || template.omza_category,
+      order: maxOrder + idx + 1,
+      descriptors: {
+        level1: template.level_descriptors["1"] || "",
+        level2: template.level_descriptors["2"] || "",
+        level3: template.level_descriptors["3"] || "",
+        level4: template.level_descriptors["4"] || "",
+        level5: template.level_descriptors["5"] || "",
+      },
+      learning_objective_ids: template.learning_objective_ids || [],
+    }));
+
+    setItems([...items, ...newItems]);
+    setShowTemplateModal(false);
+    setSelectedCriteriaIds([]);
+    setSelectedSubjectId(null);
+    setInfo(`${newItems.length} criterium/criteria toegevoegd. Vergeet niet op te slaan!`);
+    setTimeout(() => setInfo(null), 4000);
+  };
 
 
 
@@ -128,8 +279,9 @@ export default function EditRubricPageInner() {
       );
       setInfo("Opgeslagen ✔");
       setTimeout(() => setInfo(null), 1800);
-    } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.message || "Opslaan mislukt");
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: string } }; message?: string };
+      setError(err?.response?.data?.detail || err?.message || "Opslaan mislukt");
     } finally {
       setSaving(false);
     }
@@ -141,8 +293,9 @@ export default function EditRubricPageInner() {
       const res = await api.post(`/rubrics/${rubric.id}/duplicate`);
       const newId = res.data?.id;
       if (newId) router.replace(`/teacher/rubrics/${newId}/edit`);
-    } catch (e: any) {
-      alert(e?.response?.data?.detail || e?.message || "Dupliceren mislukt");
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: string } }; message?: string };
+      alert(err?.response?.data?.detail || err?.message || "Dupliceren mislukt");
     }
   }
   async function deleteRubric() {
@@ -151,12 +304,15 @@ export default function EditRubricPageInner() {
     try {
       await api.delete(`/rubrics/${rubric.id}`);
       router.replace("/teacher/rubrics");
-    } catch (e: any) {
-      alert(e?.response?.data?.detail || e?.message || "Verwijderen mislukt");
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: string } }; message?: string };
+      alert(err?.response?.data?.detail || err?.message || "Verwijderen mislukt");
     }
   }
 
   if (loading) return <main className="p-6">Laden…</main>;
+
+  const isPeerRubric = rubric?.scope === "peer";
 
   return (
     <>
@@ -180,6 +336,14 @@ export default function EditRubricPageInner() {
             >
               Terug
             </a>
+            {isPeerRubric && (
+              <button
+                onClick={() => setShowTemplateModal(true)}
+                className="px-3 py-1.5 rounded-lg border border-blue-200 bg-white text-blue-600 hover:bg-blue-50 text-sm font-medium shadow-sm"
+              >
+                + Uit template
+              </button>
+            )}
             <button
               onClick={duplicateRubric}
               className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-sm font-medium shadow-sm"
@@ -221,6 +385,146 @@ export default function EditRubricPageInner() {
           />
         )}
       </main>
+
+      {/* Template Import Modal */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Criteria uit template importeren</h2>
+              <button
+                onClick={() => {
+                  setShowTemplateModal(false);
+                  setSelectedCriteriaIds([]);
+                  setSelectedSubjectId(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 text-xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Subject selector */}
+            <div className="space-y-2 mb-4">
+              <label className="block text-sm font-medium">Vakgebied / Sectie</label>
+              <select
+                className="w-full border rounded-lg px-3 py-2"
+                value={selectedSubjectId || ""}
+                onChange={(e) => {
+                  setSelectedSubjectId(e.target.value ? parseInt(e.target.value) : null);
+                  setSelectedCriteriaIds([]);
+                }}
+                disabled={loadingSubjects}
+              >
+                {subjects.map((subject) => (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.name} ({subject.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Criteria multi-select dropdown */}
+            {selectedSubjectId && (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium">Beschikbare criteria</label>
+                <p className="text-sm text-gray-500">
+                  Selecteer welke criteria je wilt importeren
+                </p>
+                
+                {loadingCriteria ? (
+                  <div className="p-4 text-center text-gray-500 text-sm">Criteria laden...</div>
+                ) : peerCriteria.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500 text-sm border rounded-lg bg-gray-50">
+                    Geen criteria templates gevonden voor dit vakgebied.
+                  </div>
+                ) : (
+                  <div className="relative" ref={dropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-left flex justify-between items-center"
+                    >
+                      <span className={selectedCriteriaIds.length === 0 ? "text-gray-500" : ""}>
+                        {getSelectedCriteriaText()}
+                      </span>
+                      <svg
+                        className={`w-5 h-5 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+
+                    {isDropdownOpen && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                        <div className="py-1">
+                          {["organiseren", "meedoen", "zelfvertrouwen", "autonomie"].map((category) => {
+                            const categoryCriteria = peerCriteria.filter(c => c.omza_category === category);
+                            if (categoryCriteria.length === 0) return null;
+                            
+                            return (
+                              <div key={category}>
+                                <div className="px-3 py-1 bg-gray-100 text-xs font-semibold text-gray-600 uppercase">
+                                  {category}
+                                </div>
+                                {categoryCriteria.map((criterion) => (
+                                  <label
+                                    key={criterion.id}
+                                    className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedCriteriaIds.includes(criterion.id)}
+                                      onChange={() => handleCriterionToggle(criterion.id)}
+                                      className="mr-3 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <span className="text-sm">{criterion.title}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {selectedCriteriaIds.length > 0 && (
+                  <p className="text-sm text-gray-600">
+                    {selectedCriteriaIds.length} criterium/criteria geselecteerd
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={importSelectedCriteria}
+                disabled={selectedCriteriaIds.length === 0}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {selectedCriteriaIds.length === 0
+                  ? "Selecteer criteria om te importeren"
+                  : `${selectedCriteriaIds.length} criterium/criteria toevoegen`}
+              </button>
+              <button
+                onClick={() => {
+                  setShowTemplateModal(false);
+                  setSelectedCriteriaIds([]);
+                  setSelectedSubjectId(null);
+                }}
+                className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+              >
+                Annuleren
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
