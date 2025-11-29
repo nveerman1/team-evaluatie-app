@@ -7,8 +7,10 @@ import RubricEditor, { type CriterionItem } from "@/components/teacher/RubricEdi
 import { subjectService } from "@/services/subject.service";
 import { courseService } from "@/services/course.service";
 import { listPeerCriteria } from "@/services/peer-evaluation-criterion-template.service";
+import { listProjectRubricCriteria } from "@/services/project-rubric-criterion-template.service";
 import type { Subject } from "@/dtos/subject.dto";
 import type { PeerEvaluationCriterionTemplateDto } from "@/dtos/peer-evaluation-criterion-template.dto";
+import type { ProjectRubricCriterionTemplateDto } from "@/dtos/project-rubric-criterion-template.dto";
 
 // Types (optioneel importeren uit je lib/types):
 type RubricOut = {
@@ -60,6 +62,7 @@ export default function EditRubricPageInner() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
   const [peerCriteria, setPeerCriteria] = useState<PeerEvaluationCriterionTemplateDto[]>([]);
+  const [projectCriteria, setProjectCriteria] = useState<ProjectRubricCriterionTemplateDto[]>([]);
   const [selectedCriteriaIds, setSelectedCriteriaIds] = useState<number[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(false);
   const [loadingCriteria, setLoadingCriteria] = useState(false);
@@ -155,28 +158,38 @@ export default function EditRubricPageInner() {
     loadTeacherSubjects();
   }, [showTemplateModal]);
 
-  // Load peer criteria when subject changes, filtered by rubric's target_level
+  // Load criteria when subject changes, filtered by rubric's target_level
   useEffect(() => {
     async function loadCriteria() {
       if (!selectedSubjectId) {
         setPeerCriteria([]);
+        setProjectCriteria([]);
         return;
       }
       setLoadingCriteria(true);
       try {
         // Filter by rubric's target_level if set
-        const criteria = await listPeerCriteria(selectedSubjectId, {
-          target_level: rubric?.target_level,
-        });
-        setPeerCriteria(criteria);
+        if (rubric?.scope === "peer") {
+          const criteria = await listPeerCriteria(selectedSubjectId, {
+            target_level: rubric?.target_level,
+          });
+          setPeerCriteria(criteria);
+          setProjectCriteria([]);
+        } else {
+          const criteria = await listProjectRubricCriteria(selectedSubjectId, {
+            target_level: rubric?.target_level,
+          });
+          setProjectCriteria(criteria);
+          setPeerCriteria([]);
+        }
       } catch (err) {
-        console.error("Failed to load peer criteria:", err);
+        console.error("Failed to load criteria:", err);
       } finally {
         setLoadingCriteria(false);
       }
     }
     loadCriteria();
-  }, [selectedSubjectId, rubric?.target_level]);
+  }, [selectedSubjectId, rubric?.target_level, rubric?.scope]);
 
   // Toggle a criterion selection
   const handleCriterionToggle = (criterionId: number) => {
@@ -194,8 +207,9 @@ export default function EditRubricPageInner() {
     if (selectedCriteriaIds.length === 0) {
       return "Selecteer criteria...";
     }
+    const criteria = rubric?.scope === "peer" ? peerCriteria : projectCriteria;
     const names = selectedCriteriaIds
-      .map((id) => peerCriteria.find((c) => c.id === id)?.title)
+      .map((id) => criteria.find((c) => c.id === id)?.title)
       .filter(Boolean);
     if (names.length <= 2) {
       return names.join(", ");
@@ -204,32 +218,59 @@ export default function EditRubricPageInner() {
   };
 
   const importSelectedCriteria = () => {
-    const selectedTemplates = peerCriteria.filter(c => selectedCriteriaIds.includes(c.id));
-    
-    // Map OMZA category to proper category format
-    const categoryMap: Record<string, string> = {
-      "organiseren": "Organiseren",
-      "meedoen": "Meedoen",
-      "zelfvertrouwen": "Zelfvertrouwen",
-      "autonomie": "Autonomie",
-    };
-
     const maxOrder = items.reduce((m, it) => Math.max(m, it.order ?? 0), 0);
+    let newItems: CriterionItem[] = [];
 
-    const newItems: CriterionItem[] = selectedTemplates.map((template, idx) => ({
-      name: template.title,
-      weight: 1.0 / (items.length + selectedTemplates.length), // Adjust weight
-      category: categoryMap[template.omza_category] || template.omza_category,
-      order: maxOrder + idx + 1,
-      descriptors: {
-        level1: template.level_descriptors["1"] || "",
-        level2: template.level_descriptors["2"] || "",
-        level3: template.level_descriptors["3"] || "",
-        level4: template.level_descriptors["4"] || "",
-        level5: template.level_descriptors["5"] || "",
-      },
-      learning_objective_ids: template.learning_objective_ids || [],
-    }));
+    if (rubric?.scope === "peer") {
+      const selectedTemplates = peerCriteria.filter(c => selectedCriteriaIds.includes(c.id));
+      
+      // Map OMZA category to proper category format
+      const categoryMap: Record<string, string> = {
+        "organiseren": "Organiseren",
+        "meedoen": "Meedoen",
+        "zelfvertrouwen": "Zelfvertrouwen",
+        "autonomie": "Autonomie",
+      };
+
+      newItems = selectedTemplates.map((template, idx) => ({
+        name: template.title,
+        weight: 1.0 / (items.length + selectedTemplates.length), // Adjust weight
+        category: categoryMap[template.omza_category] || template.omza_category,
+        order: maxOrder + idx + 1,
+        descriptors: {
+          level1: template.level_descriptors["1"] || "",
+          level2: template.level_descriptors["2"] || "",
+          level3: template.level_descriptors["3"] || "",
+          level4: template.level_descriptors["4"] || "",
+          level5: template.level_descriptors["5"] || "",
+        },
+        learning_objective_ids: template.learning_objective_ids || [],
+      }));
+    } else {
+      const selectedTemplates = projectCriteria.filter(c => selectedCriteriaIds.includes(c.id));
+      
+      // Map project category to proper category format
+      const categoryMap: Record<string, string> = {
+        "projectproces": "Projectproces",
+        "eindresultaat": "Eindresultaat",
+        "communicatie": "Communicatie",
+      };
+
+      newItems = selectedTemplates.map((template, idx) => ({
+        name: template.title,
+        weight: 1.0 / (items.length + selectedTemplates.length), // Adjust weight
+        category: categoryMap[template.category] || template.category,
+        order: maxOrder + idx + 1,
+        descriptors: {
+          level1: template.level_descriptors["1"] || "",
+          level2: template.level_descriptors["2"] || "",
+          level3: template.level_descriptors["3"] || "",
+          level4: template.level_descriptors["4"] || "",
+          level5: template.level_descriptors["5"] || "",
+        },
+        learning_objective_ids: template.learning_objective_ids || [],
+      }));
+    }
 
     setItems([...items, ...newItems]);
     setShowTemplateModal(false);
@@ -316,6 +357,7 @@ export default function EditRubricPageInner() {
   if (loading) return <main className="p-6">Laden…</main>;
 
   const isPeerRubric = rubric?.scope === "peer";
+  const isProjectRubric = rubric?.scope === "project";
 
   return (
     <>
@@ -339,10 +381,14 @@ export default function EditRubricPageInner() {
             >
               Terug
             </a>
-            {isPeerRubric && (
+            {(isPeerRubric || isProjectRubric) && (
               <button
                 onClick={() => setShowTemplateModal(true)}
-                className="px-3 py-1.5 rounded-lg border border-blue-200 bg-white text-blue-600 hover:bg-blue-50 text-sm font-medium shadow-sm"
+                className={`px-3 py-1.5 rounded-lg border bg-white text-sm font-medium shadow-sm ${
+                  isPeerRubric 
+                    ? "border-blue-200 text-blue-600 hover:bg-blue-50"
+                    : "border-green-200 text-green-600 hover:bg-green-50"
+                }`}
               >
                 + Uit template
               </button>
@@ -437,7 +483,7 @@ export default function EditRubricPageInner() {
                 
                 {loadingCriteria ? (
                   <div className="p-4 text-center text-gray-500 text-sm">Criteria laden...</div>
-                ) : peerCriteria.length === 0 ? (
+                ) : (isPeerRubric ? peerCriteria : projectCriteria).length === 0 ? (
                   <div className="p-4 text-center text-gray-500 text-sm border rounded-lg bg-gray-50">
                     Geen criteria templates gevonden voor dit vakgebied.
                   </div>
@@ -464,32 +510,76 @@ export default function EditRubricPageInner() {
                     {isDropdownOpen && (
                       <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto">
                         <div className="py-1">
-                          {["organiseren", "meedoen", "zelfvertrouwen", "autonomie"].map((category) => {
-                            const categoryCriteria = peerCriteria.filter(c => c.omza_category === category);
-                            if (categoryCriteria.length === 0) return null;
-                            
-                            return (
-                              <div key={category}>
-                                <div className="px-3 py-1 bg-gray-100 text-xs font-semibold text-gray-600 uppercase">
-                                  {category}
+                          {isPeerRubric ? (
+                            // Peer criteria categories (OMZA)
+                            ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"].map((category) => {
+                              const categoryCriteria = peerCriteria.filter(c => c.omza_category === category);
+                              if (categoryCriteria.length === 0) return null;
+                              
+                              const categoryLabels: Record<string, string> = {
+                                organiseren: "Organiseren",
+                                meedoen: "Meedoen",
+                                zelfvertrouwen: "Zelfvertrouwen",
+                                autonomie: "Autonomie",
+                              };
+                              
+                              return (
+                                <div key={category}>
+                                  <div className="px-3 py-1 bg-gray-100 text-xs font-semibold text-gray-600 uppercase">
+                                    {categoryLabels[category]}
+                                  </div>
+                                  {categoryCriteria.map((criterion) => (
+                                    <label
+                                      key={criterion.id}
+                                      className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedCriteriaIds.includes(criterion.id)}
+                                        onChange={() => handleCriterionToggle(criterion.id)}
+                                        className="mr-3 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                      />
+                                      <span className="text-sm">{criterion.title}</span>
+                                    </label>
+                                  ))}
                                 </div>
-                                {categoryCriteria.map((criterion) => (
-                                  <label
-                                    key={criterion.id}
-                                    className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={selectedCriteriaIds.includes(criterion.id)}
-                                      onChange={() => handleCriterionToggle(criterion.id)}
-                                      className="mr-3 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                    />
-                                    <span className="text-sm">{criterion.title}</span>
-                                  </label>
-                                ))}
-                              </div>
-                            );
-                          })}
+                              );
+                            })
+                          ) : (
+                            // Project criteria categories
+                            ["projectproces", "eindresultaat", "communicatie"].map((category) => {
+                              const categoryCriteria = projectCriteria.filter(c => c.category === category);
+                              if (categoryCriteria.length === 0) return null;
+                              
+                              const categoryLabels: Record<string, string> = {
+                                projectproces: "Projectproces",
+                                eindresultaat: "Eindresultaat",
+                                communicatie: "Communicatie",
+                              };
+                              
+                              return (
+                                <div key={category}>
+                                  <div className="px-3 py-1 bg-gray-100 text-xs font-semibold text-gray-600 uppercase">
+                                    {categoryLabels[category]}
+                                  </div>
+                                  {categoryCriteria.map((criterion) => (
+                                    <label
+                                      key={criterion.id}
+                                      className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedCriteriaIds.includes(criterion.id)}
+                                        onChange={() => handleCriterionToggle(criterion.id)}
+                                        className="mr-3 h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                                      />
+                                      <span className="text-sm">{criterion.title}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              );
+                            })
+                          )}
                         </div>
                       </div>
                     )}

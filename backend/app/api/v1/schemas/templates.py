@@ -67,6 +67,70 @@ class PeerEvaluationCriterionTemplateListOut(BaseModel):
     per_page: int
 
 
+# ============ Project Assessment Criterion Template ============
+
+
+class ProjectAssessmentCriterionTemplateBase(BaseModel):
+    """Base schema for project assessment criterion template"""
+
+    category: str = Field(
+        ...,
+        description="Category: projectproces, eindresultaat, communicatie",
+    )
+    title: str = Field(..., min_length=1, max_length=200)
+    description: Optional[str] = None
+    target_level: Optional[str] = Field(
+        None, description="Target level: onderbouw or bovenbouw"
+    )
+    level_descriptors: Dict[str, str] = Field(
+        default_factory=dict,
+        description="5-level descriptors: {'1': '...', '2': '...'}",
+    )
+    learning_objective_ids: List[int] = Field(
+        default_factory=list,
+        description="List of learning objective IDs to link",
+    )
+
+
+class ProjectAssessmentCriterionTemplateCreate(ProjectAssessmentCriterionTemplateBase):
+    """Schema for creating a project assessment criterion template"""
+
+    subject_id: int
+
+
+class ProjectAssessmentCriterionTemplateUpdate(BaseModel):
+    """Schema for updating a project assessment criterion template"""
+
+    category: Optional[str] = None
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = None
+    target_level: Optional[str] = None
+    level_descriptors: Optional[Dict[str, str]] = None
+    learning_objective_ids: Optional[List[int]] = None
+
+
+class ProjectAssessmentCriterionTemplateOut(ProjectAssessmentCriterionTemplateBase):
+    """Schema for project assessment criterion template output"""
+
+    id: int
+    school_id: int
+    subject_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ProjectAssessmentCriterionTemplateListOut(BaseModel):
+    """Schema for project assessment criterion template list output"""
+
+    templates: List[ProjectAssessmentCriterionTemplateOut]
+    total: int
+    page: int
+    per_page: int
+
+
 # ============ Project Rubric Template ============
 
 
