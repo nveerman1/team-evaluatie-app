@@ -1993,7 +1993,7 @@ export default function TemplatesPage() {
                 <div className="text-center py-8 text-gray-500">
                   <p className="mb-4">Nog geen leerdoelen aangemaakt</p>
                   <p className="text-xs">
-                    Klik op "+ Nieuw Leerdoel" om te beginnen
+                    Klik op &quot;+ Nieuw Leerdoel&quot; om te beginnen
                   </p>
                 </div>
               )}
