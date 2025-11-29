@@ -375,6 +375,11 @@ async def get_standard_comments(
     
     template_remarks = template_query.order_by(StandardRemark.order, StandardRemark.id).all()
     
+    # Debug logging
+    print(f"[OMZA] Found {len(template_remarks)} template remarks for school_id={current_user.school_id}, type='omza'")
+    for r in template_remarks:
+        print(f"[OMZA]   - id={r.id}, category={r.category}, text={r.text[:50] if r.text else 'N/A'}...")
+    
     # Add template remarks first (prefixed with "template_")
     for remark in template_remarks:
         results.append(
