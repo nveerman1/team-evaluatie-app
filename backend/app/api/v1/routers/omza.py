@@ -536,8 +536,17 @@ async def delete_standard_comment(
 ):
     """
     Delete a standard comment from an evaluation.
+    Only evaluation-specific comments can be deleted here.
+    Template-based comments must be deleted from the templates admin page.
     """
     require_role(current_user, ["teacher", "admin"])
+    
+    # Template-based comments cannot be deleted from here
+    if comment_id.startswith("template_"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Template-based comments cannot be deleted here. Use the templates admin page instead.",
+        )
 
     # Get evaluation
     evaluation = (
