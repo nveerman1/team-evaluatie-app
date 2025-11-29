@@ -2,6 +2,10 @@
 
 /**
  * DTOs for Standard Remarks (Quick Comments) feature
+ * 
+ * Standard remarks support different types (e.g., "omza", "peer", "project") and 
+ * categories specific to each type. For OMZA type, categories are O/M/Z/A.
+ * For other types, categories may be "positief", "aandachtspunt", "aanbeveling".
  */
 
 export interface StandardRemarkDto {
@@ -9,7 +13,7 @@ export interface StandardRemarkDto {
   school_id: number;
   subject_id: number | null;
   type: string;  // "peer" | "project" | "competency" | "project_feedback" | "omza"
-  category: string;  // For OMZA: "O" | "M" | "Z" | "A"
+  category: string;  // For OMZA: "O" | "M" | "Z" | "A"; For others: "positief" | "aandachtspunt" | "aanbeveling"
   text: string;
   order: number;
   created_at: string;

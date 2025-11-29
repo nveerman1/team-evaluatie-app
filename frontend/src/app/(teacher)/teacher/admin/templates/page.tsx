@@ -2926,8 +2926,8 @@ export default function TemplatesPage() {
                     const categoryRemarks = filteredStandardRemarks.filter(
                       (r) => r.category === category
                     );
-                    if (categoryRemarks.length === 0 && selectedOmzaCategoryFilter !== "all" && selectedOmzaCategoryFilter !== category) return null;
-                    if (categoryRemarks.length === 0 && selectedOmzaCategoryFilter === "all") return null;
+                    // Skip categories with no remarks
+                    if (categoryRemarks.length === 0) return null;
 
                     return (
                       <div key={category} className="mb-6">
