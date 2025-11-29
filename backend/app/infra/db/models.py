@@ -1558,6 +1558,65 @@ class PeerEvaluationCriterionTemplate(Base):
     )
 
 
+class ProjectAssessmentCriterionTemplate(Base):
+    """
+    Template for project assessment criteria (Projectbeoordeling: Projectproces, Eindresultaat, Communicatie)
+    """
+
+    __tablename__ = "project_assessment_criterion_templates"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = mapped_column(
+        ForeignKey("schools.id", ondelete="CASCADE"), index=True
+    )
+    subject_id: Mapped[int] = mapped_column(
+        ForeignKey("subjects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
+    # Category: projectproces, eindresultaat, communicatie
+    category: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # "projectproces" | "eindresultaat" | "communicatie"
+
+    # Content
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text)
+
+    # Target level: onderbouw or bovenbouw
+    target_level: Mapped[Optional[str]] = mapped_column(
+        String(20), nullable=True, index=True
+    )  # "onderbouw" | "bovenbouw" | null
+
+    # Level descriptors (5 levels: 1-5)
+    level_descriptors: Mapped[dict] = mapped_column(
+        JSON, default=dict
+    )  # {"1": "description", "2": "description", ...}
+
+    # Learning objectives - stored as JSON array of IDs
+    learning_objective_ids: Mapped[list] = mapped_column(
+        JSON, default=list
+    )
+
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(
+        default=datetime.utcnow, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    # Relationships
+    school: Mapped["School"] = relationship()
+    subject: Mapped["Subject"] = relationship()
+
+    __table_args__ = (
+        Index("ix_project_assessment_criterion_template_school", "school_id"),
+        Index("ix_project_assessment_criterion_template_subject", "subject_id"),
+        Index("ix_project_assessment_criterion_template_category", "category"),
+        Index("ix_project_assessment_criterion_template_target_level", "target_level"),
+    )
+
+
 class ProjectRubricTemplate(Base):
     """
     Template for project rubrics

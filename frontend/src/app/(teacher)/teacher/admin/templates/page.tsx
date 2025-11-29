@@ -31,6 +31,16 @@ import type {
   PeerEvaluationCriterionTemplateDto,
   PeerEvaluationCriterionTemplateCreateDto,
 } from "@/dtos/peer-evaluation-criterion-template.dto";
+import {
+  listProjectRubricCriteria,
+  createProjectRubricCriterion,
+  updateProjectRubricCriterion,
+  deleteProjectRubricCriterion,
+} from "@/services/project-rubric-criterion-template.service";
+import type {
+  ProjectRubricCriterionTemplateDto,
+  ProjectRubricCriterionTemplateCreateDto,
+} from "@/dtos/project-rubric-criterion-template.dto";
 
 type TabType =
   | "peer"
@@ -43,7 +53,7 @@ type TabType =
 
 const TABS: { key: TabType; label: string }[] = [
   { key: "peer", label: "Peerevaluatie Criteria" },
-  { key: "rubrics", label: "Projectrubrics" },
+  { key: "rubrics", label: "Projectbeoordeling criteria" },
   { key: "competencies", label: "Competenties" },
   { key: "mail", label: "Mail-templates" },
   { key: "objectives", label: "Leerdoelen" },
@@ -113,6 +123,33 @@ export default function TemplatesPage() {
     _filterPhase: undefined,
   });
 
+  // Project criteria state
+  const [projectCriteria, setProjectCriteria] = useState<
+    ProjectRubricCriterionTemplateDto[]
+  >([]);
+  const [loadingProjectCriteria, setLoadingProjectCriteria] = useState(false);
+  const [expandedProjectCriterion, setExpandedProjectCriterion] = useState<number | null>(null);
+  const [editingProjectCriterion, setEditingProjectCriterion] = useState<number | null>(null);
+  const [editProjectFilterPhase, setEditProjectFilterPhase] = useState<string | undefined>(undefined);
+  const [editProjectLearningObjectiveIds, setEditProjectLearningObjectiveIds] = useState<number[]>([]);
+  const [isCreatingProjectCriterion, setIsCreatingProjectCriterion] = useState(false);
+  const [selectedProjectLevelFilter, setSelectedProjectLevelFilter] = useState<"all" | "onderbouw" | "bovenbouw">("all");
+  const [projectFormData, setProjectFormData] = useState<Partial<ProjectRubricCriterionTemplateCreateDto> & { _filterPhase?: string }>({
+    category: "projectproces",
+    title: "",
+    description: "",
+    target_level: null,
+    level_descriptors: {
+      "1": "",
+      "2": "",
+      "3": "",
+      "4": "",
+      "5": "",
+    },
+    learning_objective_ids: [] as number[],
+    _filterPhase: undefined,
+  });
+
   // Competency state
   const [competencyTree, setCompetencyTree] = useState<CompetencyTree | null>(null);
   const [loadingCompetencies, setLoadingCompetencies] = useState(false);
@@ -147,6 +184,14 @@ export default function TemplatesPage() {
   useEffect(() => {
     if (activeTab === "peer" && selectedSubjectId) {
       fetchPeerCriteria();
+      fetchLearningObjectives(); // Also load learning objectives for linking
+    }
+  }, [activeTab, selectedSubjectId]);
+
+  // Load project criteria when tab changes to rubrics
+  useEffect(() => {
+    if (activeTab === "rubrics" && selectedSubjectId) {
+      fetchProjectCriteria();
       fetchLearningObjectives(); // Also load learning objectives for linking
     }
   }, [activeTab, selectedSubjectId]);
@@ -219,6 +264,14 @@ export default function TemplatesPage() {
     }
     return peerCriteria.filter(c => c.target_level === selectedPeerLevelFilter);
   }, [peerCriteria, selectedPeerLevelFilter]);
+
+  // Filter project criteria based on selected target level filter
+  const filteredProjectCriteria = useMemo(() => {
+    if (selectedProjectLevelFilter === "all") {
+      return projectCriteria;
+    }
+    return projectCriteria.filter(c => c.target_level === selectedProjectLevelFilter);
+  }, [projectCriteria, selectedProjectLevelFilter]);
 
   const openCreateModal = () => {
     setFormData({
@@ -431,6 +484,81 @@ export default function TemplatesPage() {
   const toggleCriterionExpand = (id: number) => {
     setExpandedCriterion(expandedCriterion === id ? null : id);
     setEditingCriterion(null);
+  };
+
+  // Project criteria functions
+  const fetchProjectCriteria = async () => {
+    if (!selectedSubjectId) return;
+    
+    setLoadingProjectCriteria(true);
+    try {
+      const criteria = await listProjectRubricCriteria(selectedSubjectId);
+      setProjectCriteria(criteria);
+    } catch (err) {
+      console.error("Error fetching project criteria:", err);
+    } finally {
+      setLoadingProjectCriteria(false);
+    }
+  };
+
+  const handleCreateProjectCriterion = async () => {
+    if (!projectFormData.title) {
+      alert("Titel is verplicht");
+      return;
+    }
+    if (!selectedSubjectId) {
+      alert("Selecteer eerst een sectie");
+      return;
+    }
+
+    try {
+      await createProjectRubricCriterion({
+        ...projectFormData as ProjectRubricCriterionTemplateCreateDto,
+        subject_id: selectedSubjectId,
+      });
+      setIsCreatingProjectCriterion(false);
+      setProjectFormData({
+        category: "projectproces",
+        title: "",
+        description: "",
+        target_level: null,
+        level_descriptors: { "1": "", "2": "", "3": "", "4": "", "5": "" },
+        learning_objective_ids: [],
+      });
+      fetchProjectCriteria();
+    } catch (err) {
+      console.error("Error creating project criterion:", err);
+      alert("Er is een fout opgetreden bij het aanmaken.");
+    }
+  };
+
+  const handleUpdateProjectCriterion = async (id: number, data: Partial<ProjectRubricCriterionTemplateCreateDto>) => {
+    try {
+      await updateProjectRubricCriterion(id, data);
+      setEditingProjectCriterion(null);
+      fetchProjectCriteria();
+    } catch (err) {
+      console.error("Error updating project criterion:", err);
+      alert("Er is een fout opgetreden bij het bijwerken.");
+    }
+  };
+
+  const handleDeleteProjectCriterion = async (id: number) => {
+    if (!confirm("Weet je zeker dat je dit criterium wilt verwijderen?")) {
+      return;
+    }
+    try {
+      await deleteProjectRubricCriterion(id);
+      fetchProjectCriteria();
+    } catch (err) {
+      console.error("Error deleting project criterion:", err);
+      alert("Er is een fout opgetreden bij het verwijderen.");
+    }
+  };
+
+  const toggleProjectCriterionExpand = (id: number) => {
+    setExpandedProjectCriterion(expandedProjectCriterion === id ? null : id);
+    setEditingProjectCriterion(null);
   };
 
   const updateURL = (subjectId: number | null, tab: TabType) => {
@@ -1207,9 +1335,45 @@ export default function TemplatesPage() {
           {activeTab === "rubrics" && (
             <div className="space-y-4">
               <p className="text-sm text-gray-600">
-                Beheer projectrubric templates met criteria voor projectproces,
-                eindresultaat en communicatie
+                Beheer templates voor projectbeoordeling criteria (Projectproces,
+                Eindresultaat, Communicatie)
               </p>
+              
+              {/* Filter pills for Onderbouw/Bovenbouw */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Filter niveau:</span>
+                <button
+                  onClick={() => setSelectedProjectLevelFilter("all")}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                    selectedProjectLevelFilter === "all"
+                      ? "bg-sky-100 text-sky-700 border-sky-300"
+                      : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                  }`}
+                >
+                  Alle ({projectCriteria.length})
+                </button>
+                <button
+                  onClick={() => setSelectedProjectLevelFilter("onderbouw")}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                    selectedProjectLevelFilter === "onderbouw"
+                      ? "bg-blue-100 text-blue-700 border-blue-300"
+                      : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                  }`}
+                >
+                  Onderbouw ({projectCriteria.filter(c => c.target_level === "onderbouw").length})
+                </button>
+                <button
+                  onClick={() => setSelectedProjectLevelFilter("bovenbouw")}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                    selectedProjectLevelFilter === "bovenbouw"
+                      ? "bg-purple-100 text-purple-700 border-purple-300"
+                      : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                  }`}
+                >
+                  Bovenbouw ({projectCriteria.filter(c => c.target_level === "bovenbouw").length})
+                </button>
+              </div>
+
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
                 <h4 className="font-semibold text-green-900 mb-2">Categorieën:</h4>
                 <ul className="text-sm text-green-800 space-y-1">
@@ -1219,10 +1383,535 @@ export default function TemplatesPage() {
                 </ul>
                 <p className="text-xs text-green-700 mt-2">Elk criterium heeft 5 niveaus en kan gekoppeld worden aan leerdoelen</p>
               </div>
-              <div className="text-center py-8 text-gray-500">
-                <p className="mb-4">Project rubric templates worden hier weergegeven</p>
-                <p className="text-xs">API Endpoint: GET /api/v1/templates/project-rubrics?subject_id={selectedSubjectId}</p>
-              </div>
+
+              {loadingProjectCriteria ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Criteria laden...</p>
+                </div>
+              ) : (
+                <>
+                  {/* Create new criterion form */}
+                  {isCreatingProjectCriterion && (
+                    <div className="bg-white border-2 border-green-500 rounded-lg p-4 mb-4">
+                      <h4 className="font-semibold mb-3">Nieuw Criterium</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            Categorie
+                          </label>
+                          <select
+                            value={projectFormData.category}
+                            onChange={(e) =>
+                              setProjectFormData({
+                                ...projectFormData,
+                                category: e.target.value as "projectproces" | "eindresultaat" | "communicatie",
+                              })
+                            }
+                            className="w-full px-3 py-2 border rounded"
+                          >
+                            <option value="projectproces">Projectproces</option>
+                            <option value="eindresultaat">Eindresultaat</option>
+                            <option value="communicatie">Communicatie</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            Niveau (Onderbouw/Bovenbouw)
+                          </label>
+                          <select
+                            value={projectFormData.target_level || ""}
+                            onChange={(e) =>
+                              setProjectFormData({
+                                ...projectFormData,
+                                target_level: e.target.value ? (e.target.value as "onderbouw" | "bovenbouw") : null,
+                              })
+                            }
+                            className="w-full px-3 py-2 border rounded"
+                          >
+                            <option value="">Geen specifiek niveau</option>
+                            <option value="onderbouw">Onderbouw</option>
+                            <option value="bovenbouw">Bovenbouw</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            Titel *
+                          </label>
+                          <input
+                            type="text"
+                            value={projectFormData.title}
+                            onChange={(e) =>
+                              setProjectFormData({
+                                ...projectFormData,
+                                title: e.target.value,
+                              })
+                            }
+                            className="w-full px-3 py-2 border rounded"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            Beschrijving
+                          </label>
+                          <textarea
+                            value={projectFormData.description || ""}
+                            onChange={(e) =>
+                              setProjectFormData({
+                                ...projectFormData,
+                                description: e.target.value,
+                              })
+                            }
+                            className="w-full px-3 py-2 border rounded"
+                            rows={2}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Niveaubeschrijvingen (1-5)
+                          </label>
+                          <div className="grid grid-cols-5 gap-2">
+                            {[1, 2, 3, 4, 5].map((level) => (
+                              <div key={level} className="flex flex-col">
+                                <label className="text-xs font-medium text-gray-700 mb-1">
+                                  Niveau {level}
+                                </label>
+                                <textarea
+                                  placeholder={`Niveau ${level}`}
+                                  value={projectFormData.level_descriptors?.[level.toString() as "1" | "2" | "3" | "4" | "5"] || ""}
+                                  onChange={(e) =>
+                                    setProjectFormData({
+                                      ...projectFormData,
+                                      level_descriptors: {
+                                        ...projectFormData.level_descriptors,
+                                        [level.toString()]: e.target.value,
+                                      } as typeof projectFormData.level_descriptors,
+                                    })
+                                  }
+                                  className="w-full px-2 py-1 border rounded text-sm resize-y min-h-[80px]"
+                                  rows={4}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Leerdoelen koppelen
+                          </label>
+                          <div className="space-y-2">
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setProjectFormData({ ...projectFormData, _filterPhase: "onderbouw" })}
+                                className={`px-3 py-1 text-sm rounded ${
+                                  projectFormData._filterPhase === "onderbouw"
+                                    ? "bg-green-600 text-white"
+                                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                }`}
+                              >
+                                Onderbouw
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setProjectFormData({ ...projectFormData, _filterPhase: "bovenbouw" })}
+                                className={`px-3 py-1 text-sm rounded ${
+                                  projectFormData._filterPhase === "bovenbouw"
+                                    ? "bg-green-600 text-white"
+                                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                }`}
+                              >
+                                Bovenbouw
+                              </button>
+                            </div>
+                            {projectFormData._filterPhase && (
+                              <select
+                                value=""
+                                onChange={(e) => {
+                                  const id = parseInt(e.target.value);
+                                  const currentIds = projectFormData.learning_objective_ids || [];
+                                  if (id && !currentIds.includes(id)) {
+                                    setProjectFormData({
+                                      ...projectFormData,
+                                      learning_objective_ids: [...currentIds, id],
+                                    });
+                                  }
+                                }}
+                                className="w-full px-3 py-2 border rounded"
+                              >
+                                <option value="">Selecteer een leerdoel...</option>
+                                {learningObjectives
+                                  .filter((obj) => obj.phase === projectFormData._filterPhase)
+                                  .map((obj) => (
+                                    <option key={obj.id} value={obj.id}>
+                                      {obj.domain || ""} {obj.order} - {obj.title}
+                                    </option>
+                                  ))}
+                              </select>
+                            )}
+                            {(projectFormData.learning_objective_ids?.length ?? 0) > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {(projectFormData.learning_objective_ids || []).map((id) => {
+                                  const obj = learningObjectives.find((o) => o.id === id);
+                                  return (
+                                    <span
+                                      key={id}
+                                      className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs rounded"
+                                    >
+                                      {obj ? `${obj.domain || ""} ${obj.order} - ${obj.title}` : `ID: ${id}`}
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setProjectFormData({
+                                            ...projectFormData,
+                                            learning_objective_ids: (projectFormData.learning_objective_ids || []).filter(
+                                              (objId) => objId !== id
+                                            ),
+                                          })
+                                        }
+                                        className="text-green-600 hover:text-green-800"
+                                      >
+                                        ×
+                                      </button>
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                          <button
+                            onClick={handleCreateProjectCriterion}
+                            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                          >
+                            Opslaan
+                          </button>
+                          <button
+                            onClick={() => setIsCreatingProjectCriterion(false)}
+                            className="px-4 py-2 border rounded hover:bg-gray-50"
+                          >
+                            Annuleren
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* List of criteria by category */}
+                  {["projectproces", "eindresultaat", "communicatie"].map((category) => {
+                    const categoryCriteria = filteredProjectCriteria.filter(
+                      (c) => c.category === category
+                    );
+                    if (categoryCriteria.length === 0) return null;
+
+                    const categoryLabels: Record<string, string> = {
+                      projectproces: "Projectproces",
+                      eindresultaat: "Eindresultaat",
+                      communicatie: "Communicatie",
+                    };
+
+                    return (
+                      <div key={category} className="mb-6">
+                        <h4 className="font-semibold text-lg mb-2">
+                          {categoryLabels[category]}
+                        </h4>
+                        <div className="space-y-2">
+                          {categoryCriteria.map((criterion) => (
+                            <div
+                              key={criterion.id}
+                              className="border rounded-lg overflow-hidden"
+                            >
+                              {/* Criterion header - clickable to expand */}
+                              <div
+                                onClick={() => toggleProjectCriterionExpand(criterion.id)}
+                                className="bg-white p-4 cursor-pointer hover:bg-gray-50 flex justify-between items-center"
+                              >
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <h5 className="font-medium">{criterion.title}</h5>
+                                    {criterion.target_level && (
+                                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                        criterion.target_level === "onderbouw"
+                                          ? "bg-blue-100 text-blue-700"
+                                          : "bg-purple-100 text-purple-700"
+                                      }`}>
+                                        {criterion.target_level === "onderbouw" ? "Onderbouw" : "Bovenbouw"}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {criterion.description && (
+                                    <p className="text-sm text-gray-600 mt-1">
+                                      {criterion.description}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-gray-500">
+                                  {criterion.learning_objective_ids?.length ?? 0} leerdoel(en)
+                                  </span>
+                                  <svg
+                                    className={`w-5 h-5 transition-transform ${
+                                      expandedProjectCriterion === criterion.id
+                                        ? "rotate-180"
+                                        : ""
+                                    }`}
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M19 9l-7 7-7-7"
+                                    />
+                                  </svg>
+                                </div>
+                              </div>
+
+                              {/* Expanded content */}
+                              {expandedProjectCriterion === criterion.id && (
+                                <div className="bg-gray-50 p-4 border-t">
+                                  {editingProjectCriterion === criterion.id ? (
+                                    <div className="space-y-3">
+                                      <div>
+                                        <label className="block text-sm font-medium mb-1">
+                                          Titel
+                                        </label>
+                                        <input
+                                          type="text"
+                                          defaultValue={criterion.title}
+                                          id={`edit-project-title-${criterion.id}`}
+                                          className="w-full px-3 py-2 border rounded"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-sm font-medium mb-2">
+                                          Niveaubeschrijvingen
+                                        </label>
+                                        <div className="grid grid-cols-5 gap-2">
+                                          {[1, 2, 3, 4, 5].map((level) => (
+                                            <div key={level} className="flex flex-col">
+                                              <label className="text-xs font-medium text-gray-700 mb-1">
+                                                Niveau {level}
+                                              </label>
+                                              <textarea
+                                                defaultValue={
+                                                  criterion.level_descriptors[
+                                                    level.toString() as "1" | "2" | "3" | "4" | "5"
+                                                  ] || ""
+                                                }
+                                                id={`edit-project-level-${criterion.id}-${level}`}
+                                                className="w-full px-2 py-1 border rounded text-sm resize-y min-h-[80px]"
+                                                rows={4}
+                                              />
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <label className="block text-sm font-medium mb-2">
+                                          Leerdoelen koppelen
+                                        </label>
+                                        <div className="space-y-2">
+                                          <div className="flex gap-2">
+                                            <button
+                                              type="button"
+                                              onClick={() => setEditProjectFilterPhase("onderbouw")}
+                                              className={`px-3 py-1 text-sm rounded ${
+                                                editProjectFilterPhase === "onderbouw"
+                                                  ? "bg-green-600 text-white"
+                                                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                              }`}
+                                            >
+                                              Onderbouw
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => setEditProjectFilterPhase("bovenbouw")}
+                                              className={`px-3 py-1 text-sm rounded ${
+                                                editProjectFilterPhase === "bovenbouw"
+                                                  ? "bg-green-600 text-white"
+                                                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                              }`}
+                                            >
+                                              Bovenbouw
+                                            </button>
+                                          </div>
+                                          {editProjectFilterPhase && (
+                                            <select
+                                              value=""
+                                              onChange={(e) => {
+                                                const id = parseInt(e.target.value);
+                                                if (id && !editProjectLearningObjectiveIds.includes(id)) {
+                                                  setEditProjectLearningObjectiveIds([...editProjectLearningObjectiveIds, id]);
+                                                }
+                                              }}
+                                              className="w-full px-3 py-2 border rounded"
+                                            >
+                                              <option value="">Selecteer een leerdoel...</option>
+                                              {learningObjectives
+                                                .filter((obj) => obj.phase === editProjectFilterPhase)
+                                                .map((obj) => (
+                                                  <option key={obj.id} value={obj.id}>
+                                                    {obj.domain || ""} {obj.order} - {obj.title}
+                                                  </option>
+                                                ))}
+                                            </select>
+                                          )}
+                                          {editProjectLearningObjectiveIds.length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-2">
+                                              {editProjectLearningObjectiveIds.map((id) => {
+                                                const obj = learningObjectives.find((o) => o.id === id);
+                                                return (
+                                                  <span
+                                                    key={id}
+                                                    className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs rounded"
+                                                  >
+                                                    {obj ? `${obj.domain || ""} ${obj.order} - ${obj.title}` : `ID: ${id}`}
+                                                    <button
+                                                      type="button"
+                                                      onClick={() =>
+                                                        setEditProjectLearningObjectiveIds(
+                                                          editProjectLearningObjectiveIds.filter((objId) => objId !== id)
+                                                        )
+                                                      }
+                                                      className="text-green-600 hover:text-green-800"
+                                                    >
+                                                      ×
+                                                    </button>
+                                                  </span>
+                                                );
+                                              })}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => {
+                                            const titleEl = document.getElementById(
+                                              `edit-project-title-${criterion.id}`
+                                            ) as HTMLInputElement;
+                                            const levels: Record<string, string> = {};
+                                            [1, 2, 3, 4, 5].forEach((level) => {
+                                              const el = document.getElementById(
+                                                `edit-project-level-${criterion.id}-${level}`
+                                              ) as HTMLInputElement;
+                                              levels[level.toString()] = el.value;
+                                            });
+                                            handleUpdateProjectCriterion(criterion.id, {
+                                              title: titleEl.value,
+                                              level_descriptors: levels as typeof criterion.level_descriptors,
+                                              learning_objective_ids: editProjectLearningObjectiveIds,
+                                            });
+                                          }}
+                                          className="px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                                        >
+                                          Opslaan
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            setEditingProjectCriterion(null);
+                                            setEditProjectFilterPhase(undefined);
+                                            setEditProjectLearningObjectiveIds([]);
+                                          }}
+                                          className="px-3 py-1.5 border text-sm rounded hover:bg-gray-100"
+                                        >
+                                          Annuleren
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="mb-4">
+                                        <h6 className="font-medium text-sm mb-2">
+                                          Niveaubeschrijvingen:
+                                        </h6>
+                                        <div className="grid grid-cols-5 gap-3">
+                                          {[1, 2, 3, 4, 5].map((level) => (
+                                            <div key={level} className="border rounded p-2 bg-white">
+                                              <div className="text-xs font-semibold text-gray-700 mb-1">
+                                                Niveau {level}
+                                              </div>
+                                              <div className="text-sm text-gray-800">
+                                                {criterion.level_descriptors[
+                                                  level.toString() as "1" | "2" | "3" | "4" | "5"
+                                                ] || <em className="text-gray-400">Niet ingevuld</em>}
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                      <div className="mb-4">
+                                        <h6 className="font-medium text-sm mb-2">
+                                          Gekoppelde leerdoelen:
+                                        </h6>
+                                        {(criterion.learning_objective_ids?.length ?? 0) > 0 ? (
+                                          <div className="flex flex-wrap gap-1">
+                                            {(criterion.learning_objective_ids || []).map((id) => {
+                                              const obj = learningObjectives.find((o) => o.id === id);
+                                              return (
+                                                <span
+                                                  key={id}
+                                                  className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded"
+                                                >
+                                                  {obj ? `${obj.domain || ""} ${obj.order} - ${obj.title}` : `ID: ${id}`}
+                                                </span>
+                                              );
+                                            })}
+                                          </div>
+                                        ) : (
+                                          <p className="text-sm text-gray-500">
+                                            Geen leerdoelen gekoppeld
+                                          </p>
+                                        )}
+                                      </div>
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => {
+                                            setEditingProjectCriterion(criterion.id);
+                                            setEditProjectLearningObjectiveIds(criterion.learning_objective_ids || []);
+                                            setEditProjectFilterPhase(undefined);
+                                          }}
+                                          className="px-3 py-1.5 bg-gray-100 text-sm rounded hover:bg-gray-200"
+                                        >
+                                          Bewerken
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteProjectCriterion(criterion.id)}
+                                          className="px-3 py-1.5 bg-red-100 text-red-700 text-sm rounded hover:bg-red-200"
+                                        >
+                                          Verwijderen
+                                        </button>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {filteredProjectCriteria.length === 0 && !isCreatingProjectCriterion && (
+                    <div className="text-center py-8 text-gray-500">
+                      {projectCriteria.length === 0 ? (
+                        <>
+                          <p>Nog geen criteria aangemaakt voor dit vak.</p>
+                          <p className="text-xs mt-2">
+                            Klik op &quot;+ Nieuw Projectbeoordeling Criterium&quot; om te beginnen.
+                          </p>
+                        </>
+                      ) : (
+                        <p>Geen criteria gevonden voor het geselecteerde niveau.</p>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
 
@@ -1344,7 +2033,7 @@ export default function TemplatesPage() {
       case "peer":
         return "+ Nieuw Peerevaluatie Criterium";
       case "rubrics":
-        return "+ Nieuwe Projectrubric";
+        return "+ Nieuw Projectbeoordeling Criterium";
       case "competencies":
         return "+ Nieuwe Competentie";
       case "mail":
@@ -1383,6 +2072,16 @@ export default function TemplatesPage() {
                     setIsCreatingPeerCriterion(true);
                     setPeerFormData({
                       omza_category: "organiseren",
+                      title: "",
+                      description: "",
+                      target_level: null,
+                      level_descriptors: { "1": "", "2": "", "3": "", "4": "", "5": "" },
+                      learning_objective_ids: [],
+                    });
+                  } else if (activeTab === "rubrics") {
+                    setIsCreatingProjectCriterion(true);
+                    setProjectFormData({
+                      category: "projectproces",
                       title: "",
                       description: "",
                       target_level: null,

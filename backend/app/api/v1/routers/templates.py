@@ -11,6 +11,7 @@ from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import (
     User,
     PeerEvaluationCriterionTemplate,
+    ProjectAssessmentCriterionTemplate,
     ProjectRubricTemplate,
     ProjectRubricCriterionTemplate,
     CompetencyTemplate,
@@ -27,6 +28,11 @@ from app.api.v1.schemas.templates import (
     PeerEvaluationCriterionTemplateUpdate,
     PeerEvaluationCriterionTemplateOut,
     PeerEvaluationCriterionTemplateListOut,
+    # Project Assessment Criteria
+    ProjectAssessmentCriterionTemplateCreate,
+    ProjectAssessmentCriterionTemplateUpdate,
+    ProjectAssessmentCriterionTemplateOut,
+    ProjectAssessmentCriterionTemplateListOut,
     # Project Rubric
     ProjectRubricTemplateCreate,
     ProjectRubricTemplateUpdate,
@@ -253,6 +259,208 @@ def delete_peer_criterion_template(
         db=db,
         user=user,
         entity_type="peer_criterion_template",
+        entity_id=template.id,
+        details={"title": template.title},
+        request=request,
+    )
+
+    db.delete(template)
+    db.commit()
+
+
+# ============ Project Assessment Criterion Templates ============
+
+
+@router.get("/project-rubric-criteria", response_model=ProjectAssessmentCriterionTemplateListOut)
+def list_project_assessment_criteria_templates(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    subject_id: Optional[int] = None,
+    category: Optional[str] = None,
+    target_level: Optional[str] = None,
+):
+    """List project assessment criterion templates"""
+    require_role(user, ["admin", "teacher"])
+
+    query = db.query(ProjectAssessmentCriterionTemplate).filter(
+        ProjectAssessmentCriterionTemplate.school_id == user.school_id
+    )
+
+    if subject_id:
+        query = query.filter(ProjectAssessmentCriterionTemplate.subject_id == subject_id)
+    if category:
+        query = query.filter(
+            ProjectAssessmentCriterionTemplate.category == category
+        )
+    if target_level:
+        query = query.filter(
+            ProjectAssessmentCriterionTemplate.target_level == target_level
+        )
+
+    total = query.count()
+    offset = (page - 1) * per_page
+    templates = (
+        query.order_by(ProjectAssessmentCriterionTemplate.title)
+        .offset(offset)
+        .limit(per_page)
+        .all()
+    )
+
+    return ProjectAssessmentCriterionTemplateListOut(
+        templates=[
+            ProjectAssessmentCriterionTemplateOut.model_validate(t) for t in templates
+        ],
+        total=total,
+        page=page,
+        per_page=per_page,
+    )
+
+
+@router.post(
+    "/project-rubric-criteria",
+    response_model=ProjectAssessmentCriterionTemplateOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_project_assessment_criterion_template(
+    payload: ProjectAssessmentCriterionTemplateCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    request: Request = None,
+):
+    """Create a new project assessment criterion template"""
+    require_role(user, ["admin", "teacher"])
+
+    template = ProjectAssessmentCriterionTemplate(
+        school_id=user.school_id,
+        subject_id=payload.subject_id,
+        category=payload.category,
+        title=payload.title,
+        description=payload.description,
+        target_level=payload.target_level,
+        level_descriptors=payload.level_descriptors,
+        learning_objective_ids=payload.learning_objective_ids or [],
+    )
+
+    db.add(template)
+    db.commit()
+    db.refresh(template)
+
+    log_create(
+        db=db,
+        user=user,
+        entity_type="project_assessment_criterion_template",
+        entity_id=template.id,
+        details={"title": template.title},
+        request=request,
+    )
+
+    return ProjectAssessmentCriterionTemplateOut.model_validate(template)
+
+
+@router.get(
+    "/project-rubric-criteria/{template_id}", response_model=ProjectAssessmentCriterionTemplateOut
+)
+def get_project_assessment_criterion_template(
+    template_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Get a specific project assessment criterion template"""
+    require_role(user, ["admin", "teacher"])
+
+    template = (
+        db.query(ProjectAssessmentCriterionTemplate)
+        .filter(
+            ProjectAssessmentCriterionTemplate.id == template_id,
+            ProjectAssessmentCriterionTemplate.school_id == user.school_id,
+        )
+        .first()
+    )
+
+    if not template:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
+        )
+
+    return ProjectAssessmentCriterionTemplateOut.model_validate(template)
+
+
+@router.patch(
+    "/project-rubric-criteria/{template_id}", response_model=ProjectAssessmentCriterionTemplateOut
+)
+def update_project_assessment_criterion_template(
+    template_id: int,
+    payload: ProjectAssessmentCriterionTemplateUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    request: Request = None,
+):
+    """Update a project assessment criterion template"""
+    require_role(user, ["admin", "teacher"])
+
+    template = (
+        db.query(ProjectAssessmentCriterionTemplate)
+        .filter(
+            ProjectAssessmentCriterionTemplate.id == template_id,
+            ProjectAssessmentCriterionTemplate.school_id == user.school_id,
+        )
+        .first()
+    )
+
+    if not template:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
+        )
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(template, key, value)
+
+    db.commit()
+    db.refresh(template)
+
+    log_update(
+        db=db,
+        user=user,
+        entity_type="project_assessment_criterion_template",
+        entity_id=template.id,
+        details=update_data,
+        request=request,
+    )
+
+    return ProjectAssessmentCriterionTemplateOut.model_validate(template)
+
+
+@router.delete("/project-rubric-criteria/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_project_assessment_criterion_template(
+    template_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    request: Request = None,
+):
+    """Delete a project assessment criterion template"""
+    require_role(user, ["admin", "teacher"])
+
+    template = (
+        db.query(ProjectAssessmentCriterionTemplate)
+        .filter(
+            ProjectAssessmentCriterionTemplate.id == template_id,
+            ProjectAssessmentCriterionTemplate.school_id == user.school_id,
+        )
+        .first()
+    )
+
+    if not template:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
+        )
+
+    log_delete(
+        db=db,
+        user=user,
+        entity_type="project_assessment_criterion_template",
         entity_id=template.id,
         details={"title": template.title},
         request=request,
