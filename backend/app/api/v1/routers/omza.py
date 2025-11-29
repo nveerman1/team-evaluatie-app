@@ -342,7 +342,7 @@ async def get_standard_comments(
     """
     require_role(current_user, ["teacher", "admin"])
     
-    from app.infra.db.models import StandardRemark, Course
+    from app.infra.db.models import StandardRemark
 
     # Get evaluation
     evaluation = (
@@ -362,30 +362,13 @@ async def get_standard_comments(
     results = []
     seen_texts = set()  # Track texts to avoid duplicates
     
-    # Get subject_id from course if available
-    subject_id = None
-    if evaluation.course_id:
-        course = db.query(Course).filter(Course.id == evaluation.course_id).first()
-        if course:
-            subject_id = course.subject_id
-    
     # First, fetch template-based standard remarks for OMZA type
+    # OMZA remarks are about behavior (Organiseren, Meedoen, Zelfvertrouwen, Autonomie)
+    # and are generally school-wide, not subject-specific, so we don't filter by subject
     template_query = db.query(StandardRemark).filter(
         StandardRemark.school_id == current_user.school_id,
         StandardRemark.type == "omza",
     )
-    
-    # Filter by subject if available, but also include school-wide remarks (subject_id is NULL)
-    from sqlalchemy import or_
-    if subject_id:
-        template_query = template_query.filter(
-            or_(
-                StandardRemark.subject_id == subject_id,
-                StandardRemark.subject_id == None  # Include school-wide remarks
-            )
-        )
-    # If no subject_id from evaluation, still show school-wide remarks (subject_id is NULL)
-    # No additional filter needed - will show all OMZA remarks for the school
     
     if category:
         template_query = template_query.filter(StandardRemark.category == category)
