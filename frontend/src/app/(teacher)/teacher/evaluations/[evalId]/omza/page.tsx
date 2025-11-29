@@ -265,16 +265,20 @@ export default function OMZAOverviewPage() {
   useEffect(() => {
     if (!evalIdNum) return;
     
-    omzaService.getStandardComments(evalIdNum).then((comments) => {
-      const byCategory: Record<string, StandardComment[]> = {};
-      comments.forEach((comment) => {
-        if (!byCategory[comment.category]) {
-          byCategory[comment.category] = [];
-        }
-        byCategory[comment.category].push(comment);
+    omzaService.getStandardComments(evalIdNum)
+      .then((comments) => {
+        const byCategory: Record<string, StandardComment[]> = {};
+        comments.forEach((comment) => {
+          if (!byCategory[comment.category]) {
+            byCategory[comment.category] = [];
+          }
+          byCategory[comment.category].push(comment);
+        });
+        setStandardComments(byCategory);
+      })
+      .catch((err) => {
+        console.error("Error loading standard comments:", err);
       });
-      setStandardComments(byCategory);
-    });
   }, [evalIdNum]);
 
   // Show toast notification
