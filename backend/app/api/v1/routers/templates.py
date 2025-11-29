@@ -72,6 +72,7 @@ def list_peer_criteria_templates(
     per_page: int = Query(20, ge=1, le=100),
     subject_id: Optional[int] = None,
     omza_category: Optional[str] = None,
+    target_level: Optional[str] = None,
 ):
     """List peer evaluation criterion templates"""
     require_role(user, ["admin", "teacher"])
@@ -85,6 +86,10 @@ def list_peer_criteria_templates(
     if omza_category:
         query = query.filter(
             PeerEvaluationCriterionTemplate.omza_category == omza_category
+        )
+    if target_level:
+        query = query.filter(
+            PeerEvaluationCriterionTemplate.target_level == target_level
         )
 
     total = query.count()
@@ -126,6 +131,7 @@ def create_peer_criterion_template(
         omza_category=payload.omza_category,
         title=payload.title,
         description=payload.description,
+        target_level=payload.target_level,
         level_descriptors=payload.level_descriptors,
     )
 

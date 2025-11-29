@@ -155,7 +155,7 @@ export default function EditRubricPageInner() {
     loadTeacherSubjects();
   }, [showTemplateModal]);
 
-  // Load peer criteria when subject changes
+  // Load peer criteria when subject changes, filtered by rubric's target_level
   useEffect(() => {
     async function loadCriteria() {
       if (!selectedSubjectId) {
@@ -164,7 +164,10 @@ export default function EditRubricPageInner() {
       }
       setLoadingCriteria(true);
       try {
-        const criteria = await listPeerCriteria(selectedSubjectId);
+        // Filter by rubric's target_level if set
+        const criteria = await listPeerCriteria(selectedSubjectId, {
+          target_level: rubric?.target_level,
+        });
         setPeerCriteria(criteria);
       } catch (err) {
         console.error("Failed to load peer criteria:", err);
@@ -173,7 +176,7 @@ export default function EditRubricPageInner() {
       }
     }
     loadCriteria();
-  }, [selectedSubjectId]);
+  }, [selectedSubjectId, rubric?.target_level]);
 
   // Toggle a criterion selection
   const handleCriterionToggle = (criterionId: number) => {

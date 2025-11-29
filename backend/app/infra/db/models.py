@@ -1527,6 +1527,11 @@ class PeerEvaluationCriterionTemplate(Base):
     # Content
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
+    
+    # Target level: onderbouw or bovenbouw
+    target_level: Mapped[Optional[str]] = mapped_column(
+        String(20), nullable=True, index=True
+    )  # "onderbouw" | "bovenbouw" | null
 
     # Level descriptors (5 levels: 1-5)
     level_descriptors: Mapped[dict] = mapped_column(
@@ -1549,6 +1554,7 @@ class PeerEvaluationCriterionTemplate(Base):
         Index("ix_peer_criterion_template_school", "school_id"),
         Index("ix_peer_criterion_template_subject", "subject_id"),
         Index("ix_peer_criterion_template_category", "omza_category"),
+        Index("ix_peer_criterion_template_target_level", "target_level"),
     )
 
 

@@ -5,6 +5,7 @@ export interface PeerEvaluationCriterionTemplateDto {
   omza_category: "organiseren" | "meedoen" | "zelfvertrouwen" | "autonomie";
   title: string;
   description: string | null;
+  target_level: "onderbouw" | "bovenbouw" | null;
   level_descriptors: {
     "1": string;
     "2": string;
@@ -22,6 +23,7 @@ export interface PeerEvaluationCriterionTemplateCreateDto {
   omza_category: "organiseren" | "meedoen" | "zelfvertrouwen" | "autonomie";
   title: string;
   description?: string | null;
+  target_level?: "onderbouw" | "bovenbouw" | null;
   level_descriptors: {
     "1": string;
     "2": string;
@@ -36,6 +38,7 @@ export interface PeerEvaluationCriterionTemplateUpdateDto {
   omza_category?: "organiseren" | "meedoen" | "zelfvertrouwen" | "autonomie";
   title?: string;
   description?: string | null;
+  target_level?: "onderbouw" | "bovenbouw" | null;
   level_descriptors?: {
     "1": string;
     "2": string;

@@ -13,12 +13,19 @@ interface PeerCriteriaListResponse {
   pages: number;
 }
 
+interface ListPeerCriteriaOptions {
+  target_level?: "onderbouw" | "bovenbouw" | null;
+}
+
 export async function listPeerCriteria(
-  subjectId: number
+  subjectId: number,
+  options?: ListPeerCriteriaOptions
 ): Promise<PeerEvaluationCriterionTemplateDto[]> {
-  const response = await api.get<PeerCriteriaListResponse>(
-    `/templates/peer-criteria?subject_id=${subjectId}`
-  );
+  let url = `/templates/peer-criteria?subject_id=${subjectId}`;
+  if (options?.target_level) {
+    url += `&target_level=${options.target_level}`;
+  }
+  const response = await api.get<PeerCriteriaListResponse>(url);
   return response.data.templates || [];
 }
 
