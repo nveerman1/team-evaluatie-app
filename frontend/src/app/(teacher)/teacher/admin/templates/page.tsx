@@ -607,16 +607,21 @@ export default function TemplatesPage() {
   };
 
   const handleCreateMailTemplate = async () => {
-    if (!mailFormData.name || !mailFormData.subject || !mailFormData.body) {
-      alert("Naam, onderwerp en inhoud zijn verplicht");
+    if (!mailFormData.name || !mailFormData.subject || !mailFormData.body || !mailFormData.type) {
+      alert("Naam, type, onderwerp en inhoud zijn verplicht");
       return;
     }
 
     try {
-      await createMailTemplate({
-        ...mailFormData as MailTemplateCreateDto,
-        subject_id: selectedSubjectId,
-      });
+      const createData: MailTemplateCreateDto = {
+        name: mailFormData.name,
+        type: mailFormData.type,
+        subject: mailFormData.subject,
+        body: mailFormData.body,
+        subject_id: selectedSubjectId ?? undefined,
+        is_active: mailFormData.is_active ?? true,
+      };
+      await createMailTemplate(createData);
       setIsCreatingMailTemplate(false);
       setMailFormData({
         name: "",

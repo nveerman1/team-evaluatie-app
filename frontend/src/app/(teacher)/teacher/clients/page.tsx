@@ -366,18 +366,16 @@ function RunningProjectsTab() {
         setTemplatesLoading(true);
         const templates = await listMailTemplates({ is_active: true });
         setMailTemplates(templates);
-        // Set default template to first one if available
-        if (templates.length > 0 && !emailTemplate) {
-          setEmailTemplate(templates[0].type);
-        } else if (templates.length === 0 && !emailTemplate) {
-          setEmailTemplate("opvolgmail");
+        // Set default template to first one if available (only on initial load)
+        if (templates.length > 0) {
+          setEmailTemplate((prev) => prev === "" ? templates[0].type : prev);
+        } else {
+          setEmailTemplate((prev) => prev === "" ? "opvolgmail" : prev);
         }
       } catch (err) {
         console.error("Error fetching mail templates:", err);
-        // Fall back to default template type
-        if (!emailTemplate) {
-          setEmailTemplate("opvolgmail");
-        }
+        // Fall back to default template type (only on initial load)
+        setEmailTemplate((prev) => prev === "" ? "opvolgmail" : prev);
       } finally {
         setTemplatesLoading(false);
       }
@@ -853,18 +851,16 @@ function CommunicationTab() {
         setTemplatesLoading(true);
         const templates = await listMailTemplates({ is_active: true });
         setMailTemplates(templates);
-        // Set default template to first one if available
-        if (templates.length > 0 && !template) {
-          setTemplate(templates[0].type);
-        } else if (templates.length === 0 && !template) {
-          setTemplate("opvolgmail");
+        // Set default template to first one if available (only on initial load)
+        if (templates.length > 0) {
+          setTemplate((prev) => prev === "" ? templates[0].type : prev);
+        } else {
+          setTemplate((prev) => prev === "" ? "opvolgmail" : prev);
         }
       } catch (err) {
         console.error("Error fetching mail templates:", err);
-        // Fall back to default template type
-        if (!template) {
-          setTemplate("opvolgmail");
-        }
+        // Fall back to default template type (only on initial load)
+        setTemplate((prev) => prev === "" ? "opvolgmail" : prev);
       } finally {
         setTemplatesLoading(false);
       }
