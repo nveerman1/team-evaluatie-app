@@ -375,9 +375,17 @@ async def get_standard_comments(
         StandardRemark.type == "omza",
     )
     
-    # Filter by subject if available
+    # Filter by subject if available, but also include school-wide remarks (subject_id is NULL)
+    from sqlalchemy import or_
     if subject_id:
-        template_query = template_query.filter(StandardRemark.subject_id == subject_id)
+        template_query = template_query.filter(
+            or_(
+                StandardRemark.subject_id == subject_id,
+                StandardRemark.subject_id == None  # Include school-wide remarks
+            )
+        )
+    # If no subject_id from evaluation, still show school-wide remarks (subject_id is NULL)
+    # No additional filter needed - will show all OMZA remarks for the school
     
     if category:
         template_query = template_query.filter(StandardRemark.category == category)
