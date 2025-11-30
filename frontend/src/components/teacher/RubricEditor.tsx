@@ -106,6 +106,7 @@ export default function RubricEditor({
   }, []);
 
   // Fetch learning objectives (only on client side), filtered by targetLevel
+  // Include teacher's own objectives and shared course objectives
   useEffect(() => {
     if (!isMounted) return;
 
@@ -114,6 +115,8 @@ export default function RubricEditor({
         const response = await listLearningObjectives({
           phase: targetLevel || undefined,
           limit: 100,
+          include_teacher_objectives: true,
+          include_course_objectives: true,
         });
         setLearningObjectives(response.items);
       } catch (err) {
@@ -505,6 +508,12 @@ function SortableCriterionCard({
                   <div className="p-2">
                     {learningObjectives.map((lo) => {
                       const isSelected = item.learning_objective_ids?.includes(lo.id) ?? false;
+                      const typeLabel = lo.is_template ? "🏛️" : lo.objective_type === "teacher" ? "👤" : "👥";
+                      const typeBg = lo.is_template 
+                        ? "bg-amber-100 text-amber-800" 
+                        : lo.objective_type === "teacher" 
+                          ? "bg-emerald-100 text-emerald-800" 
+                          : "bg-cyan-100 text-cyan-800";
                       return (
                         <label
                           key={lo.id}
@@ -517,7 +526,8 @@ function SortableCriterionCard({
                             className="mt-1"
                           />
                           <div className="flex-1 text-sm">
-                            <div className="font-medium">
+                            <div className="font-medium flex items-center gap-2">
+                              <span className={`text-xs px-1.5 py-0.5 rounded ${typeBg}`}>{typeLabel}</span>
                               {lo.domain}.{lo.order} - {lo.title}
                             </div>
                             {lo.description && (
@@ -566,15 +576,22 @@ function SortableCriterionCard({
       {/* Compact Learning Objectives Badges */}
       {selectedObjectives.length > 0 && (
         <div className="flex flex-wrap gap-1.5 pl-8">
-          {selectedObjectives.map((lo) => (
-            <span
-              key={lo.id}
-              className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium"
-              title={`${lo.title}${lo.description ? ` - ${lo.description}` : ""}`}
-            >
-              {lo.domain}.{lo.order}
-            </span>
-          ))}
+          {selectedObjectives.map((lo) => {
+            const typeBg = lo.is_template 
+              ? "bg-amber-100 text-amber-700" 
+              : lo.objective_type === "teacher" 
+                ? "bg-emerald-100 text-emerald-700" 
+                : "bg-cyan-100 text-cyan-700";
+            return (
+              <span
+                key={lo.id}
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${typeBg}`}
+                title={`${lo.title}${lo.description ? ` - ${lo.description}` : ""}`}
+              >
+                {lo.domain}.{lo.order}
+              </span>
+            );
+          })}
         </div>
       )}
 
