@@ -287,6 +287,7 @@ export default function TemplatesPage() {
         page: 1,
         limit: 50,
         subject_id: selectedSubjectId,  // Filter by selected subject
+        objective_type: "template",  // Only show central/template objectives in admin
       });
       setLearningObjectives(response.items);
     } catch (err) {
@@ -357,10 +358,11 @@ export default function TemplatesPage() {
     }
 
     try {
-      // Ensure subject_id is set when creating
+      // Create as central/template objective (is_template: true) with subject_id
       await createLearningObjective({
         ...formData,
         subject_id: selectedSubjectId,
+        is_template: true,  // This is a central objective managed by admin
       });
       setIsCreateModalOpen(false);
       fetchLearningObjectives();
@@ -460,7 +462,8 @@ export default function TemplatesPage() {
 
       const result = await importLearningObjectives(
         { items },
-        selectedSubjectId
+        selectedSubjectId,
+        true  // Import as central/template objectives (is_template: true)
       );
       setImportResult(result);
       if (result.errors.length === 0) {
@@ -2722,6 +2725,20 @@ export default function TemplatesPage() {
 
           {activeTab === "objectives" && (
             <div className="space-y-4">
+              {/* Info banner for admin */}
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <span className="text-amber-500 text-xl">🏛️</span>
+                  <div className="text-sm text-amber-800">
+                    <p className="font-medium mb-1">Centrale Leerdoelen</p>
+                    <p>
+                      Leerdoelen die hier worden aangemaakt zijn <strong>centrale leerdoelen</strong> (gekoppeld aan de geselecteerde sectie).
+                      Deze zijn zichtbaar voor alle docenten maar kunnen alleen door beheerders worden bewerkt.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <p className="text-sm text-gray-600">
                 Beheer leerdoelen en eindtermen die gekoppeld kunnen worden aan
                 criteria
@@ -2738,6 +2755,9 @@ export default function TemplatesPage() {
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Type
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                           Domein
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -2753,7 +2773,12 @@ export default function TemplatesPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {learningObjectives.map((obj) => (
-                        <tr key={obj.id} className="hover:bg-gray-50">
+                        <tr key={obj.id} className="hover:bg-gray-50 bg-amber-50/30">
+                          <td className="px-6 py-4 text-sm">
+                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                              🏛️ Centraal
+                            </span>
+                          </td>
                           <td className="px-6 py-4 text-sm font-medium">
                             {obj.domain || "-"}
                           </td>
