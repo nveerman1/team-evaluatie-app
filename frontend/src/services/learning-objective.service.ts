@@ -29,6 +29,8 @@ export async function listLearningObjectives(
     phase?: string;
     search?: string;
     subject_id?: number;
+    objective_type?: "template" | "teacher" | "all";
+    include_teacher_objectives?: boolean;
   }
 ): Promise<LearningObjectiveListResponse> {
   const response = await api.get<LearningObjectiveListResponse>(
@@ -68,9 +70,13 @@ export async function deleteLearningObjective(
 
 export async function importLearningObjectives(
   data: LearningObjectiveImportRequest,
-  subject_id?: number
+  subject_id?: number,
+  is_template: boolean = true
 ): Promise<LearningObjectiveImportResponse> {
-  const params = subject_id ? { subject_id } : {};
+  const params: { subject_id?: number; is_template?: boolean } = {};
+  if (subject_id) params.subject_id = subject_id;
+  params.is_template = is_template;
+  
   const response = await api.post<LearningObjectiveImportResponse>(
     `/learning-objectives/import`,
     data,
@@ -87,6 +93,7 @@ export async function getLearningObjectivesOverview(
     course_id?: number;
     evaluation_id?: number;
     learning_objective_id?: number;
+    include_teacher_objectives?: boolean;
   }
 ): Promise<LearningObjectiveOverviewResponse> {
   const response = await api.get<LearningObjectiveOverviewResponse>(
