@@ -102,10 +102,6 @@ def _sync_learning_objectives(
     Removes old associations and adds new ones.
     """
     # Remove existing associations
-    db.execute(
-        select(RubricCriterionLearningObjective)
-        .where(RubricCriterionLearningObjective.criterion_id == criterion.id)
-    )
     existing = db.execute(
         select(RubricCriterionLearningObjective)
         .where(RubricCriterionLearningObjective.criterion_id == criterion.id)
@@ -113,6 +109,9 @@ def _sync_learning_objectives(
     
     for assoc in existing:
         db.delete(assoc)
+    
+    # Flush deletes before inserting new associations to avoid unique constraint violation
+    db.flush()
     
     # Add new associations
     for lo_id in learning_objective_ids:
