@@ -19,7 +19,7 @@ Existing learning objectives are marked as is_template=True
 (backward compatible - they were implicitly central objectives).
 
 Revision ID: lo_20251130_01
-Revises: pec_20251129_01
+Revises: pac_20251129_01
 Create Date: 2025-11-30 19:40:00.000000
 """
 
@@ -29,7 +29,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = "lo_20251130_01"
-down_revision: Union[str, None] = "pec_20251129_01"
+down_revision: Union[str, None] = "pac_20251129_01"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
