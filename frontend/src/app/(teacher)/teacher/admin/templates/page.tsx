@@ -1608,7 +1608,7 @@ export default function TemplatesPage() {
                           <tr
                             key={row.id}
                             className="hover:bg-slate-50 cursor-pointer"
-                            onClick={() => setExpandedCriterion(isOpen ? null : row.id)}
+                            onClick={() => toggleCriterionExpand(row.id)}
                           >
                             <td className="py-3 font-medium text-slate-900">{row.categoryName}</td>
                             <td className="py-3">{row.title}</td>
@@ -1748,16 +1748,22 @@ export default function TemplatesPage() {
                                           const titleEl = document.getElementById(
                                             `edit-title-${row.id}`
                                           ) as HTMLInputElement;
-                                          const levels: Record<string, string> = {};
-                                          [1, 2, 3, 4, 5].forEach((level) => {
+                                          const levels: { "1": string; "2": string; "3": string; "4": string; "5": string } = {
+                                            "1": "",
+                                            "2": "",
+                                            "3": "",
+                                            "4": "",
+                                            "5": ""
+                                          };
+                                          ([1, 2, 3, 4, 5] as const).forEach((level) => {
                                             const el = document.getElementById(
                                               `edit-level-${row.id}-${level}`
                                             ) as HTMLInputElement;
-                                            levels[level.toString()] = el.value;
+                                            levels[level.toString() as "1" | "2" | "3" | "4" | "5"] = el.value;
                                           });
                                           handleUpdatePeerCriterion(row.id, {
                                             title: titleEl.value,
-                                            level_descriptors: levels as typeof row.level_descriptors,
+                                            level_descriptors: levels,
                                             learning_objective_ids: editLearningObjectiveIds,
                                           });
                                         }}
