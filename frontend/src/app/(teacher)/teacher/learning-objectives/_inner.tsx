@@ -14,11 +14,13 @@ import type {
   LearningObjectiveUpdateDto,
   LearningObjectiveImportItem,
 } from "@/dtos/learning-objective.dto";
+import { useAuth } from "@/hooks/useAuth";
 
 // View mode type
 type ViewMode = "all" | "template" | "teacher";
 
 export default function LearningObjectivesInner() {
+  const { user } = useAuth();
   const [objectives, setObjectives] = useState<LearningObjectiveDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +82,7 @@ export default function LearningObjectivesInner() {
         search?: string;
         objective_type?: "template" | "teacher" | "all";
         include_teacher_objectives?: boolean;
+        include_course_objectives?: boolean;
       } = {
         page,
         limit,
@@ -92,9 +95,12 @@ export default function LearningObjectivesInner() {
         params.objective_type = "template";
       } else if (viewMode === "teacher") {
         params.objective_type = "teacher";
+        // When viewing teacher objectives, also include shared course objectives
+        params.include_course_objectives = true;
       } else {
-        // "all" - include both templates and teacher's own objectives
+        // "all" - include templates, own objectives, and shared course objectives
         params.include_teacher_objectives = true;
+        params.include_course_objectives = true;
       }
 
       const response = await listLearningObjectives(params);
@@ -111,8 +117,18 @@ export default function LearningObjectivesInner() {
 
   // Check if user can edit/delete an objective
   function canModify(objective: LearningObjectiveDto): boolean {
-    // Only teacher-specific objectives can be modified by the teacher
-    return objective.objective_type === "teacher";
+    // Only the owner of a teacher-specific objective can modify it
+    // Template objectives and shared objectives (owned by others) are read-only
+    if (objective.is_template) return false;
+    if (!user) return false;
+    return objective.teacher_id === user.id;
+  }
+
+  // Check if this is a shared objective (teacher objective from someone else)
+  function isShared(objective: LearningObjectiveDto): boolean {
+    if (objective.is_template) return false;
+    if (!user) return false;
+    return objective.teacher_id !== user.id;
   }
 
   function openCreateModal() {
@@ -366,10 +382,11 @@ export default function LearningObjectivesInner() {
         <div className="flex items-start gap-3">
           <span className="text-blue-500 text-xl">ℹ️</span>
           <div className="text-sm text-blue-800">
-            <p className="font-medium mb-1">Twee soorten leerdoelen:</p>
+            <p className="font-medium mb-1">Drie soorten leerdoelen:</p>
             <ul className="list-disc list-inside space-y-1">
               <li><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">Centraal</span> — Beheerd door de beheerder, gekoppeld aan rubric-criteria. Alleen-lezen voor docenten.</li>
               <li><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">Eigen doel</span> — Jouw persoonlijke leerdoelen die je zelf kunt aanmaken en bewerken.</li>
+              <li><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-800">Gedeeld</span> — Leerdoelen van collega&apos;s die aan dezelfde course zijn gekoppeld. Alleen-lezen.</li>
             </ul>
           </div>
         </div>
@@ -506,11 +523,21 @@ export default function LearningObjectivesInner() {
           </thead>
           <tbody className="divide-y divide-gray-200">
             {objectives.map((obj) => (
-              <tr key={obj.id} className={`hover:bg-gray-50 ${obj.objective_type === "template" ? "bg-amber-50/30" : ""}`}>
+              <tr key={obj.id} className={`hover:bg-gray-50 ${
+                obj.is_template 
+                  ? "bg-amber-50/30" 
+                  : isShared(obj) 
+                    ? "bg-cyan-50/30" 
+                    : ""
+              }`}>
                 <td className="px-6 py-4 text-sm">
-                  {obj.objective_type === "template" ? (
+                  {obj.is_template ? (
                     <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800">
                       🏛️ Centraal
+                    </span>
+                  ) : isShared(obj) ? (
+                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-800">
+                      👥 Gedeeld
                     </span>
                   ) : (
                     <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-emerald-100 text-emerald-800">

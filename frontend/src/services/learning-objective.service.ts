@@ -31,6 +31,7 @@ export async function listLearningObjectives(
     subject_id?: number;
     objective_type?: "template" | "teacher" | "all";
     include_teacher_objectives?: boolean;
+    include_course_objectives?: boolean;
   }
 ): Promise<LearningObjectiveListResponse> {
   const response = await api.get<LearningObjectiveListResponse>(
@@ -94,6 +95,7 @@ export async function getLearningObjectivesOverview(
     evaluation_id?: number;
     learning_objective_id?: number;
     include_teacher_objectives?: boolean;
+    include_course_objectives?: boolean;
   }
 ): Promise<LearningObjectiveOverviewResponse> {
   const response = await api.get<LearningObjectiveOverviewResponse>(

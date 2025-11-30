@@ -27,10 +27,25 @@ from app.infra.db.models import (
     ProjectAssessmentScore,
     RubricCriterionLearningObjective,
     Score,
+    TeacherCourse,
     User,
 )
 
 router = APIRouter(prefix="/learning-objectives", tags=["learning-objectives"])
+
+
+def _get_user_course_ids(db: Session, user: User) -> list[int]:
+    """Get all course IDs that a teacher is assigned to"""
+    if user.role not in ("teacher", "admin"):
+        return []
+    
+    course_ids_query = select(TeacherCourse.course_id).where(
+        TeacherCourse.school_id == user.school_id,
+        TeacherCourse.teacher_id == user.id,
+        TeacherCourse.is_active == True,
+    )
+    result = db.execute(course_ids_query).scalars().all()
+    return list(result)
 
 
 def _to_out(obj: LearningObjective) -> LearningObjectiveOut:
@@ -130,6 +145,7 @@ def list_learning_objectives(
     subject_id: Optional[int] = None,
     objective_type: Optional[Literal["template", "teacher", "all"]] = None,
     include_teacher_objectives: bool = Query(False, description="Include teacher's own objectives"),
+    include_course_objectives: bool = Query(False, description="Include teacher objectives from shared courses"),
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
@@ -143,28 +159,53 @@ def list_learning_objectives(
       - If include_teacher_objectives=True: both template and user's teacher objectives
       - Otherwise: template objectives only (backward compatible)
     
+    - include_course_objectives: Also show teacher objectives that are linked to courses
+      that the current user is also assigned to (shared course objectives)
+    
     - subject_id: If provided, filter templates by subject. If NULL, show school-wide templates.
     """
     query = select(LearningObjective).where(
         LearningObjective.school_id == user.school_id
     )
 
+    # Get course IDs the current user is assigned to (for shared course objectives)
+    user_course_ids = []
+    if include_teacher_objectives or include_course_objectives or objective_type == "teacher":
+        user_course_ids = _get_user_course_ids(db, user)
+
     # Filter by objective type
     if objective_type == "template":
         query = query.where(LearningObjective.is_template == True)
     elif objective_type == "teacher":
-        query = query.where(
-            LearningObjective.is_template == False,
-            LearningObjective.teacher_id == user.id
-        )
-    elif include_teacher_objectives:
-        # Include both templates and user's own teacher objectives
-        query = query.where(
-            or_(
-                LearningObjective.is_template == True,
+        # Show own objectives + objectives from shared courses
+        if user_course_ids:
+            query = query.where(
+                LearningObjective.is_template == False,
+                or_(
+                    LearningObjective.teacher_id == user.id,
+                    LearningObjective.course_id.in_(user_course_ids)
+                )
+            )
+        else:
+            query = query.where(
+                LearningObjective.is_template == False,
                 LearningObjective.teacher_id == user.id
             )
-        )
+    elif include_teacher_objectives or include_course_objectives:
+        # Include templates + own objectives + shared course objectives
+        conditions = [LearningObjective.is_template == True]
+        
+        if include_teacher_objectives:
+            conditions.append(LearningObjective.teacher_id == user.id)
+        
+        if include_course_objectives and user_course_ids:
+            # Include teacher objectives from shared courses (but not templates)
+            conditions.append(
+                (LearningObjective.is_template == False) & 
+                LearningObjective.course_id.in_(user_course_ids)
+            )
+        
+        query = query.where(or_(*conditions))
     else:
         # Default: backward compatible - only templates
         query = query.where(LearningObjective.is_template == True)
@@ -173,7 +214,7 @@ def list_learning_objectives(
     # if not provided, show only school-wide ones (NULL subject_id)
     if subject_id is not None:
         query = query.where(LearningObjective.subject_id == subject_id)
-    elif objective_type != "teacher":
+    elif objective_type != "teacher" and not include_teacher_objectives and not include_course_objectives:
         # For templates without subject_id filter, show school-wide
         # Skip this filter for teacher objectives as they may not have subject_id
         query = query.where(LearningObjective.subject_id.is_(None))
@@ -232,9 +273,18 @@ def get_learning_objective(
     if not obj:
         raise HTTPException(status_code=404, detail="Learning objective not found")
 
-    # Check visibility: templates are visible to all, teacher objectives only to owner
+    # Check visibility:
+    # - Templates are visible to all
+    # - Teacher objectives are visible to owner
+    # - Teacher objectives with course_id are visible to other teachers of that course
     if not obj.is_template and obj.teacher_id != user.id:
-        raise HTTPException(status_code=404, detail="Learning objective not found")
+        # Check if this is a shared course objective
+        if obj.course_id:
+            user_course_ids = _get_user_course_ids(db, user)
+            if obj.course_id not in user_course_ids:
+                raise HTTPException(status_code=404, detail="Learning objective not found")
+        else:
+            raise HTTPException(status_code=404, detail="Learning objective not found")
 
     return _to_out(obj)
 
@@ -425,6 +475,7 @@ def get_learning_objectives_overview(
     evaluation_id: Optional[int] = None,
     learning_objective_id: Optional[int] = None,
     include_teacher_objectives: bool = Query(False, description="Include teacher's own objectives"),
+    include_course_objectives: bool = Query(False, description="Include teacher objectives from shared courses"),
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
@@ -441,6 +492,7 @@ def get_learning_objectives_overview(
     - evaluation_id: Filter to a specific evaluation
     - learning_objective_id: Filter to a specific learning objective
     - include_teacher_objectives: Include teacher's own objectives in overview
+    - include_course_objectives: Include teacher objectives from shared courses
     """
     # Build query for students
     students_query = select(User).where(
@@ -465,6 +517,11 @@ def get_learning_objectives_overview(
 
     students = db.execute(students_query).scalars().all()
 
+    # Get course IDs the current user is assigned to (for shared course objectives)
+    user_course_ids = []
+    if include_teacher_objectives or include_course_objectives:
+        user_course_ids = _get_user_course_ids(db, user)
+
     # Get learning objectives
     lo_query = select(LearningObjective).where(
         LearningObjective.school_id == user.school_id
@@ -473,16 +530,20 @@ def get_learning_objectives_overview(
     if learning_objective_id:
         lo_query = lo_query.where(LearningObjective.id == learning_objective_id)
     else:
-        # Include template objectives and optionally teacher's own objectives
+        # Build visibility conditions
+        conditions = [LearningObjective.is_template == True]
+        
         if include_teacher_objectives:
-            lo_query = lo_query.where(
-                or_(
-                    LearningObjective.is_template == True,
-                    LearningObjective.teacher_id == user.id
-                )
+            conditions.append(LearningObjective.teacher_id == user.id)
+        
+        if include_course_objectives and user_course_ids:
+            # Include teacher objectives from shared courses
+            conditions.append(
+                (LearningObjective.is_template == False) & 
+                LearningObjective.course_id.in_(user_course_ids)
             )
-        else:
-            lo_query = lo_query.where(LearningObjective.is_template == True)
+        
+        lo_query = lo_query.where(or_(*conditions))
 
     lo_query = lo_query.order_by(
         LearningObjective.is_template.desc(),  # Templates first

@@ -34,10 +34,13 @@ Learning objectives are organized in a two-tier system:
 
 ### Objective Types
 
-| Type | `is_template` | `subject_id` | `teacher_id` | Managed By | Visible To |
-|------|---------------|--------------|--------------|------------|------------|
-| Central | `True` | Required | NULL | Admins only | All teachers (read-only) |
-| Teacher | `False` | NULL | Required | Owner teacher | Owner only |
+| Type | `is_template` | `subject_id` | `teacher_id` | `course_id` | Managed By | Visible To |
+|------|---------------|--------------|--------------|-------------|------------|------------|
+| Central | `True` | Required | NULL | NULL | Admins only | All teachers (read-only) |
+| Teacher (Personal) | `False` | NULL | Required | NULL | Owner teacher | Owner only |
+| Teacher (Course) | `False` | NULL | Required | Required | Owner teacher | Owner + other course teachers (read-only) |
+
+**Course-linked Teacher Objectives**: When a teacher creates a learning objective with a `course_id`, this objective becomes visible to all other teachers who are also assigned to that course (via `TeacherCourse` table). This enables collaboration where one teacher's objectives are visible to colleagues teaching the same course.
 
 ## API Endpoints
 
@@ -50,6 +53,7 @@ GET /api/v1/learning-objectives
 Query Parameters:
 - `objective_type`: Filter by type (`template`, `teacher`, `all`)
 - `include_teacher_objectives`: Include current user's teacher objectives (boolean)
+- `include_course_objectives`: Include teacher objectives from shared courses (boolean)
 - `subject_id`: Filter by subject (for central objectives)
 - `phase`: Filter by phase (`onderbouw`, `bovenbouw`)
 - `domain`: Filter by domain code

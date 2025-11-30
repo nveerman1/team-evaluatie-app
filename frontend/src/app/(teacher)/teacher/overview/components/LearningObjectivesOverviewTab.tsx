@@ -74,6 +74,7 @@ export default function LearningObjectivesOverviewTab() {
         phase: phase,
         limit: 100,
         include_teacher_objectives: true, // Include teacher's own objectives in overview
+        include_course_objectives: true, // Include objectives from shared courses
       });
       setAllObjectives(response.items);
     } catch (err) {
@@ -90,6 +91,7 @@ export default function LearningObjectivesOverviewTab() {
         class_name: classFilter || undefined,
         course_id: courseFilter,
         include_teacher_objectives: true, // Include teacher's own objectives
+        include_course_objectives: true, // Include objectives from shared courses
       });
 
       setOverview(response);
@@ -425,6 +427,10 @@ export default function LearningObjectivesOverviewTab() {
             <div className="flex items-center gap-2">
               <span className="px-2 py-1 bg-emerald-100 text-emerald-800 rounded text-xs font-medium">👤 Eigen doel</span>
               <span className="text-gray-600">— Jouw persoonlijke leerdoelen</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-1 bg-cyan-100 text-cyan-800 rounded text-xs font-medium">👥 Gedeeld</span>
+              <span className="text-gray-600">— Van collega&apos;s via gedeelde courses</span>
             </div>
           </div>
         </div>
