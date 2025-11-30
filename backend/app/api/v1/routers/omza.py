@@ -362,6 +362,20 @@ async def get_standard_comments(
     results = []
     seen_texts = set()  # Track texts to avoid duplicates
     
+    # HARDCODED TEST COMMENTS - Remove after debugging
+    # These should appear at the top of each category with a ★ prefix
+    hardcoded_test_comments = [
+        StandardCommentOut(id="test_hardcoded_O", category="O", text="[TEST] Hardcoded Organiseren comment"),
+        StandardCommentOut(id="test_hardcoded_M", category="M", text="[TEST] Hardcoded Meedoen comment"),
+        StandardCommentOut(id="test_hardcoded_Z", category="Z", text="[TEST] Hardcoded Zelfvertrouwen comment"),
+        StandardCommentOut(id="test_hardcoded_A", category="A", text="[TEST] Hardcoded Autonomie comment"),
+    ]
+    if not category:
+        results.extend(hardcoded_test_comments)
+    else:
+        results.extend([c for c in hardcoded_test_comments if c.category == category])
+    print(f"[OMZA] Added {len([c for c in results if c.id.startswith('test_')])} hardcoded test comments")
+    
     # First, fetch template-based standard remarks for OMZA type
     # OMZA remarks are about behavior (Organiseren, Meedoen, Zelfvertrouwen, Autonomie)
     # and are generally school-wide, not subject-specific, so we don't filter by subject
