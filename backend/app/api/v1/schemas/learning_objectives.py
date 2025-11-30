@@ -1,20 +1,38 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
 
 # ---------- Learning Objective ----------
 
+# Type for learning objective type
+ObjectiveType = Literal["template", "teacher"]
+
 
 class LearningObjectiveCreate(BaseModel):
+    """
+    Create a learning objective.
+    
+    For central/template objectives (admin):
+    - is_template=True
+    - subject_id is required
+    - teacher_id should be None
+    
+    For teacher-specific objectives:
+    - is_template=False (default)
+    - teacher_id is set automatically from current user
+    - course_id is optional
+    """
     domain: Optional[str] = None
     title: str
     description: Optional[str] = None
     order: int = 0
     phase: Optional[str] = None  # "onderbouw" | "bovenbouw"
-    subject_id: Optional[int] = None  # For template-specific learning objectives
+    subject_id: Optional[int] = None  # For template/central learning objectives
+    course_id: Optional[int] = None  # For teacher-specific learning objectives
+    is_template: bool = False  # True = central/admin managed, False = teacher-specific
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -25,7 +43,9 @@ class LearningObjectiveUpdate(BaseModel):
     order: Optional[int] = None
     phase: Optional[str] = None  # "onderbouw" | "bovenbouw"
     subject_id: Optional[int] = None  # For template-specific learning objectives
+    course_id: Optional[int] = None  # For teacher-specific learning objectives
     metadata_json: Optional[Dict[str, Any]] = None
+    # Note: is_template and teacher_id cannot be changed after creation
 
 
 class LearningObjectiveOut(BaseModel):
@@ -35,7 +55,11 @@ class LearningObjectiveOut(BaseModel):
     description: Optional[str]
     order: int
     phase: Optional[str]
-    subject_id: Optional[int]  # For template-specific learning objectives
+    subject_id: Optional[int]  # For template/central learning objectives
+    teacher_id: Optional[int]  # For teacher-specific learning objectives
+    course_id: Optional[int]  # For teacher-specific learning objectives
+    is_template: bool  # True = central/admin managed, False = teacher-specific
+    objective_type: ObjectiveType  # "template" (centraal) or "teacher" (docentdoel)
     metadata_json: Dict[str, Any]
 
     class Config:

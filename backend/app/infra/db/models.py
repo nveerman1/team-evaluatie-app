@@ -1118,7 +1118,18 @@ class LearningObjective(Base):
     Learning objectives / eindtermen that can be linked to rubric criteria
     to track student progress per learning goal.
     
-    Can be school-wide (subject_id=NULL) or subject-specific (subject_id set).
+    Two-tier architecture:
+    1. Central (template) objectives: is_template=True, managed by admin via /admin/templates
+       - subject_id IS NOT NULL (linked to subject/sectie)
+       - teacher_id IS NULL
+       - Can be linked to rubric criteria
+       - Read-only for teachers in /teacher/learning-objectives
+    
+    2. Teacher-specific objectives: is_template=False, managed by teacher via /teacher/learning-objectives
+       - teacher_id IS NOT NULL (owned by specific teacher)
+       - course_id optional (for course-specific objectives)
+       - Cannot be linked to central rubric templates
+       - Visible/editable only by the owning teacher
     """
 
     __tablename__ = "learning_objectives"
@@ -1126,12 +1137,29 @@ class LearningObjective(Base):
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
     
-    # Subject linkage for template-specific learning objectives
+    # Subject linkage for central/template learning objectives
     subject_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("subjects.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )
+    
+    # Teacher linkage for teacher-specific learning objectives
+    teacher_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    
+    # Course linkage for teacher-specific learning objectives (optional)
+    course_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("courses.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    
+    # Type indicator: True = central/template (admin managed), False = teacher-specific
+    is_template: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # Domain (e.g., "A", "B", "C", "D - Ontwerpen", "E")
     domain: Mapped[Optional[str]] = mapped_column(String(50))
@@ -1153,6 +1181,8 @@ class LearningObjective(Base):
 
     # Relationships
     subject: Mapped[Optional["Subject"]] = relationship()
+    teacher: Mapped[Optional["User"]] = relationship(foreign_keys=[teacher_id])
+    course: Mapped[Optional["Course"]] = relationship()
     rubric_criteria: Mapped[list["RubricCriterion"]] = relationship(
         secondary="rubric_criterion_learning_objectives",
         back_populates="learning_objectives",
@@ -1161,6 +1191,9 @@ class LearningObjective(Base):
     __table_args__ = (
         Index("ix_learning_objective_school", "school_id"),
         Index("ix_learning_objective_subject", "subject_id"),
+        Index("ix_learning_objective_teacher", "teacher_id"),
+        Index("ix_learning_objective_course", "course_id"),
+        Index("ix_learning_objective_is_template", "school_id", "is_template"),
         Index("ix_learning_objective_domain", "school_id", "domain"),
         Index("ix_learning_objective_phase", "school_id", "phase"),
     )
