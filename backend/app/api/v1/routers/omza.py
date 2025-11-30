@@ -97,6 +97,9 @@ async def get_omza_data(
             if criterion.category not in categories:
                 categories[criterion.category] = []
             categories[criterion.category].append(criterion.id)
+    
+    # Debug: log the categories from rubric
+    print(f"[OMZA] Categories from rubric: {list(categories.keys())}")
 
     # Get all active students from the course
     from app.infra.db.models import Group, GroupMember
@@ -205,10 +208,16 @@ async def get_omza_data(
         if cat not in categories:
             categories[cat] = []  # Add empty category if not in rubric
     
+    # Debug: log categories after adding OMZA defaults
+    print(f"[OMZA] Categories after adding OMZA defaults: {list(categories.keys())}")
+    
     # Sort categories in specific order: O, M, Z, A
     sorted_categories = [cat for cat in category_order if cat in categories]
     # Add any other categories that might exist
     sorted_categories.extend([cat for cat in categories.keys() if cat not in category_order])
+    
+    # Debug: log final sorted categories
+    print(f"[OMZA] Final sorted_categories: {sorted_categories}")
     
     return OmzaDataResponse(
         evaluation_id=evaluation_id,
