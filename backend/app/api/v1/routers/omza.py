@@ -91,15 +91,27 @@ async def get_omza_data(
     )
 
     # Group criteria by category
+    # Map full category names to short codes for consistency
+    category_name_to_code = {
+        "Organiseren": "O",
+        "Meedoen": "M", 
+        "Zelfvertrouwen": "Z",
+        "Autonomie": "A",
+        # Also handle lowercase
+        "organiseren": "O",
+        "meedoen": "M",
+        "zelfvertrouwen": "Z",
+        "autonomie": "A",
+    }
+    
     categories = {}
     for criterion in criteria:
         if criterion.category:
-            if criterion.category not in categories:
-                categories[criterion.category] = []
-            categories[criterion.category].append(criterion.id)
-    
-    # Debug: log the categories from rubric
-    print(f"[OMZA] Categories from rubric: {list(categories.keys())}")
+            # Normalize category to short code if it's a full name
+            cat_key = category_name_to_code.get(criterion.category, criterion.category)
+            if cat_key not in categories:
+                categories[cat_key] = []
+            categories[cat_key].append(criterion.id)
 
     # Get all active students from the course
     from app.infra.db.models import Group, GroupMember
@@ -208,16 +220,9 @@ async def get_omza_data(
         if cat not in categories:
             categories[cat] = []  # Add empty category if not in rubric
     
-    # Debug: log categories after adding OMZA defaults
-    print(f"[OMZA] Categories after adding OMZA defaults: {list(categories.keys())}")
-    
     # Sort categories in specific order: O, M, Z, A
+    # Only include O, M, Z, A - don't include any other categories
     sorted_categories = [cat for cat in category_order if cat in categories]
-    # Add any other categories that might exist
-    sorted_categories.extend([cat for cat in categories.keys() if cat not in category_order])
-    
-    # Debug: log final sorted categories
-    print(f"[OMZA] Final sorted_categories: {sorted_categories}")
     
     return OmzaDataResponse(
         evaluation_id=evaluation_id,
@@ -377,20 +382,6 @@ async def get_standard_comments(
     results = []
     seen_texts = set()  # Track texts to avoid duplicates
     
-    # HARDCODED TEST COMMENTS - Remove after debugging
-    # These should appear at the top of each category with a ★ prefix
-    hardcoded_test_comments = [
-        StandardCommentOut(id="test_hardcoded_O", category="O", text="[TEST] Hardcoded Organiseren comment"),
-        StandardCommentOut(id="test_hardcoded_M", category="M", text="[TEST] Hardcoded Meedoen comment"),
-        StandardCommentOut(id="test_hardcoded_Z", category="Z", text="[TEST] Hardcoded Zelfvertrouwen comment"),
-        StandardCommentOut(id="test_hardcoded_A", category="A", text="[TEST] Hardcoded Autonomie comment"),
-    ]
-    if not category:
-        results.extend(hardcoded_test_comments)
-    else:
-        results.extend([c for c in hardcoded_test_comments if c.category == category])
-    print(f"[OMZA] Added {len([c for c in results if c.id.startswith('test_')])} hardcoded test comments")
-    
     # First, fetch template-based standard remarks for OMZA type
     # OMZA remarks are about behavior (Organiseren, Meedoen, Zelfvertrouwen, Autonomie)
     # and are generally school-wide, not subject-specific, so we don't filter by subject
@@ -403,11 +394,6 @@ async def get_standard_comments(
         template_query = template_query.filter(StandardRemark.category == category)
     
     template_remarks = template_query.order_by(StandardRemark.order, StandardRemark.id).all()
-    
-    # Debug logging
-    print(f"[OMZA] Found {len(template_remarks)} template remarks for school_id={current_user.school_id}, type='omza'")
-    for r in template_remarks:
-        print(f"[OMZA]   - id={r.id}, category={r.category}, text={r.text[:50] if r.text else 'N/A'}...")
     
     # Add template remarks first (prefixed with "template_")
     for remark in template_remarks:

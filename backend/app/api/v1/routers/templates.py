@@ -1150,12 +1150,6 @@ def list_standard_remarks(
         .limit(per_page)
         .all()
     )
-    
-    # Debug logging
-    print(f"[TEMPLATES] Listing standard remarks: school_id={user.school_id}, subject_id={subject_id}, type={type}, category={category}")
-    print(f"[TEMPLATES] Found {len(remarks)} remarks (total={total})")
-    for r in remarks:
-        print(f"[TEMPLATES]   - id={r.id}, type={r.type}, category={r.category}, text={r.text[:30] if r.text else 'N/A'}...")
 
     return StandardRemarkListOut(
         remarks=[StandardRemarkOut.model_validate(r) for r in remarks],
@@ -1191,9 +1185,6 @@ def create_standard_remark(
     db.add(remark)
     db.commit()
     db.refresh(remark)
-    
-    # Debug logging
-    print(f"[TEMPLATES] Created StandardRemark id={remark.id}, school_id={remark.school_id}, type={remark.type}, category={remark.category}, text={remark.text[:50] if remark.text else 'N/A'}...")
 
     log_create(
         db=db,
