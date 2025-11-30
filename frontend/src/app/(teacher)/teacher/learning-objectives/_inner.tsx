@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import {
   listLearningObjectives,
   createLearningObjective,
@@ -16,10 +15,16 @@ import type {
   LearningObjectiveImportItem,
 } from "@/dtos/learning-objective.dto";
 
+// View mode type
+type ViewMode = "all" | "template" | "teacher";
+
 export default function LearningObjectivesInner() {
   const [objectives, setObjectives] = useState<LearningObjectiveDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // View mode: show all, only templates (central), or only teacher objectives
+  const [viewMode, setViewMode] = useState<ViewMode>("all");
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,20 +64,40 @@ export default function LearningObjectivesInner() {
 
   useEffect(() => {
     fetchObjectives();
-  }, [page, searchQuery, domainFilter, phaseFilter]);
+  }, [page, searchQuery, domainFilter, phaseFilter, viewMode]);
 
   async function fetchObjectives() {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await listLearningObjectives({
+      // Determine what to fetch based on view mode
+      const params: {
+        page: number;
+        limit: number;
+        domain?: string;
+        phase?: string;
+        search?: string;
+        objective_type?: "template" | "teacher" | "all";
+        include_teacher_objectives?: boolean;
+      } = {
         page,
         limit,
         domain: domainFilter || undefined,
         phase: phaseFilter || undefined,
         search: searchQuery || undefined,
-      });
+      };
+
+      if (viewMode === "template") {
+        params.objective_type = "template";
+      } else if (viewMode === "teacher") {
+        params.objective_type = "teacher";
+      } else {
+        // "all" - include both templates and teacher's own objectives
+        params.include_teacher_objectives = true;
+      }
+
+      const response = await listLearningObjectives(params);
 
       setObjectives(response.items);
       setTotal(response.total);
@@ -84,6 +109,12 @@ export default function LearningObjectivesInner() {
     }
   }
 
+  // Check if user can edit/delete an objective
+  function canModify(objective: LearningObjectiveDto): boolean {
+    // Only teacher-specific objectives can be modified by the teacher
+    return objective.objective_type === "teacher";
+  }
+
   function openCreateModal() {
     setFormData({
       domain: "",
@@ -91,11 +122,16 @@ export default function LearningObjectivesInner() {
       description: "",
       order: 0,
       phase: "",
+      is_template: false, // Teacher objectives are not templates
     });
     setIsCreateModalOpen(true);
   }
 
   function openEditModal(objective: LearningObjectiveDto) {
+    if (!canModify(objective)) {
+      alert("Centrale leerdoelen kunnen alleen door een beheerder worden bewerkt.");
+      return;
+    }
     setCurrentObjective(objective);
     setFormData({
       domain: objective.domain || "",
@@ -114,9 +150,11 @@ export default function LearningObjectivesInner() {
     }
 
     try {
-      await createLearningObjective(
-        formData as LearningObjectiveCreateDto
-      );
+      // Create as teacher-specific objective (is_template: false)
+      await createLearningObjective({
+        ...formData as LearningObjectiveCreateDto,
+        is_template: false,
+      });
       setIsCreateModalOpen(false);
       fetchObjectives();
     } catch (err) {
@@ -127,6 +165,11 @@ export default function LearningObjectivesInner() {
 
   async function handleUpdate() {
     if (!currentObjective) return;
+    
+    if (!canModify(currentObjective)) {
+      alert("Centrale leerdoelen kunnen alleen door een beheerder worden bewerkt.");
+      return;
+    }
 
     try {
       await updateLearningObjective(
@@ -142,13 +185,18 @@ export default function LearningObjectivesInner() {
     }
   }
 
-  async function handleDelete(id: number) {
+  async function handleDelete(objective: LearningObjectiveDto) {
+    if (!canModify(objective)) {
+      alert("Centrale leerdoelen kunnen alleen door een beheerder worden verwijderd.");
+      return;
+    }
+    
     if (!confirm("Weet je zeker dat je dit leerdoel wilt verwijderen?")) {
       return;
     }
 
     try {
-      await deleteLearningObjective(id);
+      await deleteLearningObjective(objective.id);
       fetchObjectives();
     } catch (err) {
       console.error("Error deleting learning objective:", err);
@@ -254,7 +302,8 @@ export default function LearningObjectivesInner() {
         });
       }
 
-      const result = await importLearningObjectives({ items });
+      // Import as teacher objectives (is_template: false)
+      const result = await importLearningObjectives({ items }, undefined, false);
       setImportResult(result);
       if (result.errors.length === 0) {
         fetchObjectives();
@@ -283,8 +332,7 @@ export default function LearningObjectivesInner() {
           <div>
             <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">Leerdoelen / Eindtermen</h1>
             <p className="text-gray-600 mt-1 text-sm">
-              Beheer leerdoelen en koppel ze aan rubrieken voor rapportage en
-              voortgangsmonitoring.
+              Bekijk centrale leerdoelen en beheer je eigen doelen.
             </p>
           </div>
           <div className="flex gap-2 mt-4 md:mt-0">
@@ -292,7 +340,7 @@ export default function LearningObjectivesInner() {
               onClick={openCreateModal}
               className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
             >
-              + Nieuw Leerdoel
+              + Eigen Leerdoel
             </button>
             <button
               onClick={() => setIsImportModalOpen(true)}
@@ -313,6 +361,55 @@ export default function LearningObjectivesInner() {
         </div>
       )}
 
+      {/* Info banner */}
+      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="flex items-start gap-3">
+          <span className="text-blue-500 text-xl">ℹ️</span>
+          <div className="text-sm text-blue-800">
+            <p className="font-medium mb-1">Twee soorten leerdoelen:</p>
+            <ul className="list-disc list-inside space-y-1">
+              <li><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">Centraal</span> — Beheerd door de beheerder, gekoppeld aan rubric-criteria. Alleen-lezen voor docenten.</li>
+              <li><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">Eigen doel</span> — Jouw persoonlijke leerdoelen die je zelf kunt aanmaken en bewerken.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Type Filter Pills */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-medium text-gray-700">Toon:</span>
+        <button
+          onClick={() => setViewMode("all")}
+          className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+            viewMode === "all"
+              ? "bg-sky-100 text-sky-700 border-sky-300"
+              : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+          }`}
+        >
+          Alle
+        </button>
+        <button
+          onClick={() => setViewMode("template")}
+          className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+            viewMode === "template"
+              ? "bg-amber-100 text-amber-700 border-amber-300"
+              : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+          }`}
+        >
+          Centrale doelen
+        </button>
+        <button
+          onClick={() => setViewMode("teacher")}
+          className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+            viewMode === "teacher"
+              ? "bg-emerald-100 text-emerald-700 border-emerald-300"
+              : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+          }`}
+        >
+          Mijn eigen doelen
+        </button>
+      </div>
+
       {/* Phase Tabs */}
       <div className="border-b border-gray-200">
         <nav className="flex gap-8" aria-label="Tabs">
@@ -327,7 +424,7 @@ export default function LearningObjectivesInner() {
               }
             `}
           >
-            Alle
+            Alle fasen
           </button>
           <button
             onClick={() => setPhaseFilter("onderbouw")}
@@ -388,6 +485,9 @@ export default function LearningObjectivesInner() {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Type
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Domein
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -406,7 +506,18 @@ export default function LearningObjectivesInner() {
           </thead>
           <tbody className="divide-y divide-gray-200">
             {objectives.map((obj) => (
-              <tr key={obj.id} className="hover:bg-gray-50">
+              <tr key={obj.id} className={`hover:bg-gray-50 ${obj.objective_type === "template" ? "bg-amber-50/30" : ""}`}>
+                <td className="px-6 py-4 text-sm">
+                  {obj.objective_type === "template" ? (
+                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                      🏛️ Centraal
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+                      👤 Eigen doel
+                    </span>
+                  )}
+                </td>
                 <td className="px-6 py-4 text-sm font-medium">{obj.domain || "-"}</td>
                 <td className="px-6 py-4 text-sm">{obj.order}</td>
                 <td className="px-6 py-4 text-sm">{obj.title}</td>
@@ -424,18 +535,24 @@ export default function LearningObjectivesInner() {
                   )}
                 </td>
                 <td className="px-6 py-4 text-sm text-right">
-                  <button
-                    onClick={() => openEditModal(obj)}
-                    className="text-blue-600 hover:text-blue-800 mr-3"
-                  >
-                    Bewerken
-                  </button>
-                  <button
-                    onClick={() => handleDelete(obj.id)}
-                    className="text-red-600 hover:text-red-800"
-                  >
-                    Verwijderen
-                  </button>
+                  {canModify(obj) ? (
+                    <>
+                      <button
+                        onClick={() => openEditModal(obj)}
+                        className="text-blue-600 hover:text-blue-800 mr-3"
+                      >
+                        Bewerken
+                      </button>
+                      <button
+                        onClick={() => handleDelete(obj)}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        Verwijderen
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-gray-400 text-xs italic">Alleen-lezen</span>
+                  )}
                 </td>
               </tr>
             ))}
@@ -476,7 +593,18 @@ export default function LearningObjectivesInner() {
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-4">Nieuw Leerdoel</h2>
+            <h2 className="text-2xl font-bold mb-2">Nieuw Eigen Leerdoel</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Dit leerdoel wordt als persoonlijk doel opgeslagen en is alleen voor jou zichtbaar.
+            </p>
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg mb-4">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+                  👤 Eigen doel
+                </span>
+                <span className="text-xs text-emerald-700">Dit doel kun je later bewerken en verwijderen.</span>
+              </div>
+            </div>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
@@ -556,7 +684,7 @@ export default function LearningObjectivesInner() {
             <div className="mt-6 flex gap-3">
               <button
                 onClick={handleCreate}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
               >
                 Aanmaken
               </button>
@@ -575,7 +703,14 @@ export default function LearningObjectivesInner() {
       {isEditModalOpen && currentObjective && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-4">Leerdoel Bewerken</h2>
+            <h2 className="text-2xl font-bold mb-2">Eigen Leerdoel Bewerken</h2>
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg mb-4">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+                  👤 Eigen doel
+                </span>
+              </div>
+            </div>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
@@ -655,7 +790,7 @@ export default function LearningObjectivesInner() {
             <div className="mt-6 flex gap-3">
               <button
                 onClick={handleUpdate}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
               >
                 Opslaan
               </button>
@@ -677,9 +812,20 @@ export default function LearningObjectivesInner() {
       {isImportModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-4">
-              Importeer Leerdoelen (CSV)
+            <h2 className="text-2xl font-bold mb-2">
+              Importeer Eigen Leerdoelen (CSV)
             </h2>
+            <p className="text-sm text-gray-600 mb-2">
+              Geïmporteerde leerdoelen worden opgeslagen als jouw persoonlijke doelen.
+            </p>
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg mb-4">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+                  👤 Eigen doelen
+                </span>
+                <span className="text-xs text-emerald-700">Deze doelen kun je later bewerken en verwijderen.</span>
+              </div>
+            </div>
             <p className="text-sm text-gray-600 mb-4">
               Formaat: domein,nummer,titel,beschrijving,fase
               <br />

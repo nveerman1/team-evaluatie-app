@@ -73,6 +73,7 @@ export default function LearningObjectivesOverviewTab() {
       const response = await listLearningObjectives({
         phase: phase,
         limit: 100,
+        include_teacher_objectives: true, // Include teacher's own objectives in overview
       });
       setAllObjectives(response.items);
     } catch (err) {
@@ -88,6 +89,7 @@ export default function LearningObjectivesOverviewTab() {
       const response = await getLearningObjectivesOverview({
         class_name: classFilter || undefined,
         course_id: courseFilter,
+        include_teacher_objectives: true, // Include teacher's own objectives
       });
 
       setOverview(response);
@@ -312,11 +314,16 @@ export default function LearningObjectivesOverviewTab() {
                 {allObjectives.map((obj) => (
                   <th
                     key={obj.id}
-                    className="px-2 py-3 text-center font-medium text-gray-700 uppercase text-xs border-r border-gray-200"
+                    className={`px-2 py-3 text-center font-medium text-gray-700 uppercase text-xs border-r border-gray-200 ${
+                      obj.objective_type === "teacher" ? "bg-emerald-50" : ""
+                    }`}
                     style={{ minWidth: "100px" }}
-                    title={`${obj.title}\n${obj.description || ""}`}
+                    title={`${obj.objective_type === "template" ? "🏛️ Centraal: " : "👤 Eigen doel: "}${obj.title}\n${obj.description || ""}`}
                   >
                     <div className="flex flex-col items-center gap-1">
+                      {obj.objective_type === "teacher" && (
+                        <span className="text-emerald-600 text-xs">👤</span>
+                      )}
                       <span className="font-bold">{obj.domain}</span>
                       {obj.order > 0 && (
                         <span className="text-xs text-gray-500">{obj.order}</span>
@@ -342,7 +349,9 @@ export default function LearningObjectivesOverviewTab() {
                       return (
                         <td
                           key={obj.id}
-                          className="px-2 py-2 text-center border-r border-gray-200"
+                          className={`px-2 py-2 text-center border-r border-gray-200 ${
+                            obj.objective_type === "teacher" ? "bg-emerald-50/50" : ""
+                          }`}
                           style={{ minWidth: "100px" }}
                         >
                           <div
@@ -404,6 +413,19 @@ export default function LearningObjectivesOverviewTab() {
               -
             </div>
             <span>Geen data</span>
+          </div>
+        </div>
+        <div className="mt-4 pt-3 border-t border-gray-200">
+          <h4 className="text-sm font-medium mb-2">Leerdoel types:</h4>
+          <div className="flex flex-wrap gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-1 bg-amber-100 text-amber-800 rounded text-xs font-medium">🏛️ Centraal</span>
+              <span className="text-gray-600">— Beheerd door beheerder</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-1 bg-emerald-100 text-emerald-800 rounded text-xs font-medium">👤 Eigen doel</span>
+              <span className="text-gray-600">— Jouw persoonlijke leerdoelen</span>
+            </div>
           </div>
         </div>
         <p className="mt-3 text-xs text-gray-600">
