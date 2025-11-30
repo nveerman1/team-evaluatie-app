@@ -43,11 +43,11 @@ def _to_out(obj: LearningObjective) -> LearningObjectiveOut:
             "description": obj.description,
             "order": obj.order,
             "phase": obj.phase,
-            "subject_id": getattr(obj, "subject_id", None),
-            "teacher_id": getattr(obj, "teacher_id", None),
-            "course_id": getattr(obj, "course_id", None),
-            "is_template": getattr(obj, "is_template", False),
-            "objective_type": "template" if getattr(obj, "is_template", False) else "teacher",
+            "subject_id": obj.subject_id,
+            "teacher_id": obj.teacher_id,
+            "course_id": obj.course_id,
+            "is_template": obj.is_template,
+            "objective_type": "template" if obj.is_template else "teacher",
             "metadata_json": obj.metadata_json or {},
         }
     )

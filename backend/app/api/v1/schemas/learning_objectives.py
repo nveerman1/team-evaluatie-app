@@ -59,7 +59,7 @@ class LearningObjectiveOut(BaseModel):
     teacher_id: Optional[int]  # For teacher-specific learning objectives
     course_id: Optional[int]  # For teacher-specific learning objectives
     is_template: bool  # True = central/admin managed, False = teacher-specific
-    objective_type: str  # "template" (centraal) or "teacher" (docentdoel)
+    objective_type: ObjectiveType  # "template" (centraal) or "teacher" (docentdoel)
     metadata_json: Dict[str, Any]
 
     class Config:
