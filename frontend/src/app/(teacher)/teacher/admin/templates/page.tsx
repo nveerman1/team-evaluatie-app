@@ -1296,12 +1296,11 @@ export default function TemplatesPage() {
     return (
       <div className="p-6">
         {/* Tab-specific content */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
-            {TABS.find((t) => t.key === activeTab)?.label}
-          </h3>
+        <h3 className="text-lg font-medium text-gray-900 mb-4">
+          {TABS.find((t) => t.key === activeTab)?.label}
+        </h3>
 
-          {activeTab === "peer" && (
+        {activeTab === "peer" && (
             <div className="space-y-4">
               {/* Title and description */}
               <div>
@@ -3059,7 +3058,6 @@ export default function TemplatesPage() {
               </div>
             </div>
           )}
-        </div>
       </div>
     );
   };
