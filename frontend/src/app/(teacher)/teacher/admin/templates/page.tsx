@@ -1295,11 +1295,6 @@ export default function TemplatesPage() {
 
     return (
       <div className="p-6">
-        <div className="mb-4 text-sm text-gray-600">
-          Templates voor:{" "}
-          <span className="font-semibold">{selectedSubject?.name}</span>
-        </div>
-
         {/* Tab-specific content */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">
@@ -1569,30 +1564,30 @@ export default function TemplatesPage() {
                   )}
 
                   {/* Table of criteria */}
-                  <table className="w-full text-sm border-collapse">
+                  <table className="w-full table-fixed text-sm border-collapse">
                     <thead>
                       <tr className="text-left text-xs text-slate-500 border-b">
                         <th 
-                          className="py-2 cursor-pointer hover:text-slate-700" 
+                          className="w-32 py-2 cursor-pointer hover:text-slate-700" 
                           onClick={() => setPeerSort({key:"categoryName", dir: peerSort.key==="categoryName" && peerSort.dir==='asc'?'desc':'asc'})}
                         >
                           Categorie {peerSort.key === "categoryName" && (peerSort.dir === "asc" ? "↑" : "↓")}
                         </th>
                         <th 
-                          className="cursor-pointer hover:text-slate-700" 
+                          className="w-40 cursor-pointer hover:text-slate-700" 
                           onClick={() => setPeerSort({key:"title", dir: peerSort.key==="title" && peerSort.dir==='asc'?'desc':'asc'})}
                         >
                           Naam {peerSort.key === "title" && (peerSort.dir === "asc" ? "↑" : "↓")}
                         </th>
                         <th 
-                          className="cursor-pointer hover:text-slate-700" 
+                          className="w-24 cursor-pointer hover:text-slate-700" 
                           onClick={() => setPeerSort({key:"target_level", dir: peerSort.key==="target_level" && peerSort.dir==='asc'?'desc':'asc'})}
                         >
                           Niveau {peerSort.key === "target_level" && (peerSort.dir === "asc" ? "↑" : "↓")}
                         </th>
-                        <th>Beschrijving</th>
+                        <th className="w-auto">Beschrijving</th>
                         <th 
-                          className="cursor-pointer hover:text-slate-700" 
+                          className="w-24 text-center cursor-pointer hover:text-slate-700" 
                           onClick={() => setPeerSort({key:"learningObjectivesCount", dir: peerSort.key==="learningObjectivesCount" && peerSort.dir==='asc'?'desc':'asc'})}
                         >
                           Leerdoelen {peerSort.key === "learningObjectivesCount" && (peerSort.dir === "asc" ? "↑" : "↓")}
@@ -1610,19 +1605,19 @@ export default function TemplatesPage() {
                             className="hover:bg-slate-50 cursor-pointer"
                             onClick={() => toggleCriterionExpand(row.id)}
                           >
-                            <td className="py-3 font-medium text-slate-900">{row.categoryName}</td>
-                            <td className="py-3">{row.title}</td>
-                            <td>
+                            <td className="w-32 py-3 font-bold text-slate-900">{row.categoryName}</td>
+                            <td className="w-40 py-3">{row.title}</td>
+                            <td className="w-24">
                               {row.target_level ? (
-                                <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700">
+                                <span className="inline-block rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700 whitespace-nowrap">
                                   {row.target_level === "onderbouw" ? "Onderbouw" : "Bovenbouw"}
                                 </span>
                               ) : (
                                 <span className="text-slate-400">-</span>
                               )}
                             </td>
-                            <td className="text-slate-600 max-w-sm">{row.description || "-"}</td>
-                            <td className="text-slate-500">{row.learningObjectivesCount}</td>
+                            <td className="text-slate-600 truncate max-w-xl">{row.description || "-"}</td>
+                            <td className="w-24 text-slate-500 text-center">{row.learningObjectivesCount}</td>
                           </tr>,
                           isOpen && (
                             <tr key={`${row.id}-expanded`} className="bg-slate-50">
