@@ -127,6 +127,8 @@ export default function TemplatesPage() {
   const [editLearningObjectiveIds, setEditLearningObjectiveIds] = useState<number[]>([]);
   const [isCreatingPeerCriterion, setIsCreatingPeerCriterion] = useState(false);
   const [selectedPeerLevelFilter, setSelectedPeerLevelFilter] = useState<"all" | "onderbouw" | "bovenbouw">("all");
+  const [activePeerCategory, setActivePeerCategory] = useState<"all" | "organiseren" | "meedoen" | "zelfvertrouwen" | "autonomie">("all");
+  const [peerSort, setPeerSort] = useState<{ key: string | null; dir: "asc" | "desc" }>({ key: null, dir: "asc" });
   const [peerFormData, setPeerFormData] = useState<Partial<PeerEvaluationCriterionTemplateCreateDto> & { _filterPhase?: string }>({
     omza_category: "organiseren",
     title: "",
@@ -317,7 +319,41 @@ export default function TemplatesPage() {
     return competencyTree.categories.filter((cat: CompetencyCategoryTreeItem) => cat.id === selectedCategoryFilter);
   }, [competencyTree, selectedCategoryFilter]);
 
-  // Filter peer criteria based on selected target level filter
+  // Filter and sort peer criteria for the table view
+  const filteredAndSortedPeerCriteria = useMemo(() => {
+    // First filter by level
+    let filtered = peerCriteria;
+    if (selectedPeerLevelFilter !== "all") {
+      filtered = filtered.filter(c => c.target_level === selectedPeerLevelFilter);
+    }
+    // Then filter by category
+    if (activePeerCategory !== "all") {
+      filtered = filtered.filter(c => c.omza_category === activePeerCategory);
+    }
+    // Map to include categoryName for display and sorting
+    const mapped = filtered.map(c => ({
+      ...c,
+      categoryName: c.omza_category.charAt(0).toUpperCase() + c.omza_category.slice(1),
+      learningObjectivesCount: c.learning_objective_ids?.length ?? 0,
+    }));
+    // Sort if sort key is set
+    if (peerSort.key) {
+      const dir = peerSort.dir === "asc" ? 1 : -1;
+      mapped.sort((a, b) => {
+        const aVal = a[peerSort.key as keyof typeof a];
+        const bVal = b[peerSort.key as keyof typeof b];
+        if (aVal == null && bVal == null) return 0;
+        if (aVal == null) return 1;
+        if (bVal == null) return -1;
+        if (aVal < bVal) return -1 * dir;
+        if (aVal > bVal) return 1 * dir;
+        return 0;
+      });
+    }
+    return mapped;
+  }, [peerCriteria, selectedPeerLevelFilter, activePeerCategory, peerSort]);
+  
+  // Keep filteredPeerCriteria for backward compatibility (used in create form)
   const filteredPeerCriteria = useMemo(() => {
     if (selectedPeerLevelFilter === "all") {
       return peerCriteria;
@@ -1272,55 +1308,50 @@ export default function TemplatesPage() {
 
           {activeTab === "peer" && (
             <div className="space-y-4">
-              <p className="text-sm text-gray-600">
-                Beheer templates voor peer evaluatie criteria (OMZA:
-                Organiseren, Meedoen, Zelfvertrouwen, Autonomie)
-              </p>
-              
-              {/* Filter pills for Onderbouw/Bovenbouw */}
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium text-gray-700">Filter niveau:</span>
-                <button
-                  onClick={() => setSelectedPeerLevelFilter("all")}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                    selectedPeerLevelFilter === "all"
-                      ? "bg-sky-100 text-sky-700 border-sky-300"
-                      : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
-                  }`}
-                >
-                  Alle ({peerCriteria.length})
-                </button>
-                <button
-                  onClick={() => setSelectedPeerLevelFilter("onderbouw")}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                    selectedPeerLevelFilter === "onderbouw"
-                      ? "bg-blue-100 text-blue-700 border-blue-300"
-                      : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
-                  }`}
-                >
-                  Onderbouw ({peerCriteria.filter(c => c.target_level === "onderbouw").length})
-                </button>
-                <button
-                  onClick={() => setSelectedPeerLevelFilter("bovenbouw")}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                    selectedPeerLevelFilter === "bovenbouw"
-                      ? "bg-purple-100 text-purple-700 border-purple-300"
-                      : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
-                  }`}
-                >
-                  Bovenbouw ({peerCriteria.filter(c => c.target_level === "bovenbouw").length})
-                </button>
+              {/* Title and description */}
+              <div>
+                <p className="text-sm text-slate-600 mt-1">Alle criteria in één overzicht.</p>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                <h4 className="font-semibold text-blue-900 mb-2">OMZA Categorieën:</h4>
-                <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• <strong>Organiseren</strong> - Planning, tijdmanagement, structuur</li>
-                  <li>• <strong>Meedoen</strong> - Participatie, samenwerking, bijdrage</li>
-                  <li>• <strong>Zelfvertrouwen</strong> - Initiatief, verantwoordelijkheid</li>
-                  <li>• <strong>Autonomie</strong> - Zelfstandigheid, reflectie</li>
-                </ul>
-                <p className="text-xs text-blue-700 mt-2">Elk criterium heeft 5 niveaus en kan gekoppeld worden aan leerdoelen</p>
+              {/* Filters above the table */}
+              <div className="flex flex-wrap items-center gap-4">
+                {/* Niveau filter */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-600">Niveau:</span>
+                  {[
+                    { id: "all", label: "Alle" },
+                    { id: "onderbouw", label: "Onderbouw" },
+                    { id: "bovenbouw", label: "Bovenbouw" },
+                  ].map((filter) => (
+                    <button
+                      key={filter.id}
+                      onClick={() => setSelectedPeerLevelFilter(filter.id as "all" | "onderbouw" | "bovenbouw")}
+                      className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                        selectedPeerLevelFilter === filter.id
+                          ? "border-blue-600 bg-blue-50 text-blue-700"
+                          : "border-slate-200 bg-white text-slate-600"
+                      }`}
+                    >
+                      {filter.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Categorie filter */}
+                <div className="flex items-center gap-2 text-xs text-slate-600">
+                  <span>Categorie:</span>
+                  <select
+                    className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs"
+                    value={activePeerCategory}
+                    onChange={(e) => setActivePeerCategory(e.target.value as "all" | "organiseren" | "meedoen" | "zelfvertrouwen" | "autonomie")}
+                  >
+                    <option value="all">Alle</option>
+                    <option value="organiseren">Organiseren</option>
+                    <option value="meedoen">Meedoen</option>
+                    <option value="zelfvertrouwen">Zelfvertrouwen</option>
+                    <option value="autonomie">Autonomie</option>
+                  </select>
+                </div>
               </div>
 
               {loadingPeerCriteria ? (
@@ -1343,7 +1374,7 @@ export default function TemplatesPage() {
                             onChange={(e) =>
                               setPeerFormData({
                                 ...peerFormData,
-                                omza_category: e.target.value as any,
+                                omza_category: e.target.value as "organiseren" | "meedoen" | "zelfvertrouwen" | "autonomie",
                               })
                             }
                             className="w-full px-3 py-2 border rounded"
@@ -1424,7 +1455,7 @@ export default function TemplatesPage() {
                                       level_descriptors: {
                                         ...peerFormData.level_descriptors,
                                         [level.toString()]: e.target.value,
-                                      } as any,
+                                      } as typeof peerFormData.level_descriptors,
                                     })
                                   }
                                   className="w-full px-2 py-1 border rounded text-sm resize-y min-h-[80px]"
@@ -1537,300 +1568,272 @@ export default function TemplatesPage() {
                     </div>
                   )}
 
-                  {/* List of criteria by category */}
-                  {["organiseren", "meedoen", "zelfvertrouwen", "autonomie"].map((category) => {
-                    const categoryCriteria = filteredPeerCriteria.filter(
-                      (c) => c.omza_category === category
-                    );
-                    if (categoryCriteria.length === 0) return null;
+                  {/* Table of criteria */}
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className="text-left text-xs text-slate-500 border-b">
+                        <th 
+                          className="py-2 cursor-pointer hover:text-slate-700" 
+                          onClick={() => setPeerSort({key:"categoryName", dir: peerSort.key==="categoryName" && peerSort.dir==='asc'?'desc':'asc'})}
+                        >
+                          Categorie {peerSort.key === "categoryName" && (peerSort.dir === "asc" ? "↑" : "↓")}
+                        </th>
+                        <th 
+                          className="cursor-pointer hover:text-slate-700" 
+                          onClick={() => setPeerSort({key:"title", dir: peerSort.key==="title" && peerSort.dir==='asc'?'desc':'asc'})}
+                        >
+                          Naam {peerSort.key === "title" && (peerSort.dir === "asc" ? "↑" : "↓")}
+                        </th>
+                        <th 
+                          className="cursor-pointer hover:text-slate-700" 
+                          onClick={() => setPeerSort({key:"target_level", dir: peerSort.key==="target_level" && peerSort.dir==='asc'?'desc':'asc'})}
+                        >
+                          Niveau {peerSort.key === "target_level" && (peerSort.dir === "asc" ? "↑" : "↓")}
+                        </th>
+                        <th>Beschrijving</th>
+                        <th 
+                          className="cursor-pointer hover:text-slate-700" 
+                          onClick={() => setPeerSort({key:"learningObjectivesCount", dir: peerSort.key==="learningObjectivesCount" && peerSort.dir==='asc'?'desc':'asc'})}
+                        >
+                          Leerdoelen {peerSort.key === "learningObjectivesCount" && (peerSort.dir === "asc" ? "↑" : "↓")}
+                        </th>
+                      </tr>
+                    </thead>
 
-                    return (
-                      <div key={category} className="mb-6">
-                        <h4 className="font-semibold text-lg mb-2 capitalize">
-                          {category}
-                        </h4>
-                        <div className="space-y-2">
-                          {categoryCriteria.map((criterion) => (
-                            <div
-                              key={criterion.id}
-                              className="border rounded-lg overflow-hidden"
-                            >
-                              {/* Criterion header - clickable to expand */}
-                              <div
-                                onClick={() => toggleCriterionExpand(criterion.id)}
-                                className="bg-white p-4 cursor-pointer hover:bg-gray-50 flex justify-between items-center"
-                              >
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <h5 className="font-medium">{criterion.title}</h5>
-                                    {criterion.target_level && (
-                                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                        criterion.target_level === "onderbouw"
-                                          ? "bg-blue-100 text-blue-700"
-                                          : "bg-purple-100 text-purple-700"
-                                      }`}>
-                                        {criterion.target_level === "onderbouw" ? "Onderbouw" : "Bovenbouw"}
-                                      </span>
-                                    )}
-                                  </div>
-                                  {criterion.description && (
-                                    <p className="text-sm text-gray-600 mt-1">
-                                      {criterion.description}
-                                    </p>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-gray-500">
-                                  {criterion.learning_objective_ids?.length ?? 0} leerdoel(en)
-                                  </span>
-                                  <svg
-                                    className={`w-5 h-5 transition-transform ${
-                                      expandedCriterion === criterion.id
-                                        ? "rotate-180"
-                                        : ""
-                                    }`}
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M19 9l-7 7-7-7"
-                                    />
-                                  </svg>
-                                </div>
-                              </div>
+                    <tbody className="divide-y">
+                      {filteredAndSortedPeerCriteria.map((row) => {
+                        const isOpen = expandedCriterion === row.id;
 
-                              {/* Expanded content */}
-                              {expandedCriterion === criterion.id && (
-                                <div className="bg-gray-50 p-4 border-t">
-                                  {editingCriterion === criterion.id ? (
-                                    <div className="space-y-3">
-                                      <div>
-                                        <label className="block text-sm font-medium mb-1">
-                                          Titel
-                                        </label>
-                                        <input
-                                          type="text"
-                                          defaultValue={criterion.title}
-                                          id={`edit-title-${criterion.id}`}
-                                          className="w-full px-3 py-2 border rounded"
-                                        />
-                                      </div>
-                                      <div>
-                                        <label className="block text-sm font-medium mb-2">
-                                          Niveaubeschrijvingen
-                                        </label>
-                                        <div className="grid grid-cols-5 gap-2">
-                                          {[1, 2, 3, 4, 5].map((level) => (
-                                            <div key={level} className="flex flex-col">
-                                              <label className="text-xs font-medium text-gray-700 mb-1">
-                                                Niveau {level}
-                                              </label>
-                                              <textarea
-                                                defaultValue={
-                                                  criterion.level_descriptors[
-                                                    level.toString() as "1" | "2" | "3" | "4" | "5"
-                                                  ] || ""
-                                                }
-                                                id={`edit-level-${criterion.id}-${level}`}
-                                                className="w-full px-2 py-1 border rounded text-sm resize-y min-h-[80px]"
-                                                rows={4}
-                                              />
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                      <div>
-                                        <label className="block text-sm font-medium mb-2">
-                                          Leerdoelen koppelen
-                                        </label>
-                                        <div className="space-y-2">
-                                          <div className="flex gap-2">
-                                            <button
-                                              type="button"
-                                              onClick={() => setEditFilterPhase("onderbouw")}
-                                              className={`px-3 py-1 text-sm rounded ${
-                                                editFilterPhase === "onderbouw"
-                                                  ? "bg-blue-600 text-white"
-                                                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                                              }`}
-                                            >
-                                              Onderbouw
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={() => setEditFilterPhase("bovenbouw")}
-                                              className={`px-3 py-1 text-sm rounded ${
-                                                editFilterPhase === "bovenbouw"
-                                                  ? "bg-blue-600 text-white"
-                                                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                                              }`}
-                                            >
-                                              Bovenbouw
-                                            </button>
+                        return [
+                          <tr
+                            key={row.id}
+                            className="hover:bg-slate-50 cursor-pointer"
+                            onClick={() => setExpandedCriterion(isOpen ? null : row.id)}
+                          >
+                            <td className="py-3 font-medium text-slate-900">{row.categoryName}</td>
+                            <td className="py-3">{row.title}</td>
+                            <td>
+                              {row.target_level ? (
+                                <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700">
+                                  {row.target_level === "onderbouw" ? "Onderbouw" : "Bovenbouw"}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400">-</span>
+                              )}
+                            </td>
+                            <td className="text-slate-600 max-w-sm">{row.description || "-"}</td>
+                            <td className="text-slate-500">{row.learningObjectivesCount}</td>
+                          </tr>,
+                          isOpen && (
+                            <tr key={`${row.id}-expanded`} className="bg-slate-50">
+                              <td colSpan={5} className="p-4">
+                                {editingCriterion === row.id ? (
+                                  <div className="space-y-3">
+                                    <div>
+                                      <label className="block text-sm font-medium mb-1">
+                                        Titel
+                                      </label>
+                                      <input
+                                        type="text"
+                                        defaultValue={row.title}
+                                        id={`edit-title-${row.id}`}
+                                        className="w-full px-3 py-2 border rounded"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-sm font-medium mb-2">
+                                        Niveaubeschrijvingen
+                                      </label>
+                                      <div className="grid grid-cols-5 gap-2">
+                                        {[1, 2, 3, 4, 5].map((level) => (
+                                          <div key={level} className="flex flex-col">
+                                            <label className="text-xs font-medium text-gray-700 mb-1">
+                                              Niveau {level}
+                                            </label>
+                                            <textarea
+                                              defaultValue={
+                                                row.level_descriptors[
+                                                  level.toString() as "1" | "2" | "3" | "4" | "5"
+                                                ] || ""
+                                              }
+                                              id={`edit-level-${row.id}-${level}`}
+                                              className="w-full px-2 py-1 border rounded text-sm resize-y min-h-[80px]"
+                                              rows={4}
+                                            />
                                           </div>
-                                          {editFilterPhase && (
-                                            <select
-                                              value=""
-                                              onChange={(e) => {
-                                                const id = parseInt(e.target.value);
-                                                if (id && !editLearningObjectiveIds.includes(id)) {
-                                                  setEditLearningObjectiveIds([...editLearningObjectiveIds, id]);
-                                                }
-                                              }}
-                                              className="w-full px-3 py-2 border rounded"
-                                            >
-                                              <option value="">Selecteer een leerdoel...</option>
-                                              {learningObjectives
-                                                .filter((obj) => obj.phase === editFilterPhase)
-                                                .map((obj) => (
-                                                  <option key={obj.id} value={obj.id}>
-                                                    {obj.domain || ""} {obj.order} - {obj.title}
-                                                  </option>
-                                                ))}
-                                            </select>
-                                          )}
-                                          {editLearningObjectiveIds.length > 0 && (
-                                            <div className="flex flex-wrap gap-1 mt-2">
-                                              {editLearningObjectiveIds.map((id) => {
-                                                const obj = learningObjectives.find((o) => o.id === id);
-                                                return (
-                                                  <span
-                                                    key={id}
-                                                    className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
-                                                  >
-                                                    {obj ? `${obj.domain || ""} ${obj.order} - ${obj.title}` : `ID: ${id}`}
-                                                    <button
-                                                      type="button"
-                                                      onClick={() =>
-                                                        setEditLearningObjectiveIds(
-                                                          editLearningObjectiveIds.filter((objId) => objId !== id)
-                                                        )
-                                                      }
-                                                      className="text-blue-600 hover:text-blue-800"
-                                                    >
-                                                      ×
-                                                    </button>
-                                                  </span>
-                                                );
-                                              })}
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                      <div className="flex gap-2">
-                                        <button
-                                          onClick={() => {
-                                            const titleEl = document.getElementById(
-                                              `edit-title-${criterion.id}`
-                                            ) as HTMLInputElement;
-                                            const levels: any = {};
-                                            [1, 2, 3, 4, 5].forEach((level) => {
-                                              const el = document.getElementById(
-                                                `edit-level-${criterion.id}-${level}`
-                                              ) as HTMLInputElement;
-                                              levels[level.toString()] = el.value;
-                                            });
-                                            handleUpdatePeerCriterion(criterion.id, {
-                                              title: titleEl.value,
-                                              level_descriptors: levels,
-                                              learning_objective_ids: editLearningObjectiveIds,
-                                            });
-                                          }}
-                                          className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-                                        >
-                                          Opslaan
-                                        </button>
-                                        <button
-                                          onClick={() => {
-                                            setEditingCriterion(null);
-                                            setEditFilterPhase(undefined);
-                                            setEditLearningObjectiveIds([]);
-                                          }}
-                                          className="px-3 py-1.5 border text-sm rounded hover:bg-gray-100"
-                                        >
-                                          Annuleren
-                                        </button>
+                                        ))}
                                       </div>
                                     </div>
-                                  ) : (
-                                    <>
-                                      <div className="mb-4">
-                                        <h6 className="font-medium text-sm mb-2">
-                                          Niveaubeschrijvingen:
-                                        </h6>
-                                        <div className="grid grid-cols-5 gap-3">
-                                          {[1, 2, 3, 4, 5].map((level) => (
-                                            <div key={level} className="border rounded p-2 bg-white">
-                                              <div className="text-xs font-semibold text-gray-700 mb-1">
-                                                Niveau {level}
-                                              </div>
-                                              <div className="text-sm text-gray-800">
-                                                {criterion.level_descriptors[
-                                                  level.toString() as "1" | "2" | "3" | "4" | "5"
-                                                ] || <em className="text-gray-400">Niet ingevuld</em>}
-                                              </div>
-                                            </div>
-                                          ))}
+                                    <div>
+                                      <label className="block text-sm font-medium mb-2">
+                                        Leerdoelen koppelen
+                                      </label>
+                                      <div className="space-y-2">
+                                        <div className="flex gap-2">
+                                          <button
+                                            type="button"
+                                            onClick={() => setEditFilterPhase("onderbouw")}
+                                            className={`px-3 py-1 text-sm rounded ${
+                                              editFilterPhase === "onderbouw"
+                                                ? "bg-blue-600 text-white"
+                                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                            }`}
+                                          >
+                                            Onderbouw
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => setEditFilterPhase("bovenbouw")}
+                                            className={`px-3 py-1 text-sm rounded ${
+                                              editFilterPhase === "bovenbouw"
+                                                ? "bg-blue-600 text-white"
+                                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                            }`}
+                                          >
+                                            Bovenbouw
+                                          </button>
                                         </div>
-                                      </div>
-                                      <div className="mb-4">
-                                        <h6 className="font-medium text-sm mb-2">
-                                          Gekoppelde leerdoelen:
-                                        </h6>
-                                        {(criterion.learning_objective_ids?.length ?? 0) > 0 ? (
-                                          <div className="flex flex-wrap gap-1">
-                                            {(criterion.learning_objective_ids || []).map((id) => {
+                                        {editFilterPhase && (
+                                          <select
+                                            value=""
+                                            onChange={(e) => {
+                                              const id = parseInt(e.target.value);
+                                              if (id && !editLearningObjectiveIds.includes(id)) {
+                                                setEditLearningObjectiveIds([...editLearningObjectiveIds, id]);
+                                              }
+                                            }}
+                                            className="w-full px-3 py-2 border rounded"
+                                          >
+                                            <option value="">Selecteer een leerdoel...</option>
+                                            {learningObjectives
+                                              .filter((obj) => obj.phase === editFilterPhase)
+                                              .map((obj) => (
+                                                <option key={obj.id} value={obj.id}>
+                                                  {obj.domain || ""} {obj.order} - {obj.title}
+                                                </option>
+                                              ))}
+                                          </select>
+                                        )}
+                                        {editLearningObjectiveIds.length > 0 && (
+                                          <div className="flex flex-wrap gap-1 mt-2">
+                                            {editLearningObjectiveIds.map((id) => {
                                               const obj = learningObjectives.find((o) => o.id === id);
                                               return (
                                                 <span
                                                   key={id}
-                                                  className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
+                                                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
                                                 >
                                                   {obj ? `${obj.domain || ""} ${obj.order} - ${obj.title}` : `ID: ${id}`}
+                                                  <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                      setEditLearningObjectiveIds(
+                                                        editLearningObjectiveIds.filter((objId) => objId !== id)
+                                                      )
+                                                    }
+                                                    className="text-blue-600 hover:text-blue-800"
+                                                  >
+                                                    ×
+                                                  </button>
                                                 </span>
                                               );
                                             })}
                                           </div>
-                                        ) : (
-                                          <p className="text-sm text-gray-500">
-                                            Geen leerdoelen gekoppeld
-                                          </p>
                                         )}
                                       </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() => {
+                                          const titleEl = document.getElementById(
+                                            `edit-title-${row.id}`
+                                          ) as HTMLInputElement;
+                                          const levels: Record<string, string> = {};
+                                          [1, 2, 3, 4, 5].forEach((level) => {
+                                            const el = document.getElementById(
+                                              `edit-level-${row.id}-${level}`
+                                            ) as HTMLInputElement;
+                                            levels[level.toString()] = el.value;
+                                          });
+                                          handleUpdatePeerCriterion(row.id, {
+                                            title: titleEl.value,
+                                            level_descriptors: levels as typeof row.level_descriptors,
+                                            learning_objective_ids: editLearningObjectiveIds,
+                                          });
+                                        }}
+                                        className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                                      >
+                                        Opslaan
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setEditingCriterion(null);
+                                          setEditFilterPhase(undefined);
+                                          setEditLearningObjectiveIds([]);
+                                        }}
+                                        className="px-3 py-1.5 border text-sm rounded hover:bg-gray-100"
+                                      >
+                                        Annuleren
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="text-xs font-medium text-slate-700 mb-2">
+                                      Niveaubeschrijvingen (1–5)
+                                    </div>
+                                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                                      {[1, 2, 3, 4, 5].map((level) => (
+                                        <div key={level} className="flex min-h-[80px] flex-col rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-inner">
+                                          <span className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Niveau {level}</span>
+                                          <p className="text-[11px] text-slate-700">
+                                            {row.level_descriptors[level.toString() as "1" | "2" | "3" | "4" | "5"] || <em className="text-slate-400">Niet ingevuld</em>}
+                                          </p>
+                                        </div>
+                                      ))}
+                                    </div>
+
+                                    <div className="mt-4 flex justify-between text-xs">
+                                      <span className="text-slate-500">
+                                        {row.learningObjectivesCount > 0 
+                                          ? `${row.learningObjectivesCount} leerdoel(en) gekoppeld`
+                                          : "Geen leerdoelen gekoppeld"
+                                        }
+                                      </span>
                                       <div className="flex gap-2">
-                                        <button
-                                          onClick={() => {
-                                            setEditingCriterion(criterion.id);
-                                            setEditLearningObjectiveIds(criterion.learning_objective_ids);
+                                        <button 
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingCriterion(row.id);
+                                            setEditLearningObjectiveIds(row.learning_objective_ids || []);
                                             setEditFilterPhase(undefined);
                                           }}
-                                          className="px-3 py-1.5 bg-gray-100 text-sm rounded hover:bg-gray-200"
+                                          className="rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px]"
                                         >
                                           Bewerken
                                         </button>
-                                        <button
-                                          onClick={() => handleDeletePeerCriterion(criterion.id)}
-                                          className="px-3 py-1.5 bg-red-100 text-red-700 text-sm rounded hover:bg-red-200"
+                                        <button 
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeletePeerCriterion(row.id);
+                                          }}
+                                          className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-[11px] text-red-700"
                                         >
                                           Verwijderen
                                         </button>
                                       </div>
-                                    </>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
+                                    </div>
+                                  </>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        ];
+                      })}
+                    </tbody>
+                  </table>
 
-                  {filteredPeerCriteria.length === 0 && !isCreatingPeerCriterion && (
+                  {filteredAndSortedPeerCriteria.length === 0 && !isCreatingPeerCriterion && (
                     <div className="text-center py-8 text-gray-500">
                       {peerCriteria.length === 0 ? (
                         <>
@@ -1840,7 +1843,7 @@ export default function TemplatesPage() {
                           </p>
                         </>
                       ) : (
-                        <p>Geen criteria gevonden voor het geselecteerde niveau.</p>
+                        <p>Geen criteria gevonden voor de geselecteerde filters.</p>
                       )}
                     </div>
                   )}
