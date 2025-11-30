@@ -98,28 +98,33 @@ function OmzaQuickCommentsGrid({
             </div>
 
             <div className="flex flex-wrap gap-1.5 mb-2">
-              {comments.map((comment) => (
-                <div key={comment.id} className="group relative inline-flex">
-                  <button
-                    type="button"
-                    className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] text-gray-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700"
-                    onClick={() => appendStandardComment(studentId, comment.text)}
-                  >
-                    {comment.text}
-                  </button>
-                  <button
-                    type="button"
-                    className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] flex items-center justify-center hover:bg-red-600"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteStandardComment(comment.id);
-                    }}
-                    title="Verwijder opmerking"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
+              {comments.map((comment) => {
+                const isTemplateComment = comment.id.startsWith("template_");
+                return (
+                  <div key={comment.id} className="group relative inline-flex">
+                    <button
+                      type="button"
+                      className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] text-gray-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700"
+                      onClick={() => appendStandardComment(studentId, comment.text)}
+                    >
+                      {comment.text}
+                    </button>
+                    {!isTemplateComment && (
+                      <button
+                        type="button"
+                        className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] flex items-center justify-center hover:bg-red-600"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteStandardComment(comment.id);
+                        }}
+                        title="Verwijder opmerking"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             <div className="flex gap-1">
@@ -254,16 +259,20 @@ export default function OMZAOverviewPage() {
   useEffect(() => {
     if (!evalIdNum) return;
     
-    omzaService.getStandardComments(evalIdNum).then((comments) => {
-      const byCategory: Record<string, StandardComment[]> = {};
-      comments.forEach((comment) => {
-        if (!byCategory[comment.category]) {
-          byCategory[comment.category] = [];
-        }
-        byCategory[comment.category].push(comment);
+    omzaService.getStandardComments(evalIdNum)
+      .then((comments) => {
+        const byCategory: Record<string, StandardComment[]> = {};
+        comments.forEach((comment) => {
+          if (!byCategory[comment.category]) {
+            byCategory[comment.category] = [];
+          }
+          byCategory[comment.category].push(comment);
+        });
+        setStandardComments(byCategory);
+      })
+      .catch((err) => {
+        console.error("Error loading standard comments:", err);
       });
-      setStandardComments(byCategory);
-    });
   }, [evalIdNum]);
 
   // Show toast notification

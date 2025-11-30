@@ -51,6 +51,16 @@ import type {
   MailTemplateDto,
   MailTemplateCreateDto,
 } from "@/dtos/mail-template.dto";
+import {
+  listStandardRemarks,
+  createStandardRemark,
+  updateStandardRemark,
+  deleteStandardRemark,
+} from "@/services/standard-remark.service";
+import type {
+  StandardRemarkDto,
+  StandardRemarkCreateDto,
+} from "@/dtos/standard-remark.dto";
 
 type TabType =
   | "peer"
@@ -178,6 +188,19 @@ export default function TemplatesPage() {
     is_active: true,
   });
 
+  // Standard remarks (OMZA quick comments) state
+  const [standardRemarks, setStandardRemarks] = useState<StandardRemarkDto[]>([]);
+  const [loadingStandardRemarks, setLoadingStandardRemarks] = useState(false);
+  const [isCreatingStandardRemark, setIsCreatingStandardRemark] = useState(false);
+  const [editingStandardRemark, setEditingStandardRemark] = useState<number | null>(null);
+  const [selectedOmzaCategoryFilter, setSelectedOmzaCategoryFilter] = useState<"all" | "O" | "M" | "Z" | "A">("all");
+  const [remarkFormData, setRemarkFormData] = useState<Partial<StandardRemarkCreateDto>>({
+    type: "omza",
+    category: "O",
+    text: "",
+    order: 0,
+  });
+
   // Sync state with URL params
   useEffect(() => {
     const subjectIdParam = searchParams.get("subjectId");
@@ -232,6 +255,13 @@ export default function TemplatesPage() {
       fetchCompetencyTree();
     }
   }, [activeTab]);
+
+  // Load standard remarks when tab changes to remarks
+  useEffect(() => {
+    if (activeTab === "remarks" && selectedSubjectId) {
+      fetchStandardRemarks();
+    }
+  }, [activeTab, selectedSubjectId]);
 
   const loadSubjects = async () => {
     try {
@@ -659,6 +689,95 @@ export default function TemplatesPage() {
       console.error("Error deleting mail template:", err);
       alert("Er is een fout opgetreden bij het verwijderen.");
     }
+  };
+
+  // Standard remarks (OMZA quick comments) functions
+  const fetchStandardRemarks = async () => {
+    if (!selectedSubjectId) return;
+    
+    setLoadingStandardRemarks(true);
+    try {
+      const response = await listStandardRemarks({
+        subject_id: selectedSubjectId,
+        type: "omza",
+        per_page: 100,
+      });
+      setStandardRemarks(response.remarks);
+    } catch (err) {
+      console.error("Error fetching standard remarks:", err);
+    } finally {
+      setLoadingStandardRemarks(false);
+    }
+  };
+
+  const handleCreateStandardRemark = async () => {
+    if (!remarkFormData.text) {
+      alert("Tekst is verplicht");
+      return;
+    }
+    if (!selectedSubjectId) {
+      alert("Selecteer eerst een sectie");
+      return;
+    }
+
+    try {
+      await createStandardRemark({
+        ...remarkFormData as StandardRemarkCreateDto,
+        subject_id: selectedSubjectId,
+        type: "omza",
+      });
+      setIsCreatingStandardRemark(false);
+      setRemarkFormData({
+        type: "omza",
+        category: "O",
+        text: "",
+        order: 0,
+      });
+      fetchStandardRemarks();
+    } catch (err) {
+      console.error("Error creating standard remark:", err);
+      alert("Er is een fout opgetreden bij het aanmaken.");
+    }
+  };
+
+  const handleUpdateStandardRemark = async (id: number, data: Partial<StandardRemarkCreateDto>) => {
+    try {
+      await updateStandardRemark(id, data);
+      setEditingStandardRemark(null);
+      fetchStandardRemarks();
+    } catch (err) {
+      console.error("Error updating standard remark:", err);
+      alert("Er is een fout opgetreden bij het bijwerken.");
+    }
+  };
+
+  const handleDeleteStandardRemark = async (id: number) => {
+    if (!confirm("Weet je zeker dat je deze opmerking wilt verwijderen?")) {
+      return;
+    }
+    try {
+      await deleteStandardRemark(id);
+      fetchStandardRemarks();
+    } catch (err) {
+      console.error("Error deleting standard remark:", err);
+      alert("Er is een fout opgetreden bij het verwijderen.");
+    }
+  };
+
+  // Filter standard remarks by OMZA category
+  const filteredStandardRemarks = useMemo(() => {
+    if (selectedOmzaCategoryFilter === "all") {
+      return standardRemarks;
+    }
+    return standardRemarks.filter(r => r.category === selectedOmzaCategoryFilter);
+  }, [standardRemarks, selectedOmzaCategoryFilter]);
+
+  // OMZA category labels
+  const OMZA_CATEGORY_LABELS: Record<string, string> = {
+    O: "Organiseren",
+    M: "Meedoen",
+    Z: "Zelfvertrouwen",
+    A: "Autonomie",
   };
 
   const updateURL = (subjectId: number | null, tab: TabType) => {
@@ -2676,12 +2795,252 @@ export default function TemplatesPage() {
           {activeTab === "remarks" && (
             <div className="space-y-4">
               <p className="text-sm text-gray-600">
-                Beheer standaardopmerkingen bibliotheek voor snelle feedback
+                Beheer standaardopmerkingen (quick comments) voor OMZA categorieën
               </p>
-              <div className="text-center py-8 text-gray-500">
-                <p className="mb-4">Standard remarks worden hier weergegeven</p>
-                <p className="text-xs">API Endpoint: GET /api/v1/templates/standard-remarks?subject_id={selectedSubjectId}</p>
+
+              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-4">
+                <h4 className="font-semibold text-indigo-900 mb-2">OMZA Categorieën:</h4>
+                <ul className="text-sm text-indigo-800 space-y-1">
+                  <li>• <strong>O - Organiseren</strong> - Planning, tijdmanagement, structuur</li>
+                  <li>• <strong>M - Meedoen</strong> - Participatie, samenwerking, bijdrage</li>
+                  <li>• <strong>Z - Zelfvertrouwen</strong> - Initiatief, verantwoordelijkheid</li>
+                  <li>• <strong>A - Autonomie</strong> - Zelfstandigheid, reflectie</li>
+                </ul>
+                <p className="text-xs text-indigo-700 mt-2">
+                  Deze opmerkingen zijn beschikbaar als &quot;quick comments&quot; op de OMZA pagina van evaluaties.
+                </p>
               </div>
+
+              {/* Filter pills for OMZA categories */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Filter categorie:</span>
+                <button
+                  onClick={() => setSelectedOmzaCategoryFilter("all")}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                    selectedOmzaCategoryFilter === "all"
+                      ? "bg-sky-100 text-sky-700 border-sky-300"
+                      : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                  }`}
+                >
+                  Alle ({standardRemarks.length})
+                </button>
+                {(["O", "M", "Z", "A"] as const).map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedOmzaCategoryFilter(cat)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                      selectedOmzaCategoryFilter === cat
+                        ? "bg-indigo-100 text-indigo-700 border-indigo-300"
+                        : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                    }`}
+                  >
+                    {OMZA_CATEGORY_LABELS[cat]} ({standardRemarks.filter(r => r.category === cat).length})
+                  </button>
+                ))}
+              </div>
+
+              {loadingStandardRemarks ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Opmerkingen laden...</p>
+                </div>
+              ) : (
+                <>
+                  {/* Create new standard remark form */}
+                  {isCreatingStandardRemark && (
+                    <div className="bg-white border-2 border-indigo-500 rounded-lg p-4 mb-4">
+                      <h4 className="font-semibold mb-3">Nieuwe Opmerking</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            OMZA Categorie
+                          </label>
+                          <select
+                            value={remarkFormData.category}
+                            onChange={(e) =>
+                              setRemarkFormData({
+                                ...remarkFormData,
+                                category: e.target.value,
+                              })
+                            }
+                            className="w-full px-3 py-2 border rounded"
+                          >
+                            <option value="O">O - Organiseren</option>
+                            <option value="M">M - Meedoen</option>
+                            <option value="Z">Z - Zelfvertrouwen</option>
+                            <option value="A">A - Autonomie</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            Tekst *
+                          </label>
+                          <input
+                            type="text"
+                            value={remarkFormData.text}
+                            onChange={(e) =>
+                              setRemarkFormData({
+                                ...remarkFormData,
+                                text: e.target.value,
+                              })
+                            }
+                            placeholder="bijv. Plant goed en houdt overzicht."
+                            className="w-full px-3 py-2 border rounded"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">
+                            Volgorde
+                          </label>
+                          <input
+                            type="number"
+                            value={remarkFormData.order || 0}
+                            onChange={(e) =>
+                              setRemarkFormData({
+                                ...remarkFormData,
+                                order: parseInt(e.target.value, 10) || 0,
+                              })
+                            }
+                            className="w-full px-3 py-2 border rounded"
+                          />
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                          <button
+                            onClick={handleCreateStandardRemark}
+                            className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                          >
+                            Opslaan
+                          </button>
+                          <button
+                            onClick={() => setIsCreatingStandardRemark(false)}
+                            className="px-4 py-2 border rounded hover:bg-gray-50"
+                          >
+                            Annuleren
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* List of standard remarks by category */}
+                  {(["O", "M", "Z", "A"] as const).map((category) => {
+                    const categoryRemarks = filteredStandardRemarks.filter(
+                      (r) => r.category === category
+                    );
+                    // Skip categories with no remarks
+                    if (categoryRemarks.length === 0) return null;
+
+                    return (
+                      <div key={category} className="mb-6">
+                        <h4 className="font-semibold text-lg mb-2">
+                          {OMZA_CATEGORY_LABELS[category]} ({category})
+                        </h4>
+                        <div className="space-y-2">
+                          {categoryRemarks.map((remark) => (
+                            <div
+                              key={remark.id}
+                              className="border rounded-lg overflow-hidden bg-white"
+                            >
+                              <div className="p-4">
+                                {editingStandardRemark === remark.id ? (
+                                  <div className="space-y-3">
+                                    <div>
+                                      <label className="block text-sm font-medium mb-1">
+                                        Tekst
+                                      </label>
+                                      <input
+                                        type="text"
+                                        defaultValue={remark.text}
+                                        id={`edit-remark-text-${remark.id}`}
+                                        className="w-full px-3 py-2 border rounded"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-sm font-medium mb-1">
+                                        Volgorde
+                                      </label>
+                                      <input
+                                        type="number"
+                                        defaultValue={remark.order}
+                                        id={`edit-remark-order-${remark.id}`}
+                                        className="w-full px-3 py-2 border rounded"
+                                      />
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() => {
+                                          const textEl = document.getElementById(
+                                            `edit-remark-text-${remark.id}`
+                                          ) as HTMLInputElement;
+                                          const orderEl = document.getElementById(
+                                            `edit-remark-order-${remark.id}`
+                                          ) as HTMLInputElement;
+                                          handleUpdateStandardRemark(remark.id, {
+                                            text: textEl.value,
+                                            order: parseInt(orderEl.value, 10) || 0,
+                                          });
+                                        }}
+                                        className="px-3 py-1.5 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700"
+                                      >
+                                        Opslaan
+                                      </button>
+                                      <button
+                                        onClick={() => setEditingStandardRemark(null)}
+                                        className="px-3 py-1.5 border text-sm rounded hover:bg-gray-100"
+                                      >
+                                        Annuleren
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="flex justify-between items-start">
+                                      <div className="flex-1">
+                                        <p className="text-gray-800">{remark.text}</p>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                          Volgorde: {remark.order}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex gap-2 mt-3">
+                                      <button
+                                        onClick={() => setEditingStandardRemark(remark.id)}
+                                        className="px-3 py-1.5 bg-gray-100 text-sm rounded hover:bg-gray-200"
+                                      >
+                                        Bewerken
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteStandardRemark(remark.id)}
+                                        className="px-3 py-1.5 bg-red-100 text-red-700 text-sm rounded hover:bg-red-200"
+                                      >
+                                        Verwijderen
+                                      </button>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {filteredStandardRemarks.length === 0 && !isCreatingStandardRemark && (
+                    <div className="text-center py-8 text-gray-500">
+                      {standardRemarks.length === 0 ? (
+                        <>
+                          <p className="mb-4">Nog geen opmerkingen aangemaakt voor dit vak.</p>
+                          <p className="text-xs">
+                            Klik op &quot;+ Nieuwe Standaardopmerking&quot; om te beginnen.
+                          </p>
+                        </>
+                      ) : (
+                        <p>Geen opmerkingen gevonden voor de geselecteerde categorie.</p>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
 
@@ -2769,6 +3128,14 @@ export default function TemplatesPage() {
                       subject: "",
                       body: "",
                       is_active: true,
+                    });
+                  } else if (activeTab === "remarks") {
+                    setIsCreatingStandardRemark(true);
+                    setRemarkFormData({
+                      type: "omza",
+                      category: "O",
+                      text: "",
+                      order: 0,
                     });
                   } else {
                     // TODO: Implement create modal/form for other template types

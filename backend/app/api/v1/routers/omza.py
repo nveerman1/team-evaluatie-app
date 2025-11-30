@@ -91,12 +91,27 @@ async def get_omza_data(
     )
 
     # Group criteria by category
+    # Map full category names to short codes for consistency
+    category_name_to_code = {
+        "Organiseren": "O",
+        "Meedoen": "M", 
+        "Zelfvertrouwen": "Z",
+        "Autonomie": "A",
+        # Also handle lowercase
+        "organiseren": "O",
+        "meedoen": "M",
+        "zelfvertrouwen": "Z",
+        "autonomie": "A",
+    }
+    
     categories = {}
     for criterion in criteria:
         if criterion.category:
-            if criterion.category not in categories:
-                categories[criterion.category] = []
-            categories[criterion.category].append(criterion.id)
+            # Normalize category to short code if it's a full name
+            cat_key = category_name_to_code.get(criterion.category, criterion.category)
+            if cat_key not in categories:
+                categories[cat_key] = []
+            categories[cat_key].append(criterion.id)
 
     # Get all active students from the course
     from app.infra.db.models import Group, GroupMember
@@ -198,11 +213,16 @@ async def get_omza_data(
             )
         )
 
-    # Sort categories in specific order: O, M, Z, A
+    # For OMZA, always ensure O, M, Z, A categories exist
+    # These are the standard OMZA categories and should always be shown
     category_order = ["O", "M", "Z", "A"]
+    for cat in category_order:
+        if cat not in categories:
+            categories[cat] = []  # Add empty category if not in rubric
+    
+    # Sort categories in specific order: O, M, Z, A
+    # Only include O, M, Z, A - don't include any other categories
     sorted_categories = [cat for cat in category_order if cat in categories]
-    # Add any other categories that might exist
-    sorted_categories.extend([cat for cat in categories.keys() if cat not in category_order])
     
     return OmzaDataResponse(
         evaluation_id=evaluation_id,
@@ -337,9 +357,12 @@ async def get_standard_comments(
 ):
     """
     Get standard comments for an evaluation, optionally filtered by category.
-    Standard comments are stored in evaluation settings.
+    Combines template-based remarks from the StandardRemark table (type='omza')
+    with evaluation-specific comments stored in evaluation settings.
     """
     require_role(current_user, ["teacher", "admin"])
+    
+    from app.infra.db.models import StandardRemark
 
     # Get evaluation
     evaluation = (
@@ -356,7 +379,34 @@ async def get_standard_comments(
             detail="Evaluation not found",
         )
 
-    # Initialize default standard comments if not present
+    results = []
+    seen_texts = set()  # Track texts to avoid duplicates
+    
+    # First, fetch template-based standard remarks for OMZA type
+    # OMZA remarks are about behavior (Organiseren, Meedoen, Zelfvertrouwen, Autonomie)
+    # and are generally school-wide, not subject-specific, so we don't filter by subject
+    template_query = db.query(StandardRemark).filter(
+        StandardRemark.school_id == current_user.school_id,
+        StandardRemark.type == "omza",
+    )
+    
+    if category:
+        template_query = template_query.filter(StandardRemark.category == category)
+    
+    template_remarks = template_query.order_by(StandardRemark.order, StandardRemark.id).all()
+    
+    # Add template remarks first (prefixed with "template_")
+    for remark in template_remarks:
+        results.append(
+            StandardCommentOut(
+                id=f"template_{remark.id}",
+                category=remark.category,
+                text=remark.text,
+            )
+        )
+        seen_texts.add(remark.text.lower().strip())
+
+    # Initialize default standard comments if not present in evaluation settings
     default_comments = {
         "O": [
             "Plant goed en houdt overzicht.",
@@ -396,18 +446,21 @@ async def get_standard_comments(
     
     standard_comments = evaluation.settings.get("omza_standard_comments", {})
 
-    results = []
     # Ensure categories are in the correct order: O, M, Z, A
     category_order = ["O", "M", "Z", "A"]
     ordered_categories = [cat for cat in category_order if cat in standard_comments]
     # Add any other categories that might exist
     ordered_categories.extend([cat for cat in standard_comments.keys() if cat not in category_order])
     
+    # Add evaluation-specific comments (prefixed with category_index)
     for cat in ordered_categories:
         if category and cat != category:
             continue
         comments = standard_comments[cat]
         for idx, text in enumerate(comments):
+            # Skip if this text is already in the results from templates
+            if text.lower().strip() in seen_texts:
+                continue
             results.append(
                 StandardCommentOut(
                     id=f"{cat}_{idx}",
@@ -494,8 +547,17 @@ async def delete_standard_comment(
 ):
     """
     Delete a standard comment from an evaluation.
+    Only evaluation-specific comments can be deleted here.
+    Template-based comments must be deleted from the templates admin page.
     """
     require_role(current_user, ["teacher", "admin"])
+    
+    # Template-based comments cannot be deleted from here
+    if comment_id.startswith("template_"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Template-based comments cannot be deleted here. Use the templates admin page instead.",
+        )
 
     # Get evaluation
     evaluation = (
