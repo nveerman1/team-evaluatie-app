@@ -104,15 +104,9 @@ function OmzaQuickCommentsGrid({
                   <div key={comment.id} className="group relative inline-flex">
                     <button
                       type="button"
-                      className={`rounded-full border px-2 py-0.5 text-[10px] hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 ${
-                        isTemplateComment
-                          ? "border-indigo-200 bg-indigo-50 text-indigo-700"
-                          : "border-gray-200 bg-gray-50 text-gray-600"
-                      }`}
+                      className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10px] text-gray-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700"
                       onClick={() => appendStandardComment(studentId, comment.text)}
-                      title={isTemplateComment ? "Template opmerking (uit vak-templates)" : "Evaluatie-specifieke opmerking"}
                     >
-                      {isTemplateComment && <span className="mr-0.5">★</span>}
                       {comment.text}
                     </button>
                     {!isTemplateComment && (
