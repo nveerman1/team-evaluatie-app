@@ -198,8 +198,14 @@ async def get_omza_data(
             )
         )
 
-    # Sort categories in specific order: O, M, Z, A
+    # For OMZA, always ensure O, M, Z, A categories exist
+    # These are the standard OMZA categories and should always be shown
     category_order = ["O", "M", "Z", "A"]
+    for cat in category_order:
+        if cat not in categories:
+            categories[cat] = []  # Add empty category if not in rubric
+    
+    # Sort categories in specific order: O, M, Z, A
     sorted_categories = [cat for cat in category_order if cat in categories]
     # Add any other categories that might exist
     sorted_categories.extend([cat for cat in categories.keys() if cat not in category_order])
