@@ -313,6 +313,8 @@ export default function TemplatesPage() {
   };
 
   // Filter categories based on selected filter
+  // Note: Level filter (selectedCompetencyLevelFilter) requires the competency tree API 
+  // to include phase data for each competency. Currently a UI placeholder.
   const filteredCategories = useMemo((): CompetencyCategoryTreeItem[] => {
     if (!competencyTree || !competencyTree.categories) return [];
     if (selectedCategoryFilter === "all") {
@@ -879,9 +881,9 @@ export default function TemplatesPage() {
                 ].map((filter) => (
                   <button
                     key={filter.id}
-                    onClick={() => setSelectedCompetencyLevelFilter?.(filter.id as "all" | "onderbouw" | "bovenbouw")}
+                    onClick={() => setSelectedCompetencyLevelFilter(filter.id as "all" | "onderbouw" | "bovenbouw")}
                     className={`rounded-full border px-3 py-1 text-xs font-medium ${
-                      (selectedCompetencyLevelFilter || "all") === filter.id
+                      selectedCompetencyLevelFilter === filter.id
                         ? "border-blue-600 bg-blue-50 text-blue-700"
                         : "border-slate-200 bg-white text-slate-600"
                     }`}
