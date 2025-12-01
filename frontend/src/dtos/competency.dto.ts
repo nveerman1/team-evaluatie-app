@@ -58,6 +58,9 @@ export interface CompetencyTree {
 
 // ============ Competency DTOs ============
 
+// Type for competency type (for frontend display)
+export type CompetencyType = "central" | "teacher" | "shared";
+
 export interface Competency {
   id: number;
   school_id: number;
@@ -65,6 +68,15 @@ export interface Competency {
   description?: string;
   category?: string; // Legacy field
   category_id?: number; // New FK to CompetencyCategory
+  category_name?: string; // Category name for display
+  category_description?: string; // Category description for inline display
+  subject_id?: number; // For template/central competencies
+  teacher_id?: number; // For teacher-specific competencies
+  course_id?: number; // For teacher-specific competencies (sharing)
+  is_template: boolean; // True = central/admin managed, False = teacher-specific
+  competency_type: CompetencyType; // Computed: "central", "teacher", or "shared"
+  phase?: string; // "onderbouw" | "bovenbouw"
+  level_descriptors: Record<string, string>; // Dict of level -> description
   order: number;
   active: boolean;
   scale_min: number;
@@ -80,6 +92,11 @@ export interface CompetencyCreate {
   description?: string;
   category?: string;
   category_id?: number;
+  subject_id?: number; // For template/central competencies
+  course_id?: number; // For teacher-specific competencies (sharing)
+  is_template?: boolean; // True = central/admin managed (admin only), False = teacher-specific (default)
+  phase?: string; // "onderbouw" | "bovenbouw"
+  level_descriptors?: Record<string, string>; // Dict of level -> description
   order?: number;
   active?: boolean;
   scale_min?: number;
@@ -93,12 +110,24 @@ export interface CompetencyUpdate {
   description?: string;
   category?: string;
   category_id?: number;
+  subject_id?: number; // For template-specific competencies
+  course_id?: number; // For teacher-specific competencies
+  phase?: string; // "onderbouw" | "bovenbouw"
+  level_descriptors?: Record<string, string>; // Dict of level -> description
   order?: number;
   active?: boolean;
   scale_min?: number;
   scale_max?: number;
   scale_labels?: Record<string, string>;
   metadata_json?: Record<string, any>;
+  // Note: is_template and teacher_id cannot be changed after creation
+}
+
+export interface CompetencyListResponse {
+  items: Competency[];
+  page: number;
+  limit: number;
+  total: number;
 }
 
 export interface CompetencyWindow {

@@ -178,6 +178,7 @@ export default function TemplatesPage() {
   const [competencyTree, setCompetencyTree] = useState<CompetencyTree | null>(null);
   const [loadingCompetencies, setLoadingCompetencies] = useState(false);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<number | "all">("all");
+  const [selectedCompetencyLevelFilter, setSelectedCompetencyLevelFilter] = useState<"all" | "onderbouw" | "bovenbouw">("all");
 
   // Mail template state
   const [mailTemplates, setMailTemplates] = useState<MailTemplateDto[]>([]);
@@ -314,6 +315,8 @@ export default function TemplatesPage() {
   };
 
   // Filter categories based on selected filter
+  // Note: Level filter (selectedCompetencyLevelFilter) requires the competency tree API 
+  // to include phase data for each competency. Currently a UI placeholder.
   const filteredCategories = useMemo((): CompetencyCategoryTreeItem[] => {
     if (!competencyTree || !competencyTree.categories) return [];
     if (selectedCategoryFilter === "all") {
@@ -876,48 +879,53 @@ export default function TemplatesPage() {
         <div className="p-6">
           <div className="space-y-6">
             {/* Header and description */}
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">
-                  Beheer competentie templates met niveau descriptoren per categorie
-                </p>
-              </div>
-              <Link
-                href="/teacher/competencies/create"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
-              >
-                <span>+</span> Nieuwe Competentie
-              </Link>
+            <div>
+              <p className="text-sm text-gray-600">
+                Beheer competentie templates met niveau descriptoren per categorie
+              </p>
             </div>
 
-            {/* Category Filter Pills */}
-            {competencyTree && competencyTree.categories && competencyTree.categories.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  onClick={() => setSelectedCategoryFilter("all")}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                    selectedCategoryFilter === "all"
-                      ? "bg-sky-100 text-sky-700 border-sky-300"
-                      : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
-                  }`}
+            {/* Filters - Dropdowns for category and level */}
+            <div className="flex flex-wrap items-center gap-4">
+              {/* Category Dropdown */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-600">Categorie:</span>
+                <select
+                  className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm"
+                  value={selectedCategoryFilter === "all" ? "all" : selectedCategoryFilter}
+                  onChange={(e) => setSelectedCategoryFilter(e.target.value === "all" ? "all" : parseInt(e.target.value))}
                 >
-                  Alle ({competencyTree.categories.reduce((acc: number, cat: CompetencyCategoryTreeItem) => acc + (cat.competencies?.length || 0), 0)})
-                </button>
-                {competencyTree.categories.map((category: CompetencyCategoryTreeItem) => (
+                  <option value="all">Alle categorieën ({competencyTree?.categories?.reduce((acc: number, cat: CompetencyCategoryTreeItem) => acc + (cat.competencies?.length || 0), 0) || 0})</option>
+                  {competencyTree?.categories?.map((category: CompetencyCategoryTreeItem) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name} ({category.competencies?.length || 0})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Level Filter */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-600">Niveau:</span>
+                {[
+                  { id: "all", label: "Alle" },
+                  { id: "onderbouw", label: "Onderbouw" },
+                  { id: "bovenbouw", label: "Bovenbouw" },
+                ].map((filter) => (
                   <button
-                    key={category.id}
-                    onClick={() => setSelectedCategoryFilter(category.id)}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                      selectedCategoryFilter === category.id
-                        ? "bg-sky-100 text-sky-700 border-sky-300"
-                        : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                    key={filter.id}
+                    onClick={() => setSelectedCompetencyLevelFilter(filter.id as "all" | "onderbouw" | "bovenbouw")}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                      selectedCompetencyLevelFilter === filter.id
+                        ? "border-blue-600 bg-blue-50 text-blue-700"
+                        : "border-slate-200 bg-white text-slate-600"
                     }`}
                   >
-                    {category.name} ({category.competencies?.length || 0})
+                    {filter.label}
                   </button>
                 ))}
               </div>
-            )}
+            </div>
 
             {/* Loading state */}
             {loadingCompetencies && (
@@ -940,7 +948,7 @@ export default function TemplatesPage() {
               </div>
             )}
 
-            {/* Category Sections */}
+            {/* Category Sections with Tables */}
             {!loadingCompetencies && filteredCategories.length > 0 && (
               <div className="space-y-8">
                 {filteredCategories.map((category: CompetencyCategoryTreeItem) => (
@@ -966,32 +974,52 @@ export default function TemplatesPage() {
                       </p>
                     )}
 
-                    {/* Competency Cards Grid */}
-                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                      {(category.competencies || []).map((competency: CompetencyTreeItem) => (
-                        <Link
-                          key={competency.id}
-                          href={`/teacher/competencies/${competency.id}`}
-                          className="p-4 border rounded-xl bg-white hover:shadow-md hover:border-gray-300 transition-all group"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors truncate">
-                                {competency.name}
-                              </h4>
-                              {competency.description && (
-                                <p className="text-sm text-gray-500 mt-1 line-clamp-2">
-                                  {competency.description}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="mt-3 flex items-center text-xs text-gray-400">
-                            <span>Klik om te bewerken →</span>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
+                    {/* Competency Table */}
+                    {(category.competencies || []).length > 0 ? (
+                      <div className="bg-white rounded-lg border overflow-hidden">
+                        <table className="w-full">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                Naam
+                              </th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                Beschrijving
+                              </th>
+                              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                                Acties
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {(category.competencies || []).map((competency: CompetencyTreeItem) => (
+                              <tr key={competency.id} className="hover:bg-gray-50">
+                                <td className="px-4 py-3 text-sm font-medium">{competency.name}</td>
+                                <td className="px-4 py-3 text-sm text-gray-600">
+                                  {competency.description ? (
+                                    competency.description.length > 60 
+                                      ? `${competency.description.substring(0, 60)}...` 
+                                      : competency.description
+                                  ) : (
+                                    <span className="text-gray-400">-</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-right">
+                                  <Link
+                                    href={`/teacher/competencies/${competency.id}`}
+                                    className="text-blue-600 hover:text-blue-800"
+                                  >
+                                    Bewerken
+                                  </Link>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400 italic px-1">Geen competenties in deze categorie</p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -3121,8 +3149,16 @@ export default function TemplatesPage() {
               Beheer sjablonen per sectie/vakgebied.
             </p>
           </div>
-          {(selectedSubjectId || activeTab === "mail") && (
+          {(selectedSubjectId || activeTab === "mail" || activeTab === "competencies") && (
             <div className="flex gap-2">
+              {activeTab === "competencies" ? (
+                <Link
+                  href="/teacher/competencies/create"
+                  className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+                >
+                  + Nieuwe Competentie
+                </Link>
+              ) : (
               <button
                 onClick={() => {
                   if (activeTab === "objectives") {
@@ -3175,6 +3211,7 @@ export default function TemplatesPage() {
               >
                 {getNewButtonLabel()}
               </button>
+              )}
               {activeTab === "objectives" && (
                 <button
                   onClick={() => setIsImportModalOpen(true)}
