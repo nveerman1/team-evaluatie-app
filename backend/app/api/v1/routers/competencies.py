@@ -99,6 +99,13 @@ def _to_competency_out(comp: Competency, current_user_id: int) -> CompetencyOut:
     else:
         competency_type = "shared"
     
+    # Get category info if available
+    category_name = None
+    category_description = None
+    if comp.competency_category:
+        category_name = comp.competency_category.name
+        category_description = comp.competency_category.description
+    
     return CompetencyOut.model_validate(
         {
             "id": comp.id,
@@ -112,6 +119,9 @@ def _to_competency_out(comp: Competency, current_user_id: int) -> CompetencyOut:
             "course_id": comp.course_id,
             "is_template": comp.is_template,
             "competency_type": competency_type,
+            "phase": getattr(comp, 'phase', None),  # Optional phase field
+            "category_name": category_name,
+            "category_description": category_description,
             "order": comp.order,
             "active": comp.active,
             "scale_min": comp.scale_min,
@@ -349,6 +359,7 @@ def list_teacher_competencies(
     include_course_competencies: bool = Query(False, description="Include teacher competencies from shared courses"),
     subject_id: Optional[int] = None,
     category_id: Optional[int] = None,
+    phase: Optional[str] = Query(None, description="Filter by phase: 'onderbouw' or 'bovenbouw'"),
     search: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -367,9 +378,12 @@ def list_teacher_competencies(
     
     - subject_id: Filter by subject (for central competencies)
     - category_id: Filter by competency category
+    - phase: Filter by phase ('onderbouw' or 'bovenbouw')
     - search: Search in name/description
     """
-    query = select(Competency).where(Competency.school_id == current_user.school_id)
+    query = select(Competency).options(
+        selectinload(Competency.competency_category)
+    ).where(Competency.school_id == current_user.school_id)
     
     if active_only:
         query = query.where(Competency.active == True)
@@ -424,6 +438,10 @@ def list_teacher_competencies(
     # Filter by category_id
     if category_id is not None:
         query = query.where(Competency.category_id == category_id)
+    
+    # Filter by phase (onderbouw/bovenbouw)
+    if phase is not None:
+        query = query.where(Competency.phase == phase)
 
     # Search filter
     if search:

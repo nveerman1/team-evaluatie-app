@@ -51,6 +51,7 @@ class CompetencyBase(BaseModel):
     description: Optional[str] = None
     category: Optional[str] = Field(None, max_length=100)  # Legacy field
     category_id: Optional[int] = None  # New FK to CompetencyCategory
+    phase: Optional[str] = Field(None, max_length=20)  # "onderbouw" | "bovenbouw"
     order: int = 0
     active: bool = True
     scale_min: int = 1
@@ -80,6 +81,7 @@ class CompetencyCreate(BaseModel):
     subject_id: Optional[int] = None  # For template/central competencies
     course_id: Optional[int] = None  # For teacher-specific competencies (sharing)
     is_template: bool = False  # True = central/admin managed, False = teacher-specific
+    phase: Optional[str] = Field(None, max_length=20)  # "onderbouw" | "bovenbouw"
     order: int = 0
     active: bool = True
     scale_min: int = 1
@@ -95,6 +97,7 @@ class CompetencyUpdate(BaseModel):
     category_id: Optional[int] = None
     subject_id: Optional[int] = None  # For template-specific competencies
     course_id: Optional[int] = None  # For teacher-specific competencies
+    phase: Optional[str] = Field(None, max_length=20)  # "onderbouw" | "bovenbouw"
     order: Optional[int] = None
     active: Optional[bool] = None
     scale_min: Optional[int] = None
@@ -128,6 +131,8 @@ class CompetencyOut(CompetencyBase):
     course_id: Optional[int] = None  # For teacher-specific competencies (sharing)
     is_template: bool = False  # True = central/admin managed, False = teacher-specific
     competency_type: CompetencyType = "central"  # Computed: "central", "teacher", or "shared"
+    category_name: Optional[str] = None  # Category name for display
+    category_description: Optional[str] = None  # Category description for inline display
     created_at: datetime
     updated_at: datetime
 

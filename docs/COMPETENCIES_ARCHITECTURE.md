@@ -24,6 +24,7 @@ Competencies are organized in a two-tier system with sharing capabilities:
 │ teacher_id: int (FK, null)  │  For teacher-specific competencies
 │ course_id: int (FK, null)   │  Optional course scope for teacher competencies
 │ is_template: bool           │  True = central, False = teacher-specific
+│ phase: str (null)           │  "onderbouw" | "bovenbouw" - like learning objectives
 │ category_id: int (FK, null) │  Optional FK to CompetencyCategory
 │ name: str                   │  Competency name
 │ description: str            │  Detailed description
@@ -75,9 +76,13 @@ Query Parameters:
 - `include_course_competencies`: Include teacher competencies from shared courses (boolean)
 - `subject_id`: Filter by subject (for central competencies)
 - `category_id`: Filter by competency category
+- `phase`: Filter by phase (`onderbouw` or `bovenbouw`)
 - `search`: Search in name/description
 
-**Response includes** `competency_type` field with computed value: `"central"`, `"teacher"`, or `"shared"`.
+**Response includes:**
+- `competency_type` field with computed value: `"central"`, `"teacher"`, or `"shared"`
+- `category_name` and `category_description` for inline display
+- `phase` field for onderbouw/bovenbouw filtering
 
 ### Create Competency
 
@@ -92,6 +97,7 @@ POST /api/v1/competencies/
   "subject_id": 1,
   "name": "Samenwerken",
   "description": "...",
+  "phase": "onderbouw",
   "scale_min": 1,
   "scale_max": 5
 }
@@ -104,6 +110,7 @@ POST /api/v1/competencies/
   "course_id": 2,  // optional - enables sharing
   "name": "Mijn eigen competentie",
   "description": "...",
+  "phase": "bovenbouw",
   "scale_min": 1,
   "scale_max": 5
 }
@@ -123,11 +130,16 @@ Note: `teacher_id` is automatically set to the current user for teacher competen
 **Purpose**: View central competencies and manage own competencies
 
 **Features:**
+- **"+ Eigen Competentie" button** in header for creating personal competencies
 - Filter pills: "Alle" / "Centrale competenties" / "Mijn eigen competenties" / "Gedeelde competenties"
+- **Phase tabs**: "Alle fasen" / "Onderbouw" / "Bovenbouw"
+- **Category dropdown filter**
 - Visual badges:
   - 🏛️ Centraal (amber) - Read-only for teachers
-  - 👤 Eigen competentie (emerald) - Editable by owner
+  - 👤 Eigen (emerald) - Editable by owner
   - 👥 Gedeeld (cyan) - Read-only
+- **Category column** with name and description inline
+- **Phase column** with Onderbouw/Bovenbouw badges
 - Search filter
 - Info banner explaining the three types
 - Legend explaining badge meanings
@@ -137,9 +149,12 @@ Note: `teacher_id` is automatically set to the current user for teacher competen
 **Purpose**: Manage central competency templates for a subject
 
 **Features:**
+- **Table per category** (like peer evaluation criteria)
+- **Category dropdown filter** (instead of filter pills)
+- **Level filter pills** (Alle / Onderbouw / Bovenbouw)
 - Only shows central competencies (`competency_type=central`)
 - New competencies created with `is_template=true`
-- Type column with "🏛️ Centraal" badge
+- "+" Button in page header (not in tab content)
 
 ### 3. Competency Monitor (`/teacher/competencies`)
 
@@ -165,16 +180,23 @@ Central competencies can be linked to rubric criteria via the `RubricCriterion.c
 
 **Important**: Only central competencies (`is_template=True`) should be linked to rubric criteria. This is enforced at the application level. Teacher-specific competencies are for personal tracking only and cannot be linked to rubric templates.
 
-## Migration
+## Migrations
 
-The Alembic migration (`comp_20251201_01`) adds:
+### comp_20251201_01 - Two-Tier Architecture
 
+Adds:
 1. `subject_id` column (FK to subjects)
 2. `teacher_id` column (FK to users)
 3. `course_id` column (FK to courses)
 4. `is_template` column (boolean, NOT NULL)
 5. Indexes on new columns
 6. Sets `is_template=True` for all existing records (backward compatible)
+
+### comp_20251201_02 - Phase Support
+
+Adds:
+1. `phase` column (nullable string, max 20 chars)
+2. Index on `school_id` + `phase` for efficient filtering
 
 ## Access Control Summary
 

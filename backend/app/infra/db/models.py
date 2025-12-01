@@ -737,6 +737,9 @@ class Competency(Base):
     
     # Type indicator: True = central/template (admin managed), False = teacher-specific
     is_template: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    
+    # Phase: "onderbouw" | "bovenbouw" (like learning objectives)
+    phase: Mapped[Optional[str]] = mapped_column(String(20), nullable=True, index=True)
 
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)

@@ -68,11 +68,14 @@ export interface Competency {
   description?: string;
   category?: string; // Legacy field
   category_id?: number; // New FK to CompetencyCategory
+  category_name?: string; // Category name for display
+  category_description?: string; // Category description for inline display
   subject_id?: number; // For template/central competencies
   teacher_id?: number; // For teacher-specific competencies
   course_id?: number; // For teacher-specific competencies (sharing)
   is_template: boolean; // True = central/admin managed, False = teacher-specific
   competency_type: CompetencyType; // Computed: "central", "teacher", or "shared"
+  phase?: string; // "onderbouw" | "bovenbouw"
   order: number;
   active: boolean;
   scale_min: number;
@@ -91,6 +94,7 @@ export interface CompetencyCreate {
   subject_id?: number; // For template/central competencies
   course_id?: number; // For teacher-specific competencies (sharing)
   is_template?: boolean; // True = central/admin managed (admin only), False = teacher-specific (default)
+  phase?: string; // "onderbouw" | "bovenbouw"
   order?: number;
   active?: boolean;
   scale_min?: number;
@@ -106,6 +110,7 @@ export interface CompetencyUpdate {
   category_id?: number;
   subject_id?: number; // For template-specific competencies
   course_id?: number; // For teacher-specific competencies
+  phase?: string; // "onderbouw" | "bovenbouw"
   order?: number;
   active?: boolean;
   scale_min?: number;

@@ -93,6 +93,7 @@ export const competencyService = {
    * @param params.include_course_competencies - Include shared course competencies
    * @param params.subject_id - Filter by subject (for central competencies)
    * @param params.category_id - Filter by competency category
+   * @param params.phase - Filter by phase ("onderbouw" or "bovenbouw")
    * @param params.search - Search in name/description
    */
   async listTeacherCompetencies(params?: {
@@ -104,6 +105,7 @@ export const competencyService = {
     include_course_competencies?: boolean;
     subject_id?: number;
     category_id?: number;
+    phase?: string;
     search?: string;
   }): Promise<CompetencyListResponse> {
     const response = await api.get<CompetencyListResponse>("/competencies/teacher-list", {

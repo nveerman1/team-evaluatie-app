@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { competencyService } from "@/services/competency.service";
-import type { Competency, CompetencyType, CompetencyListResponse } from "@/dtos";
+import type { Competency, CompetencyType, CompetencyListResponse, CompetencyCategory, CompetencyCreate } from "@/dtos";
 import { useAuth } from "@/hooks/useAuth";
 
 // View mode type
@@ -11,6 +11,7 @@ type ViewMode = "all" | "central" | "teacher" | "shared";
 export default function CompetenciesBeheerPage() {
   const { user } = useAuth();
   const [competencies, setCompetencies] = useState<Competency[]>([]);
+  const [categories, setCategories] = useState<CompetencyCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,15 +20,39 @@ export default function CompetenciesBeheerPage() {
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<number | "all">("all");
+  const [phaseFilter, setPhaseFilter] = useState<string>("");
 
   // Pagination
   const [page, setPage] = useState(1);
   const [limit] = useState(50);
   const [total, setTotal] = useState(0);
 
+  // Modal states
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [formData, setFormData] = useState<CompetencyCreate>({
+    name: "",
+    description: "",
+    category_id: undefined,
+    phase: "",
+  });
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
   useEffect(() => {
     fetchCompetencies();
-  }, [page, searchQuery, viewMode]);
+  }, [page, searchQuery, viewMode, categoryFilter, phaseFilter]);
+
+  async function fetchCategories() {
+    try {
+      const cats = await competencyService.getCategories();
+      setCategories(cats);
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+    }
+  }
 
   async function fetchCompetencies() {
     setLoading(true);
@@ -42,12 +67,16 @@ export default function CompetenciesBeheerPage() {
         competency_type?: CompetencyType | "all";
         include_teacher_competencies?: boolean;
         include_course_competencies?: boolean;
+        category_id?: number;
+        phase?: string;
         search?: string;
       } = {
         page,
         limit,
         active_only: true,
         search: searchQuery || undefined,
+        category_id: categoryFilter !== "all" ? categoryFilter : undefined,
+        phase: phaseFilter || undefined,
       };
 
       if (viewMode === "central") {
@@ -101,7 +130,7 @@ export default function CompetenciesBeheerPage() {
     } else {
       return (
         <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
-          👤 Eigen competentie
+          👤 Eigen
         </span>
       );
     }
@@ -115,6 +144,45 @@ export default function CompetenciesBeheerPage() {
       return "bg-cyan-50/30";
     }
     return "";
+  }
+
+  async function handleCreate() {
+    if (!formData.name) {
+      alert("Naam is verplicht");
+      return;
+    }
+
+    try {
+      await competencyService.createCompetency({
+        ...formData,
+        is_template: false, // Teacher competencies are not templates
+      });
+      setIsCreateModalOpen(false);
+      setFormData({ name: "", description: "", category_id: undefined, phase: "" });
+      fetchCompetencies();
+    } catch (err) {
+      console.error("Error creating competency:", err);
+      alert("Er is een fout opgetreden bij het aanmaken van de competentie.");
+    }
+  }
+
+  async function handleDelete(competency: Competency) {
+    if (!canModify(competency)) {
+      alert("Je kunt deze competentie niet verwijderen.");
+      return;
+    }
+
+    if (!confirm("Weet je zeker dat je deze competentie wilt verwijderen?")) {
+      return;
+    }
+
+    try {
+      await competencyService.deleteCompetency(competency.id);
+      fetchCompetencies();
+    } catch (err) {
+      console.error("Error deleting competency:", err);
+      alert("Er is een fout opgetreden bij het verwijderen van de competentie.");
+    }
   }
 
   const totalPages = Math.ceil(total / limit);
@@ -139,7 +207,12 @@ export default function CompetenciesBeheerPage() {
             </p>
           </div>
           <div className="flex gap-2 mt-4 md:mt-0">
-            {/* Placeholder for future create button */}
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
+            >
+              + Eigen Competentie
+            </button>
           </div>
         </header>
       </div>
@@ -213,8 +286,53 @@ export default function CompetenciesBeheerPage() {
         </button>
       </div>
 
+      {/* Phase Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="flex gap-8" aria-label="Tabs">
+          <button
+            onClick={() => setPhaseFilter("")}
+            className={`
+              py-4 px-1 border-b-2 font-medium text-sm transition-colors
+              ${
+                phaseFilter === ""
+                  ? "border-black text-black"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }
+            `}
+          >
+            Alle fasen
+          </button>
+          <button
+            onClick={() => setPhaseFilter("onderbouw")}
+            className={`
+              py-4 px-1 border-b-2 font-medium text-sm transition-colors
+              ${
+                phaseFilter === "onderbouw"
+                  ? "border-black text-black"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }
+            `}
+          >
+            Onderbouw
+          </button>
+          <button
+            onClick={() => setPhaseFilter("bovenbouw")}
+            className={`
+              py-4 px-1 border-b-2 font-medium text-sm transition-colors
+              ${
+                phaseFilter === "bovenbouw"
+                  ? "border-black text-black"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }
+            `}
+          >
+            Bovenbouw
+          </button>
+        </nav>
+      </div>
+
       {/* Filters */}
-      <div className="flex items-center gap-6 bg-white p-4 rounded-2xl border">
+      <div className="flex flex-wrap items-center gap-6 bg-white p-4 rounded-2xl border">
         <div className="flex items-center gap-3">
           <label className="text-sm font-medium">Zoeken:</label>
           <input
@@ -224,6 +342,21 @@ export default function CompetenciesBeheerPage() {
             placeholder="Naam of beschrijving..."
             className="border rounded-lg px-3 py-2"
           />
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-medium">Categorie:</label>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value === "all" ? "all" : parseInt(e.target.value))}
+            className="border rounded-lg px-3 py-2"
+          >
+            <option value="all">Alle categorieën</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -236,13 +369,16 @@ export default function CompetenciesBeheerPage() {
                 Type
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Categorie
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Naam
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Beschrijving
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Schaal
+                Fase
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
                 Acties
@@ -255,16 +391,38 @@ export default function CompetenciesBeheerPage() {
                 <td className="px-6 py-4 text-sm">
                   {getTypeBadge(comp)}
                 </td>
-                <td className="px-6 py-4 text-sm font-medium">{comp.name}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">
-                  {comp.description ? (
-                    comp.description.length > 80 ? `${comp.description.substring(0, 80)}...` : comp.description
+                <td className="px-6 py-4 text-sm">
+                  {comp.category_name ? (
+                    <div>
+                      <span className="font-medium">{comp.category_name}</span>
+                      {comp.category_description && (
+                        <p className="text-xs text-gray-500 mt-0.5">{comp.category_description}</p>
+                      )}
+                    </div>
                   ) : (
                     <span className="text-gray-400">-</span>
                   )}
                 </td>
+                <td className="px-6 py-4 text-sm font-medium">{comp.name}</td>
                 <td className="px-6 py-4 text-sm text-gray-600">
-                  {comp.scale_min} - {comp.scale_max}
+                  {comp.description ? (
+                    comp.description.length > 60 ? `${comp.description.substring(0, 60)}...` : comp.description
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </td>
+                <td className="px-6 py-4 text-sm">
+                  {comp.phase ? (
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      comp.phase === "onderbouw" 
+                        ? "bg-blue-100 text-blue-800" 
+                        : "bg-purple-100 text-purple-800"
+                    }`}>
+                      {comp.phase === "onderbouw" ? "Onderbouw" : "Bovenbouw"}
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
                 </td>
                 <td className="px-6 py-4 text-sm text-right">
                   {canModify(comp) ? (
@@ -277,7 +435,7 @@ export default function CompetenciesBeheerPage() {
                       </button>
                       <button
                         className="text-red-600 hover:text-red-800"
-                        onClick={() => {/* TODO: implement delete */}}
+                        onClick={() => handleDelete(comp)}
                       >
                         Verwijderen
                       </button>
@@ -341,6 +499,104 @@ export default function CompetenciesBeheerPage() {
       </div>
 
       </div>
+
+      {/* Create Modal */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-2">Nieuwe Eigen Competentie</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Deze competentie wordt als persoonlijke competentie opgeslagen en is alleen voor jou zichtbaar.
+            </p>
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg mb-4">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+                  👤 Eigen competentie
+                </span>
+                <span className="text-xs text-emerald-700">Deze competentie kun je later bewerken en verwijderen.</span>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Naam *
+                </label>
+                <input
+                  type="text"
+                  value={formData.name || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  placeholder="bijv. Samenwerken"
+                  className="w-full px-3 py-2 border rounded"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Categorie
+                </label>
+                <select
+                  value={formData.category_id || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, category_id: e.target.value ? parseInt(e.target.value) : undefined })
+                  }
+                  className="w-full px-3 py-2 border rounded"
+                >
+                  <option value="">Geen categorie</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Beschrijving
+                </label>
+                <textarea
+                  value={formData.description || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  placeholder="Beschrijf wat deze competentie inhoudt..."
+                  className="w-full px-3 py-2 border rounded"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Fase</label>
+                <select
+                  value={formData.phase || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phase: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border rounded"
+                >
+                  <option value="">Niet gespecificeerd</option>
+                  <option value="onderbouw">Onderbouw</option>
+                  <option value="bovenbouw">Bovenbouw</option>
+                </select>
+              </div>
+            </div>
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={handleCreate}
+                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
+              >
+                Aanmaken
+              </button>
+              <button
+                onClick={() => setIsCreateModalOpen(false)}
+                className="flex-1 px-4 py-2 border rounded hover:bg-gray-50"
+              >
+                Annuleren
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
