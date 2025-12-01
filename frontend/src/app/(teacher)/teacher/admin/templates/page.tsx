@@ -3020,7 +3020,7 @@ export default function TemplatesPage() {
                             onClick={() => toggleRemarkExpand(row.id)}
                           >
                             <td className="w-32 py-3 font-bold text-slate-900">{row.categoryName}</td>
-                            <td className="py-3 text-slate-600 truncate max-w-xl">{row.text}</td>
+                            <td className="py-3 text-slate-600 truncate max-w-xl" title={row.text}>{row.text}</td>
                             <td className="w-24 text-slate-500 text-center">{row.order}</td>
                           </tr>,
                           isOpen && (
