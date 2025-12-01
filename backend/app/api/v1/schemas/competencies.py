@@ -82,6 +82,7 @@ class CompetencyCreate(BaseModel):
     course_id: Optional[int] = None  # For teacher-specific competencies (sharing)
     is_template: bool = False  # True = central/admin managed, False = teacher-specific
     phase: Optional[str] = Field(None, max_length=20)  # "onderbouw" | "bovenbouw"
+    level_descriptors: Dict[str, str] = Field(default_factory=dict)  # Dict of level -> description
     order: int = 0
     active: bool = True
     scale_min: int = 1
@@ -98,6 +99,7 @@ class CompetencyUpdate(BaseModel):
     subject_id: Optional[int] = None  # For template-specific competencies
     course_id: Optional[int] = None  # For teacher-specific competencies
     phase: Optional[str] = Field(None, max_length=20)  # "onderbouw" | "bovenbouw"
+    level_descriptors: Optional[Dict[str, str]] = None  # Dict of level -> description
     order: Optional[int] = None
     active: Optional[bool] = None
     scale_min: Optional[int] = None
@@ -133,6 +135,7 @@ class CompetencyOut(CompetencyBase):
     competency_type: CompetencyType = "central"  # Computed: "central", "teacher", or "shared"
     category_name: Optional[str] = None  # Category name for display
     category_description: Optional[str] = None  # Category description for inline display
+    level_descriptors: Dict[str, str] = Field(default_factory=dict)  # Dict of level -> description
     created_at: datetime
     updated_at: datetime
 

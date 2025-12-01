@@ -765,9 +765,15 @@ class Competency(Base):
     subject: Mapped[Optional["Subject"]] = relationship()
     teacher: Mapped[Optional["User"]] = relationship(foreign_keys=[teacher_id])
     course: Mapped[Optional["Course"]] = relationship()
+    rubric_levels: Mapped[List["CompetencyRubricLevel"]] = relationship(
+        back_populates="competency",
+        order_by="CompetencyRubricLevel.level",
+        cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
-        UniqueConstraint("school_id", "name", name="uq_competency_name_per_school"),
+        # Unique per school + name + teacher (allows same name for different teachers or central vs teacher)
+        UniqueConstraint("school_id", "name", "teacher_id", name="uq_competency_name_per_school_teacher"),
         Index("ix_competency_school", "school_id"),
         Index("ix_competency_category_id", "category_id"),
         Index("ix_competency_subject", "subject_id"),
@@ -795,6 +801,9 @@ class CompetencyRubricLevel(Base):
         String(100)
     )  # e.g., "Startend", "Basis"
     description: Mapped[str] = mapped_column(Text, nullable=False)  # Behavior examples
+
+    # Relationship back to competency
+    competency: Mapped["Competency"] = relationship(back_populates="rubric_levels")
 
     __table_args__ = (
         UniqueConstraint(

@@ -68,7 +68,7 @@ from app.api.v1.schemas.competencies import (
 router = APIRouter(prefix="/competencies", tags=["competencies"])
 
 # Constants
-COMPETENCY_UNIQUE_NAME_CONSTRAINT = "uq_competency_name_per_school"
+COMPETENCY_UNIQUE_NAME_CONSTRAINT = "uq_competency_name_per_school_teacher"
 CATEGORY_UNIQUE_NAME_CONSTRAINT = "uq_competency_category_name_per_school"
 
 
@@ -106,6 +106,12 @@ def _to_competency_out(comp: Competency, current_user_id: int) -> CompetencyOut:
         category_name = comp.competency_category.name
         category_description = comp.competency_category.description
     
+    # Build level_descriptors dict from rubric_levels relationship
+    level_descriptors = {}
+    if hasattr(comp, 'rubric_levels') and comp.rubric_levels:
+        for rl in comp.rubric_levels:
+            level_descriptors[str(rl.level)] = rl.description
+    
     return CompetencyOut.model_validate(
         {
             "id": comp.id,
@@ -122,6 +128,7 @@ def _to_competency_out(comp: Competency, current_user_id: int) -> CompetencyOut:
             "phase": getattr(comp, 'phase', None),  # Optional phase field
             "category_name": category_name,
             "category_description": category_description,
+            "level_descriptors": level_descriptors,
             "order": comp.order,
             "active": comp.active,
             "scale_min": comp.scale_min,
@@ -272,12 +279,16 @@ def delete_category(
 @router.get("/tree", response_model=CompetencyTree)
 def get_competency_tree(
     active_only: bool = Query(True),
+    templates_only: bool = Query(True, description="Only show central/template competencies (for admin views)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
     Get the full competency tree: categories → competencies
     This is useful for dropdown selectors and hierarchical displays.
+    
+    By default, only shows central/template competencies (is_template=True).
+    Set templates_only=False to include all competencies.
     """
     # Get all categories with their competencies
     query = (
@@ -292,6 +303,11 @@ def get_competency_tree(
     tree_items = []
     for cat in categories:
         competencies = cat.competencies
+        
+        # Filter by is_template if templates_only is True
+        if templates_only:
+            competencies = [c for c in competencies if c.is_template]
+        
         if active_only:
             competencies = [c for c in competencies if c.active]
         
@@ -337,7 +353,10 @@ def list_competencies(
     This is the legacy endpoint that returns only central/template competencies
     for backward compatibility. Use /teacher-list for the full two-tier view.
     """
-    query = select(Competency).where(
+    query = select(Competency).options(
+        selectinload(Competency.competency_category),
+        selectinload(Competency.rubric_levels)
+    ).where(
         Competency.school_id == current_user.school_id,
         Competency.is_template == True,  # Only templates for backward compatibility
     )
@@ -382,7 +401,8 @@ def list_teacher_competencies(
     - search: Search in name/description
     """
     query = select(Competency).options(
-        selectinload(Competency.competency_category)
+        selectinload(Competency.competency_category),
+        selectinload(Competency.rubric_levels)
     ).where(Competency.school_id == current_user.school_id)
     
     if active_only:
@@ -510,16 +530,42 @@ def create_competency(
     
     # Set teacher_id for teacher-specific competencies
     teacher_id = None if data.is_template else current_user.id
-
+    
+    # Extract level_descriptors before creating competency
+    level_descriptors = data.level_descriptors if data.level_descriptors else {}
+    
+    # Create competency without level_descriptors (it's not a column)
+    data_dict = data.model_dump(exclude={'level_descriptors'})
     competency = Competency(
         school_id=current_user.school_id,
         teacher_id=teacher_id,
-        **data.model_dump()
+        **data_dict
     )
     db.add(competency)
     try:
+        db.flush()  # Get the competency ID
+        
+        # Create rubric levels
+        for level_str, description in level_descriptors.items():
+            if description and description.strip():
+                rubric_level = CompetencyRubricLevel(
+                    school_id=current_user.school_id,
+                    competency_id=competency.id,
+                    level=int(level_str),
+                    description=description.strip()
+                )
+                db.add(rubric_level)
+        
         db.commit()
         db.refresh(competency)
+        
+        # Re-fetch with relationships loaded
+        query = select(Competency).options(
+            selectinload(Competency.competency_category),
+            selectinload(Competency.rubric_levels)
+        ).where(Competency.id == competency.id)
+        competency = db.execute(query).scalar_one()
+        
         return _to_competency_out(competency, current_user.id)
     except IntegrityError as e:
         db.rollback()
@@ -527,7 +573,7 @@ def create_competency(
         if COMPETENCY_UNIQUE_NAME_CONSTRAINT in str(e.orig):
             raise HTTPException(
                 status_code=409,
-                detail=f"A competency with the name '{data.name}' already exists for this school",
+                detail=f"A competency with the name '{data.name}' already exists for you",
             )
         # Re-raise for other integrity errors
         raise HTTPException(status_code=400, detail="Database constraint violation")
@@ -540,7 +586,12 @@ def get_competency(
     current_user: User = Depends(get_current_user),
 ):
     """Get a specific competency"""
-    competency = db.get(Competency, competency_id)
+    query = select(Competency).options(
+        selectinload(Competency.competency_category),
+        selectinload(Competency.rubric_levels)
+    ).where(Competency.id == competency_id)
+    competency = db.execute(query).scalar_one_or_none()
+    
     if not competency or competency.school_id != current_user.school_id:
         raise HTTPException(status_code=404, detail="Competency not found")
     
@@ -595,15 +646,46 @@ def update_competency(
                 detail="You can only modify your own competencies"
             )
 
-    # Update fields (exclude is_template and teacher_id - these cannot be changed)
-    update_data = data.model_dump(exclude_unset=True)
+    # Extract level_descriptors if provided
+    level_descriptors = data.level_descriptors if data.level_descriptors is not None else None
+
+    # Update fields (exclude is_template, teacher_id, and level_descriptors)
+    update_data = data.model_dump(exclude_unset=True, exclude={'level_descriptors'})
     for key, value in update_data.items():
         if key not in ("is_template", "teacher_id"):  # These cannot be changed
             setattr(competency, key, value)
 
+    # Update rubric levels if provided
+    if level_descriptors is not None:
+        # Delete existing rubric levels
+        db.execute(
+            select(CompetencyRubricLevel)
+            .where(CompetencyRubricLevel.competency_id == competency.id)
+        )
+        for rl in competency.rubric_levels[:]:  # Create a copy to iterate
+            db.delete(rl)
+        
+        # Create new rubric levels
+        for level_str, description in level_descriptors.items():
+            if description and description.strip():
+                rubric_level = CompetencyRubricLevel(
+                    school_id=current_user.school_id,
+                    competency_id=competency.id,
+                    level=int(level_str),
+                    description=description.strip()
+                )
+                db.add(rubric_level)
+
     try:
         db.commit()
-        db.refresh(competency)
+        
+        # Re-fetch with relationships loaded
+        query = select(Competency).options(
+            selectinload(Competency.competency_category),
+            selectinload(Competency.rubric_levels)
+        ).where(Competency.id == competency.id)
+        competency = db.execute(query).scalar_one()
+        
         return _to_competency_out(competency, current_user.id)
     except IntegrityError as e:
         db.rollback()
@@ -613,7 +695,7 @@ def update_competency(
             conflicting_name = data.name if data.name is not None else competency.name
             raise HTTPException(
                 status_code=409,
-                detail=f"A competency with the name '{conflicting_name}' already exists for this school",
+                detail=f"A competency with the name '{conflicting_name}' already exists for you",
             )
         # Re-raise for other integrity errors
         raise HTTPException(status_code=400, detail="Database constraint violation")

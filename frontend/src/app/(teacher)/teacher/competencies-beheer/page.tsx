@@ -2,11 +2,20 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { competencyService } from "@/services/competency.service";
-import type { Competency, CompetencyType, CompetencyListResponse, CompetencyCategory, CompetencyCreate } from "@/dtos";
+import type { Competency, CompetencyType, CompetencyListResponse, CompetencyCategory, CompetencyCreate, CompetencyUpdate } from "@/dtos";
 import { useAuth } from "@/hooks/useAuth";
 
 // View mode type
 type ViewMode = "all" | "central" | "teacher" | "shared";
+
+// Initial form data
+const initialFormData: CompetencyCreate = {
+  name: "",
+  description: "",
+  category_id: undefined,
+  phase: "",
+  level_descriptors: { "1": "", "2": "", "3": "", "4": "", "5": "" },
+};
 
 export default function CompetenciesBeheerPage() {
   const { user } = useAuth();
@@ -28,14 +37,12 @@ export default function CompetenciesBeheerPage() {
   const [limit] = useState(50);
   const [total, setTotal] = useState(0);
 
-  // Modal states
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [formData, setFormData] = useState<CompetencyCreate>({
-    name: "",
-    description: "",
-    category_id: undefined,
-    phase: "",
-  });
+  // Inline creation and editing states
+  const [isCreating, setIsCreating] = useState(false);
+  const [formData, setFormData] = useState<CompetencyCreate>(initialFormData);
+  const [expandedCompetency, setExpandedCompetency] = useState<number | null>(null);
+  const [editingCompetency, setEditingCompetency] = useState<number | null>(null);
+  const [editFormData, setEditFormData] = useState<CompetencyUpdate>({});
 
   useEffect(() => {
     fetchCategories();
@@ -157,13 +164,54 @@ export default function CompetenciesBeheerPage() {
         ...formData,
         is_template: false, // Teacher competencies are not templates
       });
-      setIsCreateModalOpen(false);
-      setFormData({ name: "", description: "", category_id: undefined, phase: "" });
+      setIsCreating(false);
+      setFormData(initialFormData);
       fetchCompetencies();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error creating competency:", err);
-      alert("Er is een fout opgetreden bij het aanmaken van de competentie.");
+      if (err?.response?.status === 409) {
+        alert("Er bestaat al een competentie met deze naam. Kies een andere naam.");
+      } else {
+        alert("Er is een fout opgetreden bij het aanmaken van de competentie.");
+      }
     }
+  }
+
+  async function handleUpdate(competencyId: number) {
+    try {
+      await competencyService.updateCompetency(competencyId, editFormData);
+      setEditingCompetency(null);
+      setEditFormData({});
+      fetchCompetencies();
+    } catch (err: any) {
+      console.error("Error updating competency:", err);
+      if (err?.response?.status === 409) {
+        alert("Er bestaat al een competentie met deze naam. Kies een andere naam.");
+      } else {
+        alert("Er is een fout opgetreden bij het bijwerken van de competentie.");
+      }
+    }
+  }
+
+  function toggleExpand(competencyId: number) {
+    if (expandedCompetency === competencyId) {
+      setExpandedCompetency(null);
+      setEditingCompetency(null);
+    } else {
+      setExpandedCompetency(competencyId);
+      setEditingCompetency(null);
+    }
+  }
+
+  function startEdit(competency: Competency) {
+    setEditingCompetency(competency.id);
+    setEditFormData({
+      name: competency.name,
+      description: competency.description || "",
+      category_id: competency.category_id,
+      phase: competency.phase || "",
+      level_descriptors: competency.level_descriptors || { "1": "", "2": "", "3": "", "4": "", "5": "" },
+    });
   }
 
   async function handleDelete(competency: Competency) {
@@ -208,7 +256,10 @@ export default function CompetenciesBeheerPage() {
           </div>
           <div className="flex gap-2 mt-4 md:mt-0">
             <button
-              onClick={() => setIsCreateModalOpen(true)}
+              onClick={() => {
+                setIsCreating(true);
+                setFormData(initialFormData);
+              }}
               className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
             >
               + Eigen Competentie
@@ -360,92 +411,310 @@ export default function CompetenciesBeheerPage() {
         </div>
       </div>
 
+      {/* Inline Creation Form */}
+      {isCreating && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6 space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+              👤 Eigen competentie
+            </span>
+            <span className="text-sm text-emerald-700">Nieuwe competentie aanmaken</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Naam *</label>
+              <input
+                type="text"
+                value={formData.name || ""}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="bijv. Samenwerken"
+                className="w-full px-3 py-2 border rounded"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Categorie</label>
+              <select
+                value={formData.category_id || ""}
+                onChange={(e) => setFormData({ ...formData, category_id: e.target.value ? parseInt(e.target.value) : undefined })}
+                className="w-full px-3 py-2 border rounded"
+              >
+                <option value="">Geen categorie</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Fase</label>
+              <select
+                value={formData.phase || ""}
+                onChange={(e) => setFormData({ ...formData, phase: e.target.value })}
+                className="w-full px-3 py-2 border rounded"
+              >
+                <option value="">Niet gespecificeerd</option>
+                <option value="onderbouw">Onderbouw</option>
+                <option value="bovenbouw">Bovenbouw</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Beschrijving</label>
+              <input
+                type="text"
+                value={formData.description || ""}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Korte beschrijving..."
+                className="w-full px-3 py-2 border rounded"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Niveaubeschrijvingen</label>
+            <div className="grid grid-cols-5 gap-2">
+              {[1, 2, 3, 4, 5].map((level) => (
+                <div key={level} className="flex flex-col">
+                  <label className="text-xs font-medium text-gray-700 mb-1">Niveau {level}</label>
+                  <textarea
+                    value={formData.level_descriptors?.[level.toString()] || ""}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      level_descriptors: {
+                        ...formData.level_descriptors,
+                        [level.toString()]: e.target.value
+                      }
+                    })}
+                    placeholder={`Niveau ${level}`}
+                    className="w-full px-2 py-1.5 border rounded text-xs resize-none"
+                    rows={3}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleCreate}
+              className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
+            >
+              Opslaan
+            </button>
+            <button
+              onClick={() => {
+                setIsCreating(false);
+                setFormData(initialFormData);
+              }}
+              className="px-4 py-2 border rounded hover:bg-gray-50"
+            >
+              Annuleren
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-white rounded-2xl border overflow-hidden">
-        <table className="w-full">
+        <table className="w-full table-fixed">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Type
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Categorie
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="w-40 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Naam
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Beschrijving
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Fase
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                Acties
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {competencies.map((comp) => (
-              <tr key={comp.id} className={`hover:bg-gray-50 ${getRowBackground(comp)}`}>
-                <td className="px-6 py-4 text-sm">
-                  {getTypeBadge(comp)}
-                </td>
-                <td className="px-6 py-4 text-sm">
-                  {comp.category_name ? (
-                    <div>
+            {competencies.map((comp) => {
+              const isExpanded = expandedCompetency === comp.id;
+              const isEditing = editingCompetency === comp.id;
+              
+              return [
+                <tr 
+                  key={comp.id} 
+                  className={`hover:bg-gray-50 cursor-pointer ${getRowBackground(comp)}`}
+                  onClick={() => toggleExpand(comp.id)}
+                >
+                  <td className="w-28 px-4 py-3 text-sm">
+                    {getTypeBadge(comp)}
+                  </td>
+                  <td className="w-32 px-4 py-3 text-sm">
+                    {comp.category_name ? (
                       <span className="font-medium">{comp.category_name}</span>
-                      {comp.category_description && (
-                        <p className="text-xs text-gray-500 mt-0.5">{comp.category_description}</p>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="w-40 px-4 py-3 text-sm font-medium">{comp.name}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 truncate">
+                    {comp.description || <span className="text-gray-400">-</span>}
+                  </td>
+                  <td className="w-24 px-4 py-3 text-sm">
+                    {comp.phase ? (
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        comp.phase === "onderbouw" 
+                          ? "bg-blue-100 text-blue-800" 
+                          : "bg-purple-100 text-purple-800"
+                      }`}>
+                        {comp.phase === "onderbouw" ? "Onderbouw" : "Bovenbouw"}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+                </tr>,
+                isExpanded && (
+                  <tr key={`${comp.id}-expanded`} className="bg-slate-50">
+                    <td colSpan={5} className="p-4">
+                      {isEditing && canModify(comp) ? (
+                        // Edit form
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium mb-1">Naam</label>
+                              <input
+                                type="text"
+                                value={editFormData.name || ""}
+                                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                                className="w-full px-3 py-2 border rounded"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium mb-1">Categorie</label>
+                              <select
+                                value={editFormData.category_id || ""}
+                                onChange={(e) => setEditFormData({ ...editFormData, category_id: e.target.value ? parseInt(e.target.value) : undefined })}
+                                className="w-full px-3 py-2 border rounded"
+                              >
+                                <option value="">Geen categorie</option>
+                                {categories.map((cat) => (
+                                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium mb-1">Fase</label>
+                              <select
+                                value={editFormData.phase || ""}
+                                onChange={(e) => setEditFormData({ ...editFormData, phase: e.target.value })}
+                                className="w-full px-3 py-2 border rounded"
+                              >
+                                <option value="">Niet gespecificeerd</option>
+                                <option value="onderbouw">Onderbouw</option>
+                                <option value="bovenbouw">Bovenbouw</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-1">Beschrijving</label>
+                            <textarea
+                              value={editFormData.description || ""}
+                              onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                              className="w-full px-3 py-2 border rounded"
+                              rows={2}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Niveaubeschrijvingen</label>
+                            <div className="grid grid-cols-5 gap-2">
+                              {[1, 2, 3, 4, 5].map((level) => (
+                                <div key={level} className="flex flex-col">
+                                  <label className="text-xs font-medium text-gray-700 mb-1">Niveau {level}</label>
+                                  <textarea
+                                    value={editFormData.level_descriptors?.[level.toString()] || ""}
+                                    onChange={(e) => setEditFormData({
+                                      ...editFormData,
+                                      level_descriptors: {
+                                        ...editFormData.level_descriptors,
+                                        [level.toString()]: e.target.value
+                                      }
+                                    })}
+                                    className="w-full px-2 py-1.5 border rounded text-xs resize-none"
+                                    rows={3}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleUpdate(comp.id)}
+                              className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                            >
+                              Opslaan
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingCompetency(null);
+                                setEditFormData({});
+                              }}
+                              className="px-3 py-1.5 border text-sm rounded hover:bg-gray-100"
+                            >
+                              Annuleren
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        // Read-only view with level descriptors
+                        <>
+                          {comp.category_description && (
+                            <p className="text-sm text-gray-600 mb-3">{comp.category_description}</p>
+                          )}
+                          <div className="text-xs font-medium text-slate-700 mb-2">
+                            Niveaubeschrijvingen (1–5)
+                          </div>
+                          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                            {[1, 2, 3, 4, 5].map((level) => (
+                              <div key={level} className="flex min-h-[80px] flex-col rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-inner">
+                                <span className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Niveau {level}</span>
+                                <p className="text-[11px] text-slate-700">
+                                  {comp.level_descriptors?.[level.toString()] || <em className="text-slate-400">Niet ingevuld</em>}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="mt-4 flex justify-between items-center text-xs">
+                            <span className="text-gray-400">Klik om details te verbergen</span>
+                            <div className="flex gap-2">
+                              {canModify(comp) && (
+                                <>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      startEdit(comp);
+                                    }}
+                                    className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                                  >
+                                    Bewerken
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDelete(comp);
+                                    }}
+                                    className="px-3 py-1.5 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                                  >
+                                    Verwijderen
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </>
                       )}
-                    </div>
-                  ) : (
-                    <span className="text-gray-400">-</span>
-                  )}
-                </td>
-                <td className="px-6 py-4 text-sm font-medium">{comp.name}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">
-                  {comp.description ? (
-                    comp.description.length > 60 ? `${comp.description.substring(0, 60)}...` : comp.description
-                  ) : (
-                    <span className="text-gray-400">-</span>
-                  )}
-                </td>
-                <td className="px-6 py-4 text-sm">
-                  {comp.phase ? (
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      comp.phase === "onderbouw" 
-                        ? "bg-blue-100 text-blue-800" 
-                        : "bg-purple-100 text-purple-800"
-                    }`}>
-                      {comp.phase === "onderbouw" ? "Onderbouw" : "Bovenbouw"}
-                    </span>
-                  ) : (
-                    <span className="text-gray-400">-</span>
-                  )}
-                </td>
-                <td className="px-6 py-4 text-sm text-right">
-                  {canModify(comp) ? (
-                    <>
-                      <button
-                        className="text-blue-600 hover:text-blue-800 mr-3"
-                        onClick={() => {/* TODO: implement edit */}}
-                      >
-                        Bewerken
-                      </button>
-                      <button
-                        className="text-red-600 hover:text-red-800"
-                        onClick={() => handleDelete(comp)}
-                      >
-                        Verwijderen
-                      </button>
-                    </>
-                  ) : (
-                    <span className="text-gray-400 text-xs italic">Alleen-lezen</span>
-                  )}
-                </td>
-              </tr>
-            ))}
+                    </td>
+                  </tr>
+                ),
+              ];
+            })}
           </tbody>
         </table>
 
@@ -499,104 +768,6 @@ export default function CompetenciesBeheerPage() {
       </div>
 
       </div>
-
-      {/* Create Modal */}
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-2">Nieuwe Eigen Competentie</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              Deze competentie wordt als persoonlijke competentie opgeslagen en is alleen voor jou zichtbaar.
-            </p>
-            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg mb-4">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
-                  👤 Eigen competentie
-                </span>
-                <span className="text-xs text-emerald-700">Deze competentie kun je later bewerken en verwijderen.</span>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Naam *
-                </label>
-                <input
-                  type="text"
-                  value={formData.name || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  placeholder="bijv. Samenwerken"
-                  className="w-full px-3 py-2 border rounded"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Categorie
-                </label>
-                <select
-                  value={formData.category_id || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, category_id: e.target.value ? parseInt(e.target.value) : undefined })
-                  }
-                  className="w-full px-3 py-2 border rounded"
-                >
-                  <option value="">Geen categorie</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Beschrijving
-                </label>
-                <textarea
-                  value={formData.description || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  placeholder="Beschrijf wat deze competentie inhoudt..."
-                  className="w-full px-3 py-2 border rounded"
-                  rows={3}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Fase</label>
-                <select
-                  value={formData.phase || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, phase: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded"
-                >
-                  <option value="">Niet gespecificeerd</option>
-                  <option value="onderbouw">Onderbouw</option>
-                  <option value="bovenbouw">Bovenbouw</option>
-                </select>
-              </div>
-            </div>
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={handleCreate}
-                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
-              >
-                Aanmaken
-              </button>
-              <button
-                onClick={() => setIsCreateModalOpen(false)}
-                className="flex-1 px-4 py-2 border rounded hover:bg-gray-50"
-              >
-                Annuleren
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

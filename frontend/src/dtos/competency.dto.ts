@@ -76,6 +76,7 @@ export interface Competency {
   is_template: boolean; // True = central/admin managed, False = teacher-specific
   competency_type: CompetencyType; // Computed: "central", "teacher", or "shared"
   phase?: string; // "onderbouw" | "bovenbouw"
+  level_descriptors: Record<string, string>; // Dict of level -> description
   order: number;
   active: boolean;
   scale_min: number;
@@ -95,6 +96,7 @@ export interface CompetencyCreate {
   course_id?: number; // For teacher-specific competencies (sharing)
   is_template?: boolean; // True = central/admin managed (admin only), False = teacher-specific (default)
   phase?: string; // "onderbouw" | "bovenbouw"
+  level_descriptors?: Record<string, string>; // Dict of level -> description
   order?: number;
   active?: boolean;
   scale_min?: number;
@@ -111,6 +113,7 @@ export interface CompetencyUpdate {
   subject_id?: number; // For template-specific competencies
   course_id?: number; // For teacher-specific competencies
   phase?: string; // "onderbouw" | "bovenbouw"
+  level_descriptors?: Record<string, string>; // Dict of level -> description
   order?: number;
   active?: boolean;
   scale_min?: number;
