@@ -162,7 +162,7 @@ export default function CompetenciesBeheerPage() {
             <ul className="list-disc list-inside space-y-1">
               <li><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">Centraal</span> — Beheerd door de beheerder, gekoppeld aan rubric-criteria. Alleen-lezen voor docenten.</li>
               <li><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">Eigen competentie</span> — Jouw persoonlijke competenties die je zelf kunt aanmaken en bewerken.</li>
-              <li><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-800">Gedeeld</span> — Competenties van collega&apos;s die aan dezelfde course zijn gekoppeld. Alleen-lezen.</li>
+              <li><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-800">Gedeeld</span> — Competenties van collega&apos;s die aan hetzelfde vak zijn gekoppeld. Alleen-lezen.</li>
             </ul>
           </div>
         </div>
@@ -335,7 +335,7 @@ export default function CompetenciesBeheerPage() {
           </div>
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-800">👥 Gedeeld</span>
-            <span className="text-gray-600">Van collega&apos;s in dezelfde course</span>
+            <span className="text-gray-600">Van collega&apos;s in hetzelfde vak</span>
           </div>
         </div>
       </div>
