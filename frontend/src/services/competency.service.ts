@@ -6,6 +6,8 @@ import type {
   Competency,
   CompetencyCreate,
   CompetencyUpdate,
+  CompetencyListResponse,
+  CompetencyType,
   CompetencyCategory,
   CompetencyCategoryCreate,
   CompetencyCategoryUpdate,
@@ -79,6 +81,33 @@ export const competencyService = {
   async getCompetencies(activeOnly: boolean = true): Promise<Competency[]> {
     const response = await api.get("/competencies/", {
       params: { active_only: activeOnly },
+    });
+    return response.data;
+  },
+
+  /**
+   * List competencies with two-tier filtering for teachers.
+   * 
+   * @param params.competency_type - "central", "teacher", "shared", or "all"
+   * @param params.include_teacher_competencies - Include teacher's own competencies
+   * @param params.include_course_competencies - Include shared course competencies
+   * @param params.subject_id - Filter by subject (for central competencies)
+   * @param params.category_id - Filter by competency category
+   * @param params.search - Search in name/description
+   */
+  async listTeacherCompetencies(params?: {
+    page?: number;
+    limit?: number;
+    active_only?: boolean;
+    competency_type?: CompetencyType | "all";
+    include_teacher_competencies?: boolean;
+    include_course_competencies?: boolean;
+    subject_id?: number;
+    category_id?: number;
+    search?: string;
+  }): Promise<CompetencyListResponse> {
+    const response = await api.get<CompetencyListResponse>("/competencies/teacher-list", {
+      params,
     });
     return response.data;
   },

@@ -3,7 +3,7 @@ Pydantic schemas for Competency Monitor
 """
 from __future__ import annotations
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 from pydantic import BaseModel, Field
 
 
@@ -42,6 +42,9 @@ class CompetencyCategoryOut(CompetencyCategoryBase):
 
 # ============ Competency Schemas ============
 
+# Type for competency type (for frontend display)
+CompetencyType = Literal["central", "teacher", "shared"]
+
 
 class CompetencyBase(BaseModel):
     name: str = Field(..., max_length=200)
@@ -56,8 +59,33 @@ class CompetencyBase(BaseModel):
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
 
 
-class CompetencyCreate(CompetencyBase):
-    pass
+class CompetencyCreate(BaseModel):
+    """
+    Create a competency.
+    
+    For central/template competencies (admin):
+    - is_template=True
+    - subject_id is optional but recommended
+    - teacher_id should be None
+    
+    For teacher-specific competencies:
+    - is_template=False (default)
+    - teacher_id is set automatically from current user
+    - course_id is optional (enables sharing with colleagues)
+    """
+    name: str = Field(..., max_length=200)
+    description: Optional[str] = None
+    category: Optional[str] = Field(None, max_length=100)  # Legacy field
+    category_id: Optional[int] = None  # FK to CompetencyCategory
+    subject_id: Optional[int] = None  # For template/central competencies
+    course_id: Optional[int] = None  # For teacher-specific competencies (sharing)
+    is_template: bool = False  # True = central/admin managed, False = teacher-specific
+    order: int = 0
+    active: bool = True
+    scale_min: int = 1
+    scale_max: int = 5
+    scale_labels: Dict[str, str] = Field(default_factory=dict)
+    metadata_json: Dict[str, Any] = Field(default_factory=dict)
 
 
 class CompetencyUpdate(BaseModel):
@@ -65,12 +93,15 @@ class CompetencyUpdate(BaseModel):
     description: Optional[str] = None
     category: Optional[str] = Field(None, max_length=100)
     category_id: Optional[int] = None
+    subject_id: Optional[int] = None  # For template-specific competencies
+    course_id: Optional[int] = None  # For teacher-specific competencies
     order: Optional[int] = None
     active: Optional[bool] = None
     scale_min: Optional[int] = None
     scale_max: Optional[int] = None
     scale_labels: Optional[Dict[str, str]] = None
     metadata_json: Optional[Dict[str, Any]] = None
+    # Note: is_template and teacher_id cannot be changed after creation
 
 
 # ============ Competency Reorder Schemas ============
@@ -89,13 +120,27 @@ class CompetencyReorderRequest(BaseModel):
 
 
 class CompetencyOut(CompetencyBase):
+    """Output schema for competency with two-tier metadata"""
     id: int
     school_id: int
+    subject_id: Optional[int] = None  # For template/central competencies
+    teacher_id: Optional[int] = None  # For teacher-specific competencies
+    course_id: Optional[int] = None  # For teacher-specific competencies (sharing)
+    is_template: bool = False  # True = central/admin managed, False = teacher-specific
+    competency_type: CompetencyType = "central"  # Computed: "central", "teacher", or "shared"
     created_at: datetime
     updated_at: datetime
 
     class Config:
         from_attributes = True
+
+
+class CompetencyListResponse(BaseModel):
+    """Paginated list response for competencies"""
+    items: List[CompetencyOut]
+    page: int
+    limit: int
+    total: int
 
 
 class CompetencyWithCategoryOut(CompetencyOut):

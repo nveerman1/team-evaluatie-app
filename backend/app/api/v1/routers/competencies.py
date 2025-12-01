@@ -3,11 +3,11 @@ API endpoints for Competency Monitor
 """
 
 from __future__ import annotations
-from typing import List, Optional
+from typing import List, Literal, Optional
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy.exc import IntegrityError
 
@@ -25,6 +25,7 @@ from app.infra.db.models import (
     CompetencyExternalScore,
     Group,
     GroupMember,
+    TeacherCourse,
 )
 from app.api.v1.schemas.competencies import (
     CompetencyCategoryCreate,
@@ -33,6 +34,7 @@ from app.api.v1.schemas.competencies import (
     CompetencyCreate,
     CompetencyUpdate,
     CompetencyOut,
+    CompetencyListResponse,
     CompetencyWithCategoryOut,
     CompetencyTree,
     CompetencyCategoryTreeItem,
@@ -68,6 +70,74 @@ router = APIRouter(prefix="/competencies", tags=["competencies"])
 # Constants
 COMPETENCY_UNIQUE_NAME_CONSTRAINT = "uq_competency_name_per_school"
 CATEGORY_UNIQUE_NAME_CONSTRAINT = "uq_competency_category_name_per_school"
+
+
+# ============ Helper Functions ============
+
+
+def _get_user_course_ids(db: Session, user: User) -> list[int]:
+    """Get all course IDs that a teacher is assigned to"""
+    if user.role not in ("teacher", "admin"):
+        return []
+    
+    course_ids_query = select(TeacherCourse.course_id).where(
+        TeacherCourse.school_id == user.school_id,
+        TeacherCourse.teacher_id == user.id,
+        TeacherCourse.is_active == True,
+    )
+    result = db.execute(course_ids_query).scalars().all()
+    return list(result)
+
+
+def _to_competency_out(comp: Competency, current_user_id: int) -> CompetencyOut:
+    """Convert a Competency model to output schema with computed type"""
+    # Determine competency_type
+    if comp.is_template:
+        competency_type = "central"
+    elif comp.teacher_id == current_user_id:
+        competency_type = "teacher"
+    else:
+        competency_type = "shared"
+    
+    return CompetencyOut.model_validate(
+        {
+            "id": comp.id,
+            "school_id": comp.school_id,
+            "name": comp.name,
+            "description": comp.description,
+            "category": comp.category,
+            "category_id": comp.category_id,
+            "subject_id": comp.subject_id,
+            "teacher_id": comp.teacher_id,
+            "course_id": comp.course_id,
+            "is_template": comp.is_template,
+            "competency_type": competency_type,
+            "order": comp.order,
+            "active": comp.active,
+            "scale_min": comp.scale_min,
+            "scale_max": comp.scale_max,
+            "scale_labels": comp.scale_labels or {},
+            "metadata_json": comp.metadata_json or {},
+            "created_at": comp.created_at,
+            "updated_at": comp.updated_at,
+        }
+    )
+
+
+def _check_can_modify(comp: Competency, user: User) -> bool:
+    """
+    Check if user can modify the competency.
+    
+    - Admins can modify template/central competencies (is_template=True)
+    - Teachers can only modify their own teacher-specific competencies (teacher_id=current_user)
+    """
+    if comp.is_template:
+        # Template competencies can only be modified by admins
+        return user.role == "admin"
+    else:
+        # Teacher-specific competencies can only be modified by the owner
+        return comp.teacher_id == user.id
+
 
 # ============ Competency Category CRUD ============
 
@@ -251,14 +321,143 @@ def list_competencies(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List all competencies for the school"""
-    query = select(Competency).where(Competency.school_id == current_user.school_id)
+    """
+    List all competencies for the school.
+    
+    This is the legacy endpoint that returns only central/template competencies
+    for backward compatibility. Use /teacher-list for the full two-tier view.
+    """
+    query = select(Competency).where(
+        Competency.school_id == current_user.school_id,
+        Competency.is_template == True,  # Only templates for backward compatibility
+    )
     if active_only:
         query = query.where(Competency.active == True)
     query = query.order_by(Competency.order, Competency.name)
 
     competencies = db.execute(query).scalars().all()
-    return competencies
+    return [_to_competency_out(c, current_user.id) for c in competencies]
+
+
+@router.get("/teacher-list", response_model=CompetencyListResponse)
+def list_teacher_competencies(
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=100),
+    active_only: bool = Query(True),
+    competency_type: Optional[Literal["central", "teacher", "shared", "all"]] = None,
+    include_teacher_competencies: bool = Query(False, description="Include teacher's own competencies"),
+    include_course_competencies: bool = Query(False, description="Include teacher competencies from shared courses"),
+    subject_id: Optional[int] = None,
+    category_id: Optional[int] = None,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    List competencies with two-tier filtering for teachers.
+    
+    Filtering logic:
+    - competency_type="central": Only central/template competencies
+    - competency_type="teacher": Only the current teacher's own competencies
+    - competency_type="shared": Only shared competencies from courses the teacher is in
+    - competency_type="all" or not specified: 
+      - If include_teacher_competencies=True: both central and user's teacher competencies
+      - If include_course_competencies=True: also include shared course competencies
+      - Otherwise: central competencies only (backward compatible)
+    
+    - subject_id: Filter by subject (for central competencies)
+    - category_id: Filter by competency category
+    - search: Search in name/description
+    """
+    query = select(Competency).where(Competency.school_id == current_user.school_id)
+    
+    if active_only:
+        query = query.where(Competency.active == True)
+
+    # Get course IDs the current user is assigned to (for shared course competencies)
+    user_course_ids = []
+    if include_teacher_competencies or include_course_competencies or competency_type in ("teacher", "shared", "all"):
+        user_course_ids = _get_user_course_ids(db, current_user)
+
+    # Filter by competency type
+    if competency_type == "central":
+        query = query.where(Competency.is_template == True)
+    elif competency_type == "teacher":
+        query = query.where(
+            Competency.is_template == False,
+            Competency.teacher_id == current_user.id
+        )
+    elif competency_type == "shared":
+        if user_course_ids:
+            query = query.where(
+                Competency.is_template == False,
+                Competency.teacher_id != current_user.id,
+                Competency.course_id.in_(user_course_ids)
+            )
+        else:
+            # No shared competencies if user has no courses
+            query = query.where(Competency.id == -1)  # No results
+    elif competency_type == "all" or include_teacher_competencies or include_course_competencies:
+        # Include central + own + shared based on flags
+        conditions = [Competency.is_template == True]
+        
+        if include_teacher_competencies or competency_type == "all":
+            conditions.append(Competency.teacher_id == current_user.id)
+        
+        if (include_course_competencies or competency_type == "all") and user_course_ids:
+            # Include teacher competencies from shared courses
+            conditions.append(
+                (Competency.is_template == False) & 
+                (Competency.teacher_id != current_user.id) &
+                Competency.course_id.in_(user_course_ids)
+            )
+        
+        query = query.where(or_(*conditions))
+    else:
+        # Default: backward compatible - only central/templates
+        query = query.where(Competency.is_template == True)
+
+    # Filter by subject_id (for central competencies)
+    if subject_id is not None:
+        query = query.where(Competency.subject_id == subject_id)
+    
+    # Filter by category_id
+    if category_id is not None:
+        query = query.where(Competency.category_id == category_id)
+
+    # Search filter
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.where(
+            or_(
+                Competency.name.ilike(search_pattern),
+                Competency.description.ilike(search_pattern),
+            )
+        )
+
+    # Order: central first, then by order and name
+    query = query.order_by(
+        Competency.is_template.desc(),  # Central first
+        Competency.order,
+        Competency.name
+    )
+
+    # Count total
+    count_query = select(func.count()).select_from(query.subquery())
+    total = db.execute(count_query).scalar() or 0
+
+    # Paginate
+    offset = (page - 1) * limit
+    query = query.offset(offset).limit(limit)
+
+    competencies = db.execute(query).scalars().all()
+
+    return CompetencyListResponse(
+        items=[_to_competency_out(c, current_user.id) for c in competencies],
+        page=page,
+        limit=limit,
+        total=total,
+    )
 
 
 @router.post("/", response_model=CompetencyOut, status_code=status.HTTP_201_CREATED)
@@ -267,18 +466,43 @@ def create_competency(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Create a new competency (teacher only)"""
+    """
+    Create a new competency.
+    
+    For central/template competencies (admin only):
+    - Set is_template=True
+    - subject_id should be provided
+    
+    For teacher-specific competencies:
+    - Set is_template=False (default)
+    - teacher_id is automatically set to current user
+    - course_id is optional (enables sharing)
+    """
     if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(
             status_code=403, detail="Only teachers can create competencies"
         )
+    
+    # Validate: only admins can create template competencies
+    if data.is_template and current_user.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Only admins can create central/template competencies"
+        )
+    
+    # Set teacher_id for teacher-specific competencies
+    teacher_id = None if data.is_template else current_user.id
 
-    competency = Competency(school_id=current_user.school_id, **data.model_dump())
+    competency = Competency(
+        school_id=current_user.school_id,
+        teacher_id=teacher_id,
+        **data.model_dump()
+    )
     db.add(competency)
     try:
         db.commit()
         db.refresh(competency)
-        return competency
+        return _to_competency_out(competency, current_user.id)
     except IntegrityError as e:
         db.rollback()
         # Check if it's a duplicate name constraint violation
@@ -301,7 +525,21 @@ def get_competency(
     competency = db.get(Competency, competency_id)
     if not competency or competency.school_id != current_user.school_id:
         raise HTTPException(status_code=404, detail="Competency not found")
-    return competency
+    
+    # Check visibility:
+    # - Templates are visible to all
+    # - Teacher competencies are visible to owner
+    # - Teacher competencies with course_id are visible to other teachers of that course
+    if not competency.is_template and competency.teacher_id != current_user.id:
+        # Check if this is a shared course competency
+        if competency.course_id:
+            user_course_ids = _get_user_course_ids(db, current_user)
+            if competency.course_id not in user_course_ids:
+                raise HTTPException(status_code=404, detail="Competency not found")
+        else:
+            raise HTTPException(status_code=404, detail="Competency not found")
+    
+    return _to_competency_out(competency, current_user.id)
 
 
 @router.patch("/{competency_id}", response_model=CompetencyOut)
@@ -311,7 +549,12 @@ def update_competency(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Update a competency (teacher only)"""
+    """
+    Update a competency.
+    
+    - Template competencies: only admins can update
+    - Teacher competencies: only the owning teacher can update
+    """
     if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(
             status_code=403, detail="Only teachers can update competencies"
@@ -321,13 +564,29 @@ def update_competency(
     if not competency or competency.school_id != current_user.school_id:
         raise HTTPException(status_code=404, detail="Competency not found")
 
-    for key, value in data.model_dump(exclude_unset=True).items():
-        setattr(competency, key, value)
+    # Check permission
+    if not _check_can_modify(competency, current_user):
+        if competency.is_template:
+            raise HTTPException(
+                status_code=403,
+                detail="Only admins can modify central/template competencies"
+            )
+        else:
+            raise HTTPException(
+                status_code=403,
+                detail="You can only modify your own competencies"
+            )
+
+    # Update fields (exclude is_template and teacher_id - these cannot be changed)
+    update_data = data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        if key not in ("is_template", "teacher_id"):  # These cannot be changed
+            setattr(competency, key, value)
 
     try:
         db.commit()
         db.refresh(competency)
-        return competency
+        return _to_competency_out(competency, current_user.id)
     except IntegrityError as e:
         db.rollback()
         # Check if it's a duplicate name constraint violation
@@ -348,7 +607,12 @@ def delete_competency(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Delete a competency (teacher only)"""
+    """
+    Delete a competency.
+    
+    - Template competencies: only admins can delete
+    - Teacher competencies: only the owning teacher can delete
+    """
     if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(
             status_code=403, detail="Only teachers can delete competencies"
@@ -357,6 +621,19 @@ def delete_competency(
     competency = db.get(Competency, competency_id)
     if not competency or competency.school_id != current_user.school_id:
         raise HTTPException(status_code=404, detail="Competency not found")
+
+    # Check permission
+    if not _check_can_modify(competency, current_user):
+        if competency.is_template:
+            raise HTTPException(
+                status_code=403,
+                detail="Only admins can delete central/template competencies"
+            )
+        else:
+            raise HTTPException(
+                status_code=403,
+                detail="You can only delete your own competencies"
+            )
 
     db.delete(competency)
     db.commit()

@@ -684,6 +684,22 @@ class CompetencyCategory(Base):
 class Competency(Base):
     """
     Competency definition (e.g., Samenwerken, Communiceren, etc.)
+    
+    Two-tier architecture:
+    1. Central (template) competencies: is_template=True, managed by admin via /admin/templates
+       - subject_id IS NOT NULL (linked to subject/sectie)
+       - teacher_id IS NULL
+       - Can be linked to rubric criteria
+       - Read-only for teachers in /teacher/competencies-beheer
+    
+    2. Teacher-specific competencies: is_template=False, managed by teacher via /teacher/competencies-beheer
+       - teacher_id IS NOT NULL (owned by specific teacher)
+       - course_id optional (for course-specific competencies)
+       - Cannot be linked to central rubric templates
+       - Visible/editable only by the owning teacher
+       
+    3. Shared competencies: Teacher-specific with course_id set
+       - Visible to all teachers assigned to that course (read-only)
     """
 
     __tablename__ = "competencies"
@@ -697,6 +713,30 @@ class Competency(Base):
         nullable=True,
         index=True,
     )
+    
+    # Subject linkage for central/template competencies
+    subject_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("subjects.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    
+    # Teacher linkage for teacher-specific competencies
+    teacher_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    
+    # Course linkage for teacher-specific competencies (optional - enables sharing)
+    course_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("courses.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    
+    # Type indicator: True = central/template (admin managed), False = teacher-specific
+    is_template: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
@@ -719,11 +759,18 @@ class Competency(Base):
     competency_category: Mapped[Optional["CompetencyCategory"]] = relationship(
         back_populates="competencies"
     )
+    subject: Mapped[Optional["Subject"]] = relationship()
+    teacher: Mapped[Optional["User"]] = relationship(foreign_keys=[teacher_id])
+    course: Mapped[Optional["Course"]] = relationship()
 
     __table_args__ = (
         UniqueConstraint("school_id", "name", name="uq_competency_name_per_school"),
         Index("ix_competency_school", "school_id"),
         Index("ix_competency_category_id", "category_id"),
+        Index("ix_competency_subject", "subject_id"),
+        Index("ix_competency_teacher", "teacher_id"),
+        Index("ix_competency_course", "course_id"),
+        Index("ix_competency_is_template", "school_id", "is_template"),
     )
 
 
