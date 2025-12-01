@@ -658,10 +658,6 @@ def update_competency(
     # Update rubric levels if provided
     if level_descriptors is not None:
         # Delete existing rubric levels
-        db.execute(
-            select(CompetencyRubricLevel)
-            .where(CompetencyRubricLevel.competency_id == competency.id)
-        )
         for rl in competency.rubric_levels[:]:  # Create a copy to iterate
             db.delete(rl)
         

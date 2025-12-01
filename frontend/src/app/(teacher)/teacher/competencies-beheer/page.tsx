@@ -167,9 +167,10 @@ export default function CompetenciesBeheerPage() {
       setIsCreating(false);
       setFormData(initialFormData);
       fetchCompetencies();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error creating competency:", err);
-      if (err?.response?.status === 409) {
+      const axiosErr = err as { response?: { status?: number } };
+      if (axiosErr?.response?.status === 409) {
         alert("Er bestaat al een competentie met deze naam. Kies een andere naam.");
       } else {
         alert("Er is een fout opgetreden bij het aanmaken van de competentie.");
@@ -183,9 +184,10 @@ export default function CompetenciesBeheerPage() {
       setEditingCompetency(null);
       setEditFormData({});
       fetchCompetencies();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error updating competency:", err);
-      if (err?.response?.status === 409) {
+      const axiosErr = err as { response?: { status?: number } };
+      if (axiosErr?.response?.status === 409) {
         alert("Er bestaat al een competentie met deze naam. Kies een andere naam.");
       } else {
         alert("Er is een fout opgetreden bij het bijwerken van de competentie.");
