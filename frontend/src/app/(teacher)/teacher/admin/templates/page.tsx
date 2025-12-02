@@ -15,10 +15,13 @@ import {
   createLearningObjective,
   listLearningObjectives,
   importLearningObjectives,
+  updateLearningObjective,
+  deleteLearningObjective,
 } from "@/services/learning-objective.service";
 import type {
   LearningObjectiveDto,
   LearningObjectiveCreateDto,
+  LearningObjectiveUpdateDto,
   LearningObjectiveImportItem,
 } from "@/dtos/learning-objective.dto";
 import {
@@ -113,6 +116,20 @@ export default function TemplatesPage() {
     updated: number;
     errors: string[];
   } | null>(null);
+
+  // Objectives filtering and editing state
+  const [selectedObjectiveLevelFilter, setSelectedObjectiveLevelFilter] = useState<
+    "all" | "onderbouw" | "bovenbouw"
+  >("all");
+  const [selectedObjectiveDomainFilter, setSelectedObjectiveDomainFilter] = useState<string>("all");
+  const [editingObjective, setEditingObjective] = useState<number | null>(null);
+  const [editObjectiveFormData, setEditObjectiveFormData] = useState<LearningObjectiveUpdateDto>({
+    domain: "",
+    title: "",
+    description: "",
+    order: 0,
+    phase: "",
+  });
 
   // Peer criteria state
   const [peerCriteria, setPeerCriteria] = useState<
@@ -475,6 +492,38 @@ export default function TemplatesPage() {
     projectSort,
   ]);
 
+  // Get unique domains from learning objectives for filter dropdown
+  const uniqueObjectiveDomains = useMemo(() => {
+    const domains = new Set<string>();
+    learningObjectives.forEach((obj) => {
+      if (obj.domain) {
+        domains.add(obj.domain);
+      }
+    });
+    return Array.from(domains).sort();
+  }, [learningObjectives]);
+
+  // Filter learning objectives based on selected filters
+  const filteredLearningObjectives = useMemo(() => {
+    let filtered = learningObjectives;
+    
+    // Filter by level (phase)
+    if (selectedObjectiveLevelFilter !== "all") {
+      filtered = filtered.filter(
+        (obj) => obj.phase === selectedObjectiveLevelFilter,
+      );
+    }
+    
+    // Filter by domain
+    if (selectedObjectiveDomainFilter !== "all") {
+      filtered = filtered.filter(
+        (obj) => obj.domain === selectedObjectiveDomainFilter,
+      );
+    }
+    
+    return filtered;
+  }, [learningObjectives, selectedObjectiveLevelFilter, selectedObjectiveDomainFilter]);
+
   const openCreateModal = () => {
     setFormData({
       domain: "",
@@ -511,6 +560,53 @@ export default function TemplatesPage() {
       console.error("Error creating learning objective:", err);
       alert("Er is een fout opgetreden bij het aanmaken van het leerdoel.");
     }
+  };
+
+  const handleUpdateObjective = async (id: number) => {
+    if (!editObjectiveFormData.title) {
+      alert("Titel is verplicht");
+      return;
+    }
+
+    try {
+      await updateLearningObjective(id, editObjectiveFormData);
+      setEditingObjective(null);
+      setEditObjectiveFormData({
+        domain: "",
+        title: "",
+        description: "",
+        order: 0,
+        phase: "",
+      });
+      fetchLearningObjectives();
+    } catch (err) {
+      console.error("Error updating learning objective:", err);
+      alert("Er is een fout opgetreden bij het bijwerken van het leerdoel.");
+    }
+  };
+
+  const handleDeleteObjective = async (id: number) => {
+    if (!confirm("Weet je zeker dat je dit leerdoel wilt verwijderen?")) {
+      return;
+    }
+    try {
+      await deleteLearningObjective(id);
+      fetchLearningObjectives();
+    } catch (err) {
+      console.error("Error deleting learning objective:", err);
+      alert("Er is een fout opgetreden bij het verwijderen van het leerdoel.");
+    }
+  };
+
+  const startEditingObjective = (obj: LearningObjectiveDto) => {
+    setEditingObjective(obj.id);
+    setEditObjectiveFormData({
+      domain: obj.domain || "",
+      title: obj.title,
+      description: obj.description || "",
+      order: obj.order,
+      phase: obj.phase || "",
+    });
   };
 
   const parseCSVLine = (line: string): string[] => {
@@ -3404,12 +3500,60 @@ export default function TemplatesPage() {
               criteria
             </p>
 
+            {/* Filters above the table */}
+            <div className="flex flex-wrap items-center gap-4">
+              {/* Niveau filter */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-600">Niveau:</span>
+                {[
+                  { id: "all", label: "Alle" },
+                  { id: "onderbouw", label: "Onderbouw" },
+                  { id: "bovenbouw", label: "Bovenbouw" },
+                ].map((filter) => (
+                  <button
+                    key={filter.id}
+                    onClick={() =>
+                      setSelectedObjectiveLevelFilter(
+                        filter.id as "all" | "onderbouw" | "bovenbouw",
+                      )
+                    }
+                    className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                      selectedObjectiveLevelFilter === filter.id
+                        ? "border-blue-600 bg-blue-50 text-blue-700"
+                        : "border-slate-200 bg-white text-slate-600"
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Domein filter */}
+              <div className="flex items-center gap-2 text-xs text-slate-600">
+                <span>Domein:</span>
+                <select
+                  className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs"
+                  value={selectedObjectiveDomainFilter}
+                  onChange={(e) =>
+                    setSelectedObjectiveDomainFilter(e.target.value)
+                  }
+                >
+                  <option value="all">Alle</option>
+                  {uniqueObjectiveDomains.map((domain) => (
+                    <option key={domain} value={domain}>
+                      {domain}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             {loadingObjectives ? (
               <div className="text-center py-8">
                 <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
                 <p className="mt-2 text-sm text-gray-500">Laden...</p>
               </div>
-            ) : learningObjectives.length > 0 ? (
+            ) : filteredLearningObjectives.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
@@ -3429,41 +3573,154 @@ export default function TemplatesPage() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                         Fase
                       </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                        Acties
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {learningObjectives.map((obj) => (
+                    {filteredLearningObjectives.map((obj) => (
                       <tr
                         key={obj.id}
                         className="hover:bg-gray-50 bg-amber-50/30"
                       >
-                        <td className="px-6 py-4 text-sm">
-                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800">
-                            🏛️ Centraal
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm font-medium">
-                          {obj.domain || "-"}
-                        </td>
-                        <td className="px-6 py-4 text-sm">{obj.order}</td>
-                        <td className="px-6 py-4 text-sm">{obj.title}</td>
-                        <td className="px-6 py-4 text-sm">
-                          {obj.phase ? (
-                            <span
-                              className={`px-2 py-1 rounded text-xs ${
-                                obj.phase === "onderbouw"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : "bg-purple-100 text-purple-800"
-                              }`}
-                            >
-                              {obj.phase === "onderbouw"
-                                ? "Onderbouw"
-                                : "Bovenbouw"}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </td>
+                        {editingObjective === obj.id ? (
+                          <>
+                            <td className="px-6 py-4 text-sm">
+                              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                                🏛️ Centraal
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-sm">
+                              <input
+                                type="text"
+                                value={editObjectiveFormData.domain || ""}
+                                onChange={(e) =>
+                                  setEditObjectiveFormData({
+                                    ...editObjectiveFormData,
+                                    domain: e.target.value,
+                                  })
+                                }
+                                placeholder="A, B, C..."
+                                className="w-16 px-2 py-1 border rounded text-sm"
+                              />
+                            </td>
+                            <td className="px-6 py-4 text-sm">
+                              <input
+                                type="number"
+                                value={editObjectiveFormData.order || 0}
+                                onChange={(e) =>
+                                  setEditObjectiveFormData({
+                                    ...editObjectiveFormData,
+                                    order: parseInt(e.target.value, 10) || 0,
+                                  })
+                                }
+                                className="w-16 px-2 py-1 border rounded text-sm"
+                              />
+                            </td>
+                            <td className="px-6 py-4 text-sm">
+                              <input
+                                type="text"
+                                value={editObjectiveFormData.title || ""}
+                                onChange={(e) =>
+                                  setEditObjectiveFormData({
+                                    ...editObjectiveFormData,
+                                    title: e.target.value,
+                                  })
+                                }
+                                placeholder="Titel"
+                                className="w-full px-2 py-1 border rounded text-sm"
+                              />
+                            </td>
+                            <td className="px-6 py-4 text-sm">
+                              <select
+                                value={editObjectiveFormData.phase || ""}
+                                onChange={(e) =>
+                                  setEditObjectiveFormData({
+                                    ...editObjectiveFormData,
+                                    phase: e.target.value || null,
+                                  })
+                                }
+                                className="w-full px-2 py-1 border rounded text-sm"
+                              >
+                                <option value="">-</option>
+                                <option value="onderbouw">Onderbouw</option>
+                                <option value="bovenbouw">Bovenbouw</option>
+                              </select>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-right">
+                              <div className="flex justify-end gap-2">
+                                <button
+                                  onClick={() => handleUpdateObjective(obj.id)}
+                                  className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                                >
+                                  Opslaan
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setEditingObjective(null);
+                                    setEditObjectiveFormData({
+                                      domain: "",
+                                      title: "",
+                                      description: "",
+                                      order: 0,
+                                      phase: "",
+                                    });
+                                  }}
+                                  className="px-3 py-1.5 border text-xs rounded hover:bg-gray-100"
+                                >
+                                  Annuleren
+                                </button>
+                              </div>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="px-6 py-4 text-sm">
+                              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                                🏛️ Centraal
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-sm font-medium">
+                              {obj.domain || "-"}
+                            </td>
+                            <td className="px-6 py-4 text-sm">{obj.order}</td>
+                            <td className="px-6 py-4 text-sm">{obj.title}</td>
+                            <td className="px-6 py-4 text-sm">
+                              {obj.phase ? (
+                                <span
+                                  className={`px-2 py-1 rounded text-xs ${
+                                    obj.phase === "onderbouw"
+                                      ? "bg-blue-100 text-blue-800"
+                                      : "bg-purple-100 text-purple-800"
+                                  }`}
+                                >
+                                  {obj.phase === "onderbouw"
+                                    ? "Onderbouw"
+                                    : "Bovenbouw"}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-right">
+                              <div className="flex justify-end gap-2">
+                                <button
+                                  onClick={() => startEditingObjective(obj)}
+                                  className="px-3 py-1.5 bg-gray-100 text-xs rounded hover:bg-gray-200"
+                                >
+                                  Bewerken
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteObjective(obj.id)}
+                                  className="px-3 py-1.5 bg-red-100 text-red-700 text-xs rounded hover:bg-red-200"
+                                >
+                                  Verwijderen
+                                </button>
+                              </div>
+                            </td>
+                          </>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -3471,10 +3728,18 @@ export default function TemplatesPage() {
               </div>
             ) : (
               <div className="text-center py-8 text-gray-500">
-                <p className="mb-4">Nog geen leerdoelen aangemaakt</p>
-                <p className="text-xs">
-                  Klik op &quot;+ Nieuw Leerdoel&quot; om te beginnen
-                </p>
+                {learningObjectives.length === 0 ? (
+                  <>
+                    <p className="mb-4">Nog geen leerdoelen aangemaakt</p>
+                    <p className="text-xs">
+                      Klik op &quot;+ Nieuw Leerdoel&quot; om te beginnen
+                    </p>
+                  </>
+                ) : (
+                  <p>
+                    Geen leerdoelen gevonden voor de geselecteerde filters.
+                  </p>
+                )}
               </div>
             )}
           </div>
