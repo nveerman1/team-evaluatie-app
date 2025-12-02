@@ -87,7 +87,7 @@ export default function TemplatesPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(
-    null
+    null,
   );
   const [activeTab, setActiveTab] = useState<TabType>("peer");
 
@@ -105,7 +105,7 @@ export default function TemplatesPage() {
     order: 0,
     phase: "",
   });
-  
+
   // Import state
   const [importText, setImportText] = useState("");
   const [importResult, setImportResult] = useState<{
@@ -120,16 +120,31 @@ export default function TemplatesPage() {
   >([]);
   const [loadingPeerCriteria, setLoadingPeerCriteria] = useState(false);
   const [expandedCriterion, setExpandedCriterion] = useState<number | null>(
-    null
+    null,
   );
   const [editingCriterion, setEditingCriterion] = useState<number | null>(null);
-  const [editFilterPhase, setEditFilterPhase] = useState<string | undefined>(undefined);
-  const [editLearningObjectiveIds, setEditLearningObjectiveIds] = useState<number[]>([]);
+  const [editFilterPhase, setEditFilterPhase] = useState<string | undefined>(
+    undefined,
+  );
+  const [editLearningObjectiveIds, setEditLearningObjectiveIds] = useState<
+    number[]
+  >([]);
   const [isCreatingPeerCriterion, setIsCreatingPeerCriterion] = useState(false);
-  const [selectedPeerLevelFilter, setSelectedPeerLevelFilter] = useState<"all" | "onderbouw" | "bovenbouw">("all");
-  const [activePeerCategory, setActivePeerCategory] = useState<"all" | "organiseren" | "meedoen" | "zelfvertrouwen" | "autonomie">("all");
-  const [peerSort, setPeerSort] = useState<{ key: string | null; dir: "asc" | "desc" }>({ key: null, dir: "asc" });
-  const [peerFormData, setPeerFormData] = useState<Partial<PeerEvaluationCriterionTemplateCreateDto> & { _filterPhase?: string }>({
+  const [selectedPeerLevelFilter, setSelectedPeerLevelFilter] = useState<
+    "all" | "onderbouw" | "bovenbouw"
+  >("all");
+  const [activePeerCategory, setActivePeerCategory] = useState<
+    "all" | "organiseren" | "meedoen" | "zelfvertrouwen" | "autonomie"
+  >("all");
+  const [peerSort, setPeerSort] = useState<{
+    key: string | null;
+    dir: "asc" | "desc";
+  }>({ key: null, dir: "asc" });
+  const [peerFormData, setPeerFormData] = useState<
+    Partial<PeerEvaluationCriterionTemplateCreateDto> & {
+      _filterPhase?: string;
+    }
+  >({
     omza_category: "organiseren",
     title: "",
     description: "",
@@ -150,15 +165,32 @@ export default function TemplatesPage() {
     ProjectRubricCriterionTemplateDto[]
   >([]);
   const [loadingProjectCriteria, setLoadingProjectCriteria] = useState(false);
-  const [expandedProjectCriterion, setExpandedProjectCriterion] = useState<number | null>(null);
-  const [editingProjectCriterion, setEditingProjectCriterion] = useState<number | null>(null);
-  const [editProjectFilterPhase, setEditProjectFilterPhase] = useState<string | undefined>(undefined);
-  const [editProjectLearningObjectiveIds, setEditProjectLearningObjectiveIds] = useState<number[]>([]);
-  const [isCreatingProjectCriterion, setIsCreatingProjectCriterion] = useState(false);
-  const [selectedProjectLevelFilter, setSelectedProjectLevelFilter] = useState<"all" | "onderbouw" | "bovenbouw">("all");
-  const [activeProjectCategory, setActiveProjectCategory] = useState<"all" | "projectproces" | "eindresultaat" | "communicatie">("all");
-  const [projectSort, setProjectSort] = useState<{ key: string | null; dir: "asc" | "desc" }>({ key: null, dir: "asc" });
-  const [projectFormData, setProjectFormData] = useState<Partial<ProjectRubricCriterionTemplateCreateDto> & { _filterPhase?: string }>({
+  const [expandedProjectCriterion, setExpandedProjectCriterion] = useState<
+    number | null
+  >(null);
+  const [editingProjectCriterion, setEditingProjectCriterion] = useState<
+    number | null
+  >(null);
+  const [editProjectFilterPhase, setEditProjectFilterPhase] = useState<
+    string | undefined
+  >(undefined);
+  const [editProjectLearningObjectiveIds, setEditProjectLearningObjectiveIds] =
+    useState<number[]>([]);
+  const [isCreatingProjectCriterion, setIsCreatingProjectCriterion] =
+    useState(false);
+  const [selectedProjectLevelFilter, setSelectedProjectLevelFilter] = useState<
+    "all" | "onderbouw" | "bovenbouw"
+  >("all");
+  const [activeProjectCategory, setActiveProjectCategory] = useState<
+    "all" | "projectproces" | "eindresultaat" | "communicatie"
+  >("all");
+  const [projectSort, setProjectSort] = useState<{
+    key: string | null;
+    dir: "asc" | "desc";
+  }>({ key: null, dir: "asc" });
+  const [projectFormData, setProjectFormData] = useState<
+    Partial<ProjectRubricCriterionTemplateCreateDto> & { _filterPhase?: string }
+  >({
     category: "projectproces",
     title: "",
     description: "",
@@ -175,17 +207,26 @@ export default function TemplatesPage() {
   });
 
   // Competency state
-  const [competencyTree, setCompetencyTree] = useState<CompetencyTree | null>(null);
+  const [competencyTree, setCompetencyTree] = useState<CompetencyTree | null>(
+    null,
+  );
   const [loadingCompetencies, setLoadingCompetencies] = useState(false);
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<number | "all">("all");
-  const [selectedCompetencyLevelFilter, setSelectedCompetencyLevelFilter] = useState<"all" | "onderbouw" | "bovenbouw">("all");
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<
+    number | "all"
+  >("all");
+  const [selectedCompetencyLevelFilter, setSelectedCompetencyLevelFilter] =
+    useState<"all" | "onderbouw" | "bovenbouw">("all");
 
   // Mail template state
   const [mailTemplates, setMailTemplates] = useState<MailTemplateDto[]>([]);
   const [loadingMailTemplates, setLoadingMailTemplates] = useState(false);
   const [isCreatingMailTemplate, setIsCreatingMailTemplate] = useState(false);
-  const [editingMailTemplate, setEditingMailTemplate] = useState<number | null>(null);
-  const [mailFormData, setMailFormData] = useState<Partial<MailTemplateCreateDto>>({
+  const [editingMailTemplate, setEditingMailTemplate] = useState<number | null>(
+    null,
+  );
+  const [mailFormData, setMailFormData] = useState<
+    Partial<MailTemplateCreateDto>
+  >({
     name: "",
     type: "opvolgmail",
     subject: "",
@@ -194,14 +235,26 @@ export default function TemplatesPage() {
   });
 
   // Standard remarks (OMZA quick comments) state
-  const [standardRemarks, setStandardRemarks] = useState<StandardRemarkDto[]>([]);
+  const [standardRemarks, setStandardRemarks] = useState<StandardRemarkDto[]>(
+    [],
+  );
   const [loadingStandardRemarks, setLoadingStandardRemarks] = useState(false);
-  const [isCreatingStandardRemark, setIsCreatingStandardRemark] = useState(false);
-  const [editingStandardRemark, setEditingStandardRemark] = useState<number | null>(null);
+  const [isCreatingStandardRemark, setIsCreatingStandardRemark] =
+    useState(false);
+  const [editingStandardRemark, setEditingStandardRemark] = useState<
+    number | null
+  >(null);
   const [expandedRemark, setExpandedRemark] = useState<number | null>(null);
-  const [selectedOmzaCategoryFilter, setSelectedOmzaCategoryFilter] = useState<"all" | "O" | "M" | "Z" | "A">("all");
-  const [remarkSort, setRemarkSort] = useState<{ key: string | null; dir: "asc" | "desc" }>({ key: null, dir: "asc" });
-  const [remarkFormData, setRemarkFormData] = useState<Partial<StandardRemarkCreateDto>>({
+  const [selectedOmzaCategoryFilter, setSelectedOmzaCategoryFilter] = useState<
+    "all" | "O" | "M" | "Z" | "A"
+  >("all");
+  const [remarkSort, setRemarkSort] = useState<{
+    key: string | null;
+    dir: "asc" | "desc";
+  }>({ key: null, dir: "asc" });
+  const [remarkFormData, setRemarkFormData] = useState<
+    Partial<StandardRemarkCreateDto>
+  >({
     type: "omza",
     category: "O",
     text: "",
@@ -287,14 +340,14 @@ export default function TemplatesPage() {
 
   const fetchLearningObjectives = async () => {
     if (!selectedSubjectId) return;
-    
+
     setLoadingObjectives(true);
     try {
       const response = await listLearningObjectives({
         page: 1,
         limit: 50,
-        subject_id: selectedSubjectId,  // Filter by selected subject
-        objective_type: "template",  // Only show central/template objectives in admin
+        subject_id: selectedSubjectId, // Filter by selected subject
+        objective_type: "template", // Only show central/template objectives in admin
       });
       setLearningObjectives(response.items);
     } catch (err) {
@@ -317,14 +370,16 @@ export default function TemplatesPage() {
   };
 
   // Filter categories based on selected filter
-  // Note: Level filter (selectedCompetencyLevelFilter) requires the competency tree API 
+  // Note: Level filter (selectedCompetencyLevelFilter) requires the competency tree API
   // to include phase data for each competency. Currently a UI placeholder.
   const filteredCategories = useMemo((): CompetencyCategoryTreeItem[] => {
     if (!competencyTree || !competencyTree.categories) return [];
     if (selectedCategoryFilter === "all") {
       return competencyTree.categories;
     }
-    return competencyTree.categories.filter((cat: CompetencyCategoryTreeItem) => cat.id === selectedCategoryFilter);
+    return competencyTree.categories.filter(
+      (cat: CompetencyCategoryTreeItem) => cat.id === selectedCategoryFilter,
+    );
   }, [competencyTree, selectedCategoryFilter]);
 
   // Filter and sort peer criteria for the table view
@@ -332,16 +387,19 @@ export default function TemplatesPage() {
     // First filter by level
     let filtered = peerCriteria;
     if (selectedPeerLevelFilter !== "all") {
-      filtered = filtered.filter(c => c.target_level === selectedPeerLevelFilter);
+      filtered = filtered.filter(
+        (c) => c.target_level === selectedPeerLevelFilter,
+      );
     }
     // Then filter by category
     if (activePeerCategory !== "all") {
-      filtered = filtered.filter(c => c.omza_category === activePeerCategory);
+      filtered = filtered.filter((c) => c.omza_category === activePeerCategory);
     }
     // Map to include categoryName for display and sorting
-    const mapped = filtered.map(c => ({
+    const mapped = filtered.map((c) => ({
       ...c,
-      categoryName: c.omza_category.charAt(0).toUpperCase() + c.omza_category.slice(1),
+      categoryName:
+        c.omza_category.charAt(0).toUpperCase() + c.omza_category.slice(1),
       learningObjectivesCount: c.learning_objective_ids?.length ?? 0,
     }));
     // Sort if sort key is set
@@ -360,13 +418,15 @@ export default function TemplatesPage() {
     }
     return mapped;
   }, [peerCriteria, selectedPeerLevelFilter, activePeerCategory, peerSort]);
-  
+
   // Keep filteredPeerCriteria for backward compatibility (used in create form)
   const filteredPeerCriteria = useMemo(() => {
     if (selectedPeerLevelFilter === "all") {
       return peerCriteria;
     }
-    return peerCriteria.filter(c => c.target_level === selectedPeerLevelFilter);
+    return peerCriteria.filter(
+      (c) => c.target_level === selectedPeerLevelFilter,
+    );
   }, [peerCriteria, selectedPeerLevelFilter]);
 
   // Filter and sort project criteria for the table view
@@ -374,11 +434,13 @@ export default function TemplatesPage() {
     // First filter by level
     let filtered = projectCriteria;
     if (selectedProjectLevelFilter !== "all") {
-      filtered = filtered.filter(c => c.target_level === selectedProjectLevelFilter);
+      filtered = filtered.filter(
+        (c) => c.target_level === selectedProjectLevelFilter,
+      );
     }
     // Then filter by category
     if (activeProjectCategory !== "all") {
-      filtered = filtered.filter(c => c.category === activeProjectCategory);
+      filtered = filtered.filter((c) => c.category === activeProjectCategory);
     }
     // Map to include categoryName for display and sorting
     const categoryLabels: Record<string, string> = {
@@ -386,7 +448,7 @@ export default function TemplatesPage() {
       eindresultaat: "Eindresultaat",
       communicatie: "Communicatie",
     };
-    const mapped = filtered.map(c => ({
+    const mapped = filtered.map((c) => ({
       ...c,
       categoryName: categoryLabels[c.category] || c.category,
       learningObjectivesCount: c.learning_objective_ids?.length ?? 0,
@@ -406,7 +468,12 @@ export default function TemplatesPage() {
       });
     }
     return mapped;
-  }, [projectCriteria, selectedProjectLevelFilter, activeProjectCategory, projectSort]);
+  }, [
+    projectCriteria,
+    selectedProjectLevelFilter,
+    activeProjectCategory,
+    projectSort,
+  ]);
 
   const openCreateModal = () => {
     setFormData({
@@ -415,7 +482,7 @@ export default function TemplatesPage() {
       description: "",
       order: 0,
       phase: "",
-      subject_id: selectedSubjectId,  // Set subject_id from selected subject
+      subject_id: selectedSubjectId, // Set subject_id from selected subject
     });
     setIsCreateModalOpen(true);
   };
@@ -436,7 +503,7 @@ export default function TemplatesPage() {
       await createLearningObjective({
         ...formData,
         subject_id: selectedSubjectId,
-        is_template: true,  // This is a central objective managed by admin
+        is_template: true, // This is a central objective managed by admin
       });
       setIsCreateModalOpen(false);
       fetchLearningObjectives();
@@ -537,7 +604,7 @@ export default function TemplatesPage() {
       const result = await importLearningObjectives(
         { items },
         selectedSubjectId,
-        true  // Import as central/template objectives (is_template: true)
+        true, // Import as central/template objectives (is_template: true)
       );
       setImportResult(result);
       if (result.errors.length === 0) {
@@ -552,7 +619,7 @@ export default function TemplatesPage() {
   // Peer criteria functions
   const fetchPeerCriteria = async () => {
     if (!selectedSubjectId) return;
-    
+
     setLoadingPeerCriteria(true);
     try {
       const criteria = await listPeerCriteria(selectedSubjectId);
@@ -576,7 +643,7 @@ export default function TemplatesPage() {
 
     try {
       await createPeerCriterion({
-        ...peerFormData as PeerEvaluationCriterionTemplateCreateDto,
+        ...(peerFormData as PeerEvaluationCriterionTemplateCreateDto),
         subject_id: selectedSubjectId,
       });
       setIsCreatingPeerCriterion(false);
@@ -594,7 +661,10 @@ export default function TemplatesPage() {
     }
   };
 
-  const handleUpdatePeerCriterion = async (id: number, data: Partial<PeerEvaluationCriterionTemplateCreateDto>) => {
+  const handleUpdatePeerCriterion = async (
+    id: number,
+    data: Partial<PeerEvaluationCriterionTemplateCreateDto>,
+  ) => {
     try {
       await updatePeerCriterion(id, data);
       setEditingCriterion(null);
@@ -626,7 +696,7 @@ export default function TemplatesPage() {
   // Project criteria functions
   const fetchProjectCriteria = async () => {
     if (!selectedSubjectId) return;
-    
+
     setLoadingProjectCriteria(true);
     try {
       const criteria = await listProjectRubricCriteria(selectedSubjectId);
@@ -650,7 +720,7 @@ export default function TemplatesPage() {
 
     try {
       await createProjectRubricCriterion({
-        ...projectFormData as ProjectRubricCriterionTemplateCreateDto,
+        ...(projectFormData as ProjectRubricCriterionTemplateCreateDto),
         subject_id: selectedSubjectId,
       });
       setIsCreatingProjectCriterion(false);
@@ -669,7 +739,10 @@ export default function TemplatesPage() {
     }
   };
 
-  const handleUpdateProjectCriterion = async (id: number, data: Partial<ProjectRubricCriterionTemplateCreateDto>) => {
+  const handleUpdateProjectCriterion = async (
+    id: number,
+    data: Partial<ProjectRubricCriterionTemplateCreateDto>,
+  ) => {
     try {
       await updateProjectRubricCriterion(id, data);
       setEditingProjectCriterion(null);
@@ -714,7 +787,12 @@ export default function TemplatesPage() {
   };
 
   const handleCreateMailTemplate = async () => {
-    if (!mailFormData.name || !mailFormData.subject || !mailFormData.body || !mailFormData.type) {
+    if (
+      !mailFormData.name ||
+      !mailFormData.subject ||
+      !mailFormData.body ||
+      !mailFormData.type
+    ) {
       alert("Naam, type, onderwerp en inhoud zijn verplicht");
       return;
     }
@@ -744,7 +822,10 @@ export default function TemplatesPage() {
     }
   };
 
-  const handleUpdateMailTemplate = async (id: number, data: Partial<MailTemplateCreateDto>) => {
+  const handleUpdateMailTemplate = async (
+    id: number,
+    data: Partial<MailTemplateCreateDto>,
+  ) => {
     try {
       await updateMailTemplate(id, data);
       setEditingMailTemplate(null);
@@ -771,7 +852,7 @@ export default function TemplatesPage() {
   // Standard remarks (OMZA quick comments) functions
   const fetchStandardRemarks = async () => {
     if (!selectedSubjectId) return;
-    
+
     setLoadingStandardRemarks(true);
     try {
       const response = await listStandardRemarks({
@@ -799,7 +880,7 @@ export default function TemplatesPage() {
 
     try {
       await createStandardRemark({
-        ...remarkFormData as StandardRemarkCreateDto,
+        ...(remarkFormData as StandardRemarkCreateDto),
         subject_id: selectedSubjectId,
         type: "omza",
       });
@@ -817,7 +898,10 @@ export default function TemplatesPage() {
     }
   };
 
-  const handleUpdateStandardRemark = async (id: number, data: Partial<StandardRemarkCreateDto>) => {
+  const handleUpdateStandardRemark = async (
+    id: number,
+    data: Partial<StandardRemarkCreateDto>,
+  ) => {
     try {
       await updateStandardRemark(id, data);
       setEditingStandardRemark(null);
@@ -859,10 +943,12 @@ export default function TemplatesPage() {
     // First filter by category
     let filtered = standardRemarks;
     if (selectedOmzaCategoryFilter !== "all") {
-      filtered = filtered.filter(r => r.category === selectedOmzaCategoryFilter);
+      filtered = filtered.filter(
+        (r) => r.category === selectedOmzaCategoryFilter,
+      );
     }
     // Map to include categoryName for display and sorting
-    const mapped = filtered.map(r => ({
+    const mapped = filtered.map((r) => ({
       ...r,
       categoryName: OMZA_CATEGORY_LABELS[r.category] || r.category,
     }));
@@ -909,7 +995,8 @@ export default function TemplatesPage() {
             {/* Header and description */}
             <div>
               <p className="text-sm text-gray-600">
-                Beheer competentie templates met niveau descriptoren per categorie
+                Beheer competentie templates met niveau descriptoren per
+                categorie
               </p>
             </div>
 
@@ -920,15 +1007,35 @@ export default function TemplatesPage() {
                 <span className="text-xs text-slate-600">Categorie:</span>
                 <select
                   className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm"
-                  value={selectedCategoryFilter === "all" ? "all" : selectedCategoryFilter}
-                  onChange={(e) => setSelectedCategoryFilter(e.target.value === "all" ? "all" : parseInt(e.target.value))}
+                  value={
+                    selectedCategoryFilter === "all"
+                      ? "all"
+                      : selectedCategoryFilter
+                  }
+                  onChange={(e) =>
+                    setSelectedCategoryFilter(
+                      e.target.value === "all"
+                        ? "all"
+                        : parseInt(e.target.value),
+                    )
+                  }
                 >
-                  <option value="all">Alle categorieën ({competencyTree?.categories?.reduce((acc: number, cat: CompetencyCategoryTreeItem) => acc + (cat.competencies?.length || 0), 0) || 0})</option>
-                  {competencyTree?.categories?.map((category: CompetencyCategoryTreeItem) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name} ({category.competencies?.length || 0})
-                    </option>
-                  ))}
+                  <option value="all">
+                    Alle categorieën (
+                    {competencyTree?.categories?.reduce(
+                      (acc: number, cat: CompetencyCategoryTreeItem) =>
+                        acc + (cat.competencies?.length || 0),
+                      0,
+                    ) || 0}
+                    )
+                  </option>
+                  {competencyTree?.categories?.map(
+                    (category: CompetencyCategoryTreeItem) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name} ({category.competencies?.length || 0})
+                      </option>
+                    ),
+                  )}
                 </select>
               </div>
 
@@ -942,7 +1049,11 @@ export default function TemplatesPage() {
                 ].map((filter) => (
                   <button
                     key={filter.id}
-                    onClick={() => setSelectedCompetencyLevelFilter(filter.id as "all" | "onderbouw" | "bovenbouw")}
+                    onClick={() =>
+                      setSelectedCompetencyLevelFilter(
+                        filter.id as "all" | "onderbouw" | "bovenbouw",
+                      )
+                    }
                     className={`rounded-full border px-3 py-1 text-xs font-medium ${
                       selectedCompetencyLevelFilter === filter.id
                         ? "border-blue-600 bg-blue-50 text-blue-700"
@@ -959,97 +1070,117 @@ export default function TemplatesPage() {
             {loadingCompetencies && (
               <div className="text-center py-8">
                 <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
-                <p className="mt-2 text-sm text-gray-500">Competenties laden...</p>
+                <p className="mt-2 text-sm text-gray-500">
+                  Competenties laden...
+                </p>
               </div>
             )}
 
             {/* No data state */}
-            {!loadingCompetencies && (!competencyTree || !competencyTree.categories || competencyTree.categories.length === 0) && (
-              <div className="text-center py-12 border rounded-xl bg-gray-50">
-                <p className="text-gray-500 mb-4">Nog geen competenties aangemaakt.</p>
-                <Link
-                  href="/teacher/competencies/create"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
-                >
-                  <span>+</span> Eerste Competentie Aanmaken
-                </Link>
-              </div>
-            )}
+            {!loadingCompetencies &&
+              (!competencyTree ||
+                !competencyTree.categories ||
+                competencyTree.categories.length === 0) && (
+                <div className="text-center py-12 border rounded-xl bg-gray-50">
+                  <p className="text-gray-500 mb-4">
+                    Nog geen competenties aangemaakt.
+                  </p>
+                  <Link
+                    href="/teacher/competencies/create"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                  >
+                    <span>+</span> Eerste Competentie Aanmaken
+                  </Link>
+                </div>
+              )}
 
             {/* Category Sections with Tables */}
             {!loadingCompetencies && filteredCategories.length > 0 && (
               <div className="space-y-8">
-                {filteredCategories.map((category: CompetencyCategoryTreeItem) => (
-                  <div key={category.id} className="space-y-3">
-                    {/* Category Header */}
-                    <div className="flex items-center gap-3 px-1">
-                      {category.color && (
-                        <div
-                          className="w-3 h-3 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: category.color }}
-                        />
-                      )}
-                      <h3 className="text-lg font-semibold text-gray-800">
-                        {category.name}
-                        <span className="ml-2 text-sm font-normal text-gray-500">
-                          ({category.competencies?.length || 0})
-                        </span>
-                      </h3>
-                    </div>
-                    {category.description && (
-                      <p className="text-sm text-gray-500 px-1 -mt-1">
-                        {category.description}
-                      </p>
-                    )}
-
-                    {/* Competency Table */}
-                    {(category.competencies || []).length > 0 ? (
-                      <div className="bg-white rounded-lg border overflow-hidden">
-                        <table className="w-full">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                                Naam
-                              </th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                                Beschrijving
-                              </th>
-                              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
-                                Acties
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-200">
-                            {(category.competencies || []).map((competency: CompetencyTreeItem) => (
-                              <tr key={competency.id} className="hover:bg-gray-50">
-                                <td className="px-4 py-3 text-sm font-medium">{competency.name}</td>
-                                <td className="px-4 py-3 text-sm text-gray-600">
-                                  {competency.description ? (
-                                    competency.description.length > 60 
-                                      ? `${competency.description.substring(0, 60)}...` 
-                                      : competency.description
-                                  ) : (
-                                    <span className="text-gray-400">-</span>
-                                  )}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-right">
-                                  <Link
-                                    href={`/teacher/competencies/${competency.id}`}
-                                    className="text-blue-600 hover:text-blue-800"
-                                  >
-                                    Bewerken
-                                  </Link>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                {filteredCategories.map(
+                  (category: CompetencyCategoryTreeItem) => (
+                    <div key={category.id} className="space-y-3">
+                      {/* Category Header */}
+                      <div className="flex items-center gap-3 px-1">
+                        {category.color && (
+                          <div
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: category.color }}
+                          />
+                        )}
+                        <h3 className="text-lg font-semibold text-gray-800">
+                          {category.name}
+                          <span className="ml-2 text-sm font-normal text-gray-500">
+                            ({category.competencies?.length || 0})
+                          </span>
+                        </h3>
                       </div>
-                    ) : (
-                      <p className="text-sm text-gray-400 italic px-1">Geen competenties in deze categorie</p>
-                    )}
-                  </div>
-                ))}
+                      {category.description && (
+                        <p className="text-sm text-gray-500 px-1 -mt-1">
+                          {category.description}
+                        </p>
+                      )}
+
+                      {/* Competency Table */}
+                      {(category.competencies || []).length > 0 ? (
+                        <div className="bg-white rounded-lg border overflow-hidden">
+                          <table className="w-full">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                  Naam
+                                </th>
+                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                  Beschrijving
+                                </th>
+                                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                                  Acties
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                              {(category.competencies || []).map(
+                                (competency: CompetencyTreeItem) => (
+                                  <tr
+                                    key={competency.id}
+                                    className="hover:bg-gray-50"
+                                  >
+                                    <td className="px-4 py-3 text-sm font-medium">
+                                      {competency.name}
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-gray-600">
+                                      {competency.description ? (
+                                        competency.description.length > 60 ? (
+                                          `${competency.description.substring(0, 60)}...`
+                                        ) : (
+                                          competency.description
+                                        )
+                                      ) : (
+                                        <span className="text-gray-400">-</span>
+                                      )}
+                                    </td>
+                                    <td className="px-4 py-3 text-sm text-right">
+                                      <Link
+                                        href={`/teacher/competencies/${competency.id}`}
+                                        className="text-blue-600 hover:text-blue-800"
+                                      >
+                                        Bewerken
+                                      </Link>
+                                    </td>
+                                  </tr>
+                                ),
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-400 italic px-1">
+                          Geen competenties in deze categorie
+                        </p>
+                      )}
+                    </div>
+                  ),
+                )}
               </div>
             )}
           </div>
@@ -1067,18 +1198,35 @@ export default function TemplatesPage() {
             </h3>
             <div className="space-y-4">
               <p className="text-sm text-gray-600">
-                Beheer school-brede email templates met variabelen voor verschillende
-                communicatiemomenten. Selecteer een sectie voor vak-specifieke templates.
+                Beheer school-brede email templates met variabelen voor
+                verschillende communicatiemomenten. Selecteer een sectie voor
+                vak-specifieke templates.
               </p>
-              
+
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                <h4 className="font-semibold text-blue-900 mb-2">Template types:</h4>
+                <h4 className="font-semibold text-blue-900 mb-2">
+                  Template types:
+                </h4>
                 <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• <strong>opvolgmail</strong> - Opvolgmail voor volgend schooljaar</li>
-                  <li>• <strong>startproject</strong> - Uitnodiging voor startproject</li>
-                  <li>• <strong>tussenpresentatie</strong> - Uitnodiging tussenpresentatie</li>
-                  <li>• <strong>eindpresentatie</strong> - Uitnodiging eindpresentatie</li>
-                  <li>• <strong>bedankmail</strong> - Bedankmail na samenwerking</li>
+                  <li>
+                    • <strong>opvolgmail</strong> - Opvolgmail voor volgend
+                    schooljaar
+                  </li>
+                  <li>
+                    • <strong>startproject</strong> - Uitnodiging voor
+                    startproject
+                  </li>
+                  <li>
+                    • <strong>tussenpresentatie</strong> - Uitnodiging
+                    tussenpresentatie
+                  </li>
+                  <li>
+                    • <strong>eindpresentatie</strong> - Uitnodiging
+                    eindpresentatie
+                  </li>
+                  <li>
+                    • <strong>bedankmail</strong> - Bedankmail na samenwerking
+                  </li>
                 </ul>
               </div>
 
@@ -1091,7 +1239,9 @@ export default function TemplatesPage() {
                   {/* Create new mail template form */}
                   {isCreatingMailTemplate && (
                     <div className="bg-white border-2 border-blue-500 rounded-lg p-4 mb-4">
-                      <h4 className="font-semibold mb-3">Nieuwe Mail Template (School-breed)</h4>
+                      <h4 className="font-semibold mb-3">
+                        Nieuwe Mail Template (School-breed)
+                      </h4>
                       <div className="space-y-3">
                         <div>
                           <label className="block text-sm font-medium mb-1">
@@ -1126,8 +1276,12 @@ export default function TemplatesPage() {
                           >
                             <option value="opvolgmail">Opvolgmail</option>
                             <option value="startproject">Start project</option>
-                            <option value="tussenpresentatie">Tussenpresentatie</option>
-                            <option value="eindpresentatie">Eindpresentatie</option>
+                            <option value="tussenpresentatie">
+                              Tussenpresentatie
+                            </option>
+                            <option value="eindpresentatie">
+                              Eindpresentatie
+                            </option>
                             <option value="bedankmail">Bedankmail</option>
                             <option value="herinnering">Herinnering</option>
                           </select>
@@ -1232,12 +1386,24 @@ export default function TemplatesPage() {
                                     id={`edit-mail-type-global-${template.id}`}
                                     className="w-full px-3 py-2 border rounded"
                                   >
-                                    <option value="opvolgmail">Opvolgmail</option>
-                                    <option value="startproject">Start project</option>
-                                    <option value="tussenpresentatie">Tussenpresentatie</option>
-                                    <option value="eindpresentatie">Eindpresentatie</option>
-                                    <option value="bedankmail">Bedankmail</option>
-                                    <option value="herinnering">Herinnering</option>
+                                    <option value="opvolgmail">
+                                      Opvolgmail
+                                    </option>
+                                    <option value="startproject">
+                                      Start project
+                                    </option>
+                                    <option value="tussenpresentatie">
+                                      Tussenpresentatie
+                                    </option>
+                                    <option value="eindpresentatie">
+                                      Eindpresentatie
+                                    </option>
+                                    <option value="bedankmail">
+                                      Bedankmail
+                                    </option>
+                                    <option value="herinnering">
+                                      Herinnering
+                                    </option>
                                   </select>
                                 </div>
                                 <div>
@@ -1266,16 +1432,16 @@ export default function TemplatesPage() {
                                   <button
                                     onClick={() => {
                                       const nameEl = document.getElementById(
-                                        `edit-mail-name-global-${template.id}`
+                                        `edit-mail-name-global-${template.id}`,
                                       ) as HTMLInputElement;
                                       const typeEl = document.getElementById(
-                                        `edit-mail-type-global-${template.id}`
+                                        `edit-mail-type-global-${template.id}`,
                                       ) as HTMLSelectElement;
                                       const subjectEl = document.getElementById(
-                                        `edit-mail-subject-global-${template.id}`
+                                        `edit-mail-subject-global-${template.id}`,
                                       ) as HTMLInputElement;
                                       const bodyEl = document.getElementById(
-                                        `edit-mail-body-global-${template.id}`
+                                        `edit-mail-body-global-${template.id}`,
                                       ) as HTMLTextAreaElement;
                                       handleUpdateMailTemplate(template.id, {
                                         name: nameEl.value,
@@ -1301,7 +1467,9 @@ export default function TemplatesPage() {
                                 <div className="flex justify-between items-start">
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2">
-                                      <h5 className="font-medium">{template.name}</h5>
+                                      <h5 className="font-medium">
+                                        {template.name}
+                                      </h5>
                                       <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
                                         {template.type}
                                       </span>
@@ -1312,7 +1480,8 @@ export default function TemplatesPage() {
                                       )}
                                     </div>
                                     <p className="text-sm text-gray-600 mt-1">
-                                      <strong>Onderwerp:</strong> {template.subject}
+                                      <strong>Onderwerp:</strong>{" "}
+                                      {template.subject}
                                     </p>
                                     <div className="mt-2 p-2 bg-gray-50 rounded text-sm text-gray-700 font-mono whitespace-pre-wrap max-h-32 overflow-y-auto">
                                       {template.body}
@@ -1321,13 +1490,17 @@ export default function TemplatesPage() {
                                 </div>
                                 <div className="flex gap-2 mt-3">
                                   <button
-                                    onClick={() => setEditingMailTemplate(template.id)}
+                                    onClick={() =>
+                                      setEditingMailTemplate(template.id)
+                                    }
                                     className="px-3 py-1.5 bg-gray-100 text-sm rounded hover:bg-gray-200"
                                   >
                                     Bewerken
                                   </button>
                                   <button
-                                    onClick={() => handleDeleteMailTemplate(template.id)}
+                                    onClick={() =>
+                                      handleDeleteMailTemplate(template.id)
+                                    }
                                     className="px-3 py-1.5 bg-red-100 text-red-700 text-sm rounded hover:bg-red-200"
                                   >
                                     Verwijderen
@@ -1339,13 +1512,18 @@ export default function TemplatesPage() {
                         </div>
                       ))}
                     </div>
-                  ) : !isCreatingMailTemplate && (
-                    <div className="text-center py-8 text-gray-500">
-                      <p className="mb-4">Nog geen school-brede mail templates aangemaakt.</p>
-                      <p className="text-xs">
-                        Klik op &quot;+ Nieuwe Mail-template&quot; om te beginnen.
-                      </p>
-                    </div>
+                  ) : (
+                    !isCreatingMailTemplate && (
+                      <div className="text-center py-8 text-gray-500">
+                        <p className="mb-4">
+                          Nog geen school-brede mail templates aangemaakt.
+                        </p>
+                        <p className="text-xs">
+                          Klik op &quot;+ Nieuwe Mail-template&quot; om te
+                          beginnen.
+                        </p>
+                      </div>
+                    )
                   )}
                 </>
               )}
@@ -1383,7 +1561,9 @@ export default function TemplatesPage() {
       );
     }
 
-    const selectedSubject = subjects.find((s: Subject) => s.id === selectedSubjectId);
+    const selectedSubject = subjects.find(
+      (s: Subject) => s.id === selectedSubjectId,
+    );
 
     return (
       <div className="p-6">
@@ -1393,236 +1573,289 @@ export default function TemplatesPage() {
         </h3>
 
         {activeTab === "peer" && (
-            <div className="space-y-4">
-              {/* Title and description */}
-              <div>
-                <p className="text-sm text-slate-600 mt-1">Alle criteria in één overzicht.</p>
-              </div>
+          <div className="space-y-4">
+            {/* Title and description */}
+            <div>
+              <p className="text-sm text-slate-600 mt-1">
+                Alle criteria in één overzicht.
+              </p>
+            </div>
 
-              {/* Filters above the table */}
-              <div className="flex flex-wrap items-center gap-4">
-                {/* Niveau filter */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-600">Niveau:</span>
-                  {[
-                    { id: "all", label: "Alle" },
-                    { id: "onderbouw", label: "Onderbouw" },
-                    { id: "bovenbouw", label: "Bovenbouw" },
-                  ].map((filter) => (
-                    <button
-                      key={filter.id}
-                      onClick={() => setSelectedPeerLevelFilter(filter.id as "all" | "onderbouw" | "bovenbouw")}
-                      className={`rounded-full border px-3 py-1 text-xs font-medium ${
-                        selectedPeerLevelFilter === filter.id
-                          ? "border-blue-600 bg-blue-50 text-blue-700"
-                          : "border-slate-200 bg-white text-slate-600"
-                      }`}
-                    >
-                      {filter.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Categorie filter */}
-                <div className="flex items-center gap-2 text-xs text-slate-600">
-                  <span>Categorie:</span>
-                  <select
-                    className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs"
-                    value={activePeerCategory}
-                    onChange={(e) => setActivePeerCategory(e.target.value as "all" | "organiseren" | "meedoen" | "zelfvertrouwen" | "autonomie")}
+            {/* Filters above the table */}
+            <div className="flex flex-wrap items-center gap-4">
+              {/* Niveau filter */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-600">Niveau:</span>
+                {[
+                  { id: "all", label: "Alle" },
+                  { id: "onderbouw", label: "Onderbouw" },
+                  { id: "bovenbouw", label: "Bovenbouw" },
+                ].map((filter) => (
+                  <button
+                    key={filter.id}
+                    onClick={() =>
+                      setSelectedPeerLevelFilter(
+                        filter.id as "all" | "onderbouw" | "bovenbouw",
+                      )
+                    }
+                    className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                      selectedPeerLevelFilter === filter.id
+                        ? "border-blue-600 bg-blue-50 text-blue-700"
+                        : "border-slate-200 bg-white text-slate-600"
+                    }`}
                   >
-                    <option value="all">Alle</option>
-                    <option value="organiseren">Organiseren</option>
-                    <option value="meedoen">Meedoen</option>
-                    <option value="zelfvertrouwen">Zelfvertrouwen</option>
-                    <option value="autonomie">Autonomie</option>
-                  </select>
-                </div>
+                    {filter.label}
+                  </button>
+                ))}
               </div>
 
-              {loadingPeerCriteria ? (
-                <div className="text-center py-8 text-gray-500">
-                  <p>Criteria laden...</p>
-                </div>
-              ) : (
-                <>
-                  {/* Create new criterion form */}
-                  {isCreatingPeerCriterion && (
-                    <div className="bg-white border-2 border-blue-500 rounded-lg p-4 mb-4">
-                      <h4 className="font-semibold mb-3">Nieuw Criterium</h4>
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-sm font-medium mb-1">
-                            OMZA Categorie
-                          </label>
-                          <select
-                            value={peerFormData.omza_category}
-                            onChange={(e) =>
-                              setPeerFormData({
-                                ...peerFormData,
-                                omza_category: e.target.value as "organiseren" | "meedoen" | "zelfvertrouwen" | "autonomie",
-                              })
-                            }
-                            className="w-full px-3 py-2 border rounded"
-                          >
-                            <option value="organiseren">Organiseren</option>
-                            <option value="meedoen">Meedoen</option>
-                            <option value="zelfvertrouwen">Zelfvertrouwen</option>
-                            <option value="autonomie">Autonomie</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-1">
-                            Niveau (Onderbouw/Bovenbouw)
-                          </label>
-                          <select
-                            value={peerFormData.target_level || ""}
-                            onChange={(e) =>
-                              setPeerFormData({
-                                ...peerFormData,
-                                target_level: e.target.value ? (e.target.value as "onderbouw" | "bovenbouw") : null,
-                              })
-                            }
-                            className="w-full px-3 py-2 border rounded"
-                          >
-                            <option value="">Geen specifiek niveau</option>
-                            <option value="onderbouw">Onderbouw</option>
-                            <option value="bovenbouw">Bovenbouw</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-1">
-                            Titel *
-                          </label>
-                          <input
-                            type="text"
-                            value={peerFormData.title}
-                            onChange={(e) =>
-                              setPeerFormData({
-                                ...peerFormData,
-                                title: e.target.value,
-                              })
-                            }
-                            className="w-full px-3 py-2 border rounded"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-1">
-                            Beschrijving
-                          </label>
-                          <textarea
-                            value={peerFormData.description || ""}
-                            onChange={(e) =>
-                              setPeerFormData({
-                                ...peerFormData,
-                                description: e.target.value,
-                              })
-                            }
-                            className="w-full px-3 py-2 border rounded"
-                            rows={2}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-2">
-                            Niveaubeschrijvingen (1-5)
-                          </label>
-                          <div className="grid grid-cols-5 gap-2">
-                            {[1, 2, 3, 4, 5].map((level) => (
-                              <div key={level} className="flex flex-col">
-                                <label className="text-xs font-medium text-gray-700 mb-1">
-                                  Niveau {level}
-                                </label>
-                                <textarea
-                                  placeholder={`Niveau ${level}`}
-                                  value={peerFormData.level_descriptors?.[level.toString() as "1" | "2" | "3" | "4" | "5"] || ""}
-                                  onChange={(e) =>
-                                    setPeerFormData({
-                                      ...peerFormData,
-                                      level_descriptors: {
-                                        ...peerFormData.level_descriptors,
-                                        [level.toString()]: e.target.value,
-                                      } as typeof peerFormData.level_descriptors,
-                                    })
-                                  }
-                                  className="w-full px-2 py-1 border rounded text-sm resize-y min-h-[80px]"
-                                  rows={4}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-2">
-                            Leerdoelen koppelen
-                          </label>
-                          <div className="space-y-2">
-                            <div className="flex gap-2">
-                              <button
-                                type="button"
-                                onClick={() => setPeerFormData({ ...peerFormData, _filterPhase: "onderbouw" })}
-                                className={`px-3 py-1 text-sm rounded ${
-                                  peerFormData._filterPhase === "onderbouw"
-                                    ? "bg-blue-600 text-white"
-                                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                                }`}
-                              >
-                                Onderbouw
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setPeerFormData({ ...peerFormData, _filterPhase: "bovenbouw" })}
-                                className={`px-3 py-1 text-sm rounded ${
-                                  peerFormData._filterPhase === "bovenbouw"
-                                    ? "bg-blue-600 text-white"
-                                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                                }`}
-                              >
-                                Bovenbouw
-                              </button>
+              {/* Categorie filter */}
+              <div className="flex items-center gap-2 text-xs text-slate-600">
+                <span>Categorie:</span>
+                <select
+                  className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs"
+                  value={activePeerCategory}
+                  onChange={(e) =>
+                    setActivePeerCategory(
+                      e.target.value as
+                        | "all"
+                        | "organiseren"
+                        | "meedoen"
+                        | "zelfvertrouwen"
+                        | "autonomie",
+                    )
+                  }
+                >
+                  <option value="all">Alle</option>
+                  <option value="organiseren">Organiseren</option>
+                  <option value="meedoen">Meedoen</option>
+                  <option value="zelfvertrouwen">Zelfvertrouwen</option>
+                  <option value="autonomie">Autonomie</option>
+                </select>
+              </div>
+            </div>
+
+            {loadingPeerCriteria ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>Criteria laden...</p>
+              </div>
+            ) : (
+              <>
+                {/* Create new criterion form */}
+                {isCreatingPeerCriterion && (
+                  <div className="bg-white border-2 border-blue-500 rounded-lg p-4 mb-4">
+                    <h4 className="font-semibold mb-3">Nieuw Criterium</h4>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          OMZA Categorie
+                        </label>
+                        <select
+                          value={peerFormData.omza_category}
+                          onChange={(e) =>
+                            setPeerFormData({
+                              ...peerFormData,
+                              omza_category: e.target.value as
+                                | "organiseren"
+                                | "meedoen"
+                                | "zelfvertrouwen"
+                                | "autonomie",
+                            })
+                          }
+                          className="w-full px-3 py-2 border rounded"
+                        >
+                          <option value="organiseren">Organiseren</option>
+                          <option value="meedoen">Meedoen</option>
+                          <option value="zelfvertrouwen">Zelfvertrouwen</option>
+                          <option value="autonomie">Autonomie</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          Niveau (Onderbouw/Bovenbouw)
+                        </label>
+                        <select
+                          value={peerFormData.target_level || ""}
+                          onChange={(e) =>
+                            setPeerFormData({
+                              ...peerFormData,
+                              target_level: e.target.value
+                                ? (e.target.value as "onderbouw" | "bovenbouw")
+                                : null,
+                            })
+                          }
+                          className="w-full px-3 py-2 border rounded"
+                        >
+                          <option value="">Geen specifiek niveau</option>
+                          <option value="onderbouw">Onderbouw</option>
+                          <option value="bovenbouw">Bovenbouw</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          Titel *
+                        </label>
+                        <input
+                          type="text"
+                          value={peerFormData.title}
+                          onChange={(e) =>
+                            setPeerFormData({
+                              ...peerFormData,
+                              title: e.target.value,
+                            })
+                          }
+                          className="w-full px-3 py-2 border rounded"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          Beschrijving
+                        </label>
+                        <textarea
+                          value={peerFormData.description || ""}
+                          onChange={(e) =>
+                            setPeerFormData({
+                              ...peerFormData,
+                              description: e.target.value,
+                            })
+                          }
+                          className="w-full px-3 py-2 border rounded"
+                          rows={2}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Niveaubeschrijvingen (1-5)
+                        </label>
+                        <div className="grid grid-cols-5 gap-2">
+                          {[1, 2, 3, 4, 5].map((level) => (
+                            <div key={level} className="flex flex-col">
+                              <label className="text-xs font-medium text-gray-700 mb-1">
+                                Niveau {level}
+                              </label>
+                              <textarea
+                                placeholder={`Niveau ${level}`}
+                                value={
+                                  peerFormData.level_descriptors?.[
+                                    level.toString() as
+                                      | "1"
+                                      | "2"
+                                      | "3"
+                                      | "4"
+                                      | "5"
+                                  ] || ""
+                                }
+                                onChange={(e) =>
+                                  setPeerFormData({
+                                    ...peerFormData,
+                                    level_descriptors: {
+                                      ...peerFormData.level_descriptors,
+                                      [level.toString()]: e.target.value,
+                                    } as typeof peerFormData.level_descriptors,
+                                  })
+                                }
+                                className="w-full px-2 py-1 border rounded text-sm resize-y min-h-[80px]"
+                                rows={4}
+                              />
                             </div>
-                            {peerFormData._filterPhase && (
-                              <select
-                                value=""
-                                onChange={(e) => {
-                                  const id = parseInt(e.target.value);
-                                  const currentIds = peerFormData.learning_objective_ids || [];
-                                  if (id && !currentIds.includes(id)) {
-                                    setPeerFormData({
-                                      ...peerFormData,
-                                      learning_objective_ids: [...currentIds, id],
-                                    });
-                                  }
-                                }}
-                                className="w-full px-3 py-2 border rounded"
-                              >
-                                <option value="">Selecteer een leerdoel...</option>
-                                {learningObjectives
-                                  .filter((obj) => obj.phase === peerFormData._filterPhase)
-                                  .map((obj) => (
-                                    <option key={obj.id} value={obj.id}>
-                                      {obj.domain || ""} {obj.order} - {obj.title}
-                                    </option>
-                                  ))}
-                              </select>
-                            )}
-                            {(peerFormData.learning_objective_ids?.length ?? 0) > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-2">
-                                {(peerFormData.learning_objective_ids || []).map((id) => {
-                                  const obj = learningObjectives.find((o) => o.id === id);
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Leerdoelen koppelen
+                        </label>
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setPeerFormData({
+                                  ...peerFormData,
+                                  _filterPhase: "onderbouw",
+                                })
+                              }
+                              className={`px-3 py-1 text-sm rounded ${
+                                peerFormData._filterPhase === "onderbouw"
+                                  ? "bg-blue-600 text-white"
+                                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                              }`}
+                            >
+                              Onderbouw
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setPeerFormData({
+                                  ...peerFormData,
+                                  _filterPhase: "bovenbouw",
+                                })
+                              }
+                              className={`px-3 py-1 text-sm rounded ${
+                                peerFormData._filterPhase === "bovenbouw"
+                                  ? "bg-blue-600 text-white"
+                                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                              }`}
+                            >
+                              Bovenbouw
+                            </button>
+                          </div>
+                          {peerFormData._filterPhase && (
+                            <select
+                              value=""
+                              onChange={(e) => {
+                                const id = parseInt(e.target.value);
+                                const currentIds =
+                                  peerFormData.learning_objective_ids || [];
+                                if (id && !currentIds.includes(id)) {
+                                  setPeerFormData({
+                                    ...peerFormData,
+                                    learning_objective_ids: [...currentIds, id],
+                                  });
+                                }
+                              }}
+                              className="w-full px-3 py-2 border rounded"
+                            >
+                              <option value="">
+                                Selecteer een leerdoel...
+                              </option>
+                              {learningObjectives
+                                .filter(
+                                  (obj) =>
+                                    obj.phase === peerFormData._filterPhase,
+                                )
+                                .map((obj) => (
+                                  <option key={obj.id} value={obj.id}>
+                                    {obj.domain || ""} {obj.order} - {obj.title}
+                                  </option>
+                                ))}
+                            </select>
+                          )}
+                          {(peerFormData.learning_objective_ids?.length ?? 0) >
+                            0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {(peerFormData.learning_objective_ids || []).map(
+                                (id) => {
+                                  const obj = learningObjectives.find(
+                                    (o) => o.id === id,
+                                  );
                                   return (
                                     <span
                                       key={id}
                                       className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
                                     >
-                                      {obj ? `${obj.domain || ""} ${obj.order} - ${obj.title}` : `ID: ${id}`}
+                                      {obj
+                                        ? `${obj.domain || ""} ${obj.order} - ${obj.title}`
+                                        : `ID: ${id}`}
                                       <button
                                         type="button"
                                         onClick={() =>
                                           setPeerFormData({
                                             ...peerFormData,
-                                            learning_objective_ids: (peerFormData.learning_objective_ids || []).filter(
-                                              (objId) => objId !== id
-                                            ),
+                                            learning_objective_ids: (
+                                              peerFormData.learning_objective_ids ||
+                                              []
+                                            ).filter((objId) => objId !== id),
                                           })
                                         }
                                         className="text-blue-600 hover:text-blue-800"
@@ -1631,190 +1864,283 @@ export default function TemplatesPage() {
                                       </button>
                                     </span>
                                   );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex gap-2 pt-2">
-                          <button
-                            onClick={handleCreatePeerCriterion}
-                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                          >
-                            Opslaan
-                          </button>
-                          <button
-                            onClick={() => setIsCreatingPeerCriterion(false)}
-                            className="px-4 py-2 border rounded hover:bg-gray-50"
-                          >
-                            Annuleren
-                          </button>
+                                },
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          onClick={handleCreatePeerCriterion}
+                          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        >
+                          Opslaan
+                        </button>
+                        <button
+                          onClick={() => setIsCreatingPeerCriterion(false)}
+                          className="px-4 py-2 border rounded hover:bg-gray-50"
+                        >
+                          Annuleren
+                        </button>
+                      </div>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {/* Table of criteria */}
-                  <table className="w-full table-fixed text-sm border-collapse">
-                    <thead>
-                      <tr className="text-left text-xs text-slate-500 border-b">
-                        <th 
-                          className="w-32 py-2 cursor-pointer hover:text-slate-700" 
-                          onClick={() => setPeerSort({key:"categoryName", dir: peerSort.key==="categoryName" && peerSort.dir==='asc'?'desc':'asc'})}
-                        >
-                          Categorie {peerSort.key === "categoryName" && (peerSort.dir === "asc" ? "↑" : "↓")}
-                        </th>
-                        <th 
-                          className="w-40 cursor-pointer hover:text-slate-700" 
-                          onClick={() => setPeerSort({key:"title", dir: peerSort.key==="title" && peerSort.dir==='asc'?'desc':'asc'})}
-                        >
-                          Naam {peerSort.key === "title" && (peerSort.dir === "asc" ? "↑" : "↓")}
-                        </th>
-                        <th 
-                          className="w-24 cursor-pointer hover:text-slate-700" 
-                          onClick={() => setPeerSort({key:"target_level", dir: peerSort.key==="target_level" && peerSort.dir==='asc'?'desc':'asc'})}
-                        >
-                          Niveau {peerSort.key === "target_level" && (peerSort.dir === "asc" ? "↑" : "↓")}
-                        </th>
-                        <th className="w-auto">Beschrijving</th>
-                        <th 
-                          className="w-24 text-center cursor-pointer hover:text-slate-700" 
-                          onClick={() => setPeerSort({key:"learningObjectivesCount", dir: peerSort.key==="learningObjectivesCount" && peerSort.dir==='asc'?'desc':'asc'})}
-                        >
-                          Leerdoelen {peerSort.key === "learningObjectivesCount" && (peerSort.dir === "asc" ? "↑" : "↓")}
-                        </th>
-                      </tr>
-                    </thead>
+                {/* Table of criteria */}
+                <table className="w-full table-fixed text-sm border-collapse">
+                  <thead>
+                    <tr className="text-left text-xs text-slate-500 border-b">
+                      <th
+                        className="w-32 py-2 cursor-pointer hover:text-slate-700"
+                        onClick={() =>
+                          setPeerSort({
+                            key: "categoryName",
+                            dir:
+                              peerSort.key === "categoryName" &&
+                              peerSort.dir === "asc"
+                                ? "desc"
+                                : "asc",
+                          })
+                        }
+                      >
+                        Categorie{" "}
+                        {peerSort.key === "categoryName" &&
+                          (peerSort.dir === "asc" ? "↑" : "↓")}
+                      </th>
+                      <th
+                        className="w-40 cursor-pointer hover:text-slate-700"
+                        onClick={() =>
+                          setPeerSort({
+                            key: "title",
+                            dir:
+                              peerSort.key === "title" && peerSort.dir === "asc"
+                                ? "desc"
+                                : "asc",
+                          })
+                        }
+                      >
+                        Naam{" "}
+                        {peerSort.key === "title" &&
+                          (peerSort.dir === "asc" ? "↑" : "↓")}
+                      </th>
+                      <th
+                        className="w-24 cursor-pointer hover:text-slate-700"
+                        onClick={() =>
+                          setPeerSort({
+                            key: "target_level",
+                            dir:
+                              peerSort.key === "target_level" &&
+                              peerSort.dir === "asc"
+                                ? "desc"
+                                : "asc",
+                          })
+                        }
+                      >
+                        Niveau{" "}
+                        {peerSort.key === "target_level" &&
+                          (peerSort.dir === "asc" ? "↑" : "↓")}
+                      </th>
+                      <th className="w-auto">Beschrijving</th>
+                      <th
+                        className="w-24 text-center cursor-pointer hover:text-slate-700"
+                        onClick={() =>
+                          setPeerSort({
+                            key: "learningObjectivesCount",
+                            dir:
+                              peerSort.key === "learningObjectivesCount" &&
+                              peerSort.dir === "asc"
+                                ? "desc"
+                                : "asc",
+                          })
+                        }
+                      >
+                        Leerdoelen{" "}
+                        {peerSort.key === "learningObjectivesCount" &&
+                          (peerSort.dir === "asc" ? "↑" : "↓")}
+                      </th>
+                    </tr>
+                  </thead>
 
-                    <tbody className="divide-y">
-                      {filteredAndSortedPeerCriteria.map((row) => {
-                        const isOpen = expandedCriterion === row.id;
+                  <tbody className="divide-y">
+                    {filteredAndSortedPeerCriteria.map((row) => {
+                      const isOpen = expandedCriterion === row.id;
 
-                        return [
+                      return [
+                        <tr
+                          key={row.id}
+                          className="hover:bg-slate-50 cursor-pointer"
+                          onClick={() => toggleCriterionExpand(row.id)}
+                        >
+                          <td className="w-32 py-3 font-bold text-slate-900">
+                            {row.categoryName}
+                          </td>
+                          <td className="w-40 py-3">{row.title}</td>
+                          <td className="w-24">
+                            {row.target_level ? (
+                              <span className="inline-block rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700 whitespace-nowrap">
+                                {row.target_level === "onderbouw"
+                                  ? "Onderbouw"
+                                  : "Bovenbouw"}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400">-</span>
+                            )}
+                          </td>
+                          <td className="text-slate-600 truncate max-w-xl">
+                            {row.description || "-"}
+                          </td>
+                          <td className="w-24 text-slate-500 text-center">
+                            {row.learningObjectivesCount}
+                          </td>
+                        </tr>,
+                        isOpen && (
                           <tr
-                            key={row.id}
-                            className="hover:bg-slate-50 cursor-pointer"
-                            onClick={() => toggleCriterionExpand(row.id)}
+                            key={`${row.id}-expanded`}
+                            className="bg-slate-50"
                           >
-                            <td className="w-32 py-3 font-bold text-slate-900">{row.categoryName}</td>
-                            <td className="w-40 py-3">{row.title}</td>
-                            <td className="w-24">
-                              {row.target_level ? (
-                                <span className="inline-block rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700 whitespace-nowrap">
-                                  {row.target_level === "onderbouw" ? "Onderbouw" : "Bovenbouw"}
-                                </span>
-                              ) : (
-                                <span className="text-slate-400">-</span>
-                              )}
-                            </td>
-                            <td className="text-slate-600 truncate max-w-xl">{row.description || "-"}</td>
-                            <td className="w-24 text-slate-500 text-center">{row.learningObjectivesCount}</td>
-                          </tr>,
-                          isOpen && (
-                            <tr key={`${row.id}-expanded`} className="bg-slate-50">
-                              <td colSpan={5} className="p-4">
-                                {editingCriterion === row.id ? (
-                                  <div className="space-y-3">
-                                    <div>
-                                      <label className="block text-sm font-medium mb-1">
-                                        Titel
-                                      </label>
-                                      <input
-                                        type="text"
-                                        defaultValue={row.title}
-                                        id={`edit-title-${row.id}`}
-                                        className="w-full px-3 py-2 border rounded"
-                                      />
-                                    </div>
-                                    <div>
-                                      <label className="block text-sm font-medium mb-2">
-                                        Niveaubeschrijvingen
-                                      </label>
-                                      <div className="grid grid-cols-5 gap-2">
-                                        {[1, 2, 3, 4, 5].map((level) => (
-                                          <div key={level} className="flex flex-col">
-                                            <label className="text-xs font-medium text-gray-700 mb-1">
-                                              Niveau {level}
-                                            </label>
-                                            <textarea
-                                              defaultValue={
-                                                row.level_descriptors[
-                                                  level.toString() as "1" | "2" | "3" | "4" | "5"
-                                                ] || ""
-                                              }
-                                              id={`edit-level-${row.id}-${level}`}
-                                              className="w-full px-2 py-1 border rounded text-sm resize-y min-h-[80px]"
-                                              rows={4}
-                                            />
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                    <div>
-                                      <label className="block text-sm font-medium mb-2">
-                                        Leerdoelen koppelen
-                                      </label>
-                                      <div className="space-y-2">
-                                        <div className="flex gap-2">
-                                          <button
-                                            type="button"
-                                            onClick={() => setEditFilterPhase("onderbouw")}
-                                            className={`px-3 py-1 text-sm rounded ${
-                                              editFilterPhase === "onderbouw"
-                                                ? "bg-blue-600 text-white"
-                                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                                            }`}
-                                          >
-                                            Onderbouw
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => setEditFilterPhase("bovenbouw")}
-                                            className={`px-3 py-1 text-sm rounded ${
-                                              editFilterPhase === "bovenbouw"
-                                                ? "bg-blue-600 text-white"
-                                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                                            }`}
-                                          >
-                                            Bovenbouw
-                                          </button>
+                            <td colSpan={5} className="p-4">
+                              {editingCriterion === row.id ? (
+                                <div className="space-y-3">
+                                  <div>
+                                    <label className="block text-sm font-medium mb-1">
+                                      Titel
+                                    </label>
+                                    <input
+                                      type="text"
+                                      defaultValue={row.title}
+                                      id={`edit-title-${row.id}`}
+                                      className="w-full px-3 py-2 border rounded"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm font-medium mb-2">
+                                      Niveaubeschrijvingen
+                                    </label>
+                                    <div className="grid grid-cols-5 gap-2">
+                                      {[1, 2, 3, 4, 5].map((level) => (
+                                        <div
+                                          key={level}
+                                          className="flex flex-col"
+                                        >
+                                          <label className="text-xs font-medium text-gray-700 mb-1">
+                                            Niveau {level}
+                                          </label>
+                                          <textarea
+                                            defaultValue={
+                                              row.level_descriptors[
+                                                level.toString() as
+                                                  | "1"
+                                                  | "2"
+                                                  | "3"
+                                                  | "4"
+                                                  | "5"
+                                              ] || ""
+                                            }
+                                            id={`edit-level-${row.id}-${level}`}
+                                            className="w-full px-2 py-1 border rounded text-sm resize-y min-h-[80px]"
+                                            rows={4}
+                                          />
                                         </div>
-                                        {editFilterPhase && (
-                                          <select
-                                            value=""
-                                            onChange={(e) => {
-                                              const id = parseInt(e.target.value);
-                                              if (id && !editLearningObjectiveIds.includes(id)) {
-                                                setEditLearningObjectiveIds([...editLearningObjectiveIds, id]);
-                                              }
-                                            }}
-                                            className="w-full px-3 py-2 border rounded"
-                                          >
-                                            <option value="">Selecteer een leerdoel...</option>
-                                            {learningObjectives
-                                              .filter((obj) => obj.phase === editFilterPhase)
-                                              .map((obj) => (
-                                                <option key={obj.id} value={obj.id}>
-                                                  {obj.domain || ""} {obj.order} - {obj.title}
-                                                </option>
-                                              ))}
-                                          </select>
-                                        )}
-                                        {editLearningObjectiveIds.length > 0 && (
-                                          <div className="flex flex-wrap gap-1 mt-2">
-                                            {editLearningObjectiveIds.map((id) => {
-                                              const obj = learningObjectives.find((o) => o.id === id);
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm font-medium mb-2">
+                                      Leerdoelen koppelen
+                                    </label>
+                                    <div className="space-y-2">
+                                      <div className="flex gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setEditFilterPhase("onderbouw")
+                                          }
+                                          className={`px-3 py-1 text-sm rounded ${
+                                            editFilterPhase === "onderbouw"
+                                              ? "bg-blue-600 text-white"
+                                              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                          }`}
+                                        >
+                                          Onderbouw
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setEditFilterPhase("bovenbouw")
+                                          }
+                                          className={`px-3 py-1 text-sm rounded ${
+                                            editFilterPhase === "bovenbouw"
+                                              ? "bg-blue-600 text-white"
+                                              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                          }`}
+                                        >
+                                          Bovenbouw
+                                        </button>
+                                      </div>
+                                      {editFilterPhase && (
+                                        <select
+                                          value=""
+                                          onChange={(e) => {
+                                            const id = parseInt(e.target.value);
+                                            if (
+                                              id &&
+                                              !editLearningObjectiveIds.includes(
+                                                id,
+                                              )
+                                            ) {
+                                              setEditLearningObjectiveIds([
+                                                ...editLearningObjectiveIds,
+                                                id,
+                                              ]);
+                                            }
+                                          }}
+                                          className="w-full px-3 py-2 border rounded"
+                                        >
+                                          <option value="">
+                                            Selecteer een leerdoel...
+                                          </option>
+                                          {learningObjectives
+                                            .filter(
+                                              (obj) =>
+                                                obj.phase === editFilterPhase,
+                                            )
+                                            .map((obj) => (
+                                              <option
+                                                key={obj.id}
+                                                value={obj.id}
+                                              >
+                                                {obj.domain || ""} {obj.order} -{" "}
+                                                {obj.title}
+                                              </option>
+                                            ))}
+                                        </select>
+                                      )}
+                                      {editLearningObjectiveIds.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mt-2">
+                                          {editLearningObjectiveIds.map(
+                                            (id) => {
+                                              const obj =
+                                                learningObjectives.find(
+                                                  (o) => o.id === id,
+                                                );
                                               return (
                                                 <span
                                                   key={id}
                                                   className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
                                                 >
-                                                  {obj ? `${obj.domain || ""} ${obj.order} - ${obj.title}` : `ID: ${id}`}
+                                                  {obj
+                                                    ? `${obj.domain || ""} ${obj.order} - ${obj.title}`
+                                                    : `ID: ${id}`}
                                                   <button
                                                     type="button"
                                                     onClick={() =>
                                                       setEditLearningObjectiveIds(
-                                                        editLearningObjectiveIds.filter((objId) => objId !== id)
+                                                        editLearningObjectiveIds.filter(
+                                                          (objId) =>
+                                                            objId !== id,
+                                                        ),
                                                       )
                                                     }
                                                     className="text-blue-600 hover:text-blue-800"
@@ -1823,548 +2149,741 @@ export default function TemplatesPage() {
                                                   </button>
                                                 </span>
                                               );
-                                            })}
-                                          </div>
-                                        )}
-                                      </div>
+                                            },
+                                          )}
+                                        </div>
+                                      )}
                                     </div>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => {
+                                        const titleEl = document.getElementById(
+                                          `edit-title-${row.id}`,
+                                        ) as HTMLInputElement;
+                                        const levels: {
+                                          "1": string;
+                                          "2": string;
+                                          "3": string;
+                                          "4": string;
+                                          "5": string;
+                                        } = {
+                                          "1": "",
+                                          "2": "",
+                                          "3": "",
+                                          "4": "",
+                                          "5": "",
+                                        };
+                                        ([1, 2, 3, 4, 5] as const).forEach(
+                                          (level) => {
+                                            const el = document.getElementById(
+                                              `edit-level-${row.id}-${level}`,
+                                            ) as HTMLInputElement;
+                                            levels[
+                                              level.toString() as
+                                                | "1"
+                                                | "2"
+                                                | "3"
+                                                | "4"
+                                                | "5"
+                                            ] = el.value;
+                                          },
+                                        );
+                                        handleUpdatePeerCriterion(row.id, {
+                                          title: titleEl.value,
+                                          level_descriptors: levels,
+                                          learning_objective_ids:
+                                            editLearningObjectiveIds,
+                                        });
+                                      }}
+                                      className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                                    >
+                                      Opslaan
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setEditingCriterion(null);
+                                        setEditFilterPhase(undefined);
+                                        setEditLearningObjectiveIds([]);
+                                      }}
+                                      className="px-3 py-1.5 border text-sm rounded hover:bg-gray-100"
+                                    >
+                                      Annuleren
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="text-xs font-medium text-slate-700 mb-2">
+                                    Niveaubeschrijvingen (1–5)
+                                  </div>
+                                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                                    {[1, 2, 3, 4, 5].map((level) => (
+                                      <div
+                                        key={level}
+                                        className="flex min-h-[80px] flex-col rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-inner"
+                                      >
+                                        <span className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                                          Niveau {level}
+                                        </span>
+                                        <p className="text-[11px] text-slate-700">
+                                          {row.level_descriptors[
+                                            level.toString() as
+                                              | "1"
+                                              | "2"
+                                              | "3"
+                                              | "4"
+                                              | "5"
+                                          ] || (
+                                            <em className="text-slate-400">
+                                              Niet ingevuld
+                                            </em>
+                                          )}
+                                        </p>
+                                      </div>
+                                    ))}
+                                  </div>
+
+                                  <div className="mt-4 flex justify-between text-xs">
+                                    <span className="text-slate-500">
+                                      {row.learningObjectivesCount > 0
+                                        ? `${row.learningObjectivesCount} leerdoel(en) gekoppeld`
+                                        : "Geen leerdoelen gekoppeld"}
+                                    </span>
                                     <div className="flex gap-2">
                                       <button
-                                        onClick={() => {
-                                          const titleEl = document.getElementById(
-                                            `edit-title-${row.id}`
-                                          ) as HTMLInputElement;
-                                          const levels: { "1": string; "2": string; "3": string; "4": string; "5": string } = {
-                                            "1": "",
-                                            "2": "",
-                                            "3": "",
-                                            "4": "",
-                                            "5": ""
-                                          };
-                                          ([1, 2, 3, 4, 5] as const).forEach((level) => {
-                                            const el = document.getElementById(
-                                              `edit-level-${row.id}-${level}`
-                                            ) as HTMLInputElement;
-                                            levels[level.toString() as "1" | "2" | "3" | "4" | "5"] = el.value;
-                                          });
-                                          handleUpdatePeerCriterion(row.id, {
-                                            title: titleEl.value,
-                                            level_descriptors: levels,
-                                            learning_objective_ids: editLearningObjectiveIds,
-                                          });
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEditingCriterion(row.id);
+                                          setEditLearningObjectiveIds(
+                                            row.learning_objective_ids || [],
+                                          );
+                                          setEditFilterPhase(undefined);
                                         }}
-                                        className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                                        className="rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px]"
                                       >
-                                        Opslaan
+                                        Bewerken
                                       </button>
                                       <button
-                                        onClick={() => {
-                                          setEditingCriterion(null);
-                                          setEditFilterPhase(undefined);
-                                          setEditLearningObjectiveIds([]);
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeletePeerCriterion(row.id);
                                         }}
-                                        className="px-3 py-1.5 border text-sm rounded hover:bg-gray-100"
+                                        className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-[11px] text-red-700"
                                       >
-                                        Annuleren
+                                        Verwijderen
                                       </button>
                                     </div>
                                   </div>
-                                ) : (
-                                  <>
-                                    <div className="text-xs font-medium text-slate-700 mb-2">
-                                      Niveaubeschrijvingen (1–5)
-                                    </div>
-                                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                                      {[1, 2, 3, 4, 5].map((level) => (
-                                        <div key={level} className="flex min-h-[80px] flex-col rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-inner">
-                                          <span className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Niveau {level}</span>
-                                          <p className="text-[11px] text-slate-700">
-                                            {row.level_descriptors[level.toString() as "1" | "2" | "3" | "4" | "5"] || <em className="text-slate-400">Niet ingevuld</em>}
-                                          </p>
-                                        </div>
-                                      ))}
-                                    </div>
+                                </>
+                              )}
+                            </td>
+                          </tr>
+                        ),
+                      ];
+                    })}
+                  </tbody>
+                </table>
 
-                                    <div className="mt-4 flex justify-between text-xs">
-                                      <span className="text-slate-500">
-                                        {row.learningObjectivesCount > 0 
-                                          ? `${row.learningObjectivesCount} leerdoel(en) gekoppeld`
-                                          : "Geen leerdoelen gekoppeld"
-                                        }
-                                      </span>
-                                      <div className="flex gap-2">
-                                        <button 
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setEditingCriterion(row.id);
-                                            setEditLearningObjectiveIds(row.learning_objective_ids || []);
-                                            setEditFilterPhase(undefined);
-                                          }}
-                                          className="rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px]"
-                                        >
-                                          Bewerken
-                                        </button>
-                                        <button 
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDeletePeerCriterion(row.id);
-                                          }}
-                                          className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-[11px] text-red-700"
-                                        >
-                                          Verwijderen
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </>
-                                )}
-                              </td>
-                            </tr>
-                          )
-                        ];
-                      })}
-                    </tbody>
-                  </table>
-
-                  {filteredAndSortedPeerCriteria.length === 0 && !isCreatingPeerCriterion && (
+                {filteredAndSortedPeerCriteria.length === 0 &&
+                  !isCreatingPeerCriterion && (
                     <div className="text-center py-8 text-gray-500">
                       {peerCriteria.length === 0 ? (
                         <>
                           <p>Nog geen criteria aangemaakt voor dit vak.</p>
                           <p className="text-xs mt-2">
-                            Klik op &quot;+ Nieuw Peerevaluatie Criterium&quot; om te beginnen.
+                            Klik op &quot;+ Nieuw Peerevaluatie Criterium&quot;
+                            om te beginnen.
                           </p>
                         </>
                       ) : (
-                        <p>Geen criteria gevonden voor de geselecteerde filters.</p>
+                        <p>
+                          Geen criteria gevonden voor de geselecteerde filters.
+                        </p>
                       )}
                     </div>
                   )}
-                </>
-              )}
+              </>
+            )}
+          </div>
+        )}
+
+        {activeTab === "rubrics" && (
+          <div className="space-y-4">
+            {/* Title and description */}
+            <div>
+              <p className="text-sm text-slate-600 mt-1">
+                Alle criteria in één overzicht.
+              </p>
             </div>
-          )}
 
-          {activeTab === "rubrics" && (
-            <div className="space-y-4">
-              {/* Title and description */}
-              <div>
-                <p className="text-sm text-slate-600 mt-1">Alle criteria in één overzicht.</p>
-              </div>
-
-              {/* Filters above the table */}
-              <div className="flex flex-wrap items-center gap-4">
-                {/* Niveau filter */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-600">Niveau:</span>
-                  {[
-                    { id: "all", label: "Alle" },
-                    { id: "onderbouw", label: "Onderbouw" },
-                    { id: "bovenbouw", label: "Bovenbouw" },
-                  ].map((filter) => (
-                    <button
-                      key={filter.id}
-                      onClick={() => setSelectedProjectLevelFilter(filter.id as "all" | "onderbouw" | "bovenbouw")}
-                      className={`rounded-full border px-3 py-1 text-xs font-medium ${
-                        selectedProjectLevelFilter === filter.id
-                          ? "border-green-600 bg-green-50 text-green-700"
-                          : "border-slate-200 bg-white text-slate-600"
-                      }`}
-                    >
-                      {filter.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Categorie filter */}
-                <div className="flex items-center gap-2 text-xs text-slate-600">
-                  <span>Categorie:</span>
-                  <select
-                    className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs"
-                    value={activeProjectCategory}
-                    onChange={(e) => setActiveProjectCategory(e.target.value as "all" | "projectproces" | "eindresultaat" | "communicatie")}
+            {/* Filters above the table */}
+            <div className="flex flex-wrap items-center gap-4">
+              {/* Niveau filter */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-600">Niveau:</span>
+                {[
+                  { id: "all", label: "Alle" },
+                  { id: "onderbouw", label: "Onderbouw" },
+                  { id: "bovenbouw", label: "Bovenbouw" },
+                ].map((filter) => (
+                  <button
+                    key={filter.id}
+                    onClick={() =>
+                      setSelectedProjectLevelFilter(
+                        filter.id as "all" | "onderbouw" | "bovenbouw",
+                      )
+                    }
+                    className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                      selectedProjectLevelFilter === filter.id
+                        ? "border-green-600 bg-green-50 text-green-700"
+                        : "border-slate-200 bg-white text-slate-600"
+                    }`}
                   >
-                    <option value="all">Alle</option>
-                    <option value="projectproces">Projectproces</option>
-                    <option value="eindresultaat">Eindresultaat</option>
-                    <option value="communicatie">Communicatie</option>
-                  </select>
-                </div>
+                    {filter.label}
+                  </button>
+                ))}
               </div>
 
-              {loadingProjectCriteria ? (
-                <div className="text-center py-8 text-gray-500">
-                  <p>Criteria laden...</p>
-                </div>
-              ) : (
-                <>
-                  {/* Create new criterion form */}
-                  {isCreatingProjectCriterion && (
-                    <div className="bg-white border-2 border-green-500 rounded-lg p-4 mb-4">
-                      <h4 className="font-semibold mb-3">Nieuw Criterium</h4>
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-sm font-medium mb-1">
-                            Categorie
-                          </label>
-                          <select
-                            value={projectFormData.category}
-                            onChange={(e) =>
-                              setProjectFormData({
-                                ...projectFormData,
-                                category: e.target.value as "projectproces" | "eindresultaat" | "communicatie",
-                              })
-                            }
-                            className="w-full px-3 py-2 border rounded"
-                          >
-                            <option value="projectproces">Projectproces</option>
-                            <option value="eindresultaat">Eindresultaat</option>
-                            <option value="communicatie">Communicatie</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-1">
-                            Niveau (Onderbouw/Bovenbouw)
-                          </label>
-                          <select
-                            value={projectFormData.target_level || ""}
-                            onChange={(e) =>
-                              setProjectFormData({
-                                ...projectFormData,
-                                target_level: e.target.value ? (e.target.value as "onderbouw" | "bovenbouw") : null,
-                              })
-                            }
-                            className="w-full px-3 py-2 border rounded"
-                          >
-                            <option value="">Geen specifiek niveau</option>
-                            <option value="onderbouw">Onderbouw</option>
-                            <option value="bovenbouw">Bovenbouw</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-1">
-                            Titel *
-                          </label>
-                          <input
-                            type="text"
-                            value={projectFormData.title}
-                            onChange={(e) =>
-                              setProjectFormData({
-                                ...projectFormData,
-                                title: e.target.value,
-                              })
-                            }
-                            className="w-full px-3 py-2 border rounded"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-1">
-                            Beschrijving
-                          </label>
-                          <textarea
-                            value={projectFormData.description || ""}
-                            onChange={(e) =>
-                              setProjectFormData({
-                                ...projectFormData,
-                                description: e.target.value,
-                              })
-                            }
-                            className="w-full px-3 py-2 border rounded"
-                            rows={2}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-2">
-                            Niveaubeschrijvingen (1-5)
-                          </label>
-                          <div className="grid grid-cols-5 gap-2">
-                            {[1, 2, 3, 4, 5].map((level) => (
-                              <div key={level} className="flex flex-col">
-                                <label className="text-xs font-medium text-gray-700 mb-1">
-                                  Niveau {level}
-                                </label>
-                                <textarea
-                                  placeholder={`Niveau ${level}`}
-                                  value={projectFormData.level_descriptors?.[level.toString() as "1" | "2" | "3" | "4" | "5"] || ""}
-                                  onChange={(e) =>
-                                    setProjectFormData({
-                                      ...projectFormData,
-                                      level_descriptors: {
-                                        ...projectFormData.level_descriptors,
-                                        [level.toString()]: e.target.value,
-                                      } as typeof projectFormData.level_descriptors,
-                                    })
-                                  }
-                                  className="w-full px-2 py-1 border rounded text-sm resize-y min-h-[80px]"
-                                  rows={4}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-2">
-                            Leerdoelen koppelen
-                          </label>
-                          <div className="space-y-2">
-                            <div className="flex gap-2">
-                              <button
-                                type="button"
-                                onClick={() => setProjectFormData({ ...projectFormData, _filterPhase: "onderbouw" })}
-                                className={`px-3 py-1 text-sm rounded ${
-                                  projectFormData._filterPhase === "onderbouw"
-                                    ? "bg-green-600 text-white"
-                                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                                }`}
-                              >
-                                Onderbouw
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setProjectFormData({ ...projectFormData, _filterPhase: "bovenbouw" })}
-                                className={`px-3 py-1 text-sm rounded ${
-                                  projectFormData._filterPhase === "bovenbouw"
-                                    ? "bg-green-600 text-white"
-                                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                                }`}
-                              >
-                                Bovenbouw
-                              </button>
+              {/* Categorie filter */}
+              <div className="flex items-center gap-2 text-xs text-slate-600">
+                <span>Categorie:</span>
+                <select
+                  className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs"
+                  value={activeProjectCategory}
+                  onChange={(e) =>
+                    setActiveProjectCategory(
+                      e.target.value as
+                        | "all"
+                        | "projectproces"
+                        | "eindresultaat"
+                        | "communicatie",
+                    )
+                  }
+                >
+                  <option value="all">Alle</option>
+                  <option value="projectproces">Projectproces</option>
+                  <option value="eindresultaat">Eindresultaat</option>
+                  <option value="communicatie">Communicatie</option>
+                </select>
+              </div>
+            </div>
+
+            {loadingProjectCriteria ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>Criteria laden...</p>
+              </div>
+            ) : (
+              <>
+                {/* Create new criterion form */}
+                {isCreatingProjectCriterion && (
+                  <div className="bg-white border-2 border-green-500 rounded-lg p-4 mb-4">
+                    <h4 className="font-semibold mb-3">Nieuw Criterium</h4>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          Categorie
+                        </label>
+                        <select
+                          value={projectFormData.category}
+                          onChange={(e) =>
+                            setProjectFormData({
+                              ...projectFormData,
+                              category: e.target.value as
+                                | "projectproces"
+                                | "eindresultaat"
+                                | "communicatie",
+                            })
+                          }
+                          className="w-full px-3 py-2 border rounded"
+                        >
+                          <option value="projectproces">Projectproces</option>
+                          <option value="eindresultaat">Eindresultaat</option>
+                          <option value="communicatie">Communicatie</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          Niveau (Onderbouw/Bovenbouw)
+                        </label>
+                        <select
+                          value={projectFormData.target_level || ""}
+                          onChange={(e) =>
+                            setProjectFormData({
+                              ...projectFormData,
+                              target_level: e.target.value
+                                ? (e.target.value as "onderbouw" | "bovenbouw")
+                                : null,
+                            })
+                          }
+                          className="w-full px-3 py-2 border rounded"
+                        >
+                          <option value="">Geen specifiek niveau</option>
+                          <option value="onderbouw">Onderbouw</option>
+                          <option value="bovenbouw">Bovenbouw</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          Titel *
+                        </label>
+                        <input
+                          type="text"
+                          value={projectFormData.title}
+                          onChange={(e) =>
+                            setProjectFormData({
+                              ...projectFormData,
+                              title: e.target.value,
+                            })
+                          }
+                          className="w-full px-3 py-2 border rounded"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          Beschrijving
+                        </label>
+                        <textarea
+                          value={projectFormData.description || ""}
+                          onChange={(e) =>
+                            setProjectFormData({
+                              ...projectFormData,
+                              description: e.target.value,
+                            })
+                          }
+                          className="w-full px-3 py-2 border rounded"
+                          rows={2}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Niveaubeschrijvingen (1-5)
+                        </label>
+                        <div className="grid grid-cols-5 gap-2">
+                          {[1, 2, 3, 4, 5].map((level) => (
+                            <div key={level} className="flex flex-col">
+                              <label className="text-xs font-medium text-gray-700 mb-1">
+                                Niveau {level}
+                              </label>
+                              <textarea
+                                placeholder={`Niveau ${level}`}
+                                value={
+                                  projectFormData.level_descriptors?.[
+                                    level.toString() as
+                                      | "1"
+                                      | "2"
+                                      | "3"
+                                      | "4"
+                                      | "5"
+                                  ] || ""
+                                }
+                                onChange={(e) =>
+                                  setProjectFormData({
+                                    ...projectFormData,
+                                    level_descriptors: {
+                                      ...projectFormData.level_descriptors,
+                                      [level.toString()]: e.target.value,
+                                    } as typeof projectFormData.level_descriptors,
+                                  })
+                                }
+                                className="w-full px-2 py-1 border rounded text-sm resize-y min-h-[80px]"
+                                rows={4}
+                              />
                             </div>
-                            {projectFormData._filterPhase && (
-                              <select
-                                value=""
-                                onChange={(e) => {
-                                  const id = parseInt(e.target.value);
-                                  const currentIds = projectFormData.learning_objective_ids || [];
-                                  if (id && !currentIds.includes(id)) {
-                                    setProjectFormData({
-                                      ...projectFormData,
-                                      learning_objective_ids: [...currentIds, id],
-                                    });
-                                  }
-                                }}
-                                className="w-full px-3 py-2 border rounded"
-                              >
-                                <option value="">Selecteer een leerdoel...</option>
-                                {learningObjectives
-                                  .filter((obj) => obj.phase === projectFormData._filterPhase)
-                                  .map((obj) => (
-                                    <option key={obj.id} value={obj.id}>
-                                      {obj.domain || ""} {obj.order} - {obj.title}
-                                    </option>
-                                  ))}
-                              </select>
-                            )}
-                            {(projectFormData.learning_objective_ids?.length ?? 0) > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-2">
-                                {(projectFormData.learning_objective_ids || []).map((id) => {
-                                  const obj = learningObjectives.find((o) => o.id === id);
-                                  return (
-                                    <span
-                                      key={id}
-                                      className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs rounded"
-                                    >
-                                      {obj ? `${obj.domain || ""} ${obj.order} - ${obj.title}` : `ID: ${id}`}
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          setProjectFormData({
-                                            ...projectFormData,
-                                            learning_objective_ids: (projectFormData.learning_objective_ids || []).filter(
-                                              (objId) => objId !== id
-                                            ),
-                                          })
-                                        }
-                                        className="text-green-600 hover:text-green-800"
-                                      >
-                                        ×
-                                      </button>
-                                    </span>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex gap-2 pt-2">
-                          <button
-                            onClick={handleCreateProjectCriterion}
-                            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                          >
-                            Opslaan
-                          </button>
-                          <button
-                            onClick={() => setIsCreatingProjectCriterion(false)}
-                            className="px-4 py-2 border rounded hover:bg-gray-50"
-                          >
-                            Annuleren
-                          </button>
+                          ))}
                         </div>
                       </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Leerdoelen koppelen
+                        </label>
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setProjectFormData({
+                                  ...projectFormData,
+                                  _filterPhase: "onderbouw",
+                                })
+                              }
+                              className={`px-3 py-1 text-sm rounded ${
+                                projectFormData._filterPhase === "onderbouw"
+                                  ? "bg-green-600 text-white"
+                                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                              }`}
+                            >
+                              Onderbouw
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setProjectFormData({
+                                  ...projectFormData,
+                                  _filterPhase: "bovenbouw",
+                                })
+                              }
+                              className={`px-3 py-1 text-sm rounded ${
+                                projectFormData._filterPhase === "bovenbouw"
+                                  ? "bg-green-600 text-white"
+                                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                              }`}
+                            >
+                              Bovenbouw
+                            </button>
+                          </div>
+                          {projectFormData._filterPhase && (
+                            <select
+                              value=""
+                              onChange={(e) => {
+                                const id = parseInt(e.target.value);
+                                const currentIds =
+                                  projectFormData.learning_objective_ids || [];
+                                if (id && !currentIds.includes(id)) {
+                                  setProjectFormData({
+                                    ...projectFormData,
+                                    learning_objective_ids: [...currentIds, id],
+                                  });
+                                }
+                              }}
+                              className="w-full px-3 py-2 border rounded"
+                            >
+                              <option value="">
+                                Selecteer een leerdoel...
+                              </option>
+                              {learningObjectives
+                                .filter(
+                                  (obj) =>
+                                    obj.phase === projectFormData._filterPhase,
+                                )
+                                .map((obj) => (
+                                  <option key={obj.id} value={obj.id}>
+                                    {obj.domain || ""} {obj.order} - {obj.title}
+                                  </option>
+                                ))}
+                            </select>
+                          )}
+                          {(projectFormData.learning_objective_ids?.length ??
+                            0) > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {(
+                                projectFormData.learning_objective_ids || []
+                              ).map((id) => {
+                                const obj = learningObjectives.find(
+                                  (o) => o.id === id,
+                                );
+                                return (
+                                  <span
+                                    key={id}
+                                    className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs rounded"
+                                  >
+                                    {obj
+                                      ? `${obj.domain || ""} ${obj.order} - ${obj.title}`
+                                      : `ID: ${id}`}
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setProjectFormData({
+                                          ...projectFormData,
+                                          learning_objective_ids: (
+                                            projectFormData.learning_objective_ids ||
+                                            []
+                                          ).filter((objId) => objId !== id),
+                                        })
+                                      }
+                                      className="text-green-600 hover:text-green-800"
+                                    >
+                                      ×
+                                    </button>
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          onClick={handleCreateProjectCriterion}
+                          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                        >
+                          Opslaan
+                        </button>
+                        <button
+                          onClick={() => setIsCreatingProjectCriterion(false)}
+                          className="px-4 py-2 border rounded hover:bg-gray-50"
+                        >
+                          Annuleren
+                        </button>
+                      </div>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {/* Table of criteria */}
-                  <table className="w-full table-fixed text-sm border-collapse">
-                    <thead>
-                      <tr className="text-left text-xs text-slate-500 border-b">
-                        <th 
-                          className="w-32 py-2 cursor-pointer hover:text-slate-700" 
-                          onClick={() => setProjectSort({key:"categoryName", dir: projectSort.key==="categoryName" && projectSort.dir==='asc'?'desc':'asc'})}
-                        >
-                          Categorie {projectSort.key === "categoryName" && (projectSort.dir === "asc" ? "↑" : "↓")}
-                        </th>
-                        <th 
-                          className="w-40 cursor-pointer hover:text-slate-700" 
-                          onClick={() => setProjectSort({key:"title", dir: projectSort.key==="title" && projectSort.dir==='asc'?'desc':'asc'})}
-                        >
-                          Naam {projectSort.key === "title" && (projectSort.dir === "asc" ? "↑" : "↓")}
-                        </th>
-                        <th 
-                          className="w-24 cursor-pointer hover:text-slate-700" 
-                          onClick={() => setProjectSort({key:"target_level", dir: projectSort.key==="target_level" && projectSort.dir==='asc'?'desc':'asc'})}
-                        >
-                          Niveau {projectSort.key === "target_level" && (projectSort.dir === "asc" ? "↑" : "↓")}
-                        </th>
-                        <th className="w-auto">Beschrijving</th>
-                        <th 
-                          className="w-24 text-center cursor-pointer hover:text-slate-700" 
-                          onClick={() => setProjectSort({key:"learningObjectivesCount", dir: projectSort.key==="learningObjectivesCount" && projectSort.dir==='asc'?'desc':'asc'})}
-                        >
-                          Leerdoelen {projectSort.key === "learningObjectivesCount" && (projectSort.dir === "asc" ? "↑" : "↓")}
-                        </th>
-                      </tr>
-                    </thead>
+                {/* Table of criteria */}
+                <table className="w-full table-fixed text-sm border-collapse">
+                  <thead>
+                    <tr className="text-left text-xs text-slate-500 border-b">
+                      <th
+                        className="w-32 py-2 cursor-pointer hover:text-slate-700"
+                        onClick={() =>
+                          setProjectSort({
+                            key: "categoryName",
+                            dir:
+                              projectSort.key === "categoryName" &&
+                              projectSort.dir === "asc"
+                                ? "desc"
+                                : "asc",
+                          })
+                        }
+                      >
+                        Categorie{" "}
+                        {projectSort.key === "categoryName" &&
+                          (projectSort.dir === "asc" ? "↑" : "↓")}
+                      </th>
+                      <th
+                        className="w-40 cursor-pointer hover:text-slate-700"
+                        onClick={() =>
+                          setProjectSort({
+                            key: "title",
+                            dir:
+                              projectSort.key === "title" &&
+                              projectSort.dir === "asc"
+                                ? "desc"
+                                : "asc",
+                          })
+                        }
+                      >
+                        Naam{" "}
+                        {projectSort.key === "title" &&
+                          (projectSort.dir === "asc" ? "↑" : "↓")}
+                      </th>
+                      <th
+                        className="w-24 cursor-pointer hover:text-slate-700"
+                        onClick={() =>
+                          setProjectSort({
+                            key: "target_level",
+                            dir:
+                              projectSort.key === "target_level" &&
+                              projectSort.dir === "asc"
+                                ? "desc"
+                                : "asc",
+                          })
+                        }
+                      >
+                        Niveau{" "}
+                        {projectSort.key === "target_level" &&
+                          (projectSort.dir === "asc" ? "↑" : "↓")}
+                      </th>
+                      <th className="w-auto">Beschrijving</th>
+                      <th
+                        className="w-24 text-center cursor-pointer hover:text-slate-700"
+                        onClick={() =>
+                          setProjectSort({
+                            key: "learningObjectivesCount",
+                            dir:
+                              projectSort.key === "learningObjectivesCount" &&
+                              projectSort.dir === "asc"
+                                ? "desc"
+                                : "asc",
+                          })
+                        }
+                      >
+                        Leerdoelen{" "}
+                        {projectSort.key === "learningObjectivesCount" &&
+                          (projectSort.dir === "asc" ? "↑" : "↓")}
+                      </th>
+                    </tr>
+                  </thead>
 
-                    <tbody className="divide-y">
-                      {filteredAndSortedProjectCriteria.map((row) => {
-                        const isOpen = expandedProjectCriterion === row.id;
+                  <tbody className="divide-y">
+                    {filteredAndSortedProjectCriteria.map((row) => {
+                      const isOpen = expandedProjectCriterion === row.id;
 
-                        return [
+                      return [
+                        <tr
+                          key={row.id}
+                          className="hover:bg-slate-50 cursor-pointer"
+                          onClick={() => toggleProjectCriterionExpand(row.id)}
+                        >
+                          <td className="w-32 py-3 font-bold text-slate-900">
+                            {row.categoryName}
+                          </td>
+                          <td className="w-40 py-3">{row.title}</td>
+                          <td className="w-24">
+                            {row.target_level ? (
+                              <span className="inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 whitespace-nowrap">
+                                {row.target_level === "onderbouw"
+                                  ? "Onderbouw"
+                                  : "Bovenbouw"}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400">-</span>
+                            )}
+                          </td>
+                          <td className="text-slate-600 truncate max-w-xl">
+                            {row.description || "-"}
+                          </td>
+                          <td className="w-24 text-slate-500 text-center">
+                            {row.learningObjectivesCount}
+                          </td>
+                        </tr>,
+                        isOpen && (
                           <tr
-                            key={row.id}
-                            className="hover:bg-slate-50 cursor-pointer"
-                            onClick={() => toggleProjectCriterionExpand(row.id)}
+                            key={`${row.id}-expanded`}
+                            className="bg-slate-50"
                           >
-                            <td className="w-32 py-3 font-bold text-slate-900">{row.categoryName}</td>
-                            <td className="w-40 py-3">{row.title}</td>
-                            <td className="w-24">
-                              {row.target_level ? (
-                                <span className="inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 whitespace-nowrap">
-                                  {row.target_level === "onderbouw" ? "Onderbouw" : "Bovenbouw"}
-                                </span>
-                              ) : (
-                                <span className="text-slate-400">-</span>
-                              )}
-                            </td>
-                            <td className="text-slate-600 truncate max-w-xl">{row.description || "-"}</td>
-                            <td className="w-24 text-slate-500 text-center">{row.learningObjectivesCount}</td>
-                          </tr>,
-                          isOpen && (
-                            <tr key={`${row.id}-expanded`} className="bg-slate-50">
-                              <td colSpan={5} className="p-4">
-                                {editingProjectCriterion === row.id ? (
-                                  <div className="space-y-3">
-                                    <div>
-                                      <label className="block text-sm font-medium mb-1">
-                                        Titel
-                                      </label>
-                                      <input
-                                        type="text"
-                                        defaultValue={row.title}
-                                        id={`edit-project-title-${row.id}`}
-                                        className="w-full px-3 py-2 border rounded"
-                                      />
-                                    </div>
-                                    <div>
-                                      <label className="block text-sm font-medium mb-2">
-                                        Niveaubeschrijvingen
-                                      </label>
-                                      <div className="grid grid-cols-5 gap-2">
-                                        {[1, 2, 3, 4, 5].map((level) => (
-                                          <div key={level} className="flex flex-col">
-                                            <label className="text-xs font-medium text-gray-700 mb-1">
-                                              Niveau {level}
-                                            </label>
-                                            <textarea
-                                              defaultValue={
-                                                row.level_descriptors[
-                                                  level.toString() as "1" | "2" | "3" | "4" | "5"
-                                                ] || ""
-                                              }
-                                              id={`edit-project-level-${row.id}-${level}`}
-                                              className="w-full px-2 py-1 border rounded text-sm resize-y min-h-[80px]"
-                                              rows={4}
-                                            />
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                    <div>
-                                      <label className="block text-sm font-medium mb-2">
-                                        Leerdoelen koppelen
-                                      </label>
-                                      <div className="space-y-2">
-                                        <div className="flex gap-2">
-                                          <button
-                                            type="button"
-                                            onClick={() => setEditProjectFilterPhase("onderbouw")}
-                                            className={`px-3 py-1 text-sm rounded ${
-                                              editProjectFilterPhase === "onderbouw"
-                                                ? "bg-green-600 text-white"
-                                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                                            }`}
-                                          >
-                                            Onderbouw
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => setEditProjectFilterPhase("bovenbouw")}
-                                            className={`px-3 py-1 text-sm rounded ${
-                                              editProjectFilterPhase === "bovenbouw"
-                                                ? "bg-green-600 text-white"
-                                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                                            }`}
-                                          >
-                                            Bovenbouw
-                                          </button>
+                            <td colSpan={5} className="p-4">
+                              {editingProjectCriterion === row.id ? (
+                                <div className="space-y-3">
+                                  <div>
+                                    <label className="block text-sm font-medium mb-1">
+                                      Titel
+                                    </label>
+                                    <input
+                                      type="text"
+                                      defaultValue={row.title}
+                                      id={`edit-project-title-${row.id}`}
+                                      className="w-full px-3 py-2 border rounded"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm font-medium mb-2">
+                                      Niveaubeschrijvingen
+                                    </label>
+                                    <div className="grid grid-cols-5 gap-2">
+                                      {[1, 2, 3, 4, 5].map((level) => (
+                                        <div
+                                          key={level}
+                                          className="flex flex-col"
+                                        >
+                                          <label className="text-xs font-medium text-gray-700 mb-1">
+                                            Niveau {level}
+                                          </label>
+                                          <textarea
+                                            defaultValue={
+                                              row.level_descriptors[
+                                                level.toString() as
+                                                  | "1"
+                                                  | "2"
+                                                  | "3"
+                                                  | "4"
+                                                  | "5"
+                                              ] || ""
+                                            }
+                                            id={`edit-project-level-${row.id}-${level}`}
+                                            className="w-full px-2 py-1 border rounded text-sm resize-y min-h-[80px]"
+                                            rows={4}
+                                          />
                                         </div>
-                                        {editProjectFilterPhase && (
-                                          <select
-                                            value=""
-                                            onChange={(e) => {
-                                              const id = parseInt(e.target.value);
-                                              if (id && !editProjectLearningObjectiveIds.includes(id)) {
-                                                setEditProjectLearningObjectiveIds([...editProjectLearningObjectiveIds, id]);
-                                              }
-                                            }}
-                                            className="w-full px-3 py-2 border rounded"
-                                          >
-                                            <option value="">Selecteer een leerdoel...</option>
-                                            {learningObjectives
-                                              .filter((obj) => obj.phase === editProjectFilterPhase)
-                                              .map((obj) => (
-                                                <option key={obj.id} value={obj.id}>
-                                                  {obj.domain || ""} {obj.order} - {obj.title}
-                                                </option>
-                                              ))}
-                                          </select>
-                                        )}
-                                        {editProjectLearningObjectiveIds.length > 0 && (
-                                          <div className="flex flex-wrap gap-1 mt-2">
-                                            {editProjectLearningObjectiveIds.map((id) => {
-                                              const obj = learningObjectives.find((o) => o.id === id);
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm font-medium mb-2">
+                                      Leerdoelen koppelen
+                                    </label>
+                                    <div className="space-y-2">
+                                      <div className="flex gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setEditProjectFilterPhase(
+                                              "onderbouw",
+                                            )
+                                          }
+                                          className={`px-3 py-1 text-sm rounded ${
+                                            editProjectFilterPhase ===
+                                            "onderbouw"
+                                              ? "bg-green-600 text-white"
+                                              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                          }`}
+                                        >
+                                          Onderbouw
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setEditProjectFilterPhase(
+                                              "bovenbouw",
+                                            )
+                                          }
+                                          className={`px-3 py-1 text-sm rounded ${
+                                            editProjectFilterPhase ===
+                                            "bovenbouw"
+                                              ? "bg-green-600 text-white"
+                                              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                          }`}
+                                        >
+                                          Bovenbouw
+                                        </button>
+                                      </div>
+                                      {editProjectFilterPhase && (
+                                        <select
+                                          value=""
+                                          onChange={(e) => {
+                                            const id = parseInt(e.target.value);
+                                            if (
+                                              id &&
+                                              !editProjectLearningObjectiveIds.includes(
+                                                id,
+                                              )
+                                            ) {
+                                              setEditProjectLearningObjectiveIds(
+                                                [
+                                                  ...editProjectLearningObjectiveIds,
+                                                  id,
+                                                ],
+                                              );
+                                            }
+                                          }}
+                                          className="w-full px-3 py-2 border rounded"
+                                        >
+                                          <option value="">
+                                            Selecteer een leerdoel...
+                                          </option>
+                                          {learningObjectives
+                                            .filter(
+                                              (obj) =>
+                                                obj.phase ===
+                                                editProjectFilterPhase,
+                                            )
+                                            .map((obj) => (
+                                              <option
+                                                key={obj.id}
+                                                value={obj.id}
+                                              >
+                                                {obj.domain || ""} {obj.order} -{" "}
+                                                {obj.title}
+                                              </option>
+                                            ))}
+                                        </select>
+                                      )}
+                                      {editProjectLearningObjectiveIds.length >
+                                        0 && (
+                                        <div className="flex flex-wrap gap-1 mt-2">
+                                          {editProjectLearningObjectiveIds.map(
+                                            (id) => {
+                                              const obj =
+                                                learningObjectives.find(
+                                                  (o) => o.id === id,
+                                                );
                                               return (
                                                 <span
                                                   key={id}
                                                   className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs rounded"
                                                 >
-                                                  {obj ? `${obj.domain || ""} ${obj.order} - ${obj.title}` : `ID: ${id}`}
+                                                  {obj
+                                                    ? `${obj.domain || ""} ${obj.order} - ${obj.title}`
+                                                    : `ID: ${id}`}
                                                   <button
                                                     type="button"
                                                     onClick={() =>
                                                       setEditProjectLearningObjectiveIds(
-                                                        editProjectLearningObjectiveIds.filter((objId) => objId !== id)
+                                                        editProjectLearningObjectiveIds.filter(
+                                                          (objId) =>
+                                                            objId !== id,
+                                                        ),
                                                       )
                                                     }
                                                     className="text-green-600 hover:text-green-800"
@@ -2373,774 +2892,927 @@ export default function TemplatesPage() {
                                                   </button>
                                                 </span>
                                               );
-                                            })}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <div className="flex gap-2">
-                                      <button
-                                        onClick={() => {
-                                          const titleEl = document.getElementById(
-                                            `edit-project-title-${row.id}`
-                                          ) as HTMLInputElement;
-                                          const levels: { "1": string; "2": string; "3": string; "4": string; "5": string } = {
-                                            "1": "",
-                                            "2": "",
-                                            "3": "",
-                                            "4": "",
-                                            "5": ""
-                                          };
-                                          ([1, 2, 3, 4, 5] as const).forEach((level) => {
-                                            const el = document.getElementById(
-                                              `edit-project-level-${row.id}-${level}`
-                                            ) as HTMLInputElement;
-                                            levels[level.toString() as "1" | "2" | "3" | "4" | "5"] = el.value;
-                                          });
-                                          handleUpdateProjectCriterion(row.id, {
-                                            title: titleEl.value,
-                                            level_descriptors: levels,
-                                            learning_objective_ids: editProjectLearningObjectiveIds,
-                                          });
-                                        }}
-                                        className="px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700"
-                                      >
-                                        Opslaan
-                                      </button>
-                                      <button
-                                        onClick={() => {
-                                          setEditingProjectCriterion(null);
-                                          setEditProjectFilterPhase(undefined);
-                                          setEditProjectLearningObjectiveIds([]);
-                                        }}
-                                        className="px-3 py-1.5 border text-sm rounded hover:bg-gray-100"
-                                      >
-                                        Annuleren
-                                      </button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <div className="text-xs font-medium text-slate-700 mb-2">
-                                      Niveaubeschrijvingen (1–5)
-                                    </div>
-                                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                                      {[1, 2, 3, 4, 5].map((level) => (
-                                        <div key={level} className="flex min-h-[80px] flex-col rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-inner">
-                                          <span className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Niveau {level}</span>
-                                          <p className="text-[11px] text-slate-700">
-                                            {row.level_descriptors[level.toString() as "1" | "2" | "3" | "4" | "5"] || <em className="text-slate-400">Niet ingevuld</em>}
-                                          </p>
+                                            },
+                                          )}
                                         </div>
-                                      ))}
-                                    </div>
-
-                                    <div className="mt-4 flex justify-between text-xs">
-                                      <span className="text-slate-500">
-                                        {row.learningObjectivesCount > 0 
-                                          ? `${row.learningObjectivesCount} leerdoel(en) gekoppeld`
-                                          : "Geen leerdoelen gekoppeld"
-                                        }
-                                      </span>
-                                      <div className="flex gap-2">
-                                        <button 
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setEditingProjectCriterion(row.id);
-                                            setEditProjectLearningObjectiveIds(row.learning_objective_ids || []);
-                                            setEditProjectFilterPhase(undefined);
-                                          }}
-                                          className="rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px]"
-                                        >
-                                          Bewerken
-                                        </button>
-                                        <button 
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDeleteProjectCriterion(row.id);
-                                          }}
-                                          className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-[11px] text-red-700"
-                                        >
-                                          Verwijderen
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </>
-                                )}
-                              </td>
-                            </tr>
-                          )
-                        ];
-                      })}
-                    </tbody>
-                  </table>
-
-                  {filteredAndSortedProjectCriteria.length === 0 && !isCreatingProjectCriterion && (
-                    <div className="text-center py-8 text-gray-500">
-                      {projectCriteria.length === 0 ? (
-                        <>
-                          <p>Nog geen criteria aangemaakt voor dit vak.</p>
-                          <p className="text-xs mt-2">
-                            Klik op &quot;+ Nieuw Projectbeoordeling Criterium&quot; om te beginnen.
-                          </p>
-                        </>
-                      ) : (
-                        <p>Geen criteria gevonden voor de geselecteerde filters.</p>
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-
-          {activeTab === "mail" && (
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600">
-                Beheer email templates met variabelen voor verschillende
-                communicatiemomenten. Gebruik {"{schoolYear}"} als variabele voor het schooljaar.
-              </p>
-              
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                <h4 className="font-semibold text-blue-900 mb-2">Template types:</h4>
-                <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• <strong>opvolgmail</strong> - Opvolgmail voor volgend schooljaar</li>
-                  <li>• <strong>startproject</strong> - Uitnodiging voor startproject</li>
-                  <li>• <strong>tussenpresentatie</strong> - Uitnodiging tussenpresentatie</li>
-                  <li>• <strong>eindpresentatie</strong> - Uitnodiging eindpresentatie</li>
-                  <li>• <strong>bedankmail</strong> - Bedankmail na samenwerking</li>
-                </ul>
-              </div>
-
-              {loadingMailTemplates ? (
-                <div className="text-center py-8 text-gray-500">
-                  <p>Templates laden...</p>
-                </div>
-              ) : (
-                <>
-                  {/* Create new mail template form */}
-                  {isCreatingMailTemplate && (
-                    <div className="bg-white border-2 border-blue-500 rounded-lg p-4 mb-4">
-                      <h4 className="font-semibold mb-3">Nieuwe Mail Template</h4>
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-sm font-medium mb-1">
-                            Naam *
-                          </label>
-                          <input
-                            type="text"
-                            value={mailFormData.name || ""}
-                            onChange={(e) =>
-                              setMailFormData({
-                                ...mailFormData,
-                                name: e.target.value,
-                              })
-                            }
-                            placeholder="bijv. Opvolgmail volgend schooljaar"
-                            className="w-full px-3 py-2 border rounded"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-1">
-                            Type
-                          </label>
-                          <select
-                            value={mailFormData.type || "opvolgmail"}
-                            onChange={(e) =>
-                              setMailFormData({
-                                ...mailFormData,
-                                type: e.target.value,
-                              })
-                            }
-                            className="w-full px-3 py-2 border rounded"
-                          >
-                            <option value="opvolgmail">Opvolgmail</option>
-                            <option value="startproject">Start project</option>
-                            <option value="tussenpresentatie">Tussenpresentatie</option>
-                            <option value="eindpresentatie">Eindpresentatie</option>
-                            <option value="bedankmail">Bedankmail</option>
-                            <option value="herinnering">Herinnering</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-1">
-                            Onderwerp *
-                          </label>
-                          <input
-                            type="text"
-                            value={mailFormData.subject || ""}
-                            onChange={(e) =>
-                              setMailFormData({
-                                ...mailFormData,
-                                subject: e.target.value,
-                              })
-                            }
-                            placeholder="bijv. Samenwerking schooljaar {schoolYear}"
-                            className="w-full px-3 py-2 border rounded"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-1">
-                            Inhoud *
-                          </label>
-                          <textarea
-                            value={mailFormData.body || ""}
-                            onChange={(e) =>
-                              setMailFormData({
-                                ...mailFormData,
-                                body: e.target.value,
-                              })
-                            }
-                            placeholder="Beste opdrachtgever,&#10;&#10;Het schooljaar {schoolYear} staat voor de deur..."
-                            className="w-full px-3 py-2 border rounded font-mono text-sm"
-                            rows={8}
-                          />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            id="is_active"
-                            checked={mailFormData.is_active ?? true}
-                            onChange={(e) =>
-                              setMailFormData({
-                                ...mailFormData,
-                                is_active: e.target.checked,
-                              })
-                            }
-                            className="rounded"
-                          />
-                          <label htmlFor="is_active" className="text-sm">
-                            Actief (zichtbaar in dropdowns)
-                          </label>
-                        </div>
-                        <div className="flex gap-2 pt-2">
-                          <button
-                            onClick={handleCreateMailTemplate}
-                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                          >
-                            Opslaan
-                          </button>
-                          <button
-                            onClick={() => setIsCreatingMailTemplate(false)}
-                            className="px-4 py-2 border rounded hover:bg-gray-50"
-                          >
-                            Annuleren
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* List of mail templates */}
-                  {mailTemplates.length > 0 ? (
-                    <div className="space-y-3">
-                      {mailTemplates.map((template) => (
-                        <div
-                          key={template.id}
-                          className="border rounded-lg overflow-hidden"
-                        >
-                          <div className="bg-white p-4">
-                            {editingMailTemplate === template.id ? (
-                              <div className="space-y-3">
-                                <div>
-                                  <label className="block text-sm font-medium mb-1">
-                                    Naam
-                                  </label>
-                                  <input
-                                    type="text"
-                                    defaultValue={template.name}
-                                    id={`edit-mail-name-${template.id}`}
-                                    className="w-full px-3 py-2 border rounded"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-sm font-medium mb-1">
-                                    Type
-                                  </label>
-                                  <select
-                                    defaultValue={template.type}
-                                    id={`edit-mail-type-${template.id}`}
-                                    className="w-full px-3 py-2 border rounded"
-                                  >
-                                    <option value="opvolgmail">Opvolgmail</option>
-                                    <option value="startproject">Start project</option>
-                                    <option value="tussenpresentatie">Tussenpresentatie</option>
-                                    <option value="eindpresentatie">Eindpresentatie</option>
-                                    <option value="bedankmail">Bedankmail</option>
-                                    <option value="herinnering">Herinnering</option>
-                                  </select>
-                                </div>
-                                <div>
-                                  <label className="block text-sm font-medium mb-1">
-                                    Onderwerp
-                                  </label>
-                                  <input
-                                    type="text"
-                                    defaultValue={template.subject}
-                                    id={`edit-mail-subject-${template.id}`}
-                                    className="w-full px-3 py-2 border rounded"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-sm font-medium mb-1">
-                                    Inhoud
-                                  </label>
-                                  <textarea
-                                    defaultValue={template.body}
-                                    id={`edit-mail-body-${template.id}`}
-                                    className="w-full px-3 py-2 border rounded font-mono text-sm"
-                                    rows={8}
-                                  />
-                                </div>
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => {
-                                      const nameEl = document.getElementById(
-                                        `edit-mail-name-${template.id}`
-                                      ) as HTMLInputElement;
-                                      const typeEl = document.getElementById(
-                                        `edit-mail-type-${template.id}`
-                                      ) as HTMLSelectElement;
-                                      const subjectEl = document.getElementById(
-                                        `edit-mail-subject-${template.id}`
-                                      ) as HTMLInputElement;
-                                      const bodyEl = document.getElementById(
-                                        `edit-mail-body-${template.id}`
-                                      ) as HTMLTextAreaElement;
-                                      handleUpdateMailTemplate(template.id, {
-                                        name: nameEl.value,
-                                        type: typeEl.value,
-                                        subject: subjectEl.value,
-                                        body: bodyEl.value,
-                                      });
-                                    }}
-                                    className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-                                  >
-                                    Opslaan
-                                  </button>
-                                  <button
-                                    onClick={() => setEditingMailTemplate(null)}
-                                    className="px-3 py-1.5 border text-sm rounded hover:bg-gray-100"
-                                  >
-                                    Annuleren
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <>
-                                <div className="flex justify-between items-start">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <h5 className="font-medium">{template.name}</h5>
-                                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
-                                        {template.type}
-                                      </span>
-                                      {!template.is_active && (
-                                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700">
-                                          Inactief
-                                        </span>
                                       )}
                                     </div>
-                                    <p className="text-sm text-gray-600 mt-1">
-                                      <strong>Onderwerp:</strong> {template.subject}
-                                    </p>
-                                    <div className="mt-2 p-2 bg-gray-50 rounded text-sm text-gray-700 font-mono whitespace-pre-wrap max-h-32 overflow-y-auto">
-                                      {template.body}
-                                    </div>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => {
+                                        const titleEl = document.getElementById(
+                                          `edit-project-title-${row.id}`,
+                                        ) as HTMLInputElement;
+                                        const levels: {
+                                          "1": string;
+                                          "2": string;
+                                          "3": string;
+                                          "4": string;
+                                          "5": string;
+                                        } = {
+                                          "1": "",
+                                          "2": "",
+                                          "3": "",
+                                          "4": "",
+                                          "5": "",
+                                        };
+                                        ([1, 2, 3, 4, 5] as const).forEach(
+                                          (level) => {
+                                            const el = document.getElementById(
+                                              `edit-project-level-${row.id}-${level}`,
+                                            ) as HTMLInputElement;
+                                            levels[
+                                              level.toString() as
+                                                | "1"
+                                                | "2"
+                                                | "3"
+                                                | "4"
+                                                | "5"
+                                            ] = el.value;
+                                          },
+                                        );
+                                        handleUpdateProjectCriterion(row.id, {
+                                          title: titleEl.value,
+                                          level_descriptors: levels,
+                                          learning_objective_ids:
+                                            editProjectLearningObjectiveIds,
+                                        });
+                                      }}
+                                      className="px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                                    >
+                                      Opslaan
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setEditingProjectCriterion(null);
+                                        setEditProjectFilterPhase(undefined);
+                                        setEditProjectLearningObjectiveIds([]);
+                                      }}
+                                      className="px-3 py-1.5 border text-sm rounded hover:bg-gray-100"
+                                    >
+                                      Annuleren
+                                    </button>
                                   </div>
                                 </div>
-                                <div className="flex gap-2 mt-3">
-                                  <button
-                                    onClick={() => setEditingMailTemplate(template.id)}
-                                    className="px-3 py-1.5 bg-gray-100 text-sm rounded hover:bg-gray-200"
-                                  >
-                                    Bewerken
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteMailTemplate(template.id)}
-                                    className="px-3 py-1.5 bg-red-100 text-red-700 text-sm rounded hover:bg-red-200"
-                                  >
-                                    Verwijderen
-                                  </button>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : !isCreatingMailTemplate && (
-                    <div className="text-center py-8 text-gray-500">
-                      <p className="mb-4">Nog geen mail templates aangemaakt{selectedSubjectId ? " voor dit vak" : ""}.</p>
-                      <p className="text-xs">
-                        Klik op &quot;+ Nieuwe Mail-template&quot; om te beginnen.
-                      </p>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
+                              ) : (
+                                <>
+                                  <div className="text-xs font-medium text-slate-700 mb-2">
+                                    Niveaubeschrijvingen (1–5)
+                                  </div>
+                                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                                    {[1, 2, 3, 4, 5].map((level) => (
+                                      <div
+                                        key={level}
+                                        className="flex min-h-[80px] flex-col rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-inner"
+                                      >
+                                        <span className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                                          Niveau {level}
+                                        </span>
+                                        <p className="text-[11px] text-slate-700">
+                                          {row.level_descriptors[
+                                            level.toString() as
+                                              | "1"
+                                              | "2"
+                                              | "3"
+                                              | "4"
+                                              | "5"
+                                          ] || (
+                                            <em className="text-slate-400">
+                                              Niet ingevuld
+                                            </em>
+                                          )}
+                                        </p>
+                                      </div>
+                                    ))}
+                                  </div>
 
-          {activeTab === "objectives" && (
-            <div className="space-y-4">
-              {/* Info banner for admin */}
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <span className="text-amber-500 text-xl">🏛️</span>
-                  <div className="text-sm text-amber-800">
-                    <p className="font-medium mb-1">Centrale Leerdoelen</p>
-                    <p>
-                      Leerdoelen die hier worden aangemaakt zijn <strong>centrale leerdoelen</strong> (gekoppeld aan de geselecteerde sectie).
-                      Deze zijn zichtbaar voor alle docenten maar kunnen alleen door beheerders worden bewerkt.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <p className="text-sm text-gray-600">
-                Beheer leerdoelen en eindtermen die gekoppeld kunnen worden aan
-                criteria
-              </p>
-
-              {loadingObjectives ? (
-                <div className="text-center py-8">
-                  <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
-                  <p className="mt-2 text-sm text-gray-500">Laden...</p>
-                </div>
-              ) : learningObjectives.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Type
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Domein
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Nummer
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Titel
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Fase
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {learningObjectives.map((obj) => (
-                        <tr key={obj.id} className="hover:bg-gray-50 bg-amber-50/30">
-                          <td className="px-6 py-4 text-sm">
-                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800">
-                              🏛️ Centraal
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-sm font-medium">
-                            {obj.domain || "-"}
-                          </td>
-                          <td className="px-6 py-4 text-sm">{obj.order}</td>
-                          <td className="px-6 py-4 text-sm">{obj.title}</td>
-                          <td className="px-6 py-4 text-sm">
-                            {obj.phase ? (
-                              <span
-                                className={`px-2 py-1 rounded text-xs ${
-                                  obj.phase === "onderbouw"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : "bg-purple-100 text-purple-800"
-                                }`}
-                              >
-                                {obj.phase === "onderbouw"
-                                  ? "Onderbouw"
-                                  : "Bovenbouw"}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <p className="mb-4">Nog geen leerdoelen aangemaakt</p>
-                  <p className="text-xs">
-                    Klik op &quot;+ Nieuw Leerdoel&quot; om te beginnen
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === "remarks" && (
-            <div className="space-y-4">
-              {/* Title and description */}
-              <div>
-                <p className="text-sm text-slate-600 mt-1">Alle opmerkingen in één overzicht.</p>
-              </div>
-
-              {/* Filters above the table */}
-              <div className="flex flex-wrap items-center gap-4">
-                {/* Categorie filter */}
-                <div className="flex items-center gap-2 text-xs text-slate-600">
-                  <span>Categorie:</span>
-                  <select
-                    className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs"
-                    value={selectedOmzaCategoryFilter}
-                    onChange={(e) => setSelectedOmzaCategoryFilter(e.target.value as "all" | "O" | "M" | "Z" | "A")}
-                  >
-                    <option value="all">Alle</option>
-                    <option value="O">Organiseren</option>
-                    <option value="M">Meedoen</option>
-                    <option value="Z">Zelfvertrouwen</option>
-                    <option value="A">Autonomie</option>
-                  </select>
-                </div>
-              </div>
-
-              {loadingStandardRemarks ? (
-                <div className="text-center py-8 text-gray-500">
-                  <p>Opmerkingen laden...</p>
-                </div>
-              ) : (
-                <>
-                  {/* Create new standard remark form */}
-                  {isCreatingStandardRemark && (
-                    <div className="bg-white border-2 border-blue-500 rounded-lg p-4 mb-4">
-                      <h4 className="font-semibold mb-3">Nieuwe Opmerking</h4>
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-sm font-medium mb-1">
-                            OMZA Categorie
-                          </label>
-                          <select
-                            value={remarkFormData.category}
-                            onChange={(e) =>
-                              setRemarkFormData({
-                                ...remarkFormData,
-                                category: e.target.value,
-                              })
-                            }
-                            className="w-full px-3 py-2 border rounded"
-                          >
-                            <option value="O">O - Organiseren</option>
-                            <option value="M">M - Meedoen</option>
-                            <option value="Z">Z - Zelfvertrouwen</option>
-                            <option value="A">A - Autonomie</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-1">
-                            Tekst *
-                          </label>
-                          <input
-                            type="text"
-                            value={remarkFormData.text}
-                            onChange={(e) =>
-                              setRemarkFormData({
-                                ...remarkFormData,
-                                text: e.target.value,
-                              })
-                            }
-                            placeholder="bijv. Plant goed en houdt overzicht."
-                            className="w-full px-3 py-2 border rounded"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-1">
-                            Volgorde
-                          </label>
-                          <input
-                            type="number"
-                            value={remarkFormData.order || 0}
-                            onChange={(e) =>
-                              setRemarkFormData({
-                                ...remarkFormData,
-                                order: parseInt(e.target.value, 10) || 0,
-                              })
-                            }
-                            className="w-full px-3 py-2 border rounded"
-                          />
-                        </div>
-                        <div className="flex gap-2 pt-2">
-                          <button
-                            onClick={handleCreateStandardRemark}
-                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                          >
-                            Opslaan
-                          </button>
-                          <button
-                            onClick={() => setIsCreatingStandardRemark(false)}
-                            className="px-4 py-2 border rounded hover:bg-gray-50"
-                          >
-                            Annuleren
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Table of remarks */}
-                  <table className="w-full table-fixed text-sm border-collapse">
-                    <thead>
-                      <tr className="text-left text-xs text-slate-500 border-b">
-                        <th 
-                          className="w-32 py-2 cursor-pointer hover:text-slate-700" 
-                          onClick={() => setRemarkSort({key:"categoryName", dir: remarkSort.key==="categoryName" && remarkSort.dir==='asc'?'desc':'asc'})}
-                        >
-                          Categorie {remarkSort.key === "categoryName" && (remarkSort.dir === "asc" ? "↑" : "↓")}
-                        </th>
-                        <th 
-                          className="w-auto cursor-pointer hover:text-slate-700" 
-                          onClick={() => setRemarkSort({key:"text", dir: remarkSort.key==="text" && remarkSort.dir==='asc'?'desc':'asc'})}
-                        >
-                          Tekst {remarkSort.key === "text" && (remarkSort.dir === "asc" ? "↑" : "↓")}
-                        </th>
-                        <th 
-                          className="w-24 text-center cursor-pointer hover:text-slate-700" 
-                          onClick={() => setRemarkSort({key:"order", dir: remarkSort.key==="order" && remarkSort.dir==='asc'?'desc':'asc'})}
-                        >
-                          Volgorde {remarkSort.key === "order" && (remarkSort.dir === "asc" ? "↑" : "↓")}
-                        </th>
-                      </tr>
-                    </thead>
-
-                    <tbody className="divide-y">
-                      {filteredAndSortedStandardRemarks.map((row) => {
-                        const isOpen = expandedRemark === row.id;
-
-                        return [
-                          <tr
-                            key={row.id}
-                            className="hover:bg-slate-50 cursor-pointer"
-                            onClick={() => toggleRemarkExpand(row.id)}
-                          >
-                            <td className="w-32 py-3 font-bold text-slate-900">{row.categoryName}</td>
-                            <td className="py-3 text-slate-600 truncate max-w-xl" title={row.text}>{row.text}</td>
-                            <td className="w-24 text-slate-500 text-center">{row.order}</td>
-                          </tr>,
-                          isOpen && (
-                            <tr key={`${row.id}-expanded`} className="bg-slate-50">
-                              <td colSpan={3} className="p-4">
-                                {editingStandardRemark === row.id ? (
-                                  <div className="space-y-3">
-                                    <div>
-                                      <label className="block text-sm font-medium mb-1">
-                                        Tekst
-                                      </label>
-                                      <input
-                                        type="text"
-                                        defaultValue={row.text}
-                                        id={`edit-remark-text-${row.id}`}
-                                        className="w-full px-3 py-2 border rounded"
-                                      />
-                                    </div>
-                                    <div>
-                                      <label className="block text-sm font-medium mb-1">
-                                        Volgorde
-                                      </label>
-                                      <input
-                                        type="number"
-                                        defaultValue={row.order}
-                                        id={`edit-remark-order-${row.id}`}
-                                        className="w-full px-3 py-2 border rounded"
-                                      />
-                                    </div>
+                                  <div className="mt-4 flex justify-between text-xs">
+                                    <span className="text-slate-500">
+                                      {row.learningObjectivesCount > 0
+                                        ? `${row.learningObjectivesCount} leerdoel(en) gekoppeld`
+                                        : "Geen leerdoelen gekoppeld"}
+                                    </span>
                                     <div className="flex gap-2">
                                       <button
-                                        onClick={() => {
-                                          const textEl = document.getElementById(
-                                            `edit-remark-text-${row.id}`
-                                          ) as HTMLInputElement;
-                                          const orderEl = document.getElementById(
-                                            `edit-remark-order-${row.id}`
-                                          ) as HTMLInputElement;
-                                          handleUpdateStandardRemark(row.id, {
-                                            text: textEl.value,
-                                            order: parseInt(orderEl.value, 10) || 0,
-                                          });
-                                        }}
-                                        className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-                                      >
-                                        Opslaan
-                                      </button>
-                                      <button
-                                        onClick={() => setEditingStandardRemark(null)}
-                                        className="px-3 py-1.5 border text-sm rounded hover:bg-gray-100"
-                                      >
-                                        Annuleren
-                                      </button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <div className="text-sm text-slate-700 mb-3">
-                                      <span className="font-medium">Volledige tekst:</span> {row.text}
-                                    </div>
-                                    <div className="flex justify-end gap-2">
-                                      <button 
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          setEditingStandardRemark(row.id);
+                                          setEditingProjectCriterion(row.id);
+                                          setEditProjectLearningObjectiveIds(
+                                            row.learning_objective_ids || [],
+                                          );
+                                          setEditProjectFilterPhase(undefined);
                                         }}
                                         className="rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px]"
                                       >
                                         Bewerken
                                       </button>
-                                      <button 
+                                      <button
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleDeleteStandardRemark(row.id);
+                                          handleDeleteProjectCriterion(row.id);
                                         }}
                                         className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-[11px] text-red-700"
                                       >
                                         Verwijderen
                                       </button>
                                     </div>
-                                  </>
-                                )}
-                              </td>
-                            </tr>
-                          )
-                        ];
-                      })}
-                    </tbody>
-                  </table>
+                                  </div>
+                                </>
+                              )}
+                            </td>
+                          </tr>
+                        ),
+                      ];
+                    })}
+                  </tbody>
+                </table>
 
-                  {filteredAndSortedStandardRemarks.length === 0 && !isCreatingStandardRemark && (
+                {filteredAndSortedProjectCriteria.length === 0 &&
+                  !isCreatingProjectCriterion && (
                     <div className="text-center py-8 text-gray-500">
-                      {standardRemarks.length === 0 ? (
+                      {projectCriteria.length === 0 ? (
                         <>
-                          <p className="mb-4">Nog geen opmerkingen aangemaakt voor dit vak.</p>
-                          <p className="text-xs">
-                            Klik op &quot;+ Nieuwe Standaardopmerking&quot; om te beginnen.
+                          <p>Nog geen criteria aangemaakt voor dit vak.</p>
+                          <p className="text-xs mt-2">
+                            Klik op &quot;+ Nieuw Projectbeoordeling
+                            Criterium&quot; om te beginnen.
                           </p>
                         </>
                       ) : (
-                        <p>Geen opmerkingen gevonden voor de geselecteerde categorie.</p>
+                        <p>
+                          Geen criteria gevonden voor de geselecteerde filters.
+                        </p>
                       )}
                     </div>
                   )}
-                </>
-              )}
-            </div>
-          )}
+              </>
+            )}
+          </div>
+        )}
 
-          {activeTab === "tags" && (
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600">
-                Beheer tags voor categorisatie van templates
-              </p>
+        {activeTab === "mail" && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Beheer email templates met variabelen voor verschillende
+              communicatiemomenten. Gebruik {"{schoolYear}"} als variabele voor
+              het schooljaar.
+            </p>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <h4 className="font-semibold text-blue-900 mb-2">
+                Template types:
+              </h4>
+              <ul className="text-sm text-blue-800 space-y-1">
+                <li>
+                  • <strong>opvolgmail</strong> - Opvolgmail voor volgend
+                  schooljaar
+                </li>
+                <li>
+                  • <strong>startproject</strong> - Uitnodiging voor
+                  startproject
+                </li>
+                <li>
+                  • <strong>tussenpresentatie</strong> - Uitnodiging
+                  tussenpresentatie
+                </li>
+                <li>
+                  • <strong>eindpresentatie</strong> - Uitnodiging
+                  eindpresentatie
+                </li>
+                <li>
+                  • <strong>bedankmail</strong> - Bedankmail na samenwerking
+                </li>
+              </ul>
+            </div>
+
+            {loadingMailTemplates ? (
               <div className="text-center py-8 text-gray-500">
-                <p className="mb-4">Template tags worden hier weergegeven</p>
-                <p className="text-xs">API Endpoint: GET /api/v1/templates/tags?subject_id={selectedSubjectId}</p>
+                <p>Templates laden...</p>
+              </div>
+            ) : (
+              <>
+                {/* Create new mail template form */}
+                {isCreatingMailTemplate && (
+                  <div className="bg-white border-2 border-blue-500 rounded-lg p-4 mb-4">
+                    <h4 className="font-semibold mb-3">Nieuwe Mail Template</h4>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          Naam *
+                        </label>
+                        <input
+                          type="text"
+                          value={mailFormData.name || ""}
+                          onChange={(e) =>
+                            setMailFormData({
+                              ...mailFormData,
+                              name: e.target.value,
+                            })
+                          }
+                          placeholder="bijv. Opvolgmail volgend schooljaar"
+                          className="w-full px-3 py-2 border rounded"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          Type
+                        </label>
+                        <select
+                          value={mailFormData.type || "opvolgmail"}
+                          onChange={(e) =>
+                            setMailFormData({
+                              ...mailFormData,
+                              type: e.target.value,
+                            })
+                          }
+                          className="w-full px-3 py-2 border rounded"
+                        >
+                          <option value="opvolgmail">Opvolgmail</option>
+                          <option value="startproject">Start project</option>
+                          <option value="tussenpresentatie">
+                            Tussenpresentatie
+                          </option>
+                          <option value="eindpresentatie">
+                            Eindpresentatie
+                          </option>
+                          <option value="bedankmail">Bedankmail</option>
+                          <option value="herinnering">Herinnering</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          Onderwerp *
+                        </label>
+                        <input
+                          type="text"
+                          value={mailFormData.subject || ""}
+                          onChange={(e) =>
+                            setMailFormData({
+                              ...mailFormData,
+                              subject: e.target.value,
+                            })
+                          }
+                          placeholder="bijv. Samenwerking schooljaar {schoolYear}"
+                          className="w-full px-3 py-2 border rounded"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          Inhoud *
+                        </label>
+                        <textarea
+                          value={mailFormData.body || ""}
+                          onChange={(e) =>
+                            setMailFormData({
+                              ...mailFormData,
+                              body: e.target.value,
+                            })
+                          }
+                          placeholder="Beste opdrachtgever,&#10;&#10;Het schooljaar {schoolYear} staat voor de deur..."
+                          className="w-full px-3 py-2 border rounded font-mono text-sm"
+                          rows={8}
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="is_active"
+                          checked={mailFormData.is_active ?? true}
+                          onChange={(e) =>
+                            setMailFormData({
+                              ...mailFormData,
+                              is_active: e.target.checked,
+                            })
+                          }
+                          className="rounded"
+                        />
+                        <label htmlFor="is_active" className="text-sm">
+                          Actief (zichtbaar in dropdowns)
+                        </label>
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          onClick={handleCreateMailTemplate}
+                          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        >
+                          Opslaan
+                        </button>
+                        <button
+                          onClick={() => setIsCreatingMailTemplate(false)}
+                          className="px-4 py-2 border rounded hover:bg-gray-50"
+                        >
+                          Annuleren
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* List of mail templates */}
+                {mailTemplates.length > 0 ? (
+                  <div className="space-y-3">
+                    {mailTemplates.map((template) => (
+                      <div
+                        key={template.id}
+                        className="border rounded-lg overflow-hidden"
+                      >
+                        <div className="bg-white p-4">
+                          {editingMailTemplate === template.id ? (
+                            <div className="space-y-3">
+                              <div>
+                                <label className="block text-sm font-medium mb-1">
+                                  Naam
+                                </label>
+                                <input
+                                  type="text"
+                                  defaultValue={template.name}
+                                  id={`edit-mail-name-${template.id}`}
+                                  className="w-full px-3 py-2 border rounded"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium mb-1">
+                                  Type
+                                </label>
+                                <select
+                                  defaultValue={template.type}
+                                  id={`edit-mail-type-${template.id}`}
+                                  className="w-full px-3 py-2 border rounded"
+                                >
+                                  <option value="opvolgmail">Opvolgmail</option>
+                                  <option value="startproject">
+                                    Start project
+                                  </option>
+                                  <option value="tussenpresentatie">
+                                    Tussenpresentatie
+                                  </option>
+                                  <option value="eindpresentatie">
+                                    Eindpresentatie
+                                  </option>
+                                  <option value="bedankmail">Bedankmail</option>
+                                  <option value="herinnering">
+                                    Herinnering
+                                  </option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium mb-1">
+                                  Onderwerp
+                                </label>
+                                <input
+                                  type="text"
+                                  defaultValue={template.subject}
+                                  id={`edit-mail-subject-${template.id}`}
+                                  className="w-full px-3 py-2 border rounded"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium mb-1">
+                                  Inhoud
+                                </label>
+                                <textarea
+                                  defaultValue={template.body}
+                                  id={`edit-mail-body-${template.id}`}
+                                  className="w-full px-3 py-2 border rounded font-mono text-sm"
+                                  rows={8}
+                                />
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => {
+                                    const nameEl = document.getElementById(
+                                      `edit-mail-name-${template.id}`,
+                                    ) as HTMLInputElement;
+                                    const typeEl = document.getElementById(
+                                      `edit-mail-type-${template.id}`,
+                                    ) as HTMLSelectElement;
+                                    const subjectEl = document.getElementById(
+                                      `edit-mail-subject-${template.id}`,
+                                    ) as HTMLInputElement;
+                                    const bodyEl = document.getElementById(
+                                      `edit-mail-body-${template.id}`,
+                                    ) as HTMLTextAreaElement;
+                                    handleUpdateMailTemplate(template.id, {
+                                      name: nameEl.value,
+                                      type: typeEl.value,
+                                      subject: subjectEl.value,
+                                      body: bodyEl.value,
+                                    });
+                                  }}
+                                  className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                                >
+                                  Opslaan
+                                </button>
+                                <button
+                                  onClick={() => setEditingMailTemplate(null)}
+                                  className="px-3 py-1.5 border text-sm rounded hover:bg-gray-100"
+                                >
+                                  Annuleren
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <h5 className="font-medium">
+                                      {template.name}
+                                    </h5>
+                                    <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                                      {template.type}
+                                    </span>
+                                    {!template.is_active && (
+                                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700">
+                                        Inactief
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-gray-600 mt-1">
+                                    <strong>Onderwerp:</strong>{" "}
+                                    {template.subject}
+                                  </p>
+                                  <div className="mt-2 p-2 bg-gray-50 rounded text-sm text-gray-700 font-mono whitespace-pre-wrap max-h-32 overflow-y-auto">
+                                    {template.body}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex gap-2 mt-3">
+                                <button
+                                  onClick={() =>
+                                    setEditingMailTemplate(template.id)
+                                  }
+                                  className="px-3 py-1.5 bg-gray-100 text-sm rounded hover:bg-gray-200"
+                                >
+                                  Bewerken
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleDeleteMailTemplate(template.id)
+                                  }
+                                  className="px-3 py-1.5 bg-red-100 text-red-700 text-sm rounded hover:bg-red-200"
+                                >
+                                  Verwijderen
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  !isCreatingMailTemplate && (
+                    <div className="text-center py-8 text-gray-500">
+                      <p className="mb-4">
+                        Nog geen mail templates aangemaakt
+                        {selectedSubjectId ? " voor dit vak" : ""}.
+                      </p>
+                      <p className="text-xs">
+                        Klik op &quot;+ Nieuwe Mail-template&quot; om te
+                        beginnen.
+                      </p>
+                    </div>
+                  )
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {activeTab === "objectives" && (
+          <div className="space-y-4">
+            {/* Info banner for admin */}
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <span className="text-amber-500 text-xl">🏛️</span>
+                <div className="text-sm text-amber-800">
+                  <p className="font-medium mb-1">Centrale Leerdoelen</p>
+                  <p>
+                    Leerdoelen die hier worden aangemaakt zijn{" "}
+                    <strong>centrale leerdoelen</strong> (gekoppeld aan de
+                    geselecteerde sectie). Deze zijn zichtbaar voor alle
+                    docenten maar kunnen alleen door beheerders worden bewerkt.
+                  </p>
+                </div>
               </div>
             </div>
-          )}
+
+            <p className="text-sm text-gray-600">
+              Beheer leerdoelen en eindtermen die gekoppeld kunnen worden aan
+              criteria
+            </p>
+
+            {loadingObjectives ? (
+              <div className="text-center py-8">
+                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
+                <p className="mt-2 text-sm text-gray-500">Laden...</p>
+              </div>
+            ) : learningObjectives.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Type
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Domein
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Nummer
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Titel
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Fase
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {learningObjectives.map((obj) => (
+                      <tr
+                        key={obj.id}
+                        className="hover:bg-gray-50 bg-amber-50/30"
+                      >
+                        <td className="px-6 py-4 text-sm">
+                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                            🏛️ Centraal
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm font-medium">
+                          {obj.domain || "-"}
+                        </td>
+                        <td className="px-6 py-4 text-sm">{obj.order}</td>
+                        <td className="px-6 py-4 text-sm">{obj.title}</td>
+                        <td className="px-6 py-4 text-sm">
+                          {obj.phase ? (
+                            <span
+                              className={`px-2 py-1 rounded text-xs ${
+                                obj.phase === "onderbouw"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-purple-100 text-purple-800"
+                              }`}
+                            >
+                              {obj.phase === "onderbouw"
+                                ? "Onderbouw"
+                                : "Bovenbouw"}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p className="mb-4">Nog geen leerdoelen aangemaakt</p>
+                <p className="text-xs">
+                  Klik op &quot;+ Nieuw Leerdoel&quot; om te beginnen
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "remarks" && (
+          <div className="space-y-4">
+            {/* Title and description */}
+            <div>
+              <p className="text-sm text-slate-600 mt-1">
+                Beheer standaardopmerkingen (quick comments) voor OMZA
+                categorieën
+              </p>
+            </div>
+
+            {/* Filters above the table */}
+            <div className="flex flex-wrap items-center gap-4">
+              {/* Categorie filter */}
+              <div className="flex items-center gap-2 text-xs text-slate-600">
+                <span>Categorie:</span>
+                <select
+                  className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs"
+                  value={selectedOmzaCategoryFilter}
+                  onChange={(e) =>
+                    setSelectedOmzaCategoryFilter(
+                      e.target.value as "all" | "O" | "M" | "Z" | "A",
+                    )
+                  }
+                >
+                  <option value="all">Alle</option>
+                  <option value="O">Organiseren</option>
+                  <option value="M">Meedoen</option>
+                  <option value="Z">Zelfvertrouwen</option>
+                  <option value="A">Autonomie</option>
+                </select>
+              </div>
+            </div>
+
+            {loadingStandardRemarks ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>Opmerkingen laden...</p>
+              </div>
+            ) : (
+              <>
+                {/* Create new standard remark form */}
+                {isCreatingStandardRemark && (
+                  <div className="bg-white border-2 border-blue-500 rounded-lg p-4 mb-4">
+                    <h4 className="font-semibold mb-3">Nieuwe Opmerking</h4>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          OMZA Categorie
+                        </label>
+                        <select
+                          value={remarkFormData.category}
+                          onChange={(e) =>
+                            setRemarkFormData({
+                              ...remarkFormData,
+                              category: e.target.value,
+                            })
+                          }
+                          className="w-full px-3 py-2 border rounded"
+                        >
+                          <option value="O">O - Organiseren</option>
+                          <option value="M">M - Meedoen</option>
+                          <option value="Z">Z - Zelfvertrouwen</option>
+                          <option value="A">A - Autonomie</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          Tekst *
+                        </label>
+                        <input
+                          type="text"
+                          value={remarkFormData.text}
+                          onChange={(e) =>
+                            setRemarkFormData({
+                              ...remarkFormData,
+                              text: e.target.value,
+                            })
+                          }
+                          placeholder="bijv. Plant goed en houdt overzicht."
+                          className="w-full px-3 py-2 border rounded"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          Volgorde
+                        </label>
+                        <input
+                          type="number"
+                          value={remarkFormData.order || 0}
+                          onChange={(e) =>
+                            setRemarkFormData({
+                              ...remarkFormData,
+                              order: parseInt(e.target.value, 10) || 0,
+                            })
+                          }
+                          className="w-full px-3 py-2 border rounded"
+                        />
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          onClick={handleCreateStandardRemark}
+                          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        >
+                          Opslaan
+                        </button>
+                        <button
+                          onClick={() => setIsCreatingStandardRemark(false)}
+                          className="px-4 py-2 border rounded hover:bg-gray-50"
+                        >
+                          Annuleren
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Table of remarks */}
+                <table className="w-full table-fixed text-sm border-collapse">
+                  <thead>
+                    <tr className="text-left text-xs text-slate-500 border-b">
+                      <th
+                        className="w-32 py-2 cursor-pointer hover:text-slate-700"
+                        onClick={() =>
+                          setRemarkSort({
+                            key: "categoryName",
+                            dir:
+                              remarkSort.key === "categoryName" &&
+                              remarkSort.dir === "asc"
+                                ? "desc"
+                                : "asc",
+                          })
+                        }
+                      >
+                        Categorie{" "}
+                        {remarkSort.key === "categoryName" &&
+                          (remarkSort.dir === "asc" ? "↑" : "↓")}
+                      </th>
+                      <th
+                        className="w-auto cursor-pointer hover:text-slate-700"
+                        onClick={() =>
+                          setRemarkSort({
+                            key: "text",
+                            dir:
+                              remarkSort.key === "text" &&
+                              remarkSort.dir === "asc"
+                                ? "desc"
+                                : "asc",
+                          })
+                        }
+                      >
+                        Tekst{" "}
+                        {remarkSort.key === "text" &&
+                          (remarkSort.dir === "asc" ? "↑" : "↓")}
+                      </th>
+                      <th
+                        className="w-24 text-center cursor-pointer hover:text-slate-700"
+                        onClick={() =>
+                          setRemarkSort({
+                            key: "order",
+                            dir:
+                              remarkSort.key === "order" &&
+                              remarkSort.dir === "asc"
+                                ? "desc"
+                                : "asc",
+                          })
+                        }
+                      >
+                        Volgorde{" "}
+                        {remarkSort.key === "order" &&
+                          (remarkSort.dir === "asc" ? "↑" : "↓")}
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y">
+                    {filteredAndSortedStandardRemarks.map((row) => {
+                      const isOpen = expandedRemark === row.id;
+
+                      return [
+                        <tr
+                          key={row.id}
+                          className="hover:bg-slate-50 cursor-pointer"
+                          onClick={() => toggleRemarkExpand(row.id)}
+                        >
+                          <td className="w-32 py-3 font-bold text-slate-900">
+                            {row.categoryName}
+                          </td>
+                          <td
+                            className="py-3 text-slate-600 truncate max-w-xl"
+                            title={row.text}
+                          >
+                            {row.text}
+                          </td>
+                          <td className="w-24 text-slate-500 text-center">
+                            {row.order}
+                          </td>
+                        </tr>,
+                        isOpen && (
+                          <tr
+                            key={`${row.id}-expanded`}
+                            className="bg-slate-50"
+                          >
+                            <td colSpan={3} className="p-4">
+                              {editingStandardRemark === row.id ? (
+                                <div className="space-y-3">
+                                  <div>
+                                    <label className="block text-sm font-medium mb-1">
+                                      Tekst
+                                    </label>
+                                    <input
+                                      type="text"
+                                      defaultValue={row.text}
+                                      id={`edit-remark-text-${row.id}`}
+                                      className="w-full px-3 py-2 border rounded"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm font-medium mb-1">
+                                      Volgorde
+                                    </label>
+                                    <input
+                                      type="number"
+                                      defaultValue={row.order}
+                                      id={`edit-remark-order-${row.id}`}
+                                      className="w-full px-3 py-2 border rounded"
+                                    />
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => {
+                                        const textEl = document.getElementById(
+                                          `edit-remark-text-${row.id}`,
+                                        ) as HTMLInputElement;
+                                        const orderEl = document.getElementById(
+                                          `edit-remark-order-${row.id}`,
+                                        ) as HTMLInputElement;
+                                        handleUpdateStandardRemark(row.id, {
+                                          text: textEl.value,
+                                          order:
+                                            parseInt(orderEl.value, 10) || 0,
+                                        });
+                                      }}
+                                      className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                                    >
+                                      Opslaan
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        setEditingStandardRemark(null)
+                                      }
+                                      className="px-3 py-1.5 border text-sm rounded hover:bg-gray-100"
+                                    >
+                                      Annuleren
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="text-sm text-slate-700 mb-3">
+                                    <span className="font-medium">
+                                      Volledige tekst:
+                                    </span>{" "}
+                                    {row.text}
+                                  </div>
+                                  <div className="flex justify-end gap-2">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingStandardRemark(row.id);
+                                      }}
+                                      className="rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px]"
+                                    >
+                                      Bewerken
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteStandardRemark(row.id);
+                                      }}
+                                      className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-[11px] text-red-700"
+                                    >
+                                      Verwijderen
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </td>
+                          </tr>
+                        ),
+                      ];
+                    })}
+                  </tbody>
+                </table>
+
+                {filteredAndSortedStandardRemarks.length === 0 &&
+                  !isCreatingStandardRemark && (
+                    <div className="text-center py-8 text-gray-500">
+                      {standardRemarks.length === 0 ? (
+                        <>
+                          <p className="mb-4">
+                            Nog geen opmerkingen aangemaakt voor dit vak.
+                          </p>
+                          <p className="text-xs">
+                            Klik op &quot;+ Nieuwe Standaardopmerking&quot; om
+                            te beginnen.
+                          </p>
+                        </>
+                      ) : (
+                        <p>
+                          Geen opmerkingen gevonden voor de geselecteerde
+                          categorie.
+                        </p>
+                      )}
+                    </div>
+                  )}
+              </>
+            )}
+          </div>
+        )}
+
+        {activeTab === "tags" && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Beheer tags voor categorisatie van templates
+            </p>
+            <div className="text-center py-8 text-gray-500">
+              <p className="mb-4">Template tags worden hier weergegeven</p>
+              <p className="text-xs">
+                API Endpoint: GET /api/v1/templates/tags?subject_id=
+                {selectedSubjectId}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -3179,7 +3851,9 @@ export default function TemplatesPage() {
               Beheer sjablonen per sectie/vakgebied.
             </p>
           </div>
-          {(selectedSubjectId || activeTab === "mail" || activeTab === "competencies") && (
+          {(selectedSubjectId ||
+            activeTab === "mail" ||
+            activeTab === "competencies") && (
             <div className="flex gap-2">
               {activeTab === "competencies" ? (
                 <Link
@@ -3189,58 +3863,70 @@ export default function TemplatesPage() {
                   + Nieuwe Competentie
                 </Link>
               ) : (
-              <button
-                onClick={() => {
-                  if (activeTab === "objectives") {
-                    openCreateModal();
-                  } else if (activeTab === "peer") {
-                    setIsCreatingPeerCriterion(true);
-                    setPeerFormData({
-                      omza_category: "organiseren",
-                      title: "",
-                      description: "",
-                      target_level: null,
-                      level_descriptors: { "1": "", "2": "", "3": "", "4": "", "5": "" },
-                      learning_objective_ids: [],
-                    });
-                  } else if (activeTab === "rubrics") {
-                    setIsCreatingProjectCriterion(true);
-                    setProjectFormData({
-                      category: "projectproces",
-                      title: "",
-                      description: "",
-                      target_level: null,
-                      level_descriptors: { "1": "", "2": "", "3": "", "4": "", "5": "" },
-                      learning_objective_ids: [],
-                    });
-                  } else if (activeTab === "mail") {
-                    setIsCreatingMailTemplate(true);
-                    setMailFormData({
-                      name: "",
-                      type: "opvolgmail",
-                      subject: "",
-                      body: "",
-                      is_active: true,
-                    });
-                  } else if (activeTab === "remarks") {
-                    setIsCreatingStandardRemark(true);
-                    setRemarkFormData({
-                      type: "omza",
-                      category: "O",
-                      text: "",
-                      order: 0,
-                    });
-                  } else {
-                    // TODO: Implement create modal/form for other template types
-                    alert(
-                      `Create new ${TABS.find((t) => t.key === activeTab)?.label}`
-                    );
-                  }
-                }}
-                className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
-              >
-                {getNewButtonLabel()}
-              </button>
+                <button
+                  onClick={() => {
+                    if (activeTab === "objectives") {
+                      openCreateModal();
+                    } else if (activeTab === "peer") {
+                      setIsCreatingPeerCriterion(true);
+                      setPeerFormData({
+                        omza_category: "organiseren",
+                        title: "",
+                        description: "",
+                        target_level: null,
+                        level_descriptors: {
+                          "1": "",
+                          "2": "",
+                          "3": "",
+                          "4": "",
+                          "5": "",
+                        },
+                        learning_objective_ids: [],
+                      });
+                    } else if (activeTab === "rubrics") {
+                      setIsCreatingProjectCriterion(true);
+                      setProjectFormData({
+                        category: "projectproces",
+                        title: "",
+                        description: "",
+                        target_level: null,
+                        level_descriptors: {
+                          "1": "",
+                          "2": "",
+                          "3": "",
+                          "4": "",
+                          "5": "",
+                        },
+                        learning_objective_ids: [],
+                      });
+                    } else if (activeTab === "mail") {
+                      setIsCreatingMailTemplate(true);
+                      setMailFormData({
+                        name: "",
+                        type: "opvolgmail",
+                        subject: "",
+                        body: "",
+                        is_active: true,
+                      });
+                    } else if (activeTab === "remarks") {
+                      setIsCreatingStandardRemark(true);
+                      setRemarkFormData({
+                        type: "omza",
+                        category: "O",
+                        text: "",
+                        order: 0,
+                      });
+                    } else {
+                      // TODO: Implement create modal/form for other template types
+                      alert(
+                        `Create new ${TABS.find((t) => t.key === activeTab)?.label}`,
+                      );
+                    }
+                  }}
+                  className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+                >
+                  {getNewButtonLabel()}
+                </button>
               )}
               {activeTab === "objectives" && (
                 <button
@@ -3273,7 +3959,7 @@ export default function TemplatesPage() {
               value={selectedSubjectId || ""}
               onChange={(e) =>
                 handleSubjectChange(
-                  e.target.value ? parseInt(e.target.value) : 0
+                  e.target.value ? parseInt(e.target.value) : 0,
                 )
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
@@ -3323,9 +4009,7 @@ export default function TemplatesPage() {
             <h2 className="text-2xl font-bold mb-4">Nieuw Leerdoel</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Domein
-                </label>
+                <label className="block text-sm font-medium mb-1">Domein</label>
                 <input
                   type="text"
                   value={formData.domain || ""}
@@ -3421,14 +4105,15 @@ export default function TemplatesPage() {
               Importeer Leerdoelen (CSV)
             </h2>
             <p className="text-sm text-gray-600 mb-2">
-              <strong>Let op:</strong> Deze leerdoelen worden toegevoegd aan het geselecteerde
-              subject ({subjects.find((s) => s.id === selectedSubjectId)?.name}).
+              <strong>Let op:</strong> Deze leerdoelen worden toegevoegd aan het
+              geselecteerde subject (
+              {subjects.find((s) => s.id === selectedSubjectId)?.name}).
             </p>
             <p className="text-sm text-gray-600 mb-4">
               Formaat: domein,nummer,titel,beschrijving,fase
               <br />
-              Bijvoorbeeld: D,9,Conceptontwikkeling,Ontwerprichtingen genereren en
-              onderbouwen,onderbouw
+              Bijvoorbeeld: D,9,Conceptontwikkeling,Ontwerprichtingen genereren
+              en onderbouwen,onderbouw
             </p>
             <textarea
               value={importText}
