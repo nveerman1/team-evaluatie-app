@@ -3558,13 +3558,13 @@ export default function TemplatesPage() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
                         Type
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-16">
                         Domein
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-16">
                         Nummer
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -3586,12 +3586,12 @@ export default function TemplatesPage() {
                       >
                         {editingObjective === obj.id ? (
                           <>
-                            <td className="px-6 py-4 text-sm">
+                            <td className="px-6 py-4 text-sm whitespace-nowrap">
                               <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800">
                                 🏛️ Centraal
                               </span>
                             </td>
-                            <td className="px-6 py-4 text-sm">
+                            <td className="px-3 py-4 text-sm">
                               <input
                                 type="text"
                                 value={editObjectiveFormData.domain || ""}
@@ -3602,10 +3602,10 @@ export default function TemplatesPage() {
                                   })
                                 }
                                 placeholder="A, B, C..."
-                                className="w-16 px-2 py-1 border rounded text-sm"
+                                className="w-12 px-2 py-1 border rounded text-sm"
                               />
                             </td>
-                            <td className="px-6 py-4 text-sm">
+                            <td className="px-3 py-4 text-sm">
                               <input
                                 type="number"
                                 value={editObjectiveFormData.order || 0}
@@ -3615,7 +3615,7 @@ export default function TemplatesPage() {
                                     order: parseInt(e.target.value, 10) || 0,
                                   })
                                 }
-                                className="w-16 px-2 py-1 border rounded text-sm"
+                                className="w-12 px-2 py-1 border rounded text-sm"
                               />
                             </td>
                             <td className="px-6 py-4 text-sm">
@@ -3676,15 +3676,15 @@ export default function TemplatesPage() {
                           </>
                         ) : (
                           <>
-                            <td className="px-6 py-4 text-sm">
+                            <td className="px-6 py-4 text-sm whitespace-nowrap">
                               <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800">
                                 🏛️ Centraal
                               </span>
                             </td>
-                            <td className="px-6 py-4 text-sm font-medium">
+                            <td className="px-3 py-4 text-sm font-medium">
                               {obj.domain || "-"}
                             </td>
-                            <td className="px-6 py-4 text-sm">{obj.order}</td>
+                            <td className="px-3 py-4 text-sm">{obj.order}</td>
                             <td className="px-6 py-4 text-sm">{obj.title}</td>
                             <td className="px-6 py-4 text-sm">
                               {obj.phase ? (
