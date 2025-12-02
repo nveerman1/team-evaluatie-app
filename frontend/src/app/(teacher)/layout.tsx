@@ -28,7 +28,6 @@ export default function TeacherLayout({
                 <NavItem href="/teacher" label="Dashboard" />
                 <NavItem href="/teacher/calendar" label="Kalender" />
                 <NavItem href="/teacher/overview" label="Overzicht" />
-                <NavItem href="/teacher/analytics" label="Analytics" />
               </div>
             </div>
 

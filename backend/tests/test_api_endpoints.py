@@ -1,5 +1,5 @@
 """
-Tests for new API endpoints (students, users, analytics)
+Tests for new API endpoints (students, users)
 """
 
 import pytest
@@ -8,11 +8,6 @@ from fastapi import HTTPException
 from app.infra.db.models import User, Course, Group, GroupMember, Evaluation
 from app.api.v1.routers.courses import list_course_students, bulk_update_student_teams
 from app.api.v1.routers.users import search_users
-from app.api.v1.routers.analytics import (
-    get_course_summary,
-    get_learning_objectives_progress,
-    get_evaluation_type_stats,
-)
 
 
 class TestCourseStudentsEndpoints:
@@ -103,98 +98,6 @@ class TestUsersEndpoint:
         assert exc_info.value.status_code == 401
 
 
-class TestAnalyticsEndpoints:
-    """Tests for analytics endpoints"""
-
-    def test_get_course_summary_returns_data(self):
-        """Test that course summary returns analytics data"""
-        db = Mock()
-        user = Mock(spec=User)
-        user.school_id = 1
-
-        # Mock course query to return a valid course
-        mock_course = Mock(id=1, school_id=1)
-        
-        # Setup query chains with proper return values
-        mock_query_course = Mock()
-        mock_query_course.filter.return_value.first.return_value = mock_course
-        
-        # Mock student count
-        mock_query_students = Mock()
-        mock_query_students.join.return_value.join.return_value.filter.return_value.scalar.return_value = 10
-        
-        # Mock evaluation counts
-        mock_query_evals = Mock()
-        mock_query_evals.filter.return_value.scalar.return_value = 5
-        
-        # Make db.query return different mocks in sequence
-        db.query.side_effect = [
-            mock_query_course,    # Course lookup
-            mock_query_students,  # Student count
-            mock_query_evals,     # Total evaluations
-            mock_query_evals,     # Completed evaluations
-        ]
-
-        with patch("app.api.v1.routers.analytics.require_course_access"):
-            result = get_course_summary(course_id=1, db=db, user=user)
-
-            assert hasattr(result, "total_students")
-            assert hasattr(result, "total_evaluations")
-            assert hasattr(result, "average_score")
-            assert result.total_students == 10
-
-    def test_get_learning_objectives_requires_course_access(self):
-        """Test that LO progress requires course access"""
-        db = Mock()
-        user = Mock(spec=User)
-        user.school_id = 1
-
-        # Mock course query with proper level attribute
-        mock_course = Mock(id=1, school_id=1)
-        mock_course.level = None  # Set level to None to avoid Mock iteration issues
-        db.query.return_value.filter.return_value.first.return_value = mock_course
-
-        # Mock LO query - need to set up proper query chain
-        mock_lo_query = Mock()
-        mock_lo_query.filter.return_value = mock_lo_query
-        mock_lo_query.order_by.return_value = mock_lo_query
-        mock_lo_query.all.return_value = []
-        
-        # db.query() is called twice: once for Course, once for LearningObjective
-        db.query.side_effect = [
-            db.query.return_value,  # First call for Course
-            mock_lo_query,           # Second call for LearningObjective
-        ]
-
-        with patch("app.api.v1.routers.analytics.require_course_access"):
-            result = get_learning_objectives_progress(course_id=1, db=db, user=user)
-
-            assert isinstance(result, list)
-
-    def test_get_evaluation_stats_returns_by_type(self):
-        """Test that evaluation stats are grouped by type"""
-        db = Mock()
-        user = Mock(spec=User)
-        user.school_id = 1
-
-        # Mock course query
-        db.query.return_value.filter.return_value.first.return_value = Mock(
-            id=1, school_id=1
-        )
-
-        # Mock stats query
-        db.query.return_value.filter.return_value.group_by.return_value.all.return_value = [
-            ("peer", 5, 4),
-            ("project", 2, 1),
-        ]
-
-        with patch("app.api.v1.routers.analytics.require_course_access"):
-            result = get_evaluation_type_stats(course_id=1, db=db, user=user)
-
-            assert isinstance(result, list)
-            assert len(result) == 2
-
-
 class TestSchemaValidation:
     """Tests for schema validation"""
 
@@ -232,35 +135,3 @@ class TestSchemaValidation:
         bulk_update = BulkStudentTeamUpdate(**update_data)
         assert len(bulk_update.updates) == 2
         assert bulk_update.updates[0].student_id == 1
-
-    def test_analytics_schemas(self):
-        """Test analytics schema validation"""
-        from app.api.v1.schemas.analytics import (
-            CourseSummaryOut,
-            LearningObjectiveProgressOut,
-            EvaluationTypeStatsOut,
-        )
-
-        summary = CourseSummaryOut(
-            total_students=10,
-            total_evaluations=5,
-            completed_evaluations=3,
-            average_score=7.5,
-            participation_rate=80.0,
-        )
-        assert summary.total_students == 10
-
-        lo_progress = LearningObjectiveProgressOut(
-            id=1,
-            code="A1.2",
-            description="Test LO",
-            coverage=75.0,
-            average_score=7.5,
-            student_count=30,
-        )
-        assert lo_progress.code == "A1.2"
-
-        eval_stats = EvaluationTypeStatsOut(
-            type="peer", count=5, avg_score=7.5, completion_rate=80.0
-        )
-        assert eval_stats.type == "peer"
