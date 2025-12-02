@@ -27,6 +27,10 @@ class PeerEvaluationCriterionTemplateBase(BaseModel):
         default_factory=dict,
         description="5-level descriptors: {'1': '...', '2': '...'}",
     )
+    learning_objective_ids: List[int] = Field(
+        default_factory=list,
+        description="List of learning objective IDs to link",
+    )
 
 
 class PeerEvaluationCriterionTemplateCreate(PeerEvaluationCriterionTemplateBase):
@@ -43,6 +47,7 @@ class PeerEvaluationCriterionTemplateUpdate(BaseModel):
     description: Optional[str] = None
     target_level: Optional[str] = None
     level_descriptors: Optional[Dict[str, str]] = None
+    learning_objective_ids: Optional[List[int]] = None
 
 
 class PeerEvaluationCriterionTemplateOut(PeerEvaluationCriterionTemplateBase):
