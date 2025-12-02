@@ -1630,6 +1630,11 @@ class PeerEvaluationCriterionTemplate(Base):
         JSON, default=dict
     )  # {"1": "description", "2": "description", ...}
 
+    # Learning objectives - stored as JSON array of IDs
+    learning_objective_ids: Mapped[list] = mapped_column(
+        JSON, default=list
+    )
+
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
         default=datetime.utcnow, nullable=False

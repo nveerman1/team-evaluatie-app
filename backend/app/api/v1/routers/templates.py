@@ -139,6 +139,7 @@ def create_peer_criterion_template(
         description=payload.description,
         target_level=payload.target_level,
         level_descriptors=payload.level_descriptors,
+        learning_objective_ids=payload.learning_objective_ids or [],
     )
 
     db.add(template)
