@@ -198,7 +198,9 @@ export default function TemplatesPage() {
   const [loadingStandardRemarks, setLoadingStandardRemarks] = useState(false);
   const [isCreatingStandardRemark, setIsCreatingStandardRemark] = useState(false);
   const [editingStandardRemark, setEditingStandardRemark] = useState<number | null>(null);
+  const [expandedRemark, setExpandedRemark] = useState<number | null>(null);
   const [selectedOmzaCategoryFilter, setSelectedOmzaCategoryFilter] = useState<"all" | "O" | "M" | "Z" | "A">("all");
+  const [remarkSort, setRemarkSort] = useState<{ key: string | null; dir: "asc" | "desc" }>({ key: null, dir: "asc" });
   const [remarkFormData, setRemarkFormData] = useState<Partial<StandardRemarkCreateDto>>({
     type: "omza",
     category: "O",
@@ -839,13 +841,10 @@ export default function TemplatesPage() {
     }
   };
 
-  // Filter standard remarks by OMZA category
-  const filteredStandardRemarks = useMemo(() => {
-    if (selectedOmzaCategoryFilter === "all") {
-      return standardRemarks;
-    }
-    return standardRemarks.filter(r => r.category === selectedOmzaCategoryFilter);
-  }, [standardRemarks, selectedOmzaCategoryFilter]);
+  const toggleRemarkExpand = (id: number) => {
+    setExpandedRemark(expandedRemark === id ? null : id);
+    setEditingStandardRemark(null);
+  };
 
   // OMZA category labels
   const OMZA_CATEGORY_LABELS: Record<string, string> = {
@@ -854,6 +853,35 @@ export default function TemplatesPage() {
     Z: "Zelfvertrouwen",
     A: "Autonomie",
   };
+
+  // Filter and sort standard remarks by OMZA category
+  const filteredAndSortedStandardRemarks = useMemo(() => {
+    // First filter by category
+    let filtered = standardRemarks;
+    if (selectedOmzaCategoryFilter !== "all") {
+      filtered = filtered.filter(r => r.category === selectedOmzaCategoryFilter);
+    }
+    // Map to include categoryName for display and sorting
+    const mapped = filtered.map(r => ({
+      ...r,
+      categoryName: OMZA_CATEGORY_LABELS[r.category] || r.category,
+    }));
+    // Sort if sort key is set
+    if (remarkSort.key) {
+      const dir = remarkSort.dir === "asc" ? 1 : -1;
+      mapped.sort((a, b) => {
+        const aVal = a[remarkSort.key as keyof typeof a];
+        const bVal = b[remarkSort.key as keyof typeof b];
+        if (aVal == null && bVal == null) return 0;
+        if (aVal == null) return 1;
+        if (bVal == null) return -1;
+        if (aVal < bVal) return -1 * dir;
+        if (aVal > bVal) return 1 * dir;
+        return 0;
+      });
+    }
+    return mapped;
+  }, [standardRemarks, selectedOmzaCategoryFilter, remarkSort]);
 
   const updateURL = (subjectId: number | null, tab: TabType) => {
     const params = new URLSearchParams();
@@ -2850,49 +2878,28 @@ export default function TemplatesPage() {
 
           {activeTab === "remarks" && (
             <div className="space-y-4">
-              <p className="text-sm text-gray-600">
-                Beheer standaardopmerkingen (quick comments) voor OMZA categorieën
-              </p>
-
-              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-4">
-                <h4 className="font-semibold text-indigo-900 mb-2">OMZA Categorieën:</h4>
-                <ul className="text-sm text-indigo-800 space-y-1">
-                  <li>• <strong>O - Organiseren</strong> - Planning, tijdmanagement, structuur</li>
-                  <li>• <strong>M - Meedoen</strong> - Participatie, samenwerking, bijdrage</li>
-                  <li>• <strong>Z - Zelfvertrouwen</strong> - Initiatief, verantwoordelijkheid</li>
-                  <li>• <strong>A - Autonomie</strong> - Zelfstandigheid, reflectie</li>
-                </ul>
-                <p className="text-xs text-indigo-700 mt-2">
-                  Deze opmerkingen zijn beschikbaar als &quot;quick comments&quot; op de OMZA pagina van evaluaties.
-                </p>
+              {/* Title and description */}
+              <div>
+                <p className="text-sm text-slate-600 mt-1">Alle opmerkingen in één overzicht.</p>
               </div>
 
-              {/* Filter pills for OMZA categories */}
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium text-gray-700">Filter categorie:</span>
-                <button
-                  onClick={() => setSelectedOmzaCategoryFilter("all")}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                    selectedOmzaCategoryFilter === "all"
-                      ? "bg-sky-100 text-sky-700 border-sky-300"
-                      : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
-                  }`}
-                >
-                  Alle ({standardRemarks.length})
-                </button>
-                {(["O", "M", "Z", "A"] as const).map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedOmzaCategoryFilter(cat)}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                      selectedOmzaCategoryFilter === cat
-                        ? "bg-indigo-100 text-indigo-700 border-indigo-300"
-                        : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
-                    }`}
+              {/* Filters above the table */}
+              <div className="flex flex-wrap items-center gap-4">
+                {/* Categorie filter */}
+                <div className="flex items-center gap-2 text-xs text-slate-600">
+                  <span>Categorie:</span>
+                  <select
+                    className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs"
+                    value={selectedOmzaCategoryFilter}
+                    onChange={(e) => setSelectedOmzaCategoryFilter(e.target.value as "all" | "O" | "M" | "Z" | "A")}
                   >
-                    {OMZA_CATEGORY_LABELS[cat]} ({standardRemarks.filter(r => r.category === cat).length})
-                  </button>
-                ))}
+                    <option value="all">Alle</option>
+                    <option value="O">Organiseren</option>
+                    <option value="M">Meedoen</option>
+                    <option value="Z">Zelfvertrouwen</option>
+                    <option value="A">Autonomie</option>
+                  </select>
+                </div>
               </div>
 
               {loadingStandardRemarks ? (
@@ -2903,7 +2910,7 @@ export default function TemplatesPage() {
                 <>
                   {/* Create new standard remark form */}
                   {isCreatingStandardRemark && (
-                    <div className="bg-white border-2 border-indigo-500 rounded-lg p-4 mb-4">
+                    <div className="bg-white border-2 border-blue-500 rounded-lg p-4 mb-4">
                       <h4 className="font-semibold mb-3">Nieuwe Opmerking</h4>
                       <div className="space-y-3">
                         <div>
@@ -2962,7 +2969,7 @@ export default function TemplatesPage() {
                         <div className="flex gap-2 pt-2">
                           <button
                             onClick={handleCreateStandardRemark}
-                            className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                           >
                             Opslaan
                           </button>
@@ -2977,27 +2984,49 @@ export default function TemplatesPage() {
                     </div>
                   )}
 
-                  {/* List of standard remarks by category */}
-                  {(["O", "M", "Z", "A"] as const).map((category) => {
-                    const categoryRemarks = filteredStandardRemarks.filter(
-                      (r) => r.category === category
-                    );
-                    // Skip categories with no remarks
-                    if (categoryRemarks.length === 0) return null;
+                  {/* Table of remarks */}
+                  <table className="w-full table-fixed text-sm border-collapse">
+                    <thead>
+                      <tr className="text-left text-xs text-slate-500 border-b">
+                        <th 
+                          className="w-32 py-2 cursor-pointer hover:text-slate-700" 
+                          onClick={() => setRemarkSort({key:"categoryName", dir: remarkSort.key==="categoryName" && remarkSort.dir==='asc'?'desc':'asc'})}
+                        >
+                          Categorie {remarkSort.key === "categoryName" && (remarkSort.dir === "asc" ? "↑" : "↓")}
+                        </th>
+                        <th 
+                          className="w-auto cursor-pointer hover:text-slate-700" 
+                          onClick={() => setRemarkSort({key:"text", dir: remarkSort.key==="text" && remarkSort.dir==='asc'?'desc':'asc'})}
+                        >
+                          Tekst {remarkSort.key === "text" && (remarkSort.dir === "asc" ? "↑" : "↓")}
+                        </th>
+                        <th 
+                          className="w-24 text-center cursor-pointer hover:text-slate-700" 
+                          onClick={() => setRemarkSort({key:"order", dir: remarkSort.key==="order" && remarkSort.dir==='asc'?'desc':'asc'})}
+                        >
+                          Volgorde {remarkSort.key === "order" && (remarkSort.dir === "asc" ? "↑" : "↓")}
+                        </th>
+                      </tr>
+                    </thead>
 
-                    return (
-                      <div key={category} className="mb-6">
-                        <h4 className="font-semibold text-lg mb-2">
-                          {OMZA_CATEGORY_LABELS[category]} ({category})
-                        </h4>
-                        <div className="space-y-2">
-                          {categoryRemarks.map((remark) => (
-                            <div
-                              key={remark.id}
-                              className="border rounded-lg overflow-hidden bg-white"
-                            >
-                              <div className="p-4">
-                                {editingStandardRemark === remark.id ? (
+                    <tbody className="divide-y">
+                      {filteredAndSortedStandardRemarks.map((row) => {
+                        const isOpen = expandedRemark === row.id;
+
+                        return [
+                          <tr
+                            key={row.id}
+                            className="hover:bg-slate-50 cursor-pointer"
+                            onClick={() => toggleRemarkExpand(row.id)}
+                          >
+                            <td className="w-32 py-3 font-bold text-slate-900">{row.categoryName}</td>
+                            <td className="py-3 text-slate-600 truncate max-w-xl" title={row.text}>{row.text}</td>
+                            <td className="w-24 text-slate-500 text-center">{row.order}</td>
+                          </tr>,
+                          isOpen && (
+                            <tr key={`${row.id}-expanded`} className="bg-slate-50">
+                              <td colSpan={3} className="p-4">
+                                {editingStandardRemark === row.id ? (
                                   <div className="space-y-3">
                                     <div>
                                       <label className="block text-sm font-medium mb-1">
@@ -3005,8 +3034,8 @@ export default function TemplatesPage() {
                                       </label>
                                       <input
                                         type="text"
-                                        defaultValue={remark.text}
-                                        id={`edit-remark-text-${remark.id}`}
+                                        defaultValue={row.text}
+                                        id={`edit-remark-text-${row.id}`}
                                         className="w-full px-3 py-2 border rounded"
                                       />
                                     </div>
@@ -3016,8 +3045,8 @@ export default function TemplatesPage() {
                                       </label>
                                       <input
                                         type="number"
-                                        defaultValue={remark.order}
-                                        id={`edit-remark-order-${remark.id}`}
+                                        defaultValue={row.order}
+                                        id={`edit-remark-order-${row.id}`}
                                         className="w-full px-3 py-2 border rounded"
                                       />
                                     </div>
@@ -3025,17 +3054,17 @@ export default function TemplatesPage() {
                                       <button
                                         onClick={() => {
                                           const textEl = document.getElementById(
-                                            `edit-remark-text-${remark.id}`
+                                            `edit-remark-text-${row.id}`
                                           ) as HTMLInputElement;
                                           const orderEl = document.getElementById(
-                                            `edit-remark-order-${remark.id}`
+                                            `edit-remark-order-${row.id}`
                                           ) as HTMLInputElement;
-                                          handleUpdateStandardRemark(remark.id, {
+                                          handleUpdateStandardRemark(row.id, {
                                             text: textEl.value,
                                             order: parseInt(orderEl.value, 10) || 0,
                                           });
                                         }}
-                                        className="px-3 py-1.5 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700"
+                                        className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
                                       >
                                         Opslaan
                                       </button>
@@ -3049,39 +3078,40 @@ export default function TemplatesPage() {
                                   </div>
                                 ) : (
                                   <>
-                                    <div className="flex justify-between items-start">
-                                      <div className="flex-1">
-                                        <p className="text-gray-800">{remark.text}</p>
-                                        <p className="text-xs text-gray-500 mt-1">
-                                          Volgorde: {remark.order}
-                                        </p>
-                                      </div>
+                                    <div className="text-sm text-slate-700 mb-3">
+                                      <span className="font-medium">Volledige tekst:</span> {row.text}
                                     </div>
-                                    <div className="flex gap-2 mt-3">
-                                      <button
-                                        onClick={() => setEditingStandardRemark(remark.id)}
-                                        className="px-3 py-1.5 bg-gray-100 text-sm rounded hover:bg-gray-200"
+                                    <div className="flex justify-end gap-2">
+                                      <button 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEditingStandardRemark(row.id);
+                                        }}
+                                        className="rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px]"
                                       >
                                         Bewerken
                                       </button>
-                                      <button
-                                        onClick={() => handleDeleteStandardRemark(remark.id)}
-                                        className="px-3 py-1.5 bg-red-100 text-red-700 text-sm rounded hover:bg-red-200"
+                                      <button 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteStandardRemark(row.id);
+                                        }}
+                                        className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-[11px] text-red-700"
                                       >
                                         Verwijderen
                                       </button>
                                     </div>
                                   </>
                                 )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
+                              </td>
+                            </tr>
+                          )
+                        ];
+                      })}
+                    </tbody>
+                  </table>
 
-                  {filteredStandardRemarks.length === 0 && !isCreatingStandardRemark && (
+                  {filteredAndSortedStandardRemarks.length === 0 && !isCreatingStandardRemark && (
                     <div className="text-center py-8 text-gray-500">
                       {standardRemarks.length === 0 ? (
                         <>
