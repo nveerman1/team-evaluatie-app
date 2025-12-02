@@ -241,6 +241,12 @@ export default function TemplatesPage() {
   const [editingMailTemplate, setEditingMailTemplate] = useState<number | null>(
     null,
   );
+  const [isMailEditModalOpen, setIsMailEditModalOpen] = useState(false);
+  const [selectedMailTypeFilter, setSelectedMailTypeFilter] = useState<string>("all");
+  const [mailSort, setMailSort] = useState<{
+    key: string | null;
+    dir: "asc" | "desc";
+  }>({ key: null, dir: "asc" });
   const [mailFormData, setMailFormData] = useState<
     Partial<MailTemplateCreateDto>
   >({
@@ -918,7 +924,7 @@ export default function TemplatesPage() {
     }
   };
 
-  const handleUpdateMailTemplate = async (
+  const _handleUpdateMailTemplate = async (
     id: number,
     data: Partial<MailTemplateCreateDto>,
   ) => {
@@ -1064,6 +1070,91 @@ export default function TemplatesPage() {
     }
     return mapped;
   }, [standardRemarks, selectedOmzaCategoryFilter, remarkSort]);
+
+  // Mail template type labels for display
+  const MAIL_TYPE_LABELS: Record<string, string> = {
+    opvolgmail: "Opvolgmail",
+    startproject: "Start project",
+    tussenpresentatie: "Tussenpresentatie",
+    eindpresentatie: "Eindpresentatie",
+    bedankmail: "Bedankmail",
+    herinnering: "Herinnering",
+  };
+
+  // Filter and sort mail templates for the table view
+  const filteredAndSortedMailTemplates = useMemo(() => {
+    // First filter by type
+    let filtered = mailTemplates;
+    if (selectedMailTypeFilter !== "all") {
+      filtered = filtered.filter((t) => t.type === selectedMailTypeFilter);
+    }
+    // Map to include typeName for display and sorting
+    const mapped = filtered.map((t) => ({
+      ...t,
+      typeName: MAIL_TYPE_LABELS[t.type] || t.type,
+    }));
+    // Sort if sort key is set
+    if (mailSort.key) {
+      const dir = mailSort.dir === "asc" ? 1 : -1;
+      mapped.sort((a, b) => {
+        const aVal = a[mailSort.key as keyof typeof a];
+        const bVal = b[mailSort.key as keyof typeof b];
+        if (aVal == null && bVal == null) return 0;
+        if (aVal == null) return 1;
+        if (bVal == null) return -1;
+        if (aVal < bVal) return -1 * dir;
+        if (aVal > bVal) return 1 * dir;
+        return 0;
+      });
+    }
+    return mapped;
+  }, [mailTemplates, selectedMailTypeFilter, mailSort]);
+
+  // Open mail edit modal
+  const openMailEditModal = (template: MailTemplateDto) => {
+    setEditingMailTemplate(template.id);
+    setMailFormData({
+      name: template.name,
+      type: template.type,
+      subject: template.subject,
+      body: template.body,
+      is_active: template.is_active,
+    });
+    setIsMailEditModalOpen(true);
+  };
+
+  // Handle mail template update from modal
+  const handleMailTemplateUpdateFromModal = async () => {
+    if (!editingMailTemplate) return;
+    
+    if (!mailFormData.name || !mailFormData.subject || !mailFormData.body || !mailFormData.type) {
+      alert("Naam, type, onderwerp en inhoud zijn verplicht");
+      return;
+    }
+
+    try {
+      await updateMailTemplate(editingMailTemplate, {
+        name: mailFormData.name,
+        type: mailFormData.type,
+        subject: mailFormData.subject,
+        body: mailFormData.body,
+        is_active: mailFormData.is_active,
+      });
+      setIsMailEditModalOpen(false);
+      setEditingMailTemplate(null);
+      setMailFormData({
+        name: "",
+        type: "opvolgmail",
+        subject: "",
+        body: "",
+        is_active: true,
+      });
+      fetchMailTemplates();
+    } catch (err) {
+      console.error("Error updating mail template:", err);
+      alert("Er is een fout opgetreden bij het bijwerken.");
+    }
+  };
 
   const updateURL = (subjectId: number | null, tab: TabType) => {
     const params = new URLSearchParams();
@@ -1299,31 +1390,25 @@ export default function TemplatesPage() {
                 vak-specifieke templates.
               </p>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                <h4 className="font-semibold text-blue-900 mb-2">
-                  Template types:
-                </h4>
-                <ul className="text-sm text-blue-800 space-y-1">
-                  <li>
-                    • <strong>opvolgmail</strong> - Opvolgmail voor volgend
-                    schooljaar
-                  </li>
-                  <li>
-                    • <strong>startproject</strong> - Uitnodiging voor
-                    startproject
-                  </li>
-                  <li>
-                    • <strong>tussenpresentatie</strong> - Uitnodiging
-                    tussenpresentatie
-                  </li>
-                  <li>
-                    • <strong>eindpresentatie</strong> - Uitnodiging
-                    eindpresentatie
-                  </li>
-                  <li>
-                    • <strong>bedankmail</strong> - Bedankmail na samenwerking
-                  </li>
-                </ul>
+              {/* Filters above the table */}
+              <div className="flex flex-wrap items-center gap-4">
+                {/* Type filter */}
+                <div className="flex items-center gap-2 text-xs text-slate-600">
+                  <span>Type:</span>
+                  <select
+                    className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs"
+                    value={selectedMailTypeFilter}
+                    onChange={(e) => setSelectedMailTypeFilter(e.target.value)}
+                  >
+                    <option value="all">Alle</option>
+                    <option value="opvolgmail">Opvolgmail</option>
+                    <option value="startproject">Start project</option>
+                    <option value="tussenpresentatie">Tussenpresentatie</option>
+                    <option value="eindpresentatie">Eindpresentatie</option>
+                    <option value="bedankmail">Bedankmail</option>
+                    <option value="herinnering">Herinnering</option>
+                  </select>
+                </div>
               </div>
 
               {loadingMailTemplates ? (
@@ -1451,176 +1536,130 @@ export default function TemplatesPage() {
                     </div>
                   )}
 
-                  {/* List of mail templates */}
-                  {mailTemplates.length > 0 ? (
-                    <div className="space-y-3">
-                      {mailTemplates.map((template) => (
-                        <div
-                          key={template.id}
-                          className="border rounded-lg overflow-hidden"
-                        >
-                          <div className="bg-white p-4">
-                            {editingMailTemplate === template.id ? (
-                              <div className="space-y-3">
-                                <div>
-                                  <label className="block text-sm font-medium mb-1">
-                                    Naam
-                                  </label>
-                                  <input
-                                    type="text"
-                                    defaultValue={template.name}
-                                    id={`edit-mail-name-global-${template.id}`}
-                                    className="w-full px-3 py-2 border rounded"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-sm font-medium mb-1">
-                                    Type
-                                  </label>
-                                  <select
-                                    defaultValue={template.type}
-                                    id={`edit-mail-type-global-${template.id}`}
-                                    className="w-full px-3 py-2 border rounded"
-                                  >
-                                    <option value="opvolgmail">
-                                      Opvolgmail
-                                    </option>
-                                    <option value="startproject">
-                                      Start project
-                                    </option>
-                                    <option value="tussenpresentatie">
-                                      Tussenpresentatie
-                                    </option>
-                                    <option value="eindpresentatie">
-                                      Eindpresentatie
-                                    </option>
-                                    <option value="bedankmail">
-                                      Bedankmail
-                                    </option>
-                                    <option value="herinnering">
-                                      Herinnering
-                                    </option>
-                                  </select>
-                                </div>
-                                <div>
-                                  <label className="block text-sm font-medium mb-1">
-                                    Onderwerp
-                                  </label>
-                                  <input
-                                    type="text"
-                                    defaultValue={template.subject}
-                                    id={`edit-mail-subject-global-${template.id}`}
-                                    className="w-full px-3 py-2 border rounded"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-sm font-medium mb-1">
-                                    Inhoud
-                                  </label>
-                                  <textarea
-                                    defaultValue={template.body}
-                                    id={`edit-mail-body-global-${template.id}`}
-                                    className="w-full px-3 py-2 border rounded font-mono text-sm"
-                                    rows={8}
-                                  />
-                                </div>
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => {
-                                      const nameEl = document.getElementById(
-                                        `edit-mail-name-global-${template.id}`,
-                                      ) as HTMLInputElement;
-                                      const typeEl = document.getElementById(
-                                        `edit-mail-type-global-${template.id}`,
-                                      ) as HTMLSelectElement;
-                                      const subjectEl = document.getElementById(
-                                        `edit-mail-subject-global-${template.id}`,
-                                      ) as HTMLInputElement;
-                                      const bodyEl = document.getElementById(
-                                        `edit-mail-body-global-${template.id}`,
-                                      ) as HTMLTextAreaElement;
-                                      handleUpdateMailTemplate(template.id, {
-                                        name: nameEl.value,
-                                        type: typeEl.value,
-                                        subject: subjectEl.value,
-                                        body: bodyEl.value,
-                                      });
-                                    }}
-                                    className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-                                  >
-                                    Opslaan
-                                  </button>
-                                  <button
-                                    onClick={() => setEditingMailTemplate(null)}
-                                    className="px-3 py-1.5 border text-sm rounded hover:bg-gray-100"
-                                  >
-                                    Annuleren
-                                  </button>
-                                </div>
+                  {/* Table of mail templates */}
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
+                            onClick={() =>
+                              setMailSort({
+                                key: "typeName",
+                                dir:
+                                  mailSort.key === "typeName" &&
+                                  mailSort.dir === "asc"
+                                    ? "desc"
+                                    : "asc",
+                              })
+                            }
+                          >
+                            Type{" "}
+                            {mailSort.key === "typeName" &&
+                              (mailSort.dir === "asc" ? "↑" : "↓")}
+                          </th>
+                          <th
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700 w-64"
+                            onClick={() =>
+                              setMailSort({
+                                key: "name",
+                                dir:
+                                  mailSort.key === "name" && mailSort.dir === "asc"
+                                    ? "desc"
+                                    : "asc",
+                              })
+                            }
+                          >
+                            Naam{" "}
+                            {mailSort.key === "name" &&
+                              (mailSort.dir === "asc" ? "↑" : "↓")}
+                          </th>
+                          <th
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
+                            onClick={() =>
+                              setMailSort({
+                                key: "subject",
+                                dir:
+                                  mailSort.key === "subject" &&
+                                  mailSort.dir === "asc"
+                                    ? "desc"
+                                    : "asc",
+                              })
+                            }
+                          >
+                            Onderwerp{" "}
+                            {mailSort.key === "subject" &&
+                              (mailSort.dir === "asc" ? "↑" : "↓")}
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            Acties
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {filteredAndSortedMailTemplates.map((row) => (
+                          <tr
+                            key={row.id}
+                            className="hover:bg-gray-50"
+                          >
+                            <td className="px-6 py-4 text-sm">
+                              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                {row.typeName}
+                              </span>
+                              {!row.is_active && (
+                                <span className="ml-1 inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                  Inactief
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 text-sm font-bold w-64">
+                              {row.name}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-600">
+                              {row.subject}
+                            </td>
+                            <td className="px-6 py-4 text-sm">
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => openMailEditModal(row)}
+                                  className="text-blue-600 hover:text-blue-800"
+                                >
+                                  Bewerken
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteMailTemplate(row.id)}
+                                  className="text-red-600 hover:text-red-800"
+                                >
+                                  Verwijderen
+                                </button>
                               </div>
-                            ) : (
-                              <>
-                                <div className="flex justify-between items-start">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <h5 className="font-medium">
-                                        {template.name}
-                                      </h5>
-                                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
-                                        {template.type}
-                                      </span>
-                                      {!template.is_active && (
-                                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700">
-                                          Inactief
-                                        </span>
-                                      )}
-                                    </div>
-                                    <p className="text-sm text-gray-600 mt-1">
-                                      <strong>Onderwerp:</strong>{" "}
-                                      {template.subject}
-                                    </p>
-                                    <div className="mt-2 p-2 bg-gray-50 rounded text-sm text-gray-700 font-mono whitespace-pre-wrap max-h-32 overflow-y-auto">
-                                      {template.body}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex gap-2 mt-3">
-                                  <button
-                                    onClick={() =>
-                                      setEditingMailTemplate(template.id)
-                                    }
-                                    className="px-3 py-1.5 bg-gray-100 text-sm rounded hover:bg-gray-200"
-                                  >
-                                    Bewerken
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      handleDeleteMailTemplate(template.id)
-                                    }
-                                    className="px-3 py-1.5 bg-red-100 text-red-700 text-sm rounded hover:bg-red-200"
-                                  >
-                                    Verwijderen
-                                  </button>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {filteredAndSortedMailTemplates.length === 0 &&
                     !isCreatingMailTemplate && (
                       <div className="text-center py-8 text-gray-500">
-                        <p className="mb-4">
-                          Nog geen school-brede mail templates aangemaakt.
-                        </p>
-                        <p className="text-xs">
-                          Klik op &quot;+ Nieuwe Mail-template&quot; om te
-                          beginnen.
-                        </p>
+                        {mailTemplates.length === 0 ? (
+                          <>
+                            <p className="mb-4">
+                              Nog geen school-brede mail templates aangemaakt.
+                            </p>
+                            <p className="text-xs">
+                              Klik op &quot;+ Nieuwe Mail-template&quot; om te
+                              beginnen.
+                            </p>
+                          </>
+                        ) : (
+                          <p>
+                            Geen templates gevonden voor het geselecteerde type.
+                          </p>
+                        )}
                       </div>
-                    )
-                  )}
+                    )}
                 </>
               )}
             </div>
@@ -3149,37 +3188,32 @@ export default function TemplatesPage() {
 
         {activeTab === "mail" && (
           <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Beheer email templates met variabelen voor verschillende
-              communicatiemomenten. Gebruik {"{schoolYear}"} als variabele voor
-              het schooljaar.
-            </p>
+            {/* Title and description */}
+            <div>
+              <p className="text-sm text-slate-600 mt-1">
+                Beheer email templates met variabelen voor verschillende communicatiemomenten.
+              </p>
+            </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-              <h4 className="font-semibold text-blue-900 mb-2">
-                Template types:
-              </h4>
-              <ul className="text-sm text-blue-800 space-y-1">
-                <li>
-                  • <strong>opvolgmail</strong> - Opvolgmail voor volgend
-                  schooljaar
-                </li>
-                <li>
-                  • <strong>startproject</strong> - Uitnodiging voor
-                  startproject
-                </li>
-                <li>
-                  • <strong>tussenpresentatie</strong> - Uitnodiging
-                  tussenpresentatie
-                </li>
-                <li>
-                  • <strong>eindpresentatie</strong> - Uitnodiging
-                  eindpresentatie
-                </li>
-                <li>
-                  • <strong>bedankmail</strong> - Bedankmail na samenwerking
-                </li>
-              </ul>
+            {/* Filters above the table */}
+            <div className="flex flex-wrap items-center gap-4">
+              {/* Type filter */}
+              <div className="flex items-center gap-2 text-xs text-slate-600">
+                <span>Type:</span>
+                <select
+                  className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs"
+                  value={selectedMailTypeFilter}
+                  onChange={(e) => setSelectedMailTypeFilter(e.target.value)}
+                >
+                  <option value="all">Alle</option>
+                  <option value="opvolgmail">Opvolgmail</option>
+                  <option value="startproject">Start project</option>
+                  <option value="tussenpresentatie">Tussenpresentatie</option>
+                  <option value="eindpresentatie">Eindpresentatie</option>
+                  <option value="bedankmail">Bedankmail</option>
+                  <option value="herinnering">Herinnering</option>
+                </select>
+              </div>
             </div>
 
             {loadingMailTemplates ? (
@@ -3305,173 +3339,131 @@ export default function TemplatesPage() {
                   </div>
                 )}
 
-                {/* List of mail templates */}
-                {mailTemplates.length > 0 ? (
-                  <div className="space-y-3">
-                    {mailTemplates.map((template) => (
-                      <div
-                        key={template.id}
-                        className="border rounded-lg overflow-hidden"
-                      >
-                        <div className="bg-white p-4">
-                          {editingMailTemplate === template.id ? (
-                            <div className="space-y-3">
-                              <div>
-                                <label className="block text-sm font-medium mb-1">
-                                  Naam
-                                </label>
-                                <input
-                                  type="text"
-                                  defaultValue={template.name}
-                                  id={`edit-mail-name-${template.id}`}
-                                  className="w-full px-3 py-2 border rounded"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium mb-1">
-                                  Type
-                                </label>
-                                <select
-                                  defaultValue={template.type}
-                                  id={`edit-mail-type-${template.id}`}
-                                  className="w-full px-3 py-2 border rounded"
-                                >
-                                  <option value="opvolgmail">Opvolgmail</option>
-                                  <option value="startproject">
-                                    Start project
-                                  </option>
-                                  <option value="tussenpresentatie">
-                                    Tussenpresentatie
-                                  </option>
-                                  <option value="eindpresentatie">
-                                    Eindpresentatie
-                                  </option>
-                                  <option value="bedankmail">Bedankmail</option>
-                                  <option value="herinnering">
-                                    Herinnering
-                                  </option>
-                                </select>
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium mb-1">
-                                  Onderwerp
-                                </label>
-                                <input
-                                  type="text"
-                                  defaultValue={template.subject}
-                                  id={`edit-mail-subject-${template.id}`}
-                                  className="w-full px-3 py-2 border rounded"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium mb-1">
-                                  Inhoud
-                                </label>
-                                <textarea
-                                  defaultValue={template.body}
-                                  id={`edit-mail-body-${template.id}`}
-                                  className="w-full px-3 py-2 border rounded font-mono text-sm"
-                                  rows={8}
-                                />
-                              </div>
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => {
-                                    const nameEl = document.getElementById(
-                                      `edit-mail-name-${template.id}`,
-                                    ) as HTMLInputElement;
-                                    const typeEl = document.getElementById(
-                                      `edit-mail-type-${template.id}`,
-                                    ) as HTMLSelectElement;
-                                    const subjectEl = document.getElementById(
-                                      `edit-mail-subject-${template.id}`,
-                                    ) as HTMLInputElement;
-                                    const bodyEl = document.getElementById(
-                                      `edit-mail-body-${template.id}`,
-                                    ) as HTMLTextAreaElement;
-                                    handleUpdateMailTemplate(template.id, {
-                                      name: nameEl.value,
-                                      type: typeEl.value,
-                                      subject: subjectEl.value,
-                                      body: bodyEl.value,
-                                    });
-                                  }}
-                                  className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-                                >
-                                  Opslaan
-                                </button>
-                                <button
-                                  onClick={() => setEditingMailTemplate(null)}
-                                  className="px-3 py-1.5 border text-sm rounded hover:bg-gray-100"
-                                >
-                                  Annuleren
-                                </button>
-                              </div>
+                {/* Table of mail templates */}
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
+                          onClick={() =>
+                            setMailSort({
+                              key: "typeName",
+                              dir:
+                                mailSort.key === "typeName" &&
+                                mailSort.dir === "asc"
+                                  ? "desc"
+                                  : "asc",
+                            })
+                          }
+                        >
+                          Type{" "}
+                          {mailSort.key === "typeName" &&
+                            (mailSort.dir === "asc" ? "↑" : "↓")}
+                        </th>
+                        <th
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700 w-64"
+                          onClick={() =>
+                            setMailSort({
+                              key: "name",
+                              dir:
+                                mailSort.key === "name" && mailSort.dir === "asc"
+                                  ? "desc"
+                                  : "asc",
+                            })
+                          }
+                        >
+                          Naam{" "}
+                          {mailSort.key === "name" &&
+                            (mailSort.dir === "asc" ? "↑" : "↓")}
+                        </th>
+                        <th
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
+                          onClick={() =>
+                            setMailSort({
+                              key: "subject",
+                              dir:
+                                mailSort.key === "subject" &&
+                                mailSort.dir === "asc"
+                                  ? "desc"
+                                  : "asc",
+                            })
+                          }
+                        >
+                          Onderwerp{" "}
+                          {mailSort.key === "subject" &&
+                            (mailSort.dir === "asc" ? "↑" : "↓")}
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Acties
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {filteredAndSortedMailTemplates.map((row) => (
+                        <tr
+                          key={row.id}
+                          className="hover:bg-gray-50"
+                        >
+                          <td className="px-6 py-4 text-sm">
+                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                              {row.typeName}
+                            </span>
+                            {!row.is_active && (
+                              <span className="ml-1 inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                Inactief
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-sm font-bold w-64">
+                            {row.name}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600">
+                            {row.subject}
+                          </td>
+                          <td className="px-6 py-4 text-sm">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => openMailEditModal(row)}
+                                className="text-blue-600 hover:text-blue-800"
+                              >
+                                Bewerken
+                              </button>
+                              <button
+                                onClick={() => handleDeleteMailTemplate(row.id)}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                Verwijderen
+                              </button>
                             </div>
-                          ) : (
-                            <>
-                              <div className="flex justify-between items-start">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <h5 className="font-medium">
-                                      {template.name}
-                                    </h5>
-                                    <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
-                                      {template.type}
-                                    </span>
-                                    {!template.is_active && (
-                                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700">
-                                        Inactief
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-sm text-gray-600 mt-1">
-                                    <strong>Onderwerp:</strong>{" "}
-                                    {template.subject}
-                                  </p>
-                                  <div className="mt-2 p-2 bg-gray-50 rounded text-sm text-gray-700 font-mono whitespace-pre-wrap max-h-32 overflow-y-auto">
-                                    {template.body}
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="flex gap-2 mt-3">
-                                <button
-                                  onClick={() =>
-                                    setEditingMailTemplate(template.id)
-                                  }
-                                  className="px-3 py-1.5 bg-gray-100 text-sm rounded hover:bg-gray-200"
-                                >
-                                  Bewerken
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    handleDeleteMailTemplate(template.id)
-                                  }
-                                  className="px-3 py-1.5 bg-red-100 text-red-700 text-sm rounded hover:bg-red-200"
-                                >
-                                  Verwijderen
-                                </button>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {filteredAndSortedMailTemplates.length === 0 &&
                   !isCreatingMailTemplate && (
                     <div className="text-center py-8 text-gray-500">
-                      <p className="mb-4">
-                        Nog geen mail templates aangemaakt
-                        {selectedSubjectId ? " voor dit vak" : ""}.
-                      </p>
-                      <p className="text-xs">
-                        Klik op &quot;+ Nieuwe Mail-template&quot; om te
-                        beginnen.
-                      </p>
+                      {mailTemplates.length === 0 ? (
+                        <>
+                          <p className="mb-4">
+                            Nog geen mail templates aangemaakt
+                            {selectedSubjectId ? " voor dit vak" : ""}.
+                          </p>
+                          <p className="text-xs">
+                            Klik op &quot;+ Nieuwe Mail-template&quot; om te
+                            beginnen.
+                          </p>
+                        </>
+                      ) : (
+                        <p>
+                          Geen templates gevonden voor het geselecteerde type.
+                        </p>
+                      )}
                     </div>
-                  )
-                )}
+                  )}
               </>
             )}
           </div>
@@ -4420,6 +4412,118 @@ export default function TemplatesPage() {
                 className="flex-1 px-4 py-2 border rounded hover:bg-gray-50"
               >
                 Sluiten
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mail Template Edit Modal */}
+      {isMailEditModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-4">Mail Template Bewerken</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Naam *</label>
+                <input
+                  type="text"
+                  value={mailFormData.name || ""}
+                  onChange={(e) =>
+                    setMailFormData({ ...mailFormData, name: e.target.value })
+                  }
+                  placeholder="bijv. Opvolgmail volgend schooljaar"
+                  className="w-full px-3 py-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Type</label>
+                <select
+                  value={mailFormData.type || "opvolgmail"}
+                  onChange={(e) =>
+                    setMailFormData({ ...mailFormData, type: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border rounded"
+                >
+                  <option value="opvolgmail">Opvolgmail</option>
+                  <option value="startproject">Start project</option>
+                  <option value="tussenpresentatie">Tussenpresentatie</option>
+                  <option value="eindpresentatie">Eindpresentatie</option>
+                  <option value="bedankmail">Bedankmail</option>
+                  <option value="herinnering">Herinnering</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Onderwerp *
+                </label>
+                <input
+                  type="text"
+                  value={mailFormData.subject || ""}
+                  onChange={(e) =>
+                    setMailFormData({
+                      ...mailFormData,
+                      subject: e.target.value,
+                    })
+                  }
+                  placeholder="bijv. Samenwerking schooljaar {schoolYear}"
+                  className="w-full px-3 py-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Inhoud *
+                </label>
+                <textarea
+                  value={mailFormData.body || ""}
+                  onChange={(e) =>
+                    setMailFormData({ ...mailFormData, body: e.target.value })
+                  }
+                  placeholder="Beste opdrachtgever,&#10;&#10;Het schooljaar {schoolYear} staat voor de deur..."
+                  className="w-full px-3 py-2 border rounded font-mono text-sm"
+                  rows={8}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="is_active_modal"
+                  checked={mailFormData.is_active ?? true}
+                  onChange={(e) =>
+                    setMailFormData({
+                      ...mailFormData,
+                      is_active: e.target.checked,
+                    })
+                  }
+                  className="rounded"
+                />
+                <label htmlFor="is_active_modal" className="text-sm">
+                  Actief (zichtbaar in dropdowns)
+                </label>
+              </div>
+            </div>
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={handleMailTemplateUpdateFromModal}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Opslaan
+              </button>
+              <button
+                onClick={() => {
+                  setIsMailEditModalOpen(false);
+                  setEditingMailTemplate(null);
+                  setMailFormData({
+                    name: "",
+                    type: "opvolgmail",
+                    subject: "",
+                    body: "",
+                    is_active: true,
+                  });
+                }}
+                className="flex-1 px-4 py-2 border rounded hover:bg-gray-50"
+              >
+                Annuleren
               </button>
             </div>
           </div>
