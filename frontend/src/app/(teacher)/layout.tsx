@@ -37,6 +37,7 @@ export default function TeacherLayout({
                 Projecttools
               </div>
               <div className="space-y-1">
+                <NavItem href="/teacher/projects" label="Projecten" />
                 <NavItem href="/teacher/project-assessments" label="Projectbeoordeling" />
                 <NavItem href="/teacher/evaluations" label="Peerevaluaties" />
                 <NavItem href="/teacher/competencies" label="Competentiemonitor" />
