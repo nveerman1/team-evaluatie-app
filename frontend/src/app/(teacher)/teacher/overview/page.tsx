@@ -3,6 +3,7 @@
 import { useState } from "react";
 import AllItemsTab from "./components/AllItemsTab";
 import LearningObjectivesOverviewTab from "./components/LearningObjectivesOverviewTab";
+import PeerevaluatiesTab from "./components/PeerevaluatiesTab";
 
 export default function OverviewPage() {
   const [activeTab, setActiveTab] = useState("totaal");
@@ -64,12 +65,7 @@ export default function OverviewPage() {
           </div>
         )}
         
-        {activeTab === "peerevaluaties" && (
-          <div className="text-center py-12 text-gray-500">
-            <p className="text-lg font-medium mb-2">In ontwikkeling</p>
-            <p className="text-sm">Deze tab wordt binnenkort toegevoegd</p>
-          </div>
-        )}
+        {activeTab === "peerevaluaties" && <PeerevaluatiesTab />}
         
         {activeTab === "competenties" && (
           <div className="text-center py-12 text-gray-500">
