@@ -10,6 +10,10 @@ import {
   WizardProjectOut,
   RunningProjectKPI,
   RunningProjectsListResponse,
+  Subproject,
+  SubprojectCreate,
+  SubprojectUpdate,
+  SubprojectListResponse,
 } from "@/dtos/project.dto";
 
 export const projectService = {
@@ -97,5 +101,46 @@ export const projectService = {
   }): Promise<RunningProjectsListResponse> {
     const response = await api.get<RunningProjectsListResponse>("/projects/running-overview", { params });
     return response.data;
+  },
+
+  // ============ Subproject Methods ============
+
+  /**
+   * Get all subprojects for a project
+   */
+  async listSubprojects(projectId: number): Promise<SubprojectListResponse> {
+    const response = await api.get<SubprojectListResponse>(`/projects/${projectId}/subprojects`);
+    return response.data;
+  },
+
+  /**
+   * Get a specific subproject
+   */
+  async getSubproject(projectId: number, subprojectId: number): Promise<Subproject> {
+    const response = await api.get<Subproject>(`/projects/${projectId}/subprojects/${subprojectId}`);
+    return response.data;
+  },
+
+  /**
+   * Create a new subproject for a project
+   */
+  async createSubproject(projectId: number, data: SubprojectCreate): Promise<Subproject> {
+    const response = await api.post<Subproject>(`/projects/${projectId}/subprojects`, data);
+    return response.data;
+  },
+
+  /**
+   * Update a subproject
+   */
+  async updateSubproject(projectId: number, subprojectId: number, data: SubprojectUpdate): Promise<Subproject> {
+    const response = await api.patch<Subproject>(`/projects/${projectId}/subprojects/${subprojectId}`, data);
+    return response.data;
+  },
+
+  /**
+   * Delete a subproject
+   */
+  async deleteSubproject(projectId: number, subprojectId: number): Promise<void> {
+    await api.delete(`/projects/${projectId}/subprojects/${subprojectId}`);
   },
 };

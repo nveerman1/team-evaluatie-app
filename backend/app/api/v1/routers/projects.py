@@ -12,12 +12,14 @@ from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import (
     User,
     Project,
+    Subproject,
     ProjectNotesContext,
     Evaluation,
     ClientProjectLink,
     Client,
     Rubric,
     Group,
+    GroupMember,
     ProjectAssessment,
     CompetencyWindow,
     Competency,
@@ -30,6 +32,10 @@ from app.api.v1.schemas.projects import (
     ProjectListItem,
     ProjectListOut,
     ProjectDetailOut,
+    SubprojectCreate,
+    SubprojectUpdate,
+    SubprojectOut,
+    SubprojectListOut,
     WizardProjectCreate,
     WizardProjectOut,
     WizardEntityOut,
@@ -1026,3 +1032,385 @@ def wizard_create_project(
         linked_clients=linked_clients,
         warnings=warnings,
     )
+
+
+# ============ Subproject Endpoints ============
+
+
+def _enrich_subproject(
+    db: Session,
+    subproject: Subproject,
+    user: User,
+) -> SubprojectOut:
+    """Helper to enrich a subproject with client and team information"""
+    # Get client info
+    client_name = None
+    client_email = None
+    if subproject.client_id:
+        client = db.query(Client).filter(Client.id == subproject.client_id).first()
+        if client:
+            client_name = client.organization
+            client_email = client.email
+
+    # Get team info from project's course
+    team_name = None
+    team_members = []
+    if subproject.team_number is not None:
+        team_name = f"Team {subproject.team_number}"
+        # Get project to find course_id
+        project = db.query(Project).filter(Project.id == subproject.project_id).first()
+        if project and project.course_id:
+            # Get students from course with this team_number
+            # Note: team_number is stored on the User model, not on Group
+            # Students are enrolled in course groups, but team assignment is on User
+            students = (
+                db.query(User)
+                .join(GroupMember, GroupMember.user_id == User.id)
+                .join(Group, Group.id == GroupMember.group_id)
+                .filter(
+                    Group.course_id == project.course_id,
+                    User.team_number == subproject.team_number,
+                    User.school_id == user.school_id,
+                    User.role == "student",
+                    User.archived.is_(False),
+                    GroupMember.active.is_(True),
+                )
+                .all()
+            )
+            team_members = [s.name for s in students]
+
+    return SubprojectOut(
+        id=subproject.id,
+        school_id=subproject.school_id,
+        project_id=subproject.project_id,
+        title=subproject.title,
+        client_id=subproject.client_id,
+        team_number=subproject.team_number,
+        created_at=subproject.created_at,
+        updated_at=subproject.updated_at,
+        client_name=client_name,
+        client_email=client_email,
+        team_name=team_name,
+        team_members=team_members,
+    )
+
+
+@router.get("/{project_id}/subprojects", response_model=SubprojectListOut)
+def list_subprojects(
+    project_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """
+    List all subprojects for a project
+    """
+    require_role(user, ["admin", "teacher"])
+
+    # Verify project exists and user has access
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.school_id == user.school_id)
+        .first()
+    )
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found",
+        )
+
+    if project.course_id and not can_access_course(db, user, project.course_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have access to this project",
+        )
+
+    # Get subprojects
+    subprojects = (
+        db.query(Subproject)
+        .filter(Subproject.project_id == project_id)
+        .order_by(Subproject.created_at)
+        .all()
+    )
+
+    items = [_enrich_subproject(db, sp, user) for sp in subprojects]
+
+    return SubprojectListOut(items=items, total=len(items))
+
+
+@router.post(
+    "/{project_id}/subprojects",
+    response_model=SubprojectOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_subproject(
+    project_id: int,
+    payload: SubprojectCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    request: Request = None,
+):
+    """
+    Create a new subproject for a project
+    """
+    require_role(user, ["admin", "teacher"])
+
+    # Verify project exists and user has access
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.school_id == user.school_id)
+        .first()
+    )
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found",
+        )
+
+    if project.course_id and not can_access_course(db, user, project.course_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have access to this project",
+        )
+
+    # Validate client exists if provided
+    if payload.client_id:
+        client = (
+            db.query(Client)
+            .filter(Client.id == payload.client_id, Client.school_id == user.school_id)
+            .first()
+        )
+        if not client:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Client not found",
+            )
+
+    # Create subproject
+    subproject = Subproject(
+        school_id=user.school_id,
+        project_id=project_id,
+        title=payload.title,
+        client_id=payload.client_id,
+        team_number=payload.team_number,
+    )
+
+    db.add(subproject)
+    db.commit()
+    db.refresh(subproject)
+
+    # Audit log
+    log_action(
+        db=db,
+        user=user,
+        action="create_subproject",
+        entity_type="subproject",
+        entity_id=subproject.id,
+        details={"title": subproject.title, "project_id": project_id},
+        request=request,
+    )
+
+    return _enrich_subproject(db, subproject, user)
+
+
+@router.get("/{project_id}/subprojects/{subproject_id}", response_model=SubprojectOut)
+def get_subproject(
+    project_id: int,
+    subproject_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """
+    Get a specific subproject
+    """
+    require_role(user, ["admin", "teacher"])
+
+    # Verify project exists and user has access
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.school_id == user.school_id)
+        .first()
+    )
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found",
+        )
+
+    if project.course_id and not can_access_course(db, user, project.course_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have access to this project",
+        )
+
+    # Get subproject
+    subproject = (
+        db.query(Subproject)
+        .filter(
+            Subproject.id == subproject_id,
+            Subproject.project_id == project_id,
+        )
+        .first()
+    )
+
+    if not subproject:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Subproject not found",
+        )
+
+    return _enrich_subproject(db, subproject, user)
+
+
+@router.patch("/{project_id}/subprojects/{subproject_id}", response_model=SubprojectOut)
+def update_subproject(
+    project_id: int,
+    subproject_id: int,
+    payload: SubprojectUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    request: Request = None,
+):
+    """
+    Update a subproject
+    """
+    require_role(user, ["admin", "teacher"])
+
+    # Verify project exists and user has access
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.school_id == user.school_id)
+        .first()
+    )
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found",
+        )
+
+    if project.course_id and not can_access_course(db, user, project.course_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have access to this project",
+        )
+
+    # Get subproject
+    subproject = (
+        db.query(Subproject)
+        .filter(
+            Subproject.id == subproject_id,
+            Subproject.project_id == project_id,
+        )
+        .first()
+    )
+
+    if not subproject:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Subproject not found",
+        )
+
+    # Validate client exists if provided
+    if payload.client_id is not None and payload.client_id:
+        client = (
+            db.query(Client)
+            .filter(Client.id == payload.client_id, Client.school_id == user.school_id)
+            .first()
+        )
+        if not client:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Client not found",
+            )
+
+    # Update fields
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(subproject, field, value)
+
+    db.commit()
+    db.refresh(subproject)
+
+    # Audit log
+    log_action(
+        db=db,
+        user=user,
+        action="update_subproject",
+        entity_type="subproject",
+        entity_id=subproject.id,
+        details=update_data,
+        request=request,
+    )
+
+    return _enrich_subproject(db, subproject, user)
+
+
+@router.delete(
+    "/{project_id}/subprojects/{subproject_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_subproject(
+    project_id: int,
+    subproject_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    request: Request = None,
+):
+    """
+    Delete a subproject
+    """
+    require_role(user, ["admin", "teacher"])
+
+    # Verify project exists and user has access
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.school_id == user.school_id)
+        .first()
+    )
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found",
+        )
+
+    if project.course_id and not can_access_course(db, user, project.course_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have access to this project",
+        )
+
+    # Get subproject
+    subproject = (
+        db.query(Subproject)
+        .filter(
+            Subproject.id == subproject_id,
+            Subproject.project_id == project_id,
+        )
+        .first()
+    )
+
+    if not subproject:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Subproject not found",
+        )
+
+    # Audit log
+    log_action(
+        db=db,
+        user=user,
+        action="delete_subproject",
+        entity_type="subproject",
+        entity_id=subproject.id,
+        details={"title": subproject.title, "project_id": project_id},
+        request=request,
+    )
+
+    db.delete(subproject)
+    db.commit()
+
+    return None

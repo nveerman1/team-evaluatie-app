@@ -27,11 +27,18 @@ export default function NewProjectWizardPage() {
 
   // Step 1: Project basics
   const [title, setTitle] = useState("");
+  const [niveau, setNiveau] = useState("");
   const [courseId, setCourseId] = useState<number | "">("");
   const [className, setClassName] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [description, setDescription] = useState("");
+
+  // Filtered courses based on niveau selection
+  const filteredCourses = courses.filter(course => {
+    if (!niveau) return true;
+    return course.level === niveau;
+  });
 
   // Step 2: Evaluations (using new nested structure)
   const [peerTussenEnabled, setPeerTussenEnabled] = useState(true);
@@ -421,6 +428,25 @@ export default function NewProjectWizardPage() {
             </div>
 
             <div>
+              <label className="block text-sm font-medium mb-1">Niveau</label>
+              <select
+                value={niveau}
+                onChange={(e) => {
+                  setNiveau(e.target.value);
+                  setCourseId(""); // Reset course when niveau changes
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              >
+                <option value="">Alle niveaus</option>
+                <option value="onderbouw">Onderbouw</option>
+                <option value="bovenbouw">Bovenbouw</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Selecteer een niveau om de courses te filteren
+              </p>
+            </div>
+
+            <div>
               <label className="block text-sm font-medium mb-1">Course</label>
               <select
                 value={courseId}
@@ -428,9 +454,9 @@ export default function NewProjectWizardPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg"
               >
                 <option value="">Selecteer een course...</option>
-                {courses.map((course) => (
+                {filteredCourses.map((course) => (
                   <option key={course.id} value={course.id}>
-                    {course.name}
+                    {course.name} {course.level ? `(${course.level})` : ""}
                   </option>
                 ))}
               </select>
@@ -815,6 +841,12 @@ export default function NewProjectWizardPage() {
                     <dt className="w-32 text-gray-600">Titel:</dt>
                     <dd className="font-medium">{title}</dd>
                   </div>
+                  {niveau && (
+                    <div className="flex">
+                      <dt className="w-32 text-gray-600">Niveau:</dt>
+                      <dd className="capitalize">{niveau}</dd>
+                    </div>
+                  )}
                   {courseId && (
                     <div className="flex">
                       <dt className="w-32 text-gray-600">Course:</dt>

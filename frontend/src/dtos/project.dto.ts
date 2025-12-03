@@ -205,3 +205,37 @@ export type RunningProjectsListResponse = {
   per_page: number;
   pages: number;
 };
+
+// Subproject (Deelproject) Types
+export type Subproject = {
+  id: number;
+  school_id: number;
+  project_id: number;
+  title: string;
+  client_id?: number;
+  team_number?: number;
+  created_at: string;
+  updated_at: string;
+  // Enriched fields
+  client_name?: string;
+  client_email?: string;
+  team_name?: string;
+  team_members: string[];
+};
+
+export type SubprojectCreate = {
+  title: string;
+  client_id?: number;
+  team_number?: number;
+};
+
+export type SubprojectUpdate = {
+  title?: string;
+  client_id?: number;
+  team_number?: number;
+};
+
+export type SubprojectListResponse = {
+  items: Subproject[];
+  total: number;
+};

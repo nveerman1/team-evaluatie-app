@@ -1,17 +1,17 @@
 import { useState, useEffect, useMemo } from "react";
 import { courseService } from "@/services/course.service";
-import { CourseLite } from "@/dtos/course.dto";
+import { Course } from "@/dtos/course.dto";
 
 /**
- * Hook to fetch and manage courses list
+ * Hook to fetch and manage courses list with full course details
  */
 export function useCourses() {
-  const [courses, setCourses] = useState<CourseLite[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
 
   useEffect(() => {
     courseService
-      .getCourses()
-      .then((data) => setCourses(data))
+      .listCourses({ per_page: 100, is_active: true })
+      .then((data) => setCourses(data.courses || []))
       .catch(() => setCourses([]));
   }, []);
 
