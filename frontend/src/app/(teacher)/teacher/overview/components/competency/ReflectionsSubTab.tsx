@@ -39,41 +39,6 @@ export function ReflectionsSubTab() {
 
   return (
     <div className="space-y-6">
-      {/* AI Summary Card - Placeholder */}
-      <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-6 border border-purple-200">
-        <div className="flex items-start gap-4">
-          <div className="p-3 bg-white rounded-xl shadow-sm">
-            <span className="text-2xl">🤖</span>
-          </div>
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">Samenvatting reflecties</h3>
-            <p className="text-slate-600 text-sm mb-3">
-              AI-gegenereerde samenvatting van de belangrijkste thema&apos;s en patronen in de reflecties van leerlingen.
-            </p>
-            <div className="bg-white rounded-xl p-4 border border-slate-200">
-              <p className="text-slate-500 text-sm italic">
-                📝 Hier komt een AI-gegenereerde samenvatting van de reflecties. 
-                Deze functie is nog in ontwikkeling en zal binnenkort beschikbaar zijn.
-              </p>
-              <ul className="mt-3 space-y-2 text-sm text-slate-600">
-                <li className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                  Meerdere leerlingen noemen groei in communicatievaardigheden
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                  Planning blijft voor veel leerlingen een aandachtspunt
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                  Samenwerking wordt vaker als positief ervaren dan vorige periode
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Filter Bar */}
       <div className="bg-gray-50 rounded-xl p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
