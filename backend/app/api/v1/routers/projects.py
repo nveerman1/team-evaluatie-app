@@ -1060,14 +1060,19 @@ def _enrich_subproject(
         # Get project to find course_id
         project = db.query(Project).filter(Project.id == subproject.project_id).first()
         if project and project.course_id:
-            # Get students from course with this team_number
+            # Get students from course with this team_number via Group/GroupMember
+            # Note: team_number on GroupMember relates to team assignments within the course
             students = (
                 db.query(User)
+                .join(GroupMember, GroupMember.user_id == User.id)
+                .join(Group, Group.id == GroupMember.group_id)
                 .filter(
+                    Group.course_id == project.course_id,
+                    Group.team_number == subproject.team_number,
                     User.school_id == user.school_id,
-                    User.team_number == subproject.team_number,
                     User.role == "student",
                     User.archived.is_(False),
+                    GroupMember.active.is_(True),
                 )
                 .all()
             )
