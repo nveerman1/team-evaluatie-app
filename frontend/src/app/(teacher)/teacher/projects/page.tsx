@@ -406,7 +406,12 @@ function ProjectTable({
                   </td>
                   <td className="py-2 pr-4">
                     <div className="flex flex-col">
-                      <span className="text-xs font-medium text-gray-900">{project.project_title}</span>
+                      <button
+                        onClick={() => toggleProjectExpansion(project.project_id)}
+                        className="text-xs font-medium text-gray-900 hover:text-blue-600 hover:underline text-left cursor-pointer"
+                      >
+                        {project.project_title}
+                      </button>
                       <span className="text-[11px] text-gray-500">
                         {project.class_name && `Klas: ${project.class_name}`}
                         {project.class_name && project.team_number && " · "}
@@ -562,17 +567,6 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Create a map of course_name -> level
-  const courseLevelMap = React.useMemo(() => {
-    const map: Record<string, string> = {};
-    courses.forEach(course => {
-      if (course.name && course.level) {
-        map[course.name] = course.level;
-      }
-    });
-    return map;
-  }, [courses]);
-
   // Fetch mail templates
   useEffect(() => {
     async function fetchMailTemplates() {
@@ -595,18 +589,35 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
     fetchMailTemplates();
   }, []);
 
-  // Fetch projects
+  // Refresh key to trigger re-fetch when returning from wizard
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Fetch projects - using listProjects to get ALL projects, not just running ones
   useEffect(() => {
     async function fetchProjects() {
       try {
         setLoading(true);
-        const response = await projectService.getRunningProjectsOverview({ per_page: 100 });
+        // Use listProjects to get all projects, including newly created ones
+        const response = await projectService.listProjects({ per_page: 100 });
         
-        // Enrich with course level
-        const enrichedProjects: ProjectWithLevel[] = (response.items || []).map(item => ({
-          ...item,
-          course_level: item.course_name ? courseLevelMap[item.course_name] : undefined,
-        }));
+        // Map ProjectListItem to ProjectWithLevel format
+        const enrichedProjects: ProjectWithLevel[] = (response.items || []).map(item => {
+          // Find course info
+          const course = courses.find(c => c.id === item.course_id);
+          
+          return {
+            project_id: item.id,
+            project_title: item.title,
+            project_status: item.status,
+            course_name: course?.name,
+            course_id: item.course_id,
+            course_level: course?.level,
+            class_name: item.class_name,
+            start_date: item.start_date,
+            end_date: item.end_date,
+            student_names: [], // Not available from listProjects, would need separate API call if needed
+          };
+        });
         
         setProjects(enrichedProjects);
         
@@ -624,8 +635,29 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
         setLoading(false);
       }
     }
-    fetchProjects();
-  }, [courseLevelMap]);
+    
+    // Only fetch when courses are loaded
+    if (courses.length > 0) {
+      fetchProjects();
+    }
+  }, [courses, refreshKey]);
+
+  // Auto-refresh with debounce when the component becomes visible (e.g., returning from wizard)
+  useEffect(() => {
+    let lastRefreshTime = 0;
+    const DEBOUNCE_MS = 2000; // Only refresh if more than 2 seconds since last refresh
+    
+    const handleFocus = () => {
+      const now = Date.now();
+      if (now - lastRefreshTime > DEBOUNCE_MS) {
+        lastRefreshTime = now;
+        setRefreshKey(prev => prev + 1);
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
 
   // Filter projects based on level and search criteria
   const filteredProjects = projects.filter(project => {
@@ -1002,12 +1034,6 @@ export default function ProjectsPage() {
               className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
             >
               + Nieuw project
-            </Link>
-            <Link
-              href="/teacher/projects/new"
-              className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Projectwizard openen
             </Link>
           </div>
         </header>
