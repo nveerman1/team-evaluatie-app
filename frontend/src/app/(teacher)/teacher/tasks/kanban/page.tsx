@@ -887,7 +887,7 @@ export default function TeacherKanbanPage() {
   const handleAddTask = (taskData: Omit<Task, "id">) => {
     const newTask: Task = {
       ...taskData,
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
     };
     setTasks((prev) => [...prev, newTask]);
   };
