@@ -5,11 +5,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Tabs } from "@/components/Tabs";
 import { projectService } from "@/services/project.service";
+import { clientService } from "@/services/client.service";
 import { listMailTemplates } from "@/services/mail-template.service";
 import { useCourses } from "@/hooks";
 import { Loading } from "@/components";
+import { SearchableMultiSelect } from "@/components/form/SearchableMultiSelect";
 import type { MailTemplateDto } from "@/dtos/mail-template.dto";
 import type { RunningProjectItem } from "@/dtos/project.dto";
+import type { ClientListItem } from "@/dtos/client.dto";
+import type { Course } from "@/dtos/course.dto";
 
 // Default fallback templates when no templates are available from API
 const DEFAULT_TEMPLATES: Record<string, { subject: string; body: string }> = {
@@ -38,6 +42,8 @@ const DEFAULT_TEMPLATES: Record<string, { subject: string; body: string }> = {
 // Extended project type with course level info
 interface ProjectWithLevel extends RunningProjectItem {
   course_level?: string;
+  course_id?: number;
+  description?: string;
 }
 
 // Helper function for building mailto links
@@ -110,25 +116,75 @@ function DeleteConfirmModal({
 function EditProjectModal({
   isOpen,
   project,
+  courses,
   onSave,
   onCancel,
   isSaving
 }: {
   isOpen: boolean;
   project: ProjectWithLevel | null;
-  onSave: (data: { title: string; class_name?: string; status: string }) => void;
+  courses: Course[];
+  onSave: (data: { 
+    title: string; 
+    class_name?: string; 
+    status: string;
+    course_id?: number;
+    start_date?: string;
+    end_date?: string;
+    description?: string;
+    client_ids?: number[];
+  }) => void;
   onCancel: () => void;
   isSaving: boolean;
 }) {
   const [title, setTitle] = useState(project?.project_title || "");
   const [className, setClassName] = useState(project?.class_name || "");
   const [status, setStatus] = useState(project?.project_status || "concept");
+  const [courseId, setCourseId] = useState<number | "">(project?.course_id || "");
+  const [startDate, setStartDate] = useState(project?.start_date?.split("T")[0] || "");
+  const [endDate, setEndDate] = useState(project?.end_date?.split("T")[0] || "");
+  const [description, setDescription] = useState(project?.description || "");
+  const [selectedClientIds, setSelectedClientIds] = useState<number[]>(
+    project?.client_id ? [project.client_id] : []
+  );
+  
+  // Client loading state
+  const [clients, setClients] = useState<ClientListItem[]>([]);
+  const [loadingClients, setLoadingClients] = useState(false);
+  const [clientsLoaded, setClientsLoaded] = useState(false);
+
+  // Load clients when modal opens
+  useEffect(() => {
+    async function loadClients() {
+      if (!isOpen || clientsLoaded) return;
+      
+      setLoadingClients(true);
+      try {
+        const response = await clientService.listClients({ per_page: 100 });
+        setClients(response.items || []);
+        setClientsLoaded(true);
+      } catch (err) {
+        console.error("Failed to load clients:", err);
+        setClientsLoaded(true);
+      } finally {
+        setLoadingClients(false);
+      }
+    }
+    loadClients();
+  }, [isOpen, clientsLoaded]);
 
   useEffect(() => {
     if (project) {
       setTitle(project.project_title || "");
       setClassName(project.class_name || "");
       setStatus(project.project_status || "concept");
+      setCourseId(project.course_id || "");
+      setStartDate(project.start_date?.split("T")[0] || "");
+      setEndDate(project.end_date?.split("T")[0] || "");
+      setDescription(project.description || "");
+      setSelectedClientIds(project.client_id ? [project.client_id] : []);
+      // Reset clients loaded to reload when project changes
+      setClientsLoaded(false);
     }
   }, [project]);
 
@@ -136,7 +192,7 @@ function EditProjectModal({
   
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
+      <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Project bewerken</h3>
         <div className="space-y-4">
           <div>
@@ -149,6 +205,39 @@ function EditProjectModal({
               required
             />
           </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">Course (Vak)</label>
+            <select
+              value={courseId}
+              onChange={(e) => setCourseId(e.target.value ? Number(e.target.value) : "")}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            >
+              <option value="">Geen vak geselecteerd</option>
+              {courses.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.name} {course.level ? `(${course.level})` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">Opdrachtgever(s)</label>
+            <SearchableMultiSelect
+              options={clients.map(client => ({
+                id: client.id,
+                label: client.organization,
+                subtitle: client.contact_name
+              }))}
+              value={selectedClientIds}
+              onChange={setSelectedClientIds}
+              placeholder="Zoek en selecteer opdrachtgevers..."
+              loading={loadingClients}
+              className="w-full"
+            />
+          </div>
+          
           <div>
             <label className="block text-sm font-medium mb-1">Klas</label>
             <input
@@ -159,6 +248,39 @@ function EditProjectModal({
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
             />
           </div>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">Startdatum</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Einddatum</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              />
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-1">Beschrijving</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Korte beschrijving van het project..."
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+          </div>
+          
           <div>
             <label className="block text-sm font-medium mb-1">Status</label>
             <select
@@ -182,7 +304,16 @@ function EditProjectModal({
             Annuleren
           </button>
           <button
-            onClick={() => onSave({ title, class_name: className || undefined, status })}
+            onClick={() => onSave({ 
+              title, 
+              class_name: className || undefined, 
+              status,
+              course_id: courseId === "" ? undefined : courseId,
+              start_date: startDate || undefined,
+              end_date: endDate || undefined,
+              description: description || undefined,
+              client_ids: selectedClientIds.length > 0 ? selectedClientIds : undefined,
+            })}
             disabled={isSaving || !title.trim()}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
           >
@@ -584,21 +715,75 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
     window.open(mailtoLink, '_self');
   };
 
-  const handleEditProject = async (data: { title: string; class_name?: string; status: string }) => {
+  const handleEditProject = async (data: { 
+    title: string; 
+    class_name?: string; 
+    status: string;
+    course_id?: number;
+    start_date?: string;
+    end_date?: string;
+    description?: string;
+    client_ids?: number[];
+  }) => {
     if (!editingProject) return;
     
     setIsSaving(true);
     try {
+      // Update project basic fields
       await projectService.updateProject(editingProject.project_id, {
         title: data.title,
         class_name: data.class_name,
         status: data.status,
+        course_id: data.course_id,
+        start_date: data.start_date,
+        end_date: data.end_date,
+        description: data.description,
       });
+      
+      // Handle client linking/unlinking
+      if (data.client_ids !== undefined) {
+        const currentClientId = editingProject.client_id;
+        const newClientIds = data.client_ids;
+        
+        // Unlink old client if it's no longer selected
+        if (currentClientId && !newClientIds.includes(currentClientId)) {
+          try {
+            await clientService.unlinkProjectFromClient(currentClientId, editingProject.project_id);
+          } catch (err) {
+            console.warn("Failed to unlink old client:", err);
+          }
+        }
+        
+        // Link new clients
+        for (const clientId of newClientIds) {
+          if (clientId !== currentClientId) {
+            try {
+              await clientService.linkProjectToClient(clientId, editingProject.project_id);
+            } catch (err) {
+              console.warn("Failed to link client:", err);
+            }
+          }
+        }
+      }
+      
+      // Find course name for the selected course_id
+      const selectedCourse = courses.find(c => c.id === data.course_id);
       
       // Update local state
       setProjects(prev => prev.map(p => 
         p.project_id === editingProject.project_id 
-          ? { ...p, project_title: data.title, class_name: data.class_name, project_status: data.status }
+          ? { 
+              ...p, 
+              project_title: data.title, 
+              class_name: data.class_name, 
+              project_status: data.status,
+              course_name: selectedCourse?.name,
+              course_level: selectedCourse?.level,
+              start_date: data.start_date,
+              end_date: data.end_date,
+              description: data.description,
+              client_id: data.client_ids?.[0],
+            }
           : p
       ));
       setEditingProject(null);
@@ -651,6 +836,7 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
       <EditProjectModal
         isOpen={!!editingProject}
         project={editingProject}
+        courses={courses}
         onSave={handleEditProject}
         onCancel={() => setEditingProject(null)}
         isSaving={isSaving}
