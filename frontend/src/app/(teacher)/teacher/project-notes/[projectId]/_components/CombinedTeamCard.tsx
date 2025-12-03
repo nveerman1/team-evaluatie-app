@@ -112,7 +112,8 @@ export function CombinedTeamCard({
       
       await projectNotesService.createNote(contextId, {
         note_type: isStudentNote ? "student" : "team",
-        team_id: team.id,
+        // Only pass team_id for team notes, not for student notes
+        team_id: isStudentNote ? null : team.id,
         student_id: isStudentNote ? selectedStudentId : null,
         text: note,
         tags: [],
