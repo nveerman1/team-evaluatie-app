@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Tabs } from "@/components/Tabs";
 import { projectService } from "@/services/project.service";
 import { clientService } from "@/services/client.service";
+import { courseService } from "@/services/course.service";
 import { listMailTemplates } from "@/services/mail-template.service";
 import { useCourses } from "@/hooks";
 import { Loading } from "@/components";
@@ -13,7 +14,7 @@ import { SearchableMultiSelect } from "@/components/form/SearchableMultiSelect";
 import type { MailTemplateDto } from "@/dtos/mail-template.dto";
 import type { RunningProjectItem } from "@/dtos/project.dto";
 import type { ClientListItem } from "@/dtos/client.dto";
-import type { Course } from "@/dtos/course.dto";
+import type { Course, CourseStudent } from "@/dtos/course.dto";
 
 // Default fallback templates when no templates are available from API
 const DEFAULT_TEMPLATES: Record<string, { subject: string; body: string }> = {
@@ -56,9 +57,18 @@ interface ProjectWithLevel extends RunningProjectItem {
 interface SubProject {
   id: number;
   title: string;
+  client_id?: number;
   client_name?: string;
+  client_email?: string;
+  team_number?: number;
   team_name?: string;
   team_members?: string[];
+}
+
+// Team type for course teams
+interface CourseTeam {
+  team_number: number;
+  members: CourseStudent[];
 }
 
 // Helper function for building mailto links
@@ -103,7 +113,7 @@ function DeleteConfirmModal({
       <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
         <h3 className="text-lg font-semibold text-gray-900 mb-2">Project verwijderen</h3>
         <p className="text-gray-600 text-sm mb-4">
-          Weet je zeker dat je het project "{projectTitle}" wilt verwijderen? 
+          Weet je zeker dat je het project &quot;{projectTitle}&quot; wilt verwijderen? 
           Dit kan niet ongedaan worden gemaakt.
         </p>
         <div className="flex gap-3 justify-end">
@@ -120,6 +130,213 @@ function DeleteConfirmModal({
             className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
           >
             {isDeleting ? "Verwijderen..." : "Verwijderen"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Subproject modal for creating/editing deelprojecten
+function SubprojectModal({
+  isOpen,
+  projectTitle,
+  courseId,
+  onSave,
+  onCancel,
+}: {
+  isOpen: boolean;
+  projectTitle: string;
+  courseId?: number;
+  onSave: (subproject: Omit<SubProject, 'id'>) => void;
+  onCancel: () => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
+  const [selectedTeamNumber, setSelectedTeamNumber] = useState<number | null>(null);
+  const [clients, setClients] = useState<ClientListItem[]>([]);
+  const [loadingClients, setLoadingClients] = useState(false);
+  const [teams, setTeams] = useState<CourseTeam[]>([]);
+  const [loadingTeams, setLoadingTeams] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Fetch clients when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setLoadingClients(true);
+      clientService.listClients({ per_page: 100 })
+        .then(response => {
+          setClients(response.items || []);
+        })
+        .catch(err => {
+          console.error("Failed to load clients:", err);
+        })
+        .finally(() => setLoadingClients(false));
+    }
+  }, [isOpen]);
+
+  // Fetch teams from course when modal opens
+  useEffect(() => {
+    if (isOpen && courseId) {
+      setLoadingTeams(true);
+      courseService.getCourseStudents(courseId)
+        .then(students => {
+          // Group students by team_number
+          const teamMap = new Map<number, CourseStudent[]>();
+          students.forEach(student => {
+            if (student.team_number !== undefined && student.team_number !== null) {
+              if (!teamMap.has(student.team_number)) {
+                teamMap.set(student.team_number, []);
+              }
+              teamMap.get(student.team_number)!.push(student);
+            }
+          });
+          
+          // Convert to array and sort by team number
+          const teamsArray: CourseTeam[] = Array.from(teamMap.entries())
+            .map(([team_number, members]) => ({ team_number, members }))
+            .sort((a, b) => a.team_number - b.team_number);
+          
+          setTeams(teamsArray);
+        })
+        .catch(err => {
+          console.error("Failed to load teams:", err);
+        })
+        .finally(() => setLoadingTeams(false));
+    }
+  }, [isOpen, courseId]);
+
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setTitle("");
+      setSelectedClientId(null);
+      setSelectedTeamNumber(null);
+    }
+  }, [isOpen]);
+
+  const selectedClient = clients.find(c => c.id === selectedClientId);
+  const selectedTeam = teams.find(t => t.team_number === selectedTeamNumber);
+
+  const handleSave = () => {
+    if (!title.trim()) return;
+    
+    setIsSaving(true);
+    
+    const subproject: Omit<SubProject, 'id'> = {
+      title: title.trim(),
+      client_id: selectedClientId || undefined,
+      client_name: selectedClient?.organization,
+      client_email: selectedClient?.contact_email,
+      team_number: selectedTeamNumber || undefined,
+      team_name: selectedTeamNumber ? `Team ${selectedTeamNumber}` : undefined,
+      team_members: selectedTeam?.members.map(m => m.name) || [],
+    };
+    
+    onSave(subproject);
+    setIsSaving(false);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4 shadow-xl">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Nieuw deelproject</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Voeg een deelproject toe aan &quot;{projectTitle}&quot;
+        </p>
+
+        <div className="space-y-4">
+          {/* Title */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Titel <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Bijv. Windturbine redesign"
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          {/* Client dropdown */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Opdrachtgever
+            </label>
+            {loadingClients ? (
+              <div className="text-sm text-gray-500">Laden...</div>
+            ) : (
+              <SearchableMultiSelect
+                options={clients.map(client => ({
+                  id: client.id,
+                  label: client.organization,
+                  subtitle: client.contact_name
+                }))}
+                value={selectedClientId ? [selectedClientId] : []}
+                onChange={(ids) => setSelectedClientId(ids.length > 0 ? ids[0] : null)}
+                placeholder="Zoek en selecteer opdrachtgever..."
+                loading={loadingClients}
+                className="w-full"
+              />
+            )}
+          </div>
+
+          {/* Team dropdown */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Team
+            </label>
+            {loadingTeams ? (
+              <div className="text-sm text-gray-500">Teams laden...</div>
+            ) : teams.length === 0 ? (
+              <div className="text-sm text-gray-500 italic">
+                {courseId ? "Geen teams gevonden voor dit vak." : "Selecteer eerst een vak met teams."}
+              </div>
+            ) : (
+              <select
+                value={selectedTeamNumber || ""}
+                onChange={(e) => setSelectedTeamNumber(e.target.value ? Number(e.target.value) : null)}
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Selecteer een team...</option>
+                {teams.map(team => (
+                  <option key={team.team_number} value={team.team_number}>
+                    Team {team.team_number} ({team.members.length} leden)
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* Team members preview */}
+          {selectedTeam && selectedTeam.members.length > 0 && (
+            <div className="bg-blue-50 rounded-lg p-3">
+              <div className="text-xs font-medium text-gray-700 mb-1">Teamleden</div>
+              <div className="text-xs text-gray-600">
+                {selectedTeam.members.map(m => m.name).join(", ")}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3 justify-end mt-6">
+          <button
+            onClick={onCancel}
+            disabled={isSaving}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+          >
+            Annuleren
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={isSaving || !title.trim()}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          >
+            {isSaving ? "Toevoegen..." : "Toevoegen"}
           </button>
         </div>
       </div>
@@ -350,7 +567,8 @@ function ProjectTable({
   toggleProjectExpansion,
   isOnderbouw,
   onEditProject,
-  onDeleteProject
+  onDeleteProject,
+  onAddSubproject
 }: {
   projects: ProjectWithLevel[];
   selectedProjects: number[];
@@ -361,7 +579,11 @@ function ProjectTable({
   isOnderbouw: boolean;
   onEditProject: (project: ProjectWithLevel) => void;
   onDeleteProject: (project: ProjectWithLevel) => void;
+  onAddSubproject: (project: ProjectWithLevel) => void;
 }) {
+  // Determine column count based on tab
+  const colSpan = isOnderbouw ? 7 : 5; // onderbouw has 7 cols, bovenbouw has 5 cols (no opdrachtgever, no mail)
+  
   return (
     <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 space-y-3">
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 border-b border-gray-100 pb-2">
@@ -400,9 +622,9 @@ function ProjectTable({
               </th>
               <th className="py-2 pr-4">Project</th>
               <th className="px-4 py-2">Course (Vak)</th>
-              <th className="px-4 py-2">Opdrachtgever</th>
+              {isOnderbouw && <th className="px-4 py-2">Opdrachtgever</th>}
               <th className="px-4 py-2">Periode</th>
-              <th className="px-4 py-2">Mail opdrachtgever</th>
+              {isOnderbouw && <th className="px-4 py-2">Mail opdrachtgever</th>}
               <th className="px-4 py-2 text-right">Acties</th>
             </tr>
           </thead>
@@ -436,11 +658,13 @@ function ProjectTable({
                     </div>
                   </td>
                   <td className="px-4 py-2 text-[11px] text-gray-700">{project.course_name || "-"}</td>
-                  <td className="px-4 py-2">
-                    <div className="flex flex-col">
-                      <span className="text-xs text-gray-800">{project.client_organization || "-"}</span>
-                    </div>
-                  </td>
+                  {isOnderbouw && (
+                    <td className="px-4 py-2">
+                      <div className="flex flex-col">
+                        <span className="text-xs text-gray-800">{project.client_organization || "-"}</span>
+                      </div>
+                    </td>
+                  )}
                   <td className="px-4 py-2 text-[11px] text-gray-600">
                     {project.start_date && project.end_date ? (
                       <>
@@ -448,18 +672,20 @@ function ProjectTable({
                       </>
                     ) : "-"}
                   </td>
-                  <td className="px-4 py-2">
-                    {project.client_email ? (
-                      <a
-                        href={`mailto:${project.client_email}?subject=Project: ${encodeURIComponent(project.project_title)}`}
-                        className="inline-flex items-center px-3 py-1.5 text-[11px] font-medium text-slate-700 rounded-lg border border-slate-200 hover:bg-slate-50"
-                      >
-                        📧 Mail
-                      </a>
-                    ) : (
-                      <span className="text-slate-400 text-[11px]">-</span>
-                    )}
-                  </td>
+                  {isOnderbouw && (
+                    <td className="px-4 py-2">
+                      {project.client_email ? (
+                        <a
+                          href={`mailto:${project.client_email}?subject=Project: ${encodeURIComponent(project.project_title)}`}
+                          className="inline-flex items-center px-3 py-1.5 text-[11px] font-medium text-slate-700 rounded-lg border border-slate-200 hover:bg-slate-50"
+                        >
+                          📧 Mail
+                        </a>
+                      ) : (
+                        <span className="text-slate-400 text-[11px]">-</span>
+                      )}
+                    </td>
+                  )}
                   <td className="px-4 py-2 text-right align-top">
                     <div className="flex items-center justify-end gap-1">
                       <button
@@ -490,7 +716,7 @@ function ProjectTable({
                 {/* Expanded details row */}
                 {expandedProjects.includes(project.project_id) && (
                   <tr className="bg-gray-50/60">
-                    <td colSpan={7} className="px-4 pb-3 pt-0">
+                    <td colSpan={colSpan} className="px-4 pb-3 pt-0">
                       {/* Evaluation status grid */}
                       <div className="mt-2 rounded-lg border border-gray-200 bg-white p-3 grid grid-cols-1 md:grid-cols-4 gap-3 text-[11px] text-gray-700">
                         <div>
@@ -562,9 +788,8 @@ function ProjectTable({
                               </p>
                             </div>
                             <button 
-                              className="rounded-full border border-blue-200 bg-gray-100 px-3 py-1 text-[11px] font-medium text-gray-400 cursor-not-allowed"
-                              disabled
-                              title="Deelprojecten functionaliteit wordt nog ontwikkeld"
+                              className="rounded-full border border-blue-200 bg-white px-3 py-1 text-[11px] font-medium text-blue-700 hover:bg-blue-50"
+                              onClick={() => onAddSubproject(project)}
                             >
                               + Nieuw deelproject
                             </button>
@@ -593,16 +818,23 @@ function ProjectTable({
                                         {subproject.team_members?.join(", ") || "-"}
                                       </td>
                                       <td className="px-4 py-2 align-top text-right">
-                                        <span className="inline-flex items-center px-3 py-1.5 text-[11px] font-medium text-gray-400 cursor-not-allowed" title="Mail functionaliteit wordt nog ontwikkeld">
-                                          📧 Mail
-                                        </span>
+                                        {subproject.client_email ? (
+                                          <a
+                                            href={`mailto:${subproject.client_email}?subject=Deelproject: ${encodeURIComponent(subproject.title)}`}
+                                            className="inline-flex items-center px-3 py-1.5 text-[11px] font-medium text-slate-700 rounded-lg border border-slate-200 hover:bg-slate-50"
+                                          >
+                                            📧 Mail
+                                          </a>
+                                        ) : (
+                                          <span className="text-slate-400 text-[11px]">-</span>
+                                        )}
                                       </td>
                                     </tr>
                                   ))
                                 ) : (
                                   <tr>
                                     <td colSpan={5} className="py-4 text-center text-gray-500 text-[11px]">
-                                      Nog geen deelprojecten aangemaakt. (Functionaliteit wordt nog ontwikkeld)
+                                      Nog geen deelprojecten aangemaakt. Klik op &quot;+ Nieuw deelproject&quot; om te beginnen.
                                     </td>
                                   </tr>
                                 )}
@@ -627,7 +859,7 @@ function ProjectTable({
 
             {projects.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={colSpan} className="px-4 py-8 text-center text-gray-500">
                   Geen projecten gevonden
                 </td>
               </tr>
@@ -663,6 +895,9 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
   const [deletingProject, setDeletingProject] = useState<ProjectWithLevel | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Subproject modal
+  const [subprojectModalProject, setSubprojectModalProject] = useState<ProjectWithLevel | null>(null);
 
   // Fetch mail templates
   useEffect(() => {
@@ -1111,6 +1346,40 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
         isOnderbouw={levelFilter === "onderbouw"}
         onEditProject={setEditingProject}
         onDeleteProject={setDeletingProject}
+        onAddSubproject={setSubprojectModalProject}
+      />
+      
+      {/* Subproject Modal for bovenbouw */}
+      <SubprojectModal
+        isOpen={subprojectModalProject !== null}
+        projectTitle={subprojectModalProject?.project_title || ""}
+        courseId={subprojectModalProject?.course_id}
+        onSave={(subproject) => {
+          if (subprojectModalProject) {
+            // Add subproject to the project locally (stored in component state)
+            // Use crypto.randomUUID for unique ID, with Date.now() as fallback
+            const newSubproject: SubProject = {
+              id: typeof crypto !== 'undefined' && crypto.randomUUID 
+                ? parseInt(crypto.randomUUID().replace(/-/g, '').slice(0, 15), 16) 
+                : Date.now() + Math.random(),
+              ...subproject,
+            };
+            
+            // Update the project in the projects list
+            setProjects(prev => prev.map(p => {
+              if (p.project_id === subprojectModalProject.project_id) {
+                return {
+                  ...p,
+                  subprojects: [...(p.subprojects || []), newSubproject],
+                };
+              }
+              return p;
+            }));
+            
+            setSubprojectModalProject(null);
+          }
+        }}
+        onCancel={() => setSubprojectModalProject(null)}
       />
     </div>
   );
