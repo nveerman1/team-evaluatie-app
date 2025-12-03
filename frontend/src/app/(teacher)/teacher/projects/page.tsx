@@ -39,11 +39,26 @@ const DEFAULT_TEMPLATES: Record<string, { subject: string; body: string }> = {
   },
 };
 
-// Extended project type with course level info
+// Extended project type with course level info and evaluation counts
 interface ProjectWithLevel extends RunningProjectItem {
   course_level?: string;
   course_id?: number;
   description?: string;
+  // Evaluation counts from project details
+  evaluation_counts?: Record<string, number>;
+  note_count?: number;
+  client_count?: number;
+  // Subprojects for bovenbouw choice projects
+  subprojects?: SubProject[];
+}
+
+// Subproject type for bovenbouw choice projects
+interface SubProject {
+  id: number;
+  title: string;
+  client_name?: string;
+  team_name?: string;
+  team_members?: string[];
 }
 
 // Helper function for building mailto links
@@ -476,6 +491,7 @@ function ProjectTable({
                 {expandedProjects.includes(project.project_id) && (
                   <tr className="bg-gray-50/60">
                     <td colSpan={7} className="px-4 pb-3 pt-0">
+                      {/* Evaluation status grid */}
                       <div className="mt-2 rounded-lg border border-gray-200 bg-white p-3 grid grid-cols-1 md:grid-cols-4 gap-3 text-[11px] text-gray-700">
                         <div>
                           <div className="font-semibold text-gray-900 mb-1">Evaluatie</div>
@@ -483,8 +499,13 @@ function ProjectTable({
                             href={`/teacher/project-assessments?project_id=${project.project_id}`}
                             className="flex items-center gap-1 hover:underline"
                           >
-                            {renderStatusIndicator("not_started")}
-                            Bekijk beoordelingen
+                            {renderStatusIndicator(
+                              (project.evaluation_counts?.project_assessment || 0) > 0 ? "complete" : "not_started"
+                            )}
+                            {(project.evaluation_counts?.project_assessment || 0) > 0 
+                              ? `${project.evaluation_counts?.project_assessment} beoordeling${(project.evaluation_counts?.project_assessment || 0) > 1 ? "en" : ""} gekoppeld`
+                              : "Nog geen beoordeling"
+                            }
                           </Link>
                         </div>
                         <div>
@@ -493,8 +514,13 @@ function ProjectTable({
                             href={`/teacher/evaluations?project_id=${project.project_id}`}
                             className="flex items-center gap-1 hover:underline"
                           >
-                            {renderStatusIndicator("not_started")}
-                            Bekijk peerevaluaties
+                            {renderStatusIndicator(
+                              (project.evaluation_counts?.peer || 0) > 0 ? "complete" : "not_started"
+                            )}
+                            {(project.evaluation_counts?.peer || 0) > 0 
+                              ? `${project.evaluation_counts?.peer} peerevaluatie${(project.evaluation_counts?.peer || 0) > 1 ? "s" : ""} ingericht`
+                              : "Nog geen peerevaluatie"
+                            }
                           </Link>
                         </div>
                         <div>
@@ -503,20 +529,91 @@ function ProjectTable({
                             href={`/teacher/competencies?project_id=${project.project_id}`}
                             className="flex items-center gap-1 hover:underline"
                           >
-                            {renderStatusIndicator("not_started")}
-                            Bekijk scans
+                            {renderStatusIndicator(
+                              (project.evaluation_counts?.competency_scan || 0) > 0 ? "complete" : "not_started"
+                            )}
+                            {(project.evaluation_counts?.competency_scan || 0) > 0 
+                              ? `${project.evaluation_counts?.competency_scan} scan${(project.evaluation_counts?.competency_scan || 0) > 1 ? "s" : ""} ingericht`
+                              : "Scan nog in te richten"
+                            }
                           </Link>
                         </div>
                         <div>
                           <div className="font-semibold text-gray-900 mb-1">Aantekeningen</div>
                           <Link href={`/teacher/project-notes?project_id=${project.project_id}`} className="hover:underline">
-                            Bekijk aantekeningen
+                            {(project.note_count || 0) > 0 
+                              ? <><span className="font-medium">{project.note_count}</span> aantekening{(project.note_count || 0) > 1 ? "en" : ""} • <span className="underline underline-offset-2">Bekijk overzicht</span></>
+                              : "Nog geen aantekeningen"
+                            }
                           </Link>
                         </div>
                       </div>
                       
-                      {/* Team members if available */}
-                      {project.student_names && project.student_names.length > 0 && (
+                      {/* Deelprojecten section for Bovenbouw projects */}
+                      {!isOnderbouw && (
+                        <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50/60 p-3 space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <h3 className="text-xs font-semibold text-gray-800">
+                                Deelprojecten – {project.project_title}
+                              </h3>
+                              <p className="text-[11px] text-gray-500">
+                                Per deelproject zie je de opdrachtgever, het team en de namen van de teamleden.
+                              </p>
+                            </div>
+                            <button 
+                              className="rounded-full border border-blue-200 bg-gray-100 px-3 py-1 text-[11px] font-medium text-gray-400 cursor-not-allowed"
+                              disabled
+                              title="Deelprojecten functionaliteit wordt nog ontwikkeld"
+                            >
+                              + Nieuw deelproject
+                            </button>
+                          </div>
+
+                          {/* Subprojects table */}
+                          <div className="overflow-x-auto text-xs">
+                            <table className="min-w-full text-left">
+                              <thead>
+                                <tr className="border-b border-blue-100 text-[11px] text-gray-500">
+                                  <th className="py-2 pr-4">Deelproject</th>
+                                  <th className="px-4 py-2">Opdrachtgever</th>
+                                  <th className="px-4 py-2">Team</th>
+                                  <th className="px-4 py-2">Teamleden</th>
+                                  <th className="px-4 py-2 text-right">Mail</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-blue-100">
+                                {project.subprojects && project.subprojects.length > 0 ? (
+                                  project.subprojects.map((subproject) => (
+                                    <tr key={subproject.id} className="hover:bg-white/80">
+                                      <td className="py-2 pr-4 align-top">{subproject.title}</td>
+                                      <td className="px-4 py-2 align-top">{subproject.client_name || "-"}</td>
+                                      <td className="px-4 py-2 align-top">{subproject.team_name || "-"}</td>
+                                      <td className="px-4 py-2 align-top text-[11px] text-gray-700">
+                                        {subproject.team_members?.join(", ") || "-"}
+                                      </td>
+                                      <td className="px-4 py-2 align-top text-right">
+                                        <span className="inline-flex items-center px-3 py-1.5 text-[11px] font-medium text-gray-400 cursor-not-allowed" title="Mail functionaliteit wordt nog ontwikkeld">
+                                          📧 Mail
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))
+                                ) : (
+                                  <tr>
+                                    <td colSpan={5} className="py-4 text-center text-gray-500 text-[11px]">
+                                      Nog geen deelprojecten aangemaakt. (Functionaliteit wordt nog ontwikkeld)
+                                    </td>
+                                  </tr>
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Team members if available (for onderbouw) */}
+                      {isOnderbouw && project.student_names && project.student_names.length > 0 && (
                         <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50/60 p-3">
                           <div className="text-xs font-semibold text-gray-800 mb-1">Teamleden</div>
                           <p className="text-[11px] text-gray-600">{project.student_names.join(", ")}</p>
@@ -592,7 +689,7 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
   // Refresh key to trigger re-fetch when returning from wizard
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Fetch projects - using listProjects to get ALL projects, not just running ones
+  // Fetch projects - using listProjects to get ALL projects, then enrich with details
   useEffect(() => {
     async function fetchProjects() {
       try {
@@ -601,7 +698,7 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
         const response = await projectService.listProjects({ per_page: 100 });
         
         // Map ProjectListItem to ProjectWithLevel format
-        const enrichedProjects: ProjectWithLevel[] = (response.items || []).map(item => {
+        const basicProjects: ProjectWithLevel[] = (response.items || []).map(item => {
           // Find course info
           const course = courses.find(c => c.id === item.course_id);
           
@@ -615,8 +712,29 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
             class_name: item.class_name,
             start_date: item.start_date,
             end_date: item.end_date,
-            student_names: [], // Not available from listProjects, would need separate API call if needed
+            student_names: [],
           };
+        });
+        
+        // Fetch project details in parallel to get evaluation counts
+        const projectDetails = await Promise.allSettled(
+          basicProjects.map(p => projectService.getProject(p.project_id))
+        );
+        
+        // Enrich projects with details
+        const enrichedProjects: ProjectWithLevel[] = basicProjects.map((project, index) => {
+          const detailResult = projectDetails[index];
+          if (detailResult.status === 'fulfilled') {
+            const detail = detailResult.value;
+            return {
+              ...project,
+              evaluation_counts: detail.evaluation_counts,
+              note_count: detail.note_count,
+              client_count: detail.client_count,
+              description: detail.description,
+            };
+          }
+          return project;
         });
         
         setProjects(enrichedProjects);
