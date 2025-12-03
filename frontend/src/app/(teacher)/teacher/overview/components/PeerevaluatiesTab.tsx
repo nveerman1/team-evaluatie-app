@@ -453,10 +453,28 @@ function FeedbackTab() {
     }
   };
 
+  // Escape special regex characters to prevent ReDoS attacks
+  const escapeRegex = (str: string) => {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  };
+
+  // Escape HTML to prevent XSS
+  const escapeHtml = (text: string) => {
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  };
+
   const highlightKeywords = (text: string, keywords: string[]) => {
-    let result = text;
+    // First escape HTML in the original text
+    let result = escapeHtml(text);
     keywords.forEach((keyword) => {
-      const regex = new RegExp(`(${keyword})`, "gi");
+      // Escape special regex characters in keyword
+      const escapedKeyword = escapeRegex(keyword);
+      const regex = new RegExp(`(${escapedKeyword})`, "gi");
       result = result.replace(
         regex,
         '<mark class="bg-yellow-200 px-0.5 rounded">$1</mark>'
@@ -1127,7 +1145,7 @@ function CompareTab() {
           </div>
           <div className="flex items-center gap-2">
             <div className="w-8 h-6 bg-red-100 rounded"></div>
-            <span>Onvoldoende (&lt;2.0)</span>
+            <span>Onvoldoende ({"<"}2.0)</span>
           </div>
         </div>
         <p className="mt-2 text-gray-600">
