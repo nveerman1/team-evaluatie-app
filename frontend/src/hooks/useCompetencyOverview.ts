@@ -10,6 +10,7 @@ import type {
   ReflectionSummary,
   CompetencyOverviewFilters,
   FilterOptions,
+  StudentDetailData,
 } from "@/dtos/competency-monitor.dto";
 
 /**
@@ -203,6 +204,44 @@ export function useCompetencyFilterOptions() {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  return { data, loading, error, refresh };
+}
+
+/**
+ * Hook to fetch detailed data for a single student
+ */
+export function useStudentDetail(studentId: number | null) {
+  const [data, setData] = useState<StudentDetailData | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    if (!studentId) {
+      setData(null);
+      setLoading(false);
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await competencyMonitorService.getStudentDetail(studentId);
+      if (!result) {
+        setError("Leerling niet gevonden");
+      }
+      setData(result);
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: string } }; message?: string };
+      setError(err?.response?.data?.detail || err?.message || "Kon leerling details niet laden");
+    } finally {
+      setLoading(false);
+    }
+  }, [studentId]);
 
   useEffect(() => {
     refresh();

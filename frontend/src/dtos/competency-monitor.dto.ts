@@ -147,3 +147,45 @@ export interface FilterOptions {
   scans: { id: number; label: string; date: string }[];
   categories: { id: number; name: string }[];
 }
+
+// ========== Student Detail Page DTOs ==========
+
+// Category score for a single scan
+export interface StudentCategoryScore {
+  categoryId: number;
+  categoryName: string;
+  score: number | null;
+}
+
+// Scan data for a single student
+export interface StudentScanData {
+  scanId: number;
+  scanLabel: string;
+  scanDate: string;
+  overallScore: number | null;
+  categoryScores: StudentCategoryScore[];
+}
+
+// Student detail data for the individual student page
+export interface StudentDetailData {
+  studentId: number;
+  name: string;
+  className: string | null;
+  email: string | null;
+  
+  // Current profile (latest scan)
+  currentOverallScore: number | null;
+  currentCategoryScores: StudentCategoryScore[];
+  trendDelta: number | null;
+  strongestCategory: string | null;
+  weakestCategory: string | null;
+  
+  // All scans for this student
+  scans: StudentScanData[];
+  
+  // Learning goals for this student
+  learningGoals: LearningGoalSummary[];
+  
+  // Reflections for this student
+  reflections: ReflectionSummary[];
+}

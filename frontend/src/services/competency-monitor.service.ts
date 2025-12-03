@@ -13,6 +13,8 @@ import type {
   ReflectionSummary,
   CompetencyOverviewFilters,
   FilterOptions,
+  StudentDetailData,
+  StudentScanData,
 } from "@/dtos/competency-monitor.dto";
 
 // Mock data for development - will be replaced with API calls
@@ -309,5 +311,78 @@ export const competencyMonitorService = {
   async getFilterOptions(): Promise<FilterOptions> {
     await new Promise((resolve) => setTimeout(resolve, 100));
     return mockFilterOptions;
+  },
+
+  /**
+   * Get detailed data for a single student
+   */
+  async getStudentDetail(studentId: number): Promise<StudentDetailData | null> {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    
+    const student = mockStudents.find((s) => s.studentId === studentId);
+    if (!student) {
+      return null;
+    }
+    
+    // Generate mock scan data for this student
+    const studentScans: StudentScanData[] = mockScans.map((scan) => {
+      const categoryScores = mockCategorySummaries.map((cat) => ({
+        categoryId: cat.id,
+        categoryName: cat.name,
+        // Generate consistent but varied scores per student/scan/category
+        score: 2.0 + (((studentId * 7 + scan.scanId * 3 + cat.id * 5) % 30) / 10),
+      }));
+      
+      const overallScore = categoryScores.reduce((sum, c) => sum + (c.score || 0), 0) / categoryScores.length;
+      
+      return {
+        scanId: scan.scanId,
+        scanLabel: scan.label,
+        scanDate: scan.date,
+        overallScore: parseFloat(overallScore.toFixed(1)),
+        categoryScores,
+      };
+    });
+    
+    // Get current (latest) scores
+    const latestScan = studentScans[studentScans.length - 1];
+    const currentCategoryScores = latestScan?.categoryScores || [];
+    
+    // Get learning goals for this student
+    const studentGoals = mockLearningGoals.filter((g) => g.studentId === studentId);
+    
+    // Get reflections for this student
+    const studentReflections = mockReflections.filter((r) => r.studentId === studentId);
+    
+    // Add more mock reflections for variety
+    const additionalReflections = mockScans.slice(0, -1).map((scan, idx) => ({
+      id: 100 + studentId * 10 + idx,
+      studentId,
+      studentName: student.name,
+      className: student.className,
+      categoryId: null,
+      categoryName: null,
+      scanId: scan.scanId,
+      scanLabel: scan.label,
+      createdAt: scan.date,
+      reflectionText: `Reflectie voor ${scan.label}: Ik heb deze periode gewerkt aan mijn competenties en zie vooruitgang op verschillende gebieden.`,
+    }));
+    
+    return {
+      studentId: student.studentId,
+      name: student.name,
+      className: student.className,
+      email: `${student.name.toLowerCase().replace(/ /g, ".")}@school.nl`,
+      currentOverallScore: student.lastOverallScore,
+      currentCategoryScores,
+      trendDelta: student.trendDelta,
+      strongestCategory: student.strongestCategory,
+      weakestCategory: student.weakestCategory,
+      scans: studentScans,
+      learningGoals: studentGoals,
+      reflections: [...studentReflections, ...additionalReflections].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      ),
+    };
   },
 };
