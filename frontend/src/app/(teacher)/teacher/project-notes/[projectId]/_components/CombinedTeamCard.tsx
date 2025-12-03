@@ -17,23 +17,30 @@ interface CombinedTeamCardProps {
   onNoteSaved: () => void;
 }
 
-// Quick notes for teams
-const QUICK_NOTES_TEAM = [
-  "Mindere communicatie",
-  "Veel afgeleid",
-  "Goede rolverdeling",
-  "Neemt weinig initiatief",
-  "Actief betrokken bij groep",
-  "Sterke uitleg aan klasgenoten",
+// Quick notes for teams with linked OMZA tags
+const QUICK_NOTES_TEAM: { text: string; omza: string | null }[] = [
+  { text: "Werkt geconcentreerd als team", omza: "Organiseren" },
+  { text: "Taken goed verdeeld", omza: "Organiseren" },
+  { text: "Planning helder en gevolgd", omza: "Organiseren" },
+  { text: "Team neemt samen beslissingen", omza: "Meedoen" },
+  { text: "Weinig overleg / ieder werkt op eilandje", omza: "Meedoen" },
+  { text: "Tempo ligt te laag voor de planning", omza: "Organiseren" },
+  { text: "Veel afleiding in de groep", omza: "Zelfvertrouwen" },
+  { text: "Constructieve sfeer, helpt elkaar", omza: "Meedoen" },
+  { text: "Onenigheid remt het werk", omza: "Meedoen" },
 ];
 
-// Quick notes for students
-const QUICK_NOTES_STUDENT = [
-  "Weinig gedaan",
-  "Aandacht nodig",
-  "Stille deelname",
-  "Neemt snel de leiding",
-  "Zoekt veel afleiding",
+// Quick notes for students with linked OMZA tags
+const QUICK_NOTES_STUDENT: { text: string; omza: string | null }[] = [
+  { text: "Weinig gedaan", omza: "Meedoen" },
+  { text: "Extra aandacht / sturing nodig", omza: "Autonomie" },
+  { text: "Stille deelname, weinig inbreng", omza: "Meedoen" },
+  { text: "Neemt snel de leiding", omza: "Organiseren" },
+  { text: "Zoekt veel afleiding", omza: "Zelfvertrouwen" },
+  { text: "Toont veel initiatief", omza: "Autonomie" },
+  { text: "Helpt actief andere teamleden", omza: "Meedoen" },
+  { text: "Komt afspraken niet na", omza: "Organiseren" },
+  { text: "Blijft rustig en gefocust werken", omza: "Zelfvertrouwen" },
 ];
 
 // OMZA categories
@@ -92,8 +99,12 @@ export function CombinedTeamCard({
     return `${tagBlock} – ${trimmedText}`;
   };
 
-  const saveQuick = (text: string, isStudent: boolean = false) => {
+  const saveQuick = (text: string, omzaTag: string | null, isStudent: boolean = false) => {
     if (!isOpen) setIsOpen(true);
+    // Set the OMZA tag if provided
+    if (omzaTag && !omzaTags.includes(omzaTag)) {
+      setOmzaTags([omzaTag]);
+    }
     const line = formatSnippet(text, isStudent);
     if (!line) {
       return;
@@ -175,11 +186,12 @@ export function CombinedTeamCard({
       <div className="flex flex-wrap gap-1.5 text-[11px]">
         {QUICK_NOTES_TEAM.map(n => (
           <button
-            key={n}
-            onClick={() => saveQuick(n, false)}
+            key={n.text}
+            onClick={() => saveQuick(n.text, n.omza, false)}
             className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 hover:bg-indigo-50"
+            title={n.omza ? `OMZA: ${n.omza}` : undefined}
           >
-            {n}
+            {n.text}
           </button>
         ))}
       </div>
@@ -189,11 +201,12 @@ export function CombinedTeamCard({
         <div className="flex flex-wrap gap-1.5 text-[11px]">
           {QUICK_NOTES_STUDENT.map(n => (
             <button
-              key={n}
-              onClick={() => saveQuick(n, true)}
-              className="rounded-full border border-slate-200 bg-white px-3 py-1 hover:bg-indigo-50"
+              key={n.text}
+              onClick={() => saveQuick(n.text, n.omza, true)}
+              className="rounded-full border border-indigo-100 bg-indigo-50/50 px-3 py-1 hover:bg-indigo-100 text-slate-700"
+              title={n.omza ? `OMZA: ${n.omza}` : undefined}
             >
-              {n}
+              {n.text}
             </button>
           ))}
         </div>
