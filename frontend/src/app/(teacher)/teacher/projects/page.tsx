@@ -12,7 +12,7 @@ import { useCourses } from "@/hooks";
 import { Loading } from "@/components";
 import { SearchableMultiSelect } from "@/components/form/SearchableMultiSelect";
 import type { MailTemplateDto } from "@/dtos/mail-template.dto";
-import type { RunningProjectItem } from "@/dtos/project.dto";
+import type { RunningProjectItem, Subproject } from "@/dtos/project.dto";
 import type { ClientListItem } from "@/dtos/client.dto";
 import type { Course, CourseStudent } from "@/dtos/course.dto";
 
@@ -49,20 +49,8 @@ interface ProjectWithLevel extends RunningProjectItem {
   evaluation_counts?: Record<string, number>;
   note_count?: number;
   client_count?: number;
-  // Subprojects for bovenbouw choice projects
-  subprojects?: SubProject[];
-}
-
-// Subproject type for bovenbouw choice projects
-interface SubProject {
-  id: number;
-  title: string;
-  client_id?: number;
-  client_name?: string;
-  client_email?: string;
-  team_number?: number;
-  team_name?: string;
-  team_members?: string[];
+  // Subprojects for bovenbouw choice projects (from API)
+  subprojects?: Subproject[];
 }
 
 // Team type for course teams
@@ -137,6 +125,13 @@ function DeleteConfirmModal({
   );
 }
 
+// Type for subproject data passed to onSave
+interface SubprojectData {
+  title: string;
+  client_id?: number;
+  team_number?: number;
+}
+
 // Subproject modal for creating/editing deelprojecten
 function SubprojectModal({
   isOpen,
@@ -144,12 +139,14 @@ function SubprojectModal({
   courseId,
   onSave,
   onCancel,
+  isSaving: externalIsSaving = false,
 }: {
   isOpen: boolean;
   projectTitle: string;
   courseId?: number;
-  onSave: (subproject: Omit<SubProject, 'id'>) => void;
+  onSave: (subproject: SubprojectData) => void | Promise<void>;
   onCancel: () => void;
+  isSaving?: boolean;
 }) {
   const [title, setTitle] = useState("");
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
@@ -158,7 +155,6 @@ function SubprojectModal({
   const [loadingClients, setLoadingClients] = useState(false);
   const [teams, setTeams] = useState<CourseTeam[]>([]);
   const [loadingTeams, setLoadingTeams] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
 
   // Fetch clients when modal opens
   useEffect(() => {
@@ -215,26 +211,18 @@ function SubprojectModal({
     }
   }, [isOpen]);
 
-  const selectedClient = clients.find(c => c.id === selectedClientId);
   const selectedTeam = teams.find(t => t.team_number === selectedTeamNumber);
 
   const handleSave = () => {
     if (!title.trim()) return;
     
-    setIsSaving(true);
-    
-    const subproject: Omit<SubProject, 'id'> = {
+    const subprojectData: SubprojectData = {
       title: title.trim(),
       client_id: selectedClientId || undefined,
-      client_name: selectedClient?.organization,
-      client_email: selectedClient?.contact_email,
       team_number: selectedTeamNumber || undefined,
-      team_name: selectedTeamNumber ? `Team ${selectedTeamNumber}` : undefined,
-      team_members: selectedTeam?.members.map(m => m.name) || [],
     };
     
-    onSave(subproject);
-    setIsSaving(false);
+    onSave(subprojectData);
   };
 
   if (!isOpen) return null;
@@ -326,17 +314,17 @@ function SubprojectModal({
         <div className="flex gap-3 justify-end mt-6">
           <button
             onClick={onCancel}
-            disabled={isSaving}
+            disabled={externalIsSaving}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
           >
             Annuleren
           </button>
           <button
             onClick={handleSave}
-            disabled={isSaving || !title.trim()}
+            disabled={externalIsSaving || !title.trim()}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
           >
-            {isSaving ? "Toevoegen..." : "Toevoegen"}
+            {externalIsSaving ? "Toevoegen..." : "Toevoegen"}
           </button>
         </div>
       </div>
@@ -871,32 +859,6 @@ function ProjectTable({
   );
 }
 
-// LocalStorage key for subprojects
-const SUBPROJECTS_STORAGE_KEY = "teacher_projects_subprojects";
-
-// Helper to load subprojects from localStorage
-function loadSubprojectsFromStorage(): Record<number, SubProject[]> {
-  if (typeof window === "undefined") return {};
-  try {
-    const stored = localStorage.getItem(SUBPROJECTS_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : {};
-  } catch {
-    return {};
-  }
-}
-
-// Helper to save subprojects to localStorage
-function saveSubprojectsToStorage(projectId: number, subprojects: SubProject[]) {
-  if (typeof window === "undefined") return;
-  try {
-    const allSubprojects = loadSubprojectsFromStorage();
-    allSubprojects[projectId] = subprojects;
-    localStorage.setItem(SUBPROJECTS_STORAGE_KEY, JSON.stringify(allSubprojects));
-  } catch (err) {
-    console.error("Failed to save subprojects to localStorage:", err);
-  }
-}
-
 // Tab Content Component (shared between Onderbouw and Bovenbouw)
 function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" }) {
   const router = useRouter();
@@ -924,6 +886,7 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
   
   // Subproject modal
   const [subprojectModalProject, setSubprojectModalProject] = useState<ProjectWithLevel | null>(null);
+  const [isCreatingSubproject, setIsCreatingSubproject] = useState(false);
 
   // Fetch mail templates
   useEffect(() => {
@@ -977,35 +940,40 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
           };
         });
         
-        // Fetch project details in parallel to get evaluation counts
-        const projectDetails = await Promise.allSettled(
-          basicProjects.map(p => projectService.getProject(p.project_id))
-        );
+        // Fetch project details and subprojects in parallel
+        const [projectDetails, subprojectsResults] = await Promise.all([
+          Promise.allSettled(basicProjects.map(p => projectService.getProject(p.project_id))),
+          Promise.allSettled(basicProjects.map(p => projectService.listSubprojects(p.project_id))),
+        ]);
         
-        // Enrich projects with details
+        // Enrich projects with details and subprojects
         const enrichedProjects: ProjectWithLevel[] = basicProjects.map((project, index) => {
           const detailResult = projectDetails[index];
+          const subprojectsResult = subprojectsResults[index];
+          
+          let enriched = { ...project };
+          
           if (detailResult.status === 'fulfilled') {
             const detail = detailResult.value;
-            return {
-              ...project,
+            enriched = {
+              ...enriched,
               evaluation_counts: detail.evaluation_counts,
               note_count: detail.note_count,
               client_count: detail.client_count,
               description: detail.description,
             };
           }
-          return project;
+          
+          if (subprojectsResult.status === 'fulfilled') {
+            enriched.subprojects = subprojectsResult.value.items;
+          } else {
+            enriched.subprojects = [];
+          }
+          
+          return enriched;
         });
         
-        // Load subprojects from localStorage
-        const storedSubprojects = loadSubprojectsFromStorage();
-        const projectsWithSubprojects = enrichedProjects.map(project => ({
-          ...project,
-          subprojects: storedSubprojects[project.project_id] || [],
-        }));
-        
-        setProjects(projectsWithSubprojects);
+        setProjects(enrichedProjects);
         
         // Extract unique courses for filter dropdown
         const uniqueCourses = Array.from(new Set(
@@ -1387,38 +1355,45 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
         isOpen={subprojectModalProject !== null}
         projectTitle={subprojectModalProject?.project_title || ""}
         courseId={subprojectModalProject?.course_id}
-        onSave={(subproject) => {
+        onSave={async (subprojectData) => {
           if (subprojectModalProject) {
-            // Add subproject to the project locally (stored in component state + localStorage)
-            // Use crypto.randomUUID for unique ID, with Date.now() as fallback
-            const newSubproject: SubProject = {
-              id: typeof crypto !== 'undefined' && crypto.randomUUID 
-                ? parseInt(crypto.randomUUID().replace(/-/g, '').slice(0, 15), 16) 
-                : Date.now() + Math.random(),
-              ...subproject,
-            };
-            
-            // Update the project in the projects list
-            setProjects(prev => {
-              const updated = prev.map(p => {
-                if (p.project_id === subprojectModalProject.project_id) {
-                  const newSubprojects = [...(p.subprojects || []), newSubproject];
-                  // Save to localStorage for persistence
-                  saveSubprojectsToStorage(p.project_id, newSubprojects);
-                  return {
-                    ...p,
-                    subprojects: newSubprojects,
-                  };
+            setIsCreatingSubproject(true);
+            try {
+              // Create subproject via API
+              const newSubproject = await projectService.createSubproject(
+                subprojectModalProject.project_id,
+                {
+                  title: subprojectData.title,
+                  client_id: subprojectData.client_id,
+                  team_number: subprojectData.team_number,
                 }
-                return p;
+              );
+              
+              // Update the project in the projects list with the new subproject
+              setProjects(prev => {
+                const updated = prev.map(p => {
+                  if (p.project_id === subprojectModalProject.project_id) {
+                    return {
+                      ...p,
+                      subprojects: [...(p.subprojects || []), newSubproject],
+                    };
+                  }
+                  return p;
+                });
+                return updated;
               });
-              return updated;
-            });
-            
-            setSubprojectModalProject(null);
+              
+              setSubprojectModalProject(null);
+            } catch (err) {
+              console.error("Failed to create subproject:", err);
+              alert("Kon deelproject niet aanmaken");
+            } finally {
+              setIsCreatingSubproject(false);
+            }
           }
         }}
         onCancel={() => setSubprojectModalProject(null)}
+        isSaving={isCreatingSubproject}
       />
     </div>
   );

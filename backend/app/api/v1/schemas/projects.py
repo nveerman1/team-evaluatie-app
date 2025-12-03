@@ -89,6 +89,56 @@ class ProjectDetailOut(ProjectOut):
     model_config = ConfigDict(from_attributes=True)
 
 
+# ============ Subproject Schemas ============
+
+
+class SubprojectBase(BaseModel):
+    """Base schema for subproject data"""
+
+    title: str = Field(..., min_length=1, max_length=200)
+    client_id: Optional[int] = None
+    team_number: Optional[int] = None
+
+
+class SubprojectCreate(SubprojectBase):
+    """Schema for creating a new subproject"""
+
+    pass
+
+
+class SubprojectUpdate(BaseModel):
+    """Schema for updating a subproject (all fields optional)"""
+
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    client_id: Optional[int] = None
+    team_number: Optional[int] = None
+
+
+class SubprojectOut(SubprojectBase):
+    """Schema for subproject output"""
+
+    id: int
+    school_id: int
+    project_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    # Enriched fields (not in DB, populated in API)
+    client_name: Optional[str] = None
+    client_email: Optional[str] = None
+    team_name: Optional[str] = None
+    team_members: List[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SubprojectListOut(BaseModel):
+    """Schema for paginated subproject list"""
+
+    items: List[SubprojectOut]
+    total: int
+
+
 # ============ Project Note Schemas ============
 
 

@@ -262,6 +262,44 @@ class Project(Base):
     )
 
 
+class Subproject(Base):
+    """
+    Subproject (Deelproject) - Sub-tasks/sections within a main project
+    Used for bovenbouw choice projects where a main project has multiple deelprojecten
+    """
+
+    __tablename__ = "subprojects"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = mapped_column(
+        ForeignKey("schools.id", ondelete="CASCADE"), index=True
+    )
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    client_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("clients.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
+    # Basic info
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+
+    # Team info
+    team_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, index=True)
+
+    # Relationships
+    school: Mapped["School"] = relationship()
+    project: Mapped["Project"] = relationship()
+    client: Mapped[Optional["Client"]] = relationship()
+
+    __table_args__ = (
+        Index("ix_subproject_school", "school_id"),
+        Index("ix_subproject_project", "project_id"),
+        Index("ix_subproject_client", "client_id"),
+        Index("ix_subproject_team", "project_id", "team_number"),
+    )
+
+
 class Rubric(Base):
     __tablename__ = "rubrics"
     id: Mapped[int] = id_pk()
