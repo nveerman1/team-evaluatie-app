@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useCompetencyOverview, useCompetencyFilterOptions } from "@/hooks/useCompetencyOverview";
 import { Loading, ErrorMessage } from "@/components";
-import { CompetencyRadarChart } from "@/components/student/competency/CompetencyRadarChart";
+import { CompetencyRadarChart, CATEGORY_COLORS } from "@/components/student/competency/CompetencyRadarChart";
 import type { CompetencyOverviewFilters } from "@/dtos/competency-monitor.dto";
 
 export function OverviewSubTab() {
@@ -124,7 +124,7 @@ export function OverviewSubTab() {
               <div key={cat.id} className="flex items-center gap-2">
                 <div 
                   className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: ["#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#ef4444", "#0ea5e9"][index % 6] }}
+                  style={{ backgroundColor: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }}
                 />
                 <span className="text-slate-600 truncate">{cat.name}</span>
                 <span className="font-medium text-slate-900">{cat.averageScore.toFixed(1)}</span>
