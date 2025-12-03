@@ -1140,13 +1140,17 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
           }
         }
         
-        // Link new clients
+        // Link new clients (ignore "already linked" errors - 400 status)
         for (const clientId of newClientIds) {
           if (clientId !== currentClientId) {
             try {
               await clientService.linkProjectToClient(clientId, editingProject.project_id);
-            } catch (err) {
-              console.warn("Failed to link client:", err);
+            } catch (err: unknown) {
+              // Ignore 400 errors (project already linked to this client)
+              const axiosErr = err as { response?: { status?: number } };
+              if (axiosErr.response?.status !== 400) {
+                console.warn("Failed to link client:", err);
+              }
             }
           }
         }
