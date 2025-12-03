@@ -15,8 +15,11 @@ export function StudentsSubTab() {
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   
+  // Memoize filters to prevent infinite re-renders
+  const memoizedFilters = useMemo(() => ({ ...filters, searchQuery }), [filters, searchQuery]);
+  
   const { data: filterOptions, loading: filterLoading } = useCompetencyFilterOptions();
-  const { data: students, loading, error } = useCompetencyStudents({ ...filters, searchQuery });
+  const { data: students, loading, error } = useCompetencyStudents(memoizedFilters);
 
   // Sort students
   const sortedStudents = useMemo(() => {

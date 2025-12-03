@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useCompetencyLearningGoals, useCompetencyFilterOptions } from "@/hooks/useCompetencyOverview";
 import { Loading, ErrorMessage } from "@/components";
 import type { CompetencyOverviewFilters } from "@/dtos/competency-monitor.dto";
@@ -10,8 +10,11 @@ export function LearningGoalsSubTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedGoals, setExpandedGoals] = useState<Set<number>>(new Set());
   
+  // Memoize filters to prevent infinite re-renders
+  const memoizedFilters = useMemo(() => ({ ...filters, searchQuery }), [filters, searchQuery]);
+  
   const { data: filterOptions, loading: filterLoading } = useCompetencyFilterOptions();
-  const { data: learningGoals, loading, error } = useCompetencyLearningGoals({ ...filters, searchQuery });
+  const { data: learningGoals, loading, error } = useCompetencyLearningGoals(memoizedFilters);
 
   const toggleExpand = (goalId: number) => {
     const newExpanded = new Set(expandedGoals);

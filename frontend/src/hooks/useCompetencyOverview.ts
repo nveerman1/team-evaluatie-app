@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { competencyMonitorService } from "@/services/competency-monitor.service";
 import type {
   CompetencyOverviewData,
@@ -19,6 +19,9 @@ export function useCompetencyOverview(filters?: CompetencyOverviewFilters) {
   const [data, setData] = useState<CompetencyOverviewData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Serialize filters for stable dependency
+  const filtersKey = useMemo(() => JSON.stringify(filters || {}), [filters]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -32,7 +35,8 @@ export function useCompetencyOverview(filters?: CompetencyOverviewFilters) {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtersKey]);
 
   useEffect(() => {
     refresh();
@@ -48,6 +52,9 @@ export function useCategoryDetail(categoryId: number | null, filters?: Competenc
   const [data, setData] = useState<CategoryDetailData | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Serialize filters for stable dependency
+  const filtersKey = useMemo(() => JSON.stringify(filters || {}), [filters]);
 
   const refresh = useCallback(async () => {
     if (!categoryId) {
@@ -66,7 +73,8 @@ export function useCategoryDetail(categoryId: number | null, filters?: Competenc
     } finally {
       setLoading(false);
     }
-  }, [categoryId, filters]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryId, filtersKey]);
 
   useEffect(() => {
     refresh();
@@ -82,6 +90,9 @@ export function useCompetencyStudents(filters?: CompetencyOverviewFilters) {
   const [data, setData] = useState<StudentCompetencySummary[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Serialize filters for stable dependency
+  const filtersKey = useMemo(() => JSON.stringify(filters || {}), [filters]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -95,7 +106,8 @@ export function useCompetencyStudents(filters?: CompetencyOverviewFilters) {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtersKey]);
 
   useEffect(() => {
     refresh();
@@ -111,6 +123,9 @@ export function useCompetencyLearningGoals(filters?: CompetencyOverviewFilters) 
   const [data, setData] = useState<LearningGoalSummary[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Serialize filters for stable dependency
+  const filtersKey = useMemo(() => JSON.stringify(filters || {}), [filters]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -124,7 +139,8 @@ export function useCompetencyLearningGoals(filters?: CompetencyOverviewFilters) 
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtersKey]);
 
   useEffect(() => {
     refresh();
@@ -140,6 +156,9 @@ export function useCompetencyReflections(filters?: CompetencyOverviewFilters) {
   const [data, setData] = useState<ReflectionSummary[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Serialize filters for stable dependency
+  const filtersKey = useMemo(() => JSON.stringify(filters || {}), [filters]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -153,7 +172,8 @@ export function useCompetencyReflections(filters?: CompetencyOverviewFilters) {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtersKey]);
 
   useEffect(() => {
     refresh();

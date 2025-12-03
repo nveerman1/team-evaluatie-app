@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useCompetencyReflections, useCompetencyFilterOptions } from "@/hooks/useCompetencyOverview";
 import { Loading, ErrorMessage } from "@/components";
 import type { CompetencyOverviewFilters } from "@/dtos/competency-monitor.dto";
@@ -10,8 +10,11 @@ export function ReflectionsSubTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedReflections, setExpandedReflections] = useState<Set<number>>(new Set());
   
+  // Memoize filters to prevent infinite re-renders
+  const memoizedFilters = useMemo(() => ({ ...filters, searchQuery }), [filters, searchQuery]);
+  
   const { data: filterOptions, loading: filterLoading } = useCompetencyFilterOptions();
-  const { data: reflections, loading, error } = useCompetencyReflections({ ...filters, searchQuery });
+  const { data: reflections, loading, error } = useCompetencyReflections(memoizedFilters);
 
   const toggleExpand = (reflectionId: number) => {
     const newExpanded = new Set(expandedReflections);
