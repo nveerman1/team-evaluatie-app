@@ -871,6 +871,32 @@ function ProjectTable({
   );
 }
 
+// LocalStorage key for subprojects
+const SUBPROJECTS_STORAGE_KEY = "teacher_projects_subprojects";
+
+// Helper to load subprojects from localStorage
+function loadSubprojectsFromStorage(): Record<number, SubProject[]> {
+  if (typeof window === "undefined") return {};
+  try {
+    const stored = localStorage.getItem(SUBPROJECTS_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
+
+// Helper to save subprojects to localStorage
+function saveSubprojectsToStorage(projectId: number, subprojects: SubProject[]) {
+  if (typeof window === "undefined") return;
+  try {
+    const allSubprojects = loadSubprojectsFromStorage();
+    allSubprojects[projectId] = subprojects;
+    localStorage.setItem(SUBPROJECTS_STORAGE_KEY, JSON.stringify(allSubprojects));
+  } catch (err) {
+    console.error("Failed to save subprojects to localStorage:", err);
+  }
+}
+
 // Tab Content Component (shared between Onderbouw and Bovenbouw)
 function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" }) {
   const router = useRouter();
@@ -972,7 +998,14 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
           return project;
         });
         
-        setProjects(enrichedProjects);
+        // Load subprojects from localStorage
+        const storedSubprojects = loadSubprojectsFromStorage();
+        const projectsWithSubprojects = enrichedProjects.map(project => ({
+          ...project,
+          subprojects: storedSubprojects[project.project_id] || [],
+        }));
+        
+        setProjects(projectsWithSubprojects);
         
         // Extract unique courses for filter dropdown
         const uniqueCourses = Array.from(new Set(
@@ -1356,7 +1389,7 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
         courseId={subprojectModalProject?.course_id}
         onSave={(subproject) => {
           if (subprojectModalProject) {
-            // Add subproject to the project locally (stored in component state)
+            // Add subproject to the project locally (stored in component state + localStorage)
             // Use crypto.randomUUID for unique ID, with Date.now() as fallback
             const newSubproject: SubProject = {
               id: typeof crypto !== 'undefined' && crypto.randomUUID 
@@ -1366,15 +1399,21 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
             };
             
             // Update the project in the projects list
-            setProjects(prev => prev.map(p => {
-              if (p.project_id === subprojectModalProject.project_id) {
-                return {
-                  ...p,
-                  subprojects: [...(p.subprojects || []), newSubproject],
-                };
-              }
-              return p;
-            }));
+            setProjects(prev => {
+              const updated = prev.map(p => {
+                if (p.project_id === subprojectModalProject.project_id) {
+                  const newSubprojects = [...(p.subprojects || []), newSubproject];
+                  // Save to localStorage for persistence
+                  saveSubprojectsToStorage(p.project_id, newSubprojects);
+                  return {
+                    ...p,
+                    subprojects: newSubprojects,
+                  };
+                }
+                return p;
+              });
+              return updated;
+            });
             
             setSubprojectModalProject(null);
           }
