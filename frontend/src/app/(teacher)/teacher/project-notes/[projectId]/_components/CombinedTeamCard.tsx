@@ -94,14 +94,11 @@ export function CombinedTeamCard({
 
   const saveQuick = (text: string, isStudent: boolean = false) => {
     if (!isOpen) setIsOpen(true);
-    setSaving(true);
     const line = formatSnippet(text, isStudent);
     if (!line) {
-      setTimeout(() => setSaving(false), 500);
       return;
     }
     setNote(prev => prev.trim() ? `${prev.trim()}\n${line}` : line);
-    setTimeout(() => setSaving(false), 500);
   };
 
   const saveNote = async () => {

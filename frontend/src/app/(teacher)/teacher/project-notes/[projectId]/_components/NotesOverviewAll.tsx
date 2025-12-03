@@ -1,6 +1,7 @@
 "use client";
 
 import { ProjectNote } from "@/dtos/project-notes.dto";
+import { ReactNode } from "react";
 
 interface NotesOverviewAllProps {
   teamName: string;
@@ -46,11 +47,20 @@ export function NotesOverviewAll({
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 
-  // Helper to highlight search terms
-  const highlightText = (text: string): string => {
+  // Helper to highlight search terms safely using React elements
+  const highlightText = (text: string): ReactNode => {
     if (!search) return text;
-    const regex = new RegExp(`(${search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    return text.replace(regex, '<mark class="bg-yellow-200">$1</mark>');
+    
+    const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escapedSearch})`, 'gi');
+    const parts = text.split(regex);
+    
+    return parts.map((part, index) => {
+      if (part.toLowerCase() === search.toLowerCase()) {
+        return <mark key={index} className="bg-yellow-200">{part}</mark>;
+      }
+      return part;
+    });
   };
 
   if (filteredNotes.length === 0) {
@@ -113,16 +123,14 @@ export function NotesOverviewAll({
 
               {/* Show student name for student notes */}
               {!isTeam && n.student_name && (
-                <p 
-                  className="text-[13px] font-semibold text-slate-900 leading-snug mb-0.5"
-                  dangerouslySetInnerHTML={{ __html: highlightText(n.student_name) }}
-                />
+                <p className="text-[13px] font-semibold text-slate-900 leading-snug mb-0.5">
+                  {highlightText(n.student_name)}
+                </p>
               )}
 
-              <p 
-                className="text-slate-800 text-[13px] leading-snug"
-                dangerouslySetInnerHTML={{ __html: highlightText(n.text) }}
-              />
+              <p className="text-slate-800 text-[13px] leading-snug">
+                {highlightText(n.text)}
+              </p>
 
               {/* OMZA tags */}
               {allOmzaTags.length > 0 && (
