@@ -479,13 +479,36 @@ export default function TemplatesPage() {
 
   const handleUpdateCompetency = async (competencyId: number) => {
     try {
-      await competencyService.updateCompetency(competencyId, editCompetencyFormData);
+      // Clean up the form data - don't send empty strings for optional fields
+      const cleanedData: CompetencyUpdate = {
+        name: editCompetencyFormData.name,
+        description: editCompetencyFormData.description || undefined,
+        category_id: editCompetencyFormData.category_id || undefined,
+        phase: editCompetencyFormData.phase || undefined,
+        level_descriptors: editCompetencyFormData.level_descriptors,
+      };
+      await competencyService.updateCompetency(competencyId, cleanedData);
       setEditingCompetency(null);
       setEditCompetencyFormData({});
       fetchCompetencies();
     } catch (err) {
       console.error("Error updating competency:", err);
       alert("Er is een fout opgetreden bij het bijwerken van de competentie.");
+    }
+  };
+
+  const handleDeleteCompetency = async (competencyId: number) => {
+    if (!confirm("Weet je zeker dat je deze competentie wilt verwijderen?")) {
+      return;
+    }
+    try {
+      await competencyService.deleteCompetency(competencyId);
+      setExpandedCompetency(null);
+      setEditingCompetency(null);
+      fetchCompetencies();
+    } catch (err) {
+      console.error("Error deleting competency:", err);
+      alert("Er is een fout opgetreden bij het verwijderen van de competentie.");
     }
   };
 
@@ -1355,240 +1378,227 @@ export default function TemplatesPage() {
               </div>
             )}
 
-            {/* Category Sections with Tables */}
-            {!loadingCompetencies && competenciesByCategory.length > 0 && (
-              <div className="space-y-8">
-                {competenciesByCategory.map(([catId, { category, items }]) => (
-                  <div key={catId} className="space-y-3">
-                    {/* Category Header */}
-                    <div className="flex items-center gap-3 px-1">
-                      {category?.color && (
-                        <div
-                          className="w-3 h-3 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: category.color }}
-                        />
-                      )}
-                      <h3 className="text-lg font-semibold text-gray-800">
-                        {category?.name || "Zonder categorie"}
-                        <span className="ml-2 text-sm font-normal text-gray-500">
-                          ({items.length})
-                        </span>
-                      </h3>
-                    </div>
-                    {category?.description && (
-                      <p className="text-sm text-gray-500 px-1 -mt-1">
-                        {category.description}
-                      </p>
-                    )}
-
-                    {/* Competency Table */}
-                    <div className="bg-white rounded-2xl border overflow-hidden">
-                      <table className="w-full table-fixed">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                              Type
-                            </th>
-                            <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                              Categorie
-                            </th>
-                            <th className="w-40 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                              Naam
-                            </th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                              Beschrijving
-                            </th>
-                            <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                              Fase
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                          {items.map((comp) => {
-                            const isExpanded = expandedCompetency === comp.id;
-                            const isEditing = editingCompetency === comp.id;
-                            
-                            return [
-                              <tr 
-                                key={comp.id} 
-                                className="hover:bg-gray-50 cursor-pointer bg-amber-50/30"
-                                onClick={() => toggleCompetencyExpand(comp.id)}
-                              >
-                                <td className="w-28 px-4 py-3 text-sm">
-                                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800">
-                                    🏛️ Centraal
-                                  </span>
-                                </td>
-                                <td className="w-32 px-4 py-3 text-sm">
-                                  {comp.category_name ? (
-                                    <span className="font-medium">{comp.category_name}</span>
-                                  ) : (
-                                    <span className="text-gray-400">-</span>
-                                  )}
-                                </td>
-                                <td className="w-40 px-4 py-3 text-sm font-medium">{comp.name}</td>
-                                <td className="px-4 py-3 text-sm text-gray-600 truncate">
-                                  {comp.description || <span className="text-gray-400">-</span>}
-                                </td>
-                                <td className="w-24 px-4 py-3 text-sm">
-                                  {comp.phase ? (
-                                    <span className={`px-2 py-1 rounded text-xs ${
-                                      comp.phase === "onderbouw" 
-                                        ? "bg-blue-100 text-blue-800" 
-                                        : "bg-purple-100 text-purple-800"
-                                    }`}>
-                                      {comp.phase === "onderbouw" ? "Onderbouw" : "Bovenbouw"}
-                                    </span>
-                                  ) : (
-                                    <span className="text-gray-400">-</span>
-                                  )}
-                                </td>
-                              </tr>,
-                              isExpanded && (
-                                <tr key={`${comp.id}-expanded`} className="bg-slate-50">
-                                  <td colSpan={5} className="p-4">
-                                    {isEditing ? (
-                                      // Edit form
-                                      <div className="space-y-4">
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                          <div>
-                                            <label className="block text-sm font-medium mb-1">Naam</label>
-                                            <input
-                                              type="text"
-                                              value={editCompetencyFormData.name || ""}
-                                              onChange={(e) => setEditCompetencyFormData({ ...editCompetencyFormData, name: e.target.value })}
-                                              className="w-full px-3 py-2 border rounded"
-                                              onClick={(e) => e.stopPropagation()}
-                                            />
-                                          </div>
-                                          <div>
-                                            <label className="block text-sm font-medium mb-1">Categorie</label>
-                                            <select
-                                              value={editCompetencyFormData.category_id || ""}
-                                              onChange={(e) => setEditCompetencyFormData({ ...editCompetencyFormData, category_id: e.target.value ? parseInt(e.target.value) : undefined })}
-                                              className="w-full px-3 py-2 border rounded"
-                                              onClick={(e) => e.stopPropagation()}
-                                            >
-                                              <option value="">Geen categorie</option>
-                                              {categories.map((cat) => (
-                                                <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                              ))}
-                                            </select>
-                                          </div>
-                                          <div>
-                                            <label className="block text-sm font-medium mb-1">Fase</label>
-                                            <select
-                                              value={editCompetencyFormData.phase || ""}
-                                              onChange={(e) => setEditCompetencyFormData({ ...editCompetencyFormData, phase: e.target.value })}
-                                              className="w-full px-3 py-2 border rounded"
-                                              onClick={(e) => e.stopPropagation()}
-                                            >
-                                              <option value="">Niet gespecificeerd</option>
-                                              <option value="onderbouw">Onderbouw</option>
-                                              <option value="bovenbouw">Bovenbouw</option>
-                                            </select>
-                                          </div>
-                                        </div>
-                                        <div>
-                                          <label className="block text-sm font-medium mb-1">Beschrijving</label>
+            {/* Single Competency Table */}
+            {!loadingCompetencies && filteredCompetencies.length > 0 && (
+              <div className="bg-white rounded-2xl border overflow-hidden">
+                <table className="w-full table-fixed">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="w-36 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Type
+                      </th>
+                      <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Categorie
+                      </th>
+                      <th className="w-40 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Naam
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Beschrijving
+                      </th>
+                      <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Fase
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {filteredCompetencies.map((comp) => {
+                      const isExpanded = expandedCompetency === comp.id;
+                      const isEditing = editingCompetency === comp.id;
+                      
+                      return [
+                        <tr 
+                          key={comp.id} 
+                          className="hover:bg-gray-50 cursor-pointer bg-amber-50/30"
+                          onClick={() => toggleCompetencyExpand(comp.id)}
+                        >
+                          <td className="w-36 px-4 py-3 text-sm">
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800 whitespace-nowrap">
+                              🏛️ Centraal
+                            </span>
+                          </td>
+                          <td className="w-32 px-4 py-3 text-sm">
+                            {comp.category_name ? (
+                              <span className="font-medium">{comp.category_name}</span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="w-40 px-4 py-3 text-sm font-medium">{comp.name}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600 truncate">
+                            {comp.description || <span className="text-gray-400">-</span>}
+                          </td>
+                          <td className="w-32 px-4 py-3 text-sm">
+                            {comp.phase ? (
+                              <span className={`px-2 py-1 rounded text-xs whitespace-nowrap ${
+                                comp.phase === "onderbouw" 
+                                  ? "bg-blue-100 text-blue-800" 
+                                  : "bg-purple-100 text-purple-800"
+                              }`}>
+                                {comp.phase === "onderbouw" ? "Onderbouw" : "Bovenbouw"}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                        </tr>,
+                        isExpanded && (
+                          <tr key={`${comp.id}-expanded`} className="bg-slate-50">
+                            <td colSpan={5} className="p-4">
+                              {isEditing ? (
+                                // Edit form
+                                <div className="space-y-4">
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                      <label className="block text-sm font-medium mb-1">Naam</label>
+                                      <input
+                                        type="text"
+                                        value={editCompetencyFormData.name || ""}
+                                        onChange={(e) => setEditCompetencyFormData({ ...editCompetencyFormData, name: e.target.value })}
+                                        className="w-full px-3 py-2 border rounded"
+                                        onClick={(e) => e.stopPropagation()}
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-sm font-medium mb-1">Categorie</label>
+                                      <select
+                                        value={editCompetencyFormData.category_id || ""}
+                                        onChange={(e) => setEditCompetencyFormData({ ...editCompetencyFormData, category_id: e.target.value ? parseInt(e.target.value) : undefined })}
+                                        className="w-full px-3 py-2 border rounded"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <option value="">Geen categorie</option>
+                                        {categories.map((cat) => (
+                                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                    <div>
+                                      <label className="block text-sm font-medium mb-1">Fase</label>
+                                      <select
+                                        value={editCompetencyFormData.phase || ""}
+                                        onChange={(e) => setEditCompetencyFormData({ ...editCompetencyFormData, phase: e.target.value })}
+                                        className="w-full px-3 py-2 border rounded"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <option value="">Niet gespecificeerd</option>
+                                        <option value="onderbouw">Onderbouw</option>
+                                        <option value="bovenbouw">Bovenbouw</option>
+                                      </select>
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm font-medium mb-1">Beschrijving</label>
+                                    <textarea
+                                      value={editCompetencyFormData.description || ""}
+                                      onChange={(e) => setEditCompetencyFormData({ ...editCompetencyFormData, description: e.target.value })}
+                                      className="w-full px-3 py-2 border rounded"
+                                      rows={2}
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm font-medium mb-2">Niveaubeschrijvingen</label>
+                                    <div className="grid grid-cols-5 gap-2">
+                                      {[1, 2, 3, 4, 5].map((level) => (
+                                        <div key={level} className="flex flex-col">
+                                          <label className="text-xs font-medium text-gray-700 mb-1">Niveau {level}</label>
                                           <textarea
-                                            value={editCompetencyFormData.description || ""}
-                                            onChange={(e) => setEditCompetencyFormData({ ...editCompetencyFormData, description: e.target.value })}
-                                            className="w-full px-3 py-2 border rounded"
-                                            rows={2}
+                                            value={editCompetencyFormData.level_descriptors?.[level.toString()] || ""}
+                                            onChange={(e) => setEditCompetencyFormData({
+                                              ...editCompetencyFormData,
+                                              level_descriptors: {
+                                                ...editCompetencyFormData.level_descriptors,
+                                                [level.toString()]: e.target.value
+                                              }
+                                            })}
+                                            className="w-full px-2 py-1.5 border rounded text-xs resize-none"
+                                            rows={3}
                                             onClick={(e) => e.stopPropagation()}
                                           />
                                         </div>
-                                        <div>
-                                          <label className="block text-sm font-medium mb-2">Niveaubeschrijvingen</label>
-                                          <div className="grid grid-cols-5 gap-2">
-                                            {[1, 2, 3, 4, 5].map((level) => (
-                                              <div key={level} className="flex flex-col">
-                                                <label className="text-xs font-medium text-gray-700 mb-1">Niveau {level}</label>
-                                                <textarea
-                                                  value={editCompetencyFormData.level_descriptors?.[level.toString()] || ""}
-                                                  onChange={(e) => setEditCompetencyFormData({
-                                                    ...editCompetencyFormData,
-                                                    level_descriptors: {
-                                                      ...editCompetencyFormData.level_descriptors,
-                                                      [level.toString()]: e.target.value
-                                                    }
-                                                  })}
-                                                  className="w-full px-2 py-1.5 border rounded text-xs resize-none"
-                                                  rows={3}
-                                                  onClick={(e) => e.stopPropagation()}
-                                                />
-                                              </div>
-                                            ))}
-                                          </div>
-                                        </div>
-                                        <div className="flex gap-2">
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleUpdateCompetency(comp.id);
-                                            }}
-                                            className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-                                          >
-                                            Opslaan
-                                          </button>
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setEditingCompetency(null);
-                                              setEditCompetencyFormData({});
-                                            }}
-                                            className="px-3 py-1.5 border text-sm rounded hover:bg-gray-100"
-                                          >
-                                            Annuleren
-                                          </button>
-                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleUpdateCompetency(comp.id);
+                                      }}
+                                      className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                                    >
+                                      Opslaan
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingCompetency(null);
+                                        setEditCompetencyFormData({});
+                                      }}
+                                      className="px-3 py-1.5 border text-sm rounded hover:bg-gray-100"
+                                    >
+                                      Annuleren
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                // Read-only view with level descriptors
+                                <>
+                                  {comp.category_description && (
+                                    <p className="text-sm text-gray-600 mb-3">{comp.category_description}</p>
+                                  )}
+                                  <div className="text-xs font-medium text-slate-700 mb-2">
+                                    Niveaubeschrijvingen (1–5)
+                                  </div>
+                                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                                    {[1, 2, 3, 4, 5].map((level) => (
+                                      <div key={level} className="flex min-h-[80px] flex-col rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-inner">
+                                        <span className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Niveau {level}</span>
+                                        <p className="text-[11px] text-slate-700">
+                                          {comp.level_descriptors?.[level.toString()] || <em className="text-slate-400">Niet ingevuld</em>}
+                                        </p>
                                       </div>
-                                    ) : (
-                                      // Read-only view with level descriptors
-                                      <>
-                                        {comp.category_description && (
-                                          <p className="text-sm text-gray-600 mb-3">{comp.category_description}</p>
-                                        )}
-                                        <div className="text-xs font-medium text-slate-700 mb-2">
-                                          Niveaubeschrijvingen (1–5)
-                                        </div>
-                                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                                          {[1, 2, 3, 4, 5].map((level) => (
-                                            <div key={level} className="flex min-h-[80px] flex-col rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-inner">
-                                              <span className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Niveau {level}</span>
-                                              <p className="text-[11px] text-slate-700">
-                                                {comp.level_descriptors?.[level.toString()] || <em className="text-slate-400">Niet ingevuld</em>}
-                                              </p>
-                                            </div>
-                                          ))}
-                                        </div>
-                                        <div className="mt-4 flex justify-between items-center text-xs">
-                                          <span className="text-gray-400">Klik om details te verbergen</span>
-                                          <div className="flex gap-2">
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                startEditCompetency(comp);
-                                              }}
-                                              className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-                                            >
-                                              Bewerken
-                                            </button>
-                                          </div>
-                                        </div>
-                                      </>
-                                    )}
-                                  </td>
-                                </tr>
-                              ),
-                            ];
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                                    ))}
+                                  </div>
+                                  <div className="mt-4 flex justify-between items-center text-xs">
+                                    <span className="text-gray-400">Klik om details te verbergen</span>
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          startEditCompetency(comp);
+                                        }}
+                                        className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                                      >
+                                        Bewerken
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteCompetency(comp.id);
+                                        }}
+                                        className="px-3 py-1.5 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                                      >
+                                        Verwijderen
+                                      </button>
+                                    </div>
+                                  </div>
+                                </>
+                              )}
+                            </td>
+                          </tr>
+                        ),
+                      ];
+                    })}
+                  </tbody>
+                </table>
+
+                {filteredCompetencies.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    Geen competenties gevonden
                   </div>
-                ))}
+                )}
               </div>
             )}
           </div>
