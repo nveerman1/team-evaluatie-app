@@ -303,7 +303,7 @@ export default function TeacherDashboard() {
                         <ListRow
                           key={`${deadline.type}-${deadline.id}`}
                           title={deadline.title}
-                          meta={`${deadline.nextDeadlineType} sluit ${formatDate(deadline.nextDeadline?.toISOString())} • ${daysText}`}
+                          meta={`${deadline.nextDeadlineType} sluit ${formatDate(deadline.nextDeadline ? deadline.nextDeadline.toISOString() : null)} • ${daysText}`}
                           right={
                             <span
                               className={`px-2 py-1 text-xs rounded-full font-medium ${
