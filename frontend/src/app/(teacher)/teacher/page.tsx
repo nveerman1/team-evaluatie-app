@@ -6,19 +6,22 @@ import { evaluationService, projectAssessmentService, competencyService } from "
 import type { Evaluation } from "@/dtos/evaluation.dto";
 import type { ProjectAssessmentListItem } from "@/dtos/project-assessment.dto";
 import type { CompetencyWindow } from "@/dtos/competency.dto";
-import { Loading, StatusBadge } from "@/components";
+import { Loading } from "@/components";
 import { formatDate } from "@/utils";
-
-// Helper function for building mailto links
-function buildMailto({ to, subject, body }: { to: string; subject: string; body: string }) {
-  return `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-}
+import { CollapsibleSection } from "@/components/teacher/CollapsibleSection";
+import { ListRow } from "@/components/teacher/ListRow";
+import { PillTabs } from "@/components/teacher/PillTabs";
+import { KpiTile } from "@/components/teacher/KpiTile";
 
 export default function TeacherDashboard() {
   const [loading, setLoading] = useState(true);
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [projectAssessments, setProjectAssessments] = useState<ProjectAssessmentListItem[]>([]);
   const [competencyWindows, setCompetencyWindows] = useState<CompetencyWindow[]>([]);
+
+  // Tab states for collapsible sections
+  const [taskTab, setTaskTab] = useState<"week" | "deadlines" | "clients">("week");
+  const [evalTab, setEvalTab] = useState<"evaluations" | "projects" | "scans">("evaluations");
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -58,36 +61,36 @@ export default function TeacherDashboard() {
 
   // Get upcoming deadlines (evaluations with deadlines in the future)
   const now = new Date();
-  
+
   // Collect deadlines from evaluations
   const evaluationDeadlines = evaluations
     .map((e) => {
       const reviewDeadline = e.deadlines?.review ? new Date(e.deadlines.review) : null;
       const reflectionDeadline = e.deadlines?.reflection ? new Date(e.deadlines.reflection) : null;
-      
+
       // Get the earliest upcoming deadline
       let nextDeadline = null;
       let nextDeadlineType = "";
-      
+
       if (reviewDeadline && reviewDeadline > now) {
         nextDeadline = reviewDeadline;
         nextDeadlineType = "Review";
       }
-      
+
       if (reflectionDeadline && reflectionDeadline > now) {
         if (!nextDeadline || reflectionDeadline < nextDeadline) {
           nextDeadline = reflectionDeadline;
           nextDeadlineType = "Reflectie";
         }
       }
-      
-      return { 
+
+      return {
         type: "evaluation" as const,
         id: e.id,
-        title: e.title, 
-        nextDeadline, 
+        title: e.title,
+        nextDeadline,
         nextDeadlineType,
-        link: `/teacher/evaluations/${e.id}/dashboard`
+        link: `/teacher/evaluations/${e.id}/dashboard`,
       };
     })
     .filter((item) => item.nextDeadline !== null);
@@ -96,7 +99,7 @@ export default function TeacherDashboard() {
   const competencyDeadlines = competencyWindows
     .map((w) => {
       const endDate = w.end_date ? new Date(w.end_date) : null;
-      
+
       if (endDate && endDate > now) {
         return {
           type: "competency" as const,
@@ -104,10 +107,10 @@ export default function TeacherDashboard() {
           title: w.title,
           nextDeadline: endDate,
           nextDeadlineType: "Einddatum",
-          link: `/teacher/competencies/windows/${w.id}`
+          link: `/teacher/competencies/windows/${w.id}`,
         };
       }
-      
+
       return null;
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);
@@ -131,16 +134,48 @@ export default function TeacherDashboard() {
     .slice(0, 5);
 
   // Calculate time remaining for deadline
-  const getTimeRemaining = (deadline: string | undefined): string => {
+  const getTimeRemaining = (deadline: Date | null): string => {
     if (!deadline) return "";
-    const deadlineDate = new Date(deadline);
     const currentTime = new Date();
-    const diff = deadlineDate.getTime() - currentTime.getTime();
+    const diff = deadline.getTime() - currentTime.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     if (days < 0) return "Verlopen";
     if (days === 0) return "Vandaag";
     if (days === 1) return "1 dag";
     return `${days} dagen`;
+  };
+
+  // Count deadlines this week
+  const deadlinesThisWeek = upcomingDeadlines.filter((d) => {
+    if (!d.nextDeadline) return false;
+    const daysUntil = Math.floor((d.nextDeadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return daysUntil >= 0 && daysUntil <= 7;
+  });
+
+  // Count review vs reflection deadlines
+  const reviewCount = deadlinesThisWeek.filter((d) => d.nextDeadlineType === "Review").length;
+  const reflectionCount = deadlinesThisWeek.filter((d) => d.nextDeadlineType === "Reflectie").length;
+
+  // Scans count (competency windows)
+  const openScans = competencyWindows.length;
+
+  // KPI data
+  const kpiData = {
+    openEvaluations: activeEvaluations.length,
+    openEvaluationsHint:
+      activeEvaluations.length > 0
+        ? `${activeEvaluations.filter((e) => e.deadlines?.review).length} review, ${activeEvaluations.filter((e) => e.deadlines?.reflection).length} reflectie`
+        : "Geen open evaluaties",
+    deadlinesThisWeek: deadlinesThisWeek.length,
+    deadlinesHint:
+      deadlinesThisWeek.length > 0
+        ? `${reviewCount} review, ${reflectionCount} reflectie`
+        : "Geen deadlines deze week",
+    clientTasks: 3, // Mock data - in real implementation, fetch from client service
+    clientTasksHint: "Greystar, Marine, Rijndam",
+    openScans: openScans,
+    openScansHint:
+      openScans > 0 ? `${openScans} competentiescan${openScans > 1 ? "s" : ""} actief` : "Geen open scans",
   };
 
   return (
@@ -156,343 +191,325 @@ export default function TeacherDashboard() {
       </div>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-
-      {/* Quick Actions */}
-      <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
-        <h2 className="text-xl font-semibold mb-4">🧩 Snelle acties</h2>
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href="/teacher/projects/new"
-            className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-blue-700 hover:to-purple-700"
-          >
-            ➕ Nieuw project (met evaluaties)
-          </Link>
-          <Link
-            href="/teacher/project-assessments/create"
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
-          >
-            ➕ Nieuwe projectbeoordeling
-          </Link>
-          <Link
-            href="/teacher/evaluations/create"
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            ➕ Nieuwe peerevaluatie
-          </Link>
-          <Link
-            href="/teacher/competencies/windows/create"
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            ➕ Nieuw competentievenster
-          </Link>
-          <Link
-            href="/teacher/rubrics/create"
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            ➕ Nieuwe peer rubric
-          </Link>
-          <Link
-            href="/teacher/rubrics/create"
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            ➕ Nieuwe project rubric
-          </Link>
-        </div>
-      </section>
-
-      {/* Opdrachtgever-taken komende weken */}
-      <ClientRemindersCard />
-
-      {/* Upcoming Deadlines */}
-      <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
-        <h2 className="text-xl font-semibold mb-4">📅 Aankomende deadlines</h2>
-        {upcomingDeadlines.length > 0 ? (
-          <div className="space-y-3">
-            {upcomingDeadlines.map((item) => {
-              const deadlineStr = item.nextDeadline?.toISOString();
-              const typeIcon = item.type === "competency" ? "🎯" : "📝";
-              return (
-                <div
-                  key={`${item.type}-${item.id}`}
-                  className="flex items-center justify-between p-4 border rounded-xl"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span>{typeIcon}</span>
-                      <div className="font-medium">{item.title}</div>
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {item.nextDeadlineType}: {formatDate(deadlineStr)}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-blue-600">
-                      {getTimeRemaining(deadlineStr)}
-                    </div>
-                    <Link
-                      href={item.link}
-                      className="text-xs text-gray-500 hover:underline"
-                    >
-                      Bekijk →
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="text-gray-500 text-center py-8">Geen aankomende deadlines.</p>
-        )}
-      </section>
-
-      {/* Active Evaluations */}
-      <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">🧭 Actieve evaluaties</h2>
-          <Link
-            href="/teacher/evaluations"
-            className="text-sm text-blue-600 hover:underline"
-          >
-            Bekijk alle →
-          </Link>
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+        {/* KPI Tiles Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <KpiTile label="Open evaluaties" value={kpiData.openEvaluations} hint={kpiData.openEvaluationsHint} />
+          <KpiTile
+            label="Deadlines deze week"
+            value={kpiData.deadlinesThisWeek}
+            hint={kpiData.deadlinesHint}
+          />
+          <KpiTile label="Opdrachtgeverstaken" value={kpiData.clientTasks} hint={kpiData.clientTasksHint} />
+          <KpiTile label="Open scans" value={kpiData.openScans} hint={kpiData.openScansHint} />
         </div>
 
-        {activeEvaluations.length > 0 ? (
-          <div className="space-y-3">
-            {activeEvaluations.slice(0, 5).map((evaluation) => (
-              <div
-                key={evaluation.id}
-                className="p-4 border rounded-xl hover:bg-gray-50 transition-colors"
+        {/* Single Column Layout */}
+        <div className="flex flex-col gap-6">
+          {/* Snelle acties Card */}
+          <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-900">Snelle acties</h2>
+            <p className="text-sm text-gray-500 mb-4">Start direct een nieuwe evaluatie of scan.</p>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/teacher/projects/new"
+                className="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 transition-colors"
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold">{evaluation.title}</h3>
-                      <StatusBadge status={evaluation.status} />
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      Course: {evaluation.cluster || "—"}
-                    </div>
-                    {evaluation.deadlines && (
-                      <div className="text-sm text-gray-500 mt-1">
-                        {evaluation.deadlines.review && (
-                          <span className="mr-4">
-                            Review: {formatDate(evaluation.deadlines.review)} 
-                            ({getTimeRemaining(evaluation.deadlines.review)})
-                          </span>
-                        )}
-                        {evaluation.deadlines.reflection && (
-                          <span>
-                            Reflectie: {formatDate(evaluation.deadlines.reflection)}
-                            ({getTimeRemaining(evaluation.deadlines.reflection)})
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <Link
-                      href={`/teacher/evaluations/${evaluation.id}/dashboard`}
-                      className="px-3 py-1.5 text-sm rounded-lg border hover:bg-gray-100"
-                    >
-                      Dashboard
-                    </Link>
-                    <Link
-                      href={`/teacher/evaluations/${evaluation.id}/settings`}
-                      className="px-3 py-1.5 text-sm rounded-lg border hover:bg-gray-100"
-                    >
-                      Instellingen
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-gray-500 text-center py-8">Geen actieve evaluaties.</p>
-        )}
-      </section>
-
-      {/* Project Assessments This Week */}
-      <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">📊 Projectbeoordelingen deze week</h2>
-          <Link
-            href="/teacher/project-assessments"
-            className="text-sm text-blue-600 hover:underline"
-          >
-            Bekijk alle →
-          </Link>
-        </div>
-        {recentProjects.length > 0 ? (
-          <div className="space-y-3">
-            {recentProjects.map((project) => (
-              <div
-                key={project.id}
-                className="flex items-center justify-between p-4 border rounded-xl hover:bg-gray-50"
+                + Nieuw project (met evaluaties)
+              </Link>
+              <Link
+                href="/teacher/project-assessments/create"
+                className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
               >
-                <div className="flex-1">
-                  <div className="font-medium">{project.title}</div>
-                  <div className="text-sm text-gray-600">
-                    {project.group_name || "—"} • {project.course_name || "—"}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    Scores: {project.scores_count} / {project.total_criteria}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`px-2 py-1 rounded-lg text-xs font-medium ${
-                      project.status === "published"
-                        ? "bg-green-50 text-green-700"
-                        : "bg-yellow-50 text-yellow-700"
-                    }`}
-                  >
-                    {project.status}
-                  </span>
-                  <Link
-                    href={`/teacher/project-assessments/${project.id}/overview`}
-                    className="px-3 py-1.5 text-sm rounded-lg border hover:bg-gray-100"
-                  >
-                    Bekijk
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-gray-500 text-center py-8">
-            Geen recente projectbeoordelingen deze week.
-          </p>
-        )}
-      </section>
-
-      {/* Competency Monitor Status */}
-      <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">🎯 Competentiemonitor status</h2>
-          <Link
-            href="/teacher/competencies"
-            className="text-sm text-blue-600 hover:underline"
-          >
-            Bekijk alle →
-          </Link>
-        </div>
-        {competencyWindows.length > 0 ? (
-          <div className="space-y-3">
-            {competencyWindows.slice(0, 5).map((window) => (
-              <div
-                key={window.id}
-                className="p-4 border rounded-xl hover:bg-gray-50"
+                + Nieuwe projectbeoordeling
+              </Link>
+              <Link
+                href="/teacher/evaluations/create"
+                className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
               >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="font-medium">{window.title}</div>
-                  <Link
-                    href={`/teacher/competencies/windows/${window.id}`}
-                    className="px-3 py-1.5 text-sm rounded-lg border hover:bg-gray-100"
-                  >
-                    Bekijk
-                  </Link>
-                </div>
-                <div className="text-sm text-gray-600 mb-2">
-                  {formatDate(window.start_date)} - {formatDate(window.end_date)}
-                </div>
-                <div className="text-xs text-gray-500">
-                  Status: {window.status || "active"}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-gray-500 text-center py-8">Geen actieve competentievensters.</p>
-        )}
-      </section>
+                + Nieuwe peerevaluatie
+              </Link>
+              <Link
+                href="/teacher/competencies/windows/create"
+                className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
+              >
+                + Nieuwe competentiescan
+              </Link>
+            </div>
+          </section>
+
+          {/* Vandaag & deze week - Collapsible Section */}
+          <CollapsibleSection
+            title="Vandaag & deze week"
+            subtitle="Taken voor leerlingen, deadlines en opdrachtgever-communicatie."
+            defaultOpen={true}
+          >
+            <PillTabs
+              tabs={[
+                { id: "week", label: "Deze week" },
+                { id: "deadlines", label: "Deadlines" },
+                { id: "clients", label: "Opdrachtgevers" },
+              ]}
+              activeTab={taskTab}
+              onTabChange={setTaskTab}
+            />
+
+            <div className="space-y-2">
+              {taskTab === "week" && (
+                <>
+                  {activeEvaluations.length > 0 ? (
+                    activeEvaluations.slice(0, 3).map((evaluation) => (
+                      <ListRow
+                        key={evaluation.id}
+                        title={`${evaluation.title} (${evaluation.cluster || "—"})`}
+                        meta={`Reviewperiode ${formatDate(evaluation.deadlines?.review)}`}
+                        right={
+                          <Link
+                            href={`/teacher/evaluations/${evaluation.id}/dashboard`}
+                            className="px-3 py-1.5 text-xs rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                          >
+                            Plan tijdslot
+                          </Link>
+                        }
+                      />
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500 py-4 text-center">Geen taken deze week.</p>
+                  )}
+                  {competencyWindows.length > 0 && (
+                    <ListRow
+                      title={`${competencyWindows[0].title}: check openstaande scans`}
+                      meta="Nog leerlingen niet klaar"
+                      right={
+                        <Link
+                          href={`/teacher/competencies/windows/${competencyWindows[0].id}`}
+                          className="px-3 py-1.5 text-xs rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                        >
+                          Bekijk lijst
+                        </Link>
+                      }
+                    />
+                  )}
+                </>
+              )}
+
+              {taskTab === "deadlines" && (
+                <>
+                  {upcomingDeadlines.length > 0 ? (
+                    upcomingDeadlines.slice(0, 5).map((deadline) => {
+                      const daysText = getTimeRemaining(deadline.nextDeadline);
+                      const isToday = daysText === "Vandaag";
+                      return (
+                        <ListRow
+                          key={`${deadline.type}-${deadline.id}`}
+                          title={deadline.title}
+                          meta={`${deadline.nextDeadlineType} sluit ${formatDate(deadline.nextDeadline?.toISOString())} • ${daysText}`}
+                          right={
+                            <span
+                              className={`px-2 py-1 text-xs rounded-full font-medium ${
+                                isToday
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-gray-100 text-gray-700"
+                              }`}
+                            >
+                              {daysText}
+                            </span>
+                          }
+                        />
+                      );
+                    })
+                  ) : (
+                    <p className="text-sm text-gray-500 py-4 text-center">Geen aankomende deadlines.</p>
+                  )}
+                </>
+              )}
+
+              {taskTab === "clients" && <ClientTasksContent />}
+            </div>
+          </CollapsibleSection>
+
+          {/* Lopende processen - Collapsible Section */}
+          <CollapsibleSection
+            title="Lopende processen"
+            subtitle="Overzicht van actieve evaluaties, projectbeoordelingen en scans."
+            defaultOpen={true}
+          >
+            <PillTabs
+              tabs={[
+                { id: "evaluations", label: "Evaluaties" },
+                { id: "projects", label: "Projectbeoordelingen" },
+                { id: "scans", label: "Scans" },
+              ]}
+              activeTab={evalTab}
+              onTabChange={setEvalTab}
+            />
+
+            <div className="space-y-2">
+              {evalTab === "evaluations" && (
+                <>
+                  {activeEvaluations.length > 0 ? (
+                    activeEvaluations.slice(0, 5).map((evaluation) => (
+                      <ListRow
+                        key={evaluation.id}
+                        title={`${evaluation.title} (${evaluation.status})`}
+                        meta={`Review: ${formatDate(evaluation.deadlines?.review) || "—"} • Reflectie: ${formatDate(evaluation.deadlines?.reflection) || "—"}`}
+                        right={
+                          <div className="flex gap-2">
+                            <Link
+                              href={`/teacher/evaluations/${evaluation.id}/dashboard`}
+                              className="px-3 py-1.5 text-xs rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                            >
+                              Dashboard
+                            </Link>
+                            <Link
+                              href={`/teacher/evaluations/${evaluation.id}/settings`}
+                              className="px-3 py-1.5 text-xs rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                            >
+                              Instellingen
+                            </Link>
+                          </div>
+                        }
+                      />
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500 py-4 text-center">Geen actieve evaluaties.</p>
+                  )}
+                </>
+              )}
+
+              {evalTab === "projects" && (
+                <>
+                  {recentProjects.length > 0 ? (
+                    recentProjects.map((project) => (
+                      <ListRow
+                        key={project.id}
+                        title={project.title}
+                        meta={`${project.group_name || "—"} • ${project.course_name || "—"}`}
+                        right={
+                          <Link
+                            href={`/teacher/project-assessments/${project.id}/overview`}
+                            className="px-3 py-1.5 text-xs rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                          >
+                            Bekijk
+                          </Link>
+                        }
+                      />
+                    ))
+                  ) : (
+                    <div className="py-4 text-center">
+                      <p className="text-sm text-gray-500 mb-2">
+                        Geen recente projectbeoordelingen deze week.
+                      </p>
+                      <Link
+                        href="/teacher/project-assessments"
+                        className="text-sm text-blue-600 hover:underline"
+                      >
+                        Bekijk alle projectbeoordelingen →
+                      </Link>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {evalTab === "scans" && (
+                <>
+                  {competencyWindows.length > 0 ? (
+                    competencyWindows.slice(0, 5).map((window) => (
+                      <ListRow
+                        key={window.id}
+                        title={window.title}
+                        meta={`Periode: ${formatDate(window.start_date)} - ${formatDate(window.end_date)} • Status: ${window.status || "open"}`}
+                        right={
+                          <Link
+                            href={`/teacher/competencies/windows/${window.id}`}
+                            className="px-3 py-1.5 text-xs rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                          >
+                            Bekijk
+                          </Link>
+                        }
+                      />
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500 py-4 text-center">Geen actieve scans.</p>
+                  )}
+                </>
+              )}
+            </div>
+          </CollapsibleSection>
+        </div>
       </main>
     </>
   );
 }
 
-// Client Reminders Card Component
-function ClientRemindersCard() {
+// Client Tasks Content Component for the "Opdrachtgevers" tab
+function ClientTasksContent() {
   const [reminders, setReminders] = useState([
     {
       id: "1",
-      text: "Uitnodiging tussenpresentatie versturen aan Greystar (5V1)",
+      title: "Tussenpresentatie Greystar (5V1)",
+      meta: "Uitnodiging mailen uiterlijk 25/2",
       clientEmail: "sanne.devries@greystar.nl",
       subject: "Uitnodiging tussenpresentatie 5V1",
       body: "Beste Sanne,\n\nGraag nodigen wij u uit voor de tussenpresentatie van 5V1.\n\nMet vriendelijke groet,\nHet docententeam",
     },
     {
       id: "2",
-      text: "Bevestigingsmail eindpresentatie versturen aan Marine (4H2)",
+      title: "Eindpresentatie Marine (4H2)",
+      meta: "Bevestigingsmail opdrachtgever",
       clientEmail: "r.gans@mindef.nl",
       subject: "Bevestiging eindpresentatie 4H2",
       body: "Beste Richard,\n\nHierbij bevestigen wij de eindpresentatie van 4H2.\n\nMet vriendelijke groet,\nHet docententeam",
     },
     {
       id: "3",
-      text: "Bedankmail versturen aan Rijndam (3H1)",
+      title: "Bedankmail Rijndam (3H1)",
+      meta: "Versturen na eindpresentaties",
       clientEmail: "l.janssen@rijndam.nl",
       subject: "Bedankt voor de samenwerking 3H1",
       body: "Beste Lotte,\n\nHartelijk dank voor de prettige samenwerking met 3H1.\n\nMet vriendelijke groet,\nHet docententeam",
     },
   ]);
 
-  const handleOpenMail = (reminder: typeof reminders[0]) => {
-    const mailtoLink = buildMailto({
-      to: reminder.clientEmail,
-      subject: reminder.subject,
-      body: reminder.body,
-    });
-    window.open(mailtoLink, '_self');
+  const handleOpenMail = (reminder: (typeof reminders)[0]) => {
+    const mailtoLink = `mailto:${reminder.clientEmail}?subject=${encodeURIComponent(reminder.subject)}&body=${encodeURIComponent(reminder.body)}`;
+    window.open(mailtoLink, "_self");
   };
 
-  const handleCheckOff = (reminderId: string) => {
-    setReminders(reminders.filter(r => r.id !== reminderId));
+  const handleMarkAsDone = (reminderId: string) => {
+    setReminders(reminders.filter((r) => r.id !== reminderId));
   };
+
+  if (reminders.length === 0) {
+    return <p className="text-sm text-gray-500 py-4 text-center">Geen opdrachtgever-taken op dit moment.</p>;
+  }
 
   return (
-    <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold">📋 Opdrachtgever-taken komende weken</h2>
-        <Link
-          href="/teacher/clients"
-          className="text-sm text-blue-600 hover:underline"
-        >
-          Beheer opdrachtgevers →
-        </Link>
-      </div>
-      {reminders.length > 0 ? (
-        <div className="space-y-3">
-          {reminders.map((reminder) => (
-            <div
-              key={reminder.id}
-              className="flex items-center justify-between p-4 border rounded-xl hover:bg-gray-50"
-            >
-              <div className="flex-1">
-                <p className="text-sm text-gray-800">{reminder.text}</p>
-              </div>
-              <div className="flex gap-2 ml-4">
-                <button
-                  onClick={() => handleOpenMail(reminder)}
-                  className="px-3 py-1.5 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700"
-                >
-                  📧 Open mail in Outlook
-                </button>
-                <button
-                  onClick={() => handleCheckOff(reminder.id)}
-                  className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100"
-                >
-                  ✓ Afvinken
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-gray-500 text-center py-8">Geen taken op dit moment.</p>
-      )}
-    </section>
+    <>
+      {reminders.map((reminder) => (
+        <ListRow
+          key={reminder.id}
+          title={reminder.title}
+          meta={reminder.meta}
+          right={
+            reminder.id === "3" ? (
+              <button
+                onClick={() => handleMarkAsDone(reminder.id)}
+                className="px-3 py-1.5 text-xs rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+              >
+                Markeer als klaar
+              </button>
+            ) : (
+              <button
+                onClick={() => handleOpenMail(reminder)}
+                className="px-3 py-1.5 text-xs rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+              >
+                Open in Outlook
+              </button>
+            )
+          }
+        />
+      ))}
+    </>
   );
 }
