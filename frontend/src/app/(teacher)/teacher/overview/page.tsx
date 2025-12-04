@@ -5,6 +5,7 @@ import AllItemsTab from "./components/AllItemsTab";
 import LearningObjectivesOverviewTab from "./components/LearningObjectivesOverviewTab";
 import PeerevaluatiesTab from "./components/PeerevaluatiesTab";
 import CompetenciesOverviewTab from "./components/CompetenciesOverviewTab";
+import ProjectOverviewTab from "./components/ProjectOverviewTab";
 
 export default function OverviewPage() {
   const [activeTab, setActiveTab] = useState("totaal");
@@ -59,12 +60,7 @@ export default function OverviewPage() {
         <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
         {activeTab === "totaal" && <AllItemsTab />}
         
-        {activeTab === "projecten" && (
-          <div className="text-center py-12 text-gray-500">
-            <p className="text-lg font-medium mb-2">In ontwikkeling</p>
-            <p className="text-sm">Deze tab wordt binnenkort toegevoegd</p>
-          </div>
-        )}
+        {activeTab === "projecten" && <ProjectOverviewTab />}
         
         {activeTab === "peerevaluaties" && <PeerevaluatiesTab />}
         
