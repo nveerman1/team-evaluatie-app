@@ -713,10 +713,7 @@ function ProjectTable({
                             {renderStatusIndicator(
                               project.client_organization ? "complete" : "not_started"
                             )}
-                            {project.client_organization 
-                              ? project.client_organization
-                              : "Geen opdrachtgever"
-                            }
+                            {project.client_organization || "Geen opdrachtgever"}
                           </div>
                         </div>
                         <div>

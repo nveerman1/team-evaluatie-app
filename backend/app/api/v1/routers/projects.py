@@ -579,22 +579,22 @@ def get_project(
         or 0
     )
 
-    # Get first (main) client info
+    # Get first (main) client info with a joined query
     client_id = None
     client_organization = None
     client_email = None
-    first_client_link = (
-        db.query(ClientProjectLink)
+    first_client_data = (
+        db.query(ClientProjectLink, Client)
+        .join(Client, Client.id == ClientProjectLink.client_id)
         .filter(ClientProjectLink.project_id == project_id)
         .order_by(desc(ClientProjectLink.role == "main"))
         .first()
     )
-    if first_client_link:
-        client = db.query(Client).filter(Client.id == first_client_link.client_id).first()
-        if client:
-            client_id = client.id
-            client_organization = client.organization
-            client_email = client.email
+    if first_client_data:
+        _, client = first_client_data
+        client_id = client.id
+        client_organization = client.organization
+        client_email = client.email
 
     return ProjectDetailOut(
         id=project.id,
