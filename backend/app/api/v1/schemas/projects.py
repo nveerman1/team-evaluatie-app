@@ -85,6 +85,10 @@ class ProjectDetailOut(ProjectOut):
     evaluation_counts: Dict[str, int] = Field(default_factory=dict)
     note_count: int = 0
     client_count: int = 0
+    # Client info (from first linked client)
+    client_id: Optional[int] = None
+    client_organization: Optional[str] = None
+    client_email: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

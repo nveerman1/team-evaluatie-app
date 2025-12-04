@@ -619,9 +619,12 @@ function ProjectTable({
           <tbody className="divide-y divide-gray-50">
             {projects.map((project) => (
               <React.Fragment key={project.project_id}>
-                {/* Main project row */}
-                <tr className="hover:bg-gray-50 align-top">
-                  <td className="px-3 py-2">
+                {/* Main project row - clickable to expand/collapse */}
+                <tr 
+                  className="hover:bg-gray-50 align-top cursor-pointer"
+                  onClick={() => toggleProjectExpansion(project.project_id)}
+                >
+                  <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={selectedProjects.includes(project.project_id)}
@@ -631,12 +634,9 @@ function ProjectTable({
                   </td>
                   <td className="py-2 pr-4">
                     <div className="flex flex-col">
-                      <button
-                        onClick={() => toggleProjectExpansion(project.project_id)}
-                        className="text-xs font-medium text-gray-900 hover:text-blue-600 hover:underline text-left cursor-pointer"
-                      >
+                      <span className="text-xs font-medium text-gray-900">
                         {project.project_title}
-                      </button>
+                      </span>
                       <span className="text-[11px] text-gray-500">
                         {project.class_name && `Klas: ${project.class_name}`}
                         {project.class_name && project.team_number && " · "}
@@ -661,7 +661,7 @@ function ProjectTable({
                     ) : "-"}
                   </td>
                   {isOnderbouw && (
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
                       {project.client_email ? (
                         <a
                           href={`mailto:${project.client_email}?subject=Project: ${encodeURIComponent(project.project_title)}`}
@@ -674,7 +674,7 @@ function ProjectTable({
                       )}
                     </td>
                   )}
-                  <td className="px-4 py-2 text-right align-top">
+                  <td className="px-4 py-2 text-right align-top" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => onEditProject(project)}
@@ -706,9 +706,18 @@ function ProjectTable({
                   <tr className="bg-gray-50/60">
                     <td colSpan={colSpan} className="px-4 pb-3 pt-0">
                       {/* Evaluation status grid */}
-                      <div className="mt-2 rounded-lg border border-gray-200 bg-white p-3 grid grid-cols-1 md:grid-cols-4 gap-3 text-[11px] text-gray-700">
+                      <div className="mt-2 rounded-lg border border-gray-200 bg-white p-3 grid grid-cols-1 md:grid-cols-5 gap-3 text-[11px] text-gray-700">
                         <div>
-                          <div className="font-semibold text-gray-900 mb-1">Evaluatie</div>
+                          <div className="font-semibold text-gray-900 mb-1">Opdrachtgever</div>
+                          <div className="flex items-center gap-1">
+                            {renderStatusIndicator(
+                              project.client_organization ? "complete" : "not_started"
+                            )}
+                            {project.client_organization || "Geen opdrachtgever"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="font-semibold text-gray-900 mb-1">Projectbeoordeling</div>
                           <Link 
                             href={`/teacher/project-assessments?project_id=${project.project_id}`}
                             className="flex items-center gap-1 hover:underline"
@@ -961,6 +970,10 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
               note_count: detail.note_count,
               client_count: detail.client_count,
               description: detail.description,
+              // Add client info from project details
+              client_id: detail.client_id,
+              client_organization: detail.client_organization,
+              client_email: detail.client_email,
             };
           }
           
