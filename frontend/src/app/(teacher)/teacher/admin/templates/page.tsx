@@ -1762,108 +1762,106 @@ export default function TemplatesPage() {
                   )}
 
                   {/* Table of mail templates */}
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
-                            onClick={() =>
-                              setMailSort({
-                                key: "typeName",
-                                dir:
-                                  mailSort.key === "typeName" &&
-                                  mailSort.dir === "asc"
-                                    ? "desc"
-                                    : "asc",
-                              })
-                            }
-                          >
-                            Type{" "}
-                            {mailSort.key === "typeName" &&
-                              (mailSort.dir === "asc" ? "↑" : "↓")}
-                          </th>
-                          <th
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700 w-64"
-                            onClick={() =>
-                              setMailSort({
-                                key: "name",
-                                dir:
-                                  mailSort.key === "name" && mailSort.dir === "asc"
-                                    ? "desc"
-                                    : "asc",
-                              })
-                            }
-                          >
-                            Naam{" "}
-                            {mailSort.key === "name" &&
-                              (mailSort.dir === "asc" ? "↑" : "↓")}
-                          </th>
-                          <th
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
-                            onClick={() =>
-                              setMailSort({
-                                key: "subject",
-                                dir:
-                                  mailSort.key === "subject" &&
-                                  mailSort.dir === "asc"
-                                    ? "desc"
-                                    : "asc",
-                              })
-                            }
-                          >
-                            Onderwerp{" "}
-                            {mailSort.key === "subject" &&
-                              (mailSort.dir === "asc" ? "↑" : "↓")}
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                            Acties
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {filteredAndSortedMailTemplates.map((row) => (
-                          <tr
-                            key={row.id}
-                            className="hover:bg-gray-50"
-                          >
-                            <td className="px-6 py-4 text-sm">
-                              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                {row.typeName}
+                  <table className="w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th
+                          className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
+                          onClick={() =>
+                            setMailSort({
+                              key: "typeName",
+                              dir:
+                                mailSort.key === "typeName" &&
+                                mailSort.dir === "asc"
+                                  ? "desc"
+                                  : "asc",
+                            })
+                          }
+                        >
+                          Type{" "}
+                          {mailSort.key === "typeName" &&
+                            (mailSort.dir === "asc" ? "↑" : "↓")}
+                        </th>
+                        <th
+                          className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
+                          onClick={() =>
+                            setMailSort({
+                              key: "name",
+                              dir:
+                                mailSort.key === "name" && mailSort.dir === "asc"
+                                  ? "desc"
+                                  : "asc",
+                            })
+                          }
+                        >
+                          Naam{" "}
+                          {mailSort.key === "name" &&
+                            (mailSort.dir === "asc" ? "↑" : "↓")}
+                        </th>
+                        <th
+                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
+                          onClick={() =>
+                            setMailSort({
+                              key: "subject",
+                              dir:
+                                mailSort.key === "subject" &&
+                                mailSort.dir === "asc"
+                                  ? "desc"
+                                  : "asc",
+                            })
+                          }
+                        >
+                          Onderwerp{" "}
+                          {mailSort.key === "subject" &&
+                            (mailSort.dir === "asc" ? "↑" : "↓")}
+                        </th>
+                        <th className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          Acties
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {filteredAndSortedMailTemplates.map((row) => (
+                        <tr
+                          key={row.id}
+                          className="hover:bg-gray-50 cursor-pointer"
+                        >
+                          <td className="w-28 px-4 py-3 text-sm align-top">
+                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                              {row.typeName}
+                            </span>
+                            {!row.is_active && (
+                              <span className="ml-1 inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                Inactief
                               </span>
-                              {!row.is_active && (
-                                <span className="ml-1 inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
-                                  Inactief
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 text-sm font-bold w-64">
-                              {row.name}
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-600">
-                              {row.subject}
-                            </td>
-                            <td className="px-6 py-4 text-sm">
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => openMailEditModal(row)}
-                                  className="text-blue-600 hover:text-blue-800"
-                                >
-                                  Bewerken
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteMailTemplate(row.id)}
-                                  className="text-red-600 hover:text-red-800"
-                                >
-                                  Verwijderen
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                            )}
+                          </td>
+                          <td className="w-32 px-4 py-3 text-sm font-medium align-top">
+                            {row.name}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600 align-top">
+                            {row.subject}
+                          </td>
+                          <td className="w-28 px-4 py-3 text-sm align-top">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => openMailEditModal(row)}
+                                className="text-blue-600 hover:text-blue-800"
+                              >
+                                Bewerken
+                              </button>
+                              <button
+                                onClick={() => handleDeleteMailTemplate(row.id)}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                Verwijderen
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
 
                   {filteredAndSortedMailTemplates.length === 0 &&
                     !isCreatingMailTemplate && (
@@ -2249,11 +2247,11 @@ export default function TemplatesPage() {
                 )}
 
                 {/* Table of criteria */}
-                <table className="w-full table-fixed text-sm border-collapse">
-                  <thead>
-                    <tr className="text-left text-xs text-slate-500 border-b">
+                <table className="w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
                       <th
-                        className="w-32 py-2 cursor-pointer hover:text-slate-700"
+                        className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
                         onClick={() =>
                           setPeerSort({
                             key: "categoryName",
@@ -2270,7 +2268,7 @@ export default function TemplatesPage() {
                           (peerSort.dir === "asc" ? "↑" : "↓")}
                       </th>
                       <th
-                        className="w-40 cursor-pointer hover:text-slate-700"
+                        className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
                         onClick={() =>
                           setPeerSort({
                             key: "title",
@@ -2286,7 +2284,7 @@ export default function TemplatesPage() {
                           (peerSort.dir === "asc" ? "↑" : "↓")}
                       </th>
                       <th
-                        className="w-24 cursor-pointer hover:text-slate-700"
+                        className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
                         onClick={() =>
                           setPeerSort({
                             key: "target_level",
@@ -2302,9 +2300,9 @@ export default function TemplatesPage() {
                         {peerSort.key === "target_level" &&
                           (peerSort.dir === "asc" ? "↑" : "↓")}
                       </th>
-                      <th className="w-auto">Beschrijving</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Beschrijving</th>
                       <th
-                        className="w-24 text-center cursor-pointer hover:text-slate-700"
+                        className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
                         onClick={() =>
                           setPeerSort({
                             key: "learningObjectivesCount",
@@ -2323,35 +2321,39 @@ export default function TemplatesPage() {
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y">
+                  <tbody className="divide-y divide-gray-200">
                     {filteredAndSortedPeerCriteria.map((row) => {
                       const isOpen = expandedCriterion === row.id;
 
                       return [
                         <tr
                           key={row.id}
-                          className="hover:bg-slate-50 cursor-pointer"
+                          className="hover:bg-gray-50 cursor-pointer"
                           onClick={() => toggleCriterionExpand(row.id)}
                         >
-                          <td className="w-32 py-3 font-bold text-slate-900">
+                          <td className="w-28 px-4 py-3 text-sm font-medium align-top">
                             {row.categoryName}
                           </td>
-                          <td className="w-40 py-3">{row.title}</td>
-                          <td className="w-24">
+                          <td className="w-32 px-4 py-3 text-sm align-top">{row.title}</td>
+                          <td className="w-28 px-4 py-3 text-sm align-top">
                             {row.target_level ? (
-                              <span className="inline-block rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700 whitespace-nowrap">
+                              <span className={`px-2 py-1 rounded text-xs whitespace-nowrap ${
+                                row.target_level === "onderbouw"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-purple-100 text-purple-800"
+                              }`}>
                                 {row.target_level === "onderbouw"
                                   ? "Onderbouw"
                                   : "Bovenbouw"}
                               </span>
                             ) : (
-                              <span className="text-slate-400">-</span>
+                              <span className="text-gray-400">-</span>
                             )}
                           </td>
-                          <td className="text-slate-600 truncate max-w-xl">
-                            {row.description || "-"}
+                          <td className="px-4 py-3 text-sm text-gray-600 align-top">
+                            {row.description || <span className="text-gray-400">-</span>}
                           </td>
-                          <td className="w-24 text-slate-500 text-center">
+                          <td className="w-28 px-4 py-3 text-sm text-gray-600 align-top">
                             {row.learningObjectivesCount}
                           </td>
                         </tr>,
@@ -2981,11 +2983,11 @@ export default function TemplatesPage() {
                 )}
 
                 {/* Table of criteria */}
-                <table className="w-full table-fixed text-sm border-collapse">
-                  <thead>
-                    <tr className="text-left text-xs text-slate-500 border-b">
+                <table className="w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
                       <th
-                        className="w-32 py-2 cursor-pointer hover:text-slate-700"
+                        className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
                         onClick={() =>
                           setProjectSort({
                             key: "categoryName",
@@ -3002,7 +3004,7 @@ export default function TemplatesPage() {
                           (projectSort.dir === "asc" ? "↑" : "↓")}
                       </th>
                       <th
-                        className="w-40 cursor-pointer hover:text-slate-700"
+                        className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
                         onClick={() =>
                           setProjectSort({
                             key: "title",
@@ -3019,7 +3021,7 @@ export default function TemplatesPage() {
                           (projectSort.dir === "asc" ? "↑" : "↓")}
                       </th>
                       <th
-                        className="w-24 cursor-pointer hover:text-slate-700"
+                        className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
                         onClick={() =>
                           setProjectSort({
                             key: "target_level",
@@ -3035,9 +3037,9 @@ export default function TemplatesPage() {
                         {projectSort.key === "target_level" &&
                           (projectSort.dir === "asc" ? "↑" : "↓")}
                       </th>
-                      <th className="w-auto">Beschrijving</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Beschrijving</th>
                       <th
-                        className="w-24 text-center cursor-pointer hover:text-slate-700"
+                        className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
                         onClick={() =>
                           setProjectSort({
                             key: "learningObjectivesCount",
@@ -3056,35 +3058,39 @@ export default function TemplatesPage() {
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y">
+                  <tbody className="divide-y divide-gray-200">
                     {filteredAndSortedProjectCriteria.map((row) => {
                       const isOpen = expandedProjectCriterion === row.id;
 
                       return [
                         <tr
                           key={row.id}
-                          className="hover:bg-slate-50 cursor-pointer"
+                          className="hover:bg-gray-50 cursor-pointer"
                           onClick={() => toggleProjectCriterionExpand(row.id)}
                         >
-                          <td className="w-32 py-3 font-bold text-slate-900">
+                          <td className="w-28 px-4 py-3 text-sm font-medium align-top">
                             {row.categoryName}
                           </td>
-                          <td className="w-40 py-3">{row.title}</td>
-                          <td className="w-24">
+                          <td className="w-32 px-4 py-3 text-sm align-top">{row.title}</td>
+                          <td className="w-28 px-4 py-3 text-sm align-top">
                             {row.target_level ? (
-                              <span className="inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 whitespace-nowrap">
+                              <span className={`px-2 py-1 rounded text-xs whitespace-nowrap ${
+                                row.target_level === "onderbouw"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-purple-100 text-purple-800"
+                              }`}>
                                 {row.target_level === "onderbouw"
                                   ? "Onderbouw"
                                   : "Bovenbouw"}
                               </span>
                             ) : (
-                              <span className="text-slate-400">-</span>
+                              <span className="text-gray-400">-</span>
                             )}
                           </td>
-                          <td className="text-slate-600 truncate max-w-xl">
-                            {row.description || "-"}
+                          <td className="px-4 py-3 text-sm text-gray-600 align-top">
+                            {row.description || <span className="text-gray-400">-</span>}
                           </td>
-                          <td className="w-24 text-slate-500 text-center">
+                          <td className="w-28 px-4 py-3 text-sm text-gray-600 align-top">
                             {row.learningObjectivesCount}
                           </td>
                         </tr>,
@@ -3565,108 +3571,106 @@ export default function TemplatesPage() {
                 )}
 
                 {/* Table of mail templates */}
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
-                          onClick={() =>
-                            setMailSort({
-                              key: "typeName",
-                              dir:
-                                mailSort.key === "typeName" &&
-                                mailSort.dir === "asc"
-                                  ? "desc"
-                                  : "asc",
-                            })
-                          }
-                        >
-                          Type{" "}
-                          {mailSort.key === "typeName" &&
-                            (mailSort.dir === "asc" ? "↑" : "↓")}
-                        </th>
-                        <th
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700 w-64"
-                          onClick={() =>
-                            setMailSort({
-                              key: "name",
-                              dir:
-                                mailSort.key === "name" && mailSort.dir === "asc"
-                                  ? "desc"
-                                  : "asc",
-                            })
-                          }
-                        >
-                          Naam{" "}
-                          {mailSort.key === "name" &&
-                            (mailSort.dir === "asc" ? "↑" : "↓")}
-                        </th>
-                        <th
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
-                          onClick={() =>
-                            setMailSort({
-                              key: "subject",
-                              dir:
-                                mailSort.key === "subject" &&
-                                mailSort.dir === "asc"
-                                  ? "desc"
-                                  : "asc",
-                            })
-                          }
-                        >
-                          Onderwerp{" "}
-                          {mailSort.key === "subject" &&
-                            (mailSort.dir === "asc" ? "↑" : "↓")}
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Acties
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {filteredAndSortedMailTemplates.map((row) => (
-                        <tr
-                          key={row.id}
-                          className="hover:bg-gray-50"
-                        >
-                          <td className="px-6 py-4 text-sm">
-                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                              {row.typeName}
+                <table className="w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th
+                        className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
+                        onClick={() =>
+                          setMailSort({
+                            key: "typeName",
+                            dir:
+                              mailSort.key === "typeName" &&
+                              mailSort.dir === "asc"
+                                ? "desc"
+                                : "asc",
+                          })
+                        }
+                      >
+                        Type{" "}
+                        {mailSort.key === "typeName" &&
+                          (mailSort.dir === "asc" ? "↑" : "↓")}
+                      </th>
+                      <th
+                        className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
+                        onClick={() =>
+                          setMailSort({
+                            key: "name",
+                            dir:
+                              mailSort.key === "name" && mailSort.dir === "asc"
+                                ? "desc"
+                                : "asc",
+                          })
+                        }
+                      >
+                        Naam{" "}
+                        {mailSort.key === "name" &&
+                          (mailSort.dir === "asc" ? "↑" : "↓")}
+                      </th>
+                      <th
+                        className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
+                        onClick={() =>
+                          setMailSort({
+                            key: "subject",
+                            dir:
+                              mailSort.key === "subject" &&
+                              mailSort.dir === "asc"
+                                ? "desc"
+                                : "asc",
+                          })
+                        }
+                      >
+                        Onderwerp{" "}
+                        {mailSort.key === "subject" &&
+                          (mailSort.dir === "asc" ? "↑" : "↓")}
+                      </th>
+                      <th className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Acties
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {filteredAndSortedMailTemplates.map((row) => (
+                      <tr
+                        key={row.id}
+                        className="hover:bg-gray-50 cursor-pointer"
+                      >
+                        <td className="w-28 px-4 py-3 text-sm align-top">
+                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                            {row.typeName}
+                          </span>
+                          {!row.is_active && (
+                            <span className="ml-1 inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                              Inactief
                             </span>
-                            {!row.is_active && (
-                              <span className="ml-1 inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
-                                Inactief
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-sm font-bold w-64">
-                            {row.name}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-600">
-                            {row.subject}
-                          </td>
-                          <td className="px-6 py-4 text-sm">
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => openMailEditModal(row)}
-                                className="text-blue-600 hover:text-blue-800"
-                              >
-                                Bewerken
-                              </button>
-                              <button
-                                onClick={() => handleDeleteMailTemplate(row.id)}
-                                className="text-red-600 hover:text-red-800"
-                              >
-                                Verwijderen
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                          )}
+                        </td>
+                        <td className="w-32 px-4 py-3 text-sm font-medium align-top">
+                          {row.name}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600 align-top">
+                          {row.subject}
+                        </td>
+                        <td className="w-28 px-4 py-3 text-sm align-top">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => openMailEditModal(row)}
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              Bewerken
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMailTemplate(row.id)}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              Verwijderen
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
 
                 {filteredAndSortedMailTemplates.length === 0 &&
                   !isCreatingMailTemplate && (
@@ -4078,11 +4082,11 @@ export default function TemplatesPage() {
                 )}
 
                 {/* Table of remarks */}
-                <table className="w-full table-fixed text-sm border-collapse">
-                  <thead>
-                    <tr className="text-left text-xs text-slate-500 border-b">
+                <table className="w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
                       <th
-                        className="w-32 py-2 cursor-pointer hover:text-slate-700"
+                        className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
                         onClick={() =>
                           setRemarkSort({
                             key: "categoryName",
@@ -4099,7 +4103,7 @@ export default function TemplatesPage() {
                           (remarkSort.dir === "asc" ? "↑" : "↓")}
                       </th>
                       <th
-                        className="w-auto cursor-pointer hover:text-slate-700"
+                        className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
                         onClick={() =>
                           setRemarkSort({
                             key: "text",
@@ -4116,7 +4120,7 @@ export default function TemplatesPage() {
                           (remarkSort.dir === "asc" ? "↑" : "↓")}
                       </th>
                       <th
-                        className="w-24 text-center cursor-pointer hover:text-slate-700"
+                        className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-gray-700"
                         onClick={() =>
                           setRemarkSort({
                             key: "order",
@@ -4135,26 +4139,26 @@ export default function TemplatesPage() {
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y">
+                  <tbody className="divide-y divide-gray-200">
                     {filteredAndSortedStandardRemarks.map((row) => {
                       const isOpen = expandedRemark === row.id;
 
                       return [
                         <tr
                           key={row.id}
-                          className="hover:bg-slate-50 cursor-pointer"
+                          className="hover:bg-gray-50 cursor-pointer"
                           onClick={() => toggleRemarkExpand(row.id)}
                         >
-                          <td className="w-32 py-3 font-bold text-slate-900">
+                          <td className="w-28 px-4 py-3 text-sm font-medium align-top">
                             {row.categoryName}
                           </td>
                           <td
-                            className="py-3 text-slate-600 truncate max-w-xl"
+                            className="px-4 py-3 text-sm text-gray-600 align-top"
                             title={row.text}
                           >
                             {row.text}
                           </td>
-                          <td className="w-24 text-slate-500 text-center">
+                          <td className="w-28 px-4 py-3 text-sm text-gray-600 align-top">
                             {row.order}
                           </td>
                         </tr>,
