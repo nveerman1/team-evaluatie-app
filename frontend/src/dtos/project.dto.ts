@@ -62,6 +62,10 @@ export type ProjectDetailOut = Project & {
   evaluation_counts: Record<string, number>;
   note_count: number;
   client_count: number;
+  // Client info (from first linked client)
+  client_id?: number;
+  client_organization?: string;
+  client_email?: string;
 };
 
 export type ProjectNote = {

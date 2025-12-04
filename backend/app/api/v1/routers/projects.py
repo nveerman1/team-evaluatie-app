@@ -537,6 +537,32 @@ def get_project(
     )
     evaluation_counts = {eval_type: count for eval_type, count in eval_counts}
 
+    # Count project assessments linked to this project (via metadata_json.project_id)
+    project_assessment_count = (
+        db.query(func.count(ProjectAssessment.id))
+        .filter(
+            ProjectAssessment.school_id == user.school_id,
+            ProjectAssessment.metadata_json.contains({"project_id": project_id}),
+        )
+        .scalar()
+        or 0
+    )
+    if project_assessment_count > 0:
+        evaluation_counts["project_assessment"] = project_assessment_count
+
+    # Count competency windows linked to this project (via settings.project_id)
+    competency_scan_count = (
+        db.query(func.count(CompetencyWindow.id))
+        .filter(
+            CompetencyWindow.school_id == user.school_id,
+            CompetencyWindow.settings.contains({"project_id": project_id}),
+        )
+        .scalar()
+        or 0
+    )
+    if competency_scan_count > 0:
+        evaluation_counts["competency_scan"] = competency_scan_count
+
     # Get note count
     note_count = (
         db.query(func.count(ProjectNotesContext.id))
@@ -545,13 +571,30 @@ def get_project(
         or 0
     )
 
-    # Get client count
+    # Get client count and first client info
     client_count = (
         db.query(func.count(ClientProjectLink.id))
         .filter(ClientProjectLink.project_id == project_id)
         .scalar()
         or 0
     )
+
+    # Get first (main) client info
+    client_id = None
+    client_organization = None
+    client_email = None
+    first_client_link = (
+        db.query(ClientProjectLink)
+        .filter(ClientProjectLink.project_id == project_id)
+        .order_by(desc(ClientProjectLink.role == "main"))
+        .first()
+    )
+    if first_client_link:
+        client = db.query(Client).filter(Client.id == first_client_link.client_id).first()
+        if client:
+            client_id = client.id
+            client_organization = client.organization
+            client_email = client.email
 
     return ProjectDetailOut(
         id=project.id,
@@ -570,6 +613,9 @@ def get_project(
         evaluation_counts=evaluation_counts,
         note_count=note_count,
         client_count=client_count,
+        client_id=client_id,
+        client_organization=client_organization,
+        client_email=client_email,
     )
 
 
