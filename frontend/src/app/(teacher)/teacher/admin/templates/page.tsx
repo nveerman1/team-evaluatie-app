@@ -1365,7 +1365,7 @@ export default function TemplatesPage() {
 
             {/* No data state */}
             {!loadingCompetencies && competencies.length === 0 && (
-              <div className="text-center py-12 border rounded-xl bg-gray-50">
+              <div className="text-center py-12">
                 <p className="text-gray-500 mb-4">
                   Nog geen competenties aangemaakt.
                 </p>
@@ -1380,8 +1380,8 @@ export default function TemplatesPage() {
 
             {/* Single Competency Table */}
             {!loadingCompetencies && filteredCompetencies.length > 0 && (
-              <div className="bg-white rounded-2xl border overflow-hidden">
-                <table className="w-full table-fixed">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="w-36 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -1593,12 +1593,6 @@ export default function TemplatesPage() {
                     })}
                   </tbody>
                 </table>
-
-                {filteredCompetencies.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    Geen competenties gevonden
-                  </div>
-                )}
               </div>
             )}
           </div>
