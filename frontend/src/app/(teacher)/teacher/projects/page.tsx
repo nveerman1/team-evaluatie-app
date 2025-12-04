@@ -619,9 +619,12 @@ function ProjectTable({
           <tbody className="divide-y divide-gray-50">
             {projects.map((project) => (
               <React.Fragment key={project.project_id}>
-                {/* Main project row */}
-                <tr className="hover:bg-gray-50 align-top">
-                  <td className="px-3 py-2">
+                {/* Main project row - clickable to expand/collapse */}
+                <tr 
+                  className="hover:bg-gray-50 align-top cursor-pointer"
+                  onClick={() => toggleProjectExpansion(project.project_id)}
+                >
+                  <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={selectedProjects.includes(project.project_id)}
@@ -631,12 +634,9 @@ function ProjectTable({
                   </td>
                   <td className="py-2 pr-4">
                     <div className="flex flex-col">
-                      <button
-                        onClick={() => toggleProjectExpansion(project.project_id)}
-                        className="text-xs font-medium text-gray-900 hover:text-blue-600 hover:underline text-left cursor-pointer"
-                      >
+                      <span className="text-xs font-medium text-gray-900">
                         {project.project_title}
-                      </button>
+                      </span>
                       <span className="text-[11px] text-gray-500">
                         {project.class_name && `Klas: ${project.class_name}`}
                         {project.class_name && project.team_number && " · "}
@@ -661,7 +661,7 @@ function ProjectTable({
                     ) : "-"}
                   </td>
                   {isOnderbouw && (
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
                       {project.client_email ? (
                         <a
                           href={`mailto:${project.client_email}?subject=Project: ${encodeURIComponent(project.project_title)}`}
@@ -674,7 +674,7 @@ function ProjectTable({
                       )}
                     </td>
                   )}
-                  <td className="px-4 py-2 text-right align-top">
+                  <td className="px-4 py-2 text-right align-top" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => onEditProject(project)}
