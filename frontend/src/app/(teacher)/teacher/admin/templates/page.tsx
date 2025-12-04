@@ -1380,23 +1380,23 @@ export default function TemplatesPage() {
 
             {/* Single Competency Table */}
             {!loadingCompetencies && filteredCompetencies.length > 0 && (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
+              <div>
+                <table className="w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="w-36 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                         Type
                       </th>
-                      <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                         Categorie
                       </th>
-                      <th className="w-40 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                         Naam
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                         Beschrijving
                       </th>
-                      <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <th className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                         Fase
                       </th>
                     </tr>
@@ -1412,23 +1412,23 @@ export default function TemplatesPage() {
                           className="hover:bg-gray-50 cursor-pointer bg-amber-50/30"
                           onClick={() => toggleCompetencyExpand(comp.id)}
                         >
-                          <td className="w-36 px-4 py-3 text-sm">
+                          <td className="w-28 px-4 py-3 text-sm align-top">
                             <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800 whitespace-nowrap">
                               🏛️ Centraal
                             </span>
                           </td>
-                          <td className="w-32 px-4 py-3 text-sm">
+                          <td className="w-28 px-4 py-3 text-sm align-top">
                             {comp.category_name ? (
                               <span className="font-medium">{comp.category_name}</span>
                             ) : (
                               <span className="text-gray-400">-</span>
                             )}
                           </td>
-                          <td className="w-40 px-4 py-3 text-sm font-medium">{comp.name}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600 truncate">
+                          <td className="w-32 px-4 py-3 text-sm font-medium align-top">{comp.name}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600 align-top">
                             {comp.description || <span className="text-gray-400">-</span>}
                           </td>
-                          <td className="w-32 px-4 py-3 text-sm">
+                          <td className="w-28 px-4 py-3 text-sm align-top">
                             {comp.phase ? (
                               <span className={`px-2 py-1 rounded text-xs whitespace-nowrap ${
                                 comp.phase === "onderbouw" 
