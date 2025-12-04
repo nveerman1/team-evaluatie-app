@@ -1411,7 +1411,7 @@ export default function TemplatesPage() {
                             return [
                               <tr 
                                 key={comp.id} 
-                                className={`hover:bg-gray-50 cursor-pointer bg-amber-50/30`}
+                                className="hover:bg-gray-50 cursor-pointer bg-amber-50/30"
                                 onClick={() => toggleCompetencyExpand(comp.id)}
                               >
                                 <td className="w-28 px-4 py-3 text-sm">
