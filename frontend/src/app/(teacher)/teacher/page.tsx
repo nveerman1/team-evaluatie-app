@@ -185,7 +185,7 @@ export default function TeacherDashboard() {
         <header className="px-6 py-6 max-w-6xl mx-auto">
           <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">Dashboard</h1>
           <p className="text-gray-600 mt-1 text-sm">
-            Welkom 👋 — Hier vind je een overzicht van alle actieve evaluaties, projecten en deadlines.
+            Snel overzicht van je lopende evaluaties, deadlines en scans.
           </p>
         </header>
       </div>
@@ -207,31 +207,31 @@ export default function TeacherDashboard() {
         {/* Single Column Layout */}
         <div className="flex flex-col gap-6">
           {/* Snelle acties Card */}
-          <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900">Snelle acties</h2>
-            <p className="text-sm text-gray-500 mb-4">Start direct een nieuwe evaluatie of scan.</p>
+          <section className="bg-white rounded-lg border border-gray-200 p-5">
+            <h2 className="text-base font-semibold text-gray-900">Snelle acties</h2>
+            <p className="text-[13px] text-gray-500 mb-4">Start direct een nieuwe evaluatie of scan.</p>
             <div className="flex flex-wrap gap-2">
               <Link
                 href="/teacher/projects/new"
-                className="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-4 py-2 text-[13px] font-medium text-white hover:bg-blue-700 transition-colors"
               >
                 + Nieuw project (met evaluaties)
               </Link>
               <Link
                 href="/teacher/project-assessments/create"
-                className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-4 py-2 text-[13px] font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 + Nieuwe projectbeoordeling
               </Link>
               <Link
                 href="/teacher/evaluations/create"
-                className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-4 py-2 text-[13px] font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 + Nieuwe peerevaluatie
               </Link>
               <Link
                 href="/teacher/competencies/windows/create"
-                className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-4 py-2 text-[13px] font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 + Nieuwe competentiescan
               </Link>
@@ -266,7 +266,7 @@ export default function TeacherDashboard() {
                         right={
                           <Link
                             href={`/teacher/evaluations/${evaluation.id}/dashboard`}
-                            className="px-3 py-1.5 text-xs rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                            className="px-3 py-1 text-[11px] rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                           >
                             Plan tijdslot
                           </Link>
@@ -274,7 +274,7 @@ export default function TeacherDashboard() {
                       />
                     ))
                   ) : (
-                    <p className="text-sm text-gray-500 py-4 text-center">Geen taken deze week.</p>
+                    <p className="text-[13px] text-gray-400 py-4 text-center">Geen taken deze week.</p>
                   )}
                   {competencyWindows.length > 0 && (
                     <ListRow
@@ -283,7 +283,7 @@ export default function TeacherDashboard() {
                       right={
                         <Link
                           href={`/teacher/competencies/windows/${competencyWindows[0].id}`}
-                          className="px-3 py-1.5 text-xs rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                          className="px-3 py-1 text-[11px] rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors"
                         >
                           Bekijk lijst
                         </Link>
@@ -306,10 +306,10 @@ export default function TeacherDashboard() {
                           meta={`${deadline.nextDeadlineType} sluit ${formatDate(deadline.nextDeadline ? deadline.nextDeadline.toISOString() : null)} • ${daysText}`}
                           right={
                             <span
-                              className={`px-2 py-1 text-xs rounded-full font-medium ${
+                              className={`px-2 py-0.5 text-[11px] rounded-full font-medium ${
                                 isToday
                                   ? "bg-red-100 text-red-700"
-                                  : "bg-gray-100 text-gray-700"
+                                  : "bg-gray-100 text-gray-600"
                               }`}
                             >
                               {daysText}
@@ -319,7 +319,7 @@ export default function TeacherDashboard() {
                       );
                     })
                   ) : (
-                    <p className="text-sm text-gray-500 py-4 text-center">Geen aankomende deadlines.</p>
+                    <p className="text-[13px] text-gray-400 py-4 text-center">Geen aankomende deadlines.</p>
                   )}
                 </>
               )}
@@ -357,13 +357,13 @@ export default function TeacherDashboard() {
                           <div className="flex gap-2">
                             <Link
                               href={`/teacher/evaluations/${evaluation.id}/dashboard`}
-                              className="px-3 py-1.5 text-xs rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                              className="px-3 py-1 text-[11px] rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors"
                             >
                               Dashboard
                             </Link>
                             <Link
                               href={`/teacher/evaluations/${evaluation.id}/settings`}
-                              className="px-3 py-1.5 text-xs rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                              className="px-3 py-1 text-[11px] rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors"
                             >
                               Instellingen
                             </Link>
@@ -372,7 +372,7 @@ export default function TeacherDashboard() {
                       />
                     ))
                   ) : (
-                    <p className="text-sm text-gray-500 py-4 text-center">Geen actieve evaluaties.</p>
+                    <p className="text-[13px] text-gray-400 py-4 text-center">Geen actieve evaluaties.</p>
                   )}
                 </>
               )}
@@ -388,7 +388,7 @@ export default function TeacherDashboard() {
                         right={
                           <Link
                             href={`/teacher/project-assessments/${project.id}/overview`}
-                            className="px-3 py-1.5 text-xs rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                            className="px-3 py-1 text-[11px] rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors"
                           >
                             Bekijk
                           </Link>
@@ -397,12 +397,12 @@ export default function TeacherDashboard() {
                     ))
                   ) : (
                     <div className="py-4 text-center">
-                      <p className="text-sm text-gray-500 mb-2">
+                      <p className="text-[13px] text-gray-400 mb-2">
                         Geen recente projectbeoordelingen deze week.
                       </p>
                       <Link
                         href="/teacher/project-assessments"
-                        className="text-sm text-blue-600 hover:underline"
+                        className="text-[13px] text-blue-600 hover:underline"
                       >
                         Bekijk alle projectbeoordelingen →
                       </Link>
@@ -422,7 +422,7 @@ export default function TeacherDashboard() {
                         right={
                           <Link
                             href={`/teacher/competencies/windows/${window.id}`}
-                            className="px-3 py-1.5 text-xs rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                            className="px-3 py-1 text-[11px] rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors"
                           >
                             Bekijk
                           </Link>
@@ -430,7 +430,7 @@ export default function TeacherDashboard() {
                       />
                     ))
                   ) : (
-                    <p className="text-sm text-gray-500 py-4 text-center">Geen actieve scans.</p>
+                    <p className="text-[13px] text-gray-400 py-4 text-center">Geen actieve scans.</p>
                   )}
                 </>
               )}
@@ -481,7 +481,7 @@ function ClientTasksContent() {
   };
 
   if (reminders.length === 0) {
-    return <p className="text-sm text-gray-500 py-4 text-center">Geen opdrachtgever-taken op dit moment.</p>;
+    return <p className="text-[13px] text-gray-400 py-4 text-center">Geen opdrachtgever-taken op dit moment.</p>;
   }
 
   return (
@@ -495,14 +495,14 @@ function ClientTasksContent() {
             reminder.id === "3" ? (
               <button
                 onClick={() => handleMarkAsDone(reminder.id)}
-                className="px-3 py-1.5 text-xs rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                className="px-3 py-1 text-[11px] rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors"
               >
                 Markeer als klaar
               </button>
             ) : (
               <button
                 onClick={() => handleOpenMail(reminder)}
-                className="px-3 py-1.5 text-xs rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                className="px-3 py-1 text-[11px] rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors"
               >
                 Open in Outlook
               </button>
