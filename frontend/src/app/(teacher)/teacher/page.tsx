@@ -263,13 +263,11 @@ export default function TeacherDashboard() {
                         key={evaluation.id}
                         title={`${evaluation.title} (${evaluation.cluster || "—"})`}
                         meta={`Reviewperiode ${formatDate(evaluation.deadlines?.review)}`}
+                        href={`/teacher/evaluations/${evaluation.id}/dashboard`}
                         right={
-                          <Link
-                            href={`/teacher/evaluations/${evaluation.id}/dashboard`}
-                            className="px-3 py-1 text-[11px] rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                          >
+                          <span className="px-3 py-1 text-[11px] rounded-full bg-blue-600 text-white">
                             Plan tijdslot
-                          </Link>
+                          </span>
                         }
                       />
                     ))
@@ -280,13 +278,11 @@ export default function TeacherDashboard() {
                     <ListRow
                       title={`${competencyWindows[0].title}: check openstaande scans`}
                       meta="Nog leerlingen niet klaar"
+                      href={`/teacher/competencies/windows/${competencyWindows[0].id}`}
                       right={
-                        <Link
-                          href={`/teacher/competencies/windows/${competencyWindows[0].id}`}
-                          className="px-3 py-1 text-[11px] rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors"
-                        >
+                        <span className="px-3 py-1 text-[11px] rounded-full border border-gray-200 bg-white text-gray-600">
                           Bekijk lijst
-                        </Link>
+                        </span>
                       }
                     />
                   )}
@@ -304,6 +300,7 @@ export default function TeacherDashboard() {
                           key={`${deadline.type}-${deadline.id}`}
                           title={deadline.title}
                           meta={`${deadline.nextDeadlineType} sluit ${formatDate(deadline.nextDeadline ? deadline.nextDeadline.toISOString() : null)} • ${daysText}`}
+                          href={deadline.link}
                           right={
                             <span
                               className={`px-2 py-0.5 text-[11px] rounded-full font-medium ${
@@ -353,20 +350,15 @@ export default function TeacherDashboard() {
                         key={evaluation.id}
                         title={`${evaluation.title} (${evaluation.status})`}
                         meta={`Review: ${formatDate(evaluation.deadlines?.review) || "—"} • Reflectie: ${formatDate(evaluation.deadlines?.reflection) || "—"}`}
+                        href={`/teacher/evaluations/${evaluation.id}/dashboard`}
                         right={
                           <div className="flex gap-2">
-                            <Link
-                              href={`/teacher/evaluations/${evaluation.id}/dashboard`}
-                              className="px-3 py-1 text-[11px] rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors"
-                            >
+                            <span className="px-3 py-1 text-[11px] rounded-full border border-gray-200 bg-white text-gray-600">
                               Dashboard
-                            </Link>
-                            <Link
-                              href={`/teacher/evaluations/${evaluation.id}/settings`}
-                              className="px-3 py-1 text-[11px] rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors"
-                            >
+                            </span>
+                            <span className="px-3 py-1 text-[11px] rounded-full border border-gray-200 bg-white text-gray-600">
                               Instellingen
-                            </Link>
+                            </span>
                           </div>
                         }
                       />
@@ -385,13 +377,11 @@ export default function TeacherDashboard() {
                         key={project.id}
                         title={project.title}
                         meta={`${project.group_name || "—"} • ${project.course_name || "—"}`}
+                        href={`/teacher/project-assessments/${project.id}/overview`}
                         right={
-                          <Link
-                            href={`/teacher/project-assessments/${project.id}/overview`}
-                            className="px-3 py-1 text-[11px] rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors"
-                          >
+                          <span className="px-3 py-1 text-[11px] rounded-full border border-gray-200 bg-white text-gray-600">
                             Bekijk
-                          </Link>
+                          </span>
                         }
                       />
                     ))
@@ -419,13 +409,11 @@ export default function TeacherDashboard() {
                         key={window.id}
                         title={window.title}
                         meta={`Periode: ${formatDate(window.start_date)} - ${formatDate(window.end_date)} • Status: ${window.status || "open"}`}
+                        href={`/teacher/competencies/windows/${window.id}`}
                         right={
-                          <Link
-                            href={`/teacher/competencies/windows/${window.id}`}
-                            className="px-3 py-1 text-[11px] rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors"
-                          >
+                          <span className="px-3 py-1 text-[11px] rounded-full border border-gray-200 bg-white text-gray-600">
                             Bekijk
-                          </Link>
+                          </span>
                         }
                       />
                     ))
@@ -491,21 +479,16 @@ function ClientTasksContent() {
           key={reminder.id}
           title={reminder.title}
           meta={reminder.meta}
+          onClick={() => reminder.id === "3" ? handleMarkAsDone(reminder.id) : handleOpenMail(reminder)}
           right={
             reminder.id === "3" ? (
-              <button
-                onClick={() => handleMarkAsDone(reminder.id)}
-                className="px-3 py-1 text-[11px] rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors"
-              >
+              <span className="px-3 py-1 text-[11px] rounded-full border border-gray-200 bg-white text-gray-600">
                 Markeer als klaar
-              </button>
+              </span>
             ) : (
-              <button
-                onClick={() => handleOpenMail(reminder)}
-                className="px-3 py-1 text-[11px] rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-              >
+              <span className="px-3 py-1 text-[11px] rounded-full bg-blue-600 text-white">
                 Open in Outlook
-              </button>
+              </span>
             )
           }
         />
