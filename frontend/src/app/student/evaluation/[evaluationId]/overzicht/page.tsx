@@ -74,20 +74,6 @@ export default function OverzichtPage() {
               setStudentId(selfAlloc.reviewee_id);
             }
 
-            // Try to get published grade with official GCF
-            let officialGcf = myRow?.gcf;
-            try {
-              const grades = await api.get(`/grades`, {
-                params: { evaluation_id: evaluationId },
-              });
-              const myGrade = grades.data?.find((g: { user_id: number }) => g.user_id === selfAlloc?.reviewee_id);
-              if (myGrade?.gcf !== undefined && myGrade?.gcf !== null) {
-                officialGcf = myGrade.gcf;
-              }
-            } catch {
-              // If grades fetch fails, use dashboard GCF
-            }
-
             if (myRow && dashData.data.criteria.length > 0) {
               // Extract OMZA categories from criteria in correct order
               const categoriesInData = Array.from(
@@ -132,8 +118,10 @@ export default function OverzichtPage() {
                 deadlineISO: evalMeta.deadlines?.review || evalMeta.settings?.deadlines?.review,
                 status: evalMeta.status,
                 peers: [], // No detailed peer data available in dashboard
-                gcfScore: officialGcf,
-                teamContributionFactor: officialGcf,
+                // Don't show GCF in fallback - it would be calculated, not official from Grade table
+                // The official GCF is only available via peer-results endpoint
+                gcfScore: undefined,
+                teamContributionFactor: undefined,
                 omzaAverages: omzaAverages,
                 aiSummary: undefined,
                 teacherComments: undefined,
