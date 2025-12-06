@@ -21,6 +21,8 @@ from app.infra.db.models import (
     Course,
     Group,
     GroupMember,
+    FeedbackSummary,
+    Grade,
 )
 from app.api.v1.schemas.evaluations import (
     EvaluationCreate,
@@ -752,8 +754,6 @@ def get_my_peer_feedback_results(
             self_score = {k: _calc_avg(self_scores_by_cat[k]) for k in OMZA_KEYS}
 
         # Get AI summary from FeedbackSummary if available
-        from app.infra.db.models import FeedbackSummary
-
         ai_summary = None
         summary_record = (
             db.query(FeedbackSummary)
@@ -767,8 +767,6 @@ def get_my_peer_feedback_results(
             ai_summary = summary_record.summary_text
 
         # Get GCF from Grade table
-        from app.infra.db.models import Grade
-
         gcf_score = None
         grade_record = (
             db.query(Grade)
