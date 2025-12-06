@@ -40,10 +40,11 @@ export type EvaluationResult = {
   gcfScore?: number; // 0..100 – Team-bijdrage (GCF), begrijpelijk gemaakt voor leerlingen
   reflection?: ReflectionData; // eigen reflectie
   // New fields for the redesigned page
-  teacherComments?: string; // Opmerkingen van de docent
-  teacherGrade?: number; // Eindcijfer van de docent (bijv. 7.4)
+  teacherComments?: string; // Opmerkingen van de docent (from OMZA table)
+  teacherGrade?: number; // Eindcijfer van de docent (bijv. 7.4) (from grades table)
+  teacherGradeComment?: string; // Commentaar bij cijfer van de docent (from grades table)
   teacherGradeTrend?: string; // Trend t.o.v. vorige sprint (bijv. "+0,3 t.o.v. vorige sprint")
-  teacherOmza?: TeacherOmza; // Docent-OMZA scores op 1-4 schaal
+  teacherOmza?: TeacherOmza; // Docent-OMZA scores op 1-4 schaal (from OMZA table)
   teamContributionFactor?: number; // 0.90-1.10 correctiefactor
   teamContributionLabel?: string; // Label zoals "Boven verwachting"
   omzaAverages?: OmzaAverage[]; // OMZA gemiddelden met delta's

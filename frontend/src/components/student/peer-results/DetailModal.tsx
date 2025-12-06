@@ -126,6 +126,20 @@ export function DetailModal({ open, onClose, evaluation }: DetailModalProps) {
                       {evaluation.teacherComments || "Geen opmerkingen toegevoegd."}
                     </p>
                   </div>
+
+                  {evaluation.teacherGradeComment && (
+                    <div className="rounded-xl border border-slate-100 bg-blue-50/70 p-4">
+                      <div className="mb-1 flex items-center justify-between text-xs font-medium text-slate-500">
+                        <span>Toelichting bij cijfer</span>
+                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] uppercase tracking-wide text-blue-600">
+                          Docent
+                        </span>
+                      </div>
+                      <p className="text-sm leading-relaxed text-slate-700 whitespace-pre-line">
+                        {evaluation.teacherGradeComment}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Samenvattende cijfers */}
@@ -230,16 +244,70 @@ export function DetailModal({ open, onClose, evaluation }: DetailModalProps) {
           )}
 
           {tab === "peers" && (
-            <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4 text-sm text-slate-600">
-              Hier komt een overzicht met feedback per teamgenoot (naam, scores per OMZA,
-              kernfeedback). Dit is een placeholder voor de mockup.
+            <div className="space-y-3">
+              {evaluation.peers && evaluation.peers.length > 0 ? (
+                evaluation.peers.map((peer, idx) => (
+                  <div key={idx} className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
+                    <div className="mb-2 flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-slate-900">{peer.peerLabel}</h3>
+                    </div>
+                    
+                    {/* OMZA scores */}
+                    <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+                      {(["organiseren", "meedoen", "zelfvertrouwen", "autonomie"] as OmzaKey[]).map((key) => (
+                        <div key={key} className="rounded-lg border border-slate-200 bg-white p-2">
+                          <p className="text-[10px] uppercase tracking-wide text-slate-500">
+                            {OMZA_LABELS[key]}
+                          </p>
+                          <p className="mt-1 text-lg font-semibold text-slate-900">
+                            {peer.scores[key]?.toFixed(1) ?? "—"}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Feedback notes */}
+                    {peer.notes && (
+                      <div className="rounded-lg border border-slate-200 bg-white p-3">
+                        <p className="text-xs font-medium text-slate-500 mb-1">Kernfeedback</p>
+                        <p className="text-sm leading-relaxed text-slate-700 whitespace-pre-line">
+                          {peer.notes}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4 text-sm text-slate-600">
+                  Nog geen feedback van teamgenoten beschikbaar.
+                </div>
+              )}
             </div>
           )}
 
           {tab === "reflection" && (
-            <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4 text-sm text-slate-600">
-              Hier komt de eigen reflectie van de leerling op de ontvangen feedback en de gemaakte
-              afspraken voor de volgende sprint.
+            <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-4">
+              {evaluation.reflection ? (
+                <>
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-slate-900">Jouw reflectie</h3>
+                    {evaluation.reflection.submittedAt && (
+                      <span className="text-xs text-slate-500">
+                        Ingediend op {new Date(evaluation.reflection.submittedAt).toLocaleDateString("nl-NL")}
+                      </span>
+                    )}
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-sm leading-relaxed text-slate-700 whitespace-pre-line">
+                      {evaluation.reflection.text}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-slate-600">
+                  Je hebt nog geen reflectie ingediend voor deze evaluatie.
+                </p>
+              )}
             </div>
           )}
         </div>
