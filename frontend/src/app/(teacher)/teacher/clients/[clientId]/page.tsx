@@ -155,7 +155,7 @@ export default function ClientDetailPage() {
           <dl className="space-y-2 text-sm">
             <div>
               <dt className="text-xs text-slate-500">Contactpersoon</dt>
-              <dd className="text-slate-800">{c.contactName}</dd>
+              <dd className="text-slate-800">{c.contact_name}</dd>
             </div>
             <div>
               <dt className="text-xs text-slate-500">E-mail</dt>
@@ -173,13 +173,13 @@ export default function ClientDetailPage() {
 
           <div className="mt-4 flex flex-wrap gap-2 text-xs">
             <button 
-              onClick={() => window.open(buildMailto({ to: c.email, subject: "", body: "" }), '_self')}
+              onClick={() => window.open(buildMailto({ to: c.email || "", subject: "", body: "" }), '_self')}
               className="flex-1 min-w-[120px] rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-100"
             >
               Mail openen
             </button>
             <button 
-              onClick={() => navigator.clipboard.writeText(c.email)}
+              onClick={() => navigator.clipboard.writeText(c.email || "")}
               className="flex-1 min-w-[120px] rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-100"
             >
               Kopieer contact
@@ -506,14 +506,14 @@ function CommunicatieTab({ client }: { client: any }) {
 
   const generateEmail = () => {
     const template = templates[selectedTemplate as keyof typeof templates];
-    const module = mockModules.find(m => m.id === selectedModule)?.label || "N/A";
+    const moduleName = mockModules.find(m => m.id === selectedModule)?.label || "N/A";
     const teams = selectedTeams.map(t => mockTeams.find(mt => mt.id === t)?.label || t).join(", ");
     
     const preview = `Beste ${client.contact_name || 'opdrachtgever'},
 
 Hierbij nodigen wij u uit voor de ${template.toLowerCase()} van het project.
 
-Module: ${module}
+Module: ${moduleName}
 Teams: ${teams}
 
 Met vriendelijke groet,
