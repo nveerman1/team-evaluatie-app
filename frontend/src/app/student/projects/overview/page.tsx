@@ -8,6 +8,33 @@ import { ProjectLineChart } from "./components/ProjectLineChart";
 import { ProjectRadarChart } from "./components/ProjectRadarChart";
 import type { ProjectAssessmentListItem } from "@/dtos/project-assessment.dto";
 
+// Page Header component matching other student pages
+const PageHeader = () => {
+  return (
+    <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">
+            Projectoverzicht
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Overzicht van jouw projectbeoordelingen, cijfers en ontwikkeling.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Link
+            href="/student#projecten"
+            className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            <span className="mr-2">←</span>
+            Terug
+          </Link>
+        </div>
+      </div>
+    </header>
+  );
+};
+
 // KPI Tile component
 const KPITile = ({
   icon,
@@ -92,36 +119,32 @@ export default function ProjectOverviewPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100">
-        <div className="max-w-5xl mx-auto px-6 py-8">
+      <main className="min-h-screen bg-slate-100">
+        <PageHeader />
+        <div className="max-w-6xl mx-auto px-6 py-8">
           <Loading />
         </div>
-      </div>
+      </main>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-100">
-        <div className="max-w-5xl mx-auto px-6 py-8">
+      <main className="min-h-screen bg-slate-100">
+        <PageHeader />
+        <div className="max-w-6xl mx-auto px-6 py-8">
           <ErrorMessage message={error} />
         </div>
-      </div>
+      </main>
     );
   }
 
   // Empty state
   if (!projectAssessments || projectAssessments.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-100">
-        <div className="max-w-5xl mx-auto px-6 py-8">
-          <h1 className="text-3xl font-semibold text-gray-900 mb-2">
-            Projectoverzicht
-          </h1>
-          <p className="text-gray-600 mb-8">
-            Overzicht van jouw projectbeoordelingen, cijfers en ontwikkeling.
-          </p>
-
+      <main className="min-h-screen bg-slate-100">
+        <PageHeader />
+        <div className="max-w-6xl mx-auto px-6 py-8">
           <div className="rounded-xl bg-white border border-gray-300 shadow-sm p-8 text-center">
             <div className="text-6xl mb-4">📊</div>
             <h2 className="text-xl font-semibold text-gray-900 mb-2">
@@ -132,14 +155,14 @@ export default function ProjectOverviewPage() {
               ontwikkeling.
             </p>
             <Link
-              href="/student"
+              href="/student#projecten"
               className="inline-block rounded-lg bg-purple-600 text-white px-4 py-2 hover:bg-purple-700 transition-colors"
             >
               Ga terug naar dashboard
             </Link>
           </div>
         </div>
-      </div>
+      </main>
     );
   }
 
@@ -149,18 +172,10 @@ export default function ProjectOverviewPage() {
     .join(" • ");
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-semibold text-gray-900 mb-2">
-            Projectoverzicht
-          </h1>
-          <p className="text-gray-600">
-            Overzicht van jouw projectbeoordelingen, cijfers en ontwikkeling.
-          </p>
-        </div>
-
+    <main className="min-h-screen bg-slate-100">
+      <PageHeader />
+      
+      <section className="mx-auto max-w-6xl px-6 py-6 space-y-6">
         {/* KPI Tiles */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <KPITile
@@ -266,17 +281,7 @@ export default function ProjectOverviewPage() {
             </table>
           </div>
         </div>
-
-        {/* Back to Dashboard */}
-        <div className="text-center">
-          <Link
-            href="/student"
-            className="inline-block text-purple-600 hover:text-purple-800 font-medium"
-          >
-            ← Terug naar dashboard
-          </Link>
-        </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
