@@ -143,16 +143,30 @@ export function DetailModal({ open, onClose, evaluation }: DetailModalProps) {
 
           {tab === "reflection" && (
             <div className="space-y-2">
-              <p className="text-sm text-gray-600">
-                Hier kan de leerling eigen reflectie toevoegen of bekijken (bijv.
-                uit de reflectiewizard). Integreer met je bestaande
-                reflectie-endpoints.
-              </p>
-              <div className="rounded-xl border border-gray-200 p-4 text-sm text-gray-800">
-                <p className="italic opacity-70">
-                  (Placeholder – vervang door echte reflectietekst of editor.)
-                </p>
-              </div>
+              {evaluation.reflection ? (
+                <div className="rounded-xl border border-gray-200 p-4">
+                  <div className="text-sm text-gray-800 whitespace-pre-wrap">
+                    {evaluation.reflection.text}
+                  </div>
+                  {evaluation.reflection.submittedAt && (
+                    <div className="mt-3 text-xs text-gray-500">
+                      Ingediend op: {new Date(evaluation.reflection.submittedAt).toLocaleDateString("nl-NL", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit"
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-gray-200 p-4 text-sm text-gray-600">
+                  <p className="italic">
+                    Er is nog geen reflectie ingevuld voor deze evaluatie.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>

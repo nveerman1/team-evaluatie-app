@@ -770,6 +770,7 @@ def get_my_peer_feedback_results(
         grade_record = (
             db.query(Grade)
             .filter(
+                Grade.school_id == user.school_id,
                 Grade.evaluation_id == ev.id,
                 Grade.user_id == user.id,
             )
@@ -778,6 +779,23 @@ def get_my_peer_feedback_results(
         if grade_record and grade_record.gcf is not None:
             # Convert GCF to percentage (0-100)
             gcf_score = int(round(grade_record.gcf * 100))
+
+        # Get reflection for this student
+        reflection_data = None
+        reflection_record = (
+            db.query(Reflection)
+            .filter(
+                Reflection.school_id == user.school_id,
+                Reflection.evaluation_id == ev.id,
+                Reflection.user_id == user.id,
+            )
+            .first()
+        )
+        if reflection_record and reflection_record.text:
+            reflection_data = {
+                "text": reflection_record.text,
+                "submittedAt": reflection_record.submitted_at.isoformat() if reflection_record.submitted_at else None,
+            }
 
         # Build trend data (historical averages)
         # For now, we'll use the current averages as a single point
@@ -798,6 +816,7 @@ def get_my_peer_feedback_results(
             "selfScore": self_score,
             "trend": trend if trend else None,
             "gcfScore": gcf_score,
+            "reflection": reflection_data,
         }
         results.append(result_item)
 
