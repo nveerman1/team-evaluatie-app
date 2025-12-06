@@ -155,20 +155,21 @@ export function CombinedTeamCard({
   return (
     <article 
       id={`team-${team.id}`}
-      className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 space-y-4"
+      className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden"
     >
-      <div className="flex flex-col gap-3">
-        {/* Header with team name and toggle */}
-        <div className="flex items-start justify-between w-full bg-slate-200 rounded-lg px-3 py-2 -mx-1">
-          <button onClick={() => setIsOpen(!isOpen)} className="text-left flex-1">
-            <h3 className="text-sm font-semibold text-slate-900">{teamDisplayName}</h3>
-          </button>
-          <div className="flex items-center gap-1">
-            {saving && <span className="text-[10px] text-green-600">Opgeslagen ✓</span>}
-            <span className={`transition-transform ${isOpen ? "rotate-90" : "rotate-0"}`}>▸</span>
-          </div>
+      {/* Header with team name and toggle */}
+      <div className="flex items-start justify-between w-full bg-slate-200 px-4 py-3">
+        <button onClick={() => setIsOpen(!isOpen)} className="text-left flex-1">
+          <h3 className="text-sm font-semibold text-slate-900">{teamDisplayName}</h3>
+        </button>
+        <div className="flex items-center gap-1">
+          {saving && <span className="text-[10px] text-green-600">Opgeslagen ✓</span>}
+          <span className={`transition-transform ${isOpen ? "rotate-90" : "rotate-0"}`}>▸</span>
         </div>
-        
+      </div>
+      
+      {/* Content area with padding */}
+      <div className="p-4 space-y-4">
         {/* Student pills */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           {students.map(student => (
@@ -180,87 +181,87 @@ export function CombinedTeamCard({
             />
           ))}
         </div>
-      </div>
 
-      {/* Team quick notes - visible only when no student is selected */}
-      {!filter && (
-        <div className="flex flex-wrap gap-1.5 text-[11px]">
-          {QUICK_NOTES_TEAM.map(n => (
-            <button
-              key={n.text}
-              onClick={() => saveQuick(n.text, n.omza, false)}
-              className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 hover:bg-indigo-50"
-              title={n.omza ? `OMZA: ${n.omza}` : undefined}
-            >
-              {n.text}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Student quick notes - only visible when a student is selected */}
-      {filter && (
-        <div className="flex flex-wrap gap-1.5 text-[11px]">
-          {QUICK_NOTES_STUDENT.map(n => (
-            <button
-              key={n.text}
-              onClick={() => saveQuick(n.text, n.omza, true)}
-              className="rounded-full border border-indigo-100 bg-indigo-50/50 px-3 py-1 hover:bg-indigo-100 text-slate-700"
-              title={n.omza ? `OMZA: ${n.omza}` : undefined}
-            >
-              {n.text}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Expanded content */}
-      {isOpen && (
-        <div className="space-y-4">
-          {/* Note textarea */}
-          <textarea
-            value={note}
-            onChange={e => setNote(e.target.value)}
-            placeholder="Korte observatie..."
-            className="w-full min-h-[80px] rounded-xl border border-slate-300 px-3 py-2 text-sm"
-          />
-          
-          {/* OMZA tags */}
-          <div className="flex flex-wrap gap-2 text-xs">
-            {OMZA_CATEGORIES.map(tag => (
+        {/* Team quick notes - visible only when no student is selected */}
+        {!filter && (
+          <div className="flex flex-wrap gap-1.5 text-[11px]">
+            {QUICK_NOTES_TEAM.map(n => (
               <button
-                key={tag}
-                onClick={() => toggleOmza(tag)}
-                className={`px-2 py-1 rounded-full border text-[11px] ${
-                  omzaTags.includes(tag)
-                    ? "bg-indigo-100 border-indigo-300 text-indigo-800"
-                    : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-indigo-50"
-                }`}
+                key={n.text}
+                onClick={() => saveQuick(n.text, n.omza, false)}
+                className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 hover:bg-indigo-50"
+                title={n.omza ? `OMZA: ${n.omza}` : undefined}
               >
-                #{tag}
+                {n.text}
               </button>
             ))}
           </div>
-          
-          {/* Save button */}
-          <button
-            onClick={saveNote}
-            disabled={saving || !note.trim()}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {saving ? "Opslaan..." : "Notitie opslaan"}
-          </button>
-          
-          {/* Notes feed */}
-          <NotesOverviewAll
-            teamName={teamDisplayName}
-            notes={notes}
-            filter={filter}
-            search={search}
-            searchOmza={searchOmza}
-          />
-        </div>
-      )}
+        )}
+
+        {/* Student quick notes - only visible when a student is selected */}
+        {filter && (
+          <div className="flex flex-wrap gap-1.5 text-[11px]">
+            {QUICK_NOTES_STUDENT.map(n => (
+              <button
+                key={n.text}
+                onClick={() => saveQuick(n.text, n.omza, true)}
+                className="rounded-full border border-indigo-100 bg-indigo-50/50 px-3 py-1 hover:bg-indigo-100 text-slate-700"
+                title={n.omza ? `OMZA: ${n.omza}` : undefined}
+              >
+                {n.text}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Expanded content */}
+        {isOpen && (
+          <div className="space-y-4">
+            {/* Note textarea */}
+            <textarea
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              placeholder="Korte observatie..."
+              className="w-full min-h-[80px] rounded-xl border border-slate-300 px-3 py-2 text-sm"
+            />
+            
+            {/* OMZA tags */}
+            <div className="flex flex-wrap gap-2 text-xs">
+              {OMZA_CATEGORIES.map(tag => (
+                <button
+                  key={tag}
+                  onClick={() => toggleOmza(tag)}
+                  className={`px-2 py-1 rounded-full border text-[11px] ${
+                    omzaTags.includes(tag)
+                      ? "bg-indigo-100 border-indigo-300 text-indigo-800"
+                      : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-indigo-50"
+                  }`}
+                >
+                  #{tag}
+                </button>
+              ))}
+            </div>
+            
+            {/* Save button */}
+            <button
+              onClick={saveNote}
+              disabled={saving || !note.trim()}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {saving ? "Opslaan..." : "Notitie opslaan"}
+            </button>
+            
+            {/* Notes feed */}
+            <NotesOverviewAll
+              teamName={teamDisplayName}
+              notes={notes}
+              filter={filter}
+              search={search}
+              searchOmza={searchOmza}
+            />
+          </div>
+        )}
+      </div>
     </article>
   );
 }
