@@ -1,18 +1,14 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useStudentGrowth } from "@/hooks";
+import { usePeerFeedbackResults } from "@/hooks/usePeerFeedbackResults";
 import {
   CompetencyRadarChart,
   CATEGORY_COLORS,
 } from "@/components/student/competency/CompetencyRadarChart";
-import {
-  OMZALineChart,
-  OmzaTrendPoint,
-} from "@/components/student/peer-results/OMZALineChart";
-import { OMZARadarChart } from "@/components/student/peer-results/OMZARadarChart";
+import { OMZAOverview } from "@/components/student/peer-results";
 import type {
-  GrowthScanSummary,
   GrowthGoal,
   GrowthReflection,
   GrowthCategoryScore,
@@ -106,7 +102,7 @@ const DEV_MOCK_DATA: StudentGrowthData = {
 };
 
 // Helper function to find the strongest and weakest OMZA domains
-function analyzeOMZA(omza: GrowthScanSummary["omza"]) {
+function analyzeOMZA(omza: { organiseren: number; meedoen: number; zelfvertrouwen: number; autonomie: number }) {
   const entries = Object.entries(omza) as [keyof typeof omza, number][];
   const sorted = entries.sort((a, b) => b[1] - a[1]);
   const labels: Record<keyof typeof omza, string> = {
@@ -147,19 +143,12 @@ function CardSkeleton({ className = "" }: { className?: string }) {
 export default function GrowthPage() {
   const { data: apiData, isLoading, error, regenerateSummary, isRegenerating } =
     useStudentGrowth();
-  const [rangeView, setRangeView] = useState<"recent" | "all">("recent");
+  
+  // Fetch peer feedback results for OMZA overview (same as /student/results)
+  const { items: peerResults, loading: peerLoading } = usePeerFeedbackResults();
 
   // Use mock data when API fails (for development/preview)
   const data = apiData || (error ? DEV_MOCK_DATA : null);
-
-  // Determine which scans to show based on toggle
-  const scansToShow =
-    rangeView === "recent" && data?.scans && data.scans.length > 3
-      ? data.scans.slice(-3)
-      : data?.scans ?? [];
-
-  const lastScan = data?.scans?.[data.scans.length - 1];
-  const omzaAnalysis = lastScan ? analyzeOMZA(lastScan.omza) : null;
 
   // Count goals by status (for future use, e.g., KPI display)
   const _activeGoals = data?.goals?.filter((g) => g.status === "active").length ?? 0;
@@ -198,7 +187,7 @@ export default function GrowthPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-slate-100">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
         <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
@@ -264,14 +253,7 @@ export default function GrowthPage() {
             <CompetencyProfileSection profile={data.competency_profile} />
 
             {/* 2. OMZA development over time + Profiel laatste scan */}
-            <OMZADevelopmentSection
-              scans={scansToShow}
-              lastScan={lastScan}
-              omzaAnalysis={omzaAnalysis}
-              rangeView={rangeView}
-              setRangeView={setRangeView}
-              hasMoreThan3Scans={(data.scans?.length ?? 0) > 3}
-            />
+            {!peerLoading && peerResults.length > 0 && <OMZAOverview items={peerResults} />}
 
             {/* 3. Goals + Reflections */}
             <section className="grid gap-6 lg:grid-cols-2">
@@ -374,138 +356,6 @@ function CompetencyProfileSection({
             scans om te zien hoe je profiel verandert.
           </p>
         </div>
-      </div>
-    </section>
-  );
-}
-
-function OMZADevelopmentSection({
-  scans,
-  lastScan,
-  omzaAnalysis,
-  rangeView,
-  setRangeView,
-  hasMoreThan3Scans,
-}: {
-  scans: GrowthScanSummary[];
-  lastScan?: GrowthScanSummary;
-  omzaAnalysis: ReturnType<typeof analyzeOMZA> | null;
-  rangeView: "recent" | "all";
-  setRangeView: (view: "recent" | "all") => void;
-  hasMoreThan3Scans: boolean;
-}) {
-  // Transform scans data to line chart format
-  const omzaTrendData = useMemo((): OmzaTrendPoint[] => {
-    return scans.map((scan) => ({
-      label: scan.title,
-      O: scan.omza.organiseren,
-      M: scan.omza.meedoen,
-      Z: scan.omza.zelfvertrouwen,
-      A: scan.omza.autonomie,
-    }));
-  }, [scans]);
-
-  // Transform last scan data to radar chart format
-  const omzaRadarData = useMemo(() => {
-    if (!lastScan) {
-      return { O: 0, M: 0, Z: 0, A: 0 };
-    }
-
-    return {
-      O: lastScan.omza.organiseren,
-      M: lastScan.omza.meedoen,
-      Z: lastScan.omza.zelfvertrouwen,
-      A: lastScan.omza.autonomie,
-    };
-  }, [lastScan]);
-
-  return (
-    <section className="grid gap-6 lg:grid-cols-3">
-      {/* Trend over time */}
-      <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 space-y-4">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Ontwikkeling van OMZA over tijd
-          </h2>
-          {hasMoreThan3Scans && (
-            <div className="inline-flex items-center rounded-full bg-gray-100 p-1 text-xs">
-              <button
-                type="button"
-                onClick={() => setRangeView("recent")}
-                className={`px-3 py-1 rounded-full font-medium ${
-                  rangeView === "recent"
-                    ? "bg-white shadow text-gray-900"
-                    : "text-gray-500"
-                }`}
-              >
-                Laatste 3 scans
-              </button>
-              <button
-                type="button"
-                onClick={() => setRangeView("all")}
-                className={`px-3 py-1 rounded-full font-medium ${
-                  rangeView === "all"
-                    ? "bg-white shadow text-gray-900"
-                    : "text-gray-500"
-                }`}
-              >
-                Alle scans
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Line Chart */}
-        <div className="h-56 rounded-lg border border-gray-200 bg-gray-50 p-2">
-          <OMZALineChart data={omzaTrendData} />
-        </div>
-
-        <div className="flex flex-wrap gap-3 text-xs text-gray-600">
-          <span className="inline-flex items-center gap-1">
-            <span className="w-3 h-3 rounded-full bg-blue-500" /> Organiseren
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <span className="w-3 h-3 rounded-full bg-green-500" /> Meedoen
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <span className="w-3 h-3 rounded-full bg-purple-500" />{" "}
-            Zelfvertrouwen
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <span className="w-3 h-3 rounded-full bg-orange-500" /> Autonomie
-          </span>
-        </div>
-      </div>
-
-      {/* Profile last scan */}
-      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 space-y-3">
-        <h2 className="text-lg font-semibold text-gray-900">
-          Profiel laatste scan (OMZA)
-        </h2>
-        <div className="h-40 rounded-lg border border-gray-200 bg-gray-50 p-2">
-          <OMZARadarChart data={omzaRadarData} />
-        </div>
-        {lastScan && omzaAnalysis ? (
-          <ul className="space-y-1 text-xs text-gray-600">
-            <li>
-              <span className="font-medium text-gray-800">Sterkste domein:</span>{" "}
-              {omzaAnalysis.strongest.label} ({omzaAnalysis.strongest.value.toFixed(1)})
-            </li>
-            <li>
-              <span className="font-medium text-gray-800">
-                Grootste groeikans:
-              </span>{" "}
-              {omzaAnalysis.weakest.label} ({omzaAnalysis.weakest.value.toFixed(1)})
-            </li>
-            <li>
-              <span className="font-medium text-gray-800">Tip:</span> koppel een
-              leerdoel aan jouw ontwikkelpunt en verwijs ernaar in je volgende
-              reflectie.
-            </li>
-          </ul>
-        ) : (
-          <p className="text-xs text-gray-500">Nog geen scans beschikbaar.</p>
-        )}
       </div>
     </section>
   );
