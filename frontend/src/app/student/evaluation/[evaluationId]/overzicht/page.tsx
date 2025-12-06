@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Loading, ErrorMessage } from "@/components";
 import { FeedbackSummary } from "@/components/student";
-import { studentService } from "@/services";
+import { studentService, evaluationService, courseService } from "@/services";
 import api from "@/lib/api";
 import type { MyAllocation, DashboardResponse } from "@/dtos";
-import { OMZA_LABELS } from "@/components/student/peer-results/helpers";
+import type { Evaluation } from "@/dtos/evaluation.dto";
+import type { Course } from "@/dtos/course.dto";
 
 type TabKey = "summary" | "peers" | "reflection";
 
@@ -18,6 +19,8 @@ export default function OverzichtPage() {
 
   const [allocs, setAllocs] = useState<MyAllocation[]>([]);
   const [dash, setDash] = useState<DashboardResponse | undefined>();
+  const [evaluation, setEvaluation] = useState<Evaluation | undefined>();
+  const [course, setCourse] = useState<Course | undefined>();
   const [loading, setLoading] = useState(true);
   const [loadingDash, setLoadingDash] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +38,29 @@ export default function OverzichtPage() {
         setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
       })
       .finally(() => setLoading(false));
+  }, [evaluationId]);
+
+  // Load evaluation metadata
+  useEffect(() => {
+    if (!evaluationId) return;
+
+    evaluationService
+      .getEvaluation(evaluationId)
+      .then((data) => {
+        setEvaluation(data);
+        // Load course info
+        if (data.course_id) {
+          courseService
+            .getCourse(data.course_id)
+            .then((courseData) => setCourse(courseData))
+            .catch(() => {
+              // Silent fail for course
+            });
+        }
+      })
+      .catch(() => {
+        // Silent fail for evaluation
+      });
   }, [evaluationId]);
 
   // Load dashboard data
@@ -62,6 +88,11 @@ export default function OverzichtPage() {
 
   // Extract OMZA categories in order
   const omzaCategories = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"];
+
+  // Format deadline
+  const deadlineText = evaluation?.deadlines?.review
+    ? new Date(evaluation.deadlines.review).toLocaleDateString("nl-NL")
+    : "Niet ingesteld";
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -100,14 +131,20 @@ export default function OverzichtPage() {
                 <div>
                   <div className="flex items-center gap-3">
                     <h2 className="text-base font-semibold text-slate-900">
-                      Evaluatie {evaluationId}
+                      {evaluation?.title || `Evaluatie ${evaluationId}`}
                     </h2>
-                    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 bg-slate-50 text-slate-700 ring-slate-200">
-                      Afgerond
+                    <span
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ${
+                        evaluation?.status === "open"
+                          ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+                          : "bg-slate-50 text-slate-700 ring-slate-200"
+                      }`}
+                    >
+                      {evaluation?.status === "open" ? "Open" : "Afgerond"}
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-slate-500">
-                    {dash.criteria[0]?.category || "Cursus"} • Deadline: Niet ingesteld
+                    {course?.name || evaluation?.cluster || "Cursus"} • Deadline: {deadlineText}
                   </p>
                 </div>
               </div>
