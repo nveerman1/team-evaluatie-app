@@ -163,8 +163,8 @@ export default function OverzichtPage() {
     ? getTeamContributionFactor(evaluation.teamContributionFactor, evaluation.gcfScore)
     : undefined;
 
-  // Also treat null GCF as undefined for display purposes
-  const displayGcf = teamContributionFactor !== undefined && teamContributionFactor !== null 
+  // Treat null as undefined, but allow 0 as a valid value
+  const displayGcf = typeof teamContributionFactor === 'number'
     ? teamContributionFactor 
     : undefined;
 
@@ -271,9 +271,9 @@ export default function OverzichtPage() {
                       Concept
                     </span>
                   </div>
-                  {/* Wrap FeedbackSummary but override its styling to match EvaluationCard fonts */}
+                  {/* Wrap FeedbackSummary and hide its header, badges to match EvaluationCard */}
                   <div className="-m-3 mt-2">
-                    <div className="[&>div]:!bg-transparent [&>div]:!border-0 [&>div]:!shadow-none [&_h3]:!text-sm [&_h3]:!font-medium [&_h3]:!text-slate-700 [&_p]:!text-sm [&_p]:!text-slate-700 [&_button]:!text-xs">
+                    <div className="[&>div]:!bg-transparent [&>div]:!border-0 [&>div]:!shadow-none [&_h3]:!hidden [&_p:first-of-type]:!hidden [&>div>div:first-child]:!hidden [&_span.inline-flex.items-center.px-2]:!hidden [&_h3]:!text-sm [&_h3]:!font-medium [&_h3]:!text-slate-700 [&_p]:!text-sm [&_p]:!text-slate-700 [&_button]:!text-xs">
                       <FeedbackSummary
                         evaluationId={evaluationId}
                         studentId={studentId}
