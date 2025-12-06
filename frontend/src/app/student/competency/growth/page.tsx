@@ -396,15 +396,6 @@ function OMZADevelopmentSection({
 }) {
   // Transform scans data to line chart format
   const omzaTrendData = useMemo((): OmzaTrendPoint[] => {
-    if (!scans || scans.length === 0) {
-      // Return dummy data if no scans available
-      return [
-        { label: "Sprint 1", O: 2.4, M: 2.6, Z: 2.8, A: 2.3 },
-        { label: "Sprint 2", O: 2.7, M: 2.8, Z: 3.0, A: 2.6 },
-        { label: "Sprint 3", O: 3.0, M: 3.1, Z: 3.2, A: 2.9 },
-      ];
-    }
-
     return scans.map((scan) => ({
       label: scan.title,
       O: scan.omza.organiseren,
@@ -417,8 +408,7 @@ function OMZADevelopmentSection({
   // Transform last scan data to radar chart format
   const omzaRadarData = useMemo(() => {
     if (!lastScan) {
-      // Return dummy data if no last scan available
-      return { O: 3.0, M: 3.8, Z: 3.2, A: 3.4 };
+      return { O: 0, M: 0, Z: 0, A: 0 };
     }
 
     return {
