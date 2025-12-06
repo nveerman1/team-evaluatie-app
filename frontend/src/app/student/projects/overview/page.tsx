@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { useStudentProjectAssessments } from "@/hooks/useStudentProjectAssessments";
 import { Loading, ErrorMessage } from "@/components";
 import Link from "next/link";
@@ -52,14 +52,20 @@ export default function ProjectOverviewPage() {
       };
     }
 
-    // For now, we'll use dummy grade data since grades might not be in the current DTO
-    // In a real implementation, this would come from the assessment detail data
+    // TODO: Replace mock data with actual grade/score calculations
+    // The current DTO (ProjectAssessmentListItem) does not include grade or detailed scores
+    // In production, this should:
+    // 1. Fetch detailed assessment data for each project (including grades and rubric scores)
+    // 2. Calculate actual average grades from assessment details
+    // 3. Calculate actual category averages from rubric criterion scores
+    // 4. Extract real grade trends from assessment history
+    
     const completedCount = projectAssessments.length;
     
-    // Mock average grade calculation (would come from actual grade field)
+    // Mock average grade (would come from actual grade field in detail data)
     const avgGrade = 7.5;
     
-    // Mock category averages
+    // Mock category averages (would be calculated from rubric criterion scores)
     const categoryAverages = {
       Projectproces: 3.8,
       Eindresultaat: 4.1,
@@ -68,10 +74,11 @@ export default function ProjectOverviewPage() {
       Professionaliteit: 3.7,
     };
 
-    // Prepare trend data for line chart
+    // Prepare trend data for line chart with deterministic mock grades
     const gradesTrend = projectAssessments.map((assessment, index) => ({
       label: assessment.title.substring(0, 20),
-      grade: 7 + Math.random() * 2, // Mock grade
+      // TODO: Use actual grade from assessment detail
+      grade: 7 + ((index * 37) % 30) / 10, // Deterministic pseudo-random grade between 7.0-10.0
       date: assessment.published_at || "",
     }));
 

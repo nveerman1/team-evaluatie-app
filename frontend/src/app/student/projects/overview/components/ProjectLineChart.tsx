@@ -75,7 +75,7 @@ export function ProjectLineChart({ data }: ProjectLineChartProps) {
           },
           tooltip: {
             callbacks: {
-              label: (ctx) => `Cijfer: ${ctx.parsed.y !== null ? ctx.parsed.y.toFixed(1) : 'N/A'}`,
+              label: (ctx) => `Cijfer: ${ctx.parsed.y != null ? ctx.parsed.y.toFixed(1) : 'N/A'}`,
             },
           },
         },
