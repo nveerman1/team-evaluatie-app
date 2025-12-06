@@ -24,11 +24,6 @@ export function RubricRating({
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">
           {criterion.name}
-          {criterion.category && (
-            <span className="ml-2 text-xs font-normal text-slate-400">
-              ({criterion.category})
-            </span>
-          )}
         </h3>
         <span className="inline-flex items-baseline gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
           <span className="font-medium text-slate-700">Score</span>
