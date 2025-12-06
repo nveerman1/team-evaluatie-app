@@ -11,10 +11,10 @@ Provides endpoints for the student growth page showing:
 """
 
 from __future__ import annotations
-from typing import List, Optional
+from typing import Dict, List, Optional
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -31,6 +31,43 @@ from app.infra.db.models import (
     GroupMember,
 )
 from pydantic import BaseModel
+
+
+# ============ Constants ============
+
+# Maximum length for reflection snippet in the growth page
+REFLECTION_SNIPPET_MAX_LENGTH = 150
+
+# Default score when no data is available (middle of 1-5 scale)
+DEFAULT_OMZA_SCORE = 3.0
+
+# Default mapping from competency categories to OMZA domains
+# Note: In a production system, this could be configured per school in the database
+DEFAULT_OMZA_CATEGORY_MAPPING: Dict[str, str] = {
+    # Plannen & Organiseren -> Organiseren
+    "Plannen & Organiseren": "organiseren",
+    "plannen & organiseren": "organiseren",
+    "organiseren": "organiseren",
+    "Organiseren": "organiseren",
+    # Samenwerken -> Meedoen
+    "Samenwerken": "meedoen",
+    "samenwerken": "meedoen",
+    "meedoen": "meedoen",
+    "Meedoen": "meedoen",
+    # Communicatie & Presenteren -> Zelfvertrouwen
+    "Communicatie & Presenteren": "zelfvertrouwen",
+    "communicatie & presenteren": "zelfvertrouwen",
+    "zelfvertrouwen": "zelfvertrouwen",
+    "Zelfvertrouwen": "zelfvertrouwen",
+    # Reflectie & Professionele houding -> Autonomie
+    "Reflectie & Professionele houding": "autonomie",
+    "reflectie & professionele houding": "autonomie",
+    "autonomie": "autonomie",
+    "Autonomie": "autonomie",
+    # Additional mappings for flexibility
+    "Creatief denken & probleemoplossen": "autonomie",
+    "Technische vaardigheden": "organiseren",
+}
 
 
 # ============ Response Schemas ============
@@ -112,6 +149,15 @@ def _format_date(dt: Optional[datetime]) -> str:
     return dt.strftime("%d-%m-%Y")
 
 
+def _calculate_average_or_default(
+    scores: List[float], default: float = DEFAULT_OMZA_SCORE
+) -> float:
+    """Calculate average of scores or return default if empty"""
+    if not scores:
+        return default
+    return sum(scores) / len(scores)
+
+
 def _calculate_omza_scores(
     db: Session, window_id: int, user_id: int, school_id: int
 ) -> OMZAScores:
@@ -133,36 +179,8 @@ def _calculate_omza_scores(
         .all()
     )
 
-    # Map categories to OMZA domains
-    # This mapping should be configured per school, but for now we use defaults
-    omza_mapping = {
-        # Plannen & Organiseren -> Organiseren
-        "Plannen & Organiseren": "organiseren",
-        "plannen & organiseren": "organiseren",
-        "organiseren": "organiseren",
-        "Organiseren": "organiseren",
-        # Samenwerken -> Meedoen
-        "Samenwerken": "meedoen",
-        "samenwerken": "meedoen",
-        "meedoen": "meedoen",
-        "Meedoen": "meedoen",
-        # Communicatie & Presenteren -> Zelfvertrouwen
-        "Communicatie & Presenteren": "zelfvertrouwen",
-        "communicatie & presenteren": "zelfvertrouwen",
-        "zelfvertrouwen": "zelfvertrouwen",
-        "Zelfvertrouwen": "zelfvertrouwen",
-        # Reflectie & Professionele houding -> Autonomie
-        "Reflectie & Professionele houding": "autonomie",
-        "reflectie & professionele houding": "autonomie",
-        "autonomie": "autonomie",
-        "Autonomie": "autonomie",
-        # Additional mappings for flexibility
-        "Creatief denken & probleemoplossen": "autonomie",
-        "Technische vaardigheden": "organiseren",
-    }
-
     # Aggregate scores by OMZA domain
-    omza_scores = {
+    omza_scores: Dict[str, List[float]] = {
         "organiseren": [],
         "meedoen": [],
         "zelfvertrouwen": [],
@@ -182,25 +200,16 @@ def _calculate_omza_scores(
             category_name = competency.category
 
         if category_name:
-            domain = omza_mapping.get(category_name)
+            domain = DEFAULT_OMZA_CATEGORY_MAPPING.get(category_name)
             if domain:
                 omza_scores[domain].append(float(score.score))
 
-    # Calculate averages, default to 3.0 if no scores
+    # Calculate averages using helper function
     return OMZAScores(
-        organiseren=sum(omza_scores["organiseren"]) / len(omza_scores["organiseren"])
-        if omza_scores["organiseren"]
-        else 3.0,
-        meedoen=sum(omza_scores["meedoen"]) / len(omza_scores["meedoen"])
-        if omza_scores["meedoen"]
-        else 3.0,
-        zelfvertrouwen=sum(omza_scores["zelfvertrouwen"])
-        / len(omza_scores["zelfvertrouwen"])
-        if omza_scores["zelfvertrouwen"]
-        else 3.0,
-        autonomie=sum(omza_scores["autonomie"]) / len(omza_scores["autonomie"])
-        if omza_scores["autonomie"]
-        else 3.0,
+        organiseren=_calculate_average_or_default(omza_scores["organiseren"]),
+        meedoen=_calculate_average_or_default(omza_scores["meedoen"]),
+        zelfvertrouwen=_calculate_average_or_default(omza_scores["zelfvertrouwen"]),
+        autonomie=_calculate_average_or_default(omza_scores["autonomie"]),
     )
 
 
@@ -334,12 +343,10 @@ def get_student_growth_data(
     """
     Get comprehensive growth data for the current student.
     Returns scan history, competency profile, goals, reflections, and AI summary.
+    
+    This endpoint returns data for the authenticated user regardless of role.
+    Teachers/admins can use this to preview the student experience.
     """
-    # Students only - teachers should use different endpoints
-    if current_user.role not in ["student"]:
-        # Allow teachers for debugging/preview, but they see empty data
-        pass
-
     school_id = current_user.school_id
     user_id = current_user.id
 
@@ -476,8 +483,12 @@ def get_student_growth_data(
 
     reflections = []
     for reflection, window in reflections_data:
-        # Get snippet (first 150 chars)
-        snippet = reflection.text[:150] + "..." if len(reflection.text) > 150 else reflection.text
+        # Get snippet (truncate to max length)
+        text = reflection.text
+        if len(text) > REFLECTION_SNIPPET_MAX_LENGTH:
+            snippet = text[:REFLECTION_SNIPPET_MAX_LENGTH] + "..."
+        else:
+            snippet = text
 
         reflections.append(
             GrowthReflection(
