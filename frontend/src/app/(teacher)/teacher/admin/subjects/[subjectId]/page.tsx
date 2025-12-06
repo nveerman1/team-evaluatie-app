@@ -71,7 +71,7 @@ export default function SubjectDetailPage() {
     
     // Update the course to unlink it from this subject
     await courseService.updateCourse(courseId, {
-      subject_id: null,
+      subject_id: undefined,
     });
     await loadSubjectData();
   };

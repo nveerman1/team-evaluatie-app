@@ -269,7 +269,7 @@ Het docententeam`,
         </div>
 
         <div className="text-center py-8 text-slate-500">
-          <p className="text-sm">Gebruik dezelfde filters hierboven en selecteer "Bulk startmail" als template.</p>
+          <p className="text-sm">Gebruik dezelfde filters hierboven en selecteer &quot;Bulk startmail&quot; als template.</p>
         </div>
       </section>
     </div>

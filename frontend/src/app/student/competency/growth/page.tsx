@@ -1,11 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useStudentGrowth } from "@/hooks";
 import {
   CompetencyRadarChart,
   CATEGORY_COLORS,
 } from "@/components/student/competency/CompetencyRadarChart";
+import {
+  OMZALineChart,
+  OmzaTrendPoint,
+} from "@/components/student/peer-results/OMZALineChart";
+import { OMZARadarChart } from "@/components/student/peer-results/OMZARadarChart";
 import type {
   GrowthScanSummary,
   GrowthGoal,
@@ -206,15 +211,24 @@ export default function GrowthPage() {
               ontwikkelen over meerdere scans.
             </p>
           </div>
-          <button
-            className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
-            onClick={() => {
-              // TODO: Implement portfolio export functionality
-              alert("Exportfunctie komt binnenkort beschikbaar.");
-            }}
-          >
-            Exporteer voor portfolio
-          </button>
+          <div className="flex gap-2">
+            <Link
+              href="/student?tab=competenties"
+              className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <span className="mr-2">←</span>
+              Terug
+            </Link>
+            <button
+              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+              onClick={() => {
+                // TODO: Implement portfolio export functionality
+                alert("Exportfunctie komt binnenkort beschikbaar.");
+              }}
+            >
+              Exporteer voor portfolio
+            </button>
+          </div>
         </header>
       </div>
 
@@ -380,6 +394,41 @@ function OMZADevelopmentSection({
   setRangeView: (view: "recent" | "all") => void;
   hasMoreThan3Scans: boolean;
 }) {
+  // Transform scans data to line chart format
+  const omzaTrendData = useMemo((): OmzaTrendPoint[] => {
+    if (!scans || scans.length === 0) {
+      // Return dummy data if no scans available
+      return [
+        { label: "Sprint 1", O: 2.4, M: 2.6, Z: 2.8, A: 2.3 },
+        { label: "Sprint 2", O: 2.7, M: 2.8, Z: 3.0, A: 2.6 },
+        { label: "Sprint 3", O: 3.0, M: 3.1, Z: 3.2, A: 2.9 },
+      ];
+    }
+
+    return scans.map((scan) => ({
+      label: scan.title,
+      O: scan.omza.organiseren,
+      M: scan.omza.meedoen,
+      Z: scan.omza.zelfvertrouwen,
+      A: scan.omza.autonomie,
+    }));
+  }, [scans]);
+
+  // Transform last scan data to radar chart format
+  const omzaRadarData = useMemo(() => {
+    if (!lastScan) {
+      // Return dummy data if no last scan available
+      return { O: 3.0, M: 3.8, Z: 3.2, A: 3.4 };
+    }
+
+    return {
+      O: lastScan.omza.organiseren,
+      M: lastScan.omza.meedoen,
+      Z: lastScan.omza.zelfvertrouwen,
+      A: lastScan.omza.autonomie,
+    };
+  }, [lastScan]);
+
   return (
     <section className="grid gap-6 lg:grid-cols-3">
       {/* Trend over time */}
@@ -416,14 +465,9 @@ function OMZADevelopmentSection({
           )}
         </div>
 
-        {/* Chart placeholder */}
-        {/* TODO: Implement actual line chart with recharts library */}
-        <div className="h-56 rounded-lg border border-dashed border-gray-200 flex items-center justify-center text-sm text-gray-400 bg-gray-50">
-          <span>
-            Grafiek met lijnen voor Organiseren, Meedoen, Zelfvertrouwen en
-            Autonomie
-            {scans.length > 0 && ` (${scans.length} scans)`}
-          </span>
+        {/* Line Chart */}
+        <div className="h-56 rounded-lg border border-gray-200 bg-gray-50 p-2">
+          <OMZALineChart data={omzaTrendData} />
         </div>
 
         <div className="flex flex-wrap gap-3 text-xs text-gray-600">
@@ -448,8 +492,8 @@ function OMZADevelopmentSection({
         <h2 className="text-lg font-semibold text-gray-900">
           Profiel laatste scan (OMZA)
         </h2>
-        <div className="h-40 rounded-lg border border-dashed border-gray-200 flex items-center justify-center text-xs text-gray-400 bg-gray-50 mb-2">
-          Radargrafiek met OMZA-profiel laatste scan
+        <div className="h-40 rounded-lg border border-gray-200 bg-gray-50 p-2">
+          <OMZARadarChart data={omzaRadarData} />
         </div>
         {lastScan && omzaAnalysis ? (
           <ul className="space-y-1 text-xs text-gray-600">
