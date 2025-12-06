@@ -17,6 +17,7 @@ export const peerFeedbackResultsService = {
    */
   async getMyPeerResultForEvaluation(evaluationId: number): Promise<EvaluationResult | null> {
     const results = await this.getMyPeerResults();
-    return results.find((r) => r.id === String(evaluationId)) || null;
+    const idStr = String(evaluationId);
+    return results.find((r) => r.id === idStr) || null;
   },
 };
