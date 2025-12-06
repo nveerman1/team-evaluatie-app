@@ -714,7 +714,6 @@ def get_my_peer_feedback_results(
                 Allocation.evaluation_id == ev.id,
                 Allocation.reviewee_id == user.id,
                 Allocation.is_self.is_(False),
-                Score.score.isnot(None),
             )
             .all()
         )
@@ -725,22 +724,26 @@ def get_my_peer_feedback_results(
             if reviewer_id not in peers_data:
                 peers_data[reviewer_id] = {
                     "peerLabel": "Teamgenoot",  # Anonymized label
-                    "notes": None,
+                    "notes": [],
                     "scores": {k: [] for k in OMZA_KEYS},
                 }
-            norm_cat = _normalize_category(cat)
-            if norm_cat and norm_cat in peers_data[reviewer_id]["scores"]:
-                peers_data[reviewer_id]["scores"][norm_cat].append(float(score))
-            # Capture first comment as notes
-            if comment and not peers_data[reviewer_id]["notes"]:
-                peers_data[reviewer_id]["notes"] = comment
+            # Add score if present
+            if score is not None:
+                norm_cat = _normalize_category(cat)
+                if norm_cat and norm_cat in peers_data[reviewer_id]["scores"]:
+                    peers_data[reviewer_id]["scores"][norm_cat].append(float(score))
+            # Collect all comments
+            if comment and comment.strip():
+                peers_data[reviewer_id]["notes"].append(comment.strip())
 
         # Convert to peers array with averaged scores and anonymous labels
         peers = []
         for idx, (reviewer_id, data) in enumerate(peers_data.items(), start=1):
+            # Combine all notes into one string
+            notes_text = " | ".join(data["notes"]) if data["notes"] else None
             peer_entry = {
                 "peerLabel": f"Teamgenoot {chr(64 + idx)}",  # A, B, C, ...
-                "notes": data["notes"],
+                "notes": notes_text,
                 "scores": {
                     k: _calc_avg(data["scores"][k]) for k in OMZA_KEYS
                 },
