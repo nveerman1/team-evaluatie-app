@@ -10,4 +10,13 @@ export const peerFeedbackResultsService = {
     const { data } = await api.get<EvaluationResult[]>("/evaluations/my/peer-results");
     return data || [];
   },
+
+  /**
+   * Get peer feedback result for the current student for a specific evaluation.
+   * Returns data in OMZA format for a single evaluation.
+   */
+  async getMyPeerResultForEvaluation(evaluationId: number): Promise<EvaluationResult | null> {
+    const results = await this.getMyPeerResults();
+    return results.find((r) => r.id === String(evaluationId)) || null;
+  },
 };
