@@ -2,7 +2,15 @@
 
 import React, { useState } from "react";
 import { EvaluationResult, OmzaKey } from "@/dtos";
-import { OMZA_LABELS, mean, round1, getOmzaEmoji, formatDelta } from "./helpers";
+import {
+  OMZA_LABELS,
+  mean,
+  round1,
+  getOmzaEmoji,
+  formatDelta,
+  getTeamContributionFactor,
+  getTeamContributionLabel,
+} from "./helpers";
 
 type DetailModalProps = {
   open: boolean;
@@ -25,17 +33,15 @@ export function DetailModal({ open, onClose, evaluation }: DetailModalProps) {
     return acc;
   }, {} as Record<OmzaKey, number>);
 
-  // Convert gcfScore to teamContributionFactor if not provided
-  const teamContributionFactor = evaluation.teamContributionFactor ??
-    (evaluation.gcfScore !== undefined ? 0.9 + (evaluation.gcfScore / 100) * 0.2 : undefined);
+  const teamContributionFactor = getTeamContributionFactor(
+    evaluation.teamContributionFactor,
+    evaluation.gcfScore
+  );
 
-  const teamContributionLabel = evaluation.teamContributionLabel ??
+  const teamContributionLabel =
+    evaluation.teamContributionLabel ??
     (teamContributionFactor !== undefined
-      ? teamContributionFactor >= 1.05
-        ? "Boven verwachting"
-        : teamContributionFactor >= 0.95
-        ? "Naar verwachting"
-        : "Onder verwachting"
+      ? getTeamContributionLabel(teamContributionFactor)
       : undefined);
 
   // Use omzaAverages if provided, otherwise calculate from peers

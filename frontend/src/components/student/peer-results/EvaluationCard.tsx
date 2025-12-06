@@ -2,7 +2,15 @@
 
 import React, { useMemo } from "react";
 import { EvaluationResult, OmzaKey } from "@/dtos";
-import { OMZA_LABELS, mean, round1, getOmzaEmoji, formatDelta } from "./helpers";
+import {
+  OMZA_LABELS,
+  mean,
+  round1,
+  getOmzaEmoji,
+  formatDelta,
+  getTeamContributionFactor,
+  getTeamContributionLabel,
+} from "./helpers";
 
 type EvaluationCardProps = {
   data: EvaluationResult;
@@ -24,17 +32,15 @@ export function EvaluationCard({ data, onOpen }: EvaluationCardProps) {
     return obj;
   }, [data]);
 
-  // Convert gcfScore (0-100) to teamContributionFactor (0.90-1.10) if not provided
-  const teamContributionFactor = data.teamContributionFactor ?? 
-    (data.gcfScore !== undefined ? 0.9 + (data.gcfScore / 100) * 0.2 : undefined);
+  const teamContributionFactor = getTeamContributionFactor(
+    data.teamContributionFactor,
+    data.gcfScore
+  );
 
-  const teamContributionLabel = data.teamContributionLabel ?? 
+  const teamContributionLabel =
+    data.teamContributionLabel ??
     (teamContributionFactor !== undefined
-      ? teamContributionFactor >= 1.05
-        ? "Boven verwachting"
-        : teamContributionFactor >= 0.95
-        ? "Naar verwachting"
-        : "Onder verwachting"
+      ? getTeamContributionLabel(teamContributionFactor)
       : undefined);
 
   // Use omzaAverages if provided, otherwise calculate from peers
@@ -62,7 +68,7 @@ export function EvaluationCard({ data, onOpen }: EvaluationCardProps) {
                   : "bg-slate-50 text-slate-700 ring-slate-200"
               }`}
             >
-              {data.status === "open" ? "Open" : "Afgesloten"}
+              {data.status === "open" ? "Open" : "Afgerond"}
             </span>
           </div>
           <p className="mt-1 text-xs text-slate-500">

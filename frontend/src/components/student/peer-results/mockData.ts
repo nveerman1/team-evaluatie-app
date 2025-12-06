@@ -9,6 +9,24 @@ export const mockData: EvaluationResult[] = [
     status: "open",
     aiSummary:
       "Je teamgenoten waarderen je betrouwbaarheid en initiatief. Je plant taken goed, maar laat soms anderen te weinig aan het woord. Probeer actief te checken of iedereen mee is, vooral tijdens discussies. Je zelfstandigheid viel positief op. Blijf je reflectie kort en concreet koppelen aan acties.",
+    teacherComments:
+      "De basis is goed: planning en taakverdeling zijn duidelijk. Let in de volgende sprint extra op het tijdig uitspreken van verwachtingen en het betrekken van alle teamleden in de besluitvorming.",
+    teacherGrade: 7.4,
+    teacherGradeTrend: "+0,3 t.o.v. vorige sprint",
+    teacherOmza: {
+      O: 1.5,
+      M: 2.6,
+      Z: 3.2,
+      A: 3.8,
+    },
+    teamContributionFactor: 1.06,
+    teamContributionLabel: "Boven verwachting",
+    omzaAverages: [
+      { key: "O", label: "Organiseren", value: 4.25, delta: 0.3 },
+      { key: "M", label: "Meedoen", value: 3.65, delta: -0.1 },
+      { key: "Z", label: "Zelfvertrouwen", value: 3.4, delta: 0.2 },
+      { key: "A", label: "Autonomie", value: 4.5, delta: 0.0 },
+    ],
     peers: [
       {
         peerLabel: "Teamgenoot A",
@@ -55,6 +73,24 @@ export const mockData: EvaluationResult[] = [
     status: "closed",
     aiSummary:
       "Je startte de sprint gestructureerd en hielp de planning op te zetten. Je nam initiatief, maar let erop dat je ook taken overdraagt. Je betrokkenheid is goed zichtbaar.",
+    teacherComments:
+      "Goede start van het project. Je bent betrokken en neemt initiatief. Blijf werken aan je luistervaardigheden.",
+    teacherGrade: 7.1,
+    teacherGradeTrend: "Eerste beoordeling",
+    teacherOmza: {
+      O: 1.8,
+      M: 2.3,
+      Z: 2.9,
+      A: 3.4,
+    },
+    teamContributionFactor: 1.01,
+    teamContributionLabel: "Naar verwachting",
+    omzaAverages: [
+      { key: "O", label: "Organiseren", value: 3.9, delta: 0.0 },
+      { key: "M", label: "Meedoen", value: 3.3, delta: 0.0 },
+      { key: "Z", label: "Zelfvertrouwen", value: 3.6, delta: 0.0 },
+      { key: "A", label: "Autonomie", value: 4.1, delta: 0.0 },
+    ],
     peers: [
       {
         peerLabel: "Teamgenoot A",

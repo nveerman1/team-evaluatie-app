@@ -64,7 +64,7 @@ export function Filters({ items, onFilter }: FiltersProps) {
           >
             <option value="">Alle statussen</option>
             <option value="open">Open</option>
-            <option value="closed">Afgesloten</option>
+            <option value="closed">Afgerond</option>
           </select>
         </div>
       </div>
