@@ -145,7 +145,7 @@ function PeerPanel({
   };
 
   return (
-    <div className="rounded-lg overflow-hidden bg-slate-100">
+    <div className="rounded-lg overflow-hidden bg-slate-50 border border-slate-200 shadow-sm">
       <button
         onClick={onToggle}
         className="w-full p-4 bg-white hover:bg-gray-50 transition-colors text-left"
