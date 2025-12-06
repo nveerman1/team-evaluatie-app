@@ -163,10 +163,15 @@ export default function OverzichtPage() {
     ? getTeamContributionFactor(evaluation.teamContributionFactor, evaluation.gcfScore)
     : undefined;
 
+  // Also treat null GCF as undefined for display purposes
+  const displayGcf = teamContributionFactor !== undefined && teamContributionFactor !== null 
+    ? teamContributionFactor 
+    : undefined;
+
   const teamContributionLabel =
     evaluation?.teamContributionLabel ??
-    (teamContributionFactor !== undefined
-      ? getTeamContributionLabel(teamContributionFactor)
+    (displayGcf !== undefined
+      ? getTeamContributionLabel(displayGcf)
       : undefined);
 
   // Use omzaAverages if provided, otherwise calculate from peers
@@ -266,9 +271,9 @@ export default function OverzichtPage() {
                       Concept
                     </span>
                   </div>
-                  {/* Wrap FeedbackSummary but override its default white card background */}
+                  {/* Wrap FeedbackSummary but override its styling to match EvaluationCard fonts */}
                   <div className="-m-3 mt-2">
-                    <div className="[&>div]:!bg-transparent [&>div]:!border-0 [&>div]:!shadow-none">
+                    <div className="[&>div]:!bg-transparent [&>div]:!border-0 [&>div]:!shadow-none [&_h3]:!text-sm [&_h3]:!font-medium [&_h3]:!text-slate-700 [&_p]:!text-sm [&_p]:!text-slate-700 [&_button]:!text-xs">
                       <FeedbackSummary
                         evaluationId={evaluationId}
                         studentId={studentId}
@@ -294,7 +299,7 @@ export default function OverzichtPage() {
             {/* Samenvattende KPI's rechts */}
             <div className="space-y-3">
               {/* Team-bijdrage / correctiefactor */}
-              {teamContributionFactor !== undefined && (
+              {displayGcf !== undefined && (
                 <div className="rounded-xl border border-slate-100 bg-indigo-50/60 p-3">
                   <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
                     <span>Team-bijdrage</span>
@@ -305,7 +310,7 @@ export default function OverzichtPage() {
                   <div className="mt-2 flex items-baseline justify-between">
                     <div>
                       <p className="text-2xl font-semibold text-slate-900">
-                        {teamContributionFactor.toFixed(2)}
+                        {displayGcf.toFixed(2)}
                       </p>
                       <p className="text-xs text-slate-500">Range 0,90 – 1,10</p>
                     </div>
@@ -317,7 +322,7 @@ export default function OverzichtPage() {
                     <div
                       className="h-1.5 rounded-full bg-indigo-500"
                       style={{
-                        width: `${Math.min(100, Math.max(0, (teamContributionFactor - 0.9) * 500))}%`,
+                        width: `${Math.min(100, Math.max(0, (displayGcf - 0.9) * 500))}%`,
                       }}
                     />
                   </div>
