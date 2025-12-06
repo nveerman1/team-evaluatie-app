@@ -7,6 +7,7 @@ import {
   mean,
   round1,
   getOmzaEmoji,
+  getOmzaEmojiColorClasses,
   formatDelta,
   getTeamContributionFactor,
   getTeamContributionLabel,
@@ -182,12 +183,12 @@ export function EvaluationCard({ data, onOpen }: EvaluationCardProps) {
                   {Object.entries(data.teacherOmza).map(([key, value]) => (
                     <span
                       key={key}
-                      className="inline-flex items-center rounded-full bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600 ring-1 ring-slate-200"
+                      className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] ring-1 ring-slate-200"
                     >
-                      <span className="mr-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white text-[11px] shadow-sm">
+                      <span className="text-[10px] font-semibold text-slate-700 mr-1">{key}</span>
+                      <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full border text-[11px] shadow-sm ${getOmzaEmojiColorClasses(value)}`}>
                         {getOmzaEmoji(value)}
                       </span>
-                      <span className="text-[10px] font-semibold text-slate-700">{key}</span>
                     </span>
                   ))}
                 </div>

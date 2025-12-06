@@ -21,7 +21,7 @@ export function Filters({ items, onFilter }: FiltersProps) {
 
   return (
     <section className="border-b border-slate-200 bg-white">
-      <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 py-4 md:flex-row md:items-center">
+      <div className="mx-auto flex max-w-6xl flex-row items-center gap-3 px-6 py-4">
         <div className="flex-1">
           <label className="sr-only" htmlFor="search">
             Zoek peer-feedback

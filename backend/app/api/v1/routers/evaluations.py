@@ -578,6 +578,8 @@ OMZA_CATEGORY_MAP = {
 }
 
 OMZA_KEYS = ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"]
+OMZA_SHORT_CODES = ["O", "M", "Z", "A"]
+
 
 
 def _normalize_category(category: Optional[str]) -> Optional[str]:
@@ -768,8 +770,10 @@ def get_my_peer_feedback_results(
         if summary_record:
             ai_summary = summary_record.summary_text
 
-        # Get GCF from Grade table - check both direct column and meta JSON field
+        # Get GCF and grade from Grade table - check both direct column and meta JSON field
         gcf_score = None
+        teacher_grade = None
+        teacher_grade_comment = None
         grade_record = (
             db.query(Grade)
             .filter(
@@ -780,15 +784,40 @@ def get_my_peer_feedback_results(
             .first()
         )
         if grade_record:
-            # First try direct gcf column
+            # First try direct gcf column (GCF is stored as 0.90-1.10)
             if grade_record.gcf is not None:
-                gcf_score = int(round(grade_record.gcf * 100))
+                gcf_score = float(grade_record.gcf)
             # Also check meta JSON field for gcf
             elif grade_record.meta and isinstance(grade_record.meta, dict):
                 meta_gcf = grade_record.meta.get("gcf")
                 if meta_gcf is not None:
-                    gcf_score = int(round(float(meta_gcf) * 100))
+                    gcf_score = float(meta_gcf)
+            
+            # Get teacher grade (prefer published_grade, fallback to grade)
+            if grade_record.published_grade is not None:
+                teacher_grade = float(grade_record.published_grade)
+            elif grade_record.grade is not None:
+                teacher_grade = float(grade_record.grade)
+            
+            # Get teacher comment/reason
+            if grade_record.override_reason:
+                teacher_grade_comment = grade_record.override_reason
 
+        # Get teacher OMZA scores and comments from evaluation settings
+        teacher_omza_scores = {}
+        teacher_comments = None
+        if ev.settings and isinstance(ev.settings, dict):
+            # Get teacher OMZA scores per category
+            for cat_key in OMZA_SHORT_CODES:
+                teacher_key = f"teacher_score_{user.id}_{cat_key}"
+                if teacher_key in ev.settings and ev.settings[teacher_key] is not None:
+                    teacher_omza_scores[cat_key] = ev.settings[teacher_key]
+            
+            # Get teacher comment
+            teacher_comment_key = f"teacher_comment_{user.id}"
+            if teacher_comment_key in ev.settings:
+                teacher_comments = ev.settings[teacher_comment_key]
+        
         # Get reflection for this student
         reflection_data = None
         reflection_record = (
@@ -826,6 +855,11 @@ def get_my_peer_feedback_results(
             "trend": trend if trend else None,
             "gcfScore": gcf_score,
             "reflection": reflection_data,
+            # Teacher data
+            "teacherComments": teacher_comments,
+            "teacherGrade": teacher_grade,
+            "teacherGradeComment": teacher_grade_comment,
+            "teacherOmza": teacher_omza_scores or None,
         }
         results.append(result_item)
 
