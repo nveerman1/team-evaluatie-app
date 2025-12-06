@@ -765,7 +765,7 @@ def get_my_peer_feedback_results(
         if summary_record:
             ai_summary = summary_record.summary_text
 
-        # Get GCF from Grade table
+        # Get GCF from Grade table - check both direct column and meta JSON field
         gcf_score = None
         grade_record = (
             db.query(Grade)
@@ -776,9 +776,15 @@ def get_my_peer_feedback_results(
             )
             .first()
         )
-        if grade_record and grade_record.gcf is not None:
-            # Convert GCF to percentage (0-100)
-            gcf_score = int(round(grade_record.gcf * 100))
+        if grade_record:
+            # First try direct gcf column
+            if grade_record.gcf is not None:
+                gcf_score = int(round(grade_record.gcf * 100))
+            # Also check meta JSON field for gcf
+            elif grade_record.meta and isinstance(grade_record.meta, dict):
+                meta_gcf = grade_record.meta.get("gcf")
+                if meta_gcf is not None:
+                    gcf_score = int(round(float(meta_gcf) * 100))
 
         # Get reflection for this student
         reflection_data = None
