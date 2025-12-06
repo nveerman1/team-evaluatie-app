@@ -291,7 +291,7 @@ export default function OverzichtPage() {
                   </span>
                 </div>
                 <p className="text-sm leading-relaxed text-slate-700 line-clamp-3 md:line-clamp-4">
-                  {evaluation.teacherComments || "Geen opmerkingen toegevoegd."}
+                  {evaluation?.teacherComments || "Geen opmerkingen toegevoegd."}
                 </p>
               </div>
             </div>
@@ -333,7 +333,7 @@ export default function OverzichtPage() {
               )}
 
               {/* Docentbeoordeling samenvatting */}
-              {evaluation.teacherGrade !== undefined && (
+              {typeof evaluation?.teacherGrade === 'number' && (
                 <div className="rounded-xl border border-slate-100 bg-white p-3">
                   <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
                     <span>Docent-beoordeling</span>
