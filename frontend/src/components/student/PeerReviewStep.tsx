@@ -180,16 +180,34 @@ function PeerPanel({
                       return acc;
                     }, {} as Record<string, Criterion[]>);
 
+                    // OMZA category order
+                    const omzaOrder = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"];
+                    
+                    // Sort entries by OMZA order, then alphabetically for others
+                    const sortedEntries = Object.entries(grouped).sort(([catA], [catB]) => {
+                      const indexA = omzaOrder.indexOf(catA);
+                      const indexB = omzaOrder.indexOf(catB);
+                      
+                      // Both in OMZA order
+                      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                      // Only A in OMZA order - A comes first
+                      if (indexA !== -1) return -1;
+                      // Only B in OMZA order - B comes first
+                      if (indexB !== -1) return 1;
+                      // Neither in OMZA order - alphabetical
+                      return catA.localeCompare(catB);
+                    });
+
                     // Render each category with its criteria
-                    return Object.entries(grouped).map(([category, categoryCriteria], categoryIndex) => (
+                    return sortedEntries.map(([category, categoryCriteria], categoryIndex) => (
                       <div key={category}>
                         {/* Category header */}
                         {categoryIndex === 0 ? (
-                          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/80">
+                          <div className="px-6 py-4 border-b border-slate-100 bg-slate-100">
                             <h2 className="text-lg font-bold text-gray-900">{category}</h2>
                           </div>
                         ) : (
-                          <div className="px-6 py-3 bg-slate-50/50">
+                          <div className="px-6 py-3 bg-slate-100">
                             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">{category}</h3>
                           </div>
                         )}
