@@ -784,14 +784,14 @@ def get_my_peer_feedback_results(
             .first()
         )
         if grade_record:
-            # First try direct gcf column
+            # First try direct gcf column (GCF is stored as 0.90-1.10)
             if grade_record.gcf is not None:
-                gcf_score = int(round(grade_record.gcf * 100))
+                gcf_score = float(grade_record.gcf)
             # Also check meta JSON field for gcf
             elif grade_record.meta and isinstance(grade_record.meta, dict):
                 meta_gcf = grade_record.meta.get("gcf")
                 if meta_gcf is not None:
-                    gcf_score = int(round(float(meta_gcf) * 100))
+                    gcf_score = float(meta_gcf)
             
             # Get teacher grade (prefer published_grade, fallback to grade)
             if grade_record.published_grade is not None:

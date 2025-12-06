@@ -30,19 +30,32 @@ export function getOmzaEmoji(level: number): string {
   return "!!"; // dringend
 }
 
+// Get color classes for OMZA emoji based on level (matching teacher OMZA page)
+export function getOmzaEmojiColorClasses(level: number): string {
+  const emoji = getOmzaEmoji(level);
+  if (emoji === "!!") {
+    return "border-rose-500 bg-rose-100 text-rose-700";
+  }
+  if (emoji === "!") {
+    return "border-amber-400 bg-amber-100 text-amber-700";
+  }
+  // 😀 and V get green colors
+  return "border-green-500 bg-green-100 text-green-700";
+}
+
 export function formatDelta(delta: number): string {
   if (delta === 0) return "0,0";
   const prefix = delta > 0 ? "+" : "";
   return `${prefix}${delta.toFixed(1).replace(".", ",")}`;
 }
 
-// Convert gcfScore (0-100) to teamContributionFactor (0.90-1.10)
+// Get teamContributionFactor - gcfScore now comes directly as 0.90-1.10
 export function getTeamContributionFactor(
   teamContributionFactor?: number,
   gcfScore?: number
 ): number | undefined {
   if (teamContributionFactor !== undefined) return teamContributionFactor;
-  if (gcfScore !== undefined) return 0.9 + (gcfScore / 100) * 0.2;
+  if (gcfScore !== undefined) return gcfScore; // gcfScore is already in 0.90-1.10 range
   return undefined;
 }
 
