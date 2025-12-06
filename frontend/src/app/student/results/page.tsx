@@ -19,8 +19,7 @@ export default function PeerFeedbackResultsPage() {
   const [filters, setFilters] = useState<{
     q: string;
     course: string;
-    status: string;
-  }>({ q: "", course: "", status: "" });
+  }>({ q: "", course: "" });
 
   const filteredItems = useMemo(() => {
     return items.filter((i) => {
@@ -29,8 +28,7 @@ export default function PeerFeedbackResultsPage() {
         i.title.toLowerCase().includes(filters.q.toLowerCase()) ||
         i.course.toLowerCase().includes(filters.q.toLowerCase());
       const cOk = !filters.course || i.course === filters.course;
-      const sOk = !filters.status || i.status === filters.status;
-      return qOk && cOk && sOk;
+      return qOk && cOk;
     });
   }, [items, filters]);
 
