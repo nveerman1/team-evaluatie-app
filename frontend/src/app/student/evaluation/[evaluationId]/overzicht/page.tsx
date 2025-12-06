@@ -53,13 +53,13 @@ export default function OverzichtPage() {
           courseService
             .getCourse(data.course_id)
             .then((courseData) => setCourse(courseData))
-            .catch(() => {
-              // Silent fail for course
+            .catch((err) => {
+              console.error("Failed to load course:", err);
             });
         }
       })
-      .catch(() => {
-        // Silent fail for evaluation
+      .catch((err) => {
+        console.error("Failed to load evaluation:", err);
       });
   }, [evaluationId]);
 
@@ -322,30 +322,13 @@ export default function OverzichtPage() {
                             </h3>
                           </div>
 
-                          {/* OMZA scores for this peer */}
-                          {myRow?.category_averages && (
-                            <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
-                              {omzaCategories.map((category) => {
-                                const catAvg = myRow.category_averages?.find(
-                                  (ca) => ca.category === category
-                                );
-
-                                return (
-                                  <div
-                                    key={category}
-                                    className="rounded-lg border border-slate-200 bg-white p-2"
-                                  >
-                                    <p className="text-[10px] uppercase tracking-wide text-slate-500">
-                                      {category}
-                                    </p>
-                                    <p className="mt-1 text-lg font-semibold text-slate-900">
-                                      {catAvg?.peer_avg.toFixed(1) ?? "—"}
-                                    </p>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
+                          {/* Note about aggregate data */}
+                          <div className="mb-3 rounded-lg bg-blue-50 border border-blue-100 p-3">
+                            <p className="text-xs text-blue-700">
+                              Individuele scores per teamgenoot zijn alleen beschikbaar via de detail-weergave.
+                              Hier zie je je totale OMZA gemiddelden.
+                            </p>
+                          </div>
 
                           {/* Feedback notes placeholder */}
                           <div className="rounded-lg border border-slate-200 bg-white p-3">
