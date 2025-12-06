@@ -78,7 +78,12 @@ def dashboard_evaluation(
         .order_by(RubricCriterion.id.asc())
         .all()
     )
-    criteria = [CriterionMeta(id=c.id, name=c.name, weight=c.weight, category=getattr(c, "category", None)) for c in crit_rows]
+    criteria = [
+        CriterionMeta(
+            id=c.id, name=c.name, weight=c.weight, category=getattr(c, "category", None)
+        )
+        for c in crit_rows
+    ]
     crit_ids = {c.id for c in crit_rows}
     # Build category to criteria mapping
     category_to_criteria = {}
@@ -217,7 +222,9 @@ def dashboard_evaluation(
         u = users.get(reviewee_id)
         team_num = getattr(u, "team_number", None) if u else None
         team_by_reviewee[reviewee_id] = team_num
-        peer_avg_by_team.setdefault(team_num, []).append(peer_avg_by_reviewee[reviewee_id])
+        peer_avg_by_team.setdefault(team_num, []).append(
+            peer_avg_by_reviewee[reviewee_id]
+        )
 
     # Calculate team means
     team_means: dict[int | None, float] = {
@@ -296,15 +303,25 @@ def dashboard_evaluation(
                 cat_peer_scores = []
                 for cid in crit_ids_in_cat:
                     cat_peer_scores.extend(crit_peers.get(cid, []))
-                
+
                 # Collect all self scores for criteria in this category
-                cat_self_scores = [crit_selfs.get(cid) for cid in crit_ids_in_cat if cid in crit_selfs]
-                
+                cat_self_scores = [
+                    crit_selfs.get(cid) for cid in crit_ids_in_cat if cid in crit_selfs
+                ]
+
                 category_averages.append(
                     CategoryAverage(
                         category=cat,
-                        peer_avg=round(_safe_mean(cat_peer_scores), 2) if cat_peer_scores else 0.0,
-                        self_avg=round(_safe_mean(cat_self_scores), 2) if cat_self_scores else None,
+                        peer_avg=(
+                            round(_safe_mean(cat_peer_scores), 2)
+                            if cat_peer_scores
+                            else 0.0
+                        ),
+                        self_avg=(
+                            round(_safe_mean(cat_self_scores), 2)
+                            if cat_self_scores
+                            else None
+                        ),
                     )
                 )
 
