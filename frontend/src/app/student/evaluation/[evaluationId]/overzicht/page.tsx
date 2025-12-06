@@ -80,15 +80,10 @@ export default function OverzichtPage() {
       .finally(() => setLoading(false));
   }, [evaluationId]);
 
-  if (loading) return <Loading />;
-  if (error) return <ErrorMessage message={error} />;
-  if (!evaluationData) {
-    return <ErrorMessage message="Evaluatie niet gevonden" />;
-  }
-
   // Calculate OMZA averages from peer data (if available)
+  // Must be before early returns to follow Rules of Hooks
   const averages = useMemo(() => {
-    if (!evaluationData.peers || evaluationData.peers.length === 0) {
+    if (!evaluationData || !evaluationData.peers || evaluationData.peers.length === 0) {
       return {
         organiseren: 0,
         meedoen: 0,
@@ -110,24 +105,41 @@ export default function OverzichtPage() {
     return obj;
   }, [evaluationData]);
 
-  const teamContributionFactor = getTeamContributionFactor(
-    evaluationData.teamContributionFactor,
-    evaluationData.gcfScore
-  );
+  // Calculate team contribution factor and label
+  // Must be before early returns to follow Rules of Hooks
+  const teamContributionFactor = useMemo(() => {
+    if (!evaluationData) return undefined;
+    return getTeamContributionFactor(
+      evaluationData.teamContributionFactor,
+      evaluationData.gcfScore
+    );
+  }, [evaluationData]);
 
-  const teamContributionLabel =
-    evaluationData.teamContributionLabel ??
-    (teamContributionFactor !== undefined
-      ? getTeamContributionLabel(teamContributionFactor)
-      : undefined);
+  const teamContributionLabel = useMemo(() => {
+    if (!evaluationData) return undefined;
+    return evaluationData.teamContributionLabel ??
+      (teamContributionFactor !== undefined
+        ? getTeamContributionLabel(teamContributionFactor)
+        : undefined);
+  }, [evaluationData, teamContributionFactor]);
 
   // Use omzaAverages if provided, otherwise calculate from peers
-  const omzaAverages = evaluationData.omzaAverages ?? [
-    { key: "O", label: OMZA_LABELS.organiseren, value: averages.organiseren, delta: 0 },
-    { key: "M", label: OMZA_LABELS.meedoen, value: averages.meedoen, delta: 0 },
-    { key: "Z", label: OMZA_LABELS.zelfvertrouwen, value: averages.zelfvertrouwen, delta: 0 },
-    { key: "A", label: OMZA_LABELS.autonomie, value: averages.autonomie, delta: 0 },
-  ];
+  const omzaAverages = useMemo(() => {
+    if (!evaluationData) return [];
+    return evaluationData.omzaAverages ?? [
+      { key: "O", label: OMZA_LABELS.organiseren, value: averages.organiseren, delta: 0 },
+      { key: "M", label: OMZA_LABELS.meedoen, value: averages.meedoen, delta: 0 },
+      { key: "Z", label: OMZA_LABELS.zelfvertrouwen, value: averages.zelfvertrouwen, delta: 0 },
+      { key: "A", label: OMZA_LABELS.autonomie, value: averages.autonomie, delta: 0 },
+    ];
+  }, [evaluationData, averages]);
+
+  // Early returns AFTER all hooks
+  if (loading) return <Loading />;
+  if (error) return <ErrorMessage message={error} />;
+  if (!evaluationData) {
+    return <ErrorMessage message="Evaluatie niet gevonden" />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-100">
