@@ -40,12 +40,14 @@ export default function OverzichtPage() {
       .getMyPeerResults()
       .then(async (results) => {
         console.log("Peer results fetched:", results);
-        console.log("Looking for evaluation ID:", evaluationId, "as string:", String(evaluationId));
+        console.log("Looking for evaluation ID:", evaluationId);
         
-        // Find the evaluation with matching ID (convert to string for comparison)
+        // Find the evaluation with matching ID
+        // The API returns IDs with "ev-" prefix, so we need to match both formats
         const evalData = results.find((r) => {
-          console.log("Comparing:", r.id, "with", String(evaluationId), "match:", r.id === String(evaluationId));
-          return r.id === String(evaluationId);
+          const match = r.id === String(evaluationId) || r.id === `ev-${evaluationId}`;
+          console.log("Comparing:", r.id, "with", evaluationId, "match:", match);
+          return match;
         });
         
         if (evalData) {
