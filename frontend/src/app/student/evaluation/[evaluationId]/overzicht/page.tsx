@@ -226,17 +226,20 @@ export default function OverzichtPage() {
                 </p>
               </div>
 
-              <div className="flex-1 rounded-xl border border-slate-100 bg-slate-50/70 p-3 flex flex-col">
-                <div className="mb-1 flex items-center justify-between text-xs font-medium text-slate-500">
-                  <span>Opmerkingen van de docent</span>
-                  <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] uppercase tracking-wide text-indigo-600">
-                    Docent
-                  </span>
+              {/* Only show teacher comments if they exist */}
+              {evaluationData.teacherComments && (
+                <div className="flex-1 rounded-xl border border-slate-100 bg-slate-50/70 p-3 flex flex-col">
+                  <div className="mb-1 flex items-center justify-between text-xs font-medium text-slate-500">
+                    <span>Opmerkingen van de docent</span>
+                    <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] uppercase tracking-wide text-indigo-600">
+                      Docent
+                    </span>
+                  </div>
+                  <p className="text-sm leading-relaxed text-slate-700">
+                    {evaluationData.teacherComments}
+                  </p>
                 </div>
-                <p className="text-sm leading-relaxed text-slate-700">
-                  {evaluationData.teacherComments || "Nog geen opmerkingen van de docent."}
-                </p>
-              </div>
+              )}
             </div>
 
             {/* Right column: Team-bijdrage + Docentbeoordeling */}
