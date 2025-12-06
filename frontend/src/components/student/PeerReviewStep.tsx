@@ -199,18 +199,12 @@ function PeerPanel({
                     });
 
                     // Render each category with its criteria
-                    return sortedEntries.map(([category, categoryCriteria], categoryIndex) => (
+                    return sortedEntries.map(([category, categoryCriteria]) => (
                       <div key={category}>
                         {/* Category header */}
-                        {categoryIndex === 0 ? (
-                          <div className="px-6 py-4 border-b border-slate-100 bg-slate-100">
-                            <h2 className="text-lg font-bold text-gray-900">{category}</h2>
-                          </div>
-                        ) : (
-                          <div className="px-6 py-3 bg-slate-100">
-                            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">{category}</h3>
-                          </div>
-                        )}
+                        <div className="px-6 py-3 bg-slate-100">
+                          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">{category}</h3>
+                        </div>
                         {/* Criteria in this category */}
                         {categoryCriteria.map((criterion) => (
                           <RubricRating
