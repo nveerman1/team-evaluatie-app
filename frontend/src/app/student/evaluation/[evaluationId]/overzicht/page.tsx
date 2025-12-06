@@ -4,8 +4,11 @@ import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Loading, ErrorMessage } from "@/components";
 import { FeedbackSummary } from "@/components/student";
-import { peerFeedbackResultsService } from "@/services";
-import type { EvaluationResult, OmzaKey } from "@/dtos";
+import { peerFeedbackResultsService, studentService, evaluationService, courseService } from "@/services";
+import api from "@/lib/api";
+import type { EvaluationResult, OmzaKey, MyAllocation, DashboardResponse } from "@/dtos";
+import type { Evaluation } from "@/dtos/evaluation.dto";
+import type { Course } from "@/dtos/course.dto";
 import {
   OMZA_LABELS,
   mean,
@@ -35,13 +38,40 @@ export default function OverzichtPage() {
     
     peerFeedbackResultsService
       .getMyPeerResults()
-      .then((results) => {
+      .then(async (results) => {
         // Find the evaluation with matching ID (convert to string for comparison)
         const evalData = results.find((r) => r.id === String(evaluationId));
         if (evalData) {
           setEvaluationData(evalData);
         } else {
-          setError("Evaluatie niet gevonden");
+          // Fallback: If not found in peer-results, try to build it from other APIs
+          console.log("Evaluation not found in peer-results, trying fallback...");
+          try {
+            const [evaluation, allocs] = await Promise.all([
+              evaluationService.getEvaluation(evaluationId),
+              studentService.getAllocations(evaluationId)
+            ]);
+            
+            const course = evaluation.course_id 
+              ? await courseService.getCourse(evaluation.course_id).catch(() => null)
+              : null;
+
+            // Build a minimal EvaluationResult from available data
+            const fallbackData: EvaluationResult = {
+              id: String(evaluationId),
+              title: evaluation.title,
+              course: course?.name || evaluation.cluster || "Cursus",
+              deadlineISO: evaluation.deadlines?.review || evaluation.settings?.deadlines?.review,
+              status: evaluation.status === "open" ? "open" : "closed",
+              peers: [], // No peer data available yet
+              omzaAverages: [],
+            };
+            
+            setEvaluationData(fallbackData);
+          } catch (fallbackError) {
+            console.error("Fallback failed:", fallbackError);
+            setError("Evaluatie niet gevonden of nog niet beschikbaar");
+          }
         }
       })
       .catch((e) => {
@@ -56,8 +86,17 @@ export default function OverzichtPage() {
     return <ErrorMessage message="Evaluatie niet gevonden" />;
   }
 
-  // Calculate OMZA averages from peer data
+  // Calculate OMZA averages from peer data (if available)
   const averages = useMemo(() => {
+    if (!evaluationData.peers || evaluationData.peers.length === 0) {
+      return {
+        organiseren: 0,
+        meedoen: 0,
+        zelfvertrouwen: 0,
+        autonomie: 0,
+      };
+    }
+    
     const obj: Record<OmzaKey, number> = {
       organiseren: 0,
       meedoen: 0,
@@ -158,7 +197,7 @@ export default function OverzichtPage() {
                   </span>
                 </div>
                 <p className="text-sm leading-relaxed text-slate-700">
-                  {evaluationData.aiSummary || "Geen AI-samenvatting beschikbaar."}
+                  {evaluationData.aiSummary || "Nog geen AI-samenvatting beschikbaar. Deze wordt gegenereerd zodra er peer-feedback is ontvangen."}
                 </p>
               </div>
 
@@ -170,7 +209,7 @@ export default function OverzichtPage() {
                   </span>
                 </div>
                 <p className="text-sm leading-relaxed text-slate-700">
-                  {evaluationData.teacherComments || "Geen opmerkingen toegevoegd."}
+                  {evaluationData.teacherComments || "Nog geen opmerkingen van de docent."}
                 </p>
               </div>
             </div>
@@ -252,38 +291,46 @@ export default function OverzichtPage() {
           </div>
 
           {/* OMZA-balken (peer-feedback) */}
-          <div className="mt-4 grid gap-3 md:grid-cols-4">
-            {omzaAverages.map((item) => (
-              <div key={item.key} className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
-                <div className="flex items-center justify-between text-xs text-slate-500">
-                  <span>{item.label}</span>
-                  <div className="text-right">
-                    <span className="block font-medium text-slate-700">
-                      Gem.: {item.value.toFixed(1)}
-                    </span>
-                    <span
-                      className={`block text-[11px] ${
-                        item.delta > 0
-                          ? "text-emerald-600"
-                          : item.delta < 0
-                          ? "text-red-600"
-                          : "text-slate-500"
-                      }`}
-                    >
-                      Δ {formatDelta(item.delta)} t.o.v. vorige scan
-                    </span>
+          {omzaAverages && omzaAverages.length > 0 ? (
+            <div className="mt-4 grid gap-3 md:grid-cols-4">
+              {omzaAverages.map((item) => (
+                <div key={item.key} className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+                  <div className="flex items-center justify-between text-xs text-slate-500">
+                    <span>{item.label}</span>
+                    <div className="text-right">
+                      <span className="block font-medium text-slate-700">
+                        Gem.: {item.value.toFixed(1)}
+                      </span>
+                      <span
+                        className={`block text-[11px] ${
+                          item.delta > 0
+                            ? "text-emerald-600"
+                            : item.delta < 0
+                            ? "text-red-600"
+                            : "text-slate-500"
+                        }`}
+                      >
+                        Δ {formatDelta(item.delta)} t.o.v. vorige scan
+                      </span>
+                    </div>
                   </div>
+                  <div className="mt-2 h-1.5 w-full rounded-full bg-slate-200">
+                    <div
+                      className="h-1.5 rounded-full bg-indigo-500"
+                      style={{ width: `${(item.value / 4) * 100}%` }}
+                    />
+                  </div>
+                  <p className="mt-1 text-[11px] text-slate-500">0 – 4 schaal uit peer-feedback.</p>
                 </div>
-                <div className="mt-2 h-1.5 w-full rounded-full bg-slate-200">
-                  <div
-                    className="h-1.5 rounded-full bg-indigo-500"
-                    style={{ width: `${(item.value / 4) * 100}%` }}
-                  />
-                </div>
-                <p className="mt-1 text-[11px] text-slate-500">0 – 4 schaal uit peer-feedback.</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50/60 p-6 text-center">
+              <p className="text-sm text-slate-600">
+                Nog geen peer-feedback ontvangen. OMZA scores worden hier getoond zodra je teamgenoten hun beoordeling hebben ingevuld.
+              </p>
+            </div>
+          )}
         </article>
       </main>
     </div>
