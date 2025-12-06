@@ -255,12 +255,27 @@ export default function OverzichtPage() {
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             {/* AI-samenvatting + docent-opmerkingen */}
             <div className="space-y-3 md:col-span-2">
-              {/* AI Feedback Summary - keep functionality, place before teacher comments */}
+              {/* AI Feedback Summary - styled like EvaluationCard */}
               {studentId && (
-                <FeedbackSummary
-                  evaluationId={evaluationId}
-                  studentId={studentId}
-                />
+                <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
+                  <div className="mb-1 flex items-center justify-between text-xs font-medium text-slate-500">
+                    <span>AI-samenvatting</span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-500">
+                      🤖 AI
+                      <span className="h-1 w-1 rounded-full bg-emerald-400" />
+                      Concept
+                    </span>
+                  </div>
+                  {/* Wrap FeedbackSummary but override its default white card background */}
+                  <div className="-m-3 mt-2">
+                    <div className="[&>div]:!bg-transparent [&>div]:!border-0 [&>div]:!shadow-none">
+                      <FeedbackSummary
+                        evaluationId={evaluationId}
+                        studentId={studentId}
+                      />
+                    </div>
+                  </div>
+                </div>
               )}
 
               <div className="rounded-xl border border-slate-100 bg-white p-3">
