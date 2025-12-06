@@ -3,11 +3,13 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Loading, ErrorMessage } from "@/components";
+import { FeedbackSummary } from "@/components/student";
 import { peerFeedbackResultsService, evaluationService, studentService } from "@/services";
 import api from "@/lib/api";
 import type { EvaluationResult, OmzaKey, DashboardResponse, MyAllocation } from "@/dtos";
 import {
   OMZA_LABELS,
+  OMZA_KEYS,
   mean,
   round1,
   getOmzaEmoji,
@@ -23,6 +25,7 @@ export default function OverzichtPage() {
   const evaluationId = Number(params.evaluationId);
 
   const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null);
+  const [studentId, setStudentId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,6 +43,16 @@ export default function OverzichtPage() {
         if (data) {
           // Found in peer-results endpoint
           setEvaluation(data);
+          // Extract student ID from allocations for FeedbackSummary
+          try {
+            const allocs = await studentService.getAllocations(evaluationId);
+            const selfAlloc = allocs.find((a) => a.is_self);
+            if (selfAlloc?.reviewee_id) {
+              setStudentId(selfAlloc.reviewee_id);
+            }
+          } catch {
+            // Silent fail for student ID
+          }
         } else {
           // Not found in peer-results, try to build from dashboard data
           // This handles evaluations in draft status or not yet in peer-results
@@ -56,9 +69,14 @@ export default function OverzichtPage() {
             const selfAlloc = allocs.find((a) => a.is_self);
             const myRow = dashData.data.items.find((r) => r.user_id === selfAlloc?.reviewee_id);
 
+            // Set student ID for FeedbackSummary
+            if (selfAlloc?.reviewee_id) {
+              setStudentId(selfAlloc.reviewee_id);
+            }
+
             if (myRow && dashData.data.criteria.length > 0) {
-              // Extract OMZA categories from criteria
-              const categories = Array.from(
+              // Extract OMZA categories from criteria in correct order
+              const categoriesInData = Array.from(
                 new Set(
                   dashData.data.criteria
                     .map((c) => c.category)
@@ -66,16 +84,32 @@ export default function OverzichtPage() {
                 )
               );
 
-              // Build OMZA averages from category averages
-              const omzaAverages = categories.map((category) => {
-                const catAvg = myRow.category_averages?.find((ca) => ca.category === category);
-                return {
-                  key: category.charAt(0).toUpperCase(),
-                  label: category,
-                  value: catAvg?.peer_avg || 0,
-                  delta: 0, // No historical data available
-                };
-              });
+              // Map OMZA categories to standard order (Organiseren, Meedoen, Zelfvertrouwen, Autonomie)
+              const categoryMap: Record<string, OmzaKey> = {
+                'organiseren': 'organiseren',
+                'meedoen': 'meedoen',
+                'zelfvertrouwen': 'zelfvertrouwen',
+                'autonomie': 'autonomie',
+              };
+
+              // Build OMZA averages in correct OMZA order
+              const omzaAverages = OMZA_KEYS
+                .filter((key) => {
+                  const category = OMZA_LABELS[key].toLowerCase();
+                  return categoriesInData.some((c) => c.toLowerCase() === category);
+                })
+                .map((key) => {
+                  const category = OMZA_LABELS[key];
+                  const catAvg = myRow.category_averages?.find(
+                    (ca) => ca.category.toLowerCase() === category.toLowerCase()
+                  );
+                  return {
+                    key: key.charAt(0).toUpperCase(),
+                    label: category,
+                    value: catAvg?.peer_avg || 0,
+                    delta: 0, // No historical data available
+                  };
+                });
 
               const fallbackEvaluation: EvaluationResult = {
                 id: String(evaluationId),
@@ -217,22 +251,8 @@ export default function OverzichtPage() {
 
           {/* Inhoud kaart */}
           <div className="mt-4 grid gap-4 md:grid-cols-3">
-            {/* AI-samenvatting + docent-opmerkingen */}
+            {/* Docent-opmerkingen */}
             <div className="space-y-3 md:col-span-2">
-              <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-                <div className="mb-1 flex items-center justify-between text-xs font-medium text-slate-500">
-                  <span>AI-samenvatting</span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-500">
-                    🤖 AI
-                    <span className="h-1 w-1 rounded-full bg-emerald-400" />
-                    Concept
-                  </span>
-                </div>
-                <p className="text-sm leading-relaxed text-slate-700 line-clamp-3 md:line-clamp-4">
-                  {evaluation.aiSummary || "Geen AI-samenvatting beschikbaar."}
-                </p>
-              </div>
-
               <div className="rounded-xl border border-slate-100 bg-white p-3">
                 <div className="mb-1 flex items-center justify-between text-xs font-medium text-slate-500">
                   <span>Opmerkingen van de docent</span>
@@ -356,6 +376,16 @@ export default function OverzichtPage() {
             ))}
           </div>
         </article>
+
+        {/* AI Feedback Summary - separate section after the card */}
+        {studentId && (
+          <div className="mt-6">
+            <FeedbackSummary
+              evaluationId={evaluationId}
+              studentId={studentId}
+            />
+          </div>
+        )}
       </main>
     </div>
   );
