@@ -164,7 +164,7 @@ function PeerPanel({
       </button>
 
       {isOpen && (
-        <div className="p-4 bg-gray-50 border-t">
+        <div className="p-4 bg-gray-50">
           {loading ? (
             <div className="text-center py-4 text-gray-500">Laden...</div>
           ) : (
