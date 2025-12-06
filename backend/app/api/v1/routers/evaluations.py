@@ -666,6 +666,7 @@ def get_my_peer_feedback_results(
         .filter(
             Evaluation.school_id == user.school_id,
             Evaluation.id.in_(select(student_eval_ids)),
+            Evaluation.status.in_(["open", "closed"]),  # Only show open and closed evaluations
         )
         .order_by(Evaluation.created_at.desc())
         .all()
@@ -683,10 +684,8 @@ def get_my_peer_feedback_results(
             deadlines = ev.settings.get("deadlines", {})
             deadline_iso = deadlines.get("review")
 
-        # Map evaluation status
+        # Get evaluation status (only open or closed at this point)
         eval_status = ev.status
-        if eval_status == "draft":
-            eval_status = "processing"
 
         # Get peer scores per OMZA category
         peer_scores_by_cat = _get_omza_scores_for_student(
