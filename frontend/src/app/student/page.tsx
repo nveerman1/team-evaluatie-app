@@ -235,6 +235,25 @@ export default function StudentDashboard() {
 
         {activeTab === "projecten" && (
           <div className="max-w-6xl mx-auto mt-5 space-y-4 w-full transition-all duration-300">
+            {/* Project Results Overview Banner */}
+            <div className="rounded-xl border border-gray-300 shadow-sm bg-purple-50 p-4 space-y-3 w-full">
+              <div className="px-4 py-2 rounded-t-xl font-semibold text-sm bg-purple-200 text-purple-900">
+                Mijn Projectresultaten
+              </div>
+              <div className="text-sm text-gray-700">
+                Bekijk je ontwikkeling in projectvaardigheden over meerdere
+                projecten. Zie trends in categorieën, je voortgang per
+                rubric-onderdeel en je gemiddelde cijfer.
+              </div>
+              <Link
+                href="/student/projects/overview"
+                className="rounded-lg bg-purple-600 text-white text-sm px-3 py-1.5 mt-2 inline-block hover:bg-purple-700 transition-colors"
+              >
+                Bekijk Projectoverzicht →
+              </Link>
+            </div>
+
+            {/* Project Assessments List */}
             <div className="rounded-xl shadow-sm bg-gray-50 p-4 space-y-3 w-full">
               <div className="px-4 py-2 rounded-t-xl font-semibold text-sm bg-gray-200 text-gray-800">
                 Projectbeoordelingen
