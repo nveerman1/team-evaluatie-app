@@ -84,25 +84,31 @@ export function SelfEvaluationStep({
       {loading ? (
         <div className="text-center py-4 text-gray-500">Laden...</div>
       ) : (
-        <div className="space-y-8">
-          {(() => {
-            // Group criteria by category
-            const grouped = criteria.reduce((acc, c) => {
-              const cat = c.category || "Overig";
-              if (!acc[cat]) acc[cat] = [];
-              acc[cat].push(c);
-              return acc;
-            }, {} as Record<string, Criterion[]>);
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="divide-y divide-slate-100">
+            {(() => {
+              // Group criteria by category
+              const grouped = criteria.reduce((acc, c) => {
+                const cat = c.category || "Overig";
+                if (!acc[cat]) acc[cat] = [];
+                acc[cat].push(c);
+                return acc;
+              }, {} as Record<string, Criterion[]>);
 
-            // Render each category with its criteria
-            return Object.entries(grouped).map(([category, categoryCriteria]) => (
-              <div key={category} className="space-y-4">
-                {/* Category header */}
-                <div className="border-b-2 border-gray-300 pb-2">
-                  <h3 className="text-xl font-semibold text-gray-800">{category}</h3>
-                </div>
-                {/* Criteria in this category */}
-                <div className="space-y-6">
+              // Render each category with its criteria
+              return Object.entries(grouped).map(([category, categoryCriteria], categoryIndex) => (
+                <div key={category}>
+                  {/* Category header */}
+                  {categoryIndex === 0 ? (
+                    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/80">
+                      <h2 className="text-lg font-bold text-gray-900">{category}</h2>
+                    </div>
+                  ) : (
+                    <div className="px-6 py-3 bg-slate-50/50">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">{category}</h3>
+                    </div>
+                  )}
+                  {/* Criteria in this category */}
                   {categoryCriteria.map((criterion) => (
                     <RubricRating
                       key={criterion.id}
@@ -118,9 +124,9 @@ export function SelfEvaluationStep({
                     />
                   ))}
                 </div>
-              </div>
-            ));
-          })()}
+              ));
+            })()}
+          </div>
         </div>
       )}
 

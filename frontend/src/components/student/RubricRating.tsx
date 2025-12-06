@@ -20,88 +20,83 @@ export function RubricRating({
   const levels = [1, 2, 3, 4, 5];
 
   return (
-    <div className="p-4 border rounded-lg bg-white space-y-4">
-      {/* Criterion Name */}
-      <h4 className="font-medium text-lg">{criterion.name}</h4>
-
-      {/* Rubric Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr>
-              {levels.map((level) => (
-                <th
-                  key={level}
-                  className="border border-gray-300 p-2 bg-gray-50 text-center font-semibold"
-                >
-                  {level}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              {levels.map((level) => {
-                const isSelected = value === level;
-                const descriptor = criterion.descriptors[`level${level}`] || "";
-
-                return (
-                  <td
-                    key={level}
-                    className={`border border-gray-300 p-3 text-sm cursor-pointer transition-all ${
-                      isSelected
-                        ? "bg-blue-100 border-blue-500 border-2"
-                        : "bg-white hover:bg-gray-50"
-                    }`}
-                    onClick={() => onChange(level)}
-                  >
-                    <div className="flex flex-col items-center gap-2">
-                      {/* Radio Button / Check Icon */}
-                      <div className="flex items-center justify-center w-6 h-6">
-                        {isSelected ? (
-                          <svg
-                            className="w-6 h-6 text-blue-600"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        ) : (
-                          <div className="w-5 h-5 border-2 border-gray-300 rounded-full" />
-                        )}
-                      </div>
-
-                      {/* Descriptor Text */}
-                      {descriptor && (
-                        <p className="text-xs text-gray-600 text-center">
-                          {descriptor}
-                        </p>
-                      )}
-                    </div>
-                  </td>
-                );
-              })}
-            </tr>
-          </tbody>
-        </table>
+    <div className="px-6 py-5">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">
+          {criterion.name}
+          {criterion.category && (
+            <span className="ml-2 text-xs font-normal text-slate-400">
+              ({criterion.category})
+            </span>
+          )}
+        </h3>
+        <span className="inline-flex items-baseline gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
+          <span className="font-medium text-slate-700">Score</span>
+          <span className="text-slate-400">
+            {value} / 5
+          </span>
+        </span>
       </div>
 
-      {/* Comments Field */}
-      <div className="mt-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Opmerkingen
-        </label>
-        <textarea
-          className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          placeholder="Optionele opmerking..."
-          value={comment}
-          onChange={(e) => onCommentChange(e.target.value)}
-          rows={3}
-        />
+      {/* Score buttons with descriptions - matching external assessment style */}
+      <div className="flex flex-col gap-4">
+        {/* Levels */}
+        <div className="grid grid-cols-5 gap-2">
+          {levels.map((level) => {
+            const isSelected = value === level;
+            const descriptor = criterion.descriptors[`level${level}`] || "";
+
+            return (
+              <button
+                key={level}
+                type="button"
+                onClick={() => onChange(level)}
+                className={`group flex flex-col items-center justify-start rounded-xl border px-3 py-2 text-center text-xs transition-all hover:border-emerald-500 hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-1 ${
+                  isSelected
+                    ? "border-emerald-600 bg-emerald-50 shadow-[0_0_0_1px_rgba(16,185,129,0.5)]"
+                    : "border-slate-200 bg-white"
+                } cursor-pointer`}
+              >
+                <span
+                  className={`mb-1 flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold group-hover:border-emerald-500 group-hover:text-emerald-700 ${
+                    isSelected
+                      ? "border-emerald-600 bg-emerald-600 text-white"
+                      : "border-slate-300 text-slate-700 bg-slate-50"
+                  }`}
+                >
+                  {level}
+                </span>
+                {descriptor && (
+                  <span className="line-clamp-3 text-[11px] leading-snug text-slate-600">
+                    {descriptor}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Comment - below scores */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-600">
+              Toelichting
+            </span>
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-500">
+              Optioneel
+            </span>
+          </div>
+          <textarea
+            value={comment}
+            onChange={(e) => onCommentChange(e.target.value)}
+            placeholder="Schrijf hier een korte, concrete terugkoppeling..."
+            className="min-h-[80px] w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 shadow-inner outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100"
+          />
+          <div className="flex items-center justify-between text-[11px] text-slate-400">
+            <span>Tip: benoem zowel wat goed gaat als 1 verbeterpunt.</span>
+            <span>{comment.length}/400</span>
+          </div>
+        </div>
       </div>
     </div>
   );
