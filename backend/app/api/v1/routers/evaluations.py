@@ -21,6 +21,8 @@ from app.infra.db.models import (
     Course,
     Group,
     GroupMember,
+    FeedbackSummary,
+    Grade,
 )
 from app.api.v1.schemas.evaluations import (
     EvaluationCreate,
@@ -554,3 +556,277 @@ def delete_evaluation(
     db.delete(ev)
     db.commit()
     return None
+
+
+# ============================================================
+# Student Peer Feedback Results Endpoint (OMZA format)
+# ============================================================
+
+OMZA_CATEGORY_MAP = {
+    "Organiseren": "organiseren",
+    "Meedoen": "meedoen",
+    "Zelfvertrouwen": "zelfvertrouwen",
+    "Autonomie": "autonomie",
+    "organiseren": "organiseren",
+    "meedoen": "meedoen",
+    "zelfvertrouwen": "zelfvertrouwen",
+    "autonomie": "autonomie",
+    "O": "organiseren",
+    "M": "meedoen",
+    "Z": "zelfvertrouwen",
+    "A": "autonomie",
+}
+
+OMZA_KEYS = ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"]
+
+
+def _normalize_category(category: Optional[str]) -> Optional[str]:
+    """Normalize category name to lowercase OMZA key."""
+    if not category:
+        return None
+    return OMZA_CATEGORY_MAP.get(category, category.lower())
+
+
+def _get_omza_scores_for_student(
+    db: Session,
+    evaluation_id: int,
+    student_id: int,
+    is_self: bool = False,
+) -> Dict[str, List[float]]:
+    """
+    Get scores per OMZA category for a student.
+    Returns dict like {"organiseren": [4.0, 3.5], "meedoen": [3.0], ...}
+    """
+    # Build query for scores received by this student
+    query = (
+        db.query(
+            RubricCriterion.category,
+            Score.score,
+        )
+        .join(Score, Score.criterion_id == RubricCriterion.id)
+        .join(Allocation, Allocation.id == Score.allocation_id)
+        .filter(
+            Allocation.evaluation_id == evaluation_id,
+            Allocation.reviewee_id == student_id,
+            Score.score.isnot(None),
+        )
+    )
+
+    if is_self:
+        query = query.filter(Allocation.is_self.is_(True))
+    else:
+        query = query.filter(Allocation.is_self.is_(False))
+
+    rows = query.all()
+
+    # Group scores by normalized category
+    scores_by_cat: Dict[str, List[float]] = {k: [] for k in OMZA_KEYS}
+    for cat, score in rows:
+        norm_cat = _normalize_category(cat)
+        if norm_cat and norm_cat in scores_by_cat and score is not None:
+            scores_by_cat[norm_cat].append(float(score))
+
+    return scores_by_cat
+
+
+def _calc_avg(scores: List[float]) -> float:
+    """Calculate average, return 0 if empty."""
+    if not scores:
+        return 0.0
+    return round(sum(scores) / len(scores), 1)
+
+
+@router.get("/my/peer-results")
+def get_my_peer_feedback_results(
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """
+    Get peer feedback results for the current student across all evaluations.
+    Returns data in OMZA format for the student results page.
+    """
+    if not user or not getattr(user, "school_id", None):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Niet ingelogd"
+        )
+
+    # Get all evaluations where the student participated (has allocations as reviewee)
+    student_eval_ids = (
+        db.query(Allocation.evaluation_id)
+        .filter(
+            Allocation.school_id == user.school_id,
+            Allocation.reviewee_id == user.id,
+        )
+        .distinct()
+        .subquery()
+    )
+
+    evaluations = (
+        db.query(Evaluation)
+        .filter(
+            Evaluation.school_id == user.school_id,
+            Evaluation.id.in_(select(student_eval_ids)),
+            Evaluation.status.in_(["open", "closed"]),  # Only show open and closed evaluations
+        )
+        .order_by(Evaluation.created_at.desc())
+        .all()
+    )
+
+    results = []
+    for ev in evaluations:
+        # Get course info
+        course = db.query(Course).filter(Course.id == ev.course_id).first()
+        course_name = course.name if course else ""
+
+        # Get deadline from settings
+        deadline_iso = None
+        if ev.settings and isinstance(ev.settings, dict):
+            deadlines = ev.settings.get("deadlines", {})
+            deadline_iso = deadlines.get("review")
+
+        # Get evaluation status (only open or closed at this point)
+        eval_status = ev.status
+
+        # Get peer scores per OMZA category
+        peer_scores_by_cat = _get_omza_scores_for_student(
+            db, ev.id, user.id, is_self=False
+        )
+
+        # Get self scores per OMZA category
+        self_scores_by_cat = _get_omza_scores_for_student(
+            db, ev.id, user.id, is_self=True
+        )
+
+        # Build peer objects with individual scores
+        # Group by reviewer to show per-peer feedback
+        peer_feedback_query = (
+            db.query(
+                Allocation.reviewer_id,
+                User.name.label("reviewer_name"),
+                RubricCriterion.category,
+                Score.score,
+                Score.comment,
+            )
+            .join(User, User.id == Allocation.reviewer_id)
+            .join(Score, Score.allocation_id == Allocation.id)
+            .join(RubricCriterion, RubricCriterion.id == Score.criterion_id)
+            .filter(
+                Allocation.evaluation_id == ev.id,
+                Allocation.reviewee_id == user.id,
+                Allocation.is_self.is_(False),
+            )
+            .all()
+        )
+
+        # Group by reviewer
+        peers_data: Dict[int, Dict[str, Any]] = {}
+        for reviewer_id, reviewer_name, cat, score, comment in peer_feedback_query:
+            if reviewer_id not in peers_data:
+                peers_data[reviewer_id] = {
+                    "peerLabel": "Teamgenoot",  # Anonymized label
+                    "notes": [],
+                    "scores": {k: [] for k in OMZA_KEYS},
+                }
+            # Add score if present
+            if score is not None:
+                norm_cat = _normalize_category(cat)
+                if norm_cat and norm_cat in peers_data[reviewer_id]["scores"]:
+                    peers_data[reviewer_id]["scores"][norm_cat].append(float(score))
+            # Collect all comments
+            if comment and comment.strip():
+                peers_data[reviewer_id]["notes"].append(comment.strip())
+
+        # Convert to peers array with averaged scores and anonymous labels
+        peers = []
+        for idx, (reviewer_id, data) in enumerate(peers_data.items(), start=1):
+            # Combine all notes into one string
+            notes_text = " | ".join(data["notes"]) if data["notes"] else None
+            peer_entry = {
+                "peerLabel": f"Teamgenoot {chr(64 + idx)}",  # A, B, C, ...
+                "notes": notes_text,
+                "scores": {
+                    k: _calc_avg(data["scores"][k]) for k in OMZA_KEYS
+                },
+            }
+            peers.append(peer_entry)
+
+        # Build self score object
+        self_score = None
+        if any(self_scores_by_cat.values()):
+            self_score = {k: _calc_avg(self_scores_by_cat[k]) for k in OMZA_KEYS}
+
+        # Get AI summary from FeedbackSummary if available
+        ai_summary = None
+        summary_record = (
+            db.query(FeedbackSummary)
+            .filter(
+                FeedbackSummary.evaluation_id == ev.id,
+                FeedbackSummary.student_id == user.id,
+            )
+            .first()
+        )
+        if summary_record:
+            ai_summary = summary_record.summary_text
+
+        # Get GCF from Grade table - check both direct column and meta JSON field
+        gcf_score = None
+        grade_record = (
+            db.query(Grade)
+            .filter(
+                Grade.school_id == user.school_id,
+                Grade.evaluation_id == ev.id,
+                Grade.user_id == user.id,
+            )
+            .first()
+        )
+        if grade_record:
+            # First try direct gcf column
+            if grade_record.gcf is not None:
+                gcf_score = int(round(grade_record.gcf * 100))
+            # Also check meta JSON field for gcf
+            elif grade_record.meta and isinstance(grade_record.meta, dict):
+                meta_gcf = grade_record.meta.get("gcf")
+                if meta_gcf is not None:
+                    gcf_score = int(round(float(meta_gcf) * 100))
+
+        # Get reflection for this student
+        reflection_data = None
+        reflection_record = (
+            db.query(Reflection)
+            .filter(
+                Reflection.school_id == user.school_id,
+                Reflection.evaluation_id == ev.id,
+                Reflection.user_id == user.id,
+            )
+            .first()
+        )
+        if reflection_record and reflection_record.text:
+            reflection_data = {
+                "text": reflection_record.text,
+                "submittedAt": reflection_record.submitted_at.isoformat() if reflection_record.submitted_at else None,
+            }
+
+        # Build trend data (historical averages)
+        # For now, we'll use the current averages as a single point
+        # In a full implementation, this would look at previous evaluations
+        trend = {}
+        for k in OMZA_KEYS:
+            if peer_scores_by_cat[k]:
+                trend[k] = [_calc_avg(peer_scores_by_cat[k])]
+
+        result_item = {
+            "id": f"ev-{ev.id}",
+            "title": ev.title,
+            "course": course_name,
+            "deadlineISO": deadline_iso,
+            "status": eval_status,
+            "aiSummary": ai_summary,
+            "peers": peers,
+            "selfScore": self_score,
+            "trend": trend if trend else None,
+            "gcfScore": gcf_score,
+            "reflection": reflection_data,
+        }
+        results.append(result_item)
+
+    return results

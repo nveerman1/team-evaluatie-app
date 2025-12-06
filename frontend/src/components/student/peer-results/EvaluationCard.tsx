@@ -55,14 +55,18 @@ export function EvaluationCard({ data, onOpen }: EvaluationCardProps) {
         )}
       </div>
 
-      {data.aiSummary && (
-        <div className="mt-3 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
-          <div className="flex-1 rounded-xl border border-gray-200/80 bg-white p-3 text-sm leading-relaxed text-gray-800">
-            <div className="mb-1 font-medium text-gray-900">AI-samenvatting</div>
-            <p className="line-clamp-4">{data.aiSummary}</p>
-          </div>
+      {(data.aiSummary || typeof data.gcfScore === "number") && (
+        <div className="mt-3 flex flex-row justify-between items-start gap-3">
+          {data.aiSummary && (
+            <div className="flex-1 rounded-xl border border-gray-200/80 bg-white p-3 text-sm leading-relaxed text-gray-800">
+              <div className="mb-1 font-medium text-gray-900">AI-samenvatting</div>
+              <p className="line-clamp-4">{data.aiSummary}</p>
+            </div>
+          )}
           {typeof data.gcfScore === "number" && (
-            <GcfMiniCard value={data.gcfScore} />
+            <div className="shrink-0">
+              <GcfMiniCard value={data.gcfScore} />
+            </div>
           )}
         </div>
       )}

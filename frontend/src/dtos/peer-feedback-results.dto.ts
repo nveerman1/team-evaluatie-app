@@ -8,6 +8,11 @@ export type PeerScore = {
   scores: Record<OmzaKey, number>; // 1..5
 };
 
+export type ReflectionData = {
+  text: string;
+  submittedAt?: string; // ISO date
+};
+
 export type EvaluationResult = {
   id: string;
   title: string; // bijv. "Tussenreview sprint 2"
@@ -19,4 +24,5 @@ export type EvaluationResult = {
   selfScore?: Record<OmzaKey, number>;
   trend?: Partial<Record<OmzaKey, number[]>>; // laatste n gemiddelden (sparkline)
   gcfScore?: number; // 0..100 – Team-bijdrage (GCF), begrijpelijk gemaakt voor leerlingen
+  reflection?: ReflectionData; // eigen reflectie
 };

@@ -15,3 +15,4 @@ export * from "./project-notes.service";
 export * from "./client.service";
 export * from "./project.service";
 export * from "./omza.service";
+export * from "./peer-feedback-results.service";
