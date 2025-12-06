@@ -6,4 +6,7 @@ export { DetailModal } from "./DetailModal";
 export { EvaluationCard } from "./EvaluationCard";
 export { Filters } from "./Filters";
 export { PageHeader } from "./PageHeader";
+export { OMZAOverview } from "./OMZAOverview";
+export { OMZALineChart } from "./OMZALineChart";
+export { OMZARadarChart } from "./OMZARadarChart";
 export * from "./helpers";
