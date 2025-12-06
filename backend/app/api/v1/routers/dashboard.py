@@ -43,6 +43,15 @@ def _clamp(x: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, x))
 
 
+def _ensure_timezone_aware(dt: datetime | None) -> datetime | None:
+    """Ensure datetime is timezone-aware, converting to UTC if naive."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
 @router.get("/evaluation/{evaluation_id}", response_model=DashboardResponse)
 def dashboard_evaluation(
     evaluation_id: int,
@@ -608,10 +617,7 @@ def get_student_progress(
         # Last activity (most recent score or reflection submission)
         last_activity = None
         if reflection and reflection.submitted_at:
-            # Ensure timezone-aware datetime for comparison
-            last_activity = reflection.submitted_at
-            if last_activity.tzinfo is None:
-                last_activity = last_activity.replace(tzinfo=timezone.utc)
+            last_activity = _ensure_timezone_aware(reflection.submitted_at)
 
         # Get last score timestamp
         student_allocations = [
@@ -629,10 +635,7 @@ def get_student_progress(
             )
             for score in scores:
                 if hasattr(score, "created_at") and score.created_at:
-                    score_created_at = score.created_at
-                    # Ensure timezone-aware datetime for comparison
-                    if score_created_at.tzinfo is None:
-                        score_created_at = score_created_at.replace(tzinfo=timezone.utc)
+                    score_created_at = _ensure_timezone_aware(score.created_at)
                     if not last_activity or score_created_at > last_activity:
                         last_activity = score_created_at
 
