@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 
 type PageHeaderProps = {
   onRefresh?: () => void;
@@ -9,13 +10,22 @@ export function PageHeader({ onRefresh, onExportAll }: PageHeaderProps) {
   return (
     <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">
-            Peer-feedback resultaten
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Overzicht van ontvangen feedback, OMZA-scores, docentbeoordeling en groei.
-          </p>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/student"
+            className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            <span className="mr-2">←</span>
+            Terug
+          </Link>
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900">
+              Peer-feedback resultaten
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Overzicht van ontvangen feedback, OMZA-scores, docentbeoordeling en groei.
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           <button

@@ -94,8 +94,8 @@ export function EvaluationCard({ data, onOpen }: EvaluationCardProps) {
       {/* Inhoud kaart */}
       <div className="mt-4 grid gap-4 md:grid-cols-3">
         {/* AI-samenvatting + docent-opmerkingen */}
-        <div className="space-y-3 md:col-span-2">
-          <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
+        <div className="flex flex-col gap-3 md:col-span-2">
+          <div className="flex-1 rounded-xl border border-slate-100 bg-slate-50/80 p-3 flex flex-col">
             <div className="mb-1 flex items-center justify-between text-xs font-medium text-slate-500">
               <span>AI-samenvatting</span>
               <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-500">
@@ -109,7 +109,7 @@ export function EvaluationCard({ data, onOpen }: EvaluationCardProps) {
             </p>
           </div>
 
-          <div className="rounded-xl border border-slate-100 bg-white p-3">
+          <div className="flex-1 rounded-xl border border-slate-100 bg-white p-3 flex flex-col">
             <div className="mb-1 flex items-center justify-between text-xs font-medium text-slate-500">
               <span>Opmerkingen van de docent</span>
               <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] uppercase tracking-wide text-indigo-600">
