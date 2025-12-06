@@ -328,7 +328,7 @@ export default function StudentOverviewPageInner() {
                         <span className="text-gray-500">Peer:</span>{" "}
                         <span className="font-medium">{cat.peer_avg.toFixed(2)}</span>
                       </div>
-                      {cat.self_avg !== null && (
+                      {cat.self_avg !== null && cat.self_avg !== undefined && (
                         <div className="text-sm">
                           <span className="text-gray-500">Zelf:</span>{" "}
                           <span className="font-medium text-blue-600">{cat.self_avg.toFixed(2)}</span>

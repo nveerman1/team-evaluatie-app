@@ -41,25 +41,21 @@ const instance = axios.create({
 // ---- REQUEST INTERCEPTOR ----
 // Zet X-User-Email altijd vanuit storage en voorkom hardcoded/legacy defaults.
 instance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const headers = (config.headers ?? {}) as Record<string, any>;
-
-  // Verwijder eventuele eerder gezette header om overschrijven te voorkomen
-  delete headers["X-User-Email"];
-
   // Alleen in de browser (SSR heeft geen storage)
   if (typeof window !== "undefined") {
     const email =
       localStorage.getItem("x_user_email") ||
       sessionStorage.getItem("x_user_email");
     if (email) {
-      headers["X-User-Email"] = email;
+      config.headers.set("X-User-Email", email);
     }
   }
 
   // Content-Type (laat bestaande staan als die expliciet is gezet)
-  headers["Content-Type"] = headers["Content-Type"] ?? "application/json";
+  if (!config.headers.has("Content-Type")) {
+    config.headers.set("Content-Type", "application/json");
+  }
 
-  config.headers = headers;
   return config;
 });
 

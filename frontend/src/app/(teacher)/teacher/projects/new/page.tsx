@@ -266,7 +266,7 @@ export default function NewProjectWizardPage() {
             <div className="text-6xl mb-4">✅</div>
             <h1 className="text-2xl font-bold mb-2">Project aangemaakt!</h1>
             <p className="text-gray-600">
-              Het project "{title}" is succesvol aangemaakt.
+              Het project &quot;{title}&quot; is succesvol aangemaakt.
             </p>
           </div>
           
@@ -830,7 +830,7 @@ export default function NewProjectWizardPage() {
           <div className="space-y-4">
             <h2 className="text-xl font-semibold mb-4">Bevestigen</h2>
             <p className="text-sm text-gray-600 mb-4">
-              Controleer de gegevens en klik op "Project aanmaken" om te bevestigen.
+              Controleer de gegevens en klik op &quot;Project aanmaken&quot; om te bevestigen.
             </p>
 
             <div className="space-y-4">

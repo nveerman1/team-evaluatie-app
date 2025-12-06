@@ -2,7 +2,7 @@
 
 import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import Link from "next/link";
-import { Subject, SubjectCreate } from "@/dtos/subject.dto";
+import { Subject, SubjectCreate, SubjectUpdate } from "@/dtos/subject.dto";
 import { subjectService } from "@/services/subject.service";
 import SubjectFormModal from "@/components/admin/SubjectFormModal";
 
@@ -49,8 +49,8 @@ const SectionsManagement = forwardRef((props, ref) => {
     }
   };
 
-  const handleCreateSubject = async (data: SubjectCreate) => {
-    await subjectService.createSubject(data);
+  const handleCreateSubject = async (data: SubjectCreate | SubjectUpdate) => {
+    await subjectService.createSubject(data as SubjectCreate);
     await loadSubjects();
   };
 
