@@ -3,8 +3,9 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Loading, ErrorMessage } from "@/components";
-import { peerFeedbackResultsService } from "@/services";
-import type { EvaluationResult, OmzaKey } from "@/dtos";
+import { peerFeedbackResultsService, evaluationService, studentService } from "@/services";
+import api from "@/lib/api";
+import type { EvaluationResult, OmzaKey, DashboardResponse, MyAllocation } from "@/dtos";
 import {
   OMZA_LABELS,
   mean,
@@ -31,13 +32,73 @@ export default function OverzichtPage() {
 
     setLoading(true);
     setError(null);
+
+    // Try to get data from peer-results endpoint first
     peerFeedbackResultsService
       .getMyPeerResultForEvaluation(evaluationId)
-      .then((data) => {
-        if (!data) {
-          setError("Evaluatie niet gevonden");
-        } else {
+      .then(async (data) => {
+        if (data) {
+          // Found in peer-results endpoint
           setEvaluation(data);
+        } else {
+          // Not found in peer-results, try to build from dashboard data
+          // This handles evaluations in draft status or not yet in peer-results
+          try {
+            const [evalMeta, dashData, allocs] = await Promise.all([
+              evaluationService.getEvaluation(evaluationId),
+              api.get<DashboardResponse>(`/dashboard/evaluation/${evaluationId}`, {
+                params: { include_breakdown: true },
+              }),
+              studentService.getAllocations(evaluationId),
+            ]);
+
+            // Build minimal EvaluationResult from dashboard data
+            const selfAlloc = allocs.find((a) => a.is_self);
+            const myRow = dashData.data.items.find((r) => r.user_id === selfAlloc?.reviewee_id);
+
+            if (myRow && dashData.data.criteria.length > 0) {
+              // Extract OMZA categories from criteria
+              const categories = Array.from(
+                new Set(
+                  dashData.data.criteria
+                    .map((c) => c.category)
+                    .filter((c): c is string => !!c)
+                )
+              );
+
+              // Build OMZA averages from category averages
+              const omzaAverages = categories.map((category) => {
+                const catAvg = myRow.category_averages?.find((ca) => ca.category === category);
+                return {
+                  key: category.charAt(0).toUpperCase(),
+                  label: category,
+                  value: catAvg?.peer_avg || 0,
+                  delta: 0, // No historical data available
+                };
+              });
+
+              const fallbackEvaluation: EvaluationResult = {
+                id: String(evaluationId),
+                title: evalMeta.title,
+                course: evalMeta.cluster || "",
+                deadlineISO: evalMeta.deadlines?.review || evalMeta.settings?.deadlines?.review,
+                status: evalMeta.status,
+                peers: [], // No detailed peer data available in dashboard
+                gcfScore: myRow.gcf,
+                teamContributionFactor: myRow.gcf,
+                omzaAverages: omzaAverages,
+                aiSummary: undefined,
+                teacherComments: undefined,
+                teacherGrade: undefined,
+              };
+
+              setEvaluation(fallbackEvaluation);
+            } else {
+              setError("Nog geen data beschikbaar voor deze evaluatie");
+            }
+          } catch (err) {
+            setError("Kon evaluatiegegevens niet laden");
+          }
         }
       })
       .catch((e) => {
