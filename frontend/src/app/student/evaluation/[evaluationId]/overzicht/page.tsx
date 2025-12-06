@@ -36,7 +36,7 @@ export default function OverzichtPage() {
     peerFeedbackResultsService
       .getMyPeerResults()
       .then((results) => {
-        // Find the evaluation with matching ID
+        // Find the evaluation with matching ID (convert to string for comparison)
         const evalData = results.find((r) => r.id === String(evaluationId));
         if (evalData) {
           setEvaluationData(evalData);
