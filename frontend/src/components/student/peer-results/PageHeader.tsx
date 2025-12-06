@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 
 type PageHeaderProps = {
   onRefresh?: () => void;
@@ -18,6 +19,13 @@ export function PageHeader({ onRefresh, onExportAll }: PageHeaderProps) {
           </p>
         </div>
         <div className="flex gap-2">
+          <Link
+            href="/student"
+            className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            <span className="mr-2">←</span>
+            Terug
+          </Link>
           <button
             type="button"
             className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
