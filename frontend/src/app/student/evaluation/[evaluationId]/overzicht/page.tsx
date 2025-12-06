@@ -226,7 +226,7 @@ export default function OverzichtPage() {
                 </p>
               </div>
 
-              <div className="flex-1 rounded-xl border border-slate-100 bg-white p-3 flex flex-col">
+              <div className="flex-1 rounded-xl border border-slate-100 bg-slate-50/70 p-3 flex flex-col">
                 <div className="mb-1 flex items-center justify-between text-xs font-medium text-slate-500">
                   <span>Opmerkingen van de docent</span>
                   <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] uppercase tracking-wide text-indigo-600">
@@ -277,7 +277,7 @@ export default function OverzichtPage() {
 
               {/* Docentbeoordeling samenvatting */}
               {evaluationData.teacherGrade !== undefined && (
-                <div className="rounded-xl border border-slate-100 bg-white p-3">
+                <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
                   <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
                     <span>Docent-beoordeling</span>
                     <span className="text-[11px] font-normal text-slate-400">Sprintgemiddelde</span>
@@ -319,7 +319,7 @@ export default function OverzichtPage() {
           {omzaAverages && omzaAverages.length > 0 ? (
             <div className="mt-4 grid gap-3 md:grid-cols-4">
               {omzaAverages.map((item) => (
-                <div key={item.key} className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+                <div key={item.key} className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
                   <div className="flex items-center justify-between text-xs text-slate-500">
                     <span>{item.label}</span>
                     <div className="text-right">
