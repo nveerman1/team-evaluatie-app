@@ -39,13 +39,22 @@ export default function OverzichtPage() {
     peerFeedbackResultsService
       .getMyPeerResults()
       .then(async (results) => {
+        console.log("Peer results fetched:", results);
+        console.log("Looking for evaluation ID:", evaluationId, "as string:", String(evaluationId));
+        
         // Find the evaluation with matching ID (convert to string for comparison)
-        const evalData = results.find((r) => r.id === String(evaluationId));
+        const evalData = results.find((r) => {
+          console.log("Comparing:", r.id, "with", String(evaluationId), "match:", r.id === String(evaluationId));
+          return r.id === String(evaluationId);
+        });
+        
         if (evalData) {
+          console.log("Found evaluation data:", evalData);
           setEvaluationData(evalData);
         } else {
           // Fallback: If not found in peer-results, try to build it from other APIs
           console.log("Evaluation not found in peer-results, trying fallback...");
+          console.log("Available IDs:", results.map(r => r.id));
           try {
             const [evaluation, allocs] = await Promise.all([
               evaluationService.getEvaluation(evaluationId),
@@ -67,6 +76,7 @@ export default function OverzichtPage() {
               omzaAverages: [],
             };
             
+            console.log("Using fallback data:", fallbackData);
             setEvaluationData(fallbackData);
           } catch (fallbackError) {
             console.error("Fallback failed:", fallbackError);
@@ -75,6 +85,7 @@ export default function OverzichtPage() {
         }
       })
       .catch((e) => {
+        console.error("Failed to fetch peer results:", e);
         setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
       })
       .finally(() => setLoading(false));
