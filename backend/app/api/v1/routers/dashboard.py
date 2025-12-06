@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from statistics import mean
 from io import StringIO
 import csv
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import (
@@ -41,6 +41,15 @@ def _safe_mean(vals):
 
 def _clamp(x: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, x))
+
+
+def _ensure_timezone_aware(dt: datetime | None) -> datetime | None:
+    """Ensure datetime is timezone-aware, converting to UTC if naive."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 @router.get("/evaluation/{evaluation_id}", response_model=DashboardResponse)
@@ -78,7 +87,12 @@ def dashboard_evaluation(
         .order_by(RubricCriterion.id.asc())
         .all()
     )
-    criteria = [CriterionMeta(id=c.id, name=c.name, weight=c.weight, category=getattr(c, "category", None)) for c in crit_rows]
+    criteria = [
+        CriterionMeta(
+            id=c.id, name=c.name, weight=c.weight, category=getattr(c, "category", None)
+        )
+        for c in crit_rows
+    ]
     crit_ids = {c.id for c in crit_rows}
     # Build category to criteria mapping
     category_to_criteria = {}
@@ -217,7 +231,9 @@ def dashboard_evaluation(
         u = users.get(reviewee_id)
         team_num = getattr(u, "team_number", None) if u else None
         team_by_reviewee[reviewee_id] = team_num
-        peer_avg_by_team.setdefault(team_num, []).append(peer_avg_by_reviewee[reviewee_id])
+        peer_avg_by_team.setdefault(team_num, []).append(
+            peer_avg_by_reviewee[reviewee_id]
+        )
 
     # Calculate team means
     team_means: dict[int | None, float] = {
@@ -296,15 +312,25 @@ def dashboard_evaluation(
                 cat_peer_scores = []
                 for cid in crit_ids_in_cat:
                     cat_peer_scores.extend(crit_peers.get(cid, []))
-                
+
                 # Collect all self scores for criteria in this category
-                cat_self_scores = [crit_selfs.get(cid) for cid in crit_ids_in_cat if cid in crit_selfs]
-                
+                cat_self_scores = [
+                    crit_selfs.get(cid) for cid in crit_ids_in_cat if cid in crit_selfs
+                ]
+
                 category_averages.append(
                     CategoryAverage(
                         category=cat,
-                        peer_avg=round(_safe_mean(cat_peer_scores), 2) if cat_peer_scores else 0.0,
-                        self_avg=round(_safe_mean(cat_self_scores), 2) if cat_self_scores else None,
+                        peer_avg=(
+                            round(_safe_mean(cat_peer_scores), 2)
+                            if cat_peer_scores
+                            else 0.0
+                        ),
+                        self_avg=(
+                            round(_safe_mean(cat_self_scores), 2)
+                            if cat_self_scores
+                            else None
+                        ),
                     )
                 )
 
@@ -591,7 +617,7 @@ def get_student_progress(
         # Last activity (most recent score or reflection submission)
         last_activity = None
         if reflection and reflection.submitted_at:
-            last_activity = reflection.submitted_at
+            last_activity = _ensure_timezone_aware(reflection.submitted_at)
 
         # Get last score timestamp
         student_allocations = [
@@ -609,8 +635,9 @@ def get_student_progress(
             )
             for score in scores:
                 if hasattr(score, "created_at") and score.created_at:
-                    if not last_activity or score.created_at > last_activity:
-                        last_activity = score.created_at
+                    score_created_at = _ensure_timezone_aware(score.created_at)
+                    if not last_activity or score_created_at > last_activity:
+                        last_activity = score_created_at
 
         # Enhanced flags system
         flags = []
@@ -623,18 +650,9 @@ def get_student_progress(
         if not last_activity:
             flags.append("no_activity")
         else:
-            # Handle timezone-aware or naive datetime comparison
-            current_time = datetime.now()
-            if hasattr(last_activity, "replace"):
-                # Make both timezone-naive for safe comparison
-                last_activity_naive = (
-                    last_activity.replace(tzinfo=None)
-                    if last_activity.tzinfo
-                    else last_activity
-                )
-                days_since_activity = (current_time - last_activity_naive).days
-            else:
-                days_since_activity = (current_time - last_activity).days
+            # Compare timezone-aware datetimes
+            current_time = datetime.now(timezone.utc)
+            days_since_activity = (current_time - last_activity).days
 
             if days_since_activity > 7:
                 flags.append("inactive_7days")
