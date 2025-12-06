@@ -35,6 +35,7 @@ from app.api.v1.routers import clients as clients_router
 from app.api.v1.routers import projects as projects_router
 from app.api.v1.routers import omza as omza_router
 from app.api.v1.routers import templates as templates_router
+from app.api.v1.routers import student_competency_growth as student_competency_growth_router
 from app.integrations.somtoday import router as somtoday_router
 
 
@@ -89,5 +90,6 @@ api_v1.include_router(clients_router.router)
 api_v1.include_router(projects_router.router)
 api_v1.include_router(omza_router.router)
 api_v1.include_router(templates_router.router)
+api_v1.include_router(student_competency_growth_router.router)
 api_v1.include_router(somtoday_router.router)
 app.include_router(api_v1)
