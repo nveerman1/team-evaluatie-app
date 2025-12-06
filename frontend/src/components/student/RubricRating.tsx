@@ -62,7 +62,7 @@ export function RubricRating({
                   {level}
                 </span>
                 {descriptor && (
-                  <span className="line-clamp-3 text-[11px] leading-snug text-slate-600">
+                  <span className="text-[11px] leading-snug text-slate-600">
                     {descriptor}
                   </span>
                 )}
