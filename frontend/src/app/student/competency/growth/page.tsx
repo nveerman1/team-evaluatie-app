@@ -253,7 +253,11 @@ export default function GrowthPage() {
             <CompetencyProfileSection profile={data.competency_profile} />
 
             {/* 2. OMZA development over time + Profiel laatste scan */}
-            {!peerLoading && peerResults.length > 0 && <OMZAOverview items={peerResults} />}
+            {!peerLoading && peerResults.length > 0 && (
+              <div className="-mx-4 sm:-mx-6">
+                <OMZAOverview items={peerResults} />
+              </div>
+            )}
 
             {/* 3. Goals + Reflections */}
             <section className="grid gap-6 lg:grid-cols-2">
