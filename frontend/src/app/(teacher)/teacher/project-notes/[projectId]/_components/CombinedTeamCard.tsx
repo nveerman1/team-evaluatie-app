@@ -159,7 +159,7 @@ export function CombinedTeamCard({
     >
       <div className="flex flex-col gap-3">
         {/* Header with team name and toggle */}
-        <div className="flex items-start justify-between w-full">
+        <div className="flex items-start justify-between w-full bg-slate-200 rounded-lg px-3 py-2 -mx-1">
           <button onClick={() => setIsOpen(!isOpen)} className="text-left flex-1">
             <h3 className="text-sm font-semibold text-slate-900">{teamDisplayName}</h3>
           </button>
@@ -182,19 +182,21 @@ export function CombinedTeamCard({
         </div>
       </div>
 
-      {/* Team quick notes - always visible */}
-      <div className="flex flex-wrap gap-1.5 text-[11px]">
-        {QUICK_NOTES_TEAM.map(n => (
-          <button
-            key={n.text}
-            onClick={() => saveQuick(n.text, n.omza, false)}
-            className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 hover:bg-indigo-50"
-            title={n.omza ? `OMZA: ${n.omza}` : undefined}
-          >
-            {n.text}
-          </button>
-        ))}
-      </div>
+      {/* Team quick notes - visible only when no student is selected */}
+      {!filter && (
+        <div className="flex flex-wrap gap-1.5 text-[11px]">
+          {QUICK_NOTES_TEAM.map(n => (
+            <button
+              key={n.text}
+              onClick={() => saveQuick(n.text, n.omza, false)}
+              className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 hover:bg-indigo-50"
+              title={n.omza ? `OMZA: ${n.omza}` : undefined}
+            >
+              {n.text}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Student quick notes - only visible when a student is selected */}
       {filter && (
