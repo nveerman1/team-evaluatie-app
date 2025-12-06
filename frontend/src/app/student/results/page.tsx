@@ -7,6 +7,7 @@ import {
   Filters,
   EvaluationCard,
   DetailModal,
+  OMZAOverview,
 } from "@/components/student/peer-results";
 import { usePeerFeedbackResults } from "@/hooks/usePeerFeedbackResults";
 
@@ -18,8 +19,7 @@ export default function PeerFeedbackResultsPage() {
   const [filters, setFilters] = useState<{
     q: string;
     course: string;
-    status: string;
-  }>({ q: "", course: "", status: "" });
+  }>({ q: "", course: "" });
 
   const filteredItems = useMemo(() => {
     return items.filter((i) => {
@@ -28,8 +28,7 @@ export default function PeerFeedbackResultsPage() {
         i.title.toLowerCase().includes(filters.q.toLowerCase()) ||
         i.course.toLowerCase().includes(filters.q.toLowerCase());
       const cOk = !filters.course || i.course === filters.course;
-      const sOk = !filters.status || i.status === filters.status;
-      return qOk && cOk && sOk;
+      return qOk && cOk;
     });
   }, [items, filters]);
 
@@ -47,18 +46,21 @@ export default function PeerFeedbackResultsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <main className="min-h-screen bg-slate-100">
       <PageHeader onRefresh={handleRefresh} onExportAll={handleExportAll} />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Filters (Styling Guide order: Search → Course → Status) */}
-        <Filters items={items} onFilter={(next) => setFilters(next)} />
+      <Filters items={items} onFilter={(next) => setFilters(next)} />
 
+      {/* OMZA Overview */}
+      {!loading && !error && items.length > 0 && <OMZAOverview items={items} />}
+
+      {/* Cards Section */}
+      <section className="mx-auto max-w-6xl px-6 py-6 space-y-4">
         {/* Loading state */}
         {loading && (
-          <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6 text-sm text-gray-600">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-sm text-slate-600">
             <div className="flex items-center gap-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
               Resultaten laden...
             </div>
           </div>
@@ -80,24 +82,24 @@ export default function PeerFeedbackResultsPage() {
 
         {/* Cards */}
         {!loading && !error && (
-          <div className="space-y-3">
+          <>
             {filteredItems.map((ev) => (
               <EvaluationCard key={ev.id} data={ev} onOpen={openDetails} />
             ))}
             {filteredItems.length === 0 && (
-              <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6 text-sm text-gray-600">
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-sm text-slate-600">
                 Geen resultaten voor deze filters.
               </div>
             )}
-          </div>
+          </>
         )}
-      </div>
+      </section>
 
       <DetailModal
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
         evaluation={active}
       />
-    </div>
+    </main>
   );
 }
