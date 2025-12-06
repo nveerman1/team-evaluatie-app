@@ -578,6 +578,8 @@ OMZA_CATEGORY_MAP = {
 }
 
 OMZA_KEYS = ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"]
+OMZA_SHORT_CODES = ["O", "M", "Z", "A"]
+
 
 
 def _normalize_category(category: Optional[str]) -> Optional[str]:
@@ -806,7 +808,7 @@ def get_my_peer_feedback_results(
         teacher_comments = None
         if ev.settings and isinstance(ev.settings, dict):
             # Get teacher OMZA scores per category
-            for cat_key in ["O", "M", "Z", "A"]:
+            for cat_key in OMZA_SHORT_CODES:
                 teacher_key = f"teacher_score_{user.id}_{cat_key}"
                 if teacher_key in ev.settings and ev.settings[teacher_key] is not None:
                     teacher_omza_scores[cat_key] = ev.settings[teacher_key]
@@ -857,7 +859,7 @@ def get_my_peer_feedback_results(
             "teacherComments": teacher_comments,
             "teacherGrade": teacher_grade,
             "teacherGradeComment": teacher_grade_comment,
-            "teacherOmza": teacher_omza_scores if teacher_omza_scores else None,
+            "teacherOmza": teacher_omza_scores or None,
         }
         results.append(result_item)
 

@@ -7,6 +7,9 @@ export const OMZA_LABELS: Record<OmzaKey, string> = {
   autonomie: "Autonomie",
 };
 
+export const OMZA_KEYS: OmzaKey[] = ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"];
+
+
 export function mean(values: number[]): number {
   if (!values.length) return 0;
   return values.reduce((a, b) => a + b, 0) / values.length;

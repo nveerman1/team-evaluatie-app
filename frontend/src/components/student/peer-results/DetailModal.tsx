@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { EvaluationResult, OmzaKey } from "@/dtos";
 import {
   OMZA_LABELS,
+  OMZA_KEYS,
   mean,
   round1,
   getOmzaEmoji,
@@ -25,9 +26,7 @@ export function DetailModal({ open, onClose, evaluation }: DetailModalProps) {
 
   if (!open || !evaluation) return null;
 
-  const avg: Record<OmzaKey, number> = (
-    ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"] as OmzaKey[]
-  ).reduce((acc, k) => {
+  const avg: Record<OmzaKey, number> = OMZA_KEYS.reduce((acc, k) => {
     const list = evaluation.peers.map((p) => p.scores[k]).filter(Boolean);
     acc[k] = round1(mean(list));
     return acc;
@@ -254,7 +253,7 @@ export function DetailModal({ open, onClose, evaluation }: DetailModalProps) {
                     
                     {/* OMZA scores */}
                     <div className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
-                      {(["organiseren", "meedoen", "zelfvertrouwen", "autonomie"] as OmzaKey[]).map((key) => (
+                      {OMZA_KEYS.map((key) => (
                         <div key={key} className="rounded-lg border border-slate-200 bg-white p-2">
                           <p className="text-[10px] uppercase tracking-wide text-slate-500">
                             {OMZA_LABELS[key]}
