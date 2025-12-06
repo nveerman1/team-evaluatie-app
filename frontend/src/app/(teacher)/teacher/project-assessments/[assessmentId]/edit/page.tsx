@@ -1,5 +1,14 @@
-import EditProjectAssessmentInner from "./_inner";
+"use client";
+
+import { Suspense } from "react";
+import EditProjectAssessmentPageInner from "./_inner";
 
 export default function EditProjectAssessmentPage() {
-  return <EditProjectAssessmentInner />;
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+      <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
+    </div>}>
+      <EditProjectAssessmentPageInner />
+    </Suspense>
+  );
 }

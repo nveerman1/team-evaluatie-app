@@ -76,8 +76,8 @@ const TeachersManagement = forwardRef((props, ref) => {
   const adminTeachers = teachers.filter((t) => t.role === "admin").length;
 
   // Handlers
-  const handleCreateTeacher = async (data: TeacherCreate) => {
-    await teacherService.createTeacher(data);
+  const handleCreateTeacher = async (data: TeacherCreate | TeacherUpdate) => {
+    await teacherService.createTeacher(data as TeacherCreate);
     await loadTeachers();
     setShowCreateModal(false);
   };

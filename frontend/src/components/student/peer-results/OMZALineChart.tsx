@@ -95,7 +95,7 @@ export function OMZALineChart({ data }: OMZALineChartProps) {
           },
           tooltip: {
             callbacks: {
-              label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}`,
+              label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y !== null ? ctx.parsed.y.toFixed(1) : 'N/A'}`,
             },
           },
         },
