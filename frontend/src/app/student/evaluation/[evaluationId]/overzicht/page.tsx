@@ -265,8 +265,16 @@ export default function OverzichtPage() {
 
           {/* Inhoud kaart */}
           <div className="mt-4 grid gap-4 md:grid-cols-3">
-            {/* Docent-opmerkingen */}
+            {/* AI-samenvatting + docent-opmerkingen */}
             <div className="space-y-3 md:col-span-2">
+              {/* AI Feedback Summary - keep functionality, place before teacher comments */}
+              {studentId && (
+                <FeedbackSummary
+                  evaluationId={evaluationId}
+                  studentId={studentId}
+                />
+              )}
+
               <div className="rounded-xl border border-slate-100 bg-white p-3">
                 <div className="mb-1 flex items-center justify-between text-xs font-medium text-slate-500">
                   <span>Opmerkingen van de docent</span>
@@ -390,16 +398,6 @@ export default function OverzichtPage() {
             ))}
           </div>
         </article>
-
-        {/* AI Feedback Summary - separate section after the card */}
-        {studentId && (
-          <div className="mt-6">
-            <FeedbackSummary
-              evaluationId={evaluationId}
-              studentId={studentId}
-            />
-          </div>
-        )}
       </main>
     </div>
   );
