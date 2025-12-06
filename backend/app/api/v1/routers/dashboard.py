@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from statistics import mean
 from io import StringIO
 import csv
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import (
@@ -591,7 +591,10 @@ def get_student_progress(
         # Last activity (most recent score or reflection submission)
         last_activity = None
         if reflection and reflection.submitted_at:
+            # Ensure timezone-aware datetime for comparison
             last_activity = reflection.submitted_at
+            if last_activity.tzinfo is None:
+                last_activity = last_activity.replace(tzinfo=timezone.utc)
 
         # Get last score timestamp
         student_allocations = [
@@ -609,8 +612,12 @@ def get_student_progress(
             )
             for score in scores:
                 if hasattr(score, "created_at") and score.created_at:
-                    if not last_activity or score.created_at > last_activity:
-                        last_activity = score.created_at
+                    score_created_at = score.created_at
+                    # Ensure timezone-aware datetime for comparison
+                    if score_created_at.tzinfo is None:
+                        score_created_at = score_created_at.replace(tzinfo=timezone.utc)
+                    if not last_activity or score_created_at > last_activity:
+                        last_activity = score_created_at
 
         # Enhanced flags system
         flags = []
@@ -623,18 +630,9 @@ def get_student_progress(
         if not last_activity:
             flags.append("no_activity")
         else:
-            # Handle timezone-aware or naive datetime comparison
-            current_time = datetime.now()
-            if hasattr(last_activity, "replace"):
-                # Make both timezone-naive for safe comparison
-                last_activity_naive = (
-                    last_activity.replace(tzinfo=None)
-                    if last_activity.tzinfo
-                    else last_activity
-                )
-                days_since_activity = (current_time - last_activity_naive).days
-            else:
-                days_since_activity = (current_time - last_activity).days
+            # Compare timezone-aware datetimes
+            current_time = datetime.now(timezone.utc)
+            days_since_activity = (current_time - last_activity).days
 
             if days_since_activity > 7:
                 flags.append("inactive_7days")
