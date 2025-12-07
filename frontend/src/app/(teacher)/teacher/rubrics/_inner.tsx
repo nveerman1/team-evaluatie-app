@@ -34,18 +34,6 @@ export default function RubricsListInner() {
   const [reorderError, setReorderError] = useState<string | null>(null);
   const [reorderSuccess, setReorderSuccess] = useState(false);
 
-  // DnD sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
   // Competencies tab state (like competencies-beheer page)
   const [viewMode, setViewMode] = useState<ViewMode>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -291,11 +279,6 @@ export default function RubricsListInner() {
       alert("Er is een fout opgetreden bij het verwijderen van de competentie.");
     }
   }
-
-  const handleTabChange = (tab: TabType) => {
-    setActiveTab(tab);
-    setQ("");
-  };
 
   return (
     <>
