@@ -63,6 +63,7 @@ export default function ProjectOverviewPage() {
         categoryAverages: {},
         gradesTrend: [],
         topCategories: [],
+        assessmentCategoryScores: new Map<number, Record<string, { avg: number; max: number }>>(),
       };
     }
 
@@ -83,21 +84,45 @@ export default function ProjectOverviewPage() {
     const categorySums: Record<string, number> = {};
     const categoryCounts: Record<string, number> = {};
     
-    projectDetails.forEach((detail) => {
+    // Calculate per-assessment category scores
+    const assessmentCategoryScores = new Map<number, Record<string, { avg: number; max: number }>>();
+    
+    projectDetails.forEach((detail, assessmentId) => {
+      const categoryData: Record<string, { sum: number; count: number; max: number }> = {};
+      
       // Group scores by category
       detail.criteria.forEach((criterion) => {
         if (criterion.category) {
           const score = detail.scores.find(s => s.criterion_id === criterion.id);
           if (score) {
+            // Add to global category averages
             if (!categorySums[criterion.category]) {
               categorySums[criterion.category] = 0;
               categoryCounts[criterion.category] = 0;
             }
             categorySums[criterion.category] += score.score;
             categoryCounts[criterion.category]++;
+            
+            // Add to per-assessment category scores
+            if (!categoryData[criterion.category]) {
+              categoryData[criterion.category] = { sum: 0, count: 0, max: detail.rubric_scale_max };
+            }
+            categoryData[criterion.category].sum += score.score;
+            categoryData[criterion.category].count++;
           }
         }
       });
+      
+      // Calculate averages for this assessment
+      const assessmentScores: Record<string, { avg: number; max: number }> = {};
+      Object.keys(categoryData).forEach((category) => {
+        const data = categoryData[category];
+        assessmentScores[category] = {
+          avg: data.sum / data.count,
+          max: data.max,
+        };
+      });
+      assessmentCategoryScores.set(assessmentId, assessmentScores);
     });
     
     const categoryAverages: Record<string, number> = {};
@@ -126,6 +151,7 @@ export default function ProjectOverviewPage() {
       categoryAverages,
       gradesTrend,
       topCategories,
+      assessmentCategoryScores,
     };
   }, [projectAssessments, projectDetails]);
 
@@ -407,30 +433,12 @@ export default function ProjectOverviewPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {projectAssessments.map((assessment) => {
-                  const detail = projectDetails.get(assessment.id);
+                  const categoryScores = stats.assessmentCategoryScores.get(assessment.id) || {};
                   
-                  // Calculate category scores for this assessment
-                  const categoryScores: Record<string, { sum: number; count: number; max: number }> = {};
-                  
-                  if (detail) {
-                    detail.criteria.forEach((criterion) => {
-                      if (criterion.category) {
-                        const score = detail.scores.find(s => s.criterion_id === criterion.id);
-                        if (score) {
-                          if (!categoryScores[criterion.category]) {
-                            categoryScores[criterion.category] = { sum: 0, count: 0, max: detail.rubric_scale_max };
-                          }
-                          categoryScores[criterion.category].sum += score.score;
-                          categoryScores[criterion.category].count++;
-                        }
-                      }
-                    });
-                  }
-                  
-                  const getAvgScore = (category: string) => {
+                  const getCategoryDisplay = (category: string) => {
                     const data = categoryScores[category];
-                    if (!data || data.count === 0) return null;
-                    return (data.sum / data.count).toFixed(1);
+                    if (!data) return '—';
+                    return `${data.avg.toFixed(1)}/${data.max}`;
                   };
                   
                   return (
@@ -457,19 +465,13 @@ export default function ProjectOverviewPage() {
                         {assessment.teacher_name || '—'}
                       </td>
                       <td className="px-3 py-2 align-top text-xs text-slate-600">
-                        {getAvgScore('Projectproces') !== null 
-                          ? `${getAvgScore('Projectproces')}/5` 
-                          : '—'}
+                        {getCategoryDisplay('Projectproces')}
                       </td>
                       <td className="px-3 py-2 align-top text-xs text-slate-600">
-                        {getAvgScore('Eindresultaat') !== null 
-                          ? `${getAvgScore('Eindresultaat')}/5` 
-                          : '—'}
+                        {getCategoryDisplay('Eindresultaat')}
                       </td>
                       <td className="px-3 py-2 align-top text-xs text-slate-600">
-                        {getAvgScore('Communicatie') !== null 
-                          ? `${getAvgScore('Communicatie')}/5` 
-                          : '—'}
+                        {getCategoryDisplay('Communicatie')}
                       </td>
                       <td className="px-3 py-2 align-top text-right">
                         <Link
