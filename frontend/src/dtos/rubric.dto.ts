@@ -5,6 +5,7 @@ export type RubricListItem = {
   scale_min: number;
   scale_max: number;
   scope: string; // "peer" | "project"
+  target_level?: string | null; // "onderbouw" | "bovenbouw"
   metadata_json: Record<string, any>;
   criteria_count: number;
 };
