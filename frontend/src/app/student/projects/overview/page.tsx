@@ -136,7 +136,7 @@ export default function ProjectOverviewPage() {
       .slice(0, 2);
 
     // Prepare trend data for line chart with real grades (excluding external assessments)
-    // External assessments have teacher_id = null
+    // Filter out external assessments (those with teacher_id = null)
     const gradesTrend = projectAssessments
       .filter((assessment) => assessment.teacher_id !== null)
       .map((assessment) => {
