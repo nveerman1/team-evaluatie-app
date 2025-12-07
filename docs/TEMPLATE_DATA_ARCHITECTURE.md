@@ -747,7 +747,6 @@ params = {
 - Less prone to SQL injection risks
 - Proper escaping of special characters
 - Compatible with all database drivers
-```
 
 ### 6. Timestamp Handling
 
