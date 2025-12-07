@@ -35,32 +35,6 @@ const PageHeader = () => {
   );
 };
 
-// KPI Tile component
-const KPITile = ({
-  icon,
-  title,
-  value,
-  subtitle,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  value: string | number;
-  subtitle?: string;
-}) => {
-  return (
-    <div className="rounded-xl bg-white border border-gray-300 shadow-sm p-4 flex items-start gap-4">
-      <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center text-2xl">
-        {icon}
-      </div>
-      <div className="flex-1">
-        <div className="text-sm text-gray-500 mb-1">{title}</div>
-        <div className="text-3xl font-semibold text-gray-900">{value}</div>
-        {subtitle && <div className="text-xs text-gray-400 mt-1">{subtitle}</div>}
-      </div>
-    </div>
-  );
-};
-
 export default function ProjectOverviewPage() {
   const {
     assessments: projectAssessments,
@@ -76,6 +50,7 @@ export default function ProjectOverviewPage() {
         completedCount: 0,
         categoryAverages: {},
         gradesTrend: [],
+        topCategories: [],
       };
     }
 
@@ -90,16 +65,20 @@ export default function ProjectOverviewPage() {
     const completedCount = projectAssessments.length;
     
     // Mock average grade (would come from actual grade field in detail data)
-    const avgGrade = 7.5;
+    const avgGrade = 7.8;
     
     // Mock category averages (would be calculated from rubric criterion scores)
     const categoryAverages = {
-      Projectproces: 3.8,
+      Projectproces: 4.2,
       Eindresultaat: 4.1,
-      Communicatie: 3.9,
-      Samenwerking: 4.0,
-      Professionaliteit: 3.7,
+      Communicatie: 4.0,
+      Samenwerking: 3.8,
     };
+
+    // Get top 2 categories for KPI tile
+    const topCategories = Object.entries(categoryAverages)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 2);
 
     // Prepare trend data for line chart with deterministic mock grades
     const gradesTrend = projectAssessments.map((assessment, index) => ({
@@ -114,14 +93,15 @@ export default function ProjectOverviewPage() {
       completedCount,
       categoryAverages,
       gradesTrend,
+      topCategories,
     };
   }, [projectAssessments]);
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-slate-100">
+      <main className="min-h-screen bg-slate-100/80">
         <PageHeader />
-        <div className="max-w-6xl mx-auto px-6 py-8">
+        <div className="max-w-6xl mx-auto px-4 py-8">
           <Loading />
         </div>
       </main>
@@ -130,9 +110,9 @@ export default function ProjectOverviewPage() {
 
   if (error) {
     return (
-      <main className="min-h-screen bg-slate-100">
+      <main className="min-h-screen bg-slate-100/80">
         <PageHeader />
-        <div className="max-w-6xl mx-auto px-6 py-8">
+        <div className="max-w-6xl mx-auto px-4 py-8">
           <ErrorMessage message={error} />
         </div>
       </main>
@@ -142,9 +122,9 @@ export default function ProjectOverviewPage() {
   // Empty state
   if (!projectAssessments || projectAssessments.length === 0) {
     return (
-      <main className="min-h-screen bg-slate-100">
+      <main className="min-h-screen bg-slate-100/80">
         <PageHeader />
-        <div className="max-w-6xl mx-auto px-6 py-8">
+        <div className="mx-auto max-w-6xl px-4 py-8">
           <div className="rounded-xl bg-white border border-gray-300 shadow-sm p-8 text-center">
             <div className="text-6xl mb-4">📊</div>
             <h2 className="text-xl font-semibold text-gray-900 mb-2">
@@ -156,7 +136,7 @@ export default function ProjectOverviewPage() {
             </p>
             <Link
               href="/student#projecten"
-              className="inline-block rounded-lg bg-purple-600 text-white px-4 py-2 hover:bg-purple-700 transition-colors"
+              className="inline-block rounded-lg bg-slate-900 text-white px-4 py-2 hover:bg-slate-800 transition-colors"
             >
               Ga terug naar dashboard
             </Link>
@@ -166,113 +146,264 @@ export default function ProjectOverviewPage() {
     );
   }
 
-  // Format category scores for display
-  const categoryScoresText = Object.entries(stats.categoryAverages)
-    .map(([key, value]) => `${key} ${value.toFixed(1)}`)
-    .join(" • ");
-
   return (
-    <main className="min-h-screen bg-slate-100">
+    <main className="min-h-screen bg-slate-100/80 text-slate-900">
       <PageHeader />
       
-      <section className="mx-auto max-w-6xl px-6 py-6 space-y-6">
-        {/* KPI Tiles */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <KPITile
-            icon="📊"
-            title="Gemiddeld projectcijfer"
-            value={stats.avgGrade.toFixed(1)}
-          />
-          <KPITile
-            icon="✅"
-            title="Aantal afgeronde projecten"
-            value={stats.completedCount}
-          />
-        </div>
-
-        <div className="rounded-xl bg-white border border-gray-300 shadow-sm p-4">
-          <div className="text-sm text-gray-500 mb-1">
-            Gemiddelde score per categorie
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pb-10 pt-8">
+        {/* Tip banner */}
+        <div className="flex items-center justify-between gap-3 rounded-2xl bg-white/80 p-3 shadow-sm ring-1 ring-slate-200/80">
+          <div className="flex flex-col text-xs text-slate-600 sm:flex-row sm:items-center sm:gap-2">
+            <span className="font-medium text-slate-800">Tip</span>
+            <span>
+              Gebruik deze pagina om je ontwikkeling over meerdere projecten te volgen.
+            </span>
           </div>
-          <div className="text-base text-gray-700">{categoryScoresText}</div>
+          <Link
+            href="/student#projecten"
+            className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
+          >
+            Terug naar dashboard
+          </Link>
         </div>
 
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Line Chart */}
-          <div className="rounded-xl bg-white border border-gray-300 shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Cijfers per project
-            </h3>
-            <div className="h-64">
+        {/* KPI tiles */}
+        <section className="grid gap-4 md:grid-cols-4">
+          <div className="group flex flex-col justify-between rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Gemiddeld projectcijfer
+              </span>
+              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                Nieuw
+              </span>
+            </div>
+            <div className="mt-3 flex items-baseline gap-1">
+              <span className="text-3xl font-semibold text-slate-900">{stats.avgGrade.toFixed(1)}</span>
+              <span className="text-xs text-slate-500">/ 10</span>
+            </div>
+            <p className="mt-2 text-[11px] text-slate-500">
+              Gebaseerd op al je afgeronde projectbeoordelingen.
+            </p>
+          </div>
+
+          <div className="group flex flex-col justify-between rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Afgeronde projecten
+            </span>
+            <div className="mt-3 flex items-end gap-2">
+              <span className="text-3xl font-semibold text-slate-900">{stats.completedCount}</span>
+              <span className="text-[11px] text-slate-500">totaal</span>
+            </div>
+            <p className="mt-2 text-[11px] text-slate-500">
+              {stats.completedCount === 1 ? 'project' : 'projecten'} in totaal beoordeeld.
+            </p>
+          </div>
+
+          <div className="group flex flex-col justify-between rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Sterkste categorieën
+            </span>
+            <div className="mt-3 space-y-1 text-[11px] text-slate-600">
+              {stats.topCategories.length > 0 ? (
+                <>
+                  {stats.topCategories.map(([category, score], index) => (
+                    <p key={category}>
+                      <span
+                        className={`inline-block h-2 w-2 rounded-full ${
+                          index === 0 ? 'bg-sky-500' : 'bg-violet-500'
+                        }`}
+                        aria-hidden="true"
+                      ></span>{' '}
+                      {category} • {score.toFixed(1)}/5
+                    </p>
+                  ))}
+                </>
+              ) : (
+                <p>Nog geen scores beschikbaar</p>
+              )}
+            </div>
+            <p className="mt-2 text-[11px] text-slate-500">
+              Gebaseerd op rubric-scores.
+            </p>
+          </div>
+
+          <div className="group flex flex-col justify-between rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Focus voor volgende project
+            </span>
+            <p className="mt-3 text-[11px] text-slate-600">
+              Bekijk je feedback per project om specifieke tips te vinden voor jouw ontwikkeling.
+            </p>
+            <span className="mt-3 inline-flex w-fit items-center rounded-full bg-slate-900 px-3 py-1 text-[11px] font-medium text-white">
+              Zie projecten
+            </span>
+          </div>
+        </section>
+
+        {/* Charts */}
+        <section className="grid gap-4 lg:grid-cols-5">
+          <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 lg:col-span-3">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold text-slate-900">Cijfers per project</h2>
+              <span className="text-[11px] text-slate-500">Lijngrafiek</span>
+            </div>
+            <div className="mt-3 h-56">
               <ProjectLineChart data={stats.gradesTrend} />
             </div>
           </div>
 
-          {/* Radar Chart */}
-          <div className="rounded-xl bg-white border border-gray-300 shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Sterktes en ontwikkelpunten
-            </h3>
-            <div className="flex items-center justify-center h-64">
+          <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 lg:col-span-2">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold text-slate-900">
+                Sterktes en ontwikkelpunten
+              </h2>
+              <span className="text-[11px] text-slate-500">Radar grafiek</span>
+            </div>
+            <div className="mt-3 flex h-56 items-center justify-center">
               <ProjectRadarChart categoryAverages={stats.categoryAverages} />
             </div>
           </div>
-        </div>
+        </section>
+
+        {/* AI summary */}
+        <section className="grid gap-4 lg:grid-cols-3">
+          <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 lg:col-span-2">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Samenvatting van jouw projectontwikkeling
+                </h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  AI maakt op basis van meerdere projectbeoordelingen een kort
+                  overzicht van je sterktes en groeikansen.
+                </p>
+              </div>
+              <button className="rounded-full bg-slate-900 px-3 py-1 text-[11px] font-medium text-white hover:bg-slate-800">
+                Vernieuw samenvatting
+              </button>
+            </div>
+            <div className="mt-3 grid gap-3 text-xs text-slate-600 md:grid-cols-3">
+              <div className="rounded-xl bg-emerald-50/80 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+                  Sterke punten
+                </p>
+                <ul className="mt-2 space-y-1 list-disc pl-4">
+                  <li>Consistente kwaliteit in eindproducten.</li>
+                  <li>Duidelijke presentaties voor opdrachtgever.</li>
+                </ul>
+              </div>
+              <div className="rounded-xl bg-amber-50/80 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+                  Ontwikkelpunten
+                </p>
+                <ul className="mt-2 space-y-1 list-disc pl-4">
+                  <li>Planning en taakverdeling concreter maken.</li>
+                  <li>Reflecties uitbreiden met voorbeelden.</li>
+                </ul>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
+                  Volgende stap
+                </p>
+                <ul className="mt-2 space-y-1 list-disc pl-4">
+                  <li>Kies 1 categorie om bewust op te focussen.</li>
+                  <li>Bespreek je doelen met je docent of coach.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Mini legend */}
+          <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+            <h2 className="text-sm font-semibold text-slate-900">
+              Legenda rubriccategorieën
+            </h2>
+            <ul className="mt-3 space-y-2 text-xs text-slate-600">
+              {Object.keys(stats.categoryAverages).map((category, index) => {
+                const colors = ['bg-sky-500', 'bg-violet-500', 'bg-emerald-500', 'bg-amber-500'];
+                return (
+                  <li key={category} className="flex items-center gap-2">
+                    <span
+                      className={`inline-block h-2 w-2 rounded-full ${colors[index % colors.length]}`}
+                      aria-hidden="true"
+                    ></span>
+                    {category}
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="mt-3 text-[11px] text-slate-500">
+              De kleuren sluiten aan bij de grafieken op deze pagina en bij
+              de projectrubric.
+            </p>
+          </div>
+        </section>
 
         {/* Table */}
-        <div className="rounded-xl bg-white border border-gray-300 shadow-sm overflow-hidden">
-          <div className="p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Alle projectbeoordelingen
-            </h3>
+        <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+          <div className="flex flex-col gap-2 border-b border-slate-200 pb-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">
+                Alle projectbeoordelingen
+              </h2>
+              <p className="mt-1 text-xs text-slate-500">
+                Vergelijk je projecten en open details per beoordeling.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <select className="h-8 rounded-full border border-slate-200 bg-slate-50 px-3 text-xs text-slate-700">
+                <option>Sorteren op nieuwste</option>
+                <option>Sorteren op oudste</option>
+                <option>Sorteren op titel</option>
+              </select>
+            </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-y border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Project
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Team
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Datum
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Docent
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acties
-                  </th>
+
+          <div className="mt-3 overflow-x-auto">
+            <table className="min-w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
+                  <th className="px-3 py-2 font-medium">Project</th>
+                  <th className="px-3 py-2 font-medium">Team</th>
+                  <th className="px-3 py-2 font-medium">Periode</th>
+                  <th className="px-3 py-2 font-medium">Docent</th>
+                  <th className="px-3 py-2 font-medium text-right">Acties</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y divide-slate-100">
                 {projectAssessments.map((assessment) => (
-                  <tr key={assessment.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {assessment.title}
+                  <tr key={assessment.id} className="hover:bg-slate-50/80">
+                    <td className="px-3 py-2 align-top">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-medium text-slate-900">
+                          {assessment.title}
+                        </span>
+                        <span className="text-[11px] text-slate-500">
+                          {assessment.course_name || '—'}
+                        </span>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {assessment.group_name || "—"}
+                    <td className="px-3 py-2 align-top text-xs text-slate-600">
+                      {assessment.group_name || '—'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-3 py-2 align-top text-xs text-slate-600">
                       {assessment.published_at
-                        ? new Date(assessment.published_at).toLocaleDateString(
-                            "nl-NL"
-                          )
-                        : "—"}
+                        ? new Date(assessment.published_at).toLocaleDateString('nl-NL', {
+                            year: 'numeric',
+                            month: 'long',
+                          })
+                        : '—'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {assessment.teacher_name || "—"}
+                    <td className="px-3 py-2 align-top text-xs text-slate-600">
+                      {assessment.teacher_name || '—'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                    <td className="px-3 py-2 align-top text-right">
                       <Link
                         href={`/student/project-assessments/${assessment.id}`}
-                        className="text-purple-600 hover:text-purple-800 font-medium"
+                        className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-[11px] font-medium text-white hover:bg-slate-800"
                       >
-                        Details →
+                        Bekijk details
                       </Link>
                     </td>
                   </tr>
@@ -280,8 +411,8 @@ export default function ProjectOverviewPage() {
               </tbody>
             </table>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </main>
   );
 }
