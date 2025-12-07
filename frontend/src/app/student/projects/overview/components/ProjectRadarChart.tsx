@@ -112,7 +112,7 @@ export function ProjectRadarChart({ categoryAverages }: ProjectRadarChartProps) 
               font: { size: 11 },
             },
             pointLabels: {
-              font: { size: 12, weight: '500' },
+              font: { size: 12, weight: 500 },
             },
             grid: {
               color: "rgba(0, 0, 0, 0.1)",
