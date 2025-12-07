@@ -310,6 +310,33 @@ export default function TemplatesPageInner() {
     loadSubjects();
   }, []);
 
+  // Define fetchLearningObjectives before the useEffects that use it
+  const fetchLearningObjectives = useCallback(async (page: number = objectivesPagination.page) => {
+    if (!selectedSubjectId) return;
+
+    setLoadingObjectives(true);
+    try {
+      const response = await listLearningObjectives({
+        page: page,
+        limit: objectivesPagination.limit,
+        subject_id: selectedSubjectId, // Filter by selected subject
+        objective_type: "template", // Only show central/template objectives in admin
+        phase: selectedObjectiveLevelFilter !== "all" ? selectedObjectiveLevelFilter : undefined,
+        domain: selectedObjectiveDomainFilter !== "all" ? selectedObjectiveDomainFilter : undefined,
+      });
+      setLearningObjectives(response.items);
+      setObjectivesPagination({
+        page: response.page,
+        limit: response.limit,
+        total: response.total,
+      });
+    } catch (err) {
+      console.error("Error fetching learning objectives:", err);
+    } finally {
+      setLoadingObjectives(false);
+    }
+  }, [selectedSubjectId, objectivesPagination.page, objectivesPagination.limit, selectedObjectiveLevelFilter, selectedObjectiveDomainFilter]);
+
   // Load learning objectives when tab changes to objectives
   useEffect(() => {
     if (activeTab === "objectives" && selectedSubjectId) {
@@ -379,32 +406,6 @@ export default function TemplatesPageInner() {
       setLoading(false);
     }
   };
-
-  const fetchLearningObjectives = useCallback(async (page: number = objectivesPagination.page) => {
-    if (!selectedSubjectId) return;
-
-    setLoadingObjectives(true);
-    try {
-      const response = await listLearningObjectives({
-        page: page,
-        limit: objectivesPagination.limit,
-        subject_id: selectedSubjectId, // Filter by selected subject
-        objective_type: "template", // Only show central/template objectives in admin
-        phase: selectedObjectiveLevelFilter !== "all" ? selectedObjectiveLevelFilter : undefined,
-        domain: selectedObjectiveDomainFilter !== "all" ? selectedObjectiveDomainFilter : undefined,
-      });
-      setLearningObjectives(response.items);
-      setObjectivesPagination({
-        page: response.page,
-        limit: response.limit,
-        total: response.total,
-      });
-    } catch (err) {
-      console.error("Error fetching learning objectives:", err);
-    } finally {
-      setLoadingObjectives(false);
-    }
-  }, [selectedSubjectId, objectivesPagination.page, objectivesPagination.limit, selectedObjectiveLevelFilter, selectedObjectiveDomainFilter]);
 
   const fetchCategories = async () => {
     try {
