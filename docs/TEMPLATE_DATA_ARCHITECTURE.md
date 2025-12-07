@@ -650,19 +650,43 @@ def upgrade():
 
 ### 2. Idempotent Migrations
 
-Use `ON CONFLICT DO NOTHING` or `ON CONFLICT DO UPDATE` to make migrations safe to run multiple times:
+Use `ON CONFLICT DO UPDATE` to make migrations safe to run multiple times and handle updates properly:
 
 ```python
+import json
+
 conn.execute(
     sa.text("""
         INSERT INTO peer_evaluation_criterion_templates 
-            (school_id, subject_id, omza_category, title, ...)
-        VALUES (:school_id, :subject_id, :category, :title, ...)
-        ON CONFLICT (school_id, subject_id, title) DO NOTHING
+            (school_id, subject_id, omza_category, title, description, 
+             target_level, level_descriptors, learning_objective_ids)
+        VALUES (:school_id, :subject_id, :category, :title, :description,
+                :target_level, :descriptors::jsonb, :lo_ids::jsonb)
+        ON CONFLICT (school_id, subject_id, omza_category, title, target_level) 
+        DO UPDATE SET
+            description = EXCLUDED.description,
+            level_descriptors = EXCLUDED.level_descriptors,
+            learning_objective_ids = EXCLUDED.learning_objective_ids,
+            updated_at = CURRENT_TIMESTAMP
     """),
-    params
+    {
+        "school_id": school_id,
+        "subject_id": subject_id,
+        "category": category,
+        "title": title,
+        "description": description,
+        "target_level": target_level,
+        "descriptors": json.dumps(level_descriptors),
+        "lo_ids": json.dumps(learning_objective_ids)
+    }
 )
 ```
+
+**Key points:**
+- Specify exact conflict columns for clarity
+- Use `DO UPDATE` to update existing records (or `DO NOTHING` if you want to preserve user changes)
+- Use `json.dumps()` for clean JSON serialization instead of complex stringify methods
+- Update the `updated_at` timestamp when updating existing records
 
 ### 3. Subject-Based Templates
 
@@ -740,6 +764,7 @@ Create Date: 2025-12-07
 
 from alembic import op
 import sqlalchemy as sa
+import json
 
 revision = "pec_20251207_01"
 down_revision = "previous_revision"
@@ -798,6 +823,7 @@ def upgrade():
             # Insert templates for each OMZA category
             for category, templates in OMZA_TEMPLATES.items():
                 for template in templates:
+                    # Use json.dumps for cleaner JSON serialization
                     conn.execute(
                         sa.text("""
                             INSERT INTO peer_evaluation_criterion_templates (
@@ -809,7 +835,12 @@ def upgrade():
                                 :description, :target_level, :descriptors::jsonb,
                                 :lo_ids::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                             )
-                            ON CONFLICT DO NOTHING
+                            ON CONFLICT (school_id, subject_id, omza_category, title, target_level) 
+                            DO UPDATE SET
+                                description = EXCLUDED.description,
+                                level_descriptors = EXCLUDED.level_descriptors,
+                                learning_objective_ids = EXCLUDED.learning_objective_ids,
+                                updated_at = CURRENT_TIMESTAMP
                         """),
                         {
                             "school_id": school_id,
@@ -818,8 +849,8 @@ def upgrade():
                             "title": template["title"],
                             "description": template.get("description"),
                             "target_level": template.get("target_level"),
-                            "descriptors": sa.text(f"'{sa.inspect(sa.JSON).stringify(template['level_descriptors'])}'"),
-                            "lo_ids": sa.text(f"'{sa.inspect(sa.JSON).stringify(template['learning_objective_ids'])}'")
+                            "descriptors": json.dumps(template["level_descriptors"]),
+                            "lo_ids": json.dumps(template["learning_objective_ids"])
                         }
                     )
 
