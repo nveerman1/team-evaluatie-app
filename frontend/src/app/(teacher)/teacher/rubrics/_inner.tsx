@@ -1,8 +1,8 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { rubricService, competencyService } from "@/services";
-import { RubricListItem, Competency, CompetencyTree, CompetencyCategoryTreeItem, CompetencyTreeItem, CompetencyListResponse, CompetencyType, CompetencyCategory, CompetencyCreate, CompetencyUpdate } from "@/dtos";
+import { RubricListItem, Competency, CompetencyListResponse, CompetencyType, CompetencyCategory, CompetencyCreate, CompetencyUpdate } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -29,10 +29,7 @@ export default function RubricsListInner() {
   const [activeTab, setActiveTab] = useState<TabType>("peer");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<number | "all">("all");
   const [selectedNiveauFilter, setSelectedNiveauFilter] = useState<"all" | "onderbouw" | "bovenbouw">("all");
-  const [reorderError, setReorderError] = useState<string | null>(null);
-  const [reorderSuccess, setReorderSuccess] = useState(false);
 
   // Competencies tab state (like competencies-beheer page)
   const [viewMode, setViewMode] = useState<ViewMode>("all");
