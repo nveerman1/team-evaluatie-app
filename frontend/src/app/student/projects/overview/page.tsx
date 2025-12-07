@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useStudentProjectAssessments } from "@/hooks/useStudentProjectAssessments";
+import { useStudentProjectDetails } from "@/hooks/useStudentProjectDetails";
 import { Loading, ErrorMessage } from "@/components";
 import Link from "next/link";
 import { ProjectLineChart } from "./components/ProjectLineChart";
@@ -42,6 +43,17 @@ export default function ProjectOverviewPage() {
     error,
   } = useStudentProjectAssessments();
 
+  // Fetch detailed assessment data for all projects
+  const assessmentIds = useMemo(() => {
+    return projectAssessments?.map(a => a.id) || [];
+  }, [projectAssessments]);
+
+  const {
+    details: projectDetails,
+    loading: detailsLoading,
+    error: detailsError,
+  } = useStudentProjectDetails(assessmentIds);
+
   // Compute statistics from project assessments
   const stats = useMemo(() => {
     if (!projectAssessments || projectAssessments.length === 0) {
@@ -51,42 +63,90 @@ export default function ProjectOverviewPage() {
         categoryAverages: {},
         gradesTrend: [],
         topCategories: [],
+        assessmentCategoryScores: new Map<number, Record<string, { avg: number; max: number }>>(),
       };
     }
 
-    // TODO: Replace mock data with actual grade/score calculations
-    // The current DTO (ProjectAssessmentListItem) does not include grade or detailed scores
-    // In production, this should:
-    // 1. Fetch detailed assessment data for each project (including grades and rubric scores)
-    // 2. Calculate actual average grades from assessment details
-    // 3. Calculate actual category averages from rubric criterion scores
-    // 4. Extract real grade trends from assessment history
-    
     const completedCount = projectAssessments.length;
     
-    // Mock average grade (would come from actual grade field in detail data)
-    const avgGrade = 7.8;
+    // Calculate real average grade from detailed assessments
+    let totalGrade = 0;
+    let gradeCount = 0;
+    projectDetails.forEach((detail) => {
+      if (detail.grade !== null && detail.grade !== undefined) {
+        totalGrade += detail.grade;
+        gradeCount++;
+      }
+    });
+    const avgGrade = gradeCount > 0 ? totalGrade / gradeCount : 0;
     
-    // Mock category averages (would be calculated from rubric criterion scores)
-    const categoryAverages = {
-      Projectproces: 4.2,
-      Eindresultaat: 4.1,
-      Communicatie: 4.0,
-      Samenwerking: 3.8,
-    };
+    // Calculate category averages from criterion scores
+    const categorySums: Record<string, number> = {};
+    const categoryCounts: Record<string, number> = {};
+    
+    // Calculate per-assessment category scores
+    const assessmentCategoryScores = new Map<number, Record<string, { avg: number; max: number }>>();
+    
+    projectDetails.forEach((detail, assessmentId) => {
+      const categoryData: Record<string, { sum: number; count: number; max: number }> = {};
+      
+      // Group scores by category
+      detail.criteria.forEach((criterion) => {
+        if (criterion.category) {
+          const score = detail.scores.find(s => s.criterion_id === criterion.id);
+          if (score) {
+            // Add to global category averages
+            if (!categorySums[criterion.category]) {
+              categorySums[criterion.category] = 0;
+              categoryCounts[criterion.category] = 0;
+            }
+            categorySums[criterion.category] += score.score;
+            categoryCounts[criterion.category]++;
+            
+            // Add to per-assessment category scores
+            if (!categoryData[criterion.category]) {
+              categoryData[criterion.category] = { sum: 0, count: 0, max: detail.rubric_scale_max };
+            }
+            categoryData[criterion.category].sum += score.score;
+            categoryData[criterion.category].count++;
+          }
+        }
+      });
+      
+      // Calculate averages for this assessment
+      const assessmentScores: Record<string, { avg: number; max: number }> = {};
+      Object.keys(categoryData).forEach((category) => {
+        const data = categoryData[category];
+        assessmentScores[category] = {
+          avg: data.sum / data.count,
+          max: data.max,
+        };
+      });
+      assessmentCategoryScores.set(assessmentId, assessmentScores);
+    });
+    
+    const categoryAverages: Record<string, number> = {};
+    Object.keys(categorySums).forEach((category) => {
+      categoryAverages[category] = categorySums[category] / categoryCounts[category];
+    });
 
     // Get top 2 categories for KPI tile
     const topCategories = Object.entries(categoryAverages)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 2);
 
-    // Prepare trend data for line chart with deterministic mock grades
-    const gradesTrend = projectAssessments.map((assessment, index) => ({
-      label: assessment.title.substring(0, 20),
-      // TODO: Use actual grade from assessment detail
-      grade: 7 + ((index * 37) % 30) / 10, // Deterministic pseudo-random grade between 7.0-10.0
-      date: assessment.published_at || "",
-    }));
+    // Prepare trend data for line chart with real grades (excluding external assessments)
+    // Filter out external assessments (those with teacher_id = null)
+    const gradesTrend = projectAssessments
+      .filter((assessment) => assessment.teacher_id !== null)
+      .map((assessment) => {
+        const detail = projectDetails.get(assessment.id);
+        return {
+          label: assessment.title.substring(0, 20),
+          grade: detail?.grade || 0,
+          date: assessment.published_at || "",
+        };
+      });
 
     return {
       avgGrade,
@@ -94,10 +154,11 @@ export default function ProjectOverviewPage() {
       categoryAverages,
       gradesTrend,
       topCategories,
+      assessmentCategoryScores,
     };
-  }, [projectAssessments]);
+  }, [projectAssessments, projectDetails]);
 
-  if (loading) {
+  if (loading || detailsLoading) {
     return (
       <main className="min-h-screen bg-slate-100/80">
         <PageHeader />
@@ -108,12 +169,12 @@ export default function ProjectOverviewPage() {
     );
   }
 
-  if (error) {
+  if (error || detailsError) {
     return (
       <main className="min-h-screen bg-slate-100/80">
         <PageHeader />
         <div className="max-w-6xl mx-auto px-4 py-8">
-          <ErrorMessage message={error} />
+          <ErrorMessage message={error || detailsError || "An error occurred"} />
         </div>
       </main>
     );
@@ -151,22 +212,6 @@ export default function ProjectOverviewPage() {
       <PageHeader />
       
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pb-10 pt-8">
-        {/* Tip banner */}
-        <div className="flex items-center justify-between gap-3 rounded-2xl bg-white/80 p-3 shadow-sm ring-1 ring-slate-200/80">
-          <div className="flex flex-col text-xs text-slate-600 sm:flex-row sm:items-center sm:gap-2">
-            <span className="font-medium text-slate-800">Tip</span>
-            <span>
-              Gebruik deze pagina om je ontwikkeling over meerdere projecten te volgen.
-            </span>
-          </div>
-          <Link
-            href="/student#projecten"
-            className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
-          >
-            Terug naar dashboard
-          </Link>
-        </div>
-
         {/* KPI tiles */}
         <section className="grid gap-4 md:grid-cols-4">
           <div className="group flex flex-col justify-between rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200">
@@ -260,7 +305,7 @@ export default function ProjectOverviewPage() {
               </h2>
               <span className="text-[11px] text-slate-500">Radar grafiek</span>
             </div>
-            <div className="mt-3 flex h-56 items-center justify-center">
+            <div className="mt-3 flex h-72 items-center justify-center">
               <ProjectRadarChart categoryAverages={stats.categoryAverages} />
             </div>
           </div>
@@ -365,49 +410,93 @@ export default function ProjectOverviewPage() {
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
                   <th className="px-3 py-2 font-medium">Project</th>
-                  <th className="px-3 py-2 font-medium">Team</th>
+                  <th className="px-3 py-2 font-medium">Opdrachtgever</th>
                   <th className="px-3 py-2 font-medium">Periode</th>
                   <th className="px-3 py-2 font-medium">Docent</th>
+                  <th className="px-3 py-2 font-medium">Eindcijfer</th>
+                  <th className="px-3 py-2 font-medium">Projectproces</th>
+                  <th className="px-3 py-2 font-medium">Eindresultaat</th>
+                  <th className="px-3 py-2 font-medium">Communicatie</th>
                   <th className="px-3 py-2 font-medium text-right">Acties</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {projectAssessments.map((assessment) => (
-                  <tr key={assessment.id} className="hover:bg-slate-50/80">
-                    <td className="px-3 py-2 align-top">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-medium text-slate-900">
-                          {assessment.title}
+                {projectAssessments.map((assessment) => {
+                  const categoryScores = stats.assessmentCategoryScores.get(assessment.id) || {};
+                  const detail = projectDetails.get(assessment.id);
+                  
+                  const getCategoryDisplay = (category: string) => {
+                    const data = categoryScores[category];
+                    if (!data) return '—';
+                    return `${data.avg.toFixed(1)} / ${data.max}`;
+                  };
+                  
+                  // Get grade color based on value
+                  const getGradeColor = (grade: number | null | undefined) => {
+                    if (grade === null || grade === undefined) return 'text-slate-600';
+                    if (grade >= 8.0) return 'text-green-700';
+                    if (grade >= 6.5) return 'text-amber-600';
+                    return 'text-red-600';
+                  };
+                  
+                  // Extract opdrachtgever from metadata_json
+                  const opdrachtgever = assessment.metadata_json?.opdrachtgever || 
+                                       assessment.metadata_json?.client || 
+                                       '—';
+                  
+                  return (
+                    <tr key={assessment.id} className="hover:bg-slate-50/80">
+                      <td className="px-3 py-2 align-top">
+                        <div className="flex flex-col">
+                          <span className="text-xs font-medium text-slate-900">
+                            {assessment.title}
+                          </span>
+                          <span className="text-[11px] text-slate-500">
+                            {assessment.course_name || '—'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 align-top text-xs text-slate-600">
+                        {opdrachtgever}
+                      </td>
+                      <td className="px-3 py-2 align-top text-xs text-slate-600">
+                        {assessment.published_at
+                          ? new Date(assessment.published_at).toLocaleDateString('nl-NL', {
+                              year: 'numeric',
+                              month: 'long',
+                            })
+                          : '—'}
+                      </td>
+                      <td className="px-3 py-2 align-top text-xs text-slate-600">
+                        {assessment.teacher_name || '—'}
+                      </td>
+                      <td className="px-3 py-2 align-top">
+                        <span className={`text-xs font-bold ${getGradeColor(detail?.grade)}`}>
+                          {detail?.grade !== null && detail?.grade !== undefined 
+                            ? detail.grade.toFixed(1) 
+                            : '—'}
                         </span>
-                        <span className="text-[11px] text-slate-500">
-                          {assessment.course_name || '—'}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-3 py-2 align-top text-xs text-slate-600">
-                      {assessment.group_name || '—'}
-                    </td>
-                    <td className="px-3 py-2 align-top text-xs text-slate-600">
-                      {assessment.published_at
-                        ? new Date(assessment.published_at).toLocaleDateString('nl-NL', {
-                            year: 'numeric',
-                            month: 'long',
-                          })
-                        : '—'}
-                    </td>
-                    <td className="px-3 py-2 align-top text-xs text-slate-600">
-                      {assessment.teacher_name || '—'}
-                    </td>
-                    <td className="px-3 py-2 align-top text-right">
-                      <Link
-                        href={`/student/project-assessments/${assessment.id}`}
-                        className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-[11px] font-medium text-white hover:bg-slate-800"
-                      >
-                        Bekijk details
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-3 py-2 align-top text-xs text-slate-600">
+                        {getCategoryDisplay('Projectproces')}
+                      </td>
+                      <td className="px-3 py-2 align-top text-xs text-slate-600">
+                        {getCategoryDisplay('Eindresultaat')}
+                      </td>
+                      <td className="px-3 py-2 align-top text-xs text-slate-600">
+                        {getCategoryDisplay('Communicatie')}
+                      </td>
+                      <td className="px-3 py-2 align-top text-right">
+                        <Link
+                          href={`/student/project-assessments/${assessment.id}`}
+                          className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-[11px] font-medium text-white hover:bg-slate-800"
+                        >
+                          Bekijk details
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

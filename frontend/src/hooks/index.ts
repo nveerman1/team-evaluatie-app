@@ -8,6 +8,7 @@ export * from "./useStudentDashboard";
 export * from "./useStudentEvaluations";
 export * from "./useStudentResults";
 export * from "./useStudentProjectAssessments";
+export * from "./useStudentProjectDetails";
 export * from "./useCurrentUser";
 export * from "./useAuth";
 export * from "./useClients";
