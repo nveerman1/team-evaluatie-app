@@ -480,124 +480,60 @@ export default function RubricsListInner() {
               </div>
             </div>
 
-            {/* Type Filter Pills */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-medium text-gray-700">Toon:</span>
-              <button
-                onClick={() => setViewMode("all")}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                  viewMode === "all"
-                    ? "bg-sky-100 text-sky-700 border-sky-300"
-                    : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
-                }`}
+            {/* Filters - Combined in one bar */}
+            <section className="flex flex-wrap items-center gap-3 bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Zoek op naam of beschrijving..."
+                className="px-3 py-2 rounded-lg border w-64"
+              />
+              <select
+                value={viewMode}
+                onChange={(e) => setViewMode(e.target.value as ViewMode)}
+                className="px-3 py-2 rounded-lg border"
               >
-                Alle
-              </button>
-              <button
-                onClick={() => setViewMode("central")}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                  viewMode === "central"
-                    ? "bg-amber-100 text-amber-700 border-amber-300"
-                    : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
-                }`}
+                <option value="all">Alle competenties</option>
+                <option value="central">Centrale competenties</option>
+                <option value="teacher">Mijn eigen competenties</option>
+                <option value="shared">Gedeelde competenties</option>
+              </select>
+              <select
+                value={phaseFilter}
+                onChange={(e) => setPhaseFilter(e.target.value)}
+                className="px-3 py-2 rounded-lg border"
               >
-                Centrale competenties
-              </button>
-              <button
-                onClick={() => setViewMode("teacher")}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                  viewMode === "teacher"
-                    ? "bg-emerald-100 text-emerald-700 border-emerald-300"
-                    : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
-                }`}
+                <option value="">Alle fasen</option>
+                <option value="onderbouw">Onderbouw</option>
+                <option value="bovenbouw">Bovenbouw</option>
+              </select>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value === "all" ? "all" : parseInt(e.target.value))}
+                className="px-3 py-2 rounded-lg border"
               >
-                Mijn eigen competenties
-              </button>
-              <button
-                onClick={() => setViewMode("shared")}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                  viewMode === "shared"
-                    ? "bg-cyan-100 text-cyan-700 border-cyan-300"
-                    : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
-                }`}
-              >
-                Gedeelde competenties
-              </button>
-            </div>
-
-            {/* Phase Tabs */}
-            <div className="border-b border-gray-200">
-              <nav className="flex gap-8" aria-label="Tabs">
+                <option value="all">Alle categorieën</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+              {(searchQuery || viewMode !== "all" || phaseFilter || categoryFilter !== "all") && (
                 <button
-                  onClick={() => setPhaseFilter("")}
-                  className={`
-                    py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                    ${
-                      phaseFilter === ""
-                        ? "border-black text-black"
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                    }
-                  `}
+                  onClick={() => {
+                    setSearchQuery("");
+                    setViewMode("all");
+                    setPhaseFilter("");
+                    setCategoryFilter("all");
+                  }}
+                  className="px-3 py-2 rounded-lg border hover:bg-gray-50"
                 >
-                  Alle fasen
+                  Reset
                 </button>
-                <button
-                  onClick={() => setPhaseFilter("onderbouw")}
-                  className={`
-                    py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                    ${
-                      phaseFilter === "onderbouw"
-                        ? "border-black text-black"
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                    }
-                  `}
-                >
-                  Onderbouw
-                </button>
-                <button
-                  onClick={() => setPhaseFilter("bovenbouw")}
-                  className={`
-                    py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                    ${
-                      phaseFilter === "bovenbouw"
-                        ? "border-black text-black"
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                    }
-                  `}
-                >
-                  Bovenbouw
-                </button>
-              </nav>
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-wrap items-center gap-6 bg-white p-4 rounded-2xl border">
-              <div className="flex items-center gap-3">
-                <label className="text-sm font-medium">Zoeken:</label>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Naam of beschrijving..."
-                  className="border rounded-lg px-3 py-2"
-                />
-              </div>
-              <div className="flex items-center gap-3">
-                <label className="text-sm font-medium">Categorie:</label>
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value === "all" ? "all" : parseInt(e.target.value))}
-                  className="border rounded-lg px-3 py-2"
-                >
-                  <option value="all">Alle categorieën</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+              )}
+            </section>
 
             {/* Inline Creation Form */}
             {isCreating && (
@@ -699,7 +635,7 @@ export default function RubricsListInner() {
             )}
 
             {/* Table */}
-            <div className="bg-white rounded-2xl border overflow-hidden">
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
               <table className="w-full table-fixed">
                 <thead className="bg-gray-50">
                   <tr>
