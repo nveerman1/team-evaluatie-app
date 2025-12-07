@@ -639,19 +639,19 @@ export default function RubricsListInner() {
               <table className="w-full table-fixed">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="w-36 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Type
                     </th>
-                    <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="w-44 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Categorie
                     </th>
-                    <th className="w-40 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="w-56 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Naam
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Beschrijving
                     </th>
-                    <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Fase
                     </th>
                   </tr>
@@ -667,21 +667,21 @@ export default function RubricsListInner() {
                         className={`hover:bg-gray-50 cursor-pointer ${getRowBackground(comp)}`}
                         onClick={() => toggleExpand(comp.id)}
                       >
-                        <td className="w-28 px-4 py-3 text-sm">
+                        <td className="w-36 px-4 py-3 text-sm">
                           {getTypeBadge(comp)}
                         </td>
-                        <td className="w-32 px-4 py-3 text-sm">
+                        <td className="w-44 px-4 py-3 text-sm">
                           {comp.category_name ? (
                             <span className="font-medium">{comp.category_name}</span>
                           ) : (
                             <span className="text-gray-400">-</span>
                           )}
                         </td>
-                        <td className="w-40 px-4 py-3 text-sm font-medium">{comp.name}</td>
+                        <td className="w-56 px-4 py-3 text-sm font-medium">{comp.name}</td>
                         <td className="px-4 py-3 text-sm text-gray-600 truncate">
                           {comp.description || <span className="text-gray-400">-</span>}
                         </td>
-                        <td className="w-24 px-4 py-3 text-sm">
+                        <td className="w-32 px-4 py-3 text-sm">
                           {comp.phase ? (
                             <span className={`px-2 py-1 rounded text-xs ${
                               comp.phase === "onderbouw" 
