@@ -85,6 +85,11 @@ const TABS: { key: TabType; label: string }[] = [
   { key: "tags", label: "Tags & metadata" },
 ];
 
+// Pagination constants for learning objectives
+const MAX_VISIBLE_PAGES = 7;
+const ELLIPSIS_THRESHOLD = 3;
+const ELLIPSIS_OFFSET = 2;
+
 export default function TemplatesPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -311,7 +316,7 @@ export default function TemplatesPageInner() {
   }, []);
 
   // Define fetchLearningObjectives before the useEffects that use it
-  const fetchLearningObjectives = useCallback(async (page: number = objectivesPagination.page) => {
+  const fetchLearningObjectives = useCallback(async (page: number) => {
     if (!selectedSubjectId) return;
 
     setLoadingObjectives(true);
@@ -335,7 +340,7 @@ export default function TemplatesPageInner() {
     } finally {
       setLoadingObjectives(false);
     }
-  }, [selectedSubjectId, objectivesPagination.page, objectivesPagination.limit, selectedObjectiveLevelFilter, selectedObjectiveDomainFilter]);
+  }, [selectedSubjectId, objectivesPagination.limit, selectedObjectiveLevelFilter, selectedObjectiveDomainFilter]);
 
   // Load learning objectives when tab changes to objectives
   useEffect(() => {
@@ -358,7 +363,7 @@ export default function TemplatesPageInner() {
   useEffect(() => {
     if (activeTab === "peer" && selectedSubjectId) {
       fetchPeerCriteria();
-      fetchLearningObjectives(); // Also load learning objectives for linking
+      fetchLearningObjectives(1); // Also load learning objectives for linking
     }
   }, [activeTab, selectedSubjectId]);
 
@@ -366,7 +371,7 @@ export default function TemplatesPageInner() {
   useEffect(() => {
     if (activeTab === "rubrics" && selectedSubjectId) {
       fetchProjectCriteria();
-      fetchLearningObjectives(); // Also load learning objectives for linking
+      fetchLearningObjectives(1); // Also load learning objectives for linking
     }
   }, [activeTab, selectedSubjectId]);
 
@@ -677,7 +682,7 @@ export default function TemplatesPageInner() {
         is_template: true, // This is a central objective managed by admin
       });
       setIsCreateModalOpen(false);
-      fetchLearningObjectives();
+      fetchLearningObjectives(1);
     } catch (err) {
       console.error("Error creating learning objective:", err);
       alert("Er is een fout opgetreden bij het aanmaken van het leerdoel.");
@@ -700,7 +705,7 @@ export default function TemplatesPageInner() {
         order: 0,
         phase: "",
       });
-      fetchLearningObjectives();
+      fetchLearningObjectives(objectivesPagination.page);
     } catch (err) {
       console.error("Error updating learning objective:", err);
       alert("Er is een fout opgetreden bij het bijwerken van het leerdoel.");
@@ -713,7 +718,7 @@ export default function TemplatesPageInner() {
     }
     try {
       await deleteLearningObjective(id);
-      fetchLearningObjectives();
+      fetchLearningObjectives(objectivesPagination.page);
     } catch (err) {
       console.error("Error deleting learning objective:", err);
       alert("Er is een fout opgetreden bij het verwijderen van het leerdoel.");
@@ -826,7 +831,7 @@ export default function TemplatesPageInner() {
       );
       setImportResult(result);
       if (result.errors.length === 0) {
-        fetchLearningObjectives();
+        fetchLearningObjectives(1);
       }
     } catch (err) {
       console.error("Error importing learning objectives:", err);
@@ -4006,8 +4011,8 @@ export default function TemplatesPageInner() {
                       const currentPage = objectivesPagination.page;
                       const pages: (number | string)[] = [];
                       
-                      if (totalPages <= 7) {
-                        // Show all pages if 7 or fewer
+                      if (totalPages <= MAX_VISIBLE_PAGES) {
+                        // Show all pages if MAX_VISIBLE_PAGES or fewer
                         for (let i = 1; i <= totalPages; i++) {
                           pages.push(i);
                         }
@@ -4015,7 +4020,7 @@ export default function TemplatesPageInner() {
                         // Always show first page
                         pages.push(1);
                         
-                        if (currentPage > 3) {
+                        if (currentPage > ELLIPSIS_THRESHOLD) {
                           pages.push("...");
                         }
                         
@@ -4027,7 +4032,7 @@ export default function TemplatesPageInner() {
                           pages.push(i);
                         }
                         
-                        if (currentPage < totalPages - 2) {
+                        if (currentPage < totalPages - ELLIPSIS_OFFSET) {
                           pages.push("...");
                         }
                         
