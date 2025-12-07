@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { subjectService } from "@/services/subject.service";
@@ -102,6 +102,11 @@ export default function TemplatesPageInner() {
     LearningObjectiveDto[]
   >([]);
   const [loadingObjectives, setLoadingObjectives] = useState(false);
+  const [objectivesPagination, setObjectivesPagination] = useState({
+    page: 1,
+    limit: 100,
+    total: 0,
+  });
   const [formData, setFormData] = useState<LearningObjectiveCreateDto>({
     domain: "",
     title: "",
@@ -308,9 +313,19 @@ export default function TemplatesPageInner() {
   // Load learning objectives when tab changes to objectives
   useEffect(() => {
     if (activeTab === "objectives" && selectedSubjectId) {
-      fetchLearningObjectives();
+      // Reset to page 1 when subject or tab changes
+      setObjectivesPagination(prev => ({ ...prev, page: 1 }));
+      fetchLearningObjectives(1);
     }
-  }, [activeTab, selectedSubjectId]);
+  }, [activeTab, selectedSubjectId, fetchLearningObjectives]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    if (activeTab === "objectives" && selectedSubjectId) {
+      setObjectivesPagination(prev => ({ ...prev, page: 1 }));
+      fetchLearningObjectives(1);
+    }
+  }, [selectedObjectiveLevelFilter, selectedObjectiveDomainFilter, activeTab, selectedSubjectId, fetchLearningObjectives]);
 
   // Load peer criteria when tab changes to peer
   useEffect(() => {
@@ -365,24 +380,31 @@ export default function TemplatesPageInner() {
     }
   };
 
-  const fetchLearningObjectives = async () => {
+  const fetchLearningObjectives = useCallback(async (page: number = objectivesPagination.page) => {
     if (!selectedSubjectId) return;
 
     setLoadingObjectives(true);
     try {
       const response = await listLearningObjectives({
-        page: 1,
-        limit: 50,
+        page: page,
+        limit: objectivesPagination.limit,
         subject_id: selectedSubjectId, // Filter by selected subject
         objective_type: "template", // Only show central/template objectives in admin
+        phase: selectedObjectiveLevelFilter !== "all" ? selectedObjectiveLevelFilter : undefined,
+        domain: selectedObjectiveDomainFilter !== "all" ? selectedObjectiveDomainFilter : undefined,
       });
       setLearningObjectives(response.items);
+      setObjectivesPagination({
+        page: response.page,
+        limit: response.limit,
+        total: response.total,
+      });
     } catch (err) {
       console.error("Error fetching learning objectives:", err);
     } finally {
       setLoadingObjectives(false);
     }
-  };
+  }, [selectedSubjectId, objectivesPagination.page, objectivesPagination.limit, selectedObjectiveLevelFilter, selectedObjectiveDomainFilter]);
 
   const fetchCategories = async () => {
     try {
@@ -607,6 +629,8 @@ export default function TemplatesPageInner() {
   ]);
 
   // Get unique domains from learning objectives for filter dropdown
+  // Note: This shows domains from ALL objectives (not just current page)
+  // In a full implementation, you might want a separate API endpoint for this
   const uniqueObjectiveDomains = useMemo(() => {
     const domains = new Set<string>();
     learningObjectives.forEach((obj) => {
@@ -617,26 +641,9 @@ export default function TemplatesPageInner() {
     return Array.from(domains).sort();
   }, [learningObjectives]);
 
-  // Filter learning objectives based on selected filters
-  const filteredLearningObjectives = useMemo(() => {
-    let filtered = learningObjectives;
-    
-    // Filter by level (phase)
-    if (selectedObjectiveLevelFilter !== "all") {
-      filtered = filtered.filter(
-        (obj) => obj.phase === selectedObjectiveLevelFilter,
-      );
-    }
-    
-    // Filter by domain
-    if (selectedObjectiveDomainFilter !== "all") {
-      filtered = filtered.filter(
-        (obj) => obj.domain === selectedObjectiveDomainFilter,
-      );
-    }
-    
-    return filtered;
-  }, [learningObjectives, selectedObjectiveLevelFilter, selectedObjectiveDomainFilter]);
+  // For display purposes, we use learningObjectives directly since API does the filtering
+  // Keep this for backward compatibility with existing code
+  const filteredLearningObjectives = learningObjectives;
 
   const openCreateModal = () => {
     setFormData({
@@ -3961,6 +3968,118 @@ export default function TemplatesPageInner() {
                     Geen leerdoelen gevonden voor de geselecteerde filters.
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* Pagination Controls */}
+            {filteredLearningObjectives.length > 0 && objectivesPagination.total > 0 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
+                <div className="flex items-center gap-2 text-sm text-gray-700">
+                  <span>
+                    Toont {Math.min((objectivesPagination.page - 1) * objectivesPagination.limit + 1, objectivesPagination.total)} tot{" "}
+                    {Math.min(objectivesPagination.page * objectivesPagination.limit, objectivesPagination.total)} van{" "}
+                    {objectivesPagination.total} leerdoelen
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const newPage = objectivesPagination.page - 1;
+                      setObjectivesPagination(prev => ({ ...prev, page: newPage }));
+                      fetchLearningObjectives(newPage);
+                    }}
+                    disabled={objectivesPagination.page <= 1}
+                    className={`px-3 py-1 text-sm border rounded ${
+                      objectivesPagination.page <= 1
+                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        : "bg-white text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    Vorige
+                  </button>
+                  
+                  {/* Page numbers */}
+                  <div className="flex items-center gap-1">
+                    {(() => {
+                      const totalPages = Math.ceil(objectivesPagination.total / objectivesPagination.limit);
+                      const currentPage = objectivesPagination.page;
+                      const pages: (number | string)[] = [];
+                      
+                      if (totalPages <= 7) {
+                        // Show all pages if 7 or fewer
+                        for (let i = 1; i <= totalPages; i++) {
+                          pages.push(i);
+                        }
+                      } else {
+                        // Always show first page
+                        pages.push(1);
+                        
+                        if (currentPage > 3) {
+                          pages.push("...");
+                        }
+                        
+                        // Show pages around current page
+                        const start = Math.max(2, currentPage - 1);
+                        const end = Math.min(totalPages - 1, currentPage + 1);
+                        
+                        for (let i = start; i <= end; i++) {
+                          pages.push(i);
+                        }
+                        
+                        if (currentPage < totalPages - 2) {
+                          pages.push("...");
+                        }
+                        
+                        // Always show last page
+                        pages.push(totalPages);
+                      }
+                      
+                      return pages.map((page, idx) => {
+                        if (page === "...") {
+                          return (
+                            <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">
+                              ...
+                            </span>
+                          );
+                        }
+                        
+                        const pageNum = page as number;
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => {
+                              setObjectivesPagination(prev => ({ ...prev, page: pageNum }));
+                              fetchLearningObjectives(pageNum);
+                            }}
+                            className={`px-3 py-1 text-sm border rounded ${
+                              currentPage === pageNum
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : "bg-white text-gray-700 hover:bg-gray-50"
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      });
+                    })()}
+                  </div>
+                  
+                  <button
+                    onClick={() => {
+                      const newPage = objectivesPagination.page + 1;
+                      setObjectivesPagination(prev => ({ ...prev, page: newPage }));
+                      fetchLearningObjectives(newPage);
+                    }}
+                    disabled={objectivesPagination.page >= Math.ceil(objectivesPagination.total / objectivesPagination.limit)}
+                    className={`px-3 py-1 text-sm border rounded ${
+                      objectivesPagination.page >= Math.ceil(objectivesPagination.total / objectivesPagination.limit)
+                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        : "bg-white text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    Volgende
+                  </button>
+                </div>
               </div>
             )}
           </div>
