@@ -929,7 +929,7 @@ def upgrade():
                     INSERT INTO standard_remarks 
                         (school_id, type, category, text, "order")
                     VALUES (:school_id, :type, :category, :text, :order)
-                    ON CONFLICT DO NOTHING
+                    ON CONFLICT (school_id, type, category, text) DO NOTHING
                 """),
                 {
                     "school_id": school_id,
@@ -989,7 +989,7 @@ Example: `pec_20251207_01_seed_onderbouw_templates.py`
 
 Most assessment templates use a **1-5 scale**:
 
-1. **Level 1** - Beginner/Starting (Startend)
+1. **Level 1** - Beginner/Starting
 2. **Level 2** - Developing (Ontwikkelend)
 3. **Level 3** - Competent (Competent)
 4. **Level 4** - Advanced (Gevorderd)
