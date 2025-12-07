@@ -57,7 +57,7 @@ export default function RubricsListInner() {
     }
   }
 
-  async function fetchCompetenciesForBeheer() {
+  async function fetchCompetencies() {
     setLoading(true);
     setError(null);
 
@@ -118,7 +118,7 @@ export default function RubricsListInner() {
 
   async function fetchList(query = "", scope: TabType = activeTab) {
     if (scope === "competencies") {
-      await fetchCompetenciesForBeheer();
+      await fetchCompetencies();
     } else {
       await fetchRubrics(query, scope);
     }
@@ -135,7 +135,7 @@ export default function RubricsListInner() {
   // Fetch competencies when filters change
   useEffect(() => {
     if (activeTab === "competencies") {
-      fetchCompetenciesForBeheer();
+      fetchCompetencies();
     }
   }, [page, searchQuery, viewMode, categoryFilter, phaseFilter, activeTab]);
 
@@ -194,7 +194,7 @@ export default function RubricsListInner() {
       });
       setIsCreating(false);
       setFormData(initialFormData);
-      fetchCompetenciesForBeheer();
+      fetchCompetencies();
     } catch (err: unknown) {
       console.error("Error creating competency:", err);
       const axiosErr = err as { response?: { status?: number } };
@@ -211,7 +211,7 @@ export default function RubricsListInner() {
       await competencyService.updateCompetency(competencyId, editFormData);
       setEditingCompetency(null);
       setEditFormData({});
-      fetchCompetenciesForBeheer();
+      fetchCompetencies();
     } catch (err: unknown) {
       console.error("Error updating competency:", err);
       const axiosErr = err as { response?: { status?: number } };
@@ -256,7 +256,7 @@ export default function RubricsListInner() {
 
     try {
       await competencyService.deleteCompetency(competency.id);
-      fetchCompetenciesForBeheer();
+      fetchCompetencies();
     } catch (err) {
       console.error("Error deleting competency:", err);
       alert("Er is een fout opgetreden bij het verwijderen van de competentie.");
