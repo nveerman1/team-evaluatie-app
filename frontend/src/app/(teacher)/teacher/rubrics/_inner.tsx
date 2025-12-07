@@ -2,98 +2,29 @@
 import Link from "next/link";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { rubricService, competencyService } from "@/services";
-import { RubricListItem, Competency, CompetencyTree, CompetencyCategoryTreeItem, CompetencyTreeItem } from "@/dtos";
+import { RubricListItem, Competency, CompetencyTree, CompetencyCategoryTreeItem, CompetencyTreeItem, CompetencyListResponse, CompetencyType, CompetencyCategory, CompetencyCreate, CompetencyUpdate } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { useAuth } from "@/hooks/useAuth";
 
 type TabType = "peer" | "project" | "competencies";
 
-// Sortable Competency Row Component
-function SortableCompetencyRow({ competency }: { competency: CompetencyTreeItem }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: competency.id });
+// View mode type for competencies tab
+type ViewMode = "all" | "central" | "teacher" | "shared";
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`flex w-full items-center justify-between gap-4 px-2 py-3 text-left transition ${
-        isDragging ? "bg-sky-50 shadow-lg z-10" : "hover:bg-slate-50"
-      }`}
-    >
-      <Link
-        href={`/teacher/competencies/${competency.id}`}
-        className="flex-1 min-w-0"
-      >
-        <p className="truncate text-sm font-medium text-slate-900">
-          {competency.name}
-        </p>
-        {competency.description && (
-          <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">
-            {competency.description}
-          </p>
-        )}
-      </Link>
-      <div className="flex items-center gap-2 shrink-0">
-        <Link
-          href={`/teacher/competencies/${competency.id}`}
-          className="text-xs font-medium text-sky-600"
-        >
-          Bewerken →
-        </Link>
-        {/* Drag Handle */}
-        <button
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 p-1"
-          title="Sleep om te verplaatsen"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <circle cx="5" cy="3" r="1.5" />
-            <circle cx="11" cy="3" r="1.5" />
-            <circle cx="5" cy="8" r="1.5" />
-            <circle cx="11" cy="8" r="1.5" />
-            <circle cx="5" cy="13" r="1.5" />
-            <circle cx="11" cy="13" r="1.5" />
-          </svg>
-        </button>
-      </div>
-    </div>
-  );
-}
+// Initial form data for competency creation
+const initialFormData: CompetencyCreate = {
+  name: "",
+  description: "",
+  category_id: undefined,
+  phase: "",
+  level_descriptors: { "1": "", "2": "", "3": "", "4": "", "5": "" },
+};
 
 export default function RubricsListInner() {
+  const { user } = useAuth();
   const [data, setData] = useState<RubricListItem[]>([]);
   const [competencies, setCompetencies] = useState<Competency[]>([]);
-  const [competencyTree, setCompetencyTree] = useState<CompetencyTree | null>(null);
+  const [categories, setCategories] = useState<CompetencyCategory[]>([]);
   const [q, setQ] = useState("");
   const [activeTab, setActiveTab] = useState<TabType>("peer");
   const [loading, setLoading] = useState(true);
@@ -115,6 +46,20 @@ export default function RubricsListInner() {
     })
   );
 
+  // Competencies tab state (like competencies-beheer page)
+  const [viewMode, setViewMode] = useState<ViewMode>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<number | "all">("all");
+  const [phaseFilter, setPhaseFilter] = useState<string>("");
+  const [page, setPage] = useState(1);
+  const [limit] = useState(50);
+  const [total, setTotal] = useState(0);
+  const [isCreating, setIsCreating] = useState(false);
+  const [formData, setFormData] = useState<CompetencyCreate>(initialFormData);
+  const [expandedCompetency, setExpandedCompetency] = useState<number | null>(null);
+  const [editingCompetency, setEditingCompetency] = useState<number | null>(null);
+  const [editFormData, setEditFormData] = useState<CompetencyUpdate>({});
+
   async function fetchRubrics(query = "", scope: "peer" | "project") {
     setLoading(true);
     setError(null);
@@ -131,17 +76,59 @@ export default function RubricsListInner() {
   async function fetchCompetencies() {
     setLoading(true);
     setError(null);
+
     try {
-      const [comps, tree] = await Promise.all([
-        competencyService.getCompetencies(false),
-        competencyService.getCompetencyTree(false),
-      ]);
-      setCompetencies(comps);
-      setCompetencyTree(tree);
-    } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
+      // Build params based on view mode
+      const params: {
+        page: number;
+        limit: number;
+        active_only?: boolean;
+        competency_type?: CompetencyType | "all";
+        include_teacher_competencies?: boolean;
+        include_course_competencies?: boolean;
+        category_id?: number;
+        phase?: string;
+        search?: string;
+      } = {
+        page,
+        limit,
+        active_only: true,
+        search: searchQuery || undefined,
+        category_id: categoryFilter !== "all" ? categoryFilter : undefined,
+        phase: phaseFilter || undefined,
+      };
+
+      if (viewMode === "central") {
+        params.competency_type = "central";
+      } else if (viewMode === "teacher") {
+        params.competency_type = "teacher";
+      } else if (viewMode === "shared") {
+        params.competency_type = "shared";
+      } else {
+        // "all" - include all types
+        params.competency_type = "all";
+        params.include_teacher_competencies = true;
+        params.include_course_competencies = true;
+      }
+
+      const response: CompetencyListResponse = await competencyService.listTeacherCompetencies(params);
+
+      setCompetencies(response.items);
+      setTotal(response.total);
+    } catch (err) {
+      console.error("Error fetching competencies:", err);
+      setError("Er is een fout opgetreden bij het ophalen van de competenties.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchCategories() {
+    try {
+      const cats = await competencyService.getCategories();
+      setCategories(cats);
+    } catch (err) {
+      console.error("Error fetching categories:", err);
     }
   }
 
@@ -154,17 +141,19 @@ export default function RubricsListInner() {
   }
 
   useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  useEffect(() => {
     fetchList("", activeTab);
   }, [activeTab]);
 
-  // Filter categories based on selected filter
-  const filteredCategories = useMemo((): CompetencyCategoryTreeItem[] => {
-    if (!competencyTree || !competencyTree.categories) return [];
-    if (selectedCategoryFilter === "all") {
-      return competencyTree.categories;
+  // Fetch competencies when filters change
+  useEffect(() => {
+    if (activeTab === "competencies") {
+      fetchCompetencies();
     }
-    return competencyTree.categories.filter((cat: CompetencyCategoryTreeItem) => cat.id === selectedCategoryFilter);
-  }, [competencyTree, selectedCategoryFilter]);
+  }, [page, searchQuery, viewMode, categoryFilter, phaseFilter, activeTab]);
 
   // Filter rubrics based on niveau
   const filteredRubrics = useMemo((): RubricListItem[] => {
@@ -179,66 +168,134 @@ export default function RubricsListInner() {
     setQ("");
     setSelectedNiveauFilter("all");
   };
+  // Check if user can edit/delete a competency
+  function canModify(competency: Competency): boolean {
+    // Only the owner of a teacher-specific competency can modify it
+    // Central and shared competencies are read-only
+    if (competency.is_template) return false;
+    if (!user) return false;
+    return competency.teacher_id === user.id;
+  }
 
-  // Handle drag end for reordering competencies
-  const handleDragEnd = useCallback(
-    async (event: DragEndEvent, categoryId: number) => {
-      const { active, over } = event;
-
-      if (!over || active.id === over.id || !competencyTree) {
-        return;
-      }
-
-      // Find the category
-      const categoryIndex = competencyTree.categories.findIndex(
-        (c) => c.id === categoryId
+  // Get type badge for competency
+  function getTypeBadge(competency: Competency) {
+    if (competency.competency_type === "central" || competency.is_template) {
+      return (
+        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800">
+          🏛️ Centraal
+        </span>
       );
-      if (categoryIndex === -1) return;
-
-      const category = competencyTree.categories[categoryIndex];
-      const competenciesList = category.competencies || [];
-
-      // Find old and new index
-      const oldIndex = competenciesList.findIndex(
-        (c) => c.id === active.id
+    } else if (competency.competency_type === "shared") {
+      return (
+        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-cyan-100 text-cyan-800">
+          👥 Gedeeld
+        </span>
       );
-      const newIndex = competenciesList.findIndex((c) => c.id === over.id);
+    } else {
+      return (
+        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+          👤 Eigen
+        </span>
+      );
+    }
+  }
 
-      if (oldIndex === -1 || newIndex === -1) return;
+  // Get row background color based on type
+  function getRowBackground(competency: Competency): string {
+    if (competency.competency_type === "central" || competency.is_template) {
+      return "bg-amber-50/30";
+    } else if (competency.competency_type === "shared") {
+      return "bg-cyan-50/30";
+    }
+    return "";
+  }
 
-      // Optimistically update local state
-      const newCompetencies = arrayMove(competenciesList, oldIndex, newIndex);
-      const newCategories = [...competencyTree.categories];
-      newCategories[categoryIndex] = {
-        ...category,
-        competencies: newCompetencies,
-      };
-      setCompetencyTree({
-        ...competencyTree,
-        categories: newCategories,
+  async function handleCreate() {
+    if (!formData.name) {
+      alert("Naam is verplicht");
+      return;
+    }
+
+    try {
+      await competencyService.createCompetency({
+        ...formData,
+        is_template: false, // Teacher competencies are not templates
       });
-
-      // Call API to persist the new order
-      try {
-        setReorderError(null);
-        const items = newCompetencies.map((c, index) => ({
-          id: c.id,
-          order_index: index + 1,
-        }));
-        await competencyService.reorderCompetencies(categoryId, items);
-        setReorderSuccess(true);
-        setTimeout(() => setReorderSuccess(false), 2000);
-      } catch (e: any) {
-        // Revert on error
-        setReorderError(
-          e?.response?.data?.detail || e?.message || "Volgorde opslaan mislukt"
-        );
-        // Reload the original data
-        await fetchCompetencies();
+      setIsCreating(false);
+      setFormData(initialFormData);
+      fetchCompetencies();
+    } catch (err: unknown) {
+      console.error("Error creating competency:", err);
+      const axiosErr = err as { response?: { status?: number } };
+      if (axiosErr?.response?.status === 409) {
+        alert("Er bestaat al een competentie met deze naam. Kies een andere naam.");
+      } else {
+        alert("Er is een fout opgetreden bij het aanmaken van de competentie.");
       }
-    },
-    [competencyTree]
-  );
+    }
+  }
+
+  async function handleUpdate(competencyId: number) {
+    try {
+      await competencyService.updateCompetency(competencyId, editFormData);
+      setEditingCompetency(null);
+      setEditFormData({});
+      fetchCompetencies();
+    } catch (err: unknown) {
+      console.error("Error updating competency:", err);
+      const axiosErr = err as { response?: { status?: number } };
+      if (axiosErr?.response?.status === 409) {
+        alert("Er bestaat al een competentie met deze naam. Kies een andere naam.");
+      } else {
+        alert("Er is een fout opgetreden bij het bijwerken van de competentie.");
+      }
+    }
+  }
+
+  function toggleExpand(competencyId: number) {
+    if (expandedCompetency === competencyId) {
+      setExpandedCompetency(null);
+      setEditingCompetency(null);
+    } else {
+      setExpandedCompetency(competencyId);
+      setEditingCompetency(null);
+    }
+  }
+
+  function startEdit(competency: Competency) {
+    setEditingCompetency(competency.id);
+    setEditFormData({
+      name: competency.name,
+      description: competency.description || "",
+      category_id: competency.category_id,
+      phase: competency.phase || "",
+      level_descriptors: competency.level_descriptors || { "1": "", "2": "", "3": "", "4": "", "5": "" },
+    });
+  }
+
+  async function handleDelete(competency: Competency) {
+    if (!canModify(competency)) {
+      alert("Je kunt deze competentie niet verwijderen.");
+      return;
+    }
+
+    if (!confirm("Weet je zeker dat je deze competentie wilt verwijderen?")) {
+      return;
+    }
+
+    try {
+      await competencyService.deleteCompetency(competency.id);
+      fetchCompetencies();
+    } catch (err) {
+      console.error("Error deleting competency:", err);
+      alert("Er is een fout opgetreden bij het verwijderen van de competentie.");
+    }
+  }
+
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+    setQ("");
+  };
 
   return (
     <>
@@ -259,12 +316,15 @@ export default function RubricsListInner() {
               + Nieuwe {activeTab === "peer" ? "team-evaluatie" : "projectbeoordeling"}
             </Link>
           ) : (
-            <Link
-              href="/teacher/competencies/create"
-              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+            <button
+              onClick={() => {
+                setIsCreating(true);
+                setFormData(initialFormData);
+              }}
+              className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
             >
-              + Nieuwe Competentie
-            </Link>
+              + Eigen Competentie
+            </button>
           )}
         </header>
       </div>
@@ -453,134 +513,440 @@ export default function RubricsListInner() {
           </>
         )}
 
-        {/* Competencies Tab Content - OMZA Style with Drag & Drop */}
+        {/* Competencies Tab Content - Like competencies-beheer page */}
         {activeTab === "competencies" && (
-          <div className="space-y-4">
-            {/* Reorder feedback messages */}
-            {reorderSuccess && (
-              <div className="px-4 py-2 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
-                ✓ Volgorde opgeslagen
-              </div>
-            )}
-            {reorderError && (
-              <div className="px-4 py-2 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-                ✗ {reorderError}
+          <div className="space-y-6">
+            {error && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded text-red-800">
+                {error}
               </div>
             )}
 
-            {/* Category Filter Pills */}
-            {competencyTree && competencyTree.categories && competencyTree.categories.length > 0 && (
-              <div className="flex flex-wrap gap-2">
+            {/* Info banner */}
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <span className="text-blue-500 text-xl">ℹ️</span>
+                <div className="text-sm text-blue-800">
+                  <p className="font-medium mb-1">Drie soorten competenties:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">Centraal</span> — Beheerd door de beheerder, gekoppeld aan rubric-criteria. Alleen-lezen voor docenten.</li>
+                    <li><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">Eigen competentie</span> — Jouw persoonlijke competenties die je zelf kunt aanmaken en bewerken.</li>
+                    <li><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-800">Gedeeld</span> — Competenties van collega&apos;s die aan hetzelfde vak zijn gekoppeld. Alleen-lezen.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Filters - Combined in one bar */}
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Zoek op naam of beschrijving..."
+                className="h-9 w-64 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <select
+                value={viewMode}
+                onChange={(e) => setViewMode(e.target.value as ViewMode)}
+                className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm"
+              >
+                <option value="all">Alle competenties</option>
+                <option value="central">Centrale competenties</option>
+                <option value="teacher">Mijn eigen competenties</option>
+                <option value="shared">Gedeelde competenties</option>
+              </select>
+              <select
+                value={phaseFilter}
+                onChange={(e) => setPhaseFilter(e.target.value)}
+                className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm"
+              >
+                <option value="">Alle fasen</option>
+                <option value="onderbouw">Onderbouw</option>
+                <option value="bovenbouw">Bovenbouw</option>
+              </select>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value === "all" ? "all" : parseInt(e.target.value))}
+                className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm"
+              >
+                <option value="all">Alle categorieën</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+              {(searchQuery || viewMode !== "all" || phaseFilter || categoryFilter !== "all") && (
                 <button
-                  onClick={() => setSelectedCategoryFilter("all")}
-                  className={`rounded-full border px-3.5 py-1.5 text-sm transition ${
-                    selectedCategoryFilter === "all"
-                      ? "border-sky-500 bg-sky-50 text-sky-700 shadow-sm"
-                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                  }`}
+                  onClick={() => {
+                    setSearchQuery("");
+                    setViewMode("all");
+                    setPhaseFilter("");
+                    setCategoryFilter("all");
+                  }}
+                  className="h-9 px-3 rounded-lg border border-gray-300 bg-white text-sm shadow-sm hover:bg-slate-50"
                 >
-                  Alle ({competencyTree.categories.reduce((acc: number, cat: CompetencyCategoryTreeItem) => acc + (cat.competencies?.length || 0), 0)})
+                  Reset
                 </button>
-                {competencyTree.categories.map((category: CompetencyCategoryTreeItem) => (
-                  <button
-                    key={category.id}
-                    onClick={() => setSelectedCategoryFilter(category.id)}
-                    className={`rounded-full border px-3.5 py-1.5 text-sm transition ${
-                      selectedCategoryFilter === category.id
-                        ? "border-sky-500 bg-sky-50 text-sky-700 shadow-sm"
-                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                    }`}
-                  >
-                    {category.name} ({category.competencies?.length || 0})
-                  </button>
-                ))}
-              </div>
-            )}
+              )}
+            </div>
 
-            {loading && (
-              <div className="p-6">
-                <Loading />
-              </div>
-            )}
-            {error && !loading && (
-              <div className="p-6">
-                <ErrorMessage message={`Fout: ${error}`} />
-              </div>
-            )}
-            {!loading && !error && (!competencyTree || !competencyTree.categories || competencyTree.categories.length === 0) && (
-              <div className="p-8 border rounded-xl bg-gray-50 text-center">
-                <p className="text-gray-500 mb-4">
-                  Nog geen competenties aangemaakt. Maak je eerste competentie
-                  aan om te beginnen.
-                </p>
-                <Link
-                  href="/teacher/competencies/create"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
-                >
-                  <span>+</span> Eerste Competentie Aanmaken
-                </Link>
-              </div>
-            )}
-
-            {/* Category Sections - OMZA style list cards with drag & drop */}
-            {!loading && !error && filteredCategories.length > 0 && (
-              <div className="space-y-4">
-                {filteredCategories.map((category: CompetencyCategoryTreeItem) => (
-                  <section
-                    key={category.id}
-                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-                  >
-                    {/* Category header */}
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        {category.color && (
-                          <span
-                            className="inline-block h-3 w-3 rounded-full"
-                            style={{ backgroundColor: category.color }}
-                          />
-                        )}
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h2 className="text-sm font-semibold text-slate-900">
-                              {category.name}
-                            </h2>
-                            <span className="text-xs font-medium text-slate-400">
-                              ({category.competencies?.length || 0})
-                            </span>
-                          </div>
-                          {category.description && (
-                            <p className="text-xs text-slate-500">
-                              {category.description}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Competency rows with drag & drop */}
-                    <DndContext
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      onDragEnd={(event) => handleDragEnd(event, category.id)}
+            {/* Inline Creation Form */}
+            {isCreating && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6 space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+                    👤 Eigen competentie
+                  </span>
+                  <span className="text-sm text-emerald-700">Nieuwe competentie aanmaken</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Naam *</label>
+                    <input
+                      type="text"
+                      value={formData.name || ""}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="bijv. Samenwerken"
+                      className="w-full px-3 py-2 border rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Categorie</label>
+                    <select
+                      value={formData.category_id || ""}
+                      onChange={(e) => setFormData({ ...formData, category_id: e.target.value ? parseInt(e.target.value) : undefined })}
+                      className="w-full px-3 py-2 border rounded"
                     >
-                      <SortableContext
-                        items={(category.competencies || []).map((c) => c.id)}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        <div className="divide-y divide-slate-100">
-                          {(category.competencies || []).map((competency: CompetencyTreeItem) => (
-                            <SortableCompetencyRow
-                              key={competency.id}
-                              competency={competency}
-                            />
-                          ))}
-                        </div>
-                      </SortableContext>
-                    </DndContext>
-                  </section>
-                ))}
+                      <option value="">Geen categorie</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Fase</label>
+                    <select
+                      value={formData.phase || ""}
+                      onChange={(e) => setFormData({ ...formData, phase: e.target.value })}
+                      className="w-full px-3 py-2 border rounded"
+                    >
+                      <option value="">Niet gespecificeerd</option>
+                      <option value="onderbouw">Onderbouw</option>
+                      <option value="bovenbouw">Bovenbouw</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Beschrijving</label>
+                    <input
+                      type="text"
+                      value={formData.description || ""}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Korte beschrijving..."
+                      className="w-full px-3 py-2 border rounded"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Niveaubeschrijvingen</label>
+                  <div className="grid grid-cols-5 gap-2">
+                    {[1, 2, 3, 4, 5].map((level) => (
+                      <div key={level} className="flex flex-col">
+                        <label className="text-xs font-medium text-gray-700 mb-1">Niveau {level}</label>
+                        <textarea
+                          value={formData.level_descriptors?.[level.toString()] || ""}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            level_descriptors: {
+                              ...formData.level_descriptors,
+                              [level.toString()]: e.target.value
+                            }
+                          })}
+                          placeholder={`Niveau ${level}`}
+                          className="w-full px-2 py-1.5 border rounded text-xs resize-none"
+                          rows={3}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleCreate}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
+                  >
+                    Opslaan
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsCreating(false);
+                      setFormData(initialFormData);
+                    }}
+                    className="px-4 py-2 border rounded hover:bg-gray-50"
+                  >
+                    Annuleren
+                  </button>
+                </div>
               </div>
             )}
+
+            {/* Table */}
+            <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
+              <table className="w-full table-fixed">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="w-36 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Type
+                    </th>
+                    <th className="w-44 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Categorie
+                    </th>
+                    <th className="w-56 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Naam
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Beschrijving
+                    </th>
+                    <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Fase
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {competencies.map((comp) => {
+                    const isExpanded = expandedCompetency === comp.id;
+                    const isEditing = editingCompetency === comp.id;
+                    
+                    return [
+                      <tr 
+                        key={comp.id} 
+                        className={`hover:bg-gray-50 cursor-pointer ${getRowBackground(comp)}`}
+                        onClick={() => toggleExpand(comp.id)}
+                      >
+                        <td className="w-36 px-4 py-3 text-sm">
+                          {getTypeBadge(comp)}
+                        </td>
+                        <td className="w-44 px-4 py-3 text-sm">
+                          {comp.category_name ? (
+                            <span className="font-medium">{comp.category_name}</span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="w-56 px-4 py-3 text-sm font-medium">{comp.name}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600 truncate">
+                          {comp.description || <span className="text-gray-400">-</span>}
+                        </td>
+                        <td className="w-32 px-4 py-3 text-sm">
+                          {comp.phase ? (
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              comp.phase === "onderbouw" 
+                                ? "bg-blue-100 text-blue-800" 
+                                : "bg-purple-100 text-purple-800"
+                            }`}>
+                              {comp.phase === "onderbouw" ? "Onderbouw" : "Bovenbouw"}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                      </tr>,
+                      isExpanded && (
+                        <tr key={`${comp.id}-expanded`} className="bg-slate-50">
+                          <td colSpan={5} className="p-4">
+                            {isEditing && canModify(comp) ? (
+                              // Edit form
+                              <div className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                  <div>
+                                    <label className="block text-sm font-medium mb-1">Naam</label>
+                                    <input
+                                      type="text"
+                                      value={editFormData.name || ""}
+                                      onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                                      className="w-full px-3 py-2 border rounded"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm font-medium mb-1">Categorie</label>
+                                    <select
+                                      value={editFormData.category_id || ""}
+                                      onChange={(e) => setEditFormData({ ...editFormData, category_id: e.target.value ? parseInt(e.target.value) : undefined })}
+                                      className="w-full px-3 py-2 border rounded"
+                                    >
+                                      <option value="">Geen categorie</option>
+                                      {categories.map((cat) => (
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm font-medium mb-1">Fase</label>
+                                    <select
+                                      value={editFormData.phase || ""}
+                                      onChange={(e) => setEditFormData({ ...editFormData, phase: e.target.value })}
+                                      className="w-full px-3 py-2 border rounded"
+                                    >
+                                      <option value="">Niet gespecificeerd</option>
+                                      <option value="onderbouw">Onderbouw</option>
+                                      <option value="bovenbouw">Bovenbouw</option>
+                                    </select>
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-1">Beschrijving</label>
+                                  <textarea
+                                    value={editFormData.description || ""}
+                                    onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                                    className="w-full px-3 py-2 border rounded"
+                                    rows={2}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-2">Niveaubeschrijvingen</label>
+                                  <div className="grid grid-cols-5 gap-2">
+                                    {[1, 2, 3, 4, 5].map((level) => (
+                                      <div key={level} className="flex flex-col">
+                                        <label className="text-xs font-medium text-gray-700 mb-1">Niveau {level}</label>
+                                        <textarea
+                                          value={editFormData.level_descriptors?.[level.toString()] || ""}
+                                          onChange={(e) => setEditFormData({
+                                            ...editFormData,
+                                            level_descriptors: {
+                                              ...editFormData.level_descriptors,
+                                              [level.toString()]: e.target.value
+                                            }
+                                          })}
+                                          className="w-full px-2 py-1.5 border rounded text-xs resize-none"
+                                          rows={3}
+                                        />
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleUpdate(comp.id)}
+                                    className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                                  >
+                                    Opslaan
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setEditingCompetency(null);
+                                      setEditFormData({});
+                                    }}
+                                    className="px-3 py-1.5 border text-sm rounded hover:bg-gray-100"
+                                  >
+                                    Annuleren
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              // Read-only view with level descriptors
+                              <>
+                                {comp.category_description && (
+                                  <p className="text-sm text-gray-600 mb-3">{comp.category_description}</p>
+                                )}
+                                <div className="text-xs font-medium text-slate-700 mb-2">
+                                  Niveaubeschrijvingen (1–5)
+                                </div>
+                                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                                  {[1, 2, 3, 4, 5].map((level) => (
+                                    <div key={level} className="flex min-h-[80px] flex-col rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-inner">
+                                      <span className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">Niveau {level}</span>
+                                      <p className="text-[11px] text-slate-700">
+                                        {comp.level_descriptors?.[level.toString()] || <em className="text-slate-400">Niet ingevuld</em>}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className="mt-4 flex justify-between items-center text-xs">
+                                  <span className="text-gray-400">Klik om details te verbergen</span>
+                                  <div className="flex gap-2">
+                                    {canModify(comp) && (
+                                      <>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            startEdit(comp);
+                                          }}
+                                          className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                                        >
+                                          Bewerken
+                                        </button>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(comp);
+                                          }}
+                                          className="px-3 py-1.5 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                                        >
+                                          Verwijderen
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      ),
+                    ];
+                  })}
+                </tbody>
+              </table>
+
+              {competencies.length === 0 && !loading && (
+                <div className="text-center py-8 text-gray-500">
+                  Geen competenties gevonden
+                </div>
+              )}
+            </div>
+
+            {/* Pagination */}
+            {Math.ceil(total / limit) > 1 && (
+              <div className="flex justify-center gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-4 py-2 border rounded-lg disabled:opacity-50 hover:bg-gray-100"
+                >
+                  Vorige
+                </button>
+                <span className="px-4 py-2">
+                  Pagina {page} van {Math.ceil(total / limit)}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(Math.ceil(total / limit), p + 1))}
+                  disabled={page === Math.ceil(total / limit)}
+                  className="px-4 py-2 border rounded-lg disabled:opacity-50 hover:bg-gray-100"
+                >
+                  Volgende
+                </button>
+              </div>
+            )}
+
+            {/* Legend */}
+            <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <p className="text-sm font-medium text-gray-700 mb-2">Legenda:</p>
+              <div className="flex flex-wrap gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">🏛️ Centraal</span>
+                  <span className="text-gray-600">Beheerd door beheerder (alleen-lezen)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">👤 Eigen</span>
+                  <span className="text-gray-600">Jouw persoonlijke competenties</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-cyan-100 text-cyan-800">👥 Gedeeld</span>
+                  <span className="text-gray-600">Van collega&apos;s in hetzelfde vak</span>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </main>
