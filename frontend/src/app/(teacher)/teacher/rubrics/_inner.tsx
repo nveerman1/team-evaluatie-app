@@ -99,6 +99,7 @@ export default function RubricsListInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<number | "all">("all");
+  const [selectedNiveauFilter, setSelectedNiveauFilter] = useState<"all" | "onderbouw" | "bovenbouw">("all");
   const [reorderError, setReorderError] = useState<string | null>(null);
   const [reorderSuccess, setReorderSuccess] = useState(false);
 
@@ -165,9 +166,18 @@ export default function RubricsListInner() {
     return competencyTree.categories.filter((cat: CompetencyCategoryTreeItem) => cat.id === selectedCategoryFilter);
   }, [competencyTree, selectedCategoryFilter]);
 
+  // Filter rubrics based on niveau
+  const filteredRubrics = useMemo((): RubricListItem[] => {
+    if (selectedNiveauFilter === "all") {
+      return data;
+    }
+    return data.filter((r) => r.target_level === selectedNiveauFilter);
+  }, [data, selectedNiveauFilter]);
+
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);
     setQ("");
+    setSelectedNiveauFilter("all");
   };
 
   // Handle drag end for reordering competencies
@@ -324,6 +334,15 @@ export default function RubricsListInner() {
                 Reset
               </button>
             )}
+            <select
+              className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              value={selectedNiveauFilter}
+              onChange={(e) => setSelectedNiveauFilter(e.target.value as "all" | "onderbouw" | "bovenbouw")}
+            >
+              <option value="all">Alle niveaus</option>
+              <option value="onderbouw">Onderbouw</option>
+              <option value="bovenbouw">Bovenbouw</option>
+            </select>
           </div>
         </div>
       )}
@@ -340,7 +359,7 @@ export default function RubricsListInner() {
                 <ErrorMessage message={`Fout: ${error}`} />
               </div>
             )}
-            {!loading && !error && data.length === 0 && (
+            {!loading && !error && filteredRubrics.length === 0 && data.length === 0 && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
                 <div className="text-gray-500 mb-4">
                   Geen rubrics gevonden.
@@ -353,7 +372,14 @@ export default function RubricsListInner() {
                 </Link>
               </div>
             )}
-            {!loading && !error && data.length > 0 && (
+            {!loading && !error && data.length > 0 && filteredRubrics.length === 0 && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
+                <div className="text-gray-500 mb-4">
+                  Geen rubrics gevonden voor het geselecteerde niveau.
+                </div>
+              </div>
+            )}
+            {!loading && !error && filteredRubrics.length > 0 && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200 text-sm">
@@ -362,11 +388,14 @@ export default function RubricsListInner() {
                         <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide sticky left-0 bg-gray-50">
                           Titel
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide w-96">
                           Beschrijving
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
                           # Criteria
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
+                          Niveau
                         </th>
                         <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 tracking-wide">
                           Acties
@@ -374,12 +403,12 @@ export default function RubricsListInner() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {data.map((r) => (
+                      {filteredRubrics.map((r) => (
                         <tr key={r.id} className="bg-white hover:bg-gray-50">
                           <td className="px-5 py-3 font-medium sticky left-0 bg-white">
                             {r.title}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 w-96">
                             <div className="text-sm text-gray-600">
                               {r.description || "—"}
                             </div>
@@ -388,6 +417,15 @@ export default function RubricsListInner() {
                             <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">
                               {r.criteria_count}
                             </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            {r.target_level ? (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-medium capitalize">
+                                {r.target_level}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 text-xs">—</span>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex justify-end gap-2">
