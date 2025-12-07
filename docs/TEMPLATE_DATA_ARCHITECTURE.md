@@ -747,8 +747,6 @@ params = {
 - Less prone to SQL injection risks
 - Proper escaping of special characters
 - Compatible with all database drivers
-
-"learning_objective_ids": lo_ids if lo_ids else []
 ```
 
 ### 6. Timestamp Handling
@@ -852,8 +850,8 @@ def upgrade():
                                 learning_objective_ids, created_at, updated_at
                             ) VALUES (
                                 :school_id, :subject_id, :category, :title,
-                                :description, :target_level, :descriptors::jsonb,
-                                :lo_ids::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                                :description, :target_level, :level_descriptors::jsonb,
+                                :learning_objective_ids::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                             )
                             ON CONFLICT (school_id, subject_id, omza_category, title, target_level) 
                             DO UPDATE SET
@@ -869,8 +867,8 @@ def upgrade():
                             "title": template["title"],
                             "description": template.get("description"),
                             "target_level": template.get("target_level"),
-                            "descriptors": json.dumps(template["level_descriptors"]),
-                            "lo_ids": json.dumps(template["learning_objective_ids"])
+                            "level_descriptors": json.dumps(template["level_descriptors"]),
+                            "learning_objective_ids": json.dumps(template["learning_objective_ids"])
                         }
                     )
 
