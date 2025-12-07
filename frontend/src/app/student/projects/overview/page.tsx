@@ -209,22 +209,6 @@ export default function ProjectOverviewPage() {
       <PageHeader />
       
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pb-10 pt-8">
-        {/* Tip banner */}
-        <div className="flex items-center justify-between gap-3 rounded-2xl bg-white/80 p-3 shadow-sm ring-1 ring-slate-200/80">
-          <div className="flex flex-col text-xs text-slate-600 sm:flex-row sm:items-center sm:gap-2">
-            <span className="font-medium text-slate-800">Tip</span>
-            <span>
-              Gebruik deze pagina om je ontwikkeling over meerdere projecten te volgen.
-            </span>
-          </div>
-          <Link
-            href="/student#projecten"
-            className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
-          >
-            Terug naar dashboard
-          </Link>
-        </div>
-
         {/* KPI tiles */}
         <section className="grid gap-4 md:grid-cols-4">
           <div className="group flex flex-col justify-between rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200">
@@ -318,7 +302,7 @@ export default function ProjectOverviewPage() {
               </h2>
               <span className="text-[11px] text-slate-500">Radar grafiek</span>
             </div>
-            <div className="mt-3 flex h-56 items-center justify-center">
+            <div className="mt-3 flex h-72 items-center justify-center">
               <ProjectRadarChart categoryAverages={stats.categoryAverages} />
             </div>
           </div>
@@ -423,8 +407,10 @@ export default function ProjectOverviewPage() {
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
                   <th className="px-3 py-2 font-medium">Project</th>
+                  <th className="px-3 py-2 font-medium">Opdrachtgever</th>
                   <th className="px-3 py-2 font-medium">Periode</th>
                   <th className="px-3 py-2 font-medium">Docent</th>
+                  <th className="px-3 py-2 font-medium">Eindcijfer</th>
                   <th className="px-3 py-2 font-medium">Projectproces</th>
                   <th className="px-3 py-2 font-medium">Eindresultaat</th>
                   <th className="px-3 py-2 font-medium">Communicatie</th>
@@ -434,12 +420,26 @@ export default function ProjectOverviewPage() {
               <tbody className="divide-y divide-slate-100">
                 {projectAssessments.map((assessment) => {
                   const categoryScores = stats.assessmentCategoryScores.get(assessment.id) || {};
+                  const detail = projectDetails.get(assessment.id);
                   
                   const getCategoryDisplay = (category: string) => {
                     const data = categoryScores[category];
                     if (!data) return '—';
-                    return `${data.avg.toFixed(1)}/${data.max}`;
+                    return `${data.avg.toFixed(1)} / ${data.max}`;
                   };
+                  
+                  // Get grade color based on value
+                  const getGradeColor = (grade: number | null | undefined) => {
+                    if (grade === null || grade === undefined) return 'text-slate-600';
+                    if (grade >= 8.0) return 'text-green-700';
+                    if (grade >= 6.5) return 'text-amber-600';
+                    return 'text-red-600';
+                  };
+                  
+                  // Extract opdrachtgever from metadata_json
+                  const opdrachtgever = assessment.metadata_json?.opdrachtgever || 
+                                       assessment.metadata_json?.client || 
+                                       '—';
                   
                   return (
                     <tr key={assessment.id} className="hover:bg-slate-50/80">
@@ -454,6 +454,9 @@ export default function ProjectOverviewPage() {
                         </div>
                       </td>
                       <td className="px-3 py-2 align-top text-xs text-slate-600">
+                        {opdrachtgever}
+                      </td>
+                      <td className="px-3 py-2 align-top text-xs text-slate-600">
                         {assessment.published_at
                           ? new Date(assessment.published_at).toLocaleDateString('nl-NL', {
                               year: 'numeric',
@@ -463,6 +466,13 @@ export default function ProjectOverviewPage() {
                       </td>
                       <td className="px-3 py-2 align-top text-xs text-slate-600">
                         {assessment.teacher_name || '—'}
+                      </td>
+                      <td className="px-3 py-2 align-top">
+                        <span className={`text-xs font-bold ${getGradeColor(detail?.grade)}`}>
+                          {detail?.grade !== null && detail?.grade !== undefined 
+                            ? detail.grade.toFixed(1) 
+                            : '—'}
+                        </span>
                       </td>
                       <td className="px-3 py-2 align-top text-xs text-slate-600">
                         {getCategoryDisplay('Projectproces')}
