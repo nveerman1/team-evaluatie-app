@@ -11,8 +11,8 @@ type StatusToggleProps = {
 };
 
 /**
- * A two-segment toggle control for status selection.
- * Used for toggling between states like "Concept" and "Gepubliceerd".
+ * A multi-segment toggle control for status selection.
+ * Used for toggling between states like "Concept", "Open", and "Gesloten".
  */
 export function StatusToggle({
   options,

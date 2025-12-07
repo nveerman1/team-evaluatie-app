@@ -506,6 +506,7 @@ function CommunicatieTab({ client }: { client: any }) {
 
   const generateEmail = () => {
     const template = templates[selectedTemplate as keyof typeof templates];
+    const moduleName = mockModules.find(m => m.id === selectedModule)?.label || "N/A";
     const moduleData = mockModules.find(m => m.id === selectedModule)?.label || "N/A";
     const teams = selectedTeams.map(t => mockTeams.find(mt => mt.id === t)?.label || t).join(", ");
     
@@ -513,6 +514,7 @@ function CommunicatieTab({ client }: { client: any }) {
 
 Hierbij nodigen wij u uit voor de ${template.toLowerCase()} van het project.
 
+Module: ${moduleName}
 Module: ${moduleData}
 Teams: ${teams}
 
