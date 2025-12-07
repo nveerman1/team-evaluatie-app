@@ -135,15 +135,18 @@ export default function ProjectOverviewPage() {
       .sort(([, a], [, b]) => b - a)
       .slice(0, 2);
 
-    // Prepare trend data for line chart with real grades
-    const gradesTrend = projectAssessments.map((assessment) => {
-      const detail = projectDetails.get(assessment.id);
-      return {
-        label: assessment.title.substring(0, 20),
-        grade: detail?.grade || 0,
-        date: assessment.published_at || "",
-      };
-    });
+    // Prepare trend data for line chart with real grades (excluding external assessments)
+    // External assessments have teacher_id = null
+    const gradesTrend = projectAssessments
+      .filter((assessment) => assessment.teacher_id !== null)
+      .map((assessment) => {
+        const detail = projectDetails.get(assessment.id);
+        return {
+          label: assessment.title.substring(0, 20),
+          grade: detail?.grade || 0,
+          date: assessment.published_at || "",
+        };
+      });
 
     return {
       avgGrade,
