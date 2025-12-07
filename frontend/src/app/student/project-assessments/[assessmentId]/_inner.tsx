@@ -19,33 +19,68 @@ function RubricMatrixRow({
   comment?: string;
 }) {
   return (
-    <div className="mb-8">
-      <h3 className="text-lg font-semibold mb-3">{name}</h3>
-      <div className="grid grid-cols-5 gap-2 mb-4">
-        {levels.map((levelText, index) => {
-          const levelNumber = index + 1;
-          const isSelected = score === levelNumber;
-          return (
-            <div
-              key={levelNumber}
-              className={`p-3 border rounded-lg text-sm ${
-                isSelected
-                  ? "bg-blue-100 border-blue-500 border-2 font-medium"
-                  : "bg-white border-gray-300"
-              }`}
-            >
-              <div className="font-semibold mb-1 text-center">Niveau {levelNumber}</div>
-              <div className="text-xs text-gray-700">{levelText || "—"}</div>
-            </div>
-          );
-        })}
+    <div className="px-6 py-5">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">
+          {name}
+        </h3>
+        {score && (
+          <span className="inline-flex items-baseline gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
+            <span className="font-medium text-slate-700">Score</span>
+            <span className="text-slate-400">
+              {score} / 5
+            </span>
+          </span>
+        )}
       </div>
-      {comment && (
-        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-          <p className="text-sm font-medium text-gray-700 mb-1">Opmerking docent:</p>
-          <p className="text-sm text-gray-600">{comment}</p>
+
+      {/* Score levels with descriptions */}
+      <div className="flex flex-col gap-4">
+        {/* Levels */}
+        <div className="grid grid-cols-5 gap-2">
+          {levels.map((levelText, index) => {
+            const levelNumber = index + 1;
+            const isSelected = score === levelNumber;
+            return (
+              <div
+                key={levelNumber}
+                className={`flex flex-col items-center justify-start rounded-xl border px-3 py-2 text-center text-xs transition-all ${
+                  isSelected
+                    ? "border-emerald-600 bg-emerald-50 shadow-[0_0_0_1px_rgba(16,185,129,0.5)]"
+                    : "border-slate-200 bg-white"
+                }`}
+              >
+                <span
+                  className={`mb-1 flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold ${
+                    isSelected
+                      ? "border-emerald-600 bg-emerald-600 text-white"
+                      : "border-slate-300 text-slate-700 bg-slate-50"
+                  }`}
+                >
+                  {levelNumber}
+                </span>
+                {levelText && (
+                  <span className="text-[11px] leading-snug text-slate-600">
+                    {levelText}
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
-      )}
+
+        {/* Comment - below scores */}
+        {comment && (
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-medium text-slate-600">
+              Opmerking docent
+            </span>
+            <div className="min-h-[80px] w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 shadow-inner">
+              {comment}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -172,7 +207,8 @@ export default function StudentProjectAssessmentInner() {
       )}
 
         {/* Rubric matrices grouped by category */}
-        <div className="bg-white border border-gray-200/80 shadow-sm rounded-xl p-6 space-y-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="divide-y divide-slate-100">
         {(() => {
           // Group criteria by category
           const grouped = data.criteria.reduce((acc, c) => {
@@ -184,10 +220,10 @@ export default function StudentProjectAssessmentInner() {
 
           // Render each category with its criteria
           return Object.entries(grouped).map(([category, categoryCriteria]) => (
-            <div key={category} className="space-y-6">
+            <div key={category}>
               {/* Category header */}
-              <div className="border-b-2 border-gray-300 pb-2">
-                <h2 className="text-xl font-semibold text-gray-800">{category}</h2>
+              <div className="px-6 py-3 bg-slate-100">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">{category}</h3>
               </div>
               {/* Criteria in this category */}
               {categoryCriteria.map((criterion) => {
@@ -212,6 +248,7 @@ export default function StudentProjectAssessmentInner() {
             </div>
           ));
         })()}
+          </div>
       </div>
 
         {/* Total Score and Grade */}
