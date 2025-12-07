@@ -89,6 +89,7 @@ const TABS: { key: TabType; label: string }[] = [
 const MAX_VISIBLE_PAGES = 7;
 const ELLIPSIS_THRESHOLD = 3;
 const ELLIPSIS_OFFSET = 2;
+const OBJECTIVES_PER_PAGE = 100;
 
 export default function TemplatesPageInner() {
   const router = useRouter();
@@ -109,7 +110,7 @@ export default function TemplatesPageInner() {
   const [loadingObjectives, setLoadingObjectives] = useState(false);
   const [objectivesPagination, setObjectivesPagination] = useState({
     page: 1,
-    limit: 100,
+    limit: OBJECTIVES_PER_PAGE,
     total: 0,
   });
   const [formData, setFormData] = useState<LearningObjectiveCreateDto>({
@@ -323,7 +324,7 @@ export default function TemplatesPageInner() {
     try {
       const response = await listLearningObjectives({
         page: page,
-        limit: objectivesPagination.limit,
+        limit: OBJECTIVES_PER_PAGE,
         subject_id: selectedSubjectId, // Filter by selected subject
         objective_type: "template", // Only show central/template objectives in admin
         phase: selectedObjectiveLevelFilter !== "all" ? selectedObjectiveLevelFilter : undefined,
@@ -340,7 +341,7 @@ export default function TemplatesPageInner() {
     } finally {
       setLoadingObjectives(false);
     }
-  }, [selectedSubjectId, objectivesPagination.limit, selectedObjectiveLevelFilter, selectedObjectiveDomainFilter]);
+  }, [selectedSubjectId, selectedObjectiveLevelFilter, selectedObjectiveDomainFilter]);
 
   // Load learning objectives when tab changes to objectives
   useEffect(() => {
@@ -365,7 +366,8 @@ export default function TemplatesPageInner() {
       fetchPeerCriteria();
       fetchLearningObjectives(1); // Also load learning objectives for linking
     }
-  }, [activeTab, selectedSubjectId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, selectedSubjectId, fetchLearningObjectives]);
 
   // Load project criteria when tab changes to rubrics
   useEffect(() => {
@@ -373,7 +375,8 @@ export default function TemplatesPageInner() {
       fetchProjectCriteria();
       fetchLearningObjectives(1); // Also load learning objectives for linking
     }
-  }, [activeTab, selectedSubjectId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, selectedSubjectId, fetchLearningObjectives]);
 
   // Load mail templates when tab changes to mail
   useEffect(() => {
@@ -4024,20 +4027,25 @@ export default function TemplatesPageInner() {
                           pages.push("...");
                         }
                         
-                        // Show pages around current page
+                        // Show pages around current page (avoiding duplicates)
                         const start = Math.max(2, currentPage - 1);
                         const end = Math.min(totalPages - 1, currentPage + 1);
                         
                         for (let i = start; i <= end; i++) {
-                          pages.push(i);
+                          // Skip if this page is already added (page 1 or last page)
+                          if (i !== 1 && i !== totalPages) {
+                            pages.push(i);
+                          }
                         }
                         
                         if (currentPage < totalPages - ELLIPSIS_OFFSET) {
                           pages.push("...");
                         }
                         
-                        // Always show last page
-                        pages.push(totalPages);
+                        // Always show last page (if not already shown)
+                        if (totalPages > 1) {
+                          pages.push(totalPages);
+                        }
                       }
                       
                       return pages.map((page, idx) => {
