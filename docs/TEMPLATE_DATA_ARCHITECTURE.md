@@ -724,10 +724,30 @@ conn.execute(
 
 ### 5. JSON Field Defaults
 
-Always provide default values for JSON fields:
+Always provide default values for JSON fields and use proper serialization:
 
 ```python
-"level_descriptors": level_descriptors if level_descriptors else {},
+import json
+
+# ✅ CORRECT: Use json.dumps() for clean serialization
+params = {
+    "level_descriptors": json.dumps(level_descriptors if level_descriptors else {}),
+    "learning_objective_ids": json.dumps(lo_ids if lo_ids else [])
+}
+
+# ❌ AVOID: Complex stringify methods that are error-prone
+# params = {
+#     "descriptors": sa.text(f"'{sa.inspect(sa.JSON).stringify(level_descriptors)}'")
+# }
+```
+
+**Why `json.dumps()` is better:**
+- Simpler and more readable
+- Standard Python library function
+- Less prone to SQL injection risks
+- Proper escaping of special characters
+- Compatible with all database drivers
+
 "learning_objective_ids": lo_ids if lo_ids else []
 ```
 
