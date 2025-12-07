@@ -36,7 +36,7 @@ export type CourseUpdate = {
   level?: string;
   year?: number;
   description?: string;
-  subject_id?: number;
+  subject_id?: number | null;
   is_active?: boolean;
 };
 

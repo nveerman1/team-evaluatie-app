@@ -84,25 +84,43 @@ export function SelfEvaluationStep({
       {loading ? (
         <div className="text-center py-4 text-gray-500">Laden...</div>
       ) : (
-        <div className="space-y-8">
-          {(() => {
-            // Group criteria by category
-            const grouped = criteria.reduce((acc, c) => {
-              const cat = c.category || "Overig";
-              if (!acc[cat]) acc[cat] = [];
-              acc[cat].push(c);
-              return acc;
-            }, {} as Record<string, Criterion[]>);
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="divide-y divide-slate-100">
+            {(() => {
+              // Group criteria by category
+              const grouped = criteria.reduce((acc, c) => {
+                const cat = c.category || "Overig";
+                if (!acc[cat]) acc[cat] = [];
+                acc[cat].push(c);
+                return acc;
+              }, {} as Record<string, Criterion[]>);
 
-            // Render each category with its criteria
-            return Object.entries(grouped).map(([category, categoryCriteria]) => (
-              <div key={category} className="space-y-4">
-                {/* Category header */}
-                <div className="border-b-2 border-gray-300 pb-2">
-                  <h3 className="text-xl font-semibold text-gray-800">{category}</h3>
-                </div>
-                {/* Criteria in this category */}
-                <div className="space-y-6">
+              // OMZA category order
+              const omzaOrder = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"];
+              
+              // Sort entries by OMZA order, then alphabetically for others
+              const sortedEntries = Object.entries(grouped).sort(([catA], [catB]) => {
+                const indexA = omzaOrder.indexOf(catA);
+                const indexB = omzaOrder.indexOf(catB);
+                
+                // Both in OMZA order
+                if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                // Only A in OMZA order - A comes first
+                if (indexA !== -1) return -1;
+                // Only B in OMZA order - B comes first
+                if (indexB !== -1) return 1;
+                // Neither in OMZA order - alphabetical
+                return catA.localeCompare(catB);
+              });
+
+              // Render each category with its criteria
+              return sortedEntries.map(([category, categoryCriteria]) => (
+                <div key={category}>
+                  {/* Category header */}
+                  <div className="px-6 py-3 bg-slate-100">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">{category}</h3>
+                  </div>
+                  {/* Criteria in this category */}
                   {categoryCriteria.map((criterion) => (
                     <RubricRating
                       key={criterion.id}
@@ -118,9 +136,9 @@ export function SelfEvaluationStep({
                     />
                   ))}
                 </div>
-              </div>
-            ));
-          })()}
+              ));
+            })()}
+          </div>
         </div>
       )}
 

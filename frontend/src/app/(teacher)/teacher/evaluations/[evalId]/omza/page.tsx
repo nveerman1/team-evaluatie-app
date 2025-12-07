@@ -562,7 +562,7 @@ export default function OMZAOverviewPage() {
                   onChange={(e) => setClassFilter(e.target.value)}
                 >
                   <option value="all">Alle klassen</option>
-                  {classes.map((cls) => (
+                  {classes.map((cls) => cls && (
                     <option key={cls} value={cls}>
                       {cls}
                     </option>

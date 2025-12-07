@@ -145,7 +145,7 @@ function PeerPanel({
   };
 
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div className="rounded-lg overflow-hidden bg-slate-50 border border-slate-200 shadow-sm">
       <button
         onClick={onToggle}
         className="w-full p-4 bg-white hover:bg-gray-50 transition-colors text-left"
@@ -164,47 +164,67 @@ function PeerPanel({
       </button>
 
       {isOpen && (
-        <div className="p-4 bg-gray-50 border-t">
+        <div className="p-4 bg-gray-50">
           {loading ? (
             <div className="text-center py-4 text-gray-500">Laden...</div>
           ) : (
-            <div className="space-y-8">
-              {(() => {
-                // Group criteria by category
-                const grouped = criteria.reduce((acc, c) => {
-                  const cat = c.category || "Overig";
-                  if (!acc[cat]) acc[cat] = [];
-                  acc[cat].push(c);
-                  return acc;
-                }, {} as Record<string, Criterion[]>);
+            <>
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-4">
+                <div className="divide-y divide-slate-100">
+                  {(() => {
+                    // Group criteria by category
+                    const grouped = criteria.reduce((acc, c) => {
+                      const cat = c.category || "Overig";
+                      if (!acc[cat]) acc[cat] = [];
+                      acc[cat].push(c);
+                      return acc;
+                    }, {} as Record<string, Criterion[]>);
 
-                // Render each category with its criteria
-                return Object.entries(grouped).map(([category, categoryCriteria]) => (
-                  <div key={category} className="space-y-4">
-                    {/* Category header */}
-                    <div className="border-b-2 border-gray-300 pb-2">
-                      <h3 className="text-xl font-semibold text-gray-800">{category}</h3>
-                    </div>
-                    {/* Criteria in this category */}
-                    <div className="space-y-6">
-                      {categoryCriteria.map((criterion) => (
-                        <RubricRating
-                          key={criterion.id}
-                          criterion={criterion}
-                          value={values[criterion.id] ?? 3}
-                          comment={comments[criterion.id] || ""}
-                          onChange={(newValue) =>
-                            setValues((s) => ({ ...s, [criterion.id]: newValue }))
-                          }
-                          onCommentChange={(newComment) =>
-                            setComments((s) => ({ ...s, [criterion.id]: newComment }))
-                          }
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ));
-              })()}
+                    // OMZA category order
+                    const omzaOrder = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"];
+                    
+                    // Sort entries by OMZA order, then alphabetically for others
+                    const sortedEntries = Object.entries(grouped).sort(([catA], [catB]) => {
+                      const indexA = omzaOrder.indexOf(catA);
+                      const indexB = omzaOrder.indexOf(catB);
+                      
+                      // Both in OMZA order
+                      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                      // Only A in OMZA order - A comes first
+                      if (indexA !== -1) return -1;
+                      // Only B in OMZA order - B comes first
+                      if (indexB !== -1) return 1;
+                      // Neither in OMZA order - alphabetical
+                      return catA.localeCompare(catB);
+                    });
+
+                    // Render each category with its criteria
+                    return sortedEntries.map(([category, categoryCriteria]) => (
+                      <div key={category}>
+                        {/* Category header */}
+                        <div className="px-6 py-3 bg-slate-100">
+                          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">{category}</h3>
+                        </div>
+                        {/* Criteria in this category */}
+                        {categoryCriteria.map((criterion) => (
+                          <RubricRating
+                            key={criterion.id}
+                            criterion={criterion}
+                            value={values[criterion.id] ?? 3}
+                            comment={comments[criterion.id] || ""}
+                            onChange={(newValue) =>
+                              setValues((s) => ({ ...s, [criterion.id]: newValue }))
+                            }
+                            onCommentChange={(newComment) =>
+                              setComments((s) => ({ ...s, [criterion.id]: newComment }))
+                            }
+                          />
+                        ))}
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
 
               <div className="flex justify-end pt-2">
                 <button
@@ -215,7 +235,7 @@ function PeerPanel({
                   {sending ? "Bezig..." : "Opslaan"}
                 </button>
               </div>
-            </div>
+            </>
           )}
         </div>
       )}
