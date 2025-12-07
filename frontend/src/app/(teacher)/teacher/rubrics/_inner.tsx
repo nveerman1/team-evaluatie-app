@@ -481,18 +481,18 @@ export default function RubricsListInner() {
             </div>
 
             {/* Filters - Combined in one bar */}
-            <section className="flex flex-wrap items-center gap-3 bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
+            <div className="flex flex-wrap items-center gap-3">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Zoek op naam of beschrijving..."
-                className="px-3 py-2 rounded-lg border w-64"
+                className="h-9 w-64 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
               <select
                 value={viewMode}
                 onChange={(e) => setViewMode(e.target.value as ViewMode)}
-                className="px-3 py-2 rounded-lg border"
+                className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm"
               >
                 <option value="all">Alle competenties</option>
                 <option value="central">Centrale competenties</option>
@@ -502,7 +502,7 @@ export default function RubricsListInner() {
               <select
                 value={phaseFilter}
                 onChange={(e) => setPhaseFilter(e.target.value)}
-                className="px-3 py-2 rounded-lg border"
+                className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm"
               >
                 <option value="">Alle fasen</option>
                 <option value="onderbouw">Onderbouw</option>
@@ -511,7 +511,7 @@ export default function RubricsListInner() {
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value === "all" ? "all" : parseInt(e.target.value))}
-                className="px-3 py-2 rounded-lg border"
+                className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm"
               >
                 <option value="all">Alle categorieën</option>
                 {categories.map((cat) => (
@@ -528,12 +528,12 @@ export default function RubricsListInner() {
                     setPhaseFilter("");
                     setCategoryFilter("all");
                   }}
-                  className="px-3 py-2 rounded-lg border hover:bg-gray-50"
+                  className="h-9 px-3 rounded-lg border border-gray-300 bg-white text-sm shadow-sm hover:bg-slate-50"
                 >
                   Reset
                 </button>
               )}
-            </section>
+            </div>
 
             {/* Inline Creation Form */}
             {isCreating && (
