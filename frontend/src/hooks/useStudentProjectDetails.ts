@@ -54,7 +54,8 @@ export function useStudentProjectDetails(assessmentIds: number[]) {
     };
 
     fetchDetails();
-  }, [assessmentIds.join(',')]); // Only re-fetch if the list of IDs changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(assessmentIds)]); // Use JSON.stringify for stable comparison
 
   return { details, loading, error };
 }
