@@ -359,7 +359,7 @@ export default function RubricsListInner() {
                 <ErrorMessage message={`Fout: ${error}`} />
               </div>
             )}
-            {!loading && !error && filteredRubrics.length === 0 && data.length === 0 && (
+            {!loading && !error && data.length === 0 && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
                 <div className="text-gray-500 mb-4">
                   Geen rubrics gevonden.
@@ -388,7 +388,7 @@ export default function RubricsListInner() {
                         <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide sticky left-0 bg-gray-50">
                           Titel
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide w-96">
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide w-48 md:w-64 lg:w-96">
                           Beschrijving
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
@@ -408,7 +408,7 @@ export default function RubricsListInner() {
                           <td className="px-5 py-3 font-medium sticky left-0 bg-white">
                             {r.title}
                           </td>
-                          <td className="px-4 py-3 w-96">
+                          <td className="px-4 py-3 w-48 md:w-64 lg:w-96">
                             <div className="text-sm text-gray-600">
                               {r.description || "—"}
                             </div>
