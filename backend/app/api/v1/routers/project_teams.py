@@ -259,12 +259,10 @@ def clone_project_teams(
 # ========== Helper functions ==========
 
 
-def _format_project_team_output(project_team: ProjectTeam, db: Session = None) -> ProjectTeamOut:
+def _format_project_team_output(project_team: ProjectTeam, db: Session) -> ProjectTeamOut:
     """Format ProjectTeam for API output"""
     # Determine if team is locked (has evaluations/assessments)
-    is_locked = False
-    if db:
-        is_locked = ProjectTeamService._is_project_team_locked(db, project_team.id)
+    is_locked = ProjectTeamService._is_project_team_locked(db, project_team.id)
     
     return ProjectTeamOut(
         id=project_team.id,
@@ -284,7 +282,10 @@ def _format_project_team_output(project_team: ProjectTeam, db: Session = None) -
 def _format_member_output(member: ProjectTeamMember) -> ProjectTeamMemberOut:
     """Format ProjectTeamMember for API output"""
     # Determine user status based on archived field
-    user_status = "inactive" if (member.user and member.user.archived) else "active"
+    # If user is not available or is archived, mark as inactive
+    user_status = "active"
+    if not member.user or member.user.archived:
+        user_status = "inactive"
     
     return ProjectTeamMemberOut(
         id=member.id,
