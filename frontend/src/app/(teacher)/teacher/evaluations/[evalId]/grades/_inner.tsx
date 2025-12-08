@@ -28,7 +28,7 @@ export default function GradesPageInner() {
   const evalIdNum = useNumericEvalId();
   const evalIdStr = evalIdNum != null ? String(evalIdNum) : "—";
   const router = useRouter();
-  const { setAutoSaveLabel, setPublishGrades } = useEvaluationLayout();
+  const { setPublishGrades } = useEvaluationLayout();
 
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
@@ -143,24 +143,19 @@ export default function GradesPageInner() {
     return () => clearInterval(timer);
   }, [rows, evalIdNum]);
 
-  // Set publish function and autosave label in context
+  // Set publish function in context (only once on mount)
   useEffect(() => {
-    const label = {
-      idle: "",
-      saving: "Concept wordt opgeslagen…",
-      saved: "✔ Concept opgeslagen (laatste 30s)",
-      error: "⚠ Niet opgeslagen – controleer je verbinding",
-    }[autoSaveState] ?? "";
-    
-    setAutoSaveLabel(label);
     setPublishGrades(handlePublish);
     
     // Cleanup on unmount
     return () => {
-      setAutoSaveLabel("");
       setPublishGrades(null);
     };
-  }, [autoSaveState, setAutoSaveLabel, setPublishGrades, handlePublish]);
+  }, [setPublishGrades]);
+  
+  // Note: We intentionally don't include handlePublish in dependencies
+  // because we want to set it once. The function will always have access
+  // to the latest rows, evalIdNum, etc. via closures.
 
   const teamOptions = useMemo(() => {
     const set = new Set<number | string>();
@@ -248,14 +243,19 @@ export default function GradesPageInner() {
     }
   }
 
+  const autoSaveLabel =
+    {
+      idle: "",
+      saving: "Concept wordt opgeslagen…",
+      saved: "✔ Concept opgeslagen (laatste 30s)",
+      error: "⚠ Niet opgeslagen – controleer je verbinding",
+    }[autoSaveState] ?? "";
+
   return (
     <>
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-center mb-4">
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-center mb-4">
+      {/* Filters and autosave status */}
+      <div className="flex flex-wrap gap-3 items-center justify-between mb-4">
+        <div className="flex flex-wrap gap-3 items-center">
           <input
             type="text"
             className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -290,6 +290,14 @@ export default function GradesPageInner() {
             ))}
           </select>
         </div>
+        
+        {/* Autosave status on the right */}
+        {autoSaveLabel && (
+          <div className="text-xs text-gray-500 min-h-[1.2rem]">
+            {autoSaveLabel}
+          </div>
+        )}
+      </div>
 
         {loading && <p className="text-sm text-gray-500">Laden…</p>}
         {error && <p className="text-sm text-red-600">{error}</p>}
