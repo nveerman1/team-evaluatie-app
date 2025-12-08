@@ -1,0 +1,469 @@
+{
+  "criteria": [
+    {
+      "code": "O1",
+      "subject_id": 1,
+      "omza_category": "Organiseren",
+      "title": "Realistische planning maken",
+      "description": "De leerling maakt een haalbare planning en stemt deze af op teamafspraken.",
+      "target_level": null,
+      "order": 1,
+      "level_descriptors": {
+        "1": "Maakt geen planning of een planning die niet uitvoerbaar is.",
+        "2": "Maakt soms een planning, maar deze is onvolledig of moeilijk te volgen.",
+        "3": "Maakt een duidelijke en haalbare planning die meestal gevolgd wordt.",
+        "4": "Maakt een realistische planning en bewaakt de eigen voortgang actief.",
+        "5": "Maakt een heldere planning, helpt anderen plannen en past samen met teamleden effectief bij."
+      },
+      "learning_objective_codes": [
+        "OB2.1",
+        "OB2.3",
+        "5",
+        "19",
+        "33"
+      ]
+    },
+    {
+      "code": "O2",
+      "subject_id": 1,
+      "omza_category": "Organiseren",
+      "title": "Deadlines nakomen",
+      "description": "De leerling levert taken op tijd aan en houdt zich aan gemaakte afspraken.",
+      "target_level": null,
+      "order": 2,
+      "level_descriptors": {
+        "1": "Houdt deadlines zelden aan; werk komt vaak te laat.",
+        "2": "Houdt enkele deadlines aan, maar mist regelmatig afspraken.",
+        "3": "Levert taken meestal op tijd aan en houdt zich aan afspraken.",
+        "4": "Is betrouwbaar, levert altijd op tijd en houdt rekening met teamdeadlines.",
+        "5": "Draagt bij aan het bewaken van teamdeadlines en helpt anderen op tijd te blijven."
+      },
+      "learning_objective_codes": [
+        "OB2.2",
+        "OB1.4",
+        "5",
+        "19",
+        "34"
+      ]
+    },
+    {
+      "code": "O3",
+      "subject_id": 1,
+      "omza_category": "Organiseren",
+      "title": "Overzichtelijk werken",
+      "description": "De leerling werkt gestructureerd en houdt materiaal en taken georganiseerd.",
+      "target_level": null,
+      "order": 3,
+      "level_descriptors": {
+        "1": "Werkt chaotisch; materialen of notities raken vaak kwijt.",
+        "2": "Probeert geordend te werken, maar het overzicht ontbreekt regelmatig.",
+        "3": "Werkt overzichtelijk en houdt een basisstructuur aan.",
+        "4": "Werkt duidelijk gestructureerd, bewaakt voortgang en houdt materialen netjes bij.",
+        "5": "Werkt zeer systematisch en helpt teamleden overzicht te houden."
+      },
+      "learning_objective_codes": [
+        "OB2.3",
+        "OB2.4",
+        "5",
+        "19",
+        "33"
+      ]
+    },
+    {
+      "code": "O4",
+      "subject_id": 1,
+      "omza_category": "Organiseren",
+      "title": "Hulpmiddelen bij planning gebruiken",
+      "description": "De leerling gebruikt hulpmiddelen zoals agenda, bord, Trello of logboek om het werk te organiseren.",
+      "target_level": null,
+      "order": 4,
+      "level_descriptors": {
+        "1": "Gebruikt hulpmiddelen nauwelijks of onjuist.",
+        "2": "Gebruikt hulpmiddelen af en toe, maar niet consequent.",
+        "3": "Gebruikt hulpmiddelen regelmatig om taken te plannen en bij te houden.",
+        "4": "Gebruikt hulpmiddelen effectief en houdt de voortgang actief bij.",
+        "5": "Gebruikt hulpmiddelen uitstekend en stimuleert teamleden dit ook te doen."
+      },
+      "learning_objective_codes": [
+        "OB2.4",
+        "OB2.5",
+        "8",
+        "33"
+      ]
+    },
+    {
+      "code": "O5",
+      "subject_id": 1,
+      "omza_category": "Organiseren",
+      "title": "Planning bijstellen",
+      "description": "De leerling reageert op veranderingen door zelfstandig de planning aan te passen.",
+      "target_level": null,
+      "order": 5,
+      "level_descriptors": {
+        "1": "Past de planning niet aan, ook niet bij problemen of veranderingen.",
+        "2": "Probeert planningen aan te passen, maar dit gebeurt te laat of onvolledig.",
+        "3": "Past de eigen planning aan wanneer nodig en houdt hierbij rekening met teamwerk.",
+        "4": "Reageert snel op veranderende omstandigheden en past de planning effectief aan.",
+        "5": "Ziet problemen vroeg, stuurt de planning proactief bij en helpt het team mee te schakelen."
+      },
+      "learning_objective_codes": [
+        "OB2.5",
+        "OB6.5",
+        "8",
+        "19",
+        "33",
+        "35"
+      ]
+    },
+    {
+      "code": "M1",
+      "subject_id": 1,
+      "omza_category": "Meedoen",
+      "title": "Actief bijdragen",
+      "description": "De leerling neemt actief deel aan het team en voert toegewezen taken zorgvuldig uit.",
+      "target_level": null,
+      "order": 6,
+      "level_descriptors": {
+        "1": "Levert weinig bijdrage; wacht vaak af of doet niet mee.",
+        "2": "Draagt soms bij, maar laat taken liggen of wisselt in inzet.",
+        "3": "Levert een betrouwbare bijdrage en voert taken op tijd uit.",
+        "4": "Neemt actief initiatief en helpt het team vooruit.",
+        "5": "Is een motor van het team en helpt anderen om effectief samen te werken."
+      },
+      "learning_objective_codes": [
+        "OB1.1",
+        "OB1.5",
+        "34",
+        "35"
+      ]
+    },
+    {
+      "code": "M2",
+      "subject_id": 1,
+      "omza_category": "Meedoen",
+      "title": "Luisteren en respectvol reageren",
+      "description": "De leerling luistert naar teamgenoten en reageert op een positieve, constructieve manier.",
+      "target_level": null,
+      "order": 7,
+      "level_descriptors": {
+        "1": "Luistert slecht; reageert storend, negatief of niet passend.",
+        "2": "Luistert soms, maar reageert niet altijd respectvol of passend.",
+        "3": "Luistert goed en reageert meestal respectvol.",
+        "4": "Luistert actief en draagt positief bij aan groepsgesprekken.",
+        "5": "Is een voorbeeld in actief luisteren en creëert een veilige sfeer voor anderen."
+      },
+      "learning_objective_codes": [
+        "OB1.2",
+        "OB5.1",
+        "28",
+        "34"
+      ]
+    },
+    {
+      "code": "M3",
+      "subject_id": 1,
+      "omza_category": "Meedoen",
+      "title": "Informatie delen",
+      "description": "De leerling communiceert tijdig informatie en ideeën zodat het team goed kan samenwerken.",
+      "target_level": null,
+      "order": 8,
+      "level_descriptors": {
+        "1": "Deelt informatie niet of te laat; het team mist belangrijke input.",
+        "2": "Deelt soms informatie, maar dit komt onregelmatig of onvolledig.",
+        "3": "Deelt relevante informatie op tijd en communiceert duidelijk.",
+        "4": "Draagt waardevolle ideeën aan en communiceert proactief.",
+        "5": "Deelt inzichten, verbindt teamleden en stimuleert samenwerking door goede communicatie."
+      },
+      "learning_objective_codes": [
+        "OB1.3",
+        "OB5.1",
+        "OB5.3",
+        "27",
+        "28",
+        "34"
+      ]
+    },
+    {
+      "code": "M4",
+      "subject_id": 1,
+      "omza_category": "Meedoen",
+      "title": "Eerlijke taakverdeling",
+      "description": "De leerling denkt mee over een eerlijke verdeling van taken en neemt verantwoordelijkheid voor het eigen deel.",
+      "target_level": null,
+      "order": 9,
+      "level_descriptors": {
+        "1": "Vermijdt verantwoordelijkheid of laat taken aan anderen over.",
+        "2": "Neemt soms verantwoordelijkheid, maar de verdeling is niet altijd eerlijk.",
+        "3": "Neemt verantwoordelijkheid voor toegewezen taken.",
+        "4": "Denkt actief mee over taakverdeling en zorgt voor balans in het team.",
+        "5": "Stuurt taakverdeling positief bij en neemt extra verantwoordelijkheid wanneer nodig."
+      },
+      "learning_objective_codes": [
+        "OB1.4",
+        "OB2.2",
+        "5",
+        "19",
+        "34",
+        "35"
+      ]
+    },
+    {
+      "code": "M5",
+      "subject_id": 1,
+      "omza_category": "Meedoen",
+      "title": "Teamleden ondersteunen",
+      "description": "De leerling helpt anderen wanneer dat nodig is en draagt bij aan een positief teamproces.",
+      "target_level": null,
+      "order": 10,
+      "level_descriptors": {
+        "1": "Helpt anderen niet of belemmert het teamproces.",
+        "2": "Helpt soms, maar vooral wanneer hier expliciet om wordt gevraagd.",
+        "3": "Helpt teamleden regelmatig zonder dat dit ten koste gaat van het eigen werk.",
+        "4": "Ondersteunt actief en bevordert samenwerking.",
+        "5": "Is een sterke steunpilaar; helpt anderen groeien en voorkomt problemen in het team."
+      },
+      "learning_objective_codes": [
+        "OB1.5",
+        "OB6.2",
+        "34",
+        "35"
+      ]
+    },
+    {
+      "code": "Z1",
+      "subject_id": 1,
+      "omza_category": "Zelfvertrouwen",
+      "title": "Mening en ideeën delen",
+      "description": "De leerling durft ideeën te delen en spreekt zich uit op een duidelijke en respectvolle manier.",
+      "target_level": null,
+      "order": 11,
+      "level_descriptors": {
+        "1": "Deelt geen ideeën of durft niet te spreken.",
+        "2": "Deelt soms ideeën, maar onzeker of onduidelijk.",
+        "3": "Deelt regelmatig ideeën en geeft meningen duidelijk aan.",
+        "4": "Deelt proactief ideeën en draagt constructief bij aan groepsgesprekken.",
+        "5": "Inspireert anderen met ideeën en zorgt dat iedereen durft bij te dragen."
+      },
+      "learning_objective_codes": [
+        "OB3.2",
+        "OB5.1",
+        "OB10.1",
+        "10",
+        "25",
+        "34",
+        "35"
+      ]
+    },
+    {
+      "code": "Z2",
+      "subject_id": 1,
+      "omza_category": "Zelfvertrouwen",
+      "title": "Keuzes beargumenteren",
+      "description": "De leerling kan gemaakte keuzes uitleggen en onderbouwen met argumenten.",
+      "target_level": null,
+      "order": 12,
+      "level_descriptors": {
+        "1": "Kan keuzes niet uitleggen of verzint achteraf redenen.",
+        "2": "Kan keuzes beperkt onderbouwen; redenen blijven vaag.",
+        "3": "Legt keuzes duidelijk uit en geeft logische argumenten.",
+        "4": "Onderbouwt keuzes overtuigend en met meerdere invalshoeken.",
+        "5": "Onderbouwt keuzes sterk en helpt het team betere beslissingen te nemen."
+      },
+      "learning_objective_codes": [
+        "OB3.3",
+        "OB10.1",
+        "OB10.5",
+        "24",
+        "25",
+        "34"
+      ]
+    },
+    {
+      "code": "Z3",
+      "subject_id": 1,
+      "omza_category": "Zelfvertrouwen",
+      "title": "Omgaan met feedback",
+      "description": "De leerling vraagt om feedback, staat open voor opmerkingen en past het werk aan waar dat nodig is.",
+      "target_level": null,
+      "order": 13,
+      "level_descriptors": {
+        "1": "Staat niet open voor feedback; reageert defensief of negeert opmerkingen.",
+        "2": "Luistert naar feedback, maar doet er weinig mee.",
+        "3": "Neemt feedback serieus en past het werk meestal aan.",
+        "4": "Vraagt actief om feedback en verwerkt dit zorgvuldig.",
+        "5": "Gebruikt feedback uitstekend en helpt anderen groeien door constructieve input te geven."
+      },
+      "learning_objective_codes": [
+        "OB6.4",
+        "OB3.5",
+        "OB6.5",
+        "33",
+        "35"
+      ]
+    },
+    {
+      "code": "Z4",
+      "subject_id": 1,
+      "omza_category": "Zelfvertrouwen",
+      "title": "Presenteren met zekerheid",
+      "description": "De leerling presenteert met vertrouwen en communiceert duidelijk naar publiek en team.",
+      "target_level": null,
+      "order": 14,
+      "level_descriptors": {
+        "1": "Spreekt onzeker, onduidelijk of vermijdt presentatie.",
+        "2": "Presenteert met moeite; de boodschap is soms onduidelijk.",
+        "3": "Presenteert voldoende duidelijk en met basisvertrouwen.",
+        "4": "Presenteert overtuigend en helder met goede non-verbale communicatie.",
+        "5": "Presenteert sterk, zelfverzekerd en neemt het publiek goed mee."
+      },
+      "learning_objective_codes": [
+        "OB5.1",
+        "OB5.3",
+        "OB5.4",
+        "27",
+        "28"
+      ]
+    },
+    {
+      "code": "Z5",
+      "subject_id": 1,
+      "omza_category": "Zelfvertrouwen",
+      "title": "Grenzen aangeven en voor zichzelf opkomen",
+      "description": "De leerling bewaakt eigen grenzen en durft op een respectvolle manier op te komen voor zichzelf.",
+      "target_level": null,
+      "order": 15,
+      "level_descriptors": {
+        "1": "Komt niet voor zichzelf op en laat over zich heen lopen.",
+        "2": "Probeert grenzen aan te geven, maar doet dit onduidelijk.",
+        "3": "Geeft grenzen duidelijk aan wanneer dat nodig is.",
+        "4": "Komt respectvol op voor zichzelf en behoudt balans binnen het team.",
+        "5": "BewaaKt grenzen uitstekend en helpt een gezonde teamdynamiek creëren."
+      },
+      "learning_objective_codes": [
+        "OB6.2",
+        "OB6.5",
+        "32",
+        "33",
+        "35"
+      ]
+    },
+    {
+      "code": "A1",
+      "subject_id": 1,
+      "omza_category": "Autonomie",
+      "title": "Zelfstandig werken",
+      "description": "De leerling werkt zelfstandig aan taken zonder voortdurende begeleiding.",
+      "target_level": null,
+      "order": 16,
+      "level_descriptors": {
+        "1": "Kan niet zelfstandig werken en heeft constant begeleiding nodig.",
+        "2": "Werkt soms zelfstandig, maar verliest snel de focus.",
+        "3": "Werkt meestal zelfstandig en vraagt hulp wanneer dat nodig is.",
+        "4": "Werkt zelfstandig, toont eigenaarschap en behoudt overzicht.",
+        "5": "Werkt zeer zelfstandig en helpt anderen zelfstandig te werken."
+      },
+      "learning_objective_codes": [
+        "OB6.2",
+        "OB6.5",
+        "8",
+        "33",
+        "35"
+      ]
+    },
+    {
+      "code": "A2",
+      "subject_id": 1,
+      "omza_category": "Autonomie",
+      "title": "Verantwoordelijkheid nemen",
+      "description": "De leerling neemt verantwoordelijkheid voor het eigen gedrag, keuzes en bijdragen.",
+      "target_level": null,
+      "order": 17,
+      "level_descriptors": {
+        "1": "Neemt geen verantwoordelijkheid en schuift taken af.",
+        "2": "Neemt af en toe verantwoordelijkheid, maar is inconsistent.",
+        "3": "Neemt verantwoordelijkheid voor eigen taken en planning.",
+        "4": "Toont sterk eigenaarschap en neemt verantwoordelijkheid voor fouten en successen.",
+        "5": "Neemt een voorbeeldrol in verantwoordelijkheid en ondersteunt het teamproces."
+      },
+      "learning_objective_codes": [
+        "OB6.2",
+        "OB6.5",
+        "33",
+        "35"
+      ]
+    },
+    {
+      "code": "A3",
+      "subject_id": 1,
+      "omza_category": "Autonomie",
+      "title": "Eigen leerproces sturen",
+      "description": "De leerling plant eigen werk, monitort voortgang en stuurt het leerproces bij wanneer dat nodig is.",
+      "target_level": null,
+      "order": 18,
+      "level_descriptors": {
+        "1": "Stuurt het eigen leren niet en reageert pas bij problemen.",
+        "2": "Probeert het leerproces te sturen, maar dit gebeurt onregelmatig.",
+        "3": "Stuurt het eigen leerproces voldoende en maakt passende keuzes.",
+        "4": "Stuurt actief bij, bewaakt voortgang en reflecteert gericht op verbetering.",
+        "5": "Stuurt het eigen leerproces sterk, gebruikt strategieën effectief en helpt anderen reflecteren."
+      },
+      "learning_objective_codes": [
+        "OB2.1",
+        "OB6.1",
+        "OB6.3",
+        "OB6.5",
+        "8",
+        "33",
+        "32"
+      ]
+    },
+    {
+      "code": "A4",
+      "subject_id": 1,
+      "omza_category": "Autonomie",
+      "title": "Initiatief nemen",
+      "description": "De leerling neemt initiatief, ziet werk liggen en begint zelfstandig taken.",
+      "target_level": null,
+      "order": 19,
+      "level_descriptors": {
+        "1": "Wacht altijd af en neemt geen initiatief.",
+        "2": "Neemt soms initiatief, maar onzeker of te laat.",
+        "3": "Neemt regelmatig initiatief binnen eigen taken.",
+        "4": "Neemt actief initiatief en denkt vooruit.",
+        "5": "Neemt veel initiatief, ziet kansen en motiveert het team."
+      },
+      "learning_objective_codes": [
+        "OB3.4",
+        "OB3.5",
+        "OB1.5",
+        "35",
+        "19",
+        "34"
+      ]
+    },
+    {
+      "code": "A5",
+      "subject_id": 1,
+      "omza_category": "Autonomie",
+      "title": "Problemen zelfstandig oplossen",
+      "description": "De leerling probeert problemen eerst zelf te analyseren en op te lossen voordat hij of zij om hulp vraagt.",
+      "target_level": null,
+      "order": 20,
+      "level_descriptors": {
+        "1": "Lost geen problemen zelfstandig op en wacht tot anderen het doen.",
+        "2": "Probeert soms problemen te analyseren, maar geeft snel op.",
+        "3": "Probeert problemen zelfstandig op te lossen en vraagt hulp wanneer dat nodig is.",
+        "4": "Lost problemen effectief en zelfstandig op in verschillende situaties.",
+        "5": "Lost problemen creatief op en ondersteunt anderen hierbij."
+      },
+      "learning_objective_codes": [
+        "OB3.4",
+        "OB8.2",
+        "OB8.4",
+        "9",
+        "24",
+        "35"
+      ]
+    }
+  ]
+}

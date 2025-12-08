@@ -12,7 +12,7 @@ Changes:
 - Add indices for performance
 
 Revision ID: pt_20251208_01
-Revises: subp_20251203_01
+Revises: 20251207_peer_criteria
 Create Date: 2025-12-08
 
 """
@@ -20,11 +20,10 @@ Create Date: 2025-12-08
 from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "pt_20251208_01"
-down_revision: Union[str, None] = "subp_20251203_01"
+down_revision: Union[str, None] = "20251207_peer_criteria"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -57,8 +56,12 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_project_teams_id", "project_teams", ["id"], unique=False)
-    op.create_index("ix_project_teams_school_id", "project_teams", ["school_id"], unique=False)
-    op.create_index("ix_project_team_project", "project_teams", ["project_id"], unique=False)
+    op.create_index(
+        "ix_project_teams_school_id", "project_teams", ["school_id"], unique=False
+    )
+    op.create_index(
+        "ix_project_team_project", "project_teams", ["project_id"], unique=False
+    )
     op.create_index("ix_project_team_team", "project_teams", ["team_id"], unique=False)
     op.create_index(
         "ix_project_team_project_version",
@@ -230,7 +233,9 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # Remove indices and columns from project_notes_contexts
-    op.drop_index("ix_project_notes_context_status", table_name="project_notes_contexts")
+    op.drop_index(
+        "ix_project_notes_context_status", table_name="project_notes_contexts"
+    )
     op.drop_index(
         "ix_project_notes_context_project_team", table_name="project_notes_contexts"
     )
@@ -277,7 +282,9 @@ def downgrade() -> None:
     op.drop_index(
         "ix_project_team_member_project_team", table_name="project_team_members"
     )
-    op.drop_index("ix_project_team_members_school_id", table_name="project_team_members")
+    op.drop_index(
+        "ix_project_team_members_school_id", table_name="project_team_members"
+    )
     op.drop_index("ix_project_team_members_id", table_name="project_team_members")
     op.drop_table("project_team_members")
 

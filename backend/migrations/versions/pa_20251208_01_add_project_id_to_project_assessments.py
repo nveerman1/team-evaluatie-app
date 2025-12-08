@@ -1,7 +1,7 @@
 """add project_id to project_assessments
 
 Revision ID: pa_20251208_01
-Revises: pec_20251202_01
+Revises: pt_20251208_02
 Create Date: 2025-12-08
 
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = "pa_20251208_01"
-down_revision: Union[str, None] = "pec_20251202_01"
+down_revision: Union[str, None] = "pt_20251208_02"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -28,7 +28,7 @@ def upgrade() -> None:
             nullable=True,
         ),
     )
-    
+
     # Add foreign key constraint
     op.create_foreign_key(
         "fk_project_assessments_project_id",

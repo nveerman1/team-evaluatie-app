@@ -1,0 +1,247 @@
+{
+  "project_assessment_criteria": [
+    {
+      "category": "projectproces",
+      "code": "OP_ORIENTEREN_ANALYSEREN",
+      "title": "Oriënteren & analyseren",
+      "description": "Analyse van context en probleem, maatschappelijke en ethische gevolgen van technologie, betrouwbaarheid van kennis, opdrachtgever, behoeften en vraagformulering.",
+      "target_level": "bovenbouw",
+      "learning_objectives": ["A1", "A2", "A3", "E18", "E19", "E20", "F26"],
+      "level_descriptors": {
+        "1": "Heeft weinig zicht op de context en formuleert geen of een vage vraag; houdt geen rekening met bronnen of gevolgen.",
+        "2": "Brengt de context globaal in beeld maar mist belangrijke aspecten; vraag is deels onduidelijk of niet goed afgebakend.",
+        "3": "Analyseert de context redelijk volledig, benoemt kernaspecten en formuleert een bruikbare onderzoek- of ontwerpvraag.",
+        "4": "Maakt een scherpe analyse van context, belanghebbenden en gevolgen; formuleert een heldere en goed afgebakende vraag.",
+        "5": "Levert een diepgaande en kritische analyse, weegt bronnen en gevolgen expliciet en formuleert een zeer sterke centrale vraag."
+      }
+    },
+    {
+      "category": "projectproces",
+      "code": "OP_DIVERGEREN_IDEEN",
+      "title": "Divergeren (ideeën bedenken)",
+      "description": "Creatieve en inhoudelijk verantwoorde ideeën genereren, redenerend met systemen, oorzaak-gevolg, kringlopen, structuur–functie en interdisciplinair perspectief.",
+      "target_level": "bovenbouw",
+      "learning_objectives": ["B6", "C9", "C10", "C14", "C15", "C16"],
+      "level_descriptors": {
+        "1": "Bedenkt één of enkele oppervlakkige ideeën zonder inhoudelijke onderbouwing.",
+        "2": "Bedenkt meerdere ideeën maar zonder duidelijke koppeling met natuurwetenschappelijke denkwijzen.",
+        "3": "Bedenkt een reeks haalbare ideeën en gebruikt af en toe systemen, oorzaak-gevolg of structuur–functie in de redenering.",
+        "4": "Genereert diverse originele ideeën en onderbouwt deze bewust met systeemdenken, patronen of structuur–functie.",
+        "5": "Bedenkt veel én vernieuwende ideeën, combineert meerdere denkwijzen en kan helder uitleggen waarom ze inhoudelijk sterk zijn."
+      }
+    },
+    {
+      "category": "projectproces",
+      "code": "OP_VISUALISEREN_MAKEN",
+      "title": "Visualiseren / maken",
+      "description": "Ideeën omzetten in schetsen, modellen of prototypes met begrip van schaal, stabiliteit, structuur en functie.",
+      "target_level": "bovenbouw",
+      "learning_objectives": ["B6", "C12", "C13", "C15", "E21"],
+      "level_descriptors": {
+        "1": "Maakt nauwelijks visualisaties of prototypes; wat er is, is onoverzichtelijk of niet bruikbaar.",
+        "2": "Maakt eenvoudige visualisaties of modellen maar houdt weinig rekening met schaal, stabiliteit of functie.",
+        "3": "Maakt bruikbare visualisaties/prototypes waarbij schaal en basisstructuur meestal kloppen.",
+        "4": "Maakt duidelijke en technisch verzorgde visualisaties/prototypes met bewuste keuzes in schaal, vorm en stabiliteit.",
+        "5": "Maakt zeer heldere en professioneel ogende visualisaties/prototypes die functie, schaal en constructie uitstekend laten zien."
+      }
+    },
+    {
+      "category": "projectproces",
+      "code": "OP_CONVERGEREN_KEUZE_ONDERBOUWING",
+      "title": "Convergeren (keuze & onderbouwing)",
+      "description": "Keuzes maken en onderbouwen met natuurwetenschappelijke redeneringen, data en analyses.",
+      "target_level": "bovenbouw",
+      "learning_objectives": ["B6", "C9", "E19", "E24", "E25"],
+      "level_descriptors": {
+        "1": "Maakt keuzes zonder uitleg of op basis van willekeur.",
+        "2": "Geeft een globale reden voor keuzes, maar zonder duidelijke link met data of denkwijzen.",
+        "3": "Onderbouwt keuzes met enkele argumenten of observaties; de link met data is soms nog oppervlakkig.",
+        "4": "Maakt goed doordachte keuzes en onderbouwt deze met relevante data en natuurwetenschappelijke redeneringen.",
+        "5": "Weegt alternatieven systematisch af en formuleert een zeer sterke, transparante en goed onderbouwde keuze."
+      }
+    },
+    {
+      "category": "projectproces",
+      "code": "OP_TESTEN_EVALUEREN",
+      "title": "Testen & evalueren",
+      "description": "Hypothesen of ontwerpen testen, patronen en oorzaak–gevolgrelaties herkennen, data analyseren en verbeteren op basis van resultaten.",
+      "target_level": "bovenbouw",
+      "learning_objectives": ["C10", "C11", "E21", "E22", "E23", "E24", "E27"],
+      "level_descriptors": {
+        "1": "Test weinig tot niet; trekt geen of willekeurige conclusies uit resultaten.",
+        "2": "Voert enkele tests uit maar werkt onnauwkeurig of trekt weinig onderbouwde conclusies.",
+        "3": "Voert redelijke tests uit, registreert data en trekt basale conclusies over werking of effect.",
+        "4": "Plant en voert gerichte tests uit, herkent patronen in data en verbetert het ontwerp op basis van de resultaten.",
+        "5": "Ontwerpt sterke testopzetten, analyseert data kritisch en gebruikt inzichten om het ontwerp wezenlijk te verbeteren."
+      }
+    },
+    {
+      "category": "projectproces",
+      "code": "OP_WETENSCHAPPELIJKE_DENKWIJZEN",
+      "title": "Wetenschappelijke denkwijzen & onderbouwing",
+      "description": "Gericht redeneren met systemen, schaal, stabiliteit, patronen en oorzaak–gevolg, en deze denkwijzen gebruiken om het ontwerp of onderzoek te onderbouwen.",
+      "target_level": "bovenbouw",
+      "learning_objectives": ["C9", "C10", "C11", "C12", "C13"],
+      "level_descriptors": {
+        "1": "Gebruikt nauwelijks natuurwetenschappelijke denkwijzen in redeneringen over het project.",
+        "2": "Past af en toe een denkwijze toe, maar oppervlakkig of onsamenhangend.",
+        "3": "Gebruikt één of enkele denkwijzen (bijv. oorzaak–gevolg of schaal) om keuzes te verklaren.",
+        "4": "Gebruikt meerdere denkwijzen bewust en consequent om het ontwerp of onderzoek te onderbouwen.",
+        "5": "Integreert denkwijzen systematisch in analyse en ontwerp; kan helder uitleggen hoe deze het resultaat verbeteren."
+      }
+    },
+
+    {
+      "category": "eindresultaat",
+      "code": "ER_ONTWERP_WENS_HAAL_INNOV",
+      "title": "Ontwerp (wenselijkheid, haalbaarheid, innovativiteit)",
+      "description": "Ontwerp is functioneel, realistisch en vernieuwend; laat inzicht zien in stabiliteit, vorm–functie en maatschappelijke relevantie.",
+      "target_level": "bovenbouw",
+      "learning_objectives": ["B4", "C13", "C15", "D17", "E21", "E24"],
+      "level_descriptors": {
+        "1": "Ontwerp is nauwelijks functioneel of haalbaar en sluit slecht aan bij de vraag.",
+        "2": "Ontwerp werkt deels, maar is beperkt haalbaar of weinig passend bij de context.",
+        "3": "Ontwerp is in de basis functioneel en haalbaar en sluit redelijk aan bij de vraag.",
+        "4": "Ontwerp is goed doordacht, haalbaar en duidelijk afgestemd op de context en gebruiker.",
+        "5": "Ontwerp is zowel functioneel als vernieuwend, toont sterke vorm–functie-keuzes en speelt overtuigend in op maatschappelijke context."
+      }
+    },
+    {
+      "category": "eindresultaat",
+      "code": "ER_UITWERKING_MODEL_TEKNISCH",
+      "title": "Uitwerking (tekening/model/maquette)",
+      "description": "Technisch correcte uitwerking met passende schaal, maatvoering en detaillering.",
+      "target_level": "bovenbouw",
+      "learning_objectives": ["B6", "C12", "C15", "E21", "E23"],
+      "level_descriptors": {
+        "1": "Uitwerking is onvolledig of onduidelijk; belangrijke details ontbreken.",
+        "2": "Uitwerking is aanwezig maar bevat onnauwkeurigheden in schaal, maatvoering of details.",
+        "3": "Uitwerking is voldoende duidelijk; schaal en maatvoering zijn grotendeels correct.",
+        "4": "Uitwerking is zorgvuldig, nauwkeurig en goed leesbaar uitgewerkt.",
+        "5": "Uitwerking is zeer professioneel, met consistente schaal, nauwkeurige details en heldere technische communicatie."
+      }
+    },
+
+    {
+      "category": "communicatie",
+      "code": "CO_OPDRACHTGEVER_EXPERT_DOCENT",
+      "title": "Communicatie met opdrachtgever, expert en docenten",
+      "description": "Professionele communicatie, samenwerking met opdrachtgever en experts, opvolging van feedback en ondernemende houding.",
+      "target_level": "bovenbouw",
+      "learning_objectives": ["A3", "E18", "E19", "F34", "F35"],
+      "level_descriptors": {
+        "1": "Neemt nauwelijks contact op of reageert onprofessioneel; gaat niet in op feedback.",
+        "2": "Heeft af en toe contact maar communicatie is onduidelijk of passief.",
+        "3": "Communiceert meestal duidelijk en reageert op feedback wanneer hierom gevraagd wordt.",
+        "4": "Communiceert proactief, professioneel en gebruikt feedback om het project te verbeteren.",
+        "5": "Bouwt een sterke, professionele samenwerking op met opdrachtgever/experts en toont een ondernemende houding."
+      }
+    },
+    {
+      "category": "communicatie",
+      "code": "CO_VERSLAG",
+      "title": "Verslag",
+      "description": "Wetenschappelijk betrouwbaar en logisch opgebouwd verslag met correcte bronvermelding en goed onderbouwde conclusies.",
+      "target_level": "bovenbouw",
+      "learning_objectives": ["A2", "E24", "E25", "F33"],
+      "level_descriptors": {
+        "1": "Verslag is incompleet of slecht gestructureerd; bronnen ontbreken of zijn onduidelijk.",
+        "2": "Verslag is aanwezig maar mist structuur, onderbouwing of correcte bronvermelding.",
+        "3": "Verslag heeft een logische opbouw en bevat basis-onderbouwing en enkele bronnen.",
+        "4": "Verslag is helder gestructureerd, goed onderbouwd en verantwoordt bronnen zorgvuldig.",
+        "5": "Verslag benadert een academische stijl met sterke argumentatie, kritische reflectie en uitstekende bronverantwoording."
+      }
+    },
+    {
+      "category": "communicatie",
+      "code": "CO_PRESENTATIE",
+      "title": "Presentatie",
+      "description": "Heldere presentatie waarin ontwerpkeuzes en maatschappelijke betekenis begrijpelijk en overtuigend worden verantwoord.",
+      "target_level": "bovenbouw",
+      "learning_objectives": ["A3", "D17", "E25", "F33", "F34"],
+      "level_descriptors": {
+        "1": "Presentatie is onduidelijk, slecht voorbereid of moeilijk te volgen.",
+        "2": "Presentatie is begrijpelijk maar mist structuur of onderbouwing.",
+        "3": "Presentatie is helder en redelijk gestructureerd; keuzes worden in hoofdlijnen uitgelegd.",
+        "4": "Presentatie is goed opgebouwd, duidelijk en legt keuzes en impact overtuigend uit.",
+        "5": "Presentatie is zeer sterk, boeiend en professioneel; koppelt ontwerp en maatschappelijke betekenis overtuigend en met zelfvertrouwen."
+      }
+    },
+
+    {
+      "category": "projectproces",
+      "code": "PM_PLANNING_TIJD",
+      "title": "Planning & tijdsinzet",
+      "description": "Realistische planning opstellen en voortgang bewaken; tijd efficiënt inzetten.",
+      "target_level": "bovenbouw",
+      "learning_objectives": ["B5", "E19", "F33"],
+      "level_descriptors": {
+        "1": "Plant nauwelijks en komt vaak deadlines niet na.",
+        "2": "Maakt een globale planning maar houdt zich er beperkt aan.",
+        "3": "Maakt een haalbare planning en houdt zich hier meestal aan.",
+        "4": "Plant realistisch, bewaakt de voortgang goed en stuurt bij wanneer nodig.",
+        "5": "Plant zeer effectief, anticipeert op risico’s en gebruikt tijd optimaal voor een sterk eindresultaat."
+      }
+    },
+    {
+      "category": "projectproces",
+      "code": "PM_SAMENWERKING_COMMUNICATIE",
+      "title": "Samenwerking & communicatie",
+      "description": "Effectief samenwerken in het team, taken verdelen, afstemmen en feedback verwerken.",
+      "target_level": "bovenbouw",
+      "learning_objectives": ["B5", "E19", "F34"],
+      "level_descriptors": {
+        "1": "Draagt weinig bij of belemmert de samenwerking.",
+        "2": "Werkt mee wanneer gevraagd maar neemt weinig initiatief in samenwerking.",
+        "3": "Werkt over het algemeen goed samen en communiceert voldoende duidelijk.",
+        "4": "Neemt actief deel aan samenwerking, stemt af en verwerkt feedback constructief.",
+        "5": "Is een drijvende kracht in het team, stimuleert anderen en zorgt voor een open en effectieve communicatiecultuur."
+      }
+    },
+    {
+      "category": "projectproces",
+      "code": "PM_AUTONOMIE_INITIATIEF",
+      "title": "Autonomie & initiatief",
+      "description": "Zelf regie nemen, initiatief tonen en verantwoordelijkheid dragen voor het eigen aandeel.",
+      "target_level": "bovenbouw",
+      "learning_objectives": ["B8", "F33", "F35"],
+      "level_descriptors": {
+        "1": "Wacht af en neemt nauwelijks verantwoordelijkheid; laat werk aan anderen over.",
+        "2": "Neemt soms initiatief maar is afhankelijk van aansturing.",
+        "3": "Neemt verantwoordelijkheid voor eigen taken en werkt redelijk zelfstandig.",
+        "4": "Werkt zelfstandig, ziet werk liggen en neemt initiatief om problemen op te lossen.",
+        "5": "Toont sterk eigenaarschap, neemt voortouw waar nodig en denkt ondernemend mee over kansen en verbeteringen."
+      }
+    },
+    {
+      "category": "projectproces",
+      "code": "PM_AANPASSING_REFLECTIE",
+      "title": "Aanpassing & reflectie",
+      "description": "Reflecteren op aanpak en resultaat, feedback benutten en het proces tussentijds bijsturen.",
+      "target_level": "bovenbouw",
+      "learning_objectives": ["B8", "E19", "F33", "F34"],
+      "level_descriptors": {
+        "1": "Reflecteert nauwelijks en verandert niets, ook niet als iets duidelijk niet werkt.",
+        "2": "Ziet achteraf wel wat beter kon, maar verwerkt dit nauwelijks in het project.",
+        "3": "Benoemt wat goed en minder goed ging en past af en toe iets aan op basis van feedback.",
+        "4": "Reflecteert gericht, verwerkt feedback zichtbaar en stuurt het proces bewust bij.",
+        "5": "Reflecteert diepgaand, leert aantoonbaar van eerdere projecten en gebruikt feedback om zichzelf en het team naar een hoger niveau te tillen."
+      }
+    },
+    {
+      "category": "projectproces",
+      "code": "PM_ZELFONTWIKKELING_REFLECTIE",
+      "title": "Zelfontwikkeling & reflectie",
+      "description": "Bewust sturen van eigen leerproces en groei; eigenaarschap over leerdoelen en professionele houding.",
+      "target_level": "bovenbouw",
+      "learning_objectives": ["B8", "F33", "F35"],
+      "level_descriptors": {
+        "1": "Heeft weinig zicht op eigen leerproces en toont geen interesse in persoonlijke ontwikkeling.",
+        "2": "Kan globaal aangeven wat geleerd is, maar zonder duidelijke koppeling aan eigen doelen of gedrag.",
+        "3": "Benoemt eigen sterke en zwakke punten en ziet welke stappen nodig zijn om te verbeteren.",
+        "4": "Stelt concrete leerdoelen, werkt hier actief aan en evalueert eigen groei gedurende het project.",
+        "5": "Neemt sterk eigenaarschap over eigen ontwikkeling, zoekt actief uitdagingen op en verbindt inzichten aan toekomstige studie of loopbaan."
+      }
+    }
+  ]
+}
