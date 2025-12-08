@@ -158,7 +158,7 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
       {/* Alert */}
       {alertMessage && (
         <div className={`mb-4 p-4 rounded-lg border ${getAlertStyles()}`}>
@@ -178,7 +178,7 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
 
       {/* Project Selector */}
       <div className="mb-6">
-        <label className="block text-xs font-semibold text-gray-500 tracking-wide mb-2">
+        <label className="block text-sm font-semibold text-gray-500 mb-2">
           Selecteer project
         </label>
         <div className="relative">
@@ -267,7 +267,7 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
                           >
                             {member.user_name}
                             {member.role && (
-                              <span className="ml-1 text-[11px] text-gray-500">
+                              <span className="ml-1 text-xs text-gray-500">
                                 ({member.role})
                               </span>
                             )}
