@@ -510,12 +510,44 @@ export default function ClassTeamsPageInner() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
-      <div className="mx-auto max-w-7xl">
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+                Klas- & Teambeheer
+                {isAdmin && (
+                  <span className="ml-3 rounded-full bg-purple-100 px-3 py-1 text-sm font-medium text-purple-800">
+                    Admin
+                  </span>
+                )}
+              </h1>
+              {selectedCourse && (
+                <p className="text-gray-600 mt-1 text-sm">
+                  {selectedCourse.name} ({selectedCourse.code}) - {selectedCourse.level} jaar {selectedCourse.year}
+                </p>
+              )}
+            </div>
+            {isAdmin && courseIdParam && (
+              <Link
+                href="/teacher/courses"
+                className="rounded-full border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                ← Terug
+              </Link>
+            )}
+          </div>
+        </header>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-6 space-y-5">
         {/* Alert */}
         {alertMessage && (
           <div
-            className={`mb-4 rounded-lg p-4 ${
+            className={`rounded-lg p-4 ${
               alertType === "success"
                 ? "bg-green-50 text-green-800"
                 : alertType === "error"
@@ -527,40 +559,10 @@ export default function ClassTeamsPageInner() {
           </div>
         )}
 
-        {/* Header */}
-        <div className="mb-6">
-          {isAdmin && courseIdParam && (
-            <Link
-              href="/teacher/courses"
-              className="mb-4 inline-flex items-center text-sm text-gray-600 hover:text-gray-900"
-            >
-              ← Terug naar Vakken beheren
-            </Link>
-          )}
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Klas- & Teambeheer
-                {isAdmin && (
-                  <span className="ml-3 rounded-full bg-purple-100 px-3 py-1 text-sm font-medium text-purple-800">
-                    Admin
-                  </span>
-                )}
-              </h1>
-              {selectedCourse && (
-                <p className="mt-1 text-gray-600">
-                  {selectedCourse.name} ({selectedCourse.code}) - {selectedCourse.level} jaar {selectedCourse.year}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-
         {/* Course Selector for Teachers (no courseId in URL) */}
         {isTeacher && !courseIdParam && (
-          <div className="mb-6 rounded-lg bg-white p-4 shadow">
-            <label className="mb-2 block text-sm font-medium text-gray-700">Selecteer vak</label>
+          <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-200">
+            <label className="mb-2 block text-sm font-semibold text-gray-500">Selecteer vak</label>
             <CourseSelector
               onCourseChange={(course) => setSelectedCourse(course)}
               selectedCourseId={selectedCourse?.id}
@@ -569,7 +571,7 @@ export default function ClassTeamsPageInner() {
         )}
 
         {!selectedCourse && (
-          <div className="rounded-lg bg-white p-8 text-center shadow">
+          <div className="rounded-2xl bg-white p-8 text-center shadow-sm border border-gray-200">
             <p className="text-gray-600">Selecteer een vak om te beginnen</p>
           </div>
         )}
@@ -1009,6 +1011,6 @@ export default function ClassTeamsPageInner() {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }
