@@ -328,11 +328,6 @@ class ProjectTeam(Base):
     # Metadata for backfill tracking
     backfill_source: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
 
-    # Timestamps
-    created_at: Mapped[datetime] = mapped_column(
-        default=datetime.utcnow, nullable=False
-    )
-
     # Relationships
     project: Mapped["Project"] = relationship()
     team: Mapped[Optional["Group"]] = relationship()
@@ -366,11 +361,6 @@ class ProjectTeamMember(Base):
 
     # Role in the team (optional)
     role: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-
-    # Timestamp
-    created_at: Mapped[datetime] = mapped_column(
-        default=datetime.utcnow, nullable=False
-    )
 
     # Relationships
     project_team: Mapped["ProjectTeam"] = relationship(back_populates="members")
