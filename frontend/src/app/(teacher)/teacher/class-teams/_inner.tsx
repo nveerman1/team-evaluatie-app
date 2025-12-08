@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Course } from "@/dtos/course.dto";
 import { useAuth } from "@/hooks/useAuth";
 import CourseSelector from "@/components/CourseSelector";
+import ProjectTeamManagement from "@/components/ProjectTeamManagement";
 import { courseService } from "@/services/course.service";
 
 // ============ Types ============
@@ -575,8 +576,25 @@ export default function ClassTeamsPageInner() {
 
         {selectedCourse && (
           <>
-            {/* Sticky Toolbar */}
-            <div className="sticky top-0 z-10 mb-6 space-y-4 rounded-2xl bg-white/80 p-4 shadow-sm backdrop-blur-sm">
+            {/* Explanatory Text */}
+            <div className="mb-6 rounded-lg bg-blue-50 p-4">
+              <p className="text-sm text-gray-700">
+                <span className="font-medium">Links:</span> vaste projectroosters (frozen teams per project). 
+                <span className="ml-2 font-medium">Rechts:</span> klasteams per leerling.
+              </p>
+            </div>
+
+            {/* 2-Column Grid Layout */}
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+              {/* Left Column: ProjectTeamManagement */}
+              <div className="xl:col-span-1">
+                <ProjectTeamManagement courseId={selectedCourse.id} />
+              </div>
+
+              {/* Right Column: Existing Student Management */}
+              <div className="xl:col-span-2">
+                {/* Sticky Toolbar */}
+                <div className="sticky top-0 z-10 mb-6 space-y-4 rounded-2xl bg-white/80 p-4 shadow-sm backdrop-blur-sm">
               {/* Row 1: Filters */}
               <div className="flex flex-wrap items-center gap-4">
                 {/* Search */}
@@ -846,6 +864,8 @@ export default function ClassTeamsPageInner() {
                   {filteredStudents.length} van {students.length} studenten
                   {hasUnsavedChanges && <span className="ml-2 text-orange-600">(wijzigingen worden automatisch opgeslagen...)</span>}
                 </p>
+              </div>
+            </div>
               </div>
             </div>
           </>
