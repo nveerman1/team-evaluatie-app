@@ -7,6 +7,13 @@ import { ProjectNotesContext } from "@/dtos/project-notes.dto";
 import { Course } from "@/dtos/course.dto";
 import type { ProjectListItem } from "@/dtos/project.dto";
 
+const INITIAL_PROJECT_STATE = {
+  title: "",
+  project_id: undefined as number | undefined,
+  course_id: undefined as number | undefined,
+  description: "",
+};
+
 export default function ProjectNotesOverviewPage() {
   const [projects, setProjects] = useState<ProjectNotesContext[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -15,12 +22,7 @@ export default function ProjectNotesOverviewPage() {
   const [showNewProjectForm, setShowNewProjectForm] = useState(false);
   const [selectedProjects, setSelectedProjects] = useState<Set<number>>(new Set());
   const [linkToExistingProject, setLinkToExistingProject] = useState(false);
-  const [newProject, setNewProject] = useState({
-    title: "",
-    project_id: undefined as number | undefined,
-    course_id: undefined as number | undefined,
-    description: "",
-  });
+  const [newProject, setNewProject] = useState(INITIAL_PROJECT_STATE);
 
   useEffect(() => {
     loadProjects();
@@ -73,7 +75,7 @@ export default function ProjectNotesOverviewPage() {
         description: newProject.description || null,
       });
       setShowNewProjectForm(false);
-      setNewProject({ title: "", project_id: undefined, course_id: undefined, description: "" });
+      setNewProject(INITIAL_PROJECT_STATE);
       setLinkToExistingProject(false);
       loadProjects(); // Reload the list
     } catch (error) {

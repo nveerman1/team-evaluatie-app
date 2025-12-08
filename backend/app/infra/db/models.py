@@ -707,7 +707,6 @@ class ProjectAssessment(Base):
     external_evaluator: Mapped["ExternalEvaluator"] = relationship()
 
     __table_args__ = (
-        Index("ix_project_assessment_project", "project_id"),
         Index("ix_project_assessment_group", "group_id"),
         Index("ix_project_assessment_project_team", "project_team_id"),
         Index("ix_project_assessment_teacher", "teacher_id"),

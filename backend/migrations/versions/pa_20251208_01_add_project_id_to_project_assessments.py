@@ -2,7 +2,7 @@
 
 Revision ID: pa_20251208_01
 Revises: pec_20251202_01
-Create Date: 2024-12-08
+Create Date: 2025-12-08
 
 """
 
@@ -38,17 +38,9 @@ def upgrade() -> None:
         ["id"],
         ondelete="CASCADE",
     )
-    
-    # Add index for better performance
-    op.create_index(
-        "ix_project_assessment_project",
-        "project_assessments",
-        ["project_id"],
-    )
 
 
 def downgrade() -> None:
-    op.drop_index("ix_project_assessment_project", table_name="project_assessments")
     op.drop_constraint(
         "fk_project_assessments_project_id",
         "project_assessments",
