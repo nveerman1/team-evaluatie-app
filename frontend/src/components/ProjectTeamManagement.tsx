@@ -12,16 +12,11 @@
 
 import { useState, useEffect } from "react";
 import { ChevronDown, Copy, Plus, Users, Lock, Unlock } from "lucide-react";
+import api from "@/lib/api";
+import { projectService } from "@/services/project.service";
+import type { ProjectListItem } from "@/dtos/project.dto";
 
 // ============ Types ============
-
-type Project = {
-  id: number;
-  title: string;
-  status: string;
-  start_date: string | null;
-  end_date: string | null;
-};
 
 type ProjectTeam = {
   id: number;
@@ -50,12 +45,12 @@ type ProjectTeamManagementProps = {
 // ============ Component ============
 
 export default function ProjectTeamManagement({ courseId }: ProjectTeamManagementProps) {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [projects, setProjects] = useState<ProjectListItem[]>([]);
+  const [selectedProject, setSelectedProject] = useState<ProjectListItem | null>(null);
   const [projectTeams, setProjectTeams] = useState<ProjectTeam[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCloneModal, setShowCloneModal] = useState(false);
-  const [cloneSourceProject, setCloneSourceProject] = useState<Project | null>(null);
+  const [cloneSourceProject, setCloneSourceProject] = useState<ProjectListItem | null>(null);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const [alertType, setAlertType] = useState<"success" | "error" | "info">("info");
 
@@ -63,20 +58,16 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
   useEffect(() => {
     const loadProjects = async () => {
       try {
-        const response = await fetch(`/api/v1/projects?course_id=${courseId}&per_page=100`, {
-          headers: {
-            "X-User-Email": localStorage.getItem("user_email") || "",
-          },
+        const data = await projectService.listProjects({
+          course_id: courseId,
+          per_page: 100,
         });
         
-        if (!response.ok) throw new Error("Failed to load projects");
-        
-        const data = await response.json();
-        setProjects(data.projects || []);
+        setProjects(data.items || []);
         
         // Auto-select most recent active project only on initial load
-        if (data.projects && data.projects.length > 0 && !selectedProject) {
-          const activeProjects = data.projects.filter((p: Project) => p.status === "active");
+        if (data.items && data.items.length > 0 && !selectedProject) {
+          const activeProjects = data.items.filter((p) => p.status === "active");
           if (activeProjects.length > 0) {
             setSelectedProject(activeProjects[0]);
           }
@@ -102,19 +93,11 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
 
       setLoading(true);
       try {
-        const response = await fetch(
-          `/api/v1/project-teams/projects/${selectedProject.id}/teams`,
-          {
-            headers: {
-              "X-User-Email": localStorage.getItem("user_email") || "",
-            },
-          }
+        const response = await api.get<{ teams: ProjectTeam[] }>(
+          `/project-teams/projects/${selectedProject.id}/teams`
         );
 
-        if (!response.ok) throw new Error("Failed to load project teams");
-
-        const data = await response.json();
-        setProjectTeams(data.teams || []);
+        setProjectTeams(response.data.teams || []);
       } catch (error) {
         console.error("Error loading project teams:", error);
         showAlert("Could not load project teams", "error");
@@ -132,36 +115,20 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
 
     setLoading(true);
     try {
-      const response = await fetch(
-        `/api/v1/project-teams/projects/${selectedProject.id}/teams/clone-from/${cloneSourceProject.id}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-User-Email": localStorage.getItem("user_email") || "",
-          },
-        }
+      const response = await api.post<{ teams_cloned: number; members_cloned: number }>(
+        `/project-teams/projects/${selectedProject.id}/teams/clone-from/${cloneSourceProject.id}`
       );
 
-      if (!response.ok) throw new Error("Failed to clone teams");
-
-      const data = await response.json();
       showAlert(
-        `Successfully cloned ${data.teams_cloned} teams with ${data.members_cloned} members`,
+        `Successfully cloned ${response.data.teams_cloned} teams with ${response.data.members_cloned} members`,
         "success"
       );
 
       // Reload project teams
-      const teamsResponse = await fetch(
-        `/api/v1/project-teams/projects/${selectedProject.id}/teams`,
-        {
-          headers: {
-            "X-User-Email": localStorage.getItem("user_email") || "",
-          },
-        }
+      const teamsResponse = await api.get<{ teams: ProjectTeam[] }>(
+        `/project-teams/projects/${selectedProject.id}/teams`
       );
-      const teamsData = await teamsResponse.json();
-      setProjectTeams(teamsData.teams || []);
+      setProjectTeams(teamsResponse.data.teams || []);
 
       setShowCloneModal(false);
       setCloneSourceProject(null);
