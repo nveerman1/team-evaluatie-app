@@ -166,78 +166,17 @@ export default function EvaluationSettingsPageInner() {
   const evalIdStr = String(evalId);
 
   if (loading) return <main className="p-6">Laden…</main>;
-  
-  const tabs = [
-    { id: "dashboard", label: "Dashboard", href: `/teacher/evaluations/${evalIdStr}/dashboard` },
-    { id: "omza", label: "OMZA", href: `/teacher/evaluations/${evalIdStr}/omza` },
-    { id: "grades", label: "Cijfers", href: `/teacher/evaluations/${evalIdStr}/grades` },
-    { id: "feedback", label: "Feedback", href: `/teacher/evaluations/${evalIdStr}/feedback` },
-    { id: "reflections", label: "Reflecties", href: `/teacher/evaluations/${evalIdStr}/reflections` },
-    { id: "settings", label: "Instellingen", href: `/teacher/evaluations/${evalIdStr}/settings` },
-  ];
 
   return (
     <>
-      {/* Page Header */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-slate-200/70">
-        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-slate-900">
-              Instellingen
-            </h1>
-            <p className="text-slate-600 mt-1 text-sm">
-              Evaluatie #{evaluation?.id} — {evaluation?.title}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/teacher/evaluations"
-              className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm"
-            >
-              Terug
-            </Link>
-            <button
-              onClick={handleSave}
-              disabled={saving || anyLoading || !courseId || rubricId === ""}
-              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
-            >
-              {saving ? "Opslaan…" : "Opslaan"}
-            </button>
-          </div>
-        </header>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        
-        {/* Tabs Navigation */}
-        <div className="border-b border-slate-200">
-          <nav className="flex gap-6 text-sm" aria-label="Tabs">
-            {tabs.map((tab) => (
-              <Link
-                key={tab.id}
-                href={tab.href}
-                className={`py-3 border-b-2 -mb-px transition-colors ${
-                  tab.id === "settings"
-                    ? "border-blue-600 text-blue-700 font-medium"
-                    : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
-                }`}
-                aria-current={tab.id === "settings" ? "page" : undefined}
-              >
-                {tab.label}
-              </Link>
-            ))}
-          </nav>
+      {error && (
+        <div className="p-3 rounded-xl bg-red-50 text-red-700 border border-red-200">
+          {error}
         </div>
-
-        {error && (
-          <div className="p-3 rounded-xl bg-red-50 text-red-700 border border-red-200">
-            {error}
-          </div>
-        )}
-        {info && (
-          <div className="p-3 rounded-xl bg-green-50 text-green-700 border border-green-200">{info}</div>
-        )}
+      )}
+      {info && (
+        <div className="p-3 rounded-xl bg-green-50 text-green-700 border border-green-200">{info}</div>
+      )}
 
         <form
           onSubmit={handleSave}
@@ -384,7 +323,6 @@ export default function EvaluationSettingsPageInner() {
           </a>
         </div>
         </form>
-      </div>
     </>
   );
 }
