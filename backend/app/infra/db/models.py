@@ -300,6 +300,92 @@ class Subproject(Base):
     )
 
 
+class ProjectTeam(Base):
+    """
+    Project-specific team roster - freezes team composition at a point in time
+    Tracks which groups/teams were used in a specific project
+    """
+
+    __tablename__ = "project_teams"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = tenant_fk()
+
+    # Links to project and optionally to the source group
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    team_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("groups.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
+    # Snapshot of team name at time of creation
+    display_name_at_time: Mapped[str] = mapped_column(String(200), nullable=False)
+
+    # Version for handling team composition changes
+    version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    # Metadata for backfill tracking
+    backfill_source: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(
+        default=datetime.utcnow, nullable=False
+    )
+
+    # Relationships
+    project: Mapped["Project"] = relationship()
+    team: Mapped[Optional["Group"]] = relationship()
+    members: Mapped[list["ProjectTeamMember"]] = relationship(
+        back_populates="project_team", cascade="all,delete-orphan"
+    )
+
+    __table_args__ = (
+        Index("ix_project_team_project", "project_id"),
+        Index("ix_project_team_team", "team_id"),
+        Index("ix_project_team_project_version", "project_id", "team_id", "version"),
+    )
+
+
+class ProjectTeamMember(Base):
+    """
+    Individual members of a project team at a specific point in time
+    """
+
+    __tablename__ = "project_team_members"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = tenant_fk()
+
+    project_team_id: Mapped[int] = mapped_column(
+        ForeignKey("project_teams.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
+    # Role in the team (optional)
+    role: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+
+    # Timestamp
+    created_at: Mapped[datetime] = mapped_column(
+        default=datetime.utcnow, nullable=False
+    )
+
+    # Relationships
+    project_team: Mapped["ProjectTeam"] = relationship(back_populates="members")
+    user: Mapped["User"] = relationship()
+
+    __table_args__ = (
+        UniqueConstraint(
+            "project_team_id", "user_id", name="uq_project_team_member_once"
+        ),
+        Index("ix_project_team_member_project_team", "project_team_id"),
+        Index("ix_project_team_member_user", "user_id"),
+        Index("ix_project_team_member_composite", "project_team_id", "user_id"),
+    )
+
+
 class Rubric(Base):
     __tablename__ = "rubrics"
     id: Mapped[int] = id_pk()
@@ -374,6 +460,13 @@ class Evaluation(Base):
         index=True,
     )
 
+    # Link to frozen project team roster
+    project_team_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("project_teams.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+
     rubric_id: Mapped[int] = mapped_column(
         ForeignKey("rubrics.id", ondelete="RESTRICT")
     )
@@ -388,17 +481,24 @@ class Evaluation(Base):
     status: Mapped[str] = mapped_column(
         String(30), default="draft"
     )  # draft|open|closed
+    
+    # Timestamp when evaluation was closed
+    closed_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
 
     course: Mapped["Course"] = relationship()
     project: Mapped["Project"] = relationship()
+    project_team: Mapped[Optional["ProjectTeam"]] = relationship()
     rubric: Mapped["Rubric"] = relationship()
 
     __table_args__ = (
         Index("ix_eval_course", "course_id"),
         Index("ix_eval_project", "project_id"),
+        Index("ix_eval_project_team", "project_team_id"),
         Index("ix_eval_rubric", "rubric_id"),
         Index("ix_eval_type", "evaluation_type"),
         Index("ix_eval_school_type", "school_id", "evaluation_type"),
+        Index("ix_eval_status", "status"),
+        Index("ix_eval_project_team_status", "project_team_id", "status"),
     )
 
 
@@ -567,6 +667,14 @@ class ProjectAssessment(Base):
     group_id: Mapped[int] = mapped_column(
         ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    
+    # Link to frozen project team roster
+    project_team_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("project_teams.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    
     rubric_id: Mapped[int] = mapped_column(
         ForeignKey("rubrics.id", ondelete="RESTRICT"), nullable=False
     )
@@ -582,8 +690,11 @@ class ProjectAssessment(Base):
     version: Mapped[Optional[str]] = mapped_column(
         String(50)
     )  # e.g., "tussentijds", "eind"
-    status: Mapped[str] = mapped_column(String(30), default="draft")  # draft|published
+    status: Mapped[str] = mapped_column(String(30), default="draft")  # draft|open|closed|published
     published_at: Mapped[Optional[datetime]] = mapped_column()
+    
+    # Timestamp when assessment was closed
+    closed_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
 
     # Role: who is creating this assessment
     role: Mapped[str] = mapped_column(
@@ -597,13 +708,17 @@ class ProjectAssessment(Base):
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
 
     # Relationships
+    project_team: Mapped[Optional["ProjectTeam"]] = relationship()
     external_evaluator: Mapped["ExternalEvaluator"] = relationship()
 
     __table_args__ = (
         Index("ix_project_assessment_group", "group_id"),
+        Index("ix_project_assessment_project_team", "project_team_id"),
         Index("ix_project_assessment_teacher", "teacher_id"),
         Index("ix_project_assessment_external", "external_evaluator_id"),
         Index("ix_project_assessment_role", "role"),
+        Index("ix_project_assessment_status", "status"),
+        Index("ix_project_assessment_project_team_status", "project_team_id", "status"),
     )
 
 
@@ -1401,6 +1516,13 @@ class ProjectNotesContext(Base):
         ForeignKey("evaluations.id", ondelete="SET NULL"),
         index=True,
     )
+    
+    # Link to frozen project team roster
+    project_team_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("project_teams.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
 
     # Metadata
     created_by: Mapped[int] = mapped_column(
@@ -1416,6 +1538,13 @@ class ProjectNotesContext(Base):
         onupdate=datetime.utcnow,
         nullable=False,
     )
+    
+    # Status and closing
+    status: Mapped[str] = mapped_column(
+        String(30), default="draft", nullable=False
+    )  # draft|open|closed
+    closed_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
+    
     settings: Mapped[dict] = mapped_column(JSONB, default=dict)
 
     # Relationships
@@ -1426,11 +1555,14 @@ class ProjectNotesContext(Base):
     project: Mapped[Optional["Project"]] = relationship()
     course: Mapped[Optional["Course"]] = relationship()
     evaluation: Mapped[Optional["Evaluation"]] = relationship()
+    project_team: Mapped[Optional["ProjectTeam"]] = relationship()
     creator: Mapped["User"] = relationship()
 
     __table_args__ = (
         Index("ix_project_notes_context_school_course", "school_id", "course_id"),
         Index("ix_project_notes_context_created_by", "created_by"),
+        Index("ix_project_notes_context_project_team", "project_team_id"),
+        Index("ix_project_notes_context_status", "status"),
     )
 
 
