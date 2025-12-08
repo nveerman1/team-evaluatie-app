@@ -5,11 +5,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { RubricListResponse, RubricListItem } from "@/lib/rubric-types";
 import { useCourses } from "@/hooks";
+import { projectService } from "@/services";
+import type { ProjectListItem } from "@/dtos/project.dto";
 
 type EvalCreatePayload = {
   title: string;
   rubric_id: number;
   course_id: number; // verplicht
+  project_id?: number | null;
   settings?: {
     deadlines?: {
       review?: string | null; // "YYYY-MM-DD"
@@ -31,6 +34,7 @@ export default function CreateEvaluationPageInner() {
 
   // ---- Data ----
   const [rubrics, setRubrics] = useState<RubricListItem[]>([]);
+  const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const { courses, courseNameById } = useCourses();
 
   // ---- UI ----
@@ -42,6 +46,7 @@ export default function CreateEvaluationPageInner() {
   // ---- Form ----
   const [title, setTitle] = useState("");
   const [courseId, setCourseId] = useState<number | "">("");
+  const [projectId, setProjectId] = useState<number | "">("");
   const [rubricId, setRubricId] = useState<number | "">(
     preRubricId ? Number(preRubricId) : "",
   );
@@ -60,22 +65,28 @@ export default function CreateEvaluationPageInner() {
   const [smoothing, setSmoothing] = useState<boolean>(true);
   const [reviewerRating, setReviewerRating] = useState<boolean>(true);
 
-  // Rubrics laden
+  // Rubrics en projects laden
   useEffect(() => {
     let mounted = true;
     (async () => {
       setLoading(true);
       setError(null);
       try {
-        const rubRes = await api.get<RubricListResponse>("/rubrics?scope=peer");
+        const [rubRes, projRes] = await Promise.all([
+          api.get<RubricListResponse>("/rubrics?scope=peer"),
+          projectService.listProjects(),
+        ]);
+        
         if (!mounted) return;
 
         const list = Array.isArray(rubRes.data?.items) ? rubRes.data.items : [];
         setRubrics(list);
         if (!preRubricId && list.length === 1) setRubricId(list[0].id);
+        
+        setProjects(projRes.items || []);
       } catch (e: any) {
         setError(
-          e?.response?.data?.detail || e?.message || "Kon rubrics niet laden",
+          e?.response?.data?.detail || e?.message || "Kon data niet laden",
         );
       } finally {
         setLoading(false);
@@ -120,6 +131,7 @@ export default function CreateEvaluationPageInner() {
         title: title.trim(),
         rubric_id: Number(rubricId),
         course_id: Number(courseId),
+        project_id: projectId ? Number(projectId) : null,
         settings: {
           deadlines: {
             review: toDateOnly(reviewDeadline) || null,
@@ -200,7 +212,7 @@ export default function CreateEvaluationPageInner() {
           />
         </div>
 
-        {/* Course & Rubric */}
+        {/* Course & Project */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
             <label className="block text-sm font-medium">Course</label>
@@ -224,29 +236,50 @@ export default function CreateEvaluationPageInner() {
           </div>
 
           <div className="space-y-1">
-            <label className="block text-sm font-medium">Rubric</label>
+            <label className="block text-sm font-medium">Project (optioneel)</label>
             <select
               className="w-full px-3 py-2 border rounded-lg"
-              value={rubricId === "" ? "" : Number(rubricId)}
-              onChange={(e) =>
-                setRubricId(e.target.value ? Number(e.target.value) : "")
-              }
+              value={projectId === "" ? "" : Number(projectId)}
+              onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : "")}
               disabled={anyLoading}
-              required
             >
-              <option value="">— Kies rubric —</option>
-              {rubrics.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.title ?? `Rubric #${r.id}`}
+              <option value="">— Geen project —</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
                 </option>
               ))}
             </select>
-            {selectedRubric && (
-              <p className="text-xs text-gray-500 mt-1">
-                Gekozen: {selectedRubric.title} (id: {selectedRubric.id})
-              </p>
-            )}
+            <p className="text-xs text-gray-500">
+              Koppel deze evaluatie aan een bestaand project.
+            </p>
           </div>
+        </div>
+
+        {/* Rubric */}
+        <div className="space-y-1">
+          <label className="block text-sm font-medium">Rubric</label>
+          <select
+            className="w-full px-3 py-2 border rounded-lg"
+            value={rubricId === "" ? "" : Number(rubricId)}
+            onChange={(e) =>
+              setRubricId(e.target.value ? Number(e.target.value) : "")
+            }
+            disabled={anyLoading}
+            required
+          >
+            <option value="">— Kies rubric —</option>
+            {rubrics.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.title ?? `Rubric #${r.id}`}
+              </option>
+            ))}
+          </select>
+          {selectedRubric && (
+            <p className="text-xs text-gray-500 mt-1">
+              Gekozen: {selectedRubric.title} (id: {selectedRubric.id})
+            </p>
+          )}
         </div>
 
         {/* Deadlines */}
