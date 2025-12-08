@@ -101,10 +101,42 @@ def create_project_assessment(
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
     
+    # Validate project_team_id is required when project_id is provided
+    if payload.project_id and not payload.project_team_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="project_team_id is required when creating an assessment for a project"
+        )
+    
+    # Validate project_team exists and belongs to the project if provided
+    if payload.project_team_id:
+        from app.infra.db.models import ProjectTeam
+        project_team = (
+            db.query(ProjectTeam)
+            .filter(
+                ProjectTeam.id == payload.project_team_id,
+                ProjectTeam.school_id == user.school_id,
+            )
+            .first()
+        )
+        if not project_team:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project team not found"
+            )
+        
+        # Ensure project_team belongs to the specified project
+        if payload.project_id and project_team.project_id != payload.project_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Project team does not belong to the specified project"
+            )
+    
     pa = ProjectAssessment(
         school_id=user.school_id,
         project_id=payload.project_id,
         group_id=payload.group_id,
+        project_team_id=payload.project_team_id,
         rubric_id=payload.rubric_id,
         teacher_id=user.id,
         title=payload.title,

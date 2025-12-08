@@ -10,6 +10,7 @@ class EvaluationCreate(BaseModel):
     rubric_id: int
     title: str
     project_id: Optional[int] = None
+    project_team_id: Optional[int] = None  # Required when project_id is provided
     settings: Dict[str, Any] = Field(default_factory=dict)  # deadlines etc.
 
 
@@ -21,6 +22,7 @@ class EvaluationUpdate(BaseModel):
     title: Optional[str] = None
     course_id: Optional[int] = None
     project_id: Optional[int] = None
+    project_team_id: Optional[int] = None
     rubric_id: Optional[int] = None
     settings: Optional[Dict[str, Any]] = None
 
