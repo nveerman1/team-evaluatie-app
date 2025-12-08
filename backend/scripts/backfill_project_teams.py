@@ -175,7 +175,7 @@ def backfill_project_teams(db: Session) -> None:
         db.add(project_team)
         db.flush()  # Get the ID
 
-        project_team_cache[key] = project_team.id
+        project_team_cache[(project_id, group_id)] = project_team.id
         stats["project_teams_created"] += 1
 
         # ========== Step 4: Populate project_team_members ==========
