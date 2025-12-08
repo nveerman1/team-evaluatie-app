@@ -12,6 +12,7 @@ class ProjectAssessmentCreate(BaseModel):
     title: str
     version: Optional[str] = None
     project_id: Optional[int] = None
+    project_team_id: Optional[int] = None  # Required when project_id is provided
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -21,6 +22,7 @@ class ProjectAssessmentUpdate(BaseModel):
     version: Optional[str] = None
     status: Optional[str] = None  # draft|published
     project_id: Optional[int] = None
+    project_team_id: Optional[int] = None
     metadata_json: Optional[Dict[str, Any]] = None
 
 
