@@ -12,16 +12,11 @@
 
 import { useState, useEffect } from "react";
 import { ChevronDown, Copy, Plus, Users, Lock, Unlock } from "lucide-react";
+import api from "@/lib/api";
+import { projectService } from "@/services/project.service";
+import type { ProjectListItem } from "@/dtos/project.dto";
 
 // ============ Types ============
-
-type Project = {
-  id: number;
-  title: string;
-  status: string;
-  start_date: string | null;
-  end_date: string | null;
-};
 
 type ProjectTeam = {
   id: number;
@@ -41,6 +36,7 @@ type ProjectTeamMember = {
   role: string | null;
   user_name: string | null;
   user_email: string | null;
+  user_status?: "active" | "inactive";
 };
 
 type ProjectTeamManagementProps = {
@@ -50,12 +46,12 @@ type ProjectTeamManagementProps = {
 // ============ Component ============
 
 export default function ProjectTeamManagement({ courseId }: ProjectTeamManagementProps) {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [projects, setProjects] = useState<ProjectListItem[]>([]);
+  const [selectedProject, setSelectedProject] = useState<ProjectListItem | null>(null);
   const [projectTeams, setProjectTeams] = useState<ProjectTeam[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCloneModal, setShowCloneModal] = useState(false);
-  const [cloneSourceProject, setCloneSourceProject] = useState<Project | null>(null);
+  const [cloneSourceProject, setCloneSourceProject] = useState<ProjectListItem | null>(null);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const [alertType, setAlertType] = useState<"success" | "error" | "info">("info");
 
@@ -63,27 +59,23 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
   useEffect(() => {
     const loadProjects = async () => {
       try {
-        const response = await fetch(`/api/v1/projects?course_id=${courseId}&per_page=100`, {
-          headers: {
-            "X-User-Email": localStorage.getItem("user_email") || "",
-          },
+        const data = await projectService.listProjects({
+          course_id: courseId,
+          per_page: 100,
         });
         
-        if (!response.ok) throw new Error("Failed to load projects");
-        
-        const data = await response.json();
-        setProjects(data.projects || []);
+        setProjects(data.items || []);
         
         // Auto-select most recent active project only on initial load
-        if (data.projects && data.projects.length > 0 && !selectedProject) {
-          const activeProjects = data.projects.filter((p: Project) => p.status === "active");
+        if (data.items && data.items.length > 0 && !selectedProject) {
+          const activeProjects = data.items.filter((p) => p.status === "active");
           if (activeProjects.length > 0) {
             setSelectedProject(activeProjects[0]);
           }
         }
       } catch (error) {
         console.error("Error loading projects:", error);
-        showAlert("Could not load projects", "error");
+        showAlert("Kon projecten niet laden", "error");
       }
     };
 
@@ -102,22 +94,14 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
 
       setLoading(true);
       try {
-        const response = await fetch(
-          `/api/v1/project-teams/projects/${selectedProject.id}/teams`,
-          {
-            headers: {
-              "X-User-Email": localStorage.getItem("user_email") || "",
-            },
-          }
+        const response = await api.get<{ teams: ProjectTeam[] }>(
+          `/project-teams/projects/${selectedProject.id}/teams`
         );
 
-        if (!response.ok) throw new Error("Failed to load project teams");
-
-        const data = await response.json();
-        setProjectTeams(data.teams || []);
+        setProjectTeams(response.data.teams || []);
       } catch (error) {
         console.error("Error loading project teams:", error);
-        showAlert("Could not load project teams", "error");
+        showAlert("Kon projectteams niet laden", "error");
       } finally {
         setLoading(false);
       }
@@ -132,42 +116,26 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
 
     setLoading(true);
     try {
-      const response = await fetch(
-        `/api/v1/project-teams/projects/${selectedProject.id}/teams/clone-from/${cloneSourceProject.id}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-User-Email": localStorage.getItem("user_email") || "",
-          },
-        }
+      const response = await api.post<{ teams_cloned: number; members_cloned: number }>(
+        `/project-teams/projects/${selectedProject.id}/teams/clone-from/${cloneSourceProject.id}`
       );
 
-      if (!response.ok) throw new Error("Failed to clone teams");
-
-      const data = await response.json();
       showAlert(
-        `Successfully cloned ${data.teams_cloned} teams with ${data.members_cloned} members`,
+        `${response.data.teams_cloned} teams met ${response.data.members_cloned} leden succesvol gekopieerd`,
         "success"
       );
 
       // Reload project teams
-      const teamsResponse = await fetch(
-        `/api/v1/project-teams/projects/${selectedProject.id}/teams`,
-        {
-          headers: {
-            "X-User-Email": localStorage.getItem("user_email") || "",
-          },
-        }
+      const teamsResponse = await api.get<{ teams: ProjectTeam[] }>(
+        `/project-teams/projects/${selectedProject.id}/teams`
       );
-      const teamsData = await teamsResponse.json();
-      setProjectTeams(teamsData.teams || []);
+      setProjectTeams(teamsResponse.data.teams || []);
 
       setShowCloneModal(false);
       setCloneSourceProject(null);
     } catch (error) {
       console.error("Error cloning teams:", error);
-      showAlert("Failed to clone teams", "error");
+      showAlert("Kon teams niet kopiëren", "error");
     } finally {
       setLoading(false);
     }
@@ -191,7 +159,7 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
       {/* Alert */}
       {alertMessage && (
         <div className={`mb-4 p-4 rounded-lg border ${getAlertStyles()}`}>
@@ -200,21 +168,19 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-1">
-            Project Team Rosters
-          </h2>
-          <p className="text-sm text-gray-600">
-            Manage frozen team compositions for projects
-          </p>
-        </div>
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">
+          Projectteams
+        </h2>
+        <p className="text-gray-600 mt-1 text-sm">
+          Projectteams vorige projecten
+        </p>
       </div>
 
       {/* Project Selector */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Select Project
+        <label className="block text-sm font-semibold text-gray-500 mb-2">
+          Selecteer project
         </label>
         <div className="relative">
           <select
@@ -223,16 +189,16 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
               const project = projects.find((p) => p.id === parseInt(e.target.value));
               setSelectedProject(project || null);
             }}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none pr-10"
+            className="w-full h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none pr-10"
           >
-            <option value="">Select a project...</option>
+            <option value="">Selecteer een project...</option>
             {projects.map((project) => (
               <option key={project.id} value={project.id}>
                 {project.title} ({project.status})
               </option>
             ))}
           </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
         </div>
       </div>
 
@@ -242,10 +208,10 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
           <button
             onClick={() => setShowCloneModal(true)}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <Copy className="w-4 h-4" />
-            Clone from Previous Project
+            Kopieer van eerder project
           </button>
         </div>
       )}
@@ -253,66 +219,72 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
       {/* Project Teams List */}
       {selectedProject && (
         <div>
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Teams in {selectedProject.title}
           </h3>
 
           {loading ? (
             <div className="text-center py-8">
               <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
-              <p className="mt-2 text-gray-600">Loading teams...</p>
+              <p className="mt-2 text-sm text-gray-600">Laden...</p>
             </div>
           ) : projectTeams.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Users className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-              <p>No teams in this project yet</p>
-              <p className="text-sm mt-1">Clone teams from another project to get started</p>
+              <p className="text-sm">Nog geen teams in dit project</p>
+              <p className="text-xs mt-1 text-gray-400">Kopieer teams van een ander project om te beginnen</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {projectTeams.map((team) => (
-                <div
-                  key={team.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h4 className="font-medium text-gray-900">
-                          {team.display_name_at_time}
-                        </h4>
-                        {team.is_locked && (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 text-xs font-medium rounded">
-                            <Lock className="w-3 h-3" />
-                            Locked
+              {projectTeams.map((team) => {
+                // Filter out inactive members
+                const activeMembers = team.members.filter((m) => m.user_status !== "inactive");
+                const activeMemberCount = activeMembers.length;
+                
+                return (
+                  <div
+                    key={team.id}
+                    className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h4 className="font-medium text-gray-900 text-sm">
+                            {team.team_id ? `Team ${team.team_id}` : team.display_name_at_time}
+                          </h4>
+                          {team.is_locked && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-800 text-xs font-medium rounded">
+                              <Lock className="w-3 h-3" />
+                              Vergrendeld
+                            </span>
+                          )}
+                          <span className="text-xs text-gray-500">
+                            v{team.version}
                           </span>
-                        )}
-                        <span className="text-xs text-gray-500">
-                          Version {team.version}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600 mb-3">
-                        {team.member_count} member{team.member_count !== 1 ? "s" : ""}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {team.members.map((member) => (
-                          <span
-                            key={member.id}
-                            className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full"
-                          >
-                            {member.user_name}
-                            {member.role && (
-                              <span className="ml-1 text-xs text-gray-500">
-                                ({member.role})
-                              </span>
-                            )}
-                          </span>
-                        ))}
+                        </div>
+                        <p className="text-xs text-gray-600 mb-3">
+                          {activeMemberCount} {activeMemberCount !== 1 ? "leden" : "lid"}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {activeMembers.map((member) => (
+                            <span
+                              key={member.id}
+                              className="inline-flex items-center px-2.5 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-full"
+                            >
+                              {member.user_name}
+                              {member.role && (
+                                <span className="ml-1 text-xs text-gray-500">
+                                  ({member.role})
+                                </span>
+                              )}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -321,12 +293,12 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
       {/* Clone Modal */}
       {showCloneModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Clone Teams from Another Project
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold tracking-tight text-gray-900 mb-2">
+              Teams kopiëren
             </h3>
             <p className="text-sm text-gray-600 mb-4">
-              Select a project to copy all team structures and members from:
+              Selecteer een project om alle teamstructuren en leden van te kopiëren:
             </p>
 
             <select
@@ -335,9 +307,9 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
                 const project = projects.find((p) => p.id === parseInt(e.target.value));
                 setCloneSourceProject(project || null);
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-6"
+              className="w-full h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-6"
             >
-              <option value="">Select source project...</option>
+              <option value="">Selecteer bronproject...</option>
               {projects
                 .filter((p) => p.id !== selectedProject?.id)
                 .map((project) => (
@@ -353,16 +325,16 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
                   setShowCloneModal(false);
                   setCloneSourceProject(null);
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                className="flex-1 rounded-full border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
-                Cancel
+                Annuleren
               </button>
               <button
                 onClick={handleCloneTeams}
                 disabled={!cloneSourceProject || loading}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {loading ? "Cloning..." : "Clone Teams"}
+                {loading ? "Kopiëren..." : "Kopieer teams"}
               </button>
             </div>
           </div>
