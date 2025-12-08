@@ -407,6 +407,78 @@ def delete_project_assessment(
     return None
 
 
+@router.post("/{assessment_id}/close", response_model=ProjectAssessmentOut)
+def close_project_assessment(
+    assessment_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """
+    Close a project assessment and mark it as archived
+    
+    Sets status to 'closed' and records closed_at timestamp.
+    This action is idempotent - calling it multiple times has the same effect.
+    Once closed, the project_team members become read-only.
+    """
+    from datetime import datetime
+    from app.core.audit import log_update
+    
+    # Require teacher or admin role
+    if user.role not in ("teacher", "admin"):
+        raise HTTPException(
+            status_code=403,
+            detail="Alleen docenten en admins kunnen beoordelingen sluiten"
+        )
+    
+    # Get assessment
+    assessment = db.query(ProjectAssessment).filter(
+        ProjectAssessment.id == assessment_id,
+        ProjectAssessment.school_id == user.school_id,
+    ).first()
+    
+    if not assessment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Assessment not found"
+        )
+    
+    # Update status and closed_at if not already closed
+    if assessment.status != "closed":
+        assessment.status = "closed"
+        assessment.closed_at = datetime.utcnow()
+        
+        # Log action
+        log_update(
+            db=db,
+            user=user,
+            entity_type="project_assessment",
+            entity_id=assessment_id,
+            details={"action": "close", "closed_at": assessment.closed_at.isoformat()},
+        )
+    
+    db.commit()
+    db.refresh(assessment)
+    
+    # Format output
+    return ProjectAssessmentOut(
+        id=assessment.id,
+        school_id=assessment.school_id,
+        group_id=assessment.group_id,
+        project_team_id=assessment.project_team_id,
+        rubric_id=assessment.rubric_id,
+        teacher_id=assessment.teacher_id,
+        external_evaluator_id=assessment.external_evaluator_id,
+        title=assessment.title,
+        version=assessment.version,
+        status=assessment.status,
+        closed_at=assessment.closed_at,
+        published_at=assessment.published_at,
+        role=assessment.role,
+        is_advisory=assessment.is_advisory,
+        metadata_json=assessment.metadata_json,
+    )
+
+
 # ---------- Team Overview ----------
 
 @router.get("/{assessment_id}/teams", response_model=ProjectAssessmentTeamOverview)

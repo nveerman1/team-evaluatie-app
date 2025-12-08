@@ -24,14 +24,20 @@ class ProjectAssessmentUpdate(BaseModel):
 
 class ProjectAssessmentOut(BaseModel):
     id: int
+    school_id: int
     group_id: int
+    project_team_id: Optional[int] = None
     rubric_id: int
-    teacher_id: Optional[int]
+    teacher_id: Optional[int] = None
+    external_evaluator_id: Optional[int] = None
     title: str
-    version: Optional[str]
+    version: Optional[str] = None
     status: str
-    published_at: Optional[datetime]
-    metadata_json: Dict[str, Any]
+    closed_at: Optional[datetime] = None
+    published_at: Optional[datetime] = None
+    role: str = "TEACHER"
+    is_advisory: bool = False
+    metadata_json: Dict[str, Any] = {}
 
     class Config:
         from_attributes = True
