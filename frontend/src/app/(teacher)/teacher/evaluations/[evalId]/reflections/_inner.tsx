@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
 import { useNumericEvalId } from "@/lib/id";
+import { useEvaluationLayout } from "../EvaluationLayoutContext";
 
 type Item = {
   student_id: number;
@@ -16,6 +17,8 @@ type Item = {
 export default function ReflectionsPageInner() {
   const evalIdNum = useNumericEvalId(); // null op /create
   const evalIdStr = evalIdNum != null ? String(evalIdNum) : "";
+  const { setExportCsvUrl } = useEvaluationLayout();
+  
   const [rows, setRows] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -27,6 +30,16 @@ export default function ReflectionsPageInner() {
     "name_asc" | "name_desc" | "date_new" | "date_old" | "words_hi" | "words_lo"
   >("name_asc");
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+
+  // Set export CSV URL in context
+  useEffect(() => {
+    if (evalIdNum != null) {
+      setExportCsvUrl(`/api/v1/evaluations/${evalIdStr}/reflections/export.csv`);
+    }
+    return () => {
+      setExportCsvUrl(null);
+    };
+  }, [evalIdNum, evalIdStr, setExportCsvUrl]);
 
   useEffect(() => {
     setErr(null);
@@ -98,64 +111,10 @@ export default function ReflectionsPageInner() {
     setExpanded(map);
   };
 
-  const tabs = [
-    { id: "dashboard", label: "Dashboard", href: `/teacher/evaluations/${evalIdStr}/dashboard` },
-    { id: "omza", label: "OMZA", href: `/teacher/evaluations/${evalIdStr}/omza` },
-    { id: "grades", label: "Cijfers", href: `/teacher/evaluations/${evalIdStr}/grades` },
-    { id: "feedback", label: "Feedback", href: `/teacher/evaluations/${evalIdStr}/feedback` },
-    { id: "reflections", label: "Reflecties", href: `/teacher/evaluations/${evalIdStr}/reflections` },
-    { id: "settings", label: "Instellingen", href: `/teacher/evaluations/${evalIdStr}/settings` },
-  ];
-
   return (
     <>
-      {/* Page Header */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-slate-200/70">
-        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-slate-900">
-              Reflecties
-            </h1>
-            <p className="text-slate-600 mt-1 text-sm">
-              Bekijk en exporteer studentreflecties
-            </p>
-          </div>
-          {evalIdNum != null && (
-            <a
-              href={`/api/v1/evaluations/${evalIdStr}/reflections/export.csv`}
-              className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm"
-            >
-              Export CSV
-            </a>
-          )}
-        </header>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        
-        {/* Tabs Navigation */}
-        <div className="border-b border-slate-200">
-          <nav className="flex gap-6 text-sm" aria-label="Tabs">
-            {tabs.map((tab) => (
-              <Link
-                key={tab.id}
-                href={tab.href}
-                className={`py-3 border-b-2 -mb-px transition-colors ${
-                  tab.id === "reflections"
-                    ? "border-blue-600 text-blue-700 font-medium"
-                    : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
-                }`}
-                aria-current={tab.id === "reflections" ? "page" : undefined}
-              >
-                {tab.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-
-        {/* Filters */}
-        <div className="sticky top-0 bg-white/80 backdrop-blur border border-slate-200 rounded-2xl p-3 flex flex-wrap items-center gap-3 shadow-sm">
+      {/* Filters */}
+      <div className="sticky top-0 bg-white/80 backdrop-blur border border-slate-200 rounded-2xl p-3 flex flex-wrap items-center gap-3 shadow-sm">
         <input
           className="px-3 py-2 border border-slate-200 rounded-xl w-80 focus:outline-none focus:ring-2 focus:ring-blue-600"
           placeholder="Zoek op student/tekst…"
@@ -293,7 +252,6 @@ export default function ReflectionsPageInner() {
             Geen geldige evaluatie geselecteerd.
           </p>
         )}
-      </div>
     </>
   );
 }

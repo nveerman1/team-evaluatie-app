@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useNumericEvalId } from "@/lib/id";
 import { gradesService } from "@/services/grades.service";
 import type { GradePreviewItem } from "@/dtos/grades.dto";
+import { useEvaluationLayout } from "../EvaluationLayoutContext";
 
 type Row = {
   user_id: number;
@@ -27,6 +28,7 @@ export default function GradesPageInner() {
   const evalIdNum = useNumericEvalId();
   const evalIdStr = evalIdNum != null ? String(evalIdNum) : "—";
   const router = useRouter();
+  const { setPublishGrades } = useEvaluationLayout();
 
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
@@ -141,6 +143,20 @@ export default function GradesPageInner() {
     return () => clearInterval(timer);
   }, [rows, evalIdNum]);
 
+  // Set publish function in context (only once on mount)
+  useEffect(() => {
+    setPublishGrades(handlePublish);
+    
+    // Cleanup on unmount
+    return () => {
+      setPublishGrades(null);
+    };
+  }, [setPublishGrades]);
+  
+  // Note: We intentionally don't include handlePublish in dependencies
+  // because we want to set it once. The function will always have access
+  // to the latest rows, evalIdNum, etc. via closures.
+
   const teamOptions = useMemo(() => {
     const set = new Set<number | string>();
     rows.forEach((r) => set.add(r.teamNumber ?? "–"));
@@ -219,46 +235,13 @@ export default function GradesPageInner() {
         group_grade: null,
         overrides,
       });
-      alert("Cijfers gepubliceerd!");
+      // Don't show alert here, the layout will show toast
     } catch (e: any) {
       alert(e?.response?.data?.detail ?? e?.message ?? "Publiceren mislukt");
     } finally {
       setSaving(false);
     }
   }
-
-  const tabs = [
-    {
-      id: "dashboard",
-      label: "Dashboard",
-      href: `/teacher/evaluations/${evalIdStr}/dashboard`,
-    },
-    {
-      id: "omza",
-      label: "OMZA",
-      href: `/teacher/evaluations/${evalIdStr}/omza`,
-    },
-    {
-      id: "grades",
-      label: "Cijfers",
-      href: `/teacher/evaluations/${evalIdStr}/grades`,
-    },
-    {
-      id: "feedback",
-      label: "Feedback",
-      href: `/teacher/evaluations/${evalIdStr}/feedback`,
-    },
-    {
-      id: "reflections",
-      label: "Reflecties",
-      href: `/teacher/evaluations/${evalIdStr}/reflections`,
-    },
-    {
-      id: "settings",
-      label: "Instellingen",
-      href: `/teacher/evaluations/${evalIdStr}/settings`,
-    },
-  ];
 
   const autoSaveLabel =
     {
@@ -270,64 +253,9 @@ export default function GradesPageInner() {
 
   return (
     <>
-      {/* Page Header */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
-        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
-              Cijfers
-            </h1>
-            <p className="text-gray-600 mt-1 text-sm">
-              Beheer en publiceer eindcijfers voor deze evaluatie.
-            </p>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="text-xs text-gray-500 min-h-[1.2rem]">
-              {autoSaveLabel}
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleDraftSave}
-                className="rounded-full border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Concept opslaan
-              </button>
-              <button
-                onClick={handlePublish}
-                disabled={saving || loading || evalIdNum == null}
-                className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
-              >
-                {saving ? "Publiceren…" : "Publiceer cijfers"}
-              </button>
-            </div>
-          </div>
-        </header>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-6 py-6 space-y-5">
-        {/* Tabs Navigation */}
-        <div className="border-b border-gray-200">
-          <nav className="flex gap-6 text-sm" aria-label="Tabs">
-            {tabs.map((tab) => (
-              <Link
-                key={tab.id}
-                href={tab.href}
-                className={`py-3 border-b-2 -mb-px transition-colors ${
-                  tab.id === "grades"
-                    ? "border-blue-600 text-blue-700 font-medium"
-                    : "border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300"
-                }`}
-                aria-current={tab.id === "grades" ? "page" : undefined}
-              >
-                {tab.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-wrap gap-3 items-center mb-4">
+      {/* Filters and autosave status */}
+      <div className="flex flex-wrap gap-3 items-center justify-between mb-4">
+        <div className="flex flex-wrap gap-3 items-center">
           <input
             type="text"
             className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -362,6 +290,14 @@ export default function GradesPageInner() {
             ))}
           </select>
         </div>
+        
+        {/* Autosave status on the right */}
+        {autoSaveLabel && (
+          <div className="text-xs text-gray-500 min-h-[1.2rem]">
+            {autoSaveLabel}
+          </div>
+        )}
+      </div>
 
         {loading && <p className="text-sm text-gray-500">Laden…</p>}
         {error && <p className="text-sm text-red-600">{error}</p>}
@@ -585,7 +521,6 @@ export default function GradesPageInner() {
             </div>
           </section>
         )}
-      </div>
     </>
   );
 

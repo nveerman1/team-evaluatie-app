@@ -477,15 +477,6 @@ export default function OMZAOverviewPage() {
   const teams = Array.from(new Set(omzaData?.students.map((s) => s.team_number).filter((t) => t != null)));
   const classes = Array.from(new Set(omzaData?.students.map((s) => s.class_name).filter((c) => c)));
 
-  const tabs = [
-    { id: "dashboard", label: "Dashboard", href: `/teacher/evaluations/${evalId}/dashboard` },
-    { id: "omza", label: "OMZA", href: `/teacher/evaluations/${evalId}/omza` },
-    { id: "grades", label: "Cijfers", href: `/teacher/evaluations/${evalId}/grades` },
-    { id: "feedback", label: "Feedback", href: `/teacher/evaluations/${evalId}/feedback` },
-    { id: "reflections", label: "Reflecties", href: `/teacher/evaluations/${evalId}/reflections` },
-    { id: "settings", label: "Instellingen", href: `/teacher/evaluations/${evalId}/settings` },
-  ];
-
   return (
     <>
       {/* Toast notification */}
@@ -497,52 +488,19 @@ export default function OMZAOverviewPage() {
         </div>
       )}
 
-      {/* Page Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200">
-        <header className="max-w-6xl mx-auto px-6 pt-8 pb-4">
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
-            OMZA Overzicht
-          </h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Overzicht van peer-, self- én docentscores per categorie.
-          </p>
-        </header>
+      {loading && <Loading />}
+      {error && <ErrorMessage message={error} />}
 
-        {/* Tabs */}
-        <nav className="border-t border-gray-200">
-          <div className="max-w-6xl mx-auto px-6 flex gap-6 text-sm">
-            {tabs.map((tab) => (
-              <Link
-                key={tab.id}
-                href={tab.href}
-                className={`-mb-px py-3 border-b-2 text-sm font-medium transition-colors ${
-                  tab.id === "omza"
-                    ? "border-indigo-600 text-indigo-700"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-200"
-                }`}
-              >
-                {tab.label}
-              </Link>
-            ))}
-          </div>
-        </nav>
-      </div>
-
-      {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-6 py-6">
-        {loading && <Loading />}
-        {error && <ErrorMessage message={error} />}
-
-        {!loading && !error && omzaData && (
-          <>
-            {/* Filters bar */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
-              <div className="flex flex-wrap gap-3 items-center">
-                <input
-                  className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="Zoek op naam…"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+      {!loading && !error && omzaData && (
+        <>
+          {/* Filters bar */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+            <div className="flex flex-wrap gap-3 items-center">
+              <input
+                className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Zoek op naam…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 />
                 <select
                   className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm"
@@ -799,12 +757,11 @@ export default function OMZAOverviewPage() {
           </>
         )}
 
-        {evalIdNum == null && (
-          <p className="text-sm text-gray-500">
-            Geen geldige evaluatie geselecteerd.
-          </p>
-        )}
-      </main>
+      {evalIdNum == null && (
+        <p className="text-sm text-gray-500">
+          Geen geldige evaluatie geselecteerd.
+        </p>
+      )}
     </>
   );
 }

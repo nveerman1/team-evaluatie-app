@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
 import { useNumericEvalId } from "@/lib/id";
+import { useEvaluationLayout } from "../EvaluationLayoutContext";
 
 type UiComment = {
   to_student_id?: number;
@@ -96,6 +97,8 @@ function normalizeToGroups(res: any): UiGroup[] {
 export default function FeedbackPageInner() {
   const evalIdNum = useNumericEvalId(); // null op /create
   const evalIdStr = evalIdNum != null ? String(evalIdNum) : "";
+  const { setExportCsvUrl } = useEvaluationLayout();
+  
   const [groups, setGroups] = useState<UiGroup[]>([]);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "self" | "peer">("all");
@@ -105,6 +108,16 @@ export default function FeedbackPageInner() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("card");
+
+  // Set export CSV URL in context
+  useEffect(() => {
+    if (evalIdNum != null) {
+      setExportCsvUrl(`/api/v1/evaluations/${evalIdStr}/feedback/export.csv`);
+    }
+    return () => {
+      setExportCsvUrl(null);
+    };
+  }, [evalIdNum, evalIdStr, setExportCsvUrl]);
 
   useEffect(() => {
     setErr(null);
@@ -231,64 +244,10 @@ export default function FeedbackPageInner() {
     }
   };
 
-  const tabs = [
-    { id: "dashboard", label: "Dashboard", href: `/teacher/evaluations/${evalIdStr}/dashboard` },
-    { id: "omza", label: "OMZA", href: `/teacher/evaluations/${evalIdStr}/omza` },
-    { id: "grades", label: "Cijfers", href: `/teacher/evaluations/${evalIdStr}/grades` },
-    { id: "feedback", label: "Feedback", href: `/teacher/evaluations/${evalIdStr}/feedback` },
-    { id: "reflections", label: "Reflecties", href: `/teacher/evaluations/${evalIdStr}/reflections` },
-    { id: "settings", label: "Instellingen", href: `/teacher/evaluations/${evalIdStr}/settings` },
-  ];
-
   return (
     <>
-      {/* Page Header */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-slate-200/70">
-        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-slate-900">
-              Feedback
-            </h1>
-            <p className="text-slate-600 mt-1 text-sm">
-              Bekijk ontvangen peer- en zelfevaluaties
-            </p>
-          </div>
-          {evalIdNum != null && (
-            <a
-              href={`/api/v1/evaluations/${evalIdStr}/feedback/export.csv`}
-              className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm"
-            >
-              Export CSV
-            </a>
-          )}
-        </header>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        
-        {/* Tabs Navigation */}
-        <div className="border-b border-slate-200">
-          <nav className="flex gap-6 text-sm" aria-label="Tabs">
-            {tabs.map((tab) => (
-              <Link
-                key={tab.id}
-                href={tab.href}
-                className={`py-3 border-b-2 -mb-px transition-colors ${
-                  tab.id === "feedback"
-                    ? "border-blue-600 text-blue-700 font-medium"
-                    : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
-                }`}
-                aria-current={tab.id === "feedback" ? "page" : undefined}
-              >
-                {tab.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-
-        {/* View Mode Toggle */}
-        <div className="flex items-center justify-between">
+      {/* View Mode Toggle */}
+      <div className="flex items-center justify-between">
         <button
           className={`px-4 py-2 rounded-xl border border-slate-200 font-medium shadow-sm ${
             viewMode === "table"
@@ -511,7 +470,6 @@ export default function FeedbackPageInner() {
             Geen geldige evaluatie geselecteerd.
           </p>
         )}
-      </div>
     </>
   );
 }

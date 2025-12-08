@@ -1,22 +1,30 @@
 import { EvalStatus } from "@/dtos/evaluation.dto";
 
 const STATUS_LABEL: Record<EvalStatus, string> = {
-  draft: "draft",
-  open: "open",
-  closed: "closed",
+  draft: "Concept",
+  open: "Open",
+  closed: "Gesloten",
+  published: "Gepubliceerd",
 };
 
 export function StatusBadge({ status }: { status: EvalStatus }) {
   const styles: Record<EvalStatus, string> = {
-    draft: "bg-yellow-50 text-yellow-700 ring-1 ring-yellow-200",
-    open: "bg-green-50 text-green-700 ring-1 ring-green-200",
-    closed: "bg-gray-100 text-gray-600 ring-1 ring-gray-200",
+    draft: "bg-gray-100 text-gray-700",
+    open: "bg-green-100 text-green-700",
+    closed: "bg-gray-100 text-gray-600",
+    published: "bg-green-100 text-green-700",
+  };
+  const icons: Record<EvalStatus, string> = {
+    draft: "⚠️",
+    open: "✅",
+    closed: "🔒",
+    published: "✅",
   };
   return (
     <span
-      className={`px-2 py-1 rounded-lg text-xs font-medium ${styles[status]}`}
+      className={`px-2 py-1 rounded-full text-xs ${styles[status]}`}
     >
-      {STATUS_LABEL[status]}
+      {icons[status]} {STATUS_LABEL[status]}
     </span>
   );
 }

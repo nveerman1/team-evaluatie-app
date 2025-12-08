@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useUrlState, useEvaluations, useCourses } from "@/hooks";
 import { evaluationService } from "@/services";
-import type { Evaluation, EvalStatus } from "@/dtos/evaluation.dto";
-import { Loading, ErrorMessage, Toast } from "@/components";
+import type { Evaluation } from "@/dtos/evaluation.dto";
+import { Loading, ErrorMessage, Toast, StatusBadge } from "@/components";
 import { formatDate } from "@/utils";
 
 const STATUSES_FILTER = [
@@ -14,12 +14,6 @@ const STATUSES_FILTER = [
   { value: "open", label: "Open" },
   { value: "closed", label: "Closed" },
 ];
-
-const STATUS_LABEL: Record<EvalStatus, string> = {
-  draft: "draft",
-  open: "open",
-  closed: "closed",
-};
 
 export default function EvaluationsListInner() {
   // URL state (q, status, course_id)
@@ -38,7 +32,6 @@ export default function EvaluationsListInner() {
   const { courses, courseNameById } = useCourses();
 
   // UI state
-  const [savingId, setSavingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -48,32 +41,6 @@ export default function EvaluationsListInner() {
       setParams({ course_id: String(courses[0].id) });
     }
   }, [courseIdStr, courses, setParams]);
-
-  async function changeStatus(id: number, next: EvalStatus) {
-    const prev = evaluations.find((x) => x.id === id)?.status;
-    if (!prev || prev === next) return;
-
-    setSavingId(id);
-    // Optimistic update
-    setEvaluations((r: Evaluation[]) =>
-      r.map((x) => (x.id === id ? { ...x, status: next } : x)),
-    );
-    try {
-      await evaluationService.updateStatus(id, next);
-      setToast(`Status aangepast naar "${STATUS_LABEL[next]}".`);
-      setTimeout(() => setToast(null), 1500);
-    } catch (e: any) {
-      // Rollback
-      setEvaluations((r: Evaluation[]) =>
-        r.map((x) => (x.id === id ? { ...x, status: prev } : x)),
-      );
-      setToast(
-        e?.response?.data?.detail || e?.message || "Status wijzigen mislukt",
-      );
-    } finally {
-      setSavingId(null);
-    }
-  }
 
   async function deleteEvaluation(id: number) {
     const evalTitle = evaluations.find((x) => x.id === id)?.title;
@@ -212,29 +179,8 @@ export default function EvaluationsListInner() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h4 className="font-semibold text-gray-900">{e.title}</h4>
-                      {/* Status badge + inline switcher */}
-                      <select
-                        className="appearance-none bg-gray-50 border border-gray-300 text-gray-700 text-xs rounded-md px-2 py-1 pr-5
-                                  hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
-                                  cursor-pointer transition-all"
-                        style={{
-                          backgroundImage:
-                            "url(\"data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='none' stroke='%23666' stroke-width='1.5' d='M1 1l4 4 4-4'/%3E%3C/svg%3E\")",
-                          backgroundRepeat: "no-repeat",
-                          backgroundPosition: "right 0.4rem center",
-                          backgroundSize: "10px 6px",
-                        }}
-                        value={e.status}
-                        disabled={savingId === e.id}
-                        onChange={(ev) =>
-                          changeStatus(e.id, ev.target.value as EvalStatus)
-                        }
-                        title="Wijzig status"
-                      >
-                        <option value="draft">Draft</option>
-                        <option value="open">Open</option>
-                        <option value="closed">Closed</option>
-                      </select>
+                      {/* Status badge */}
+                      <StatusBadge status={e.status} />
                     </div>
                     
                     {/* Deadlines */}
