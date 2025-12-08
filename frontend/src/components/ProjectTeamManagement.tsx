@@ -74,10 +74,12 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
         const data = await response.json();
         setProjects(data.projects || []);
         
-        // Auto-select most recent active project
-        const activeProjects = data.projects.filter((p: Project) => p.status === "active");
-        if (activeProjects.length > 0 && !selectedProject) {
-          setSelectedProject(activeProjects[0]);
+        // Auto-select most recent active project only on initial load
+        if (data.projects && data.projects.length > 0 && !selectedProject) {
+          const activeProjects = data.projects.filter((p: Project) => p.status === "active");
+          if (activeProjects.length > 0) {
+            setSelectedProject(activeProjects[0]);
+          }
         }
       } catch (error) {
         console.error("Error loading projects:", error);
@@ -88,7 +90,7 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
     if (courseId) {
       loadProjects();
     }
-  }, [courseId]);
+  }, [courseId]); // Only re-run when courseId changes
 
   // Load project teams when project is selected
   useEffect(() => {

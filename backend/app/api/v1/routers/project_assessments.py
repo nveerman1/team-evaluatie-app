@@ -421,14 +421,11 @@ def close_project_assessment(
     Once closed, the project_team members become read-only.
     """
     from datetime import datetime
+    from app.core.rbac import require_role
     from app.core.audit import log_update
     
     # Require teacher or admin role
-    if user.role not in ("teacher", "admin"):
-        raise HTTPException(
-            status_code=403,
-            detail="Alleen docenten en admins kunnen beoordelingen sluiten"
-        )
+    require_role(user, ["teacher", "admin"])
     
     # Get assessment
     assessment = db.query(ProjectAssessment).filter(

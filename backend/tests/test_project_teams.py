@@ -3,7 +3,7 @@ Tests for Project Teams API endpoints and service
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock, MagicMock, patch
 from datetime import datetime
 from fastapi import HTTPException
 

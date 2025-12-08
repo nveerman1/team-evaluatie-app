@@ -171,17 +171,19 @@ def backfill_project_teams(db: Session) -> None:
         # If no group members found, try to infer from evaluation allocations
         if not members and combo["eval_ids"]:
             stats["inference_count"] += 1
-            inference_query = text("""
-                SELECT DISTINCT a.reviewee_id as user_id
-                FROM allocations a
-                WHERE a.evaluation_id IN :eval_ids
-            """)
-            members = [
-                {"user_id": row.user_id, "role_in_team": None}
-                for row in db.execute(
-                    inference_query, {"eval_ids": tuple(combo["eval_ids"])}
-                ).fetchall()
-            ]
+            # Only query if we have eval_ids
+            if len(combo["eval_ids"]) > 0:
+                inference_query = text("""
+                    SELECT DISTINCT a.reviewee_id as user_id
+                    FROM allocations a
+                    WHERE a.evaluation_id IN :eval_ids
+                """)
+                members = [
+                    {"user_id": row.user_id, "role_in_team": None}
+                    for row in db.execute(
+                        inference_query, {"eval_ids": tuple(combo["eval_ids"])}
+                    ).fetchall()
+                ]
 
         # Add team members
         for member in members:
