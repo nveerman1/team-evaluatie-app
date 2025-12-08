@@ -6,6 +6,7 @@
 
 export interface ProjectNotesContextCreate {
   title: string;
+  project_id?: number | null;
   course_id?: number | null;
   class_name?: string | null;
   description?: string | null;
@@ -22,6 +23,7 @@ export interface ProjectNotesContextUpdate {
 export interface ProjectNotesContext {
   id: number;
   title: string;
+  project_id?: number | null;
   course_id?: number | null;
   course_name?: string | null;
   class_name?: string | null;

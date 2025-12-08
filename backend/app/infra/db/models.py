@@ -654,6 +654,11 @@ class ProjectAssessment(Base):
     school_id: Mapped[int] = tenant_fk()
 
     # Relationships
+    project_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     group_id: Mapped[int] = mapped_column(
         ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True
     )
@@ -702,6 +707,7 @@ class ProjectAssessment(Base):
     external_evaluator: Mapped["ExternalEvaluator"] = relationship()
 
     __table_args__ = (
+        Index("ix_project_assessment_project", "project_id"),
         Index("ix_project_assessment_group", "group_id"),
         Index("ix_project_assessment_project_team", "project_team_id"),
         Index("ix_project_assessment_teacher", "teacher_id"),

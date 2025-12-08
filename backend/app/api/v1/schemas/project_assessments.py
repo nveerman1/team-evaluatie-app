@@ -11,6 +11,7 @@ class ProjectAssessmentCreate(BaseModel):
     rubric_id: int
     title: str
     version: Optional[str] = None
+    project_id: Optional[int] = None
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -19,12 +20,14 @@ class ProjectAssessmentUpdate(BaseModel):
     rubric_id: Optional[int] = None
     version: Optional[str] = None
     status: Optional[str] = None  # draft|published
+    project_id: Optional[int] = None
     metadata_json: Optional[Dict[str, Any]] = None
 
 
 class ProjectAssessmentOut(BaseModel):
     id: int
     school_id: int
+    project_id: Optional[int] = None
     group_id: int
     project_team_id: Optional[int] = None
     rubric_id: int
