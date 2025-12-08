@@ -52,13 +52,19 @@ def _to_out_assessment(pa: ProjectAssessment) -> ProjectAssessmentOut:
     return ProjectAssessmentOut.model_validate(
         {
             "id": pa.id,
+            "school_id": pa.school_id,
             "group_id": pa.group_id,
+            "project_team_id": pa.project_team_id,
             "rubric_id": pa.rubric_id,
             "teacher_id": pa.teacher_id,
+            "external_evaluator_id": pa.external_evaluator_id,
             "title": pa.title,
             "version": pa.version,
             "status": pa.status,
+            "closed_at": pa.closed_at,
             "published_at": pa.published_at,
+            "role": pa.role,
+            "is_advisory": pa.is_advisory,
             "metadata_json": pa.metadata_json or {},
         }
     )
@@ -420,7 +426,7 @@ def close_project_assessment(
     This action is idempotent - calling it multiple times has the same effect.
     Once closed, the project_team members become read-only.
     """
-    from datetime import datetime
+    from datetime import datetime, timezone
     from app.core.rbac import require_role
     from app.core.audit import log_update
     

@@ -556,7 +556,7 @@ def close_evaluation(
     This action is idempotent - calling it multiple times has the same effect.
     Once closed, the project_team members become read-only.
     """
-    from datetime import datetime
+    from datetime import datetime, timezone
     from app.core.rbac import require_role
     from app.core.audit import log_update
     
