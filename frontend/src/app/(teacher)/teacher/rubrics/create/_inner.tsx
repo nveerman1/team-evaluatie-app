@@ -353,7 +353,7 @@ export default function CreateRubricPageInner() {
                       {scope === "peer" ? (
                         // Peer criteria categories (OMZA)
                         ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"].map((category) => {
-                          const categoryCriteria = peerCriteria.filter(c => c.omza_category === category);
+                          const categoryCriteria = peerCriteria.filter(c => c.omza_category.toLowerCase() === category);
                           if (categoryCriteria.length === 0) return null;
                           
                           const categoryLabels: Record<string, string> = {
@@ -388,7 +388,7 @@ export default function CreateRubricPageInner() {
                       ) : (
                         // Project criteria categories
                         ["projectproces", "eindresultaat", "communicatie"].map((category) => {
-                          const categoryCriteria = projectCriteria.filter(c => c.category === category);
+                          const categoryCriteria = projectCriteria.filter(c => c.category.toLowerCase() === category);
                           if (categoryCriteria.length === 0) return null;
                           
                           const categoryLabels: Record<string, string> = {

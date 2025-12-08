@@ -5,6 +5,7 @@ Templates API endpoints for admin template management
 from __future__ import annotations
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_db, get_current_user
@@ -94,8 +95,12 @@ def list_peer_criteria_templates(
             PeerEvaluationCriterionTemplate.omza_category == omza_category
         )
     if target_level:
+        # Show criteria with target_level = NULL OR target_level = specified level
         query = query.filter(
-            PeerEvaluationCriterionTemplate.target_level == target_level
+            or_(
+                PeerEvaluationCriterionTemplate.target_level.is_(None),
+                PeerEvaluationCriterionTemplate.target_level == target_level
+            )
         )
 
     total = query.count()
@@ -296,8 +301,12 @@ def list_project_assessment_criteria_templates(
             ProjectAssessmentCriterionTemplate.category == category
         )
     if target_level:
+        # Show criteria with target_level = NULL OR target_level = specified level
         query = query.filter(
-            ProjectAssessmentCriterionTemplate.target_level == target_level
+            or_(
+                ProjectAssessmentCriterionTemplate.target_level.is_(None),
+                ProjectAssessmentCriterionTemplate.target_level == target_level
+            )
         )
 
     total = query.count()
