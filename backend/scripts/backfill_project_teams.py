@@ -18,7 +18,7 @@ Usage:
 
 import sys
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from collections import defaultdict
 
 # Add parent directory to path to import app modules
@@ -37,6 +37,19 @@ from app.infra.db.models import (
     GroupMember,
     Allocation,
 )
+
+
+def make_aware(dt):
+    """
+    Convert a naive datetime to timezone-aware UTC datetime.
+    If already aware, return as-is.
+    """
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        # Naive datetime - assume UTC
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 def backfill_project_teams(db: Session) -> None:
@@ -126,10 +139,12 @@ def backfill_project_teams(db: Session) -> None:
         combo["group_name"] = row.group_name
         combo["school_id"] = row.school_id
         combo["eval_ids"].append(row.eval_id)
-        # Handle None dates properly
+        # Handle None dates properly and normalize timezone
         if row.earliest_date is not None:
-            if combo["earliest_date"] is None or row.earliest_date < combo["earliest_date"]:
-                combo["earliest_date"] = row.earliest_date
+            row_date = make_aware(row.earliest_date)
+            combo_date = make_aware(combo["earliest_date"])
+            if combo_date is None or row_date < combo_date:
+                combo["earliest_date"] = row_date
 
     for row in assessment_combinations:
         key = (row.project_id, row.group_id)
@@ -137,10 +152,12 @@ def backfill_project_teams(db: Session) -> None:
         combo["group_name"] = row.group_name
         combo["school_id"] = row.school_id
         combo["assessment_ids"].append(row.assessment_id)
-        # Handle None dates properly
+        # Handle None dates properly and normalize timezone
         if row.earliest_date is not None:
-            if combo["earliest_date"] is None or row.earliest_date < combo["earliest_date"]:
-                combo["earliest_date"] = row.earliest_date
+            row_date = make_aware(row.earliest_date)
+            combo_date = make_aware(combo["earliest_date"])
+            if combo_date is None or row_date < combo_date:
+                combo["earliest_date"] = row_date
 
     print(f"  Found {len(all_combinations)} unique project-group combinations")
 
@@ -153,7 +170,7 @@ def backfill_project_teams(db: Session) -> None:
             display_name_at_time=combo["group_name"] or f"Team {group_id}",
             version=1,
             backfill_source="backfill",
-            created_at=combo["earliest_date"] or datetime.utcnow(),
+            created_at=combo["earliest_date"] or datetime.now(timezone.utc),
         )
         db.add(project_team)
         db.flush()  # Get the ID
@@ -196,7 +213,7 @@ def backfill_project_teams(db: Session) -> None:
                 project_team_id=project_team.id,
                 user_id=member.user_id if hasattr(member, "user_id") else member["user_id"],
                 role=member.role_in_team if hasattr(member, "role_in_team") else member.get("role_in_team"),
-                created_at=combo["earliest_date"] or datetime.utcnow(),
+                created_at=combo["earliest_date"] or datetime.now(timezone.utc),
             )
             db.add(team_member)
             stats["team_members_added"] += 1
