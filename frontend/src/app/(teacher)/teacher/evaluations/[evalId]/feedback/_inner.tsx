@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
 import { useNumericEvalId } from "@/lib/id";
+import { useEvaluationLayout } from "../EvaluationLayoutContext";
 
 type UiComment = {
   to_student_id?: number;
@@ -96,6 +97,8 @@ function normalizeToGroups(res: any): UiGroup[] {
 export default function FeedbackPageInner() {
   const evalIdNum = useNumericEvalId(); // null op /create
   const evalIdStr = evalIdNum != null ? String(evalIdNum) : "";
+  const { setExportCsvUrl } = useEvaluationLayout();
+  
   const [groups, setGroups] = useState<UiGroup[]>([]);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "self" | "peer">("all");
@@ -105,6 +108,16 @@ export default function FeedbackPageInner() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("card");
+
+  // Set export CSV URL in context
+  useEffect(() => {
+    if (evalIdNum != null) {
+      setExportCsvUrl(`/api/v1/evaluations/${evalIdStr}/feedback/export.csv`);
+    }
+    return () => {
+      setExportCsvUrl(null);
+    };
+  }, [evalIdNum, evalIdStr, setExportCsvUrl]);
 
   useEffect(() => {
     setErr(null);
@@ -233,18 +246,6 @@ export default function FeedbackPageInner() {
 
   return (
     <>
-      {/* Export button specific to this page */}
-      {evalIdNum != null && (
-        <div className="flex justify-end mb-4">
-          <a
-            href={`/api/v1/evaluations/${evalIdStr}/feedback/export.csv`}
-            className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm"
-          >
-            Export CSV
-          </a>
-        </div>
-      )}
-
       {/* View Mode Toggle */}
       <div className="flex items-center justify-between">
         <button

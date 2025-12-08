@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
 import { useNumericEvalId } from "@/lib/id";
+import { useEvaluationLayout } from "../EvaluationLayoutContext";
 
 type Item = {
   student_id: number;
@@ -16,6 +17,8 @@ type Item = {
 export default function ReflectionsPageInner() {
   const evalIdNum = useNumericEvalId(); // null op /create
   const evalIdStr = evalIdNum != null ? String(evalIdNum) : "";
+  const { setExportCsvUrl } = useEvaluationLayout();
+  
   const [rows, setRows] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -27,6 +30,16 @@ export default function ReflectionsPageInner() {
     "name_asc" | "name_desc" | "date_new" | "date_old" | "words_hi" | "words_lo"
   >("name_asc");
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+
+  // Set export CSV URL in context
+  useEffect(() => {
+    if (evalIdNum != null) {
+      setExportCsvUrl(`/api/v1/evaluations/${evalIdStr}/reflections/export.csv`);
+    }
+    return () => {
+      setExportCsvUrl(null);
+    };
+  }, [evalIdNum, evalIdStr, setExportCsvUrl]);
 
   useEffect(() => {
     setErr(null);
@@ -100,18 +113,6 @@ export default function ReflectionsPageInner() {
 
   return (
     <>
-      {/* Export button specific to this page */}
-      {evalIdNum != null && (
-        <div className="flex justify-end mb-4">
-          <a
-            href={`/api/v1/evaluations/${evalIdStr}/reflections/export.csv`}
-            className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm"
-          >
-            Export CSV
-          </a>
-        </div>
-      )}
-
       {/* Filters */}
       <div className="sticky top-0 bg-white/80 backdrop-blur border border-slate-200 rounded-2xl p-3 flex flex-wrap items-center gap-3 shadow-sm">
         <input

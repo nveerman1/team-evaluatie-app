@@ -7,15 +7,17 @@ import { ApiAuthError } from "@/lib/api";
 import { evaluationService } from "@/services";
 import { Evaluation, EvalStatus } from "@/dtos/evaluation.dto";
 import { Loading, ErrorMessage, StatusToggle } from "@/components";
+import { EvaluationLayoutProvider, useEvaluationLayout } from "./EvaluationLayoutContext";
 
 type LayoutProps = {
   children: ReactNode;
 };
 
-export default function EvaluationLayout({ children }: LayoutProps) {
+function EvaluationLayoutInner({ children }: LayoutProps) {
   const params = useParams();
   const evalId = params?.evalId as string;
   const pathname = usePathname();
+  const { autoSaveLabel, exportCsvUrl, publishGrades } = useEvaluationLayout();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,17 +63,25 @@ export default function EvaluationLayout({ children }: LayoutProps) {
     
     setPublishing(true);
     try {
+      // If changing to published status and on grades page with publishGrades function
+      if (newStatus === "published" && publishGrades) {
+        await publishGrades();
+        showToast("Cijfers gepubliceerd!");
+      }
+      
       await evaluationService.updateStatus(Number(evalId), newStatus as EvalStatus);
       
       // Reload data to get updated status
       await loadData();
       
-      const statusLabels: Record<EvalStatus, string> = {
+      const statusLabels: Record<string, string> = {
         draft: "concept",
         open: "open",
-        closed: "gesloten"
+        published: "gepubliceerd"
       };
-      showToast(`Status gewijzigd naar "${statusLabels[newStatus as EvalStatus]}"`);
+      if (newStatus !== "published" || !publishGrades) {
+        showToast(`Status gewijzigd naar "${statusLabels[newStatus]}"`);
+      }
     } catch (e: unknown) {
       const err = e as { response?: { data?: { detail?: string } }; message?: string };
       showToast(err?.response?.data?.detail || err?.message || "Status wijzigen mislukt");
@@ -124,13 +134,28 @@ export default function EvaluationLayout({ children }: LayoutProps) {
               <p className="text-gray-600 mt-1 text-sm">
                 Evaluatie #{data.id}
               </p>
+              {/* Auto-save label above toggle */}
+              {autoSaveLabel && (
+                <p className="text-xs text-gray-500 mt-2">
+                  {autoSaveLabel}
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-2">
+              {/* Export CSV button if provided */}
+              {exportCsvUrl && (
+                <a
+                  href={exportCsvUrl}
+                  className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm"
+                >
+                  Export CSV
+                </a>
+              )}
               <StatusToggle
                 options={[
                   { value: "draft", label: "Concept" },
                   { value: "open", label: "Open" },
-                  { value: "closed", label: "Gesloten" },
+                  { value: "published", label: "Gepubliceerd" },
                 ]}
                 value={data.status}
                 onChange={handleStatusChange}
@@ -171,5 +196,13 @@ export default function EvaluationLayout({ children }: LayoutProps) {
         {children}
       </div>
     </>
+  );
+}
+
+export default function EvaluationLayout({ children }: LayoutProps) {
+  return (
+    <EvaluationLayoutProvider>
+      <EvaluationLayoutInner>{children}</EvaluationLayoutInner>
+    </EvaluationLayoutProvider>
   );
 }

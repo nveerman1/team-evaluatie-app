@@ -4,6 +4,7 @@ const STATUS_LABEL: Record<EvalStatus, string> = {
   draft: "Concept",
   open: "Open",
   closed: "Gesloten",
+  published: "Gepubliceerd",
 };
 
 export function StatusBadge({ status }: { status: EvalStatus }) {
@@ -11,11 +12,13 @@ export function StatusBadge({ status }: { status: EvalStatus }) {
     draft: "bg-gray-100 text-gray-700",
     open: "bg-green-100 text-green-700",
     closed: "bg-gray-100 text-gray-600",
+    published: "bg-green-100 text-green-700",
   };
   const icons: Record<EvalStatus, string> = {
     draft: "⚠️",
     open: "✅",
     closed: "🔒",
+    published: "✅",
   };
   return (
     <span

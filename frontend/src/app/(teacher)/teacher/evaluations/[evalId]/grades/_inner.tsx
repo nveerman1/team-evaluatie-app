@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useNumericEvalId } from "@/lib/id";
 import { gradesService } from "@/services/grades.service";
 import type { GradePreviewItem } from "@/dtos/grades.dto";
+import { useEvaluationLayout } from "../EvaluationLayoutContext";
 
 type Row = {
   user_id: number;
@@ -27,6 +28,7 @@ export default function GradesPageInner() {
   const evalIdNum = useNumericEvalId();
   const evalIdStr = evalIdNum != null ? String(evalIdNum) : "—";
   const router = useRouter();
+  const { setAutoSaveLabel, setPublishGrades } = useEvaluationLayout();
 
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
@@ -141,6 +143,25 @@ export default function GradesPageInner() {
     return () => clearInterval(timer);
   }, [rows, evalIdNum]);
 
+  // Set publish function and autosave label in context
+  useEffect(() => {
+    const label = {
+      idle: "",
+      saving: "Concept wordt opgeslagen…",
+      saved: "✔ Concept opgeslagen (laatste 30s)",
+      error: "⚠ Niet opgeslagen – controleer je verbinding",
+    }[autoSaveState] ?? "";
+    
+    setAutoSaveLabel(label);
+    setPublishGrades(handlePublish);
+    
+    // Cleanup on unmount
+    return () => {
+      setAutoSaveLabel("");
+      setPublishGrades(null);
+    };
+  }, [autoSaveState, setAutoSaveLabel, setPublishGrades, handlePublish]);
+
   const teamOptions = useMemo(() => {
     const set = new Set<number | string>();
     rows.forEach((r) => set.add(r.teamNumber ?? "–"));
@@ -219,7 +240,7 @@ export default function GradesPageInner() {
         group_grade: null,
         overrides,
       });
-      alert("Cijfers gepubliceerd!");
+      // Don't show alert here, the layout will show toast
     } catch (e: any) {
       alert(e?.response?.data?.detail ?? e?.message ?? "Publiceren mislukt");
     } finally {
@@ -227,36 +248,10 @@ export default function GradesPageInner() {
     }
   }
 
-  const autoSaveLabel =
-    {
-      idle: "",
-      saving: "Concept wordt opgeslagen…",
-      saved: "✔ Concept opgeslagen (laatste 30s)",
-      error: "⚠ Niet opgeslagen – controleer je verbinding",
-    }[autoSaveState] ?? "";
-
   return (
     <>
-      {/* Action buttons for this specific page */}
-      <div className="flex flex-col items-end gap-2 mb-4">
-        <div className="text-xs text-gray-500 min-h-[1.2rem]">
-          {autoSaveLabel}
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleDraftSave}
-            className="rounded-full border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Concept opslaan
-          </button>
-          <button
-            onClick={handlePublish}
-            disabled={saving || loading || evalIdNum == null}
-            className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
-          >
-            {saving ? "Publiceren…" : "Publiceer cijfers"}
-          </button>
-        </div>
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 items-center mb-4">
       </div>
 
       {/* Filters */}
