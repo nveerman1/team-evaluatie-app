@@ -4,7 +4,7 @@ Tests for Project Teams API endpoints and service
 
 import pytest
 from unittest.mock import Mock, MagicMock, patch
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import HTTPException
 
 from app.infra.db.models import (
@@ -133,17 +133,17 @@ class TestProjectTeamService:
         # Mock team is not locked
         def query_side_effect(model):
             mock_query = Mock()
-            if model == ProjectTeam:
+            # Use type comparison instead of == to avoid SQLAlchemy comparison issues
+            if isinstance(model, type) and issubclass(model, ProjectTeam):
                 mock_query.filter().first.return_value = project_team
-            else:
-                mock_query.filter().first.return_value = None
-            
-            # Mock user query - only return 2 users, not 3
-            if model == User or str(model).find("User") >= 0:
+            elif isinstance(model, type) and issubclass(model, User):
+                # Mock user query - only return 2 users, not 3
                 mock_query.filter().all.return_value = [
                     Mock(id=100),
                     Mock(id=101),
                 ]
+            else:
+                mock_query.filter().first.return_value = None
             return mock_query
         
         db.query.side_effect = query_side_effect
@@ -240,7 +240,12 @@ class TestProjectTeamService:
         assert ProjectTeamService._is_project_team_locked(db, project_team_id) is True
 
         # Test with nothing - should not be locked
-        db.query().filter().first.return_value = None
+        def query_with_nothing(model):
+            mock_query = Mock()
+            mock_query.filter().first.return_value = None
+            return mock_query
+        
+        db.query.side_effect = query_with_nothing
         assert ProjectTeamService._is_project_team_locked(db, project_team_id) is False
 
 
@@ -264,8 +269,8 @@ class TestEvaluationCloseEndpoint:
         
         db.query().filter().first.return_value = evaluation
 
-        with patch("app.api.v1.routers.evaluations.require_role"):
-            with patch("app.api.v1.routers.evaluations.log_update"):
+        with patch("app.core.rbac.require_role"):
+            with patch("app.core.audit.log_update"):
                 result = close_evaluation(
                     evaluation_id=1,
                     db=db,
@@ -296,8 +301,8 @@ class TestEvaluationCloseEndpoint:
         
         db.query().filter().first.return_value = evaluation
 
-        with patch("app.api.v1.routers.evaluations.require_role"):
-            with patch("app.api.v1.routers.evaluations.log_update") as mock_log:
+        with patch("app.core.rbac.require_role"):
+            with patch("app.core.audit.log_update") as mock_log:
                 result = close_evaluation(
                     evaluation_id=1,
                     db=db,
@@ -334,14 +339,14 @@ class TestProjectAssessmentCloseEndpoint:
         assessment.external_evaluator_id = None
         assessment.title = "Test Assessment"
         assessment.version = "1.0"
-        assessment.published_at = datetime.utcnow()
+        assessment.published_at = datetime.now(timezone.utc)
         assessment.role = "TEACHER"
         assessment.is_advisory = False
         assessment.metadata_json = {}
         
         db.query().filter().first.return_value = assessment
 
-        with patch("app.api.v1.routers.project_assessments.log_update"):
+        with patch("app.core.audit.log_update"):
             result = close_project_assessment(
                 assessment_id=1,
                 db=db,
