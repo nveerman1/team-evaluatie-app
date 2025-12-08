@@ -126,8 +126,10 @@ def backfill_project_teams(db: Session) -> None:
         combo["group_name"] = row.group_name
         combo["school_id"] = row.school_id
         combo["eval_ids"].append(row.eval_id)
-        if combo["earliest_date"] is None or row.earliest_date < combo["earliest_date"]:
-            combo["earliest_date"] = row.earliest_date
+        # Handle None dates properly
+        if row.earliest_date is not None:
+            if combo["earliest_date"] is None or row.earliest_date < combo["earliest_date"]:
+                combo["earliest_date"] = row.earliest_date
 
     for row in assessment_combinations:
         key = (row.project_id, row.group_id)
@@ -135,8 +137,10 @@ def backfill_project_teams(db: Session) -> None:
         combo["group_name"] = row.group_name
         combo["school_id"] = row.school_id
         combo["assessment_ids"].append(row.assessment_id)
-        if combo["earliest_date"] is None or row.earliest_date < combo["earliest_date"]:
-            combo["earliest_date"] = row.earliest_date
+        # Handle None dates properly
+        if row.earliest_date is not None:
+            if combo["earliest_date"] is None or row.earliest_date < combo["earliest_date"]:
+                combo["earliest_date"] = row.earliest_date
 
     print(f"  Found {len(all_combinations)} unique project-group combinations")
 
