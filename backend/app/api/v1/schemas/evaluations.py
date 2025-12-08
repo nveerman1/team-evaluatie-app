@@ -26,14 +26,18 @@ class EvaluationUpdate(BaseModel):
 # ---------- Output ----------
 class EvaluationOut(BaseModel):
     id: int
-    course_id: int
+    school_id: int
+    course_id: Optional[int] = None
+    project_id: Optional[int] = None
+    project_team_id: Optional[int] = None
     # compat: oude frontend-veldnaam als label (gevuld met course.name)
-    cluster: str
+    cluster: Optional[str] = None
     rubric_id: int
     title: str
     evaluation_type: str  # "peer" | "project" | "competency"
     status: str
-    created_at: datetime
+    closed_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
     settings: Dict[str, Any]
     deadlines: Optional[dict] = None  # afgeleid veld voor frontend
 

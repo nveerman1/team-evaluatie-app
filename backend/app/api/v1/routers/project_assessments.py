@@ -52,13 +52,19 @@ def _to_out_assessment(pa: ProjectAssessment) -> ProjectAssessmentOut:
     return ProjectAssessmentOut.model_validate(
         {
             "id": pa.id,
+            "school_id": pa.school_id,
             "group_id": pa.group_id,
+            "project_team_id": pa.project_team_id,
             "rubric_id": pa.rubric_id,
             "teacher_id": pa.teacher_id,
+            "external_evaluator_id": pa.external_evaluator_id,
             "title": pa.title,
             "version": pa.version,
             "status": pa.status,
+            "closed_at": pa.closed_at,
             "published_at": pa.published_at,
+            "role": pa.role,
+            "is_advisory": pa.is_advisory,
             "metadata_json": pa.metadata_json or {},
         }
     )
@@ -405,6 +411,75 @@ def delete_project_assessment(
     db.delete(pa)
     db.commit()
     return None
+
+
+@router.post("/{assessment_id}/close", response_model=ProjectAssessmentOut)
+def close_project_assessment(
+    assessment_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """
+    Close a project assessment and mark it as archived
+    
+    Sets status to 'closed' and records closed_at timestamp.
+    This action is idempotent - calling it multiple times has the same effect.
+    Once closed, the project_team members become read-only.
+    """
+    from datetime import datetime, timezone
+    from app.core.rbac import require_role
+    from app.core.audit import log_update
+    
+    # Require teacher or admin role
+    require_role(user, ["teacher", "admin"])
+    
+    # Get assessment
+    assessment = db.query(ProjectAssessment).filter(
+        ProjectAssessment.id == assessment_id,
+        ProjectAssessment.school_id == user.school_id,
+    ).first()
+    
+    if not assessment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Assessment not found"
+        )
+    
+    # Update status and closed_at if not already closed
+    if assessment.status != "closed":
+        assessment.status = "closed"
+        assessment.closed_at = datetime.now(timezone.utc)
+        
+        # Log action
+        log_update(
+            db=db,
+            user=user,
+            entity_type="project_assessment",
+            entity_id=assessment_id,
+            details={"action": "close", "closed_at": assessment.closed_at.isoformat()},
+        )
+    
+    db.commit()
+    db.refresh(assessment)
+    
+    # Format output
+    return ProjectAssessmentOut(
+        id=assessment.id,
+        school_id=assessment.school_id,
+        group_id=assessment.group_id,
+        project_team_id=assessment.project_team_id,
+        rubric_id=assessment.rubric_id,
+        teacher_id=assessment.teacher_id,
+        external_evaluator_id=assessment.external_evaluator_id,
+        title=assessment.title,
+        version=assessment.version,
+        status=assessment.status,
+        closed_at=assessment.closed_at,
+        published_at=assessment.published_at,
+        role=assessment.role,
+        is_advisory=assessment.is_advisory,
+        metadata_json=assessment.metadata_json,
+    )
 
 
 # ---------- Team Overview ----------

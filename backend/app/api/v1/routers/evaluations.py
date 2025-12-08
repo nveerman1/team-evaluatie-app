@@ -53,13 +53,17 @@ def _to_out(ev: Evaluation) -> EvaluationOut:
     return EvaluationOut.model_validate(
         {
             "id": ev.id,
+            "school_id": ev.school_id,
             "course_id": ev.course_id,
+            "project_id": ev.project_id,
+            "project_team_id": ev.project_team_id,
             "cluster": getattr(ev.course, "name", None)
             or "",  # compat voor oude frontend
             "rubric_id": ev.rubric_id,
             "title": ev.title,
             "evaluation_type": ev.evaluation_type,
             "status": ev.status,
+            "closed_at": ev.closed_at,
             "created_at": ev.created_at,
             "settings": ev.settings or {},
             "deadlines": _extract_deadlines(ev.settings),
@@ -536,6 +540,71 @@ def export_reflections_csv(
         buf,
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post("/{evaluation_id}/close", response_model=EvaluationOut)
+def close_evaluation(
+    evaluation_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """
+    Close an evaluation and mark it as archived
+    
+    Sets status to 'closed' and records closed_at timestamp.
+    This action is idempotent - calling it multiple times has the same effect.
+    Once closed, the project_team members become read-only.
+    """
+    from datetime import datetime, timezone
+    from app.core.rbac import require_role
+    from app.core.audit import log_update
+    
+    # Require teacher or admin role
+    require_role(user, ["teacher", "admin"])
+    
+    # Get evaluation
+    evaluation = (
+        db.query(Evaluation)
+        .filter(Evaluation.id == evaluation_id, Evaluation.school_id == user.school_id)
+        .first()
+    )
+    if not evaluation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Evaluation not found"
+        )
+    
+    # Update status and closed_at if not already closed
+    if evaluation.status != "closed":
+        evaluation.status = "closed"
+        evaluation.closed_at = datetime.now(timezone.utc)
+        
+        # Log action
+        log_update(
+            db=db,
+            user=user,
+            entity_type="evaluation",
+            entity_id=evaluation_id,
+            details={"action": "close", "closed_at": evaluation.closed_at.isoformat()},
+        )
+    
+    db.commit()
+    db.refresh(evaluation)
+    
+    # Format output
+    return EvaluationOut(
+        id=evaluation.id,
+        school_id=evaluation.school_id,
+        course_id=evaluation.course_id,
+        project_id=evaluation.project_id,
+        project_team_id=evaluation.project_team_id,
+        rubric_id=evaluation.rubric_id,
+        title=evaluation.title,
+        evaluation_type=evaluation.evaluation_type,
+        settings=evaluation.settings,
+        status=evaluation.status,
+        closed_at=evaluation.closed_at,
     )
 
 
