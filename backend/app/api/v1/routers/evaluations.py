@@ -53,13 +53,17 @@ def _to_out(ev: Evaluation) -> EvaluationOut:
     return EvaluationOut.model_validate(
         {
             "id": ev.id,
+            "school_id": ev.school_id,
             "course_id": ev.course_id,
+            "project_id": ev.project_id,
+            "project_team_id": ev.project_team_id,
             "cluster": getattr(ev.course, "name", None)
             or "",  # compat voor oude frontend
             "rubric_id": ev.rubric_id,
             "title": ev.title,
             "evaluation_type": ev.evaluation_type,
             "status": ev.status,
+            "closed_at": ev.closed_at,
             "created_at": ev.created_at,
             "settings": ev.settings or {},
             "deadlines": _extract_deadlines(ev.settings),
@@ -574,7 +578,7 @@ def close_evaluation(
     # Update status and closed_at if not already closed
     if evaluation.status != "closed":
         evaluation.status = "closed"
-        evaluation.closed_at = datetime.utcnow()
+        evaluation.closed_at = datetime.now(timezone.utc)
         
         # Log action
         log_update(

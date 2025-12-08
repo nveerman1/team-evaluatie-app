@@ -130,18 +130,22 @@ class TestProjectTeamService:
         project_team.id = 1
         project_team.school_id = 1
 
+        # Create proper user ID mocks that have .id attributes
+        user1 = Mock()
+        user1.id = 100
+        user2 = Mock()
+        user2.id = 101
+
         # Mock team is not locked
-        def query_side_effect(model):
+        def query_side_effect(model_or_column):
             mock_query = Mock()
-            # Use type comparison instead of == to avoid SQLAlchemy comparison issues
-            if isinstance(model, type) and issubclass(model, ProjectTeam):
+            # Handle User.id column query
+            if hasattr(model_or_column, 'class_'):
+                # This is a column like User.id
+                mock_query.filter().all.return_value = [user1, user2]
+            # Use type comparison for model queries
+            elif isinstance(model_or_column, type) and issubclass(model_or_column, ProjectTeam):
                 mock_query.filter().first.return_value = project_team
-            elif isinstance(model, type) and issubclass(model, User):
-                # Mock user query - only return 2 users, not 3
-                mock_query.filter().all.return_value = [
-                    Mock(id=100),
-                    Mock(id=101),
-                ]
             else:
                 mock_query.filter().first.return_value = None
             return mock_query
@@ -266,6 +270,13 @@ class TestEvaluationCloseEndpoint:
         evaluation.status = "open"
         evaluation.closed_at = None
         evaluation.school_id = 1
+        evaluation.course_id = 1
+        evaluation.project_id = 1
+        evaluation.project_team_id = None
+        evaluation.rubric_id = 1
+        evaluation.title = "Test Evaluation"
+        evaluation.evaluation_type = "peer"
+        evaluation.settings = {}
         
         db.query().filter().first.return_value = evaluation
 
@@ -281,6 +292,8 @@ class TestEvaluationCloseEndpoint:
         assert evaluation.status == "closed"
         assert evaluation.closed_at is not None
         assert db.commit.called
+        assert result.status == "closed"
+        assert result.closed_at is not None
 
     def test_close_evaluation_is_idempotent(self):
         """Test that closing already closed evaluation is safe"""
@@ -298,6 +311,13 @@ class TestEvaluationCloseEndpoint:
         evaluation.status = "closed"
         evaluation.closed_at = closed_time
         evaluation.school_id = 1
+        evaluation.course_id = 1
+        evaluation.project_id = 1
+        evaluation.project_team_id = None
+        evaluation.rubric_id = 1
+        evaluation.title = "Test Evaluation"
+        evaluation.evaluation_type = "peer"
+        evaluation.settings = {}
         
         db.query().filter().first.return_value = evaluation
 
@@ -313,6 +333,8 @@ class TestEvaluationCloseEndpoint:
         assert evaluation.closed_at == closed_time
         # Log should not be called for already-closed evaluation
         assert not mock_log.called
+        assert result.status == "closed"
+        assert result.closed_at == closed_time
 
 
 class TestProjectAssessmentCloseEndpoint:
@@ -335,7 +357,7 @@ class TestProjectAssessmentCloseEndpoint:
         assessment.group_id = 5
         assessment.project_team_id = None
         assessment.rubric_id = 3
-        assessment.teacher_id = user.id
+        assessment.teacher_id = 10  # Set to actual int instead of user.id
         assessment.external_evaluator_id = None
         assessment.title = "Test Assessment"
         assessment.version = "1.0"
@@ -343,6 +365,8 @@ class TestProjectAssessmentCloseEndpoint:
         assessment.role = "TEACHER"
         assessment.is_advisory = False
         assessment.metadata_json = {}
+        
+        user.id = 10  # Ensure user.id matches
         
         db.query().filter().first.return_value = assessment
 
@@ -357,6 +381,8 @@ class TestProjectAssessmentCloseEndpoint:
         assert assessment.status == "closed"
         assert assessment.closed_at is not None
         assert db.commit.called
+        assert result.status == "closed"
+        assert result.closed_at is not None
 
     def test_close_assessment_requires_teacher_role(self):
         """Test that only teachers/admins can close assessments"""

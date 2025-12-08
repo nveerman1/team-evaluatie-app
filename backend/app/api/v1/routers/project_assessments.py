@@ -442,7 +442,7 @@ def close_project_assessment(
     # Update status and closed_at if not already closed
     if assessment.status != "closed":
         assessment.status = "closed"
-        assessment.closed_at = datetime.utcnow()
+        assessment.closed_at = datetime.now(timezone.utc)
         
         # Log action
         log_update(
