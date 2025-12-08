@@ -34,6 +34,7 @@ class ProjectTeamMemberOut(ProjectTeamMemberBase):
     # User details (populated from join)
     user_name: Optional[str] = None
     user_email: Optional[str] = None
+    user_status: Optional[str] = None  # "active" or "inactive" based on archived field
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -74,6 +75,7 @@ class ProjectTeamOut(ProjectTeamBase):
     # Related data
     members: List[ProjectTeamMemberOut] = []
     member_count: int = 0
+    is_locked: bool = False  # True if team has evaluations/assessments
 
     model_config = ConfigDict(from_attributes=True)
 

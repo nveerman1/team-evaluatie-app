@@ -84,7 +84,7 @@ def create_project_team(
 
     # Reload with members
     db.refresh(project_team)
-    return _format_project_team_output(project_team)
+    return _format_project_team_output(project_team, db)
 
 
 @router.post(
@@ -173,7 +173,7 @@ def list_project_teams(
     )
 
     return ProjectTeamListOut(
-        teams=[_format_project_team_output(t) for t in teams],
+        teams=[_format_project_team_output(t, db) for t in teams],
         total=len(teams),
     )
 
@@ -259,8 +259,13 @@ def clone_project_teams(
 # ========== Helper functions ==========
 
 
-def _format_project_team_output(project_team: ProjectTeam) -> ProjectTeamOut:
+def _format_project_team_output(project_team: ProjectTeam, db: Session = None) -> ProjectTeamOut:
     """Format ProjectTeam for API output"""
+    # Determine if team is locked (has evaluations/assessments)
+    is_locked = False
+    if db:
+        is_locked = ProjectTeamService._is_project_team_locked(db, project_team.id)
+    
     return ProjectTeamOut(
         id=project_team.id,
         school_id=project_team.school_id,
@@ -272,11 +277,15 @@ def _format_project_team_output(project_team: ProjectTeam) -> ProjectTeamOut:
         created_at=project_team.created_at,
         members=[_format_member_output(m) for m in project_team.members],
         member_count=len(project_team.members),
+        is_locked=is_locked,
     )
 
 
 def _format_member_output(member: ProjectTeamMember) -> ProjectTeamMemberOut:
     """Format ProjectTeamMember for API output"""
+    # Determine user status based on archived field
+    user_status = "inactive" if (member.user and member.user.archived) else "active"
+    
     return ProjectTeamMemberOut(
         id=member.id,
         project_team_id=member.project_team_id,
@@ -285,4 +294,5 @@ def _format_member_output(member: ProjectTeamMember) -> ProjectTeamMemberOut:
         created_at=member.created_at,
         user_name=member.user.name if member.user else None,
         user_email=member.user.email if member.user else None,
+        user_status=user_status,
     )
