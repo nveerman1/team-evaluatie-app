@@ -73,6 +73,7 @@ export type CourseStudent = {
   email: string;
   class_name?: string;
   team_number?: number;
+  status?: "active" | "inactive";
 };
 
 export type StudentTeamUpdate = {

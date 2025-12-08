@@ -17,6 +17,7 @@ type StudentRow = {
   email: string;
   class_name: string;
   team_number: number | null;
+  status?: "active" | "inactive";
   isModified?: boolean;
 };
 
@@ -105,13 +106,16 @@ export default function ClassTeamsPageInner() {
       setLoading(true);
       try {
         const courseStudents = await courseService.getCourseStudents(selectedCourse.id);
+        // Filter out inactive students
+        const activeStudents = courseStudents.filter((s) => s.status !== "inactive");
         setStudents(
-          courseStudents.map((s) => ({
+          activeStudents.map((s) => ({
             id: s.id,
             name: s.name,
             email: s.email,
             class_name: s.class_name || "",
             team_number: s.team_number ?? null,
+            status: s.status,
           }))
         );
       } catch (error) {
@@ -581,8 +585,8 @@ export default function ClassTeamsPageInner() {
             {/* Explanatory Text */}
             <div className="mb-6 rounded-lg bg-blue-50 p-4">
               <p className="text-sm text-gray-700">
-                <span className="font-medium">Links:</span> vaste projectroosters (frozen teams per project). 
-                <span className="ml-2 font-medium">Rechts:</span> klasteams per leerling.
+                <span className="font-medium">Links:</span> teams uit vorige projecten. 
+                <span className="ml-2 font-medium">Rechts:</span> huidige teamsamenstelling per leerling.
               </p>
             </div>
 
