@@ -171,6 +171,7 @@ async def create_context(
     context = ProjectNotesContext(
         school_id=current_user.school_id,
         title=data.title,
+        project_id=data.project_id,
         course_id=data.course_id,
         class_name=data.class_name,
         description=data.description,

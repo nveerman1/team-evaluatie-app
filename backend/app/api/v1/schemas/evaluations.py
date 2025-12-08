@@ -9,6 +9,7 @@ class EvaluationCreate(BaseModel):
     course_id: int
     rubric_id: int
     title: str
+    project_id: Optional[int] = None
     settings: Dict[str, Any] = Field(default_factory=dict)  # deadlines etc.
 
 
@@ -19,6 +20,7 @@ class EvaluationUpdateStatus(BaseModel):
 class EvaluationUpdate(BaseModel):
     title: Optional[str] = None
     course_id: Optional[int] = None
+    project_id: Optional[int] = None
     rubric_id: Optional[int] = None
     settings: Optional[Dict[str, Any]] = None
 

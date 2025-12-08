@@ -1,5 +1,6 @@
 export type ProjectAssessmentOut = {
   id: number;
+  project_id?: number | null;
   group_id: number;
   rubric_id: number;
   teacher_id?: number | null;
@@ -32,6 +33,7 @@ export type ProjectAssessmentCreate = {
   rubric_id: number;
   title: string;
   version?: string | null;
+  project_id?: number | null;
   metadata_json?: Record<string, any>;
 };
 

@@ -18,6 +18,7 @@ class ProjectNotesContextCreate(BaseModel):
     """Schema for creating a new project notes context."""
 
     title: str = Field(..., min_length=1, max_length=200)
+    project_id: Optional[int] = None
     course_id: Optional[int] = None
     class_name: Optional[str] = None
     description: Optional[str] = None
@@ -40,6 +41,7 @@ class ProjectNotesContextOut(BaseModel):
 
     id: int
     title: str
+    project_id: Optional[int]
     course_id: Optional[int]
     course_name: Optional[str] = None  # Joined from Course table
     class_name: Optional[str]

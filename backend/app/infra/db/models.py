@@ -654,6 +654,11 @@ class ProjectAssessment(Base):
     school_id: Mapped[int] = tenant_fk()
 
     # Relationships
+    project_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     group_id: Mapped[int] = mapped_column(
         ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True
     )

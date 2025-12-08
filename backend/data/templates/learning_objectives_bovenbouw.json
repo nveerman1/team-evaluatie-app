@@ -1,0 +1,317 @@
+[
+  {
+    "subject_id": 1,
+    "code": "1",
+    "domain": "A",
+    "phase": "bovenbouw",
+    "title": "Totstandkoming en gevolgen van technologie",
+    "description": "De leerling toont inzicht in de totstandkoming en de gevolgen van de inzet van technologie.",
+    "order": 1
+  },
+  {
+    "subject_id": 1,
+    "code": "2",
+    "domain": "A",
+    "phase": "bovenbouw",
+    "title": "Totstandkoming en betrouwbaarheid van wetenschappelijke kennis",
+    "description": "De leerling toont inzicht in de totstandkoming en betrouwbaarheid van wetenschappelijke kennis.",
+    "order": 2
+  },
+  {
+    "subject_id": 1,
+    "code": "3",
+    "domain": "A",
+    "phase": "bovenbouw",
+    "title": "Beïnvloeding van natuurwetenschap en technologie",
+    "description": "De leerling beschrijft hoe natuurwetenschap en technologie worden beïnvloed.",
+    "order": 3
+  },
+  {
+    "subject_id": 1,
+    "code": "4",
+    "domain": "B",
+    "phase": "bovenbouw",
+    "title": "Selecteren van relevante concepten",
+    "description": "De leerling selecteert relevante concepten en toont inzicht in deze concepten.",
+    "order": 4
+  },
+  {
+    "subject_id": 1,
+    "code": "5",
+    "domain": "B",
+    "phase": "bovenbouw",
+    "title": "Projectmatig werken",
+    "description": "De leerling toont inzicht in de onderdelen van projectmatig werken.",
+    "order": 5
+  },
+  {
+    "subject_id": 1,
+    "code": "6",
+    "domain": "B",
+    "phase": "bovenbouw",
+    "title": "Ontwerpproces",
+    "description": "De leerling toont inzicht in de verschillende onderdelen van een ontwerpproces.",
+    "order": 6
+  },
+  {
+    "subject_id": 1,
+    "code": "7",
+    "domain": "B",
+    "phase": "bovenbouw",
+    "title": "Onderzoeksproces",
+    "description": "De leerling toont inzicht in de onderdelen van een onderzoeksproces tijdens het voorbereiden en uitvoeren van een onderzoek.",
+    "order": 7
+  },
+  {
+    "subject_id": 1,
+    "code": "8",
+    "domain": "B",
+    "phase": "bovenbouw",
+    "title": "Zelfregulerend leren",
+    "description": "De leerling toont inzicht in hoe strategieën voor zelfregulerend leren worden ingezet tijdens het reguleren van een leerproces.",
+    "order": 8
+  },
+  {
+    "subject_id": 1,
+    "code": "9",
+    "domain": "C",
+    "phase": "bovenbouw",
+    "title": "Redeneren met systemen",
+    "description": "De leerling redeneert met systemen.",
+    "order": 9
+  },
+  {
+    "subject_id": 1,
+    "code": "10",
+    "domain": "C",
+    "phase": "bovenbouw",
+    "title": "Oorzaak en gevolg",
+    "description": "De leerling redeneert met oorzaak en gevolg en relaties daartussen.",
+    "order": 10
+  },
+  {
+    "subject_id": 1,
+    "code": "11",
+    "domain": "C",
+    "phase": "bovenbouw",
+    "title": "Patronen",
+    "description": "De leerling redeneert met patronen tijdens het analyseren van data.",
+    "order": 11
+  },
+  {
+    "subject_id": 1,
+    "code": "12",
+    "domain": "C",
+    "phase": "bovenbouw",
+    "title": "Schaal",
+    "description": " verhouding en hoeveelheid",
+    "order": 12
+  },
+  {
+    "subject_id": 1,
+    "code": "13",
+    "domain": "C",
+    "phase": "bovenbouw",
+    "title": "Stabiliteit en verandering",
+    "description": "De leerling redeneert met stabiliteit en verandering.",
+    "order": 13
+  },
+  {
+    "subject_id": 1,
+    "code": "14",
+    "domain": "C",
+    "phase": "bovenbouw",
+    "title": "Kringlopen en transport",
+    "description": "De leerling redeneert met kringlopen en transport.",
+    "order": 14
+  },
+  {
+    "subject_id": 1,
+    "code": "15",
+    "domain": "C",
+    "phase": "bovenbouw",
+    "title": "Structuur",
+    "description": " vorm",
+    "order": 15
+  },
+  {
+    "subject_id": 1,
+    "code": "16",
+    "domain": "C",
+    "phase": "bovenbouw",
+    "title": "Interdisciplinair perspectief",
+    "description": "De leerling redeneert vanuit een interdisciplinair perspectief.",
+    "order": 16
+  },
+  {
+    "subject_id": 1,
+    "code": "17",
+    "domain": "D",
+    "phase": "bovenbouw",
+    "title": "Vraagstukken en maatschappelijke context",
+    "description": "De leerling legt verbanden tussen het project en maatschappelijke, technologische of wetenschappelijke vraagstukken.",
+    "order": 17
+  },
+  {
+    "subject_id": 1,
+    "code": "18",
+    "domain": "E",
+    "phase": "bovenbouw",
+    "title": "Werken met externe opdrachtgever",
+    "description": "De leerling werkt in samenspraak met een externe opdrachtgever aan een project waarin onderzoek of ontwerpen centraal staat.",
+    "order": 18
+  },
+  {
+    "subject_id": 1,
+    "code": "19",
+    "domain": "E",
+    "phase": "bovenbouw",
+    "title": "Systematisch en iteratief werken",
+    "description": "De leerling past in gezamenlijkheid op systematische en iteratieve wijze onderzoeks- en ontwerpstappen toe om tot een onderbouwd en beproefd resultaat te komen.",
+    "order": 19
+  },
+  {
+    "subject_id": 1,
+    "code": "20",
+    "domain": "E",
+    "phase": "bovenbouw",
+    "title": "Analyseren van vragen en behoeften",
+    "description": "De leerling analyseert vragen, problemen en behoeften van opdrachtgevers en gebruikers vanuit verschillende disciplines en professionele praktijken, en formuleert hieruit onderzoeks- en ontwerpvragen.",
+    "order": 20
+  },
+  {
+    "subject_id": 1,
+    "code": "21",
+    "domain": "E",
+    "phase": "bovenbouw",
+    "title": "Ontwerpproces uitvoeren",
+    "description": "De leerling bereidt een ontwerpproces voor en voert het uit.",
+    "order": 21
+  },
+  {
+    "subject_id": 1,
+    "code": "22",
+    "domain": "E",
+    "phase": "bovenbouw",
+    "title": "Onderzoek uitvoeren",
+    "description": "De leerling bereidt een onderzoek voor en voert dit uit.",
+    "order": 22
+  },
+  {
+    "subject_id": 1,
+    "code": "23",
+    "domain": "E",
+    "phase": "bovenbouw",
+    "title": "Data verwerken",
+    "description": "De leerling verwerkt data.",
+    "order": 23
+  },
+  {
+    "subject_id": 1,
+    "code": "24",
+    "domain": "E",
+    "phase": "bovenbouw",
+    "title": "Verklaringen en oplossingen",
+    "description": "De leerling redeneert over natuurwetenschappelijke verklaringen en technische oplossingen.",
+    "order": 24
+  },
+  {
+    "subject_id": 1,
+    "code": "25",
+    "domain": "E",
+    "phase": "bovenbouw",
+    "title": "Standpunt formuleren",
+    "description": "De leerling formuleert een onderbouwd standpunt.",
+    "order": 25
+  },
+  {
+    "subject_id": 1,
+    "code": "26",
+    "domain": "E",
+    "phase": "bovenbouw",
+    "title": "Informatie verzamelen en evalueren",
+    "description": "De leerling verzamelt en evalueert informatie.",
+    "order": 26
+  },
+  {
+    "subject_id": 1,
+    "code": "27",
+    "domain": "E",
+    "phase": "bovenbouw",
+    "title": "Presenteren",
+    "description": "De leerling presenteert het proces en de resultaten van een onderzoek of ontwerp.",
+    "order": 27
+  },
+  {
+    "subject_id": 1,
+    "code": "28",
+    "domain": "E",
+    "phase": "bovenbouw",
+    "title": "Communiceren met betrokkenen",
+    "description": "De leerling communiceert doelgericht met betrokken partijen ten behoeve van het project.",
+    "order": 28
+  },
+  {
+    "subject_id": 1,
+    "code": "29",
+    "domain": "E",
+    "phase": "bovenbouw",
+    "title": "Modellen gebruiken en ontwerpen",
+    "description": "De leerling gebruikt en ontwerpt natuurwetenschappelijke en technologische modellen en past ze aan.",
+    "order": 29
+  },
+  {
+    "subject_id": 1,
+    "code": "30",
+    "domain": "E",
+    "phase": "bovenbouw",
+    "title": "Verbanden tussen grootheden",
+    "description": "De leerling toont inzicht in verbanden tussen natuurwetenschappelijke grootheden.",
+    "order": 30
+  },
+  {
+    "subject_id": 1,
+    "code": "31",
+    "domain": "E",
+    "phase": "bovenbouw",
+    "title": "Wiskunde toepassen",
+    "description": "De leerling past wiskunde toe.",
+    "order": 31
+  },
+  {
+    "subject_id": 1,
+    "code": "32",
+    "domain": "F",
+    "phase": "bovenbouw",
+    "title": "Oriëntatie op toekomst en kwaliteiten",
+    "description": "De leerling legt verbanden tussen ervaringen, persoonlijke interesses en kwaliteiten, vervolgopleidingen en toekomst.",
+    "order": 32
+  },
+  {
+    "subject_id": 1,
+    "code": "33",
+    "domain": "F",
+    "phase": "bovenbouw",
+    "title": "Zelfregulatie",
+    "description": "De leerling reguleert het eigen leerproces.",
+    "order": 33
+  },
+  {
+    "subject_id": 1,
+    "code": "34",
+    "domain": "F",
+    "phase": "bovenbouw",
+    "title": "Samenwerken",
+    "description": "De leerling draagt bij aan het samenwerken om een teamresultaat te bereiken.",
+    "order": 34
+  },
+  {
+    "subject_id": 1,
+    "code": "35",
+    "domain": "F",
+    "phase": "bovenbouw",
+    "title": "Proactieve en ondernemende houding",
+    "description": "De leerling draagt met een proactieve en ondernemende houding bij aan het proces van onderzoeken en ontwerpen.",
+    "order": 35
+  }
+]

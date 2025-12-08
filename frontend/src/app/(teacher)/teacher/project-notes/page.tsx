@@ -2,25 +2,32 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { projectNotesService, courseService } from "@/services";
+import { projectNotesService, courseService, projectService } from "@/services";
 import { ProjectNotesContext } from "@/dtos/project-notes.dto";
 import { Course } from "@/dtos/course.dto";
+import type { ProjectListItem } from "@/dtos/project.dto";
+
+const INITIAL_PROJECT_STATE = {
+  title: "",
+  project_id: undefined as number | undefined,
+  course_id: undefined as number | undefined,
+  description: "",
+};
 
 export default function ProjectNotesOverviewPage() {
   const [projects, setProjects] = useState<ProjectNotesContext[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [existingProjects, setExistingProjects] = useState<ProjectListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewProjectForm, setShowNewProjectForm] = useState(false);
   const [selectedProjects, setSelectedProjects] = useState<Set<number>>(new Set());
-  const [newProject, setNewProject] = useState({
-    title: "",
-    course_id: undefined as number | undefined,
-    description: "",
-  });
+  const [linkToExistingProject, setLinkToExistingProject] = useState(false);
+  const [newProject, setNewProject] = useState(INITIAL_PROJECT_STATE);
 
   useEffect(() => {
     loadProjects();
     loadCourses();
+    loadExistingProjects();
   }, []);
 
   const loadProjects = async () => {
@@ -44,21 +51,32 @@ export default function ProjectNotesOverviewPage() {
     }
   };
 
+  const loadExistingProjects = async () => {
+    try {
+      const response = await projectService.listProjects();
+      setExistingProjects(response.items || []);
+    } catch (error) {
+      console.error("Failed to load existing projects:", error);
+    }
+  };
+
   const handleCreateProject = async () => {
-    if (!newProject.title || !newProject.course_id) {
-      alert("Vul minimaal een projectnaam en vak in.");
+    if (!newProject.title || (!newProject.project_id && !newProject.course_id)) {
+      alert("Vul minimaal een projectnaam in en selecteer een bestaand project of vak.");
       return;
     }
     
     try {
       await projectNotesService.createContext({
         title: newProject.title,
+        project_id: newProject.project_id,
         course_id: newProject.course_id,
         class_name: null,
         description: newProject.description || null,
       });
       setShowNewProjectForm(false);
-      setNewProject({ title: "", course_id: undefined, description: "" });
+      setNewProject(INITIAL_PROJECT_STATE);
+      setLinkToExistingProject(false);
       loadProjects(); // Reload the list
     } catch (error) {
       console.error("Failed to create project:", error);
@@ -165,25 +183,69 @@ export default function ProjectNotesOverviewPage() {
                   placeholder="Bijvoorbeeld: Duurzame wijk"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Vak *
+              
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="link-existing"
+                  checked={linkToExistingProject}
+                  onChange={(e) => {
+                    setLinkToExistingProject(e.target.checked);
+                    if (e.target.checked) {
+                      setNewProject({ ...newProject, course_id: undefined });
+                    } else {
+                      setNewProject({ ...newProject, project_id: undefined });
+                    }
+                  }}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <label htmlFor="link-existing" className="text-sm font-medium text-gray-700">
+                  Koppel aan bestaand project
                 </label>
-                <select
-                  value={newProject.course_id || ""}
-                  onChange={(e) =>
-                    setNewProject({ ...newProject, course_id: e.target.value ? Number(e.target.value) : undefined })
-                  }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Selecteer een vak...</option>
-                  {courses.map((course) => (
-                    <option key={course.id} value={course.id}>
-                      {course.name} {course.code ? `(${course.code})` : ""}
-                    </option>
-                  ))}
-                </select>
               </div>
+
+              {linkToExistingProject ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Bestaand project *
+                  </label>
+                  <select
+                    value={newProject.project_id || ""}
+                    onChange={(e) =>
+                      setNewProject({ ...newProject, project_id: e.target.value ? Number(e.target.value) : undefined })
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Selecteer een project...</option>
+                    {existingProjects.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Vak *
+                  </label>
+                  <select
+                    value={newProject.course_id || ""}
+                    onChange={(e) =>
+                      setNewProject({ ...newProject, course_id: e.target.value ? Number(e.target.value) : undefined })
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Selecteer een vak...</option>
+                    {courses.map((course) => (
+                      <option key={course.id} value={course.id}>
+                        {course.name} {course.code ? `(${course.code})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Beschrijving (optioneel)
@@ -200,7 +262,10 @@ export default function ProjectNotesOverviewPage() {
               </div>
               <div className="flex justify-end gap-2">
                 <button
-                  onClick={() => setShowNewProjectForm(false)}
+                  onClick={() => {
+                    setShowNewProjectForm(false);
+                    setLinkToExistingProject(false);
+                  }}
                   className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
                   Annuleren

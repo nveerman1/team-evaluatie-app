@@ -120,6 +120,7 @@ def create_evaluation(
         title=payload.title,
         status="draft",
         course_id=course.id,
+        project_id=payload.project_id,
         settings=payload.settings or {},
     )
     db.add(ev)

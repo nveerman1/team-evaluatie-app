@@ -7,6 +7,7 @@ export type Evaluation = {
   title: string;
   rubric_id: number;
   course_id: number;
+  project_id?: number | null;
   cluster: string; // kept for backward compatibility (populated from course_name)
   evaluation_type: EvaluationType;
   status: EvalStatus;
@@ -28,6 +29,7 @@ export type EvaluationCreateDto = {
   title: string;
   rubric_id: number;
   course_id: number;
+  project_id?: number | null;
   settings?: {
     deadlines?: {
       review?: string;

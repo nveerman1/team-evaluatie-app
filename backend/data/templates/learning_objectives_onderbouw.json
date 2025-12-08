@@ -1,0 +1,452 @@
+[
+  {
+    "subject_id": 1,
+    "code": "OB1.1",
+    "domain": "Samenwerken",
+    "phase": "onderbouw",
+    "title": "Actief meewerken in het team.",
+    "description": "De leerling werkt actief mee in het team en houdt zich aan afspraken.",
+    "order": 1
+  },
+  {
+    "subject_id": 1,
+    "code": "OB1.2",
+    "domain": "Samenwerken",
+    "phase": "onderbouw",
+    "title": "Luisteren en respectvol reageren.",
+    "description": "De leerling luistert naar teamleden en reageert respectvol op hun ideeën.",
+    "order": 2
+  },
+  {
+    "subject_id": 1,
+    "code": "OB1.3",
+    "domain": "Samenwerken",
+    "phase": "onderbouw",
+    "title": "Informatie delen binnen het team.",
+    "description": "De leerling deelt informatie zodat iedereen in het team weet wat er moet gebeuren.",
+    "order": 3
+  },
+  {
+    "subject_id": 1,
+    "code": "OB1.4",
+    "domain": "Samenwerken",
+    "phase": "onderbouw",
+    "title": "Eerlijke taakverdeling maken.",
+    "description": "De leerling maakt samen met het team een eerlijke en haalbare taakverdeling.",
+    "order": 4
+  },
+  {
+    "subject_id": 1,
+    "code": "OB1.5",
+    "domain": "Samenwerken",
+    "phase": "onderbouw",
+    "title": "Teamleden helpen waar nodig.",
+    "description": "De leerling helpt teamleden wanneer dat nodig is om het project verder te brengen.",
+    "order": 5
+  },
+  {
+    "subject_id": 1,
+    "code": "OB2.1",
+    "domain": "Plannen & Organiseren",
+    "phase": "onderbouw",
+    "title": "Eenvoudige planning maken.",
+    "description": "De leerling kan een eenvoudige planning maken voor zijn of haar taken.",
+    "order": 6
+  },
+  {
+    "subject_id": 1,
+    "code": "OB2.2",
+    "domain": "Plannen & Organiseren",
+    "phase": "onderbouw",
+    "title": "Afspraken en deadlines naleven.",
+    "description": "De leerling houdt zich aan afspraken en deadlines binnen het team.",
+    "order": 7
+  },
+  {
+    "subject_id": 1,
+    "code": "OB2.3",
+    "domain": "Plannen & Organiseren",
+    "phase": "onderbouw",
+    "title": "Overzichtelijk en geordend werken.",
+    "description": "De leerling werkt overzichtelijk en geordend aan zijn of haar taken.",
+    "order": 8
+  },
+  {
+    "subject_id": 1,
+    "code": "OB2.4",
+    "domain": "Plannen & Organiseren",
+    "phase": "onderbouw",
+    "title": "Hulpmiddelen gebruiken bij het plannen.",
+    "description": "De leerling gebruikt hulpmiddelen, zoals een agenda, bord of checklist, om het werk te organiseren.",
+    "order": 9
+  },
+  {
+    "subject_id": 1,
+    "code": "OB2.5",
+    "domain": "Plannen & Organiseren",
+    "phase": "onderbouw",
+    "title": "Planning aanpassen bij veranderingen.",
+    "description": "De leerling past de planning aan wanneer het anders loopt dan verwacht.",
+    "order": 10
+  },
+  {
+    "subject_id": 1,
+    "code": "OB3.1",
+    "domain": "Creatief Denken & Probleemoplossen",
+    "phase": "onderbouw",
+    "title": "Meerdere ideeën bedenken.",
+    "description": "De leerling bedenkt meerdere ideeën voor een probleem of opdracht.",
+    "order": 11
+  },
+  {
+    "subject_id": 1,
+    "code": "OB3.2",
+    "domain": "Creatief Denken & Probleemoplossen",
+    "phase": "onderbouw",
+    "title": "Onverwachte ideeën durven delen.",
+    "description": "De leerling durft ook onverwachte of creatieve ideeën te delen voordat er een keuze wordt gemaakt.",
+    "order": 12
+  },
+  {
+    "subject_id": 1,
+    "code": "OB3.3",
+    "domain": "Creatief Denken & Probleemoplossen",
+    "phase": "onderbouw",
+    "title": "Bijpassend idee kiezen en onderbouwen.",
+    "description": "De leerling kiest een idee en kan kort uitleggen waarom dit past bij de opdracht.",
+    "order": 13
+  },
+  {
+    "subject_id": 1,
+    "code": "OB3.4",
+    "domain": "Creatief Denken & Probleemoplossen",
+    "phase": "onderbouw",
+    "title": "Oplossingen uitproberen.",
+    "description": "De leerling probeert oplossingen uit en leert van wat wel en niet werkt.",
+    "order": 14
+  },
+  {
+    "subject_id": 1,
+    "code": "OB3.5",
+    "domain": "Creatief Denken & Probleemoplossen",
+    "phase": "onderbouw",
+    "title": "Idee verbeteren met feedback.",
+    "description": "De leerling verbetert zijn of haar idee op basis van feedback of nieuwe inzichten.",
+    "order": 15
+  },
+  {
+    "subject_id": 1,
+    "code": "OB4.1",
+    "domain": "Technische Vaardigheden",
+    "phase": "onderbouw",
+    "title": "Zorgvuldig werken met materialen en gereedschap.",
+    "description": "De leerling gaat zorgvuldig om met gereedschap, materialen en digitale hulpmiddelen.",
+    "order": 16
+  },
+  {
+    "subject_id": 1,
+    "code": "OB4.2",
+    "domain": "Technische Vaardigheden",
+    "phase": "onderbouw",
+    "title": "Eenvoudige technische handelingen uitvoeren.",
+    "description": "De leerling kan eenvoudige technische handelingen uitvoeren, zoals meten, zagen of monteren.",
+    "order": 17
+  },
+  {
+    "subject_id": 1,
+    "code": "OB4.3",
+    "domain": "Technische Vaardigheden",
+    "phase": "onderbouw",
+    "title": "Eenvoudig 2D- of 3D-model maken.",
+    "description": "De leerling kan een eenvoudig 2D- of 3D-model maken van een idee.",
+    "order": 18
+  },
+  {
+    "subject_id": 1,
+    "code": "OB4.4",
+    "domain": "Technische Vaardigheden",
+    "phase": "onderbouw",
+    "title": "Veiligheid in het lokaal naleven.",
+    "description": "De leerling volgt de veiligheidsafspraken in het lokaal nauwkeurig op.",
+    "order": 19
+  },
+  {
+    "subject_id": 1,
+    "code": "OB4.5",
+    "domain": "Technische Vaardigheden",
+    "phase": "onderbouw",
+    "title": "Technische oplossing controleren.",
+    "description": "De leerling controleert of de technische oplossing doet wat hij moet doen.",
+    "order": 20
+  },
+  {
+    "subject_id": 1,
+    "code": "OB5.1",
+    "domain": "Communicatie & Presenteren",
+    "phase": "onderbouw",
+    "title": "Eigen werk duidelijk uitleggen.",
+    "description": "De leerling legt zijn of haar idee of werk duidelijk uit aan docent en klasgenoten.",
+    "order": 21
+  },
+  {
+    "subject_id": 1,
+    "code": "OB5.2",
+    "domain": "Communicatie & Presenteren",
+    "phase": "onderbouw",
+    "title": "Visuele hulpmiddelen gebruiken.",
+    "description": "De leerling gebruikt tekeningen, foto’s of schema’s om het idee te ondersteunen.",
+    "order": 22
+  },
+  {
+    "subject_id": 1,
+    "code": "OB5.3",
+    "domain": "Communicatie & Presenteren",
+    "phase": "onderbouw",
+    "title": "Samen presenteren in een team.",
+    "description": "De leerling presenteert samen met het team en neemt een actieve rol in de presentatie.",
+    "order": 23
+  },
+  {
+    "subject_id": 1,
+    "code": "OB5.4",
+    "domain": "Communicatie & Presenteren",
+    "phase": "onderbouw",
+    "title": "Rekening houden met het publiek.",
+    "description": "De leerling houdt rekening met het publiek tijdens de presentatie, bijvoorbeeld in tempo, taal en voorbeelden.",
+    "order": 24
+  },
+  {
+    "subject_id": 1,
+    "code": "OB5.5",
+    "domain": "Communicatie & Presenteren",
+    "phase": "onderbouw",
+    "title": "Vragen over het werk beantwoorden.",
+    "description": "De leerling kan vragen over het eigen werk of dat van het team beantwoorden.",
+    "order": 25
+  },
+  {
+    "subject_id": 1,
+    "code": "OB6.1",
+    "domain": "Reflectie & Professionele houding",
+    "phase": "onderbouw",
+    "title": "Terugkijken op het eigen werk.",
+    "description": "De leerling kan benoemen wat goed ging tijdens een opdracht en wat beter kan.",
+    "order": 26
+  },
+  {
+    "subject_id": 1,
+    "code": "OB6.2",
+    "domain": "Reflectie & Professionele houding",
+    "phase": "onderbouw",
+    "title": "Verantwoordelijkheid nemen voor gedrag.",
+    "description": "De leerling neemt verantwoordelijkheid voor het eigen gedrag in de les.",
+    "order": 27
+  },
+  {
+    "subject_id": 1,
+    "code": "OB6.3",
+    "domain": "Reflectie & Professionele houding",
+    "phase": "onderbouw",
+    "title": "Beschrijven wat er is geleerd.",
+    "description": "De leerling kan vertellen wat hij of zij geleerd heeft van een opdracht of project.",
+    "order": 28
+  },
+  {
+    "subject_id": 1,
+    "code": "OB6.4",
+    "domain": "Reflectie & Professionele houding",
+    "phase": "onderbouw",
+    "title": "Feedback serieus nemen.",
+    "description": "De leerling gaat serieus om met feedback van docenten en klasgenoten.",
+    "order": 29
+  },
+  {
+    "subject_id": 1,
+    "code": "OB6.5",
+    "domain": "Reflectie & Professionele houding",
+    "phase": "onderbouw",
+    "title": "Aanpak verbeteren in een volgende opdracht.",
+    "description": "De leerling probeert zijn of haar gedrag of aanpak te verbeteren in een volgende opdracht.",
+    "order": 30
+  },
+  {
+    "subject_id": 1,
+    "code": "OB7.1",
+    "domain": "Oriëntatie op techniek & wetenschap",
+    "phase": "onderbouw",
+    "title": "Technische en wetenschappelijke beroepen herkennen.",
+    "description": "De leerling kan voorbeelden noemen van beroepen of studies die met techniek of wetenschap te maken hebben.",
+    "order": 31
+  },
+  {
+    "subject_id": 1,
+    "code": "OB7.2",
+    "domain": "Oriëntatie op techniek & wetenschap",
+    "phase": "onderbouw",
+    "title": "Belang van techniek en wetenschap uitleggen.",
+    "description": "De leerling kan uitleggen waarom techniek en wetenschap belangrijk zijn in het dagelijks leven.",
+    "order": 32
+  },
+  {
+    "subject_id": 1,
+    "code": "OB7.3",
+    "domain": "Oriëntatie op techniek & wetenschap",
+    "phase": "onderbouw",
+    "title": "Techniek en wetenschap om zich heen herkennen.",
+    "description": "De leerling herkent techniek en wetenschap in projecten of producten in de omgeving.",
+    "order": 33
+  },
+  {
+    "subject_id": 1,
+    "code": "OB7.4",
+    "domain": "Oriëntatie op techniek & wetenschap",
+    "phase": "onderbouw",
+    "title": "Vragen stellen over hoe dingen werken.",
+    "description": "De leerling stelt vragen over hoe dingen werken of waarom iets op een bepaalde manier is gemaakt.",
+    "order": 34
+  },
+  {
+    "subject_id": 1,
+    "code": "OB7.5",
+    "domain": "Oriëntatie op techniek & wetenschap",
+    "phase": "onderbouw",
+    "title": "Eigen interesses in techniek en wetenschap benoemen.",
+    "description": "De leerling kan vertellen welke technische of wetenschappelijke onderwerpen hij of zij interessant vindt.",
+    "order": 35
+  },
+  {
+    "subject_id": 1,
+    "code": "OB8.1",
+    "domain": "Onderzoekend Werken",
+    "phase": "onderbouw",
+    "title": "Eenvoudige onderzoeksvraag bedenken.",
+    "description": "De leerling kan een eenvoudige onderzoeksvraag bedenken over een onderwerp dat interesse wekt.",
+    "order": 36
+  },
+  {
+    "subject_id": 1,
+    "code": "OB8.2",
+    "domain": "Onderzoekend Werken",
+    "phase": "onderbouw",
+    "title": "Onderzoeksaanpak kiezen.",
+    "description": "De leerling bedenkt hoe een vraag onderzocht kan worden, bijvoorbeeld door meten, tellen of observeren.",
+    "order": 37
+  },
+  {
+    "subject_id": 1,
+    "code": "OB8.3",
+    "domain": "Onderzoekend Werken",
+    "phase": "onderbouw",
+    "title": "Gegevens verzamelen.",
+    "description": "De leerling verzamelt gegevens op een overzichtelijke manier.",
+    "order": 38
+  },
+  {
+    "subject_id": 1,
+    "code": "OB8.4",
+    "domain": "Onderzoekend Werken",
+    "phase": "onderbouw",
+    "title": "Eenvoudige conclusies trekken.",
+    "description": "De leerling trekt eenvoudige conclusies uit de verzamelde gegevens.",
+    "order": 39
+  },
+  {
+    "subject_id": 1,
+    "code": "OB8.5",
+    "domain": "Onderzoekend Werken",
+    "phase": "onderbouw",
+    "title": "Onderzoek en resultaten toelichten.",
+    "description": "De leerling kan kort uitleggen wat er is onderzocht en wat daarbij is ontdekt.",
+    "order": 40
+  },
+  {
+    "subject_id": 1,
+    "code": "OB9.1",
+    "domain": "Ontwerpend Werken",
+    "phase": "onderbouw",
+    "title": "Idee voor een oplossing schetsen.",
+    "description": "De leerling kan een idee schetsen voor een product of oplossing.",
+    "order": 41
+  },
+  {
+    "subject_id": 1,
+    "code": "OB9.2",
+    "domain": "Ontwerpend Werken",
+    "phase": "onderbouw",
+    "title": "Rekening houden met eisen in de opdracht.",
+    "description": "De leerling houdt bij het ontwerpen rekening met de eisen uit de opdracht.",
+    "order": 42
+  },
+  {
+    "subject_id": 1,
+    "code": "OB9.3",
+    "domain": "Ontwerpend Werken",
+    "phase": "onderbouw",
+    "title": "Eenvoudig model of prototype maken.",
+    "description": "De leerling maakt een eenvoudig model of prototype om het idee te testen.",
+    "order": 43
+  },
+  {
+    "subject_id": 1,
+    "code": "OB9.4",
+    "domain": "Ontwerpend Werken",
+    "phase": "onderbouw",
+    "title": "Ontwerp verbeteren met testresultaten.",
+    "description": "De leerling verbetert het ontwerp op basis van testresultaten of feedback.",
+    "order": 44
+  },
+  {
+    "subject_id": 1,
+    "code": "OB9.5",
+    "domain": "Ontwerpend Werken",
+    "phase": "onderbouw",
+    "title": "Werking en doelgroep van het ontwerp uitleggen.",
+    "description": "De leerling kan uitleggen hoe het ontwerp werkt en voor wie het bedoeld is.",
+    "order": 45
+  },
+  {
+    "subject_id": 1,
+    "code": "OB10.1",
+    "domain": "Redeneren",
+    "phase": "onderbouw",
+    "title": "Keuzes voor aanpak of oplossing uitleggen.",
+    "description": "De leerling kan uitleggen waarom hij of zij voor een bepaalde aanpak of oplossing kiest.",
+    "order": 46
+  },
+  {
+    "subject_id": 1,
+    "code": "OB10.2",
+    "domain": "Redeneren",
+    "phase": "onderbouw",
+    "title": "Oplossingen vergelijken.",
+    "description": "De leerling vergelijkt twee oplossingen en benoemt verschillen en overeenkomsten.",
+    "order": 47
+  },
+  {
+    "subject_id": 1,
+    "code": "OB10.3",
+    "domain": "Redeneren",
+    "phase": "onderbouw",
+    "title": "Stappen in de eigen aanpak beschrijven.",
+    "description": "De leerling legt stap voor stap uit hoe hij of zij tot een antwoord of oplossing is gekomen.",
+    "order": 48
+  },
+  {
+    "subject_id": 1,
+    "code": "OB10.4",
+    "domain": "Redeneren",
+    "phase": "onderbouw",
+    "title": "Oplossingen beoordelen en onderbouwen.",
+    "description": "De leerling kan uitleggen waarom een oplossing beter of geschikter is dan een andere.",
+    "order": 49
+  },
+  {
+    "subject_id": 1,
+    "code": "OB10.5",
+    "domain": "Redeneren",
+    "phase": "onderbouw",
+    "title": "Argumenten gebruiken om keuzes te onderbouwen.",
+    "description": "De leerling gebruikt argumenten om gemaakte keuzes te onderbouwen.",
+    "order": 50
+  }
+]

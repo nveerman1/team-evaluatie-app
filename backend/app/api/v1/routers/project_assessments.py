@@ -53,6 +53,7 @@ def _to_out_assessment(pa: ProjectAssessment) -> ProjectAssessmentOut:
         {
             "id": pa.id,
             "school_id": pa.school_id,
+            "project_id": pa.project_id,
             "group_id": pa.group_id,
             "project_team_id": pa.project_team_id,
             "rubric_id": pa.rubric_id,
@@ -102,6 +103,7 @@ def create_project_assessment(
     
     pa = ProjectAssessment(
         school_id=user.school_id,
+        project_id=payload.project_id,
         group_id=payload.group_id,
         rubric_id=payload.rubric_id,
         teacher_id=user.id,

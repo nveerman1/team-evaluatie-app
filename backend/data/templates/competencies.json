@@ -1,0 +1,534 @@
+{
+  "categories": [
+    {
+      "key": "samenwerken",
+      "name": "Samenwerken",
+      "description": "",
+      "color": null,
+      "icon": null,
+      "order_index": 1
+    },
+    {
+      "key": "plannen_and_organiseren",
+      "name": "Plannen & Organiseren",
+      "description": "",
+      "color": null,
+      "icon": null,
+      "order_index": 2
+    },
+    {
+      "key": "creatief_denken_and_probleemoplossen",
+      "name": "Creatief denken & probleemoplossen",
+      "description": "",
+      "color": null,
+      "icon": null,
+      "order_index": 3
+    },
+    {
+      "key": "technische_vaardigheden",
+      "name": "Technische vaardigheden",
+      "description": "",
+      "color": null,
+      "icon": null,
+      "order_index": 4
+    },
+    {
+      "key": "communicatie_and_presenteren",
+      "name": "Communicatie & Presenteren",
+      "description": "",
+      "color": null,
+      "icon": null,
+      "order_index": 5
+    },
+    {
+      "key": "reflectie_and_professionele_houding",
+      "name": "Reflectie & Professionele houding",
+      "description": "",
+      "color": null,
+      "icon": null,
+      "order_index": 6
+    }
+  ],
+  "competencies": [
+    {
+      "category_key": "samenwerken",
+      "subject_id": 1,
+      "phase": null,
+      "code": "1.1",
+      "name": "Draagt actief bij aan het team",
+      "description": "De leerling levert meestal zijn of haar bijdrage en rond zijn of haar taken op tijd af.",
+      "order": 1,
+      "levels": {
+        "1": "Ik draag weinig bij aan het team en wacht vaak af.",
+        "2": "Ik doe soms mee, maar laat taken ook liggen of schuif ze door.",
+        "3": "Ik lever meestal mijn bijdrage en rond mijn taken op tijd af.",
+        "4": "Ik denk actief mee en neem verantwoordelijkheid voor mijn deel van het werk.",
+        "5": "Ik neem initiatief, zoek werk op en help het team vooruit."
+      }
+    },
+    {
+      "category_key": "samenwerken",
+      "subject_id": 1,
+      "phase": null,
+      "code": "1.2",
+      "name": "Luistert en reageert constructief",
+      "description": "De leerling luister meestal goed en reageer respectvol op anderen.",
+      "order": 2,
+      "levels": {
+        "1": "Ik luister slecht en reageer vaak afwijzend of ongeïnteresseerd.",
+        "2": "Ik luister soms, maar ben snel afgeleid of reageer defensief.",
+        "3": "Ik luister meestal goed en reageer respectvol op anderen.",
+        "4": "Ik luister actief, stel vragen en reageer opbouwend.",
+        "5": "Ik geef anderen ruimte, vat samen en help hun ideeën verder te brengen."
+      }
+    },
+    {
+      "category_key": "samenwerken",
+      "subject_id": 1,
+      "phase": null,
+      "code": "1.3",
+      "name": "Communiceert duidelijk binnen het team",
+      "description": "De leerling communiceert meestal duidelijk over zijn of haar werkt en voortgang.",
+      "order": 3,
+      "levels": {
+        "1": "Ik deel weinig informatie en anderen weten vaak niet wat ik doe.",
+        "2": "Ik deel soms informatie, maar vaak te laat of onduidelijk.",
+        "3": "Ik communiceer meestal duidelijk over mijn werk en voortgang.",
+        "4": "Ik communiceer helder, volledig en op het juiste moment.",
+        "5": "Ik houd het team actief op de hoogte en voorkom misverstanden."
+      }
+    },
+    {
+      "category_key": "samenwerken",
+      "subject_id": 1,
+      "phase": null,
+      "code": "1.4",
+      "name": "Verdeelt en stemt taken effectief af",
+      "description": "De leerling verdeel taken redelijk eerlijk en stem af met het team.",
+      "order": 4,
+      "levels": {
+        "1": "Ik help niet mee aan een eerlijke taakverdeling.",
+        "2": "Ik denk soms mee, maar houd weinig rekening met kwaliteiten of planning.",
+        "3": "Ik verdeel taken redelijk eerlijk en stem af met het team.",
+        "4": "Ik zorg voor een haalbare taakverdeling en controleer of iedereen uitkomt.",
+        "5": "Ik organiseer taken op basis van talenten en werkdruk en stuur bij waar nodig."
+      }
+    },
+    {
+      "category_key": "samenwerken",
+      "subject_id": 1,
+      "phase": null,
+      "code": "1.5",
+      "name": "Neemt verantwoordelijkheid en ondersteunt teamleden",
+      "description": "De leerling neemt redelijk verantwoordelijkheid en helpt soms een teamlid.",
+      "order": 5,
+      "levels": {
+        "1": "Ik neem geen verantwoordelijkheid en schuif fouten af op anderen.",
+        "2": "Ik neem af en toe verantwoordelijkheid, maar niet altijd consequent.",
+        "3": "Ik neem redelijk verantwoordelijkheid en help soms een teamlid.",
+        "4": "Ik pak verantwoordelijkheid en ondersteun teamleden actief.",
+        "5": "Ik voel me mede-eigenaar van het project en help anderen zonder hun werk over te nemen."
+      }
+    },
+    {
+      "category_key": "plannen_and_organiseren",
+      "subject_id": 1,
+      "phase": null,
+      "code": "2.1",
+      "name": "Maakt en bewaakt een realistische planning",
+      "description": "De leerling maak een redelijke planning en probeer zich eraan te houden.",
+      "order": 6,
+      "levels": {
+        "1": "Ik maak geen of een onrealistische planning.",
+        "2": "Ik maak een globale planning, maar zonder goede tijdinschatting.",
+        "3": "Ik maak een redelijke planning en probeer me eraan te houden.",
+        "4": "Ik maak een duidelijke, haalbare planning en bewaak de voortgang.",
+        "5": "Ik plan doordacht, houd overzicht en anticipeer op drukte."
+      }
+    },
+    {
+      "category_key": "plannen_and_organiseren",
+      "subject_id": 1,
+      "phase": null,
+      "code": "2.2",
+      "name": "Houdt zich aan afspraken en deadlines",
+      "description": "De leerling houd zich meestal aan afspraken en deadlines.",
+      "order": 7,
+      "levels": {
+        "1": "Ik houd me vaak niet aan afspraken of lever te laat in.",
+        "2": "Ik kom afspraken soms na, maar vergeet deadlines geregeld.",
+        "3": "Ik houd me meestal aan afspraken en deadlines.",
+        "4": "Ik ben betrouwbaar en lever op tijd.",
+        "5": "Ik lever op tijd of eerder op en geef het tijdig aan als iets moeizaam gaat."
+      }
+    },
+    {
+      "category_key": "plannen_and_organiseren",
+      "subject_id": 1,
+      "phase": null,
+      "code": "2.3",
+      "name": "Werkt gestructureerd en overzichtelijk",
+      "description": "De leerling werkt redelijk geordend en vind meestal terug wat ik nodig heb.",
+      "order": 8,
+      "levels": {
+        "1": "Ik werk chaotisch; dingen zijn slecht terug te vinden.",
+        "2": "Ik probeer structuur aan te brengen, maar verlies snel overzicht.",
+        "3": "Ik werk redelijk geordend en vind meestal terug wat ik nodig heb.",
+        "4": "Ik werk netjes, geordend en met een duidelijke structuur.",
+        "5": "Ik organiseer mijn werk zo goed dat anderen er ook makkelijk mee kunnen werken."
+      }
+    },
+    {
+      "category_key": "plannen_and_organiseren",
+      "subject_id": 1,
+      "phase": null,
+      "code": "2.4",
+      "name": "Gebruikt hulpmiddelen effectief",
+      "description": "De leerling gebruikt hulpmiddelen zoals Trello of een agenda redelijk goed.",
+      "order": 9,
+      "levels": {
+        "1": "Ik gebruik hulpmiddelen nauwelijks of helemaal niet.",
+        "2": "Ik gebruik ze soms, maar onregelmatig of onnauwkeurig.",
+        "3": "Ik gebruik hulpmiddelen zoals Trello of een agenda redelijk goed.",
+        "4": "Ik gebruik hulpmiddelen consequent en effectief.",
+        "5": "Ik houd hulpmiddelen perfect bij en laat het hele team ervan profiteren."
+      }
+    },
+    {
+      "category_key": "plannen_and_organiseren",
+      "subject_id": 1,
+      "phase": null,
+      "code": "2.5",
+      "name": "Stuurt planning en werkproces bij",
+      "description": "De leerling stuur zijn of haar planning bij wanneer het nodig is.",
+      "order": 10,
+      "levels": {
+        "1": "Ik zie problemen niet aankomen en stuur mijn planning niet bij.",
+        "2": "Ik merk soms dat iets misgaat, maar reageer te laat.",
+        "3": "Ik stuur mijn planning bij wanneer het nodig is.",
+        "4": "Ik herken knelpunten op tijd en pas mijn aanpak goed aan.",
+        "5": "Ik anticipeer op problemen en stuur vroegtijdig en effectief bij."
+      }
+    },
+    {
+      "category_key": "creatief_denken_and_probleemoplossen",
+      "subject_id": 1,
+      "phase": null,
+      "code": "3.1",
+      "name": "Genereert meerdere ideeën en denkrichtingen",
+      "description": "De leerling kom met meerdere ideeën of varianten.",
+      "order": 11,
+      "levels": {
+        "1": "Ik blijf bij één idee en onderzoek geen alternatieven.",
+        "2": "Ik bedenk soms ideeën, maar ze blijven oppervlakkig.",
+        "3": "Ik kom met meerdere ideeën of varianten.",
+        "4": "Ik bedenk diverse originele en creatieve ideeën.",
+        "5": "Ik genereer veel verschillende ideeën en stimuleer anderen om dat ook te doen."
+      }
+    },
+    {
+      "category_key": "creatief_denken_and_probleemoplossen",
+      "subject_id": 1,
+      "phase": null,
+      "code": "3.2",
+      "name": "Onderzoekt en verkent oplossingen doelgericht",
+      "description": "De leerling doet onderzoek of kleine tests om ideeën te verkennen.",
+      "order": 12,
+      "levels": {
+        "1": "Ik onderzoek of test mijn ideeën niet.",
+        "2": "Ik probeer iets uit, maar zonder duidelijk doel of vraag.",
+        "3": "Ik doe onderzoek of kleine tests om ideeën te verkennen.",
+        "4": "Ik plan gerichte tests, schetsen en experimenten.",
+        "5": "Ik onderzoek systematisch, vergelijk resultaten en gebruik dit bewust in mijn ontwerp."
+      }
+    },
+    {
+      "category_key": "creatief_denken_and_probleemoplossen",
+      "subject_id": 1,
+      "phase": null,
+      "code": "3.3",
+      "name": "Bouwt en test prototypes",
+      "description": "De leerling maak een bruikbaar prototype en doet basis-tests.",
+      "order": 13,
+      "levels": {
+        "1": "Ik maak geen prototypes om ideeën te testen.",
+        "2": "Ik maak soms een prototype, maar test het nauwelijks.",
+        "3": "Ik maak een bruikbaar prototype en doe basis-tests.",
+        "4": "Ik maak doordachte prototypes en test ze gericht.",
+        "5": "Ik maak meerdere versies, test uitgebreid en onderbouw keuzes met resultaten."
+      }
+    },
+    {
+      "category_key": "creatief_denken_and_probleemoplossen",
+      "subject_id": 1,
+      "phase": null,
+      "code": "3.4",
+      "name": "Denkt kritisch en maakt onderbouwde keuzes",
+      "description": "De leerling herken het probleem redelijk en kan zijn of haar keuzes meestal uitleggen.",
+      "order": 14,
+      "levels": {
+        "1": "Ik zie het echte probleem niet en maak keuzes zonder uitleg.",
+        "2": "Ik probeer keuzes te onderbouwen, maar mis belangrijke argumenten.",
+        "3": "Ik herken het probleem redelijk en kan mijn keuzes meestal uitleggen.",
+        "4": "Ik analyseer het probleem goed en onderbouw mijn keuzes duidelijk.",
+        "5": "Ik analyseer diepgaand, vergelijk alternatieven en maak zeer goed onderbouwde keuzes."
+      }
+    },
+    {
+      "category_key": "creatief_denken_and_probleemoplossen",
+      "subject_id": 1,
+      "phase": null,
+      "code": "3.5",
+      "name": "Verbetert oplossingen met feedback en testresultaten",
+      "description": "De leerling gebruikt feedback af en toe om zijn of haar werkt te verbeteren.",
+      "order": 15,
+      "levels": {
+        "1": "Ik doe niets met feedback of testresultaten.",
+        "2": "Ik pas soms iets aan, maar weinig gericht.",
+        "3": "Ik gebruik feedback af en toe om mijn werk te verbeteren.",
+        "4": "Ik verwerk feedback en testdata duidelijk in verbeteringen.",
+        "5": "Ik vraag actief om feedback en verbeter mijn ontwerp in meerdere iteraties."
+      }
+    },
+    {
+      "category_key": "technische_vaardigheden",
+      "subject_id": 1,
+      "phase": null,
+      "code": "4.1",
+      "name": "Maakt nauwkeurige technische ontwerpen",
+      "description": "De leerling maak meestal kloppende ontwerpen.",
+      "order": 16,
+      "levels": {
+        "1": "Ik maak onnauwkeurige of onvolledige ontwerpen.",
+        "2": "Ik maak eenvoudige ontwerpen met fouten.",
+        "3": "Ik maak meestal kloppende ontwerpen.",
+        "4": "Ik maak nauwkeurige CAD-modellen en tekeningen.",
+        "5": "Ik maak zeer precieze ontwerpen die direct bruikbaar zijn."
+      }
+    },
+    {
+      "category_key": "technische_vaardigheden",
+      "subject_id": 1,
+      "phase": null,
+      "code": "4.2",
+      "name": "Bouwt stevige en functionele constructies",
+      "description": "De leerling bouw meestal stevige, functionele constructies.",
+      "order": 17,
+      "levels": {
+        "1": "Ik bouw constructies die instabiel of niet functioneel zijn.",
+        "2": "Mijn constructies zijn soms stevig, maar niet altijd betrouwbaar.",
+        "3": "Ik bouw meestal stevige, functionele constructies.",
+        "4": "Ik bouw doordachte, solide en veilige constructies.",
+        "5": "Ik bouw zeer stevige en efficiënte constructies met oog voor detail."
+      }
+    },
+    {
+      "category_key": "technische_vaardigheden",
+      "subject_id": 1,
+      "phase": null,
+      "code": "4.3",
+      "name": "Programmeert logisch en gestructureerd",
+      "description": "De leerling schrijf meestal logische en leesbare code.",
+      "order": 18,
+      "levels": {
+        "1": "Ik schrijf onduidelijke of niet-werkende code.",
+        "2": "Mijn code werkt soms, maar is rommelig of lastig te volgen.",
+        "3": "Ik schrijf meestal logische en leesbare code.",
+        "4": "Ik programmeer gestructureerd, overzichtelijk en foutarm.",
+        "5": "Ik schrijf efficiënte, duidelijke code en los problemen zelfstandig op."
+      }
+    },
+    {
+      "category_key": "technische_vaardigheden",
+      "subject_id": 1,
+      "phase": null,
+      "code": "4.4",
+      "name": "Gaat veilig en vaardig om met materialen en apparatuur",
+      "description": "De leerling werkt meestal veilig en voorzichtig.",
+      "order": 19,
+      "levels": {
+        "1": "Ik werk onveilig of onhandig met materialen/apparatuur.",
+        "2": "Ik houd me soms aan de regels, maar niet altijd.",
+        "3": "Ik werk meestal veilig en voorzichtig.",
+        "4": "Ik ga vaardig en veilig om met materialen en apparatuur.",
+        "5": "Ik werk zeer veilig en help anderen dat ook te doen."
+      }
+    },
+    {
+      "category_key": "technische_vaardigheden",
+      "subject_id": 1,
+      "phase": null,
+      "code": "4.5",
+      "name": "Past technische kennis doelgericht toe",
+      "description": "De leerling gebruikt basiskennis redelijk goed binnen zijn of haar ontwerp.",
+      "order": 20,
+      "levels": {
+        "1": "Ik gebruik technische kennis nauwelijks of verkeerd.",
+        "2": "Ik pas kennis soms toe, maar zonder duidelijk doel.",
+        "3": "Ik gebruik basiskennis redelijk goed binnen mijn ontwerp.",
+        "4": "Ik gebruik technische kennis bewust om mijn ontwerp te verbeteren.",
+        "5": "Ik gebruik technische kennis creatief en effectief en kan goed uitleggen waarom."
+      }
+    },
+    {
+      "category_key": "communicatie_and_presenteren",
+      "subject_id": 1,
+      "phase": null,
+      "code": "5.1",
+      "name": "Legt ideeën en keuzes helder uit",
+      "description": "De leerling leg meestal duidelijk uit wat ik bedoel.",
+      "order": 21,
+      "levels": {
+        "1": "Ik leg mijn ideeën onduidelijk uit.",
+        "2": "Ik leg soms begrijpelijk uit, maar sla belangrijke dingen over.",
+        "3": "Ik leg meestal duidelijk uit wat ik bedoel.",
+        "4": "Ik leg helder, volledig en logisch uit.",
+        "5": "Ik leg mijn ideeën overtuigend en passend bij het publiek uit."
+      }
+    },
+    {
+      "category_key": "communicatie_and_presenteren",
+      "subject_id": 1,
+      "phase": null,
+      "code": "5.2",
+      "name": "Maakt duidelijke en passende visualisaties",
+      "description": "De leerling maak bruikbare visualisaties die zijn of haar idee ondersteunen.",
+      "order": 22,
+      "levels": {
+        "1": "Ik maak onduidelijke of ontbrekende visualisaties.",
+        "2": "Ik maak visuals, maar ze zijn soms onvolledig of moeilijk te lezen.",
+        "3": "Ik maak bruikbare visualisaties die mijn idee ondersteunen.",
+        "4": "Ik maak duidelijke, verzorgde visualisaties.",
+        "5": "Ik maak sterke, duidelijke visuals die mijn idee direct inzichtelijk maken."
+      }
+    },
+    {
+      "category_key": "communicatie_and_presenteren",
+      "subject_id": 1,
+      "phase": null,
+      "code": "5.3",
+      "name": "Schrijft gestructureerd en volledig",
+      "description": "De leerling schrijf meestal een logisch en redelijk compleet verslag.",
+      "order": 23,
+      "levels": {
+        "1": "Ik schrijf een chaotisch of onvolledig verslag.",
+        "2": "Ik schrijf delen van het proces op, maar zonder duidelijke structuur.",
+        "3": "Ik schrijf meestal een logisch en redelijk compleet verslag.",
+        "4": "Ik schrijf een volledig, overzichtelijk en goed leesbaar verslag.",
+        "5": "Ik schrijf een professioneel verslag met sterke onderbouwing."
+      }
+    },
+    {
+      "category_key": "communicatie_and_presenteren",
+      "subject_id": 1,
+      "phase": null,
+      "code": "5.4",
+      "name": "Presenteert overtuigend en afgestemd op het publiek",
+      "description": "De leerling presenteert meestal duidelijk en met basisstructuur.",
+      "order": 24,
+      "levels": {
+        "1": "Ik presenteer onduidelijk of moeilijk verstaanbaar.",
+        "2": "Mijn presentaties zijn wisselend en sluiten niet altijd goed aan.",
+        "3": "Ik presenteer meestal duidelijk en met basisstructuur.",
+        "4": "Ik presenteer overtuigend en pas mijn verhaal aan op het publiek.",
+        "5": "Ik presenteer sterk, zelfverzekerd en met goede interactie met het publiek."
+      }
+    },
+    {
+      "category_key": "communicatie_and_presenteren",
+      "subject_id": 1,
+      "phase": null,
+      "code": "5.5",
+      "name": "Rapporteert voortgang en resultaten professioneel",
+      "description": "De leerling rapporteer meestal op tijd en redelijk volledig.",
+      "order": 25,
+      "levels": {
+        "1": "Ik rapporteer voortgang niet of te laat.",
+        "2": "Ik geef soms updates, maar onregelmatig of onvolledig.",
+        "3": "Ik rapporteer meestal op tijd en redelijk volledig.",
+        "4": "Ik rapporteer duidelijk en tijdig aan docent/opdrachtgever.",
+        "5": "Ik rapporteer proactief, professioneel en houd verwachtingen goed bij."
+      }
+    },
+    {
+      "category_key": "reflectie_and_professionele_houding",
+      "subject_id": 1,
+      "phase": null,
+      "code": "6.1",
+      "name": "Reflecteert eerlijk op eigen werk en aanpak",
+      "description": "De leerling kan benoemen wat goed ging en wat beter kan.",
+      "order": 26,
+      "levels": {
+        "1": "Ik zie mijn eigen fouten nauwelijks en leer er weinig van.",
+        "2": "Ik zie soms verbeterpunten, maar blijf oppervlakkig.",
+        "3": "Ik kan benoemen wat goed ging en wat beter kan.",
+        "4": "Ik reflecteer eerlijk en concreet en leer zichtbaar van mijn ervaringen.",
+        "5": "Ik reflecteer diep en gebruik mijn inzichten om gericht te groeien."
+      }
+    },
+    {
+      "category_key": "reflectie_and_professionele_houding",
+      "subject_id": 1,
+      "phase": null,
+      "code": "6.2",
+      "name": "Gebruikt feedback om te verbeteren",
+      "description": "De leerling gebruikt feedback af en toe om te verbeteren.",
+      "order": 27,
+      "levels": {
+        "1": "Ik doe niets met feedback.",
+        "2": "Ik luister wel, maar pas weinig aan.",
+        "3": "Ik gebruik feedback af en toe om te verbeteren.",
+        "4": "Ik verwerk feedback duidelijk in mijn werk.",
+        "5": "Ik vraag actief om feedback en verbeter mezelf continu."
+      }
+    },
+    {
+      "category_key": "reflectie_and_professionele_houding",
+      "subject_id": 1,
+      "phase": null,
+      "code": "6.3",
+      "name": "Neemt verantwoordelijkheid voor eigen taken en gedrag",
+      "description": "De leerling neemt meestal verantwoordelijkheid en kom afspraken na.",
+      "order": 28,
+      "levels": {
+        "1": "Ik neem geen verantwoordelijkheid voor mijn gedrag of werk.",
+        "2": "Ik neem soms verantwoordelijkheid, maar ben niet altijd betrouwbaar.",
+        "3": "Ik neem meestal verantwoordelijkheid en kom afspraken na.",
+        "4": "Ik neem duidelijk verantwoordelijkheid en los problemen zelf op.",
+        "5": "Ik toon sterk eigenaarschap en neem initiatief om dingen goed te regelen."
+      }
+    },
+    {
+      "category_key": "reflectie_and_professionele_houding",
+      "subject_id": 1,
+      "phase": null,
+      "code": "6.4",
+      "name": "Werkt zelfstandig en toont doorzettingsvermogen",
+      "description": "De leerling werkt meestal zelfstandig en geef niet snel op.",
+      "order": 29,
+      "levels": {
+        "1": "Ik kom zonder begeleiding moeilijk op gang en stop snel bij tegenslag.",
+        "2": "Ik heb veel begeleiding nodig om door te werken.",
+        "3": "Ik werk meestal zelfstandig en geef niet snel op.",
+        "4": "Ik werk zelfstandig, zoek oplossingen en blijf doorgaan bij moeilijkheden.",
+        "5": "Ik werk zeer zelfstandig, denk vooruit en geef niet op tot het doel bereikt is."
+      }
+    },
+    {
+      "category_key": "reflectie_and_professionele_houding",
+      "subject_id": 1,
+      "phase": null,
+      "code": "6.5",
+      "name": "Past houding en aanpak aan wanneer dat nodig is",
+      "description": "De leerling past zijn of haar aanpak aan na duidelijke feedback.",
+      "order": 30,
+      "levels": {
+        "1": "Ik blijf hetzelfde doen, ook als het niet werkt.",
+        "2": "Ik zie soms dat ik iets moet veranderen, maar vind dit moeilijk.",
+        "3": "Ik pas mijn aanpak aan na duidelijke feedback.",
+        "4": "Ik herken zelf wanneer ik moet aanpassen en doe dat.",
+        "5": "Ik pas me flexibel aan, anticipeer op situaties en kies bewust wat werkt."
+      }
+    }
+  ]
+}

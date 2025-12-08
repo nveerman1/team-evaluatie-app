@@ -2,9 +2,10 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import api, { ApiAuthError } from "@/lib/api";
-import { projectAssessmentService, rubricService } from "@/services";
+import { projectAssessmentService, rubricService, projectService } from "@/services";
 import { RubricListItem, ProjectAssessmentCreate } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
+import type { ProjectListItem } from "@/dtos/project.dto";
 
 type Group = {
   id: number;
@@ -20,10 +21,12 @@ export default function CreateProjectAssessmentInner() {
 
   const [rubrics, setRubrics] = useState<RubricListItem[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [projects, setProjects] = useState<ProjectListItem[]>([]);
 
   const [title, setTitle] = useState("");
   const [rubricId, setRubricId] = useState<number | "">("");
   const [groupId, setGroupId] = useState<number | "">("");
+  const [projectId, setProjectId] = useState<number | "">("");
   const [version, setVersion] = useState("");
 
   useEffect(() => {
@@ -40,6 +43,10 @@ export default function CreateProjectAssessmentInner() {
         setGroups(
           Array.isArray(groupsResponse.data) ? groupsResponse.data : [],
         );
+
+        // Load projects
+        const projectsResponse = await projectService.listProjects();
+        setProjects(projectsResponse.items || []);
       } catch (e: any) {
         setError(e?.response?.data?.detail || e?.message || "Laden mislukt");
       } finally {
@@ -63,6 +70,7 @@ export default function CreateProjectAssessmentInner() {
         title,
         rubric_id: Number(rubricId),
         group_id: Number(groupId),
+        project_id: projectId ? Number(projectId) : undefined,
         version: version || undefined,
         metadata_json: {},
       };
@@ -110,6 +118,27 @@ export default function CreateProjectAssessmentInner() {
             placeholder="Bijv. Projectbeoordeling periode 1"
             required
           />
+        </div>
+
+        <div className="space-y-1">
+          <label className="block text-sm font-medium">
+            Project (optioneel)
+          </label>
+          <select
+            className="w-full border rounded-lg px-3 py-2"
+            value={projectId}
+            onChange={(e) => setProjectId(Number(e.target.value) || "")}
+          >
+            <option value="">-- Geen project --</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.title}
+              </option>
+            ))}
+          </select>
+          <p className="text-sm text-gray-500">
+            Koppel deze beoordeling aan een bestaand project (optioneel).
+          </p>
         </div>
 
         <div className="space-y-1">
