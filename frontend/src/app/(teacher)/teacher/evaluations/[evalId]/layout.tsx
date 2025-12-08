@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import { useState, useEffect, ReactNode, useCallback } from "react";
 import Link from "next/link";
 import { ApiAuthError } from "@/lib/api";
@@ -15,6 +15,7 @@ type LayoutProps = {
 export default function EvaluationLayout({ children }: LayoutProps) {
   const params = useParams();
   const evalId = params?.evalId as string;
+  const pathname = usePathname();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -146,8 +147,8 @@ export default function EvaluationLayout({ children }: LayoutProps) {
         <div className="border-b border-gray-200">
           <nav className="flex gap-6 text-sm" aria-label="Tabs">
             {tabs.map((tab) => {
-              // Simple way to detect active tab - check if current path includes the tab's path
-              const isActive = typeof window !== 'undefined' && window.location.pathname.includes(tab.id);
+              // Use pathname to detect active tab
+              const isActive = pathname?.includes(tab.id) ?? false;
               return (
                 <Link
                   key={tab.id}
