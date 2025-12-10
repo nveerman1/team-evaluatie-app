@@ -105,7 +105,7 @@ export default function CreateEvaluationPageInner() {
   useEffect(() => {
     let mounted = true;
     const loadProjectTeams = async () => {
-      if (!projectId || projectId === "") {
+      if (projectId === "" || !projectId) {
         setProjectTeams([]);
         setProjectTeamId("");
         return;
@@ -156,7 +156,7 @@ export default function CreateEvaluationPageInner() {
       return setError("Kies een rubric.");
     
     // NEW: Validation - require project team when project is selected
-    if (projectId && projectId !== "" && (!projectTeamId || projectTeamId === "")) {
+    if (projectId !== "" && projectId && (projectTeamId === "" || !projectTeamId)) {
       return setError("Selecteer een projectteam wanneer een project is gekozen.");
     }
 
@@ -296,7 +296,7 @@ export default function CreateEvaluationPageInner() {
         </div>
 
         {/* NEW: Project Team Selector (conditional) */}
-        {projectId && projectId !== "" && (
+        {projectId !== "" && projectId && (
           <div className="space-y-1">
             <label className="block text-sm font-medium">
               Projectteam <span className="text-red-500">*</span>
@@ -305,7 +305,7 @@ export default function CreateEvaluationPageInner() {
               className="w-full px-3 py-2 border rounded-lg"
               value={projectTeamId === "" ? "" : Number(projectTeamId)}
               onChange={(e) => setProjectTeamId(e.target.value ? Number(e.target.value) : "")}
-              required={projectId !== ""}
+              required={typeof projectId === "number"}
               disabled={anyLoading || projectTeams.length === 0}
             >
               <option value="">— Kies projectteam —</option>
