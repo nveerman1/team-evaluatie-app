@@ -124,7 +124,8 @@ export function useDashboardData(evaluationId?: number): DashboardState {
       setStudentProgress(progress);
       setKpisData(kpis);
     } catch (e: any) {
-      if (e.name !== 'AbortError') {
+      // Don't set error state for canceled requests
+      if (e.name !== 'AbortError' && e.name !== 'CanceledError' && e.message !== 'canceled') {
         setErr(errorMsg(e, "Ophalen van dashboarddata mislukte"));
         setDashboard(null);
         setFlagsArr([]);

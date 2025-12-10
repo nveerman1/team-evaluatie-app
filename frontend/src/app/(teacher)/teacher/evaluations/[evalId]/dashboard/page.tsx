@@ -90,7 +90,7 @@ export default function EvaluationDashboardPage() {
         );
         setTeamContext(context);
       } catch (error: any) {
-        if (error.name !== 'AbortError') {
+        if (error.name !== 'AbortError' && error.name !== 'CanceledError' && error.message !== 'canceled') {
           console.error('Failed to load team context:', error);
         }
       }

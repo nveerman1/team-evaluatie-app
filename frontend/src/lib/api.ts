@@ -63,6 +63,18 @@ instance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 instance.interceptors.response.use(
   (res) => res,
   (err: AxiosError<any>) => {
+    // Don't log or handle canceled/aborted requests
+    // Check multiple conditions for canceled requests
+    if (
+      axios.isCancel(err) || 
+      err.code === 'ERR_CANCELED' || 
+      err.message === 'canceled' ||
+      err.name === 'CanceledError' ||
+      err.name === 'AbortError'
+    ) {
+      return Promise.reject(err);
+    }
+
     const status = err?.response?.status;
 
     if (status === 401 || status === 403) {
