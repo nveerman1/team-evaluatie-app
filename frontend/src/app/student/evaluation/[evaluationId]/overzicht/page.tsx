@@ -33,31 +33,46 @@ export default function OverzichtPage() {
 
   // Load current user ID
   useEffect(() => {
+    const controller = new AbortController();
+    
     async function loadUser() {
       try {
-        const response = await api.get("/users/me");
+        const response = await api.get("/users/me", { signal: controller.signal });
         setCurrentUserId(response.data.id);
-      } catch (e) {
-        console.error("Failed to load current user:", e);
+      } catch (e: any) {
+        if (e.name !== 'AbortError') {
+          console.error("Failed to load current user:", e);
+        }
       }
     }
     loadUser();
+    
+    return () => controller.abort();
   }, []);
 
   // Load team context
   useEffect(() => {
     if (!evaluationId) return;
     
+    const controller = new AbortController();
+    
     async function loadTeams() {
       try {
-        const context = await evaluationService.getEvaluationTeams(evaluationId);
+        const context = await evaluationService.getEvaluationTeams(
+          evaluationId,
+          controller.signal
+        );
         setTeamContext(context);
       } catch (error: any) {
-        console.error('Failed to load team context:', error);
+        if (error.name !== 'AbortError') {
+          console.error('Failed to load team context:', error);
+        }
       }
     }
     
     loadTeams();
+    
+    return () => controller.abort();
   }, [evaluationId]);
 
   // Load peer feedback results for this evaluation
