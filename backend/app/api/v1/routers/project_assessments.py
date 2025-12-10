@@ -569,11 +569,15 @@ def get_assessment_teams_overview(
             for member in members:
                 user_team_map[member.user_id] = team.team_number
     
-    # Group users by team_number (use project team if available, fallback to user.team_number)
+    # Group users by team_number
+    # If assessment has project_id, only use project teams (don't fallback to user.team_number)
+    # If no project_id, use user.team_number
     teams_dict: dict[int, List[User]] = {}
     for u in members_in_group:
-        # Get team number from project teams if available, otherwise use user.team_number
-        team_num = user_team_map.get(u.id, u.team_number)
+        if pa.project_id:
+            team_num = user_team_map.get(u.id, None)
+        else:
+            team_num = u.team_number
         if team_num is not None:
             if team_num not in teams_dict:
                 teams_dict[team_num] = []
@@ -894,11 +898,15 @@ def get_assessment_scores_overview(
             for member in members:
                 user_team_map[member.user_id] = team.team_number
     
-    # Group users by team_number (use project team if available, fallback to user.team_number)
+    # Group users by team_number
+    # If assessment has project_id, only use project teams (don't fallback to user.team_number)
+    # If no project_id, use user.team_number
     teams_dict: dict[int, List[User]] = {}
     for u in members_in_group:
-        # Get team number from project teams if available, otherwise use user.team_number
-        team_num = user_team_map.get(u.id, u.team_number)
+        if pa.project_id:
+            team_num = user_team_map.get(u.id, None)
+        else:
+            team_num = u.team_number
         if team_num is not None:
             if team_num not in teams_dict:
                 teams_dict[team_num] = []
@@ -1102,10 +1110,15 @@ def get_assessment_students_overview(
             for member in members:
                 user_team_map[member.user_id] = team.team_number
     
-    # Sort students by class_name, then by team_number (using project team if available), then by name
+    # Sort students by class_name, then by team_number, then by name
+    # If assessment has project_id, only use project teams (don't fallback to user.team_number)
+    # If no project_id, use user.team_number
     students_with_teams = []
     for s in students:
-        team_num = user_team_map.get(s.id, s.team_number)
+        if pa.project_id:
+            team_num = user_team_map.get(s.id, None)
+        else:
+            team_num = s.team_number
         students_with_teams.append((s, team_num))
     
     # Sort by class_name, team_number, name
@@ -1146,8 +1159,12 @@ def get_assessment_students_overview(
     deviating_count = 0  # Count students with at least one override
     
     for student in students:
-        # Get team number from project teams if available, otherwise use user.team_number
-        team_num = user_team_map.get(student.id, student.team_number)
+        # If assessment has project_id, only use project teams (don't fallback to user.team_number)
+        # If no project_id, use user.team_number
+        if pa.project_id:
+            team_num = user_team_map.get(student.id, None)
+        else:
+            team_num = student.team_number
         team_name = f"Team {team_num}" if team_num else None
         
         # Build criterion scores for this student

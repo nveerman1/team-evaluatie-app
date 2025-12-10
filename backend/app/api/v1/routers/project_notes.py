@@ -296,13 +296,17 @@ async def get_context(
                 for member in members:
                     user_team_map[member.user_id] = team.team_number
 
-        # Group students by team_number (use project team if available, fallback to user.team_number)
+        # Group students by team_number
+        # If context has project_id, only use project teams (don't fallback to user.team_number)
+        # If no project_id, use user.team_number
         teams_dict = {}
         students_without_team = []
         
         for student in all_students:
-            # Get team number from project teams if available, otherwise use user.team_number
-            team_num = user_team_map.get(student.id, student.team_number)
+            if context.project_id:
+                team_num = user_team_map.get(student.id, None)
+            else:
+                team_num = student.team_number
             if team_num is not None:
                 if team_num not in teams_dict:
                     teams_dict[team_num] = []

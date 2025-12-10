@@ -225,12 +225,19 @@ async def get_omza_data(
             else None
         )
 
+        # If evaluation has a project, only use project teams (don't fallback to user.team_number)
+        # If no project, use user.team_number
+        if evaluation.project_id:
+            team_number = user_team_map.get(student.id, None)
+        else:
+            team_number = student.team_number
+        
         student_data_list.append(
             OmzaStudentData(
                 student_id=student.id,
                 student_name=student.name,
                 class_name=student.class_name,
-                team_number=user_team_map.get(student.id, student.team_number),  # Use project team if available, fallback to user team
+                team_number=team_number,
                 category_scores=category_scores,
                 teacher_comment=teacher_comment,
             )

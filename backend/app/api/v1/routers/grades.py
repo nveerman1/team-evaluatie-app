@@ -319,6 +319,13 @@ def preview_grades(
         # afronden en begrenzen (alleen als er een waarde is)
         suggested = clamp(round(suggested_val, 1), 1.0, 10.0) if suggested_val is not None else None
 
+        # If evaluation has a project, only use project teams (don't fallback to user.team_number)
+        # If no project, use user.team_number
+        if evaluation.project_id:
+            team_num = project_team_map.get(u.id, None)
+        else:
+            team_num = getattr(u, "team_number", None)
+        
         items.append(
             GradePreviewItem(
                 user_id=u.id,
@@ -327,8 +334,7 @@ def preview_grades(
                 gcf=gcf,  # placeholder
                 spr=spr,  # placeholder
                 suggested_grade=suggested,  # 1–10
-                # Use project team number if available, otherwise fallback to user.team_number
-                team_number=project_team_map.get(u.id, getattr(u, "team_number", None)),
+                team_number=team_num,
                 class_name=getattr(u, "class_name", None),
             )
         )
