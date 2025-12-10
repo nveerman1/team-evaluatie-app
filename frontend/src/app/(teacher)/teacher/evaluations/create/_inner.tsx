@@ -5,14 +5,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { RubricListResponse, RubricListItem } from "@/lib/rubric-types";
 import { useCourses } from "@/hooks";
-import { projectService } from "@/services";
+import { projectService, projectTeamService } from "@/services";
 import type { ProjectListItem } from "@/dtos/project.dto";
+import type { ProjectTeam } from "@/dtos/project-team.dto";
 
 type EvalCreatePayload = {
   title: string;
   rubric_id: number;
   course_id: number; // verplicht
   project_id?: number | null;
+  project_team_id?: number | null; // NEW: link to roster
   settings?: {
     deadlines?: {
       review?: string | null; // "YYYY-MM-DD"
@@ -35,6 +37,7 @@ export default function CreateEvaluationPageInner() {
   // ---- Data ----
   const [rubrics, setRubrics] = useState<RubricListItem[]>([]);
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
+  const [projectTeams, setProjectTeams] = useState<ProjectTeam[]>([]); // NEW
   const { courses, courseNameById } = useCourses();
 
   // ---- UI ----
@@ -47,6 +50,7 @@ export default function CreateEvaluationPageInner() {
   const [title, setTitle] = useState("");
   const [courseId, setCourseId] = useState<number | "">("");
   const [projectId, setProjectId] = useState<number | "">("");
+  const [projectTeamId, setProjectTeamId] = useState<number | "">(""); // NEW
   const [rubricId, setRubricId] = useState<number | "">(
     preRubricId ? Number(preRubricId) : "",
   );
@@ -97,6 +101,32 @@ export default function CreateEvaluationPageInner() {
     };
   }, [preRubricId]);
 
+  // NEW: Load project teams when project is selected
+  useEffect(() => {
+    let mounted = true;
+    const loadProjectTeams = async () => {
+      if (!projectId || projectId === "") {
+        setProjectTeams([]);
+        setProjectTeamId("");
+        return;
+      }
+
+      try {
+        const response = await projectTeamService.listProjectTeams(Number(projectId));
+        if (!mounted) return;
+        setProjectTeams(response.teams || []);
+      } catch (e: any) {
+        console.error("Failed to load project teams:", e);
+        // Don't show error - teams are optional
+      }
+    };
+
+    loadProjectTeams();
+    return () => {
+      mounted = false;
+    };
+  }, [projectId]);
+
   // Als er precies één course is, preselecteer
   useEffect(() => {
     if (!courseId && courses.length === 1) {
@@ -124,6 +154,11 @@ export default function CreateEvaluationPageInner() {
     if (!courseId) return setError("Kies een course.");
     if (rubricId === "" || rubricId == null)
       return setError("Kies een rubric.");
+    
+    // NEW: Validation - require project team when project is selected
+    if (projectId && projectId !== "" && (!projectTeamId || projectTeamId === "")) {
+      return setError("Selecteer een projectteam wanneer een project is gekozen.");
+    }
 
     setSubmitting(true);
     try {
@@ -132,6 +167,7 @@ export default function CreateEvaluationPageInner() {
         rubric_id: Number(rubricId),
         course_id: Number(courseId),
         project_id: projectId ? Number(projectId) : null,
+        project_team_id: projectTeamId ? Number(projectTeamId) : null, // NEW
         settings: {
           deadlines: {
             review: toDateOnly(reviewDeadline) || null,
@@ -240,7 +276,10 @@ export default function CreateEvaluationPageInner() {
             <select
               className="w-full px-3 py-2 border rounded-lg"
               value={projectId === "" ? "" : Number(projectId)}
-              onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : "")}
+              onChange={(e) => {
+                setProjectId(e.target.value ? Number(e.target.value) : "");
+                setProjectTeamId(""); // Reset team selection when project changes
+              }}
               disabled={anyLoading}
             >
               <option value="">— Geen project —</option>
@@ -255,6 +294,40 @@ export default function CreateEvaluationPageInner() {
             </p>
           </div>
         </div>
+
+        {/* NEW: Project Team Selector (conditional) */}
+        {projectId && projectId !== "" && (
+          <div className="space-y-1">
+            <label className="block text-sm font-medium">
+              Projectteam <span className="text-red-500">*</span>
+            </label>
+            <select
+              className="w-full px-3 py-2 border rounded-lg"
+              value={projectTeamId === "" ? "" : Number(projectTeamId)}
+              onChange={(e) => setProjectTeamId(e.target.value ? Number(e.target.value) : "")}
+              required={projectId !== ""}
+              disabled={anyLoading || projectTeams.length === 0}
+            >
+              <option value="">— Kies projectteam —</option>
+              {projectTeams.map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.display_name_at_time} · {team.member_count} leden
+                  {team.is_locked ? " 🔒" : ""} · v{team.version}
+                </option>
+              ))}
+            </select>
+            {projectTeams.length === 0 && (
+              <p className="text-xs text-amber-600">
+                Geen teams gevonden voor dit project. Maak eerst teams aan via Klas- & Teambeheer.
+              </p>
+            )}
+            {projectTeams.length > 0 && (
+              <p className="text-xs text-gray-500">
+                Selecteer het team waarvoor deze evaluatie bedoeld is.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Rubric */}
         <div className="space-y-1">
