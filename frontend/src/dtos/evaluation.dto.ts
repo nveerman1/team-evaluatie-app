@@ -8,10 +8,12 @@ export type Evaluation = {
   rubric_id: number;
   course_id: number;
   project_id?: number | null;
+  project_team_id?: number | null; // Link to frozen roster
   cluster: string; // kept for backward compatibility (populated from course_name)
   evaluation_type: EvaluationType;
   status: EvalStatus;
   created_at: string; // ISO
+  closed_at?: string | null; // ISO - when evaluation was closed/locked
   settings?: {
     deadlines?: {
       review?: string; // "YYYY-MM-DD"
@@ -30,6 +32,7 @@ export type EvaluationCreateDto = {
   rubric_id: number;
   course_id: number;
   project_id?: number | null;
+  project_team_id?: number | null; // Optional link to project team roster
   settings?: {
     deadlines?: {
       review?: string;
