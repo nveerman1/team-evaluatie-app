@@ -1,16 +1,14 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Course } from "@/dtos/course.dto";
-import { ProjectTeamMember } from "@/dtos/project-team.dto";
 import { useAuth } from "@/hooks/useAuth";
 import CourseSelector from "@/components/CourseSelector";
-import ProjectTeamManagement from "@/components/ProjectTeamManagement";
 import { courseService } from "@/services/course.service";
-import { projectTeamService } from "@/services/project-team.service";
-import { Lock } from "lucide-react";
+import { projectService } from "@/services/project.service";
+import type { ProjectListItem } from "@/dtos/project.dto";
 
 // ============ Types ============
 
@@ -40,10 +38,11 @@ export default function ClassTeamsPageInner() {
   const router = useRouter();
   const courseIdParam = searchParams?.get("course_id");
   const projectIdParam = searchParams?.get("project_id");
-  const projectTeamIdParam = searchParams?.get("project_team_id");
   const { user, isAdmin, isTeacher, loading: authLoading } = useAuth();
 
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [selectedProject, setSelectedProject] = useState<ProjectListItem | null>(null);
+  const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -60,15 +59,8 @@ export default function ClassTeamsPageInner() {
   const [editingStudent, setEditingStudent] = useState<StudentRow | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
 
-  // NEW: Roster-specific state
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
-  const [selectedProjectTeamId, setSelectedProjectTeamId] = useState<number | null>(null);
-  const [rosterMembers, setRosterMembers] = useState<ProjectTeamMember[]>([]);
-  const [rosterLoading, setRosterLoading] = useState(false);
-  const [rosterError, setRosterError] = useState<string | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
-
-  const inRosterMode = !!selectedProjectTeamId;
+  // Check if project is closed (completed or archived)
+  const isProjectClosed = selectedProject?.status === "completed" || selectedProject?.status === "archived";
 
   // Team colors for visual distinction
   const TEAM_COLORS = [
@@ -170,82 +162,58 @@ export default function ClassTeamsPageInner() {
     }
   }, [authLoading, isAdmin, isTeacher]);
 
-  // NEW: Parse URL params for roster mode on mount
+  // Load projects when course is selected
   useEffect(() => {
-    if (projectIdParam) {
-      const pid = parseInt(projectIdParam, 10);
-      if (!isNaN(pid)) setSelectedProjectId(pid);
-    }
-    if (projectTeamIdParam) {
-      const ptid = parseInt(projectTeamIdParam, 10);
-      if (!isNaN(ptid)) setSelectedProjectTeamId(ptid);
-    }
-  }, [projectIdParam, projectTeamIdParam]);
-
-  // NEW: Fetch roster members when team is selected
-  useEffect(() => {
-    const loadRosterMembers = async () => {
-      if (!selectedProjectTeamId) {
-        setRosterMembers([]);
+    const loadProjects = async () => {
+      if (!selectedCourse) {
+        setProjects([]);
+        setSelectedProject(null);
         return;
       }
 
-      // Cancel previous request
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-      abortControllerRef.current = new AbortController();
-
-      setRosterLoading(true);
-      setRosterError(null);
       try {
-        const members = await projectTeamService.getProjectTeamMembers(
-          selectedProjectTeamId,
-          abortControllerRef.current.signal
-        );
-        setRosterMembers(members);
-      } catch (error: unknown) {
-        if (error instanceof Error && error.name !== "AbortError") {
-          console.error("Failed to load roster members:", error);
-          setRosterError("Kon teamleden niet laden");
+        const data = await projectService.listProjects({
+          course_id: selectedCourse.id,
+          per_page: 100,
+        });
+        setProjects(data.items || []);
+      } catch (error) {
+        console.error("Failed to load projects:", error);
+        showAlert("Kon projecten niet laden", "error");
+      }
+    };
+
+    loadProjects();
+  }, [selectedCourse]);
+
+  // Parse project_id from URL and set selected project
+  useEffect(() => {
+    if (projectIdParam && projects.length > 0) {
+      const pid = parseInt(projectIdParam, 10);
+      if (!isNaN(pid)) {
+        const project = projects.find(p => p.id === pid);
+        if (project) {
+          setSelectedProject(project);
         }
-      } finally {
-        setRosterLoading(false);
       }
-    };
+    }
+  }, [projectIdParam, projects]);
 
-    loadRosterMembers();
-
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, [selectedProjectTeamId]);
-
-  // NEW: Update URL when selection changes
-  const updateURL = (projectId: number | null, projectTeamId: number | null) => {
+  // Update URL when project selection changes
+  const updateURL = (projectId: number | null) => {
     if (!selectedCourse) return;
     
     const params = new URLSearchParams();
     params.set("course_id", selectedCourse.id.toString());
     if (projectId) params.set("project_id", projectId.toString());
-    if (projectTeamId) params.set("project_team_id", projectTeamId.toString());
     
     router.replace(`/teacher/class-teams?${params.toString()}`);
   };
 
-  // NEW: Handle project selection from ProjectTeamManagement
-  const handleProjectSelect = (projectId: number | null) => {
-    setSelectedProjectId(projectId);
-    setSelectedProjectTeamId(null);
-    updateURL(projectId, null);
-  };
-
-  // NEW: Handle team selection from ProjectTeamManagement
-  const handleTeamSelect = (projectTeamId: number | null) => {
-    setSelectedProjectTeamId(projectTeamId);
-    updateURL(selectedProjectId, projectTeamId);
+  // Handle project selection
+  const handleProjectSelect = (project: ProjectListItem | null) => {
+    setSelectedProject(project);
+    updateURL(project?.id ?? null);
   };
 
   // Filter and sort students
@@ -676,95 +644,35 @@ export default function ClassTeamsPageInner() {
 
         {selectedCourse && (
           <>
-            {/* Explanatory Text */}
-            <div className="mb-6 rounded-lg bg-blue-50 p-4">
-              <p className="text-sm text-gray-700">
-                <span className="font-medium">Links:</span> teams uit vorige projecten. 
-                <span className="ml-2 font-medium">Rechts:</span> huidige teamsamenstelling per leerling.
-              </p>
+            {/* Project Selection Card */}
+            <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-200">
+              <label className="mb-2 block text-sm font-semibold text-gray-500">Selecteer project</label>
+              <select
+                value={selectedProject?.id || ""}
+                onChange={(e) => {
+                  const project = projects.find((p) => p.id === parseInt(e.target.value));
+                  handleProjectSelect(project || null);
+                }}
+                className="w-full h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">— Selecteer een project —</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.title} ({project.status})
+                  </option>
+                ))}
+              </select>
+              {selectedProject && isProjectClosed && (
+                <p className="text-xs text-amber-600 mt-2">
+                  🔒 Dit project is afgesloten. Teams kunnen niet meer worden gewijzigd.
+                </p>
+              )}
             </div>
 
-            {/* 2-Column Grid Layout */}
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-              {/* Left Column: ProjectTeamManagement */}
-              <div className="xl:col-span-1">
-                <ProjectTeamManagement 
-                  courseId={selectedCourse.id}
-                  onSelectProject={handleProjectSelect}
-                  onSelectProjectTeam={handleTeamSelect}
-                />
-              </div>
-
-              {/* Right Column: Roster View or Student Management */}
-              <div className="xl:col-span-2">
-                {inRosterMode ? (
-                  // NEW: Roster View
-                  <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-200">
-                    <div className="mb-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h2 className="text-xl font-semibold text-gray-900">Teamleden</h2>
-                        <button
-                          onClick={() => handleTeamSelect(null)}
-                          className="text-sm text-blue-600 hover:text-blue-700"
-                        >
-                          ✕ Sluiten
-                        </button>
-                      </div>
-                      <p className="text-sm text-gray-600">
-                        Bekijk de samenstelling van dit projectteam
-                      </p>
-                    </div>
-
-                    {rosterLoading ? (
-                      <div className="text-center py-8">
-                        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
-                        <p className="mt-2 text-sm text-gray-600">Laden...</p>
-                      </div>
-                    ) : rosterError ? (
-                      <div className="rounded-lg bg-red-50 p-4 text-red-800">
-                        {rosterError}
-                      </div>
-                    ) : rosterMembers.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <p className="text-sm">Geen leden in dit team</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {rosterMembers.map((member) => (
-                          <div
-                            key={member.id}
-                            className={`border rounded-lg p-3 ${
-                              member.user_status === "inactive"
-                                ? "bg-gray-50 border-gray-200"
-                                : "border-gray-200"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="font-medium text-gray-900">
-                                  {member.user_name || "Onbekend"}
-                                  {member.user_status === "inactive" && (
-                                    <span className="ml-2 text-xs text-gray-500">(Inactief)</span>
-                                  )}
-                                </p>
-                                <p className="text-sm text-gray-600">{member.user_email}</p>
-                                {member.role && (
-                                  <p className="text-xs text-gray-500 mt-1">Rol: {member.role}</p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  // Existing Student Management UI
-                  <>
-                {/* Sticky Toolbar */}
-                <div className="sticky top-0 z-10 mb-6 space-y-4 rounded-2xl bg-white/80 p-4 shadow-sm backdrop-blur-sm">
+            {/* Search and Filter Card */}
+            <div className="rounded-2xl bg-white p-4 shadow-sm border border-gray-200">
               {/* Row 1: Filters */}
-              <div className="flex flex-wrap items-center gap-4">
+              <div className="flex flex-wrap items-center gap-4 mb-4">
                 {/* Search */}
                 <div className="flex-1 min-w-[200px]">
                   <input
@@ -805,57 +713,59 @@ export default function ClassTeamsPageInner() {
                 </label>
               </div>
 
-              {/* Row 2: Actions */}
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  onClick={handleOpenAddModal}
-                  className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
-                >
-                  ➕ Leerling toevoegen
-                </button>
+              {/* Row 2: Actions - Only show when project is open */}
+              {selectedProject && !isProjectClosed && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={handleOpenAddModal}
+                    className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                  >
+                    ➕ Leerling toevoegen
+                  </button>
 
-                <button
-                  onClick={handleCreateTeams}
-                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-                >
-                  ✨ Teams maken
-                </button>
+                  <button
+                    onClick={handleCreateTeams}
+                    className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                  >
+                    ✨ Teams maken
+                  </button>
 
-                <button
-                  onClick={handleAutoBalance}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                >
-                  🔄 Auto-verdeel
-                </button>
+                  <button
+                    onClick={handleAutoBalance}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  >
+                    🔄 Auto-verdeel
+                  </button>
 
-                <button
-                  onClick={handleClearAll}
-                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-                >
-                  🗑️ Wis alle teams
-                </button>
+                  <button
+                    onClick={handleClearAll}
+                    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                  >
+                    🗑️ Wis alle teams
+                  </button>
 
-                {isAdmin && (
-                  <>
-                    <button
-                      onClick={handleExportCSV}
-                      className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
-                    >
-                      📥 Exporteer CSV
-                    </button>
+                  {isAdmin && (
+                    <>
+                      <button
+                        onClick={handleExportCSV}
+                        className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                      >
+                        📥 Exporteer CSV
+                      </button>
 
-                    <label className="cursor-pointer rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700">
-                      📤 Importeer CSV
-                      <input
-                        type="file"
-                        accept=".csv"
-                        onChange={handleImportCSV}
-                        className="hidden"
-                      />
-                    </label>
-                  </>
-                )}
-              </div>
+                      <label className="cursor-pointer rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700">
+                        📤 Importeer CSV
+                        <input
+                          type="file"
+                          accept=".csv"
+                          onChange={handleImportCSV}
+                          className="hidden"
+                        />
+                      </label>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Student Table */}
@@ -936,7 +846,7 @@ export default function ClassTeamsPageInner() {
                             </span>
                           </td>
                           <td className="whitespace-nowrap px-6 py-4 text-sm">
-                            {isEditing ? (
+                            {isEditing && !isProjectClosed ? (
                               <div className="flex items-center gap-2">
                                 <input
                                   type="number"
@@ -983,21 +893,33 @@ export default function ClassTeamsPageInner() {
                               </div>
                             ) : (
                               student.team_number !== null ? (
-                                <button
-                                  onClick={() => handleStartEdit(student.id, student.team_number)}
-                                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold cursor-pointer hover:opacity-80 ${
+                                isProjectClosed ? (
+                                  <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
                                     TEAM_COLORS[(student.team_number - 1) % TEAM_COLORS.length]
-                                  }`}
-                                >
-                                  Team {student.team_number}
-                                </button>
+                                  }`}>
+                                    Team {student.team_number}
+                                  </span>
+                                ) : (
+                                  <button
+                                    onClick={() => handleStartEdit(student.id, student.team_number)}
+                                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold cursor-pointer hover:opacity-80 ${
+                                      TEAM_COLORS[(student.team_number - 1) % TEAM_COLORS.length]
+                                    }`}
+                                  >
+                                    Team {student.team_number}
+                                  </button>
+                                )
                               ) : (
-                                <button
-                                  onClick={() => handleStartEdit(student.id, student.team_number)}
-                                  className="text-gray-400 hover:text-gray-600"
-                                >
-                                  - (klik om toe te wijzen)
-                                </button>
+                                isProjectClosed ? (
+                                  <span className="text-gray-400">-</span>
+                                ) : (
+                                  <button
+                                    onClick={() => handleStartEdit(student.id, student.team_number)}
+                                    className="text-gray-400 hover:text-gray-600"
+                                  >
+                                    - (klik om toe te wijzen)
+                                  </button>
+                                )
                               )
                             )}
                           </td>
@@ -1032,10 +954,6 @@ export default function ClassTeamsPageInner() {
                   {filteredStudents.length} van {students.length} studenten
                   {hasUnsavedChanges && <span className="ml-2 text-orange-600">(wijzigingen worden automatisch opgeslagen...)</span>}
                 </p>
-              </div>
-            </div>
-                  </>
-                )}
               </div>
             </div>
           </>
