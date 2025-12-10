@@ -204,8 +204,8 @@ export default function ClassTeamsPageInner() {
           abortControllerRef.current.signal
         );
         setRosterMembers(members);
-      } catch (error: any) {
-        if (error.name !== "AbortError") {
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name !== "AbortError") {
           console.error("Failed to load roster members:", error);
           setRosterError("Kon teamleden niet laden");
         }

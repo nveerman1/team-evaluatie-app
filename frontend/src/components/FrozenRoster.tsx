@@ -29,7 +29,7 @@ export default function FrozenRoster({ projectTeamId, closedAt, isLegacy = false
       try {
         const data = await projectTeamService.getProjectTeamMembers(projectTeamId);
         setMembers(data);
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error("Failed to load roster members:", e);
         setError("Kon teamleden niet laden");
       } finally {
@@ -77,7 +77,7 @@ export default function FrozenRoster({ projectTeamId, closedAt, isLegacy = false
 
       {loading ? (
         <div className="text-center py-4">
-          <div className="inline-block h-6 w-6 animate-spin rounded-full border-3 border-solid border-blue-600 border-r-transparent"></div>
+          <div className="inline-block h-6 w-6 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
           <p className="mt-2 text-sm text-gray-600">Laden...</p>
         </div>
       ) : error ? (

@@ -115,7 +115,7 @@ export default function CreateEvaluationPageInner() {
         const response = await projectTeamService.listProjectTeams(Number(projectId));
         if (!mounted) return;
         setProjectTeams(response.teams || []);
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error("Failed to load project teams:", e);
         // Don't show error - teams are optional
       }
