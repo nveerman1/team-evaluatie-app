@@ -42,3 +42,43 @@ export type EvaluationCreateDto = {
 };
 
 export type EvaluationListResponse = Evaluation[];
+
+// Team context types for evaluations
+export interface EvaluationTeamMember {
+  user_id: number;
+  name: string;
+  email: string;
+  role: string | null;
+  is_allocated: boolean;
+}
+
+export interface EvaluationTeam {
+  team_id: number;
+  team_number: number;
+  display_name: string;
+  member_count: number;
+  members: EvaluationTeamMember[];
+}
+
+export interface EvaluationTeamContext {
+  project_id: number | null;
+  project_name: string | null;
+  teams: EvaluationTeam[];
+}
+
+// Allocation with team information
+export interface AllocationWithTeam {
+  id: number;
+  evaluator_id: number;
+  evaluator_name: string | null;
+  evaluator_team: number | null;
+  evaluatee_id: number;
+  evaluatee_name: string | null;
+  evaluatee_team: number | null;
+  status: "pending" | "completed";
+}
+
+export interface AllocationsWithTeamsResponse {
+  allocations: AllocationWithTeam[];
+}
+
