@@ -23,6 +23,8 @@ from app.infra.db.models import (
     GroupMember,
     FeedbackSummary,
     Grade,
+    ProjectTeam,
+    ProjectTeamMember,
 )
 from app.api.v1.schemas.evaluations import (
     EvaluationCreate,
@@ -124,6 +126,65 @@ def create_evaluation(
         settings=payload.settings or {},
     )
     db.add(ev)
+    db.flush()  # Get ev.id before creating allocations
+
+    # NEW: Automatically link all project teams and create allocations
+    if payload.project_id:
+        # Get all project teams for this project
+        project_teams = (
+            db.query(ProjectTeam)
+            .filter(
+                ProjectTeam.project_id == payload.project_id,
+                ProjectTeam.school_id == user.school_id,
+            )
+            .all()
+        )
+
+        if project_teams:
+            # Collect all unique student IDs from all project teams
+            all_student_ids = set()
+            for team in project_teams:
+                # Get team members
+                team_members = (
+                    db.query(ProjectTeamMember)
+                    .join(User, User.id == ProjectTeamMember.user_id)
+                    .filter(
+                        ProjectTeamMember.project_team_id == team.id,
+                        User.role == "student",
+                        User.archived.is_(False),
+                    )
+                    .all()
+                )
+                for member in team_members:
+                    all_student_ids.add(member.user_id)
+
+            # Convert to sorted list for consistent ordering
+            student_ids = sorted(list(all_student_ids))
+
+            # Create allocations: self-review + peer reviews for each student
+            for student_id in student_ids:
+                # Self-review allocation
+                self_alloc = Allocation(
+                    school_id=user.school_id,
+                    evaluation_id=ev.id,
+                    reviewer_id=student_id,
+                    reviewee_id=student_id,
+                    is_self=True,
+                )
+                db.add(self_alloc)
+
+                # Peer review allocations (review all other students)
+                for reviewee_id in student_ids:
+                    if reviewee_id != student_id:
+                        peer_alloc = Allocation(
+                            school_id=user.school_id,
+                            evaluation_id=ev.id,
+                            reviewer_id=student_id,
+                            reviewee_id=reviewee_id,
+                            is_self=False,
+                        )
+                        db.add(peer_alloc)
+
     db.commit()
     db.refresh(ev)
     return _to_out(ev)
