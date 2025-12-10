@@ -249,7 +249,7 @@ export default function OMZAOverviewPage() {
         setTeacherComments(comments);
       })
       .catch((err) => {
-        if (err.name !== 'AbortError') {
+        if (err.name !== 'AbortError' && err.name !== 'CanceledError' && err.message !== 'canceled') {
           setError(err?.response?.data?.detail || err?.message || "Laden mislukt");
         }
       })
@@ -278,7 +278,7 @@ export default function OMZAOverviewPage() {
         setStandardComments(byCategory);
       })
       .catch((err) => {
-        if (err.name !== 'AbortError') {
+        if (err.name !== 'AbortError' && err.name !== 'CanceledError' && err.message !== 'canceled') {
           console.error("Error loading standard comments:", err);
         }
       });

@@ -40,7 +40,7 @@ export default function OverzichtPage() {
         const response = await api.get("/users/me", { signal: controller.signal });
         setCurrentUserId(response.data.id);
       } catch (e: any) {
-        if (e.name !== 'AbortError') {
+        if (e.name !== 'AbortError' && e.name !== 'CanceledError' && e.message !== 'canceled') {
           console.error("Failed to load current user:", e);
         }
       }
@@ -64,7 +64,7 @@ export default function OverzichtPage() {
         );
         setTeamContext(context);
       } catch (error: any) {
-        if (error.name !== 'AbortError') {
+        if (error.name !== 'AbortError' && error.name !== 'CanceledError' && error.message !== 'canceled') {
           console.error('Failed to load team context:', error);
         }
       }
