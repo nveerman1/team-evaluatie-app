@@ -1,198 +1,127 @@
-# PR Summary: Wizard Enhancement - Create Proper Entity Types
+# PR Summary: Project-Specific Team Rosters
 
-## 🎯 Overview
+## Status: ✅ Backend Complete | 📝 Documentation Complete | ⏳ Frontend Pending
 
-This PR implements the requirements to make the project wizard create the correct entity types per evaluation type, rather than always creating `Evaluation` records. This ensures the wizard output aligns with how the frontend retrieves and displays data.
+---
 
-## 📋 Problem Statement
+## Overview
+Implements project-specific team rosters to replace `student.team_number` with a robust, versioned team management system.
 
-Previously, the wizard created `Evaluation` records for all types:
-- Peer evaluations → `Evaluation` with `evaluation_type="peer"`
-- Project assessments → `Evaluation` with `evaluation_type="project"` ❌
-- Competency scans → `Evaluation` with `evaluation_type="competency"` ❌
+## Problem Solved
+- ❌ No historical team tracking → ✅ Frozen snapshots per project
+- ❌ Single team per student → ✅ Different teams per project
+- ❌ No roster locking → ✅ Automatic locking on evaluation close
+- ❌ No team versioning → ✅ Version tracking (v1, v2, etc.)
 
-But the frontend expects:
-- `/teacher/project-assessments` → `ProjectAssessment` records
-- `/teacher/competencies` → `CompetencyWindow` records
+## Key Changes
 
-This mismatch caused data not to appear in the frontend.
+### Database (2 new tables, 3 modified tables)
+```
+NEW:
+- project_teams (id, project_id, team_id, display_name, version, backfill_source)
+- project_team_members (id, project_team_id, user_id, role)
 
-## ✅ Solution
-
-The wizard now creates the appropriate entity type for each evaluation:
-
-| Evaluation Type | Database Model | Records Created | Frontend Route |
-|----------------|----------------|----------------|----------------|
-| Peer Evaluations | `Evaluation` | 1 per config | `/teacher/evaluations` |
-| Project Assessments | `ProjectAssessment` | 1 per group | `/teacher/project-assessments` |
-| Competency Scans | `CompetencyWindow` | 1 per config | `/teacher/competencies` |
-
-## 🔑 Key Changes
-
-### 1. Enhanced Request Schema
-
-Added granular configuration for each evaluation type:
-
-```typescript
-// New request structure
-{
-  "evaluations": {
-    "peer_tussen": {
-      "enabled": true,
-      "deadline": "2025-06-30T23:59:59",
-      "rubric_id": 1,
-      "title_suffix": "tussentijds"
-    },
-    "project_assessment": {
-      "enabled": true,
-      "rubric_id": 5,
-      "deadline": "2025-06-30T23:59:59",
-      "version": "tussentijds"
-    },
-    "competency_scan": {
-      "enabled": true,
-      "start_date": "2025-01-01T00:00:00",
-      "end_date": "2025-06-30T23:59:59",
-      "competency_ids": [1, 2, 3],
-      "title": "Q1 Scan"
-    }
-  }
-}
+MODIFIED:
+- evaluations (+ project_team_id, closed_at)
+- project_assessments (+ project_team_id, closed_at)
+- project_notes_contexts (+ project_team_id, status, closed_at)
 ```
 
-### 2. Mixed Entity Response
+### API (1 new endpoint)
+- `POST /project-notes/contexts/{id}/close` - Lock notes context roster
 
-Response now includes type discriminators:
+### Migrations
+- **Alembic**: `pt_20251208_01` (schema), `pt_20251208_02` (backfill)
+- **SQL Fallback**: `01_create_project_teams.sql`, `02_backfill_project_teams.sql`
 
-```typescript
-{
-  "project": {...},
-  "entities": [
-    {"type": "peer", "data": {...}},
-    {"type": "project_assessment", "data": {...}},
-    {"type": "competency_scan", "data": {...}}
-  ],
-  "warnings": [],
-  "note": {...},
-  "linked_clients": [...]
-}
-```
+### Documentation (4 new docs)
+1. `docs/ADR-project-team-rosters.md` - Architecture decisions
+2. `docs/MIGRATION-project-team-rosters.md` - Migration guide
+3. `docs/DEPRECATION-team-number.md` - 5-phase deprecation plan
+4. `backend/migrations/sql_fallback/README.md` - Manual SQL instructions
 
-### 3. Edge Case Handling
+---
 
-- ⚠️ **Course without groups**: Returns warning, doesn't create project assessments
-- ⚠️ **Invalid competency IDs**: Filters invalid IDs, returns warning
-- ✅ **Mixed entity creation**: Supports all types in one wizard run
+## Features Implemented
 
-## 📁 Files Changed
+### ✅ Roster Freezing
+Teams are frozen at project creation time, preserving historical context.
 
-| File | Lines | Description |
-|------|-------|-------------|
-| `backend/app/api/v1/schemas/projects.py` | +78 | New schemas for entity configurations |
-| `backend/app/api/v1/routers/projects.py` | +185 | Wizard logic for creating proper entities |
-| `backend/tests/test_wizard_new_entities.py` | +396 | Comprehensive test suite (6 tests) |
-| `docs/WIZARD_API_CHANGES.md` | +296 | Migration guide for frontend |
-| **Total** | **+955 lines** | |
+### ✅ Roster Locking
+When evaluations/assessments close, rosters become read-only (HTTP 409 on edits).
 
-## 🧪 Testing
+### ✅ Versioning
+Team changes create new versions (v1, v2, etc.) with full audit trail.
 
-All tests passing ✅
+### ✅ Backfill
+Existing data automatically migrated with `backfill_source = 'inference'` marker.
 
-```
-tests/test_projects_api.py ..................... 9 passed
-tests/test_wizard_new_entities.py .............. 6 passed
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Total: 15 passed in 0.68s
-```
+### ✅ Backward Compatibility
+`team_number` field preserved but nullable. Gradual deprecation planned.
 
-### Test Coverage
+---
 
-- ✅ Peer evaluations with deadlines
-- ✅ Project assessment creation per group
-- ✅ Warning when course has no groups
-- ✅ Competency window creation
-- ✅ Warning on invalid competency IDs
-- ✅ Mixed entity creation (all types at once)
+## Migration
 
-## 🔒 Security
+### Required
+✅ **Yes** - Database migration required
 
-Security scan passed ✅
-- CodeQL analysis: 0 vulnerabilities found
-- No security issues introduced
+### Methods
+1. **Alembic**: `alembic upgrade head`
+2. **SQL**: Run fallback scripts in `backend/migrations/sql_fallback/`
 
-## 🎨 Code Quality
+### Rollback
+✅ Complete rollback procedures documented
 
-- ✅ Linting passed (ruff): 0 errors
-- ✅ All imports verified
-- ✅ Type hints maintained
-- ✅ Docstrings updated
-- ✅ Minimal changes to existing code
+---
 
-## 📚 Documentation
+## Files Changed
 
-Comprehensive documentation added in `docs/WIZARD_API_CHANGES.md`:
+**Added (8 files, +1,290 lines)**:
+- Migrations: 1 Alembic backfill, 3 SQL fallback files
+- Documentation: 3 comprehensive guides
+- API: 1 endpoint modification (project_notes.py)
 
-- ✅ Migration guide for frontend developers
-- ✅ Request/response schema examples
-- ✅ Entity type mapping table
-- ✅ Edge case handling guide
-- ✅ TypeScript integration examples
-- ✅ Testing instructions
+**Pre-existing** (referenced):
+- Schema migration (pt_20251208_01)
+- Models, services, API endpoints
+- Tests, frontend component
 
-## 🚀 Next Steps for Frontend
+---
 
-1. **Update wizard form UI**
-   - Add deadline pickers
-   - Add rubric selectors
-   - Add competency framework selector
+## Next Steps
 
-2. **Update API integration**
-   - Use new nested configuration structure
-   - Handle mixed entity response
-   - Display warnings to users
+### Phase 3: Frontend Integration
+- [ ] Update evaluation creation forms
+- [ ] Add project team selection UI
+- [ ] Display frozen rosters
+- [ ] Update CSV import/export
+- [ ] Make team_number read-only
 
-3. **Update routing**
-   - Route to correct pages based on entity type
-   - Handle all three entity types
+### Phase 4: Testing
+- [ ] Unit test coverage
+- [ ] Integration tests
+- [ ] Migration tests
+- [ ] Frontend workflow tests
+- [ ] CI validation
 
-See `docs/WIZARD_API_CHANGES.md` for detailed migration guide.
+---
 
-## 🔄 Backward Compatibility
+## Breaking Changes
+**None** - All changes are backward compatible.
 
-⚠️ **Breaking Change**: Response structure changed from `evaluations: []` to `entities: []`
+---
 
-The frontend must be updated to use the new structure. A mapping example is provided in the documentation for temporary backward compatibility if needed.
+## Documentation
+- **Architecture**: [ADR](docs/ADR-project-team-rosters.md)
+- **Migration**: [Guide](docs/MIGRATION-project-team-rosters.md)
+- **Deprecation**: [Plan](docs/DEPRECATION-team-number.md)
+- **SQL Fallback**: [README](backend/migrations/sql_fallback/README.md)
 
-## ✨ Benefits
+---
 
-1. **Data consistency**: Wizard output now matches frontend expectations
-2. **Type safety**: Clear discriminators prevent confusion
-3. **Flexibility**: Supports deadlines, rubric selection, competency linking
-4. **Robustness**: Edge cases handled gracefully with warnings
-5. **Maintainability**: Well-tested with comprehensive documentation
+**Ready for**: Code review, migration testing, frontend integration
 
-## 📊 Impact
+**Blocked by**: None
 
-- **Backend**: 3 files modified, 955 lines added
-- **Tests**: 6 new comprehensive tests
-- **Documentation**: Complete migration guide
-- **Breaking changes**: 1 (response structure)
-- **Security issues**: 0
-- **Performance impact**: Minimal (same number of DB queries)
-
-## 👥 Review Checklist
-
-- [x] Code follows project style guidelines
-- [x] Tests added and passing
-- [x] Documentation updated
-- [x] Security scan passed
-- [x] Linting passed
-- [x] Edge cases handled
-- [x] Backward compatibility considered
-- [x] Migration guide provided
-
-## 📝 Additional Notes
-
-This implementation prioritizes **minimal changes** to existing code while adding the necessary functionality. The wizard endpoint signature remains the same - only the request and response structures have been enhanced.
-
-The changes are **production-ready** and have been thoroughly tested. All quality checks have passed.
+**Dependencies**: None

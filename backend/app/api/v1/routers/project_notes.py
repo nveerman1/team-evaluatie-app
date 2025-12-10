@@ -716,3 +716,72 @@ async def get_timeline(
     # Serialize with joined data
     results = [ProjectNoteOut(**serialize_note(note, db)) for note in notes]
     return results
+
+
+@router.post("/contexts/{context_id}/close", response_model=ProjectNotesContextOut)
+async def close_project_notes_context(
+    context_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Close a project notes context and mark it as archived
+    
+    Sets status to 'closed' and records closed_at timestamp.
+    This action is idempotent - calling it multiple times has the same effect.
+    Once closed, the project_team members become read-only.
+    """
+    from datetime import datetime, timezone as tz
+    
+    require_role(current_user, ["teacher", "admin"])
+    
+    # Get context
+    context = (
+        db.query(ProjectNotesContext)
+        .filter(
+            ProjectNotesContext.id == context_id,
+            ProjectNotesContext.school_id == current_user.school_id,
+        )
+        .first()
+    )
+    
+    if not context:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Context not found"
+        )
+    
+    # Update status and closed_at if not already closed
+    if context.status != "closed":
+        context.status = "closed"
+        context.closed_at = datetime.now(tz.utc)
+        
+        # Log action
+        log_update(
+            db=db,
+            user=current_user,
+            entity_type="project_notes_context",
+            entity_id=context_id,
+            details={"action": "close", "closed_at": context.closed_at.isoformat()},
+        )
+    
+    db.commit()
+    db.refresh(context)
+    
+    # Format output
+    return ProjectNotesContextOut(
+        id=context.id,
+        school_id=context.school_id,
+        title=context.title,
+        description=context.description,
+        project_id=context.project_id,
+        course_id=context.course_id,
+        class_name=context.class_name,
+        evaluation_id=context.evaluation_id,
+        project_team_id=context.project_team_id,
+        status=context.status,
+        closed_at=context.closed_at,
+        created_by=context.created_by,
+        created_at=context.created_at,
+        updated_at=context.updated_at,
+    )

@@ -12,7 +12,7 @@ Changes:
 - Add indices for performance
 
 Revision ID: pt_20251208_01
-Revises: 20251207_peer_criteria
+Revises: pa_20251208_01
 Create Date: 2025-12-08
 
 """
@@ -23,7 +23,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = "pt_20251208_01"
-down_revision: Union[str, None] = "20251207_peer_criteria"
+down_revision: Union[str, None] = "pa_20251208_01"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
