@@ -23,6 +23,8 @@ from app.infra.db.models import (
     Allocation,
     RubricCriterion,
     Rubric,
+    ProjectTeam,
+    ProjectTeamMember,
 )
 from app.api.v1.schemas.omza import (
     OmzaDataResponse,
@@ -138,6 +140,27 @@ async def get_omza_data(
         .all()
     )
 
+    # Build user_id -> project team_number mapping if evaluation has a project
+    user_team_map = {}
+    if evaluation.project_id:
+        project_teams = (
+            db.query(ProjectTeam)
+            .filter(
+                ProjectTeam.project_id == evaluation.project_id,
+                ProjectTeam.school_id == current_user.school_id,
+            )
+            .all()
+        )
+        
+        for team in project_teams:
+            members = (
+                db.query(ProjectTeamMember)
+                .filter(ProjectTeamMember.project_team_id == team.id)
+                .all()
+            )
+            for member in members:
+                user_team_map[member.user_id] = team.team_number
+
     # Build student data
     student_data_list = []
     for student in students:
@@ -207,7 +230,7 @@ async def get_omza_data(
                 student_id=student.id,
                 student_name=student.name,
                 class_name=student.class_name,
-                team_number=student.team_number,
+                team_number=user_team_map.get(student.id, student.team_number),  # Use project team if available, fallback to user team
                 category_scores=category_scores,
                 teacher_comment=teacher_comment,
             )

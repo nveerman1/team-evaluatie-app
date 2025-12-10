@@ -198,11 +198,12 @@ export default function OMZAOverviewPage() {
       return;
     }
 
+    const controller = new AbortController();
     setLoading(true);
     setError(null);
     
     omzaService
-      .getOmzaData(evalIdNum)
+      .getOmzaData(evalIdNum, controller.signal)
       .then((data) => {
         // Ensure categories are in the correct order: O, M, Z, A
         const categoryOrder = ["O", "M", "Z", "A"];
@@ -248,18 +249,24 @@ export default function OMZAOverviewPage() {
         setTeacherComments(comments);
       })
       .catch((err) => {
-        setError(err?.response?.data?.detail || err?.message || "Laden mislukt");
+        if (err.name !== 'AbortError') {
+          setError(err?.response?.data?.detail || err?.message || "Laden mislukt");
+        }
       })
       .finally(() => {
         setLoading(false);
       });
+      
+    return () => controller.abort();
   }, [evalIdNum]);
 
   // Load standard comments
   useEffect(() => {
     if (!evalIdNum) return;
     
-    omzaService.getStandardComments(evalIdNum)
+    const controller = new AbortController();
+    
+    omzaService.getStandardComments(evalIdNum, controller.signal)
       .then((comments) => {
         const byCategory: Record<string, StandardComment[]> = {};
         comments.forEach((comment) => {
@@ -271,8 +278,12 @@ export default function OMZAOverviewPage() {
         setStandardComments(byCategory);
       })
       .catch((err) => {
-        console.error("Error loading standard comments:", err);
+        if (err.name !== 'AbortError') {
+          console.error("Error loading standard comments:", err);
+        }
       });
+      
+    return () => controller.abort();
   }, [evalIdNum]);
 
   // Show toast notification

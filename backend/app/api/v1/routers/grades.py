@@ -21,11 +21,11 @@ def clamp(x: float, lo: float, hi: float) -> float:
 
 # Probeer group/evaluation te importeren; val veilig terug als de modellen anders heten/ontbreken
 try:
-    from app.infra.db.models import GroupMember, Group, Evaluation
+    from app.infra.db.models import GroupMember, Group, Evaluation, ProjectTeam, ProjectTeamMember
 
     HAS_GROUP_MODELS = True
 except Exception:
-    GroupMember = Group = Evaluation = None  # type: ignore
+    GroupMember = Group = Evaluation = ProjectTeam = ProjectTeamMember = None  # type: ignore
     HAS_GROUP_MODELS = False
 
 
@@ -126,6 +126,33 @@ def preview_grades(
         #     .all()
         # )
         students = []
+
+    # 3.5) Build project team mapping if evaluation has a project
+    project_team_map: Dict[int, int] = {}
+    if Evaluation and ProjectTeam and ProjectTeamMember:
+        try:
+            ev = db.get(Evaluation, evaluation_id)
+            if ev and getattr(ev, 'project_id', None):
+                project_teams = (
+                    db.query(ProjectTeam)
+                    .filter(
+                        ProjectTeam.project_id == ev.project_id,
+                        ProjectTeam.school_id == getattr(ev, 'school_id', None),
+                    )
+                    .all()
+                )
+                
+                for team in project_teams:
+                    members = (
+                        db.query(ProjectTeamMember)
+                        .filter(ProjectTeamMember.project_team_id == team.id)
+                        .all()
+                    )
+                    for member in members:
+                        project_team_map[member.user_id] = team.team_number
+        except Exception as e:
+            print(f"[grades.preview] project teams mapping failed: {e!r}")
+            project_team_map = {}
 
     # 4) Defaults (tot je echte berekeningen zijn aangesloten)
     DEFAULT_GROUP = group_grade if group_grade is not None else 7.0
@@ -300,8 +327,8 @@ def preview_grades(
                 gcf=gcf,  # placeholder
                 spr=spr,  # placeholder
                 suggested_grade=suggested,  # 1–10
-                # Gebruik het teamnummer uit admin/students als bron van waarheid
-                team_number=getattr(u, "team_number", None),
+                # Use project team number if available, otherwise fallback to user.team_number
+                team_number=project_team_map.get(u.id, getattr(u, "team_number", None)),
                 class_name=getattr(u, "class_name", None),
             )
         )
