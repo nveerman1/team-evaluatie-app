@@ -1,13 +1,16 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Course } from "@/dtos/course.dto";
+import { ProjectTeamMember } from "@/dtos/project-team.dto";
 import { useAuth } from "@/hooks/useAuth";
 import CourseSelector from "@/components/CourseSelector";
 import ProjectTeamManagement from "@/components/ProjectTeamManagement";
 import { courseService } from "@/services/course.service";
+import { projectTeamService } from "@/services/project-team.service";
+import { Lock } from "lucide-react";
 
 // ============ Types ============
 
@@ -34,7 +37,10 @@ const CLASS_COLORS = [
 
 export default function ClassTeamsPageInner() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const courseIdParam = searchParams?.get("course_id");
+  const projectIdParam = searchParams?.get("project_id");
+  const projectTeamIdParam = searchParams?.get("project_team_id");
   const { user, isAdmin, isTeacher, loading: authLoading } = useAuth();
 
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
@@ -53,6 +59,16 @@ export default function ClassTeamsPageInner() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<StudentRow | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // NEW: Roster-specific state
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [selectedProjectTeamId, setSelectedProjectTeamId] = useState<number | null>(null);
+  const [rosterMembers, setRosterMembers] = useState<ProjectTeamMember[]>([]);
+  const [rosterLoading, setRosterLoading] = useState(false);
+  const [rosterError, setRosterError] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const inRosterMode = !!selectedProjectTeamId;
 
   // Team colors for visual distinction
   const TEAM_COLORS = [
@@ -153,6 +169,84 @@ export default function ClassTeamsPageInner() {
       showAlert("Geen toegang. Alleen docenten en admins kunnen deze pagina bekijken.", "error");
     }
   }, [authLoading, isAdmin, isTeacher]);
+
+  // NEW: Parse URL params for roster mode on mount
+  useEffect(() => {
+    if (projectIdParam) {
+      const pid = parseInt(projectIdParam, 10);
+      if (!isNaN(pid)) setSelectedProjectId(pid);
+    }
+    if (projectTeamIdParam) {
+      const ptid = parseInt(projectTeamIdParam, 10);
+      if (!isNaN(ptid)) setSelectedProjectTeamId(ptid);
+    }
+  }, [projectIdParam, projectTeamIdParam]);
+
+  // NEW: Fetch roster members when team is selected
+  useEffect(() => {
+    const loadRosterMembers = async () => {
+      if (!selectedProjectTeamId) {
+        setRosterMembers([]);
+        return;
+      }
+
+      // Cancel previous request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
+
+      setRosterLoading(true);
+      setRosterError(null);
+      try {
+        const members = await projectTeamService.getProjectTeamMembers(
+          selectedProjectTeamId,
+          abortControllerRef.current.signal
+        );
+        setRosterMembers(members);
+      } catch (error: any) {
+        if (error.name !== "AbortError") {
+          console.error("Failed to load roster members:", error);
+          setRosterError("Kon teamleden niet laden");
+        }
+      } finally {
+        setRosterLoading(false);
+      }
+    };
+
+    loadRosterMembers();
+
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [selectedProjectTeamId]);
+
+  // NEW: Update URL when selection changes
+  const updateURL = (projectId: number | null, projectTeamId: number | null) => {
+    if (!selectedCourse) return;
+    
+    const params = new URLSearchParams();
+    params.set("course_id", selectedCourse.id.toString());
+    if (projectId) params.set("project_id", projectId.toString());
+    if (projectTeamId) params.set("project_team_id", projectTeamId.toString());
+    
+    router.replace(`/teacher/class-teams?${params.toString()}`);
+  };
+
+  // NEW: Handle project selection from ProjectTeamManagement
+  const handleProjectSelect = (projectId: number | null) => {
+    setSelectedProjectId(projectId);
+    setSelectedProjectTeamId(null);
+    updateURL(projectId, null);
+  };
+
+  // NEW: Handle team selection from ProjectTeamManagement
+  const handleTeamSelect = (projectTeamId: number | null) => {
+    setSelectedProjectTeamId(projectTeamId);
+    updateURL(selectedProjectId, projectTeamId);
+  };
 
   // Filter and sort students
   const filteredStudents = useMemo(() => {
@@ -594,11 +688,79 @@ export default function ClassTeamsPageInner() {
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
               {/* Left Column: ProjectTeamManagement */}
               <div className="xl:col-span-1">
-                <ProjectTeamManagement courseId={selectedCourse.id} />
+                <ProjectTeamManagement 
+                  courseId={selectedCourse.id}
+                  onSelectProject={handleProjectSelect}
+                  onSelectProjectTeam={handleTeamSelect}
+                />
               </div>
 
-              {/* Right Column: Existing Student Management */}
+              {/* Right Column: Roster View or Student Management */}
               <div className="xl:col-span-2">
+                {inRosterMode ? (
+                  // NEW: Roster View
+                  <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-200">
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h2 className="text-xl font-semibold text-gray-900">Teamleden</h2>
+                        <button
+                          onClick={() => handleTeamSelect(null)}
+                          className="text-sm text-blue-600 hover:text-blue-700"
+                        >
+                          ✕ Sluiten
+                        </button>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        Bekijk de samenstelling van dit projectteam
+                      </p>
+                    </div>
+
+                    {rosterLoading ? (
+                      <div className="text-center py-8">
+                        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+                        <p className="mt-2 text-sm text-gray-600">Laden...</p>
+                      </div>
+                    ) : rosterError ? (
+                      <div className="rounded-lg bg-red-50 p-4 text-red-800">
+                        {rosterError}
+                      </div>
+                    ) : rosterMembers.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <p className="text-sm">Geen leden in dit team</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {rosterMembers.map((member) => (
+                          <div
+                            key={member.id}
+                            className={`border rounded-lg p-3 ${
+                              member.user_status === "inactive"
+                                ? "bg-gray-50 border-gray-200"
+                                : "border-gray-200"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium text-gray-900">
+                                  {member.user_name || "Onbekend"}
+                                  {member.user_status === "inactive" && (
+                                    <span className="ml-2 text-xs text-gray-500">(Inactief)</span>
+                                  )}
+                                </p>
+                                <p className="text-sm text-gray-600">{member.user_email}</p>
+                                {member.role && (
+                                  <p className="text-xs text-gray-500 mt-1">Rol: {member.role}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  // Existing Student Management UI
+                  <>
                 {/* Sticky Toolbar */}
                 <div className="sticky top-0 z-10 mb-6 space-y-4 rounded-2xl bg-white/80 p-4 shadow-sm backdrop-blur-sm">
               {/* Row 1: Filters */}
@@ -872,6 +1034,8 @@ export default function ClassTeamsPageInner() {
                 </p>
               </div>
             </div>
+                  </>
+                )}
               </div>
             </div>
           </>
