@@ -7,7 +7,7 @@
 - Maakt records in project_assessment_criterion_templates voor alle scholen (subject_id = 1, target_level = 'bovenbouw').
 
 Revision ID: pt_20251208_02
-Revises: pt_20251208_01
+Revises: 20251207_peer_criteria
 Create Date: 2025-12-08
 """
 
@@ -18,7 +18,7 @@ from pathlib import Path
 
 # Alembic identifiers
 revision = "pt_20251208_02"
-down_revision = "pt_20251208_01"
+down_revision = "20251207_peer_criteria"
 branch_labels = None
 depends_on = None
 
