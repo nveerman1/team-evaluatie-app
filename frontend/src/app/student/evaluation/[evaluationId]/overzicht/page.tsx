@@ -2,12 +2,12 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Loading, ErrorMessage } from "@/components";
+import { Loading, ErrorMessage, TeamBadge, TeamMembersList } from "@/components";
 import { FeedbackSummary } from "@/components/student";
 import { peerFeedbackResultsService, studentService, evaluationService, courseService } from "@/services";
 import api from "@/lib/api";
 import type { EvaluationResult, OmzaKey, MyAllocation, DashboardResponse } from "@/dtos";
-import type { Evaluation } from "@/dtos/evaluation.dto";
+import type { Evaluation, EvaluationTeamContext, EvaluationTeam } from "@/dtos/evaluation.dto";
 import type { Course } from "@/dtos/course.dto";
 import {
   OMZA_LABELS,
@@ -28,6 +28,37 @@ export default function OverzichtPage() {
   const [evaluationData, setEvaluationData] = useState<EvaluationResult | undefined>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [teamContext, setTeamContext] = useState<EvaluationTeamContext | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+
+  // Load current user ID
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const response = await api.get("/users/me");
+        setCurrentUserId(response.data.id);
+      } catch (e) {
+        console.error("Failed to load current user:", e);
+      }
+    }
+    loadUser();
+  }, []);
+
+  // Load team context
+  useEffect(() => {
+    if (!evaluationId) return;
+    
+    async function loadTeams() {
+      try {
+        const context = await evaluationService.getEvaluationTeams(evaluationId);
+        setTeamContext(context);
+      } catch (error: any) {
+        console.error('Failed to load team context:', error);
+      }
+    }
+    
+    loadTeams();
+  }, [evaluationId]);
 
   // Load peer feedback results for this evaluation
   useEffect(() => {
@@ -146,6 +177,15 @@ export default function OverzichtPage() {
       { key: "A", label: OMZA_LABELS.autonomie, value: averages.autonomie, delta: 0 },
     ];
   }, [evaluationData, averages]);
+
+  // Find the student's team
+  const myTeam = useMemo(() => {
+    if (!teamContext || !currentUserId) return null;
+    
+    return teamContext.teams.find((team) => 
+      team.members.some((member) => member.user_id === currentUserId)
+    );
+  }, [teamContext, currentUserId]);
 
   // Early returns AFTER all hooks
   if (loading) return <Loading />;
@@ -360,6 +400,22 @@ export default function OverzichtPage() {
             </div>
           )}
         </article>
+
+        {/* Team Section */}
+        {teamContext && myTeam && (
+          <article className="mt-6 rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <TeamBadge teamNumber={myTeam.team_number} displayName={myTeam.display_name} size="lg" />
+              <h2 className="text-lg font-semibold text-slate-900">
+                Jouw Teamleden
+              </h2>
+            </div>
+            <TeamMembersList members={myTeam.members} />
+            <p className="mt-4 text-xs text-slate-500">
+              Je hebt {myTeam.members.length} teamleden voor deze evaluatie.
+            </p>
+          </article>
+        )}
       </main>
     </div>
   );
