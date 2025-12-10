@@ -193,14 +193,12 @@ function EvaluationLayoutInner({ children }: LayoutProps) {
           </nav>
         </div>
 
-        {/* Frozen Roster or Legacy Banner */}
+        {/* Frozen Roster - only show if explicitly using project_team_id */}
         {data.project_team_id ? (
           <FrozenRoster 
             projectTeamId={data.project_team_id} 
             closedAt={data.closed_at}
           />
-        ) : data.project_id ? (
-          <FrozenRoster isLegacy={true} projectTeamId={0} />
         ) : null}
 
         {/* Page-specific content */}
