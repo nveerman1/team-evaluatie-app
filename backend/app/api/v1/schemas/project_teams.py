@@ -52,6 +52,7 @@ class ProjectTeamBase(BaseModel):
     """Base schema for project team"""
 
     display_name_at_time: str = Field(..., min_length=1, max_length=200)
+    team_number: Optional[int] = Field(None, ge=1)
     version: int = Field(default=1, ge=1)
 
 
@@ -108,3 +109,23 @@ class CloneProjectTeamsResponse(BaseModel):
     teams_cloned: int
     members_cloned: int
     project_team_ids: List[int]
+
+
+# ============ Project Students Schema ============
+
+
+class ProjectStudentOut(BaseModel):
+    """Schema for student with project-specific team information"""
+    
+    id: int
+    name: str
+    email: str
+    class_name: Optional[str] = None
+    status: str  # "active" or "inactive"
+    
+    # Project-specific team information
+    project_team_id: Optional[int] = None
+    project_team_name: Optional[str] = None  # From display_name_at_time
+    project_team_number: Optional[int] = None  # Extracted from team name or group
+    
+    model_config = ConfigDict(from_attributes=True)

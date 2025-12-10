@@ -12,6 +12,7 @@ from app.api.v1.schemas.project_teams import (
     ProjectTeamOut,
     ProjectTeamListOut,
     ProjectTeamMemberOut,
+    ProjectStudentOut,
     BulkAddMembersRequest,
     CloneProjectTeamsRequest,
     CloneProjectTeamsResponse,
@@ -176,6 +177,74 @@ def list_project_teams(
         teams=[_format_project_team_output(t, db) for t in teams],
         total=len(teams),
     )
+
+
+@router.get("/projects/{project_id}/students", response_model=List[ProjectStudentOut])
+def get_project_students(
+    project_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """
+    Get all students for a project with their project-specific team information
+    
+    Returns students with team_number from project_teams table (project-specific).
+    """
+    # Validate project access
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.school_id == user.school_id)
+        .first()
+    )
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    # Query all students who are members of project teams in this project
+    from sqlalchemy import func
+    from app.infra.db.models import GroupMember, Group
+    
+    # Get all unique students from project team members
+    students_data = (
+        db.query(
+            User.id,
+            User.name,
+            User.email,
+            User.class_name,
+            User.archived,
+            ProjectTeam.id.label("project_team_id"),
+            ProjectTeam.display_name_at_time,
+            ProjectTeam.team_number,
+        )
+        .join(ProjectTeamMember, ProjectTeamMember.user_id == User.id)
+        .join(ProjectTeam, ProjectTeam.id == ProjectTeamMember.project_team_id)
+        .filter(
+            ProjectTeam.project_id == project_id,
+            ProjectTeam.school_id == user.school_id,
+            User.role == "student",
+        )
+        .order_by(User.name)
+        .all()
+    )
+    
+    # Format output
+    result = []
+    for row in students_data:
+        result.append(
+            ProjectStudentOut(
+                id=row.id,
+                name=row.name,
+                email=row.email,
+                class_name=row.class_name or "",
+                status="inactive" if row.archived else "active",
+                project_team_id=row.project_team_id,
+                project_team_name=row.display_name_at_time,
+                project_team_number=row.team_number,
+            )
+        )
+    
+    return result
 
 
 @router.get("/{project_team_id}/members", response_model=List[ProjectTeamMemberOut])

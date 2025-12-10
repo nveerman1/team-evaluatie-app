@@ -2,6 +2,7 @@ import api from "@/lib/api";
 import {
   ProjectTeam,
   ProjectTeamMember,
+  ProjectStudent,
   ProjectTeamListResponse,
   ProjectTeamCreate,
   BulkAddMembersRequest,
@@ -18,6 +19,20 @@ export const projectTeamService = {
   ): Promise<ProjectTeamListResponse> {
     const response = await api.get<ProjectTeamListResponse>(
       `/project-teams/projects/${projectId}/teams`,
+      { signal }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get all students for a project with project-specific team information
+   */
+  async getProjectStudents(
+    projectId: number,
+    signal?: AbortSignal
+  ): Promise<ProjectStudent[]> {
+    const response = await api.get<ProjectStudent[]>(
+      `/project-teams/projects/${projectId}/students`,
       { signal }
     );
     return response.data;

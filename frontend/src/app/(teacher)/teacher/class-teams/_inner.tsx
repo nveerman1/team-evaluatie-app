@@ -103,7 +103,7 @@ export default function ClassTeamsPageInner() {
     loadCourseFromUrl();
   }, [courseIdParam]);
 
-  // Load students when course is selected
+  // Load students when course or project is selected
   useEffect(() => {
     const loadStudents = async () => {
       if (!selectedCourse) {
@@ -113,19 +113,35 @@ export default function ClassTeamsPageInner() {
 
       setLoading(true);
       try {
-        const courseStudents = await courseService.getCourseStudents(selectedCourse.id);
-        // Filter out inactive students
-        const activeStudents = courseStudents.filter((s) => s.status !== "inactive");
-        setStudents(
-          activeStudents.map((s) => ({
-            id: s.id,
-            name: s.name,
-            email: s.email,
-            class_name: s.class_name || "",
-            team_number: s.team_number ?? null,
-            status: s.status,
-          }))
-        );
+        // If a project is selected, load students with project-specific team info
+        if (selectedProject) {
+          const projectStudents = await projectTeamService.getProjectStudents(selectedProject.id);
+          setStudents(
+            projectStudents.map((s) => ({
+              id: s.id,
+              name: s.name,
+              email: s.email,
+              class_name: s.class_name || "",
+              team_number: s.project_team_number ?? null,
+              status: s.status,
+            }))
+          );
+        } else {
+          // Load all course students with their global team_number
+          const courseStudents = await courseService.getCourseStudents(selectedCourse.id);
+          // Filter out inactive students
+          const activeStudents = courseStudents.filter((s) => s.status !== "inactive");
+          setStudents(
+            activeStudents.map((s) => ({
+              id: s.id,
+              name: s.name,
+              email: s.email,
+              class_name: s.class_name || "",
+              team_number: s.team_number ?? null,
+              status: s.status,
+            }))
+          );
+        }
       } catch (error) {
         console.error("Failed to load students:", error);
         showAlert("Kon studenten niet laden", "error");
@@ -135,7 +151,7 @@ export default function ClassTeamsPageInner() {
     };
 
     loadStudents();
-  }, [selectedCourse]);
+  }, [selectedCourse, selectedProject]);
 
   // Auto-select all classes on mount
   useEffect(() => {

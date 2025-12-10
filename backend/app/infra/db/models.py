@@ -321,6 +321,9 @@ class ProjectTeam(Base):
 
     # Snapshot of team name at time of creation
     display_name_at_time: Mapped[str] = mapped_column(String(200), nullable=False)
+    
+    # Team number for this project (project-specific)
+    team_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, index=True)
 
     # Version for handling team composition changes
     version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
@@ -339,6 +342,7 @@ class ProjectTeam(Base):
         Index("ix_project_team_project", "project_id"),
         Index("ix_project_team_team", "team_id"),
         Index("ix_project_team_project_version", "project_id", "team_id", "version"),
+        Index("ix_project_teams_project_team_number", "project_id", "team_number"),
     )
 
 

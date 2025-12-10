@@ -9,6 +9,7 @@ export type ProjectTeam = {
   project_id: number;
   team_id: number | null;
   display_name_at_time: string;
+  team_number: number | null;
   version: number;
   member_count: number;
   is_locked: boolean;
@@ -25,6 +26,17 @@ export type ProjectTeamMember = {
   user_email: string | null;
   user_status?: "active" | "inactive";
   created_at: string;
+};
+
+export type ProjectStudent = {
+  id: number;
+  name: string;
+  email: string;
+  class_name: string;
+  status: "active" | "inactive";
+  project_team_id: number | null;
+  project_team_name: string | null;
+  project_team_number: number | null;
 };
 
 export type ProjectTeamListResponse = {
