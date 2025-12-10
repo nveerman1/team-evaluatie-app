@@ -499,19 +499,18 @@ export default function ClassTeamsPageInner() {
     }
 
     try {
-      // Call API to add student to course
+      // Call API to add student to course (without team_number - it's being phased out)
       const newStudent = await courseService.addStudentToCourse(selectedCourse.id, {
         name: editingStudent.name,
         email: editingStudent.email,
         class_name: editingStudent.class_name || undefined,
-        team_number: editingStudent.team_number,
       });
 
-      // Add to local state
+      // Add to local state without team number (assign via project teams)
       setStudents((prev) => [...prev, {
         ...newStudent,
         class_name: newStudent.class_name || "",
-        team_number: newStudent.team_number ?? null,
+        team_number: null, // No team assigned yet - assign via project teams
       }]);
       setShowAddModal(false);
       setEditingStudent(null);
@@ -1138,18 +1137,6 @@ export default function ClassTeamsPageInner() {
                     onChange={(e) => setEditingStudent({ ...editingStudent, class_name: e.target.value })}
                     className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     placeholder="bijv. 5V1"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Teamnummer</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={editingStudent.team_number || ""}
-                    onChange={(e) => setEditingStudent({ ...editingStudent, team_number: e.target.value ? parseInt(e.target.value) : null })}
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="Optioneel"
                   />
                 </div>
               </div>
