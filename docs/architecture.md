@@ -85,45 +85,75 @@ Teachers are explicitly assigned to courses via the **TeacherCourse** junction t
 │ name        │   │ code        │ │ scope       │ │ action      │ │ contact_name│ │ title       │
 │ role        │   │ color       │ │ target_level│ │ entity_type │ │ email       │ │ status      │
 │ class_name  │   │ icon        │ └─────────────┘ │ entity_id   │ │ phone       │ └─────────────┘
-│ team_number │   │ is_active   │                 │ details     │ │ level       │
-│ archived    │   └─────────────┘                 │ created_at  │ │ sector      │
-└─────────────┘          │                        └─────────────┘ │ tags        │
-      │                  │                                         │ active      │
-      │                  ▼                                         └─────────────┘
-      │          ┌─────────────┐                                          │
-      │          │   Course    │                                  ┌───────┴────────┐
-      │          │─────────────│                                  │                │
-      │          │ id          │                                  ▼                ▼
+│ team_number*│   │ is_active   │                 │ details     │ │ level       │        │
+│ archived    │   └─────────────┘                 │ created_at  │ │ sector      │        │
+└─────────────┘          │                        └─────────────┘ │ tags        │        │
+      │                  │                                         │ active      │        │
+      │                  ▼                                         └─────────────┘        │
+      │          ┌─────────────┐                                          │               │
+      │          │   Course    │                                  ┌───────┴────────┐      │
+      │          │─────────────│                                  │                │      │
+      │          │ id          │                                  ▼                ▼      │
       │          │ school_id   │                          ┌─────────────┐   ┌─────────────┐
       │          │ subject_id  │◄── Optional link         │ ClientLog   │   │ClientProject│
       │          │ name        │                          │─────────────│   │    Link     │
       │          │ code        │                          │ id          │   │─────────────│
       │          │ level       │                          │ client_id   │   │ id          │
       │          │ year        │                          │ author_id   │   │ client_id   │
-      │          │ is_active   │                          │ log_type    │   │ project_id  │
-      │          └─────────────┘                          │ text        │   │ role        │
-      │                 │                                 │ created_at  │   │ start_date  │
-      │         ┌───────┴────────┐                        └─────────────┘   │ end_date    │
-      │         │                │                                          └─────────────┘
-      │         ▼                ▼
-      │  ┌─────────────┐  ┌─────────────┐
-      │  │TeacherCourse│  │   Group     │
-      │  │─────────────│  │─────────────│
-      └─►│ teacher_id  │  │ id          │
-         │ course_id   │  │ school_id   │
-         │ role        │  │ course_id   │
-         │ is_active   │  │ name        │
-         └─────────────┘  │ team_number │
+      │          │ is_active   │                          │ log_type    │   │ project_id  │◄─┐
+      │          └─────────────┘                          │ text        │   │ role        │  │
+      │                 │                                 │ created_at  │   │ start_date  │  │
+      │         ┌───────┴────────┐                        └─────────────┘   │ end_date    │  │
+      │         │                │                                          └─────────────┘  │
+      │         ▼                ▼                                                           │
+      │  ┌─────────────┐  ┌─────────────┐                                                   │
+      │  │TeacherCourse│  │   Group     │ (Legacy - mutable)                                │
+      │  │─────────────│  │─────────────│                                                   │
+      └─►│ teacher_id  │  │ id          │                                                   │
+         │ course_id   │  │ school_id   │                                                   │
+         │ role        │  │ course_id   │                                                   │
+         │ is_active   │  │ name        │                                                   │
+         └─────────────┘  │ team_number │                                                   │
+                          └─────────────┘                                                   │
+                                 │                                                           │
+                                 ▼                                                           │
+                          ┌─────────────┐                                                   │
+                          │GroupMember  │ (Legacy - mutable)                                │
+                          │─────────────│                                                   │
+                          │ group_id    │                                                   │
+                          │ user_id     │                                                   │
+                          │ active      │                                                   │
+                          └─────────────┘                                                   │
+                                                                                            │
+                          ┌─────────────┐                                                   │
+                          │ProjectTeam  │ (New - immutable snapshots) ◄────────────────────┘
+                          │─────────────│
+                          │ id          │
+                          │ school_id   │
+                          │ project_id  │
+                          │ team_id     │ (optional legacy link)
+                          │ display_name│
+                          │ team_number │
+                          │ version     │
+                          │ is_locked   │
+                          │ created_at  │
                           └─────────────┘
                                  │
                                  ▼
                           ┌─────────────┐
-                          │GroupMember  │
+                          │ProjectTeam  │
+                          │   Member    │
                           │─────────────│
-                          │ group_id    │
+                          │ id          │
+                          │ school_id   │
+                          │ project     │
+                          │   _team_id  │
                           │ user_id     │
-                          │ active      │
+                          │ role        │
+                          │ created_at  │
                           └─────────────┘
+
+* team_number in User table is DEPRECATED - use ProjectTeam instead
 
 ┌─────────────┐
 │ Evaluation  │
@@ -164,9 +194,10 @@ Teachers are explicitly assigned to courses via the **TeacherCourse** junction t
 - `name`: Full name
 - `role`: "admin" | "teacher" | "student"
 - `class_name`: Class designation (e.g., "4A")
-- `team_number`: Team number within class
+- `team_number`: **DEPRECATED** - Team number within class (use ProjectTeam instead)
 - `archived`: Soft delete flag
 - **Unique constraint**: `(school_id, email)`
+- **Note**: `team_number` is being phased out in favor of project-specific team assignments
 
 ### Subject
 - `id`: Primary key
@@ -208,11 +239,16 @@ Teachers are explicitly assigned to courses via the **TeacherCourse** junction t
 - `id`: Primary key
 - `school_id`: Foreign key to School
 - `course_id`: Foreign key to Course (nullable)
+- `project_id`: Foreign key to Project (optional - for project-based evaluations)
+- `project_team_id`: Foreign key to ProjectTeam (optional - snapshots team roster)
 - `rubric_id`: Foreign key to Rubric
 - `title`: Evaluation title
 - `evaluation_type`: "peer" | "project" | "competency"
 - `status`: "draft" | "open" | "closed"
+- `closed_at`: Timestamp when evaluation was closed (nullable)
 - `settings`: JSON settings
+- **Note**: When `project_id` is set, all teams from that project are automatically allocated
+- **Note**: `project_team_id` preserves historical team composition for closed evaluations
 
 ### AuditLog
 - `id`: Primary key
@@ -262,6 +298,51 @@ Teachers are explicitly assigned to courses via the **TeacherCourse** junction t
 - `end_date`: Project end date
 - **Unique constraint**: `(client_id, project_assessment_id)`
 
+### ProjectTeam (New - Immutable Snapshots)
+- `id`: Primary key
+- `school_id`: Foreign key to School
+- `project_id`: Foreign key to Project
+- `team_id`: Foreign key to Group (optional legacy link, nullable)
+- `display_name_at_time`: Team name frozen at creation (e.g., "Team 1")
+- `team_number`: Team number within project
+- `version`: Version number (allows multiple snapshots, default: 1)
+- `is_locked`: Lock status (true when referenced by evaluation/assessment)
+- `backfill_source`: Migration tracking (`null`, `'backfill'`, or `'inference'`)
+- `created_at`: Timestamp
+- **Unique constraint**: `(project_id, team_number, version)`
+- **Indexes**: 
+  - `(project_id, team_number)`
+  - `(school_id, project_id)`
+- **Purpose**: Immutable snapshots of team composition for historical accuracy
+
+### ProjectTeamMember
+- `id`: Primary key
+- `school_id`: Foreign key to School
+- `project_team_id`: Foreign key to ProjectTeam
+- `user_id`: Foreign key to User
+- `role`: Member role (optional, e.g., "leader", "member")
+- `created_at`: Timestamp
+- **Unique constraint**: `(project_team_id, user_id)`
+- **Indexes**: 
+  - `project_team_id`
+  - `user_id`
+- **Purpose**: Stores student membership in project teams
+
+### Group (Legacy - Mutable)
+- `id`: Primary key
+- `school_id`: Foreign key to School
+- `course_id`: Foreign key to Course
+- `name`: Group name
+- `team_number`: Team number
+- **Note**: This table represents legacy mutable groups - new code should use ProjectTeam instead
+
+### GroupMember (Legacy - Mutable)
+- `id`: Primary key
+- `group_id`: Foreign key to Group
+- `user_id`: Foreign key to User
+- `active`: Active status flag
+- **Note**: This table represents legacy mutable group membership - new code should use ProjectTeamMember instead
+
 ## Clients (Opdrachtgevers) Module
 
 The Clients module manages external organizations that provide projects to students, with full database integration and automation features.
@@ -307,6 +388,197 @@ Templates support variables like `{contactpersoon}`, `{project_naam}`, `{datum}`
 - Filter by level, status, and search query
 - CSV export with all client data
 - Pagination support for large datasets
+
+## Project-Based Team Management
+
+The application uses a project-centric team management system that isolates team assignments per project and provides historical accuracy for evaluations.
+
+### Key Concepts
+
+#### Project Teams vs Groups (Legacy)
+
+- **Groups** (`groups` table): Legacy mutable course-level teams that can change anytime
+- **Project Teams** (`project_teams` table): Immutable project-scoped snapshots of team composition
+
+New development should use Project Teams exclusively. Groups are maintained for backwards compatibility only.
+
+#### Single Source of Truth
+
+- `project_teams` and `project_team_members` tables are the authoritative source for team data
+- `User.team_number` is **DEPRECATED** and being phased out
+- Team assignments are project-specific and isolated from other projects
+
+#### Team Number Isolation
+
+Each project maintains its own team numbering:
+- Team 1 in Project A is independent from Team 1 in Project B
+- Changing team assignments in one project doesn't affect other projects
+- Students can have different team numbers in different projects
+
+### Workflow
+
+#### 1. Class-Teams Page (`/teacher/class-teams`)
+
+**Single Column Layout:**
+- Project selector at top
+- Search/filter card below
+- Student table showing all course students
+
+**When No Project Selected:**
+- All course students visible
+- No team numbers shown (User.team_number phased out)
+- Action buttons hidden
+
+**When Project Selected (Open):**
+- All course students visible
+- Team numbers editable (from `project_teams.team_number`)
+- Action buttons enabled:
+  - ➕ Leerling toevoegen (Add student to course)
+  - ✨ Teams maken (Create teams automatically)
+  - 🔄 Auto-verdeel (Distribute unassigned students)
+  - 🗑️ Wis alle teams (Clear all team assignments)
+  - 📥 CSV Export/Import
+
+**When Project Selected (Closed):**
+- Students visible with read-only team numbers
+- 🔒 Lock indicator shown
+- All action buttons hidden
+
+#### 2. Team Assignment
+
+**Assigning a Student:**
+1. Select a project
+2. Click team number cell for student
+3. Enter team number (e.g., 1, 2, 3)
+4. Backend automatically:
+   - Creates `ProjectTeam` if team doesn't exist
+   - Creates `ProjectTeamMember` linking student to team
+   - Saves changes to `project_teams.team_number`
+
+**Bulk Operations:**
+- **Teams maken**: Randomly distributes all students into teams of 4
+- **Auto-verdeel**: Distributes unassigned students across existing teams
+- **Wis alle teams**: Removes all team assignments for the project
+
+#### 3. Evaluation Creation (`/teacher/evaluations/create`)
+
+**Simplified Workflow:**
+- Course selection: **Required**
+- Project selection: **Required** (filtered by selected course)
+- Anonymity: Fixed to "pseudonym" (dropdown removed)
+- Project team dropdown: **Removed**
+
+**Automatic Allocation:**
+When evaluation is created with a `project_id`:
+1. Backend fetches all `ProjectTeam` records for the project
+2. Collects all active student members from all teams
+3. Creates allocations automatically:
+   - Self-review allocation (student reviews self)
+   - Peer review allocations (student reviews all other students)
+4. Full peer review matrix created (everyone reviews everyone)
+5. No manual auto-allocate step needed
+
+#### 4. Frozen Rosters
+
+**Purpose:**
+Preserve historical team composition for closed evaluations
+
+**When Evaluation Closes:**
+- `status` set to "closed"
+- `closed_at` timestamp recorded
+- Team roster becomes immutable snapshot
+
+**Display:**
+- Shows "Team Roster (Frozen)" banner
+- 🔒 icon indicates locked status
+- `closed_at` timestamp displayed
+- Team composition frozen at evaluation creation time
+
+**Legacy Banner:**
+If `project_team_id` is null, shows: "Legacy evaluatie — rosterinformatie kan afwijken"
+
+### API Endpoints
+
+#### Project Team Management
+
+**List students with project-specific teams:**
+```
+GET /project-teams/projects/{project_id}/students
+```
+Returns all course students with their project team assignments.
+
+**Update team assignments:**
+```
+PATCH /project-teams/projects/{project_id}/student-teams
+Body: [{"student_id": 123, "team_number": 2}, ...]
+```
+Creates/updates ProjectTeam and ProjectTeamMember records.
+
+**Get project team members:**
+```
+GET /project-teams/{project_team_id}/members
+```
+Returns members of a specific project team (read-only).
+
+**List teams for a project:**
+```
+GET /project-teams/projects/{project_id}/teams
+```
+Returns all ProjectTeam records with metadata (member count, lock status, version).
+
+### Data Flow
+
+#### Creating Team Assignment
+
+```
+User Action: Assign student 123 to team 2 in project 5
+                    ↓
+Frontend: PATCH /project-teams/projects/5/student-teams
+          Body: [{"student_id": 123, "team_number": 2}]
+                    ↓
+Backend Logic:
+  1. Find or create ProjectTeam(project_id=5, team_number=2)
+  2. Find existing ProjectTeamMember for student 123
+  3. If exists: Update project_team_id
+     If not: Create new ProjectTeamMember
+  4. Commit changes
+                    ↓
+Result: Student 123 now in Team 2 of Project 5
+```
+
+#### Creating Evaluation with Auto-Allocation
+
+```
+User Action: Create evaluation for project 5
+                    ↓
+Frontend: POST /evaluations
+          Body: {"project_id": 5, ...}
+                    ↓
+Backend Logic:
+  1. Create Evaluation record
+  2. Fetch all ProjectTeam records where project_id=5
+  3. Collect unique student IDs from ProjectTeamMember
+  4. For each student:
+     - Create self-review allocation
+     - Create peer review allocations to all other students
+  5. Commit all allocations
+                    ↓
+Result: Evaluation ready with full allocation matrix
+```
+
+### Migration Notes
+
+**Phase 3 Status:** ✅ **Complete**
+
+- User.team_number fully phased out from UI
+- All team operations use project_teams
+- Historical data migrated and backfilled
+- Legacy Groups/GroupMembers preserved for backwards compatibility
+
+**See Also:**
+- `docs/DEPRECATION-team-number.md` - Deprecation plan and timeline
+- `docs/PROJECT_TEAM_ROSTERS_IMPLEMENTATION.md` - Detailed implementation guide
+- `docs/PROJECT_TEAM_ROSTERS_ADR.md` - Architecture decision record
 
 ## Role-Based Access Control (RBAC)
 

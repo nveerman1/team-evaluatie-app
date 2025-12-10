@@ -21,14 +21,17 @@ The `users.team_number` field is being phased out in favor of project-specific t
 - `team_number` still readable via API for backwards compatibility
 - Roster locking implemented for closed evaluations
 
-### Phase 3: UI Transition (Next Release)
-**Status**: 🔄 In Progress
+### Phase 3: UI Transition (Current Release)
+**Status**: ✅ Complete
 
-- [ ] Remove team_number editing from class-teams UI
-- [ ] Add project team selection to evaluation creation
-- [ ] Show frozen rosters for closed evaluations
-- [ ] Update CSV import/export to use project teams
-- [ ] Display `team_number` read-only for informational purposes
+- [x] Remove team_number editing from class-teams UI
+- [x] Add project team selection to evaluation creation
+- [x] Show frozen rosters for closed evaluations
+- [x] Update CSV import/export to use project teams
+- [x] Display team numbers from project_teams.team_number only
+- [x] Remove team_number field from Add Student modal
+- [x] All team operations (create, auto-distribute, clear) use project teams
+- [x] Team numbers isolated per project
 
 ### Phase 4: Deprecation Warning (Release + 2 versions)
 **Status**: ⏳ Planned
@@ -183,11 +186,20 @@ If issues arise:
 - All stakeholders agree
 - Comprehensive testing passed
 
-## Status: Phase 2 Complete
-Last Updated: 2025-12-08
+## Status: Phase 3 Complete
+Last Updated: 2025-12-10
+
+Implementation Summary:
+- ✅ User.team_number fully phased out from UI
+- ✅ All team management uses project_teams system
+- ✅ Project-specific team numbering implemented
+- ✅ Automatic evaluation allocation on creation
+- ✅ Frozen rosters for closed evaluations
+- ✅ Single-column layout with project selector
+- ✅ CSV export/import with project context
 
 Next Steps:
-1. Complete UI transition (Phase 3)
-2. Update all evaluation creation forms
-3. Add project team management UI
-4. Monitor adoption and gather feedback
+1. Monitor user adoption and gather feedback (Phase 4 preparation)
+2. Add deprecation warnings in API when User.team_number accessed
+3. Log analytics on remaining team_number usage
+4. Plan for Phase 5 (removal) after 6+ months of stability
