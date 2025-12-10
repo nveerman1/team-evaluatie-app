@@ -127,17 +127,18 @@ def preview_grades(
         # )
         students = []
 
-    # 3.5) Build project team mapping if evaluation has a project
+    # 3.5) Fetch evaluation and build project team mapping if evaluation has a project
+    evaluation = None
     project_team_map: Dict[int, int] = {}
     if Evaluation and ProjectTeam and ProjectTeamMember:
         try:
-            ev = db.get(Evaluation, evaluation_id)
-            if ev and getattr(ev, 'project_id', None):
+            evaluation = db.get(Evaluation, evaluation_id)
+            if evaluation and getattr(evaluation, 'project_id', None):
                 project_teams = (
                     db.query(ProjectTeam)
                     .filter(
-                        ProjectTeam.project_id == ev.project_id,
-                        ProjectTeam.school_id == getattr(ev, 'school_id', None),
+                        ProjectTeam.project_id == evaluation.project_id,
+                        ProjectTeam.school_id == getattr(evaluation, 'school_id', None),
                     )
                     .all()
                 )
@@ -321,7 +322,7 @@ def preview_grades(
 
         # If evaluation has a project, only use project teams (don't fallback to user.team_number)
         # If no project, use user.team_number
-        if evaluation.project_id:
+        if evaluation and getattr(evaluation, 'project_id', None):
             team_num = project_team_map.get(u.id, None)
         else:
             team_num = getattr(u, "team_number", None)
