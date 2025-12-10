@@ -92,4 +92,18 @@ export const projectTeamService = {
     );
     return response.data;
   },
+
+  /**
+   * Update team assignments for students in a project
+   */
+  async updateProjectStudentTeams(
+    projectId: number,
+    updates: Array<{ student_id: number; team_number: number | null }>
+  ): Promise<{ status: string; updated: number }> {
+    const response = await api.patch<{ status: string; updated: number }>(
+      `/project-teams/projects/${projectId}/student-teams`,
+      updates
+    );
+    return response.data;
+  },
 };

@@ -277,6 +277,65 @@ def get_project_team_members(
     return [_format_member_output(m) for m in members]
 
 
+@router.patch("/projects/{project_id}/student-teams")
+def update_project_student_teams(
+    project_id: int,
+    updates: List[dict],
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """
+    Update team assignments for students in a project
+    
+    Updates the team_number field in project_teams table.
+    Expects a list of updates: [{"student_id": int, "team_number": int | None}, ...]
+    
+    This assigns/reassigns students to project teams by team number.
+    """
+    # Require teacher or admin role
+    require_role(user, ["teacher", "admin"])
+    
+    # Validate project access
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.school_id == user.school_id)
+        .first()
+    )
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+    
+    # Process updates
+    for update in updates:
+        student_id = update.get("student_id")
+        team_number = update.get("team_number")
+        
+        if not student_id:
+            continue
+            
+        # Find the student's project team membership
+        project_team_member = (
+            db.query(ProjectTeamMember)
+            .join(ProjectTeam, ProjectTeam.id == ProjectTeamMember.project_team_id)
+            .filter(
+                ProjectTeamMember.user_id == student_id,
+                ProjectTeam.project_id == project_id,
+                ProjectTeam.school_id == user.school_id,
+            )
+            .first()
+        )
+        
+        if project_team_member:
+            # Update the team_number on the project_team
+            project_team = project_team_member.project_team
+            project_team.team_number = team_number
+    
+    db.commit()
+    
+    return {"status": "success", "updated": len(updates)}
+
+
 @router.post(
     "/projects/{project_id}/teams/clone-from/{source_project_id}",
     response_model=CloneProjectTeamsResponse,

@@ -127,7 +127,7 @@ export default function ClassTeamsPageInner() {
             }))
           );
         } else {
-          // Load all course students with their global team_number
+          // Load all course students but NO team numbers (User.team_number is being phased out)
           const courseStudents = await courseService.getCourseStudents(selectedCourse.id);
           // Filter out inactive students
           const activeStudents = courseStudents.filter((s) => s.status !== "inactive");
@@ -137,7 +137,7 @@ export default function ClassTeamsPageInner() {
               name: s.name,
               email: s.email,
               class_name: s.class_name || "",
-              team_number: s.team_number ?? null,
+              team_number: null, // Don't show User.team_number - it's being phased out
               status: s.status,
             }))
           );
@@ -332,10 +332,17 @@ export default function ClassTeamsPageInner() {
 
       const updates = modifiedStudents.map((s) => ({
         student_id: s.id,
-        team_number: s.team_number === null ? undefined : s.team_number,
+        team_number: s.team_number === null ? null : s.team_number,
       }));
 
-      await courseService.bulkUpdateStudentTeams(selectedCourse.id, updates);
+      // If a project is selected, update project_teams.team_number
+      if (selectedProject) {
+        await projectTeamService.updateProjectStudentTeams(selectedProject.id, updates);
+      } else {
+        // No project selected - don't save (User.team_number is being phased out)
+        showAlert("Selecteer eerst een project om teams te kunnen toewijzen", "error");
+        return;
+      }
       
       showAlert("Wijzigingen automatisch opgeslagen", "success");
       setStudents((prev) => prev.map((s) => ({ ...s, isModified: false })));
@@ -347,6 +354,11 @@ export default function ClassTeamsPageInner() {
   };
 
   const handleCreateTeams = () => {
+    if (!selectedProject) {
+      showAlert("Selecteer eerst een project om teams te maken", "error");
+      return;
+    }
+
     if (students.length === 0) {
       showAlert("Geen studenten om te verdelen", "info");
       return;
@@ -376,6 +388,11 @@ export default function ClassTeamsPageInner() {
   };
 
   const handleAutoBalance = () => {
+    if (!selectedProject) {
+      showAlert("Selecteer eerst een project om teams te verdelen", "error");
+      return;
+    }
+
     const unassigned = students.filter((s) => s.team_number === null);
     if (unassigned.length === 0) {
       showAlert("Geen studenten zonder team", "info");
@@ -506,6 +523,11 @@ export default function ClassTeamsPageInner() {
   };
 
   const handleClearAll = () => {
+    if (!selectedProject) {
+      showAlert("Selecteer eerst een project om teams te wissen", "error");
+      return;
+    }
+
     if (!confirm("Weet je zeker dat je alle teams wilt wissen? Deze actie kan niet ongedaan gemaakt worden.")) {
       return;
     }
@@ -516,25 +538,37 @@ export default function ClassTeamsPageInner() {
   };
 
   const handleExportCSV = () => {
-    const headers = ["Naam", "Email", "Klas", "Teamnummer"];
+    if (!selectedProject) {
+      showAlert("Selecteer eerst een project om teams te exporteren", "error");
+      return;
+    }
+
+    const headers = ["Naam", "Email", "Klas", "Teamnummer", "Project"];
     const rows = students.map((s) => [
       s.name,
       s.email,
       s.class_name,
       s.team_number !== null ? String(s.team_number) : "",
+      selectedProject.title,
     ]);
 
     const csvContent = [headers, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(",")).join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `teams_${selectedCourse?.code || "export"}_${new Date().toISOString().split("T")[0]}.csv`;
+    link.download = `teams_${selectedProject.title}_${new Date().toISOString().split("T")[0]}.csv`;
     link.click();
 
     showAlert("CSV geëxporteerd", "success");
   };
 
   const handleImportCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedProject) {
+      showAlert("Selecteer eerst een project om teams te importeren", "error");
+      event.target.value = ""; // Reset file input
+      return;
+    }
+
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -909,7 +943,7 @@ export default function ClassTeamsPageInner() {
                               </div>
                             ) : (
                               student.team_number !== null ? (
-                                isProjectClosed ? (
+                                isProjectClosed || !selectedProject ? (
                                   <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
                                     TEAM_COLORS[(student.team_number - 1) % TEAM_COLORS.length]
                                   }`}>
@@ -926,7 +960,7 @@ export default function ClassTeamsPageInner() {
                                   </button>
                                 )
                               ) : (
-                                isProjectClosed ? (
+                                isProjectClosed || !selectedProject ? (
                                   <span className="text-gray-400">-</span>
                                 ) : (
                                   <button
