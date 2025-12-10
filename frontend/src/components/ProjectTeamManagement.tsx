@@ -6,48 +6,36 @@
  * - View project-specific teams
  * - Clone teams from previous projects
  * - Create and manage project teams
+ * - Emit selection to parent for roster view
  */
 
 "use client";
 
 import { useState, useEffect } from "react";
 import { ChevronDown, Copy, Plus, Users, Lock, Unlock } from "lucide-react";
-import api from "@/lib/api";
 import { projectService } from "@/services/project.service";
+import { projectTeamService } from "@/services/project-team.service";
 import type { ProjectListItem } from "@/dtos/project.dto";
+import type { ProjectTeam } from "@/dtos/project-team.dto";
 
 // ============ Types ============
 
-type ProjectTeam = {
-  id: number;
-  project_id: number;
-  team_id: number | null;
-  display_name_at_time: string;
-  version: number;
-  members: ProjectTeamMember[];
-  member_count: number;
-  created_at: string;
-  is_locked?: boolean;
-};
-
-type ProjectTeamMember = {
-  id: number;
-  user_id: number;
-  role: string | null;
-  user_name: string | null;
-  user_email: string | null;
-  user_status?: "active" | "inactive";
-};
-
 type ProjectTeamManagementProps = {
   courseId: number;
+  onSelectProject?: (projectId: number | null) => void;
+  onSelectProjectTeam?: (projectTeamId: number | null) => void;
 };
 
 // ============ Component ============
 
-export default function ProjectTeamManagement({ courseId }: ProjectTeamManagementProps) {
+export default function ProjectTeamManagement({ 
+  courseId, 
+  onSelectProject,
+  onSelectProjectTeam 
+}: ProjectTeamManagementProps) {
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [selectedProject, setSelectedProject] = useState<ProjectListItem | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
   const [projectTeams, setProjectTeams] = useState<ProjectTeam[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCloneModal, setShowCloneModal] = useState(false);
@@ -70,7 +58,7 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
         if (data.items && data.items.length > 0 && !selectedProject) {
           const activeProjects = data.items.filter((p) => p.status === "active");
           if (activeProjects.length > 0) {
-            setSelectedProject(activeProjects[0]);
+            handleProjectSelect(activeProjects[0]);
           }
         }
       } catch (error) {
@@ -94,11 +82,8 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
 
       setLoading(true);
       try {
-        const response = await api.get<{ teams: ProjectTeam[] }>(
-          `/project-teams/projects/${selectedProject.id}/teams`
-        );
-
-        setProjectTeams(response.data.teams || []);
+        const response = await projectTeamService.listProjectTeams(selectedProject.id);
+        setProjectTeams(response.teams || []);
       } catch (error) {
         console.error("Error loading project teams:", error);
         showAlert("Kon projectteams niet laden", "error");
@@ -110,26 +95,37 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
     loadProjectTeams();
   }, [selectedProject]);
 
+  const handleProjectSelect = (project: ProjectListItem | null) => {
+    setSelectedProject(project);
+    setSelectedTeamId(null);
+    onSelectProject?.(project?.id ?? null);
+    onSelectProjectTeam?.(null);
+  };
+
+  const handleTeamSelect = (teamId: number) => {
+    setSelectedTeamId(teamId);
+    onSelectProjectTeam?.(teamId);
+  };
+
   // Clone teams from another project
   const handleCloneTeams = async () => {
     if (!selectedProject || !cloneSourceProject) return;
 
     setLoading(true);
     try {
-      const response = await api.post<{ teams_cloned: number; members_cloned: number }>(
-        `/project-teams/projects/${selectedProject.id}/teams/clone-from/${cloneSourceProject.id}`
+      const response = await projectTeamService.cloneProjectTeams(
+        selectedProject.id,
+        cloneSourceProject.id
       );
 
       showAlert(
-        `${response.data.teams_cloned} teams met ${response.data.members_cloned} leden succesvol gekopieerd`,
+        `${response.teams_cloned} teams met ${response.members_cloned} leden succesvol gekopieerd`,
         "success"
       );
 
       // Reload project teams
-      const teamsResponse = await api.get<{ teams: ProjectTeam[] }>(
-        `/project-teams/projects/${selectedProject.id}/teams`
-      );
-      setProjectTeams(teamsResponse.data.teams || []);
+      const teamsResponse = await projectTeamService.listProjectTeams(selectedProject.id);
+      setProjectTeams(teamsResponse.teams || []);
 
       setShowCloneModal(false);
       setCloneSourceProject(null);
@@ -187,7 +183,7 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
             value={selectedProject?.id || ""}
             onChange={(e) => {
               const project = projects.find((p) => p.id === parseInt(e.target.value));
-              setSelectedProject(project || null);
+              handleProjectSelect(project || null);
             }}
             className="w-full h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none pr-10"
           >
@@ -237,52 +233,39 @@ export default function ProjectTeamManagement({ courseId }: ProjectTeamManagemen
           ) : (
             <div className="space-y-3">
               {projectTeams.map((team) => {
-                // Filter out inactive members
-                const activeMembers = team.members.filter((m) => m.user_status !== "inactive");
-                const activeMemberCount = activeMembers.length;
+                const isSelected = selectedTeamId === team.id;
                 
                 return (
-                  <div
+                  <button
                     key={team.id}
-                    className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors"
+                    onClick={() => handleTeamSelect(team.id)}
+                    className={`w-full border rounded-lg p-4 text-left transition-colors ${
+                      isSelected 
+                        ? "border-blue-500 bg-blue-50" 
+                        : "border-gray-200 hover:border-blue-300"
+                    }`}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
                           <h4 className="font-medium text-gray-900 text-sm">
-                            {team.team_id ? `Team ${team.team_id}` : team.display_name_at_time}
+                            {team.display_name_at_time}
                           </h4>
                           {team.is_locked && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-800 text-xs font-medium rounded">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-800 text-xs font-medium rounded" title="Vergrendeld">
                               <Lock className="w-3 h-3" />
-                              Vergrendeld
                             </span>
                           )}
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-gray-500" title={`Versie ${team.version}`}>
                             v{team.version}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-600 mb-3">
-                          {activeMemberCount} {activeMemberCount !== 1 ? "leden" : "lid"}
+                        <p className="text-xs text-gray-600">
+                          {team.member_count} {team.member_count !== 1 ? "leden" : "lid"}
                         </p>
-                        <div className="flex flex-wrap gap-2">
-                          {activeMembers.map((member) => (
-                            <span
-                              key={member.id}
-                              className="inline-flex items-center px-2.5 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-full"
-                            >
-                              {member.user_name}
-                              {member.role && (
-                                <span className="ml-1 text-xs text-gray-500">
-                                  ({member.role})
-                                </span>
-                              )}
-                            </span>
-                          ))}
-                        </div>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>

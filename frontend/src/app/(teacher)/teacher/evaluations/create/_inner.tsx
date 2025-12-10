@@ -12,7 +12,7 @@ type EvalCreatePayload = {
   title: string;
   rubric_id: number;
   course_id: number; // verplicht
-  project_id?: number | null;
+  project_id: number; // Now required, not optional
   settings?: {
     deadlines?: {
       review?: string | null; // "YYYY-MM-DD"
@@ -56,14 +56,17 @@ export default function CreateEvaluationPageInner() {
   const [reflectionDeadline, setReflectionDeadline] = useState("");
 
   // Optionele instellingen
-  const [anonymity, setAnonymity] = useState<"none" | "pseudonym" | "full">(
-    "pseudonym",
-  );
   const [minWords, setMinWords] = useState<number>(50);
   const [minCf, setMinCf] = useState<number>(0.6);
   const [maxCf, setMaxCf] = useState<number>(1.4);
   const [smoothing, setSmoothing] = useState<boolean>(true);
   const [reviewerRating, setReviewerRating] = useState<boolean>(true);
+
+  // Filter projects based on selected course
+  const filteredProjects = useMemo(() => {
+    if (!courseId || courseId === "") return [];
+    return projects.filter(p => p.course_id === Number(courseId));
+  }, [projects, courseId]);
 
   // Rubrics en projects laden
   useEffect(() => {
@@ -84,7 +87,7 @@ export default function CreateEvaluationPageInner() {
         if (!preRubricId && list.length === 1) setRubricId(list[0].id);
         
         setProjects(projRes.items || []);
-      } catch (e: any) {
+      } catch (e: unknown) {
         setError(
           e?.response?.data?.detail || e?.message || "Kon data niet laden",
         );
@@ -121,7 +124,8 @@ export default function CreateEvaluationPageInner() {
     setInfo(null);
 
     if (!title.trim()) return setError("Vul een titel in.");
-    if (!courseId) return setError("Kies een course.");
+    if (!courseId || courseId === "") return setError("Kies een course.");
+    if (!projectId || projectId === "") return setError("Kies een project.");
     if (rubricId === "" || rubricId == null)
       return setError("Kies een rubric.");
 
@@ -131,13 +135,13 @@ export default function CreateEvaluationPageInner() {
         title: title.trim(),
         rubric_id: Number(rubricId),
         course_id: Number(courseId),
-        project_id: projectId ? Number(projectId) : null,
+        project_id: Number(projectId), // Now required
         settings: {
           deadlines: {
             review: toDateOnly(reviewDeadline) || null,
             reflection: toDateOnly(reflectionDeadline) || null,
           },
-          anonymity,
+          anonymity: "pseudonym", // Fixed value
           min_words: Number(minWords) || 0,
           min_cf: Number(minCf) || 0,
           max_cf: Number(maxCf) || 0,
@@ -149,14 +153,15 @@ export default function CreateEvaluationPageInner() {
       await api.post("/evaluations", payload);
       setInfo("Evaluatie aangemaakt ✔");
       router.replace("/teacher/evaluations");
-    } catch (e: any) {
-      const detail = e?.response?.data?.detail;
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: unknown } }; message?: string };
+      const detail = err?.response?.data?.detail;
       setError(
         typeof detail === "string"
           ? detail
           : detail
             ? JSON.stringify(detail)
-            : e?.message || "Aanmaken mislukt",
+            : err?.message || "Aanmaken mislukt",
       );
     } finally {
       setSubmitting(false);
@@ -215,11 +220,16 @@ export default function CreateEvaluationPageInner() {
         {/* Course & Project */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="block text-sm font-medium">Course</label>
+            <label className="block text-sm font-medium">
+              Course <span className="text-red-500">*</span>
+            </label>
             <select
               className="w-full px-3 py-2 border rounded-lg"
               value={courseId === "" ? "" : Number(courseId)}
-              onChange={(e) => setCourseId(e.target.value ? Number(e.target.value) : "")}
+              onChange={(e) => {
+                setCourseId(e.target.value ? Number(e.target.value) : "");
+                setProjectId(""); // Reset project when course changes
+              }}
               required
               disabled={anyLoading}
             >
@@ -236,22 +246,27 @@ export default function CreateEvaluationPageInner() {
           </div>
 
           <div className="space-y-1">
-            <label className="block text-sm font-medium">Project (optioneel)</label>
+            <label className="block text-sm font-medium">
+              Project <span className="text-red-500">*</span>
+            </label>
             <select
               className="w-full px-3 py-2 border rounded-lg"
               value={projectId === "" ? "" : Number(projectId)}
-              onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : "")}
-              disabled={anyLoading}
+              onChange={(e) => {
+                setProjectId(e.target.value ? Number(e.target.value) : "");
+              }}
+              required
+              disabled={anyLoading || !courseId}
             >
-              <option value="">— Geen project —</option>
-              {projects.map((p) => (
+              <option value="">— Kies project —</option>
+              {filteredProjects.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.title}
                 </option>
               ))}
             </select>
             <p className="text-xs text-gray-500">
-              Koppel deze evaluatie aan een bestaand project.
+              Alle teams van dit project worden automatisch gekoppeld aan deze evaluatie.
             </p>
           </div>
         </div>
@@ -310,19 +325,6 @@ export default function CreateEvaluationPageInner() {
 
         {/* Overige instellingen */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="space-y-1">
-            <label className="block text-sm font-medium">Anonimiteit</label>
-            <select
-              className="w-full border rounded-lg px-3 py-2"
-              value={anonymity}
-              onChange={(e) => setAnonymity(e.target.value as any)}
-            >
-              <option value="none">Geen</option>
-              <option value="pseudonym">Pseudoniem (aanbevolen)</option>
-              <option value="full">Volledig anoniem</option>
-            </select>
-          </div>
-
           <div className="space-y-1">
             <label className="block text-sm font-medium">
               Minimum woorden/review

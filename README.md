@@ -18,6 +18,16 @@ Een multi-tenant webapplicatie voor peer evaluaties, projectbeoordelingen en com
 - **Project Assessment**: Teamprojectbeoordelingen door docenten
 - **Competency Monitor**: Competentiemeting met self-assessment en peer feedback
 
+### Project-Based Team Management
+- **Project-specific teams**: Team toewijzingen geïsoleerd per project
+- **Automatic allocation**: Evaluaties worden automatisch gevuld met alle projectteams
+- **Frozen rosters**: Historische teamsamenstelling bewaard voor gesloten evaluaties
+- **No global team numbers**: User.team_number gefaseerd uit - teams zijn project-specifiek
+- **Bulk operations**: Teams maken, auto-verdeel, CSV import/export
+- **Version control**: Team wijzigingen kunnen worden geversioneerd
+
+Zie [docs/architecture.md](docs/architecture.md#project-based-team-management) voor details.
+
 ### Student Evaluatie Wizard
 - **Stap 1**: Zelfbeoordeling
 - **Stap 2**: Peer-reviews
