@@ -15,6 +15,13 @@ export function TeamMembersList({
     );
   }
 
+  // Helper function to safely get initials
+  const getInitials = (name: string): string => {
+    if (!name || name.length === 0) return "??";
+    if (name.length === 1) return name.toUpperCase();
+    return name.substring(0, 2).toUpperCase();
+  };
+
   return (
     <div className="space-y-2">
       {members.map((member) => (
@@ -24,7 +31,7 @@ export function TeamMembersList({
         >
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm font-medium">
-              {member.name.substring(0, 2).toUpperCase()}
+              {getInitials(member.name)}
             </div>
             <div>
               <div className="font-medium text-sm">{member.name}</div>

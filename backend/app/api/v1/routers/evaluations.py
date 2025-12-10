@@ -905,10 +905,20 @@ def get_allocations_with_teams(
     
     # If no project, return allocations without team info
     if not evaluation.project_id:
+        # Get all unique user IDs from allocations
+        user_ids = set()
+        for alloc in allocations_query:
+            user_ids.add(alloc.reviewer_id)
+            user_ids.add(alloc.reviewee_id)
+        
+        # Fetch all users in a single query
+        users = db.query(User).filter(User.id.in_(user_ids)).all()
+        user_map = {u.id: u for u in users}
+        
         result = []
         for alloc in allocations_query:
-            evaluator = db.query(User).filter(User.id == alloc.reviewer_id).first()
-            evaluatee = db.query(User).filter(User.id == alloc.reviewee_id).first()
+            evaluator = user_map.get(alloc.reviewer_id)
+            evaluatee = user_map.get(alloc.reviewee_id)
             
             result.append({
                 "id": alloc.id,
@@ -943,11 +953,21 @@ def get_allocations_with_teams(
         for member in members:
             user_team_map[member.user_id] = team.team_number
     
+    # Get all unique user IDs from allocations
+    user_ids = set()
+    for alloc in allocations_query:
+        user_ids.add(alloc.reviewer_id)
+        user_ids.add(alloc.reviewee_id)
+    
+    # Fetch all users in a single query
+    users = db.query(User).filter(User.id.in_(user_ids)).all()
+    user_map = {u.id: u for u in users}
+    
     # Build result with team info
     result = []
     for alloc in allocations_query:
-        evaluator = db.query(User).filter(User.id == alloc.reviewer_id).first()
-        evaluatee = db.query(User).filter(User.id == alloc.reviewee_id).first()
+        evaluator = user_map.get(alloc.reviewer_id)
+        evaluatee = user_map.get(alloc.reviewee_id)
         
         result.append({
             "id": alloc.id,
