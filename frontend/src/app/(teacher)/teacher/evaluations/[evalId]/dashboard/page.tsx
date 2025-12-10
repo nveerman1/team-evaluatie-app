@@ -249,28 +249,6 @@ export default function EvaluationDashboardPage() {
           <Tile label="Totaal studenten" value={kpis?.students_total ?? 0} />
         </section>
 
-          {/* Teams Overview Card */}
-          {teamContext && teamContext.teams.length > 0 && (
-            <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <h2 className="text-lg font-semibold text-slate-900 mb-4">
-                Teams Overzicht
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {teamContext.teams.map((team) => (
-                  <div key={team.team_id} className="p-4 border border-slate-200 rounded-lg">
-                    <TeamBadge teamNumber={team.team_number} displayName={team.display_name} />
-                    <div className="mt-2 text-sm text-slate-600">
-                      {team.member_count} leden
-                    </div>
-                    <div className="mt-1 text-xs text-slate-500">
-                      {team.members.filter(m => m.is_allocated).length} toegewezen
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
           {/* Student Progress Table */}
           <section className="space-y-3">
             <div className="flex items-center justify-between">

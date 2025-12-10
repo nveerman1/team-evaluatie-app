@@ -14,11 +14,13 @@ export const dashboardService = {
   async getDashboard(
     evaluationId: number,
     includeBreakdown?: boolean,
+    signal?: AbortSignal,
   ): Promise<DashboardResponse> {
     const response = await api.get<DashboardResponse>(
       `/dashboard/evaluation/${evaluationId}`,
       {
         params: includeBreakdown ? { include_breakdown: true } : undefined,
+        signal,
       },
     );
     return response.data;
@@ -27,9 +29,10 @@ export const dashboardService = {
   /**
    * Get flags for an evaluation
    */
-  async getFlags(evaluationId: number): Promise<FlagsResponse> {
+  async getFlags(evaluationId: number, signal?: AbortSignal): Promise<FlagsResponse> {
     const response = await api.get<FlagsResponse>(
       `/flags/evaluation/${evaluationId}`,
+      { signal },
     );
     return response.data;
   },
@@ -37,11 +40,12 @@ export const dashboardService = {
   /**
    * Get grade preview (POST is primair; bij 405 fallback naar GET)
    */
-  async getGradePreview(evaluationId: number): Promise<GradePreviewResponse> {
+  async getGradePreview(evaluationId: number, signal?: AbortSignal): Promise<GradePreviewResponse> {
     try {
       // ✅ Jouw backend: GET met ?evaluation_id=...
       const res = await api.get<GradePreviewResponse>("/grades/preview", {
         params: { evaluation_id: evaluationId },
+        signal,
       });
       return res.data;
     } catch (e: any) {
@@ -49,7 +53,7 @@ export const dashboardService = {
       if (e?.response?.status === 405) {
         const res = await api.post<GradePreviewResponse>("/grades/preview", {
           evaluation_id: evaluationId,
-        });
+        }, { signal });
         return res.data;
       }
       throw e;
@@ -61,9 +65,11 @@ export const dashboardService = {
    */
   async getStudentProgress(
     evaluationId: number,
+    signal?: AbortSignal,
   ): Promise<StudentProgressResponse> {
     const response = await api.get<StudentProgressResponse>(
       `/dashboard/evaluation/${evaluationId}/progress`,
+      { signal },
     );
     return response.data;
   },
@@ -71,9 +77,10 @@ export const dashboardService = {
   /**
    * Get KPIs for an evaluation
    */
-  async getKPIs(evaluationId: number): Promise<StudentProgressKPIs> {
+  async getKPIs(evaluationId: number, signal?: AbortSignal): Promise<StudentProgressKPIs> {
     const response = await api.get<StudentProgressKPIs>(
       `/dashboard/evaluation/${evaluationId}/kpis`,
+      { signal },
     );
     return response.data;
   },
