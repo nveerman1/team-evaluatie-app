@@ -287,10 +287,11 @@ def update_project_student_teams(
     """
     Update team assignments for students in a project
     
-    Updates the team_number field in project_teams table.
+    Assigns students to project teams by team number.
     Expects a list of updates: [{"student_id": int, "team_number": int | None}, ...]
     
-    This assigns/reassigns students to project teams by team number.
+    - If team_number is provided: Creates/updates ProjectTeam and ProjectTeamMember
+    - If team_number is None: Removes student from all project teams
     """
     # Require teacher or admin role
     require_role(user, ["teacher", "admin"])
@@ -313,9 +314,19 @@ def update_project_student_teams(
         
         if not student_id:
             continue
+        
+        # Validate student exists
+        student = db.query(User).filter(
+            User.id == student_id,
+            User.school_id == user.school_id,
+            User.role == "student"
+        ).first()
+        
+        if not student:
+            continue
             
-        # Find the student's project team membership
-        project_team_member = (
+        # Find existing project team membership for this student
+        existing_member = (
             db.query(ProjectTeamMember)
             .join(ProjectTeam, ProjectTeam.id == ProjectTeamMember.project_team_id)
             .filter(
@@ -326,10 +337,47 @@ def update_project_student_teams(
             .first()
         )
         
-        if project_team_member:
-            # Update the team_number on the project_team
-            project_team = project_team_member.project_team
-            project_team.team_number = team_number
+        if team_number is None:
+            # Remove from project team
+            if existing_member:
+                db.delete(existing_member)
+        else:
+            # Assign to team with team_number
+            # Find or create ProjectTeam with this team_number
+            project_team = (
+                db.query(ProjectTeam)
+                .filter(
+                    ProjectTeam.project_id == project_id,
+                    ProjectTeam.team_number == team_number,
+                    ProjectTeam.school_id == user.school_id,
+                )
+                .first()
+            )
+            
+            if not project_team:
+                # Create new project team
+                project_team = ProjectTeam(
+                    school_id=user.school_id,
+                    project_id=project_id,
+                    display_name_at_time=f"Team {team_number}",
+                    team_number=team_number,
+                    version=1,
+                )
+                db.add(project_team)
+                db.flush()  # Get the ID
+            
+            if existing_member:
+                # Move to different team
+                if existing_member.project_team_id != project_team.id:
+                    existing_member.project_team_id = project_team.id
+            else:
+                # Create new membership
+                new_member = ProjectTeamMember(
+                    school_id=user.school_id,
+                    project_team_id=project_team.id,
+                    user_id=student_id,
+                )
+                db.add(new_member)
     
     db.commit()
     

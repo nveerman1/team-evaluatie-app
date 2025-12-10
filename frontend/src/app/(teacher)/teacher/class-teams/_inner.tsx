@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import CourseSelector from "@/components/CourseSelector";
 import { courseService } from "@/services/course.service";
 import { projectService } from "@/services/project.service";
+import { projectTeamService } from "@/services/project-team.service";
 import type { ProjectListItem } from "@/dtos/project.dto";
 
 // ============ Types ============
@@ -113,24 +114,48 @@ export default function ClassTeamsPageInner() {
 
       setLoading(true);
       try {
-        // If a project is selected, load students with project-specific team info
+        // Always load all course students first
+        const courseStudents = await courseService.getCourseStudents(selectedCourse.id);
+        // Filter out inactive students
+        const activeStudents = courseStudents.filter((s) => s.status !== "inactive");
+
         if (selectedProject) {
-          const projectStudents = await projectTeamService.getProjectStudents(selectedProject.id);
-          setStudents(
-            projectStudents.map((s) => ({
-              id: s.id,
-              name: s.name,
-              email: s.email,
-              class_name: s.class_name || "",
-              team_number: s.project_team_number ?? null,
-              status: s.status,
-            }))
-          );
+          // If a project is selected, overlay project-specific team info
+          try {
+            const projectStudents = await projectTeamService.getProjectStudents(selectedProject.id);
+            
+            // Create a map of student_id -> team_number from project students
+            const projectTeamMap = new Map(
+              projectStudents.map(ps => [ps.id, ps.project_team_number])
+            );
+            
+            // Merge: all course students with their project team numbers (if any)
+            setStudents(
+              activeStudents.map((s) => ({
+                id: s.id,
+                name: s.name,
+                email: s.email,
+                class_name: s.class_name || "",
+                team_number: projectTeamMap.get(s.id) ?? null,
+                status: s.status,
+              }))
+            );
+          } catch (error) {
+            // If project students can't be loaded, show all students with no team numbers
+            console.warn("Could not load project team info:", error);
+            setStudents(
+              activeStudents.map((s) => ({
+                id: s.id,
+                name: s.name,
+                email: s.email,
+                class_name: s.class_name || "",
+                team_number: null,
+                status: s.status,
+              }))
+            );
+          }
         } else {
-          // Load all course students but NO team numbers (User.team_number is being phased out)
-          const courseStudents = await courseService.getCourseStudents(selectedCourse.id);
-          // Filter out inactive students
-          const activeStudents = courseStudents.filter((s) => s.status !== "inactive");
+          // No project selected: show all students but NO team numbers
           setStudents(
             activeStudents.map((s) => ({
               id: s.id,
