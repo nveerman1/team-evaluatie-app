@@ -15,11 +15,24 @@ export function TeamMembersList({
     );
   }
 
-  // Helper function to safely get initials
+  // Helper function to safely get initials from full name
   const getInitials = (name: string): string => {
     if (!name || name.length === 0) return "??";
-    if (name.length === 1) return name.toUpperCase();
-    return name.substring(0, 2).toUpperCase();
+    
+    // Split name into words and take first letter of each word
+    const words = name.trim().split(/\s+/);
+    if (words.length === 0) return "??";
+    
+    if (words.length === 1) {
+      // Single word: take first two characters if available
+      const word = words[0];
+      return word.length === 1 
+        ? word.toUpperCase() 
+        : word.substring(0, 2).toUpperCase();
+    }
+    
+    // Multiple words: take first letter of first two words
+    return (words[0][0] + words[1][0]).toUpperCase();
   };
 
   return (

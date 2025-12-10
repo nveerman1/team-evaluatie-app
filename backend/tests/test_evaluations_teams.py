@@ -177,22 +177,30 @@ class TestEvaluationTeamsEndpoints:
         evaluatee.id = 101
         evaluatee.name = "Piet"
         
-        # Setup query chain
+        # Setup query chain with simpler mocking
+        eval_query = Mock()
+        eval_query.filter().first.return_value = evaluation
+        
+        alloc_query = Mock()
+        alloc_query.filter().all.return_value = [allocation]
+        
+        # Mock User.id.in_() for the user query
+        user_query = Mock()
+        user_in_mock = Mock()
+        user_in_mock.in_.return_value = None
+        user_query_filter = Mock()
+        user_query_filter.all.return_value = [evaluator, evaluatee]
+        user_query.filter.return_value = user_query_filter
+        
+        # Setup query to return different mocks based on model
         def query_side_effect(model):
-            query_mock = Mock()
             if model == Evaluation:
-                query_mock.filter().first.return_value = evaluation
+                return eval_query
             elif model == Allocation:
-                query_mock.filter().all.return_value = [allocation]
+                return alloc_query
             elif model == User:
-                # Return different users based on filter
-                def user_filter(*args, **kwargs):
-                    filter_mock = Mock()
-                    # Simple approach: return evaluator first, evaluatee second
-                    filter_mock.first.side_effect = [evaluator, evaluatee]
-                    return filter_mock
-                query_mock.filter = user_filter
-            return query_mock
+                return user_query
+            return Mock()
         
         db.query.side_effect = query_side_effect
         
@@ -203,7 +211,7 @@ class TestEvaluationTeamsEndpoints:
             user=user
         )
         
-        # Verify response
+        # Verify response - with optimized queries, names come from user_map
         assert "allocations" in result
         assert len(result["allocations"]) == 1
         
@@ -259,25 +267,38 @@ class TestEvaluationTeamsEndpoints:
         member2 = Mock(spec=ProjectTeamMember)
         member2.user_id = 101
         
-        # Setup query chain
+        # Setup query chain with simpler mocking
+        eval_query = Mock()
+        eval_query.filter().first.return_value = evaluation
+        
+        alloc_query = Mock()
+        alloc_query.filter().all.return_value = [allocation]
+        
+        team_query = Mock()
+        team_query.filter().all.return_value = [team]
+        
+        member_query = Mock()
+        member_query.filter().all.return_value = [member1, member2]
+        
+        # Mock User.id.in_() for the user query
+        user_query = Mock()
+        user_query_filter = Mock()
+        user_query_filter.all.return_value = [evaluator, evaluatee]
+        user_query.filter.return_value = user_query_filter
+        
+        # Setup query to return different mocks based on model
         def query_side_effect(model):
-            query_mock = Mock()
             if model == Evaluation:
-                query_mock.filter().first.return_value = evaluation
+                return eval_query
             elif model == Allocation:
-                query_mock.filter().all.return_value = [allocation]
+                return alloc_query
             elif model == ProjectTeam:
-                query_mock.filter().all.return_value = [team]
+                return team_query
             elif model == ProjectTeamMember:
-                query_mock.filter().all.return_value = [member1, member2]
+                return member_query
             elif model == User:
-                # Return different users based on filter
-                def user_filter(*args, **kwargs):
-                    filter_mock = Mock()
-                    filter_mock.first.side_effect = [evaluator, evaluatee]
-                    return filter_mock
-                query_mock.filter = user_filter
-            return query_mock
+                return user_query
+            return Mock()
         
         db.query.side_effect = query_side_effect
         
