@@ -238,7 +238,14 @@ export default function ProjectAssessmentsListInner() {
 
                   {/* Team progress bar */}
                   <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-500">
-                    <div className="inline-block h-1 w-20 rounded-full bg-slate-200">
+                    <div 
+                      className="inline-block h-1 w-20 rounded-full bg-slate-200"
+                      role="progressbar"
+                      aria-valuenow={progressPercentage}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={`${readyTeams} van ${totalTeams} teams gereed`}
+                    >
                       <div
                         className="block h-1 rounded-full bg-blue-500 transition-all"
                         style={{ width: `${progressPercentage}%` }}
