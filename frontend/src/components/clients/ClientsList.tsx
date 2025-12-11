@@ -101,13 +101,11 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
     <div className="space-y-4">
       {/* Combined Filters Card */}
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
-        {/* Expertise tags */}
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Expertise-tags</span>
-          </div>
+        {/* Expertise tags - inline with label */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Expertise-tags</span>
           {uniqueTags.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
+            <>
               {uniqueTags.map((tag) => (
                 <button
                   key={tag}
@@ -130,84 +128,70 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
                   ✕ Wis filter
                 </button>
               )}
-            </div>
+            </>
           ) : (
             <p className="text-xs text-slate-500">Geen tags gevonden. Tags worden toegevoegd bij het aanmaken van een opdrachtgever.</p>
           )}
         </div>
 
-        {/* Search and Dropdowns */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between pt-2 border-t border-slate-100">
-          <div className="flex-1 max-w-md">
-            <label className="text-xs font-medium text-slate-600 block mb-1.5">Zoeken</label>
-            <input
-              type="text"
-              placeholder="Zoek op organisatie of contactpersoon..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            />
-          </div>
+        {/* Search and Dropdowns - all in one row */}
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="text"
+            placeholder="Zoek op organisatie of contactpersoon..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1 min-w-[240px] rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
 
-          <div className="flex flex-wrap items-end gap-2">
-            <div>
-              <label className="text-xs font-medium text-slate-600 block mb-1.5">Sector</label>
-              <select
-                value={selectedSector}
-                onChange={(e) => {
-                  setSelectedSector(e.target.value);
-                  setPage(1);
-                }}
-                className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm focus:outline-none"
-              >
-                <option value="Alle">Alle sectoren</option>
-                {uniqueSectors.map((sector) => (
-                  <option key={sector} value={sector}>
-                    {sector}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <select
+            value={selectedSector}
+            onChange={(e) => {
+              setSelectedSector(e.target.value);
+              setPage(1);
+            }}
+            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm focus:outline-none"
+          >
+            <option value="Alle">Alle sectoren</option>
+            {uniqueSectors.map((sector) => (
+              <option key={sector} value={sector}>
+                {sector}
+              </option>
+            ))}
+          </select>
 
-            <div>
-              <label className="text-xs font-medium text-slate-600 block mb-1.5">Niveau</label>
-              <select
-                value={selectedLevel}
-                onChange={(e) => {
-                  setSelectedLevel(e.target.value);
-                  setPage(1);
-                }}
-                className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm focus:outline-none"
-              >
-                <option value="Alle">Alle niveaus</option>
-                <option value="Onderbouw">Onderbouw</option>
-                <option value="Bovenbouw">Bovenbouw</option>
-              </select>
-            </div>
+          <select
+            value={selectedLevel}
+            onChange={(e) => {
+              setSelectedLevel(e.target.value);
+              setPage(1);
+            }}
+            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm focus:outline-none"
+          >
+            <option value="Alle">Alle niveaus</option>
+            <option value="Onderbouw">Onderbouw</option>
+            <option value="Bovenbouw">Bovenbouw</option>
+          </select>
 
-            <div>
-              <label className="text-xs font-medium text-slate-600 block mb-1.5">Status</label>
-              <select
-                value={selectedStatus}
-                onChange={(e) => {
-                  setSelectedStatus(e.target.value);
-                  setPage(1);
-                }}
-                className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm focus:outline-none"
-              >
-                <option value="Alle">Alle statussen</option>
-                <option value="Actief">Actief</option>
-                <option value="Inactief">Inactief</option>
-              </select>
-            </div>
+          <select
+            value={selectedStatus}
+            onChange={(e) => {
+              setSelectedStatus(e.target.value);
+              setPage(1);
+            }}
+            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm focus:outline-none"
+          >
+            <option value="Alle">Alle statussen</option>
+            <option value="Actief">Actief</option>
+            <option value="Inactief">Inactief</option>
+          </select>
 
-            <button
-              onClick={handleExportCSV}
-              className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-            >
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" /> CSV
-            </button>
-          </div>
+          <button
+            onClick={handleExportCSV}
+            className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+          >
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" /> CSV
+          </button>
         </div>
       </section>
 
@@ -239,7 +223,7 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
                 {filteredData.items.map((client) => (
                   <tr key={client.id} className="hover:bg-indigo-50/60 transition">
                     <td className="px-4 py-3">
-                      <Link href={`/teacher/clients/${client.id}`} className="font-medium text-slate-900 hover:underline">
+                      <Link href={`/teacher/clients/${client.id}`} className="font-semibold text-slate-900 hover:underline">
                         {client.organization}
                       </Link>
                     </td>
