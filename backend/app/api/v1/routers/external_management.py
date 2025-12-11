@@ -354,6 +354,9 @@ def get_project_external_status(
         Group.school_id == user.school_id,
     ).all()
     
+    if not course_groups:
+        return []
+    
     course_group_ids = [g.id for g in course_groups]
     
     # Try to get project teams first
