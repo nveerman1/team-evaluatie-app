@@ -387,13 +387,21 @@ def get_project_external_status(
             team_name = f"Team {project_team.team_number}"
             
             # Get external link if exists for this team
-            # Note: ProjectTeamExternal uses group_id + team_number for identification
-            # We search across all groups in the course since external invitations
-            # might be associated with any group in the course
-            link = db.query(ProjectTeamExternal).filter(
-                ProjectTeamExternal.group_id.in_(course_group_ids),
-                ProjectTeamExternal.team_number == project_team.team_number,
-            ).first()
+            # Match by team_number and optionally by the project team's group (team_id)
+            # If project_team.team_id is set, use it for more precise matching
+            # Otherwise, search across all course groups (fallback for teams without group reference)
+            if project_team.team_id:
+                # Precise match: external invitation must be for this specific group
+                link = db.query(ProjectTeamExternal).filter(
+                    ProjectTeamExternal.group_id == project_team.team_id,
+                    ProjectTeamExternal.team_number == project_team.team_number,
+                ).first()
+            else:
+                # Fallback: search across all course groups
+                link = db.query(ProjectTeamExternal).filter(
+                    ProjectTeamExternal.group_id.in_(course_group_ids),
+                    ProjectTeamExternal.team_number == project_team.team_number,
+                ).first()
             
             # Determine the group_id to use for the response
             # Use the external link's group_id if it exists, otherwise use team_id or first course group
