@@ -18,6 +18,8 @@ from app.infra.db.models import (
     Group,
     Project,
     Rubric,
+    ProjectTeam,
+    ProjectTeamMember,
 )
 from app.api.v1.schemas.external_assessments import (
     ExternalEvaluatorCreate,
@@ -329,7 +331,8 @@ def get_project_external_status(
 ):
     """
     Get external assessment status for all teams in a project.
-    Teams are identified by group_id + team_number.
+    Teams are identified by project_teams.team_number.
+    Only returns teams that have external evaluator links (ProjectTeamExternal records).
     """
     require_role(user, ["teacher", "admin"])
     
@@ -342,84 +345,55 @@ def get_project_external_status(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
-    # Get all groups/teams for this project's course
-    if not project.course_id:
-        return []
-    
-    from app.infra.db.models import GroupMember, User as UserModel
-    
-    # Get the group (course/cluster)
-    groups = db.query(Group).filter(
-        Group.course_id == project.course_id,
-        Group.school_id == user.school_id,
+    # Get all project teams for this project
+    project_teams = db.query(ProjectTeam).filter(
+        ProjectTeam.project_id == project_id,
+        ProjectTeam.school_id == user.school_id,
     ).all()
     
-    if not groups:
+    if not project_teams:
         return []
     
     status_list = []
     
-    for group in groups:
-        # Get all users in this group, grouped by team_number
-        members_in_group = db.query(UserModel).join(
-            GroupMember, GroupMember.user_id == UserModel.id
+    for project_team in project_teams:
+        # Get team members from project_team_members
+        team_members_records = db.query(ProjectTeamMember, User).join(
+            User, ProjectTeamMember.user_id == User.id
         ).filter(
-            GroupMember.group_id == group.id,
-            GroupMember.school_id == user.school_id,
-            GroupMember.active == True,
-            UserModel.team_number.isnot(None),
-            UserModel.archived == False,
+            ProjectTeamMember.project_team_id == project_team.id,
+            ProjectTeamMember.school_id == user.school_id,
         ).all()
         
-        # Group users by team_number
-        teams_dict: dict[int, list] = {}
-        for u in members_in_group:
-            if u.team_number is not None:
-                if u.team_number not in teams_dict:
-                    teams_dict[u.team_number] = []
-                teams_dict[u.team_number].append(u)
+        # Build list of member names
+        member_names = ", ".join([u.name or u.email for _, u in team_members_records])
+        team_name = f"Team {project_team.team_number}" if project_team.team_number else project_team.display_name_at_time
         
-        # Build status for each team
-        for team_num in sorted(teams_dict.keys()):
-            team_members = teams_dict[team_num]
-            member_names = ", ".join([m.name or m.email for m in team_members])
-            team_name = f"Team {team_num}"
-            
-            # Get external link if exists for this group + team_number
+        # Get external link if exists for this team
+        # Note: ProjectTeamExternal uses group_id + team_number, so we need to find the matching link
+        link = None
+        if project_team.team_id and project_team.team_number is not None:
             link = db.query(ProjectTeamExternal).filter(
-                ProjectTeamExternal.group_id == group.id,
-                ProjectTeamExternal.team_number == team_num,
+                ProjectTeamExternal.group_id == project_team.team_id,
+                ProjectTeamExternal.team_number == project_team.team_number,
             ).first()
-            
-            if link:
-                evaluator = db.get(ExternalEvaluator, link.external_evaluator_id)
-                status_list.append(
-                    ExternalAssessmentStatus(
-                        team_id=group.id,
-                        team_number=team_num,
-                        team_name=team_name,
-                        members=member_names,
-                        external_evaluator=ExternalEvaluatorOut.model_validate(evaluator) if evaluator else None,
-                        status=link.status,
-                        invitation_sent=(link.status != "NOT_INVITED"),
-                        submitted_at=link.submitted_at,
-                        updated_at=link.updated_at,
-                    )
+        
+        # Only include teams that have external links
+        if link:
+            evaluator = db.get(ExternalEvaluator, link.external_evaluator_id)
+            status_list.append(
+                ExternalAssessmentStatus(
+                    team_id=project_team.team_id or 0,  # Use team_id (group_id) from project_team
+                    team_number=project_team.team_number,
+                    team_name=team_name,
+                    members=member_names,
+                    external_evaluator=ExternalEvaluatorOut.model_validate(evaluator) if evaluator else None,
+                    status=link.status,
+                    invitation_sent=(link.status != "NOT_INVITED"),
+                    submitted_at=link.submitted_at,
+                    updated_at=link.updated_at,
                 )
-            else:
-                status_list.append(
-                    ExternalAssessmentStatus(
-                        team_id=group.id,
-                        team_number=team_num,
-                        team_name=team_name,
-                        members=member_names,
-                        external_evaluator=None,
-                        status="NOT_INVITED",
-                        invitation_sent=False,
-                        submitted_at=None,
-                        updated_at=None,
-                    )
-                )
+            )
     
     return status_list
 
