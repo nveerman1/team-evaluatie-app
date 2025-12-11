@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useNumericEvalId } from "@/utils";
 import { useDashboardData } from "@/hooks";
-import { Tile, Loading, ErrorMessage } from "@/components";
-import { useState, useMemo } from "react";
+import { Tile, Loading, ErrorMessage, TeamBadge, TeamFilter } from "@/components";
+import { useState, useMemo, useEffect } from "react";
 import { dashboardService } from "@/services/dashboard.service";
+import { evaluationService } from "@/services/evaluation.service";
+import type { EvaluationTeamContext } from "@/dtos/evaluation.dto";
 
 function getStatusIcon(status: string): string {
   switch (status) {
@@ -70,13 +72,55 @@ export default function EvaluationDashboardPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [filterType, setFilterType] = useState<FilterType>("all");
 
+  // State for team context
+  const [teamContext, setTeamContext] = useState<EvaluationTeamContext | null>(null);
+  const [selectedTeamFilter, setSelectedTeamFilter] = useState<number | null>(null);
+
+  // Load team context
+  useEffect(() => {
+    if (!evalIdNum) return;
+    
+    const controller = new AbortController();
+    
+    async function loadTeams() {
+      try {
+        const context = await evaluationService.getEvaluationTeams(
+          evalIdNum,
+          controller.signal
+        );
+        setTeamContext(context);
+      } catch (error: any) {
+        if (error.name !== 'AbortError' && error.name !== 'CanceledError' && error.message !== 'canceled') {
+          console.error('Failed to load team context:', error);
+        }
+      }
+    }
+    
+    loadTeams();
+    
+    return () => controller.abort();
+  }, [evalIdNum]);
+
+  // Map user IDs to team numbers for quick lookup
+  const userTeamMap = useMemo(() => {
+    if (!teamContext) return new Map<number, number>();
+    
+    const map = new Map<number, number>();
+    teamContext.teams.forEach((team) => {
+      team.members.forEach((member) => {
+        map.set(member.user_id, team.team_number);
+      });
+    });
+    return map;
+  }, [teamContext]);
+
   // Filtered and sorted students
   const filteredStudents = useMemo(() => {
     if (!studentProgress?.items) return [];
 
     let filtered = [...studentProgress.items];
 
-    // Apply filter
+    // Apply status filter
     if (filterType === "completed") {
       filtered = filtered.filter((s) => s.total_progress_percent === 100);
     } else if (filterType === "partial") {
@@ -85,6 +129,11 @@ export default function EvaluationDashboardPage() {
       );
     } else if (filterType === "not_started") {
       filtered = filtered.filter((s) => s.total_progress_percent === 0);
+    }
+
+    // Apply team filter
+    if (selectedTeamFilter !== null && userTeamMap.size > 0) {
+      filtered = filtered.filter((s) => userTeamMap.get(s.user_id) === selectedTeamFilter);
     }
 
     // Apply sort
@@ -139,7 +188,7 @@ export default function EvaluationDashboardPage() {
     });
 
     return filtered;
-  }, [studentProgress, filterType, sortField, sortDirection]);
+  }, [studentProgress, filterType, selectedTeamFilter, userTeamMap, sortField, sortDirection]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -223,7 +272,7 @@ export default function EvaluationDashboardPage() {
             </div>
 
             {/* Filters */}
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-2 items-center flex-wrap">
               <label className="text-sm font-medium text-slate-600">Filter:</label>
               <button
                 onClick={() => setFilterType("all")}
@@ -265,6 +314,22 @@ export default function EvaluationDashboardPage() {
               >
                 Voltooid
               </button>
+              
+              {/* Team filter */}
+              {teamContext && teamContext.teams.length > 0 && (
+                <>
+                  <div className="mx-2 h-6 w-px bg-slate-300"></div>
+                  <TeamFilter
+                    teams={teamContext.teams.map(t => ({
+                      teamNumber: t.team_number,
+                      displayName: t.display_name,
+                      memberCount: t.member_count,
+                    }))}
+                    selectedTeam={selectedTeamFilter}
+                    onTeamChange={setSelectedTeamFilter}
+                  />
+                </>
+              )}
             </div>
 
             {/* Table */}
@@ -295,6 +360,11 @@ export default function EvaluationDashboardPage() {
                           )}
                         </div>
                       </th>
+                      {teamContext && teamContext.teams.length > 0 && (
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
+                          Team
+                        </th>
+                      )}
                       <th
                         className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
                         onClick={() => handleSort("self_assessment")}
@@ -358,7 +428,7 @@ export default function EvaluationDashboardPage() {
                   <tbody className="divide-y divide-slate-100">
                     {filteredStudents.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
+                        <td colSpan={teamContext && teamContext.teams.length > 0 ? 9 : 8} className="px-4 py-8 text-center text-slate-500">
                           Geen studenten gevonden
                         </td>
                       </tr>
@@ -371,6 +441,15 @@ export default function EvaluationDashboardPage() {
                           <td className="px-5 py-3 text-sm text-slate-600">
                             {student.class_name || "-"}
                           </td>
+                          {teamContext && teamContext.teams.length > 0 && (
+                            <td className="px-4 py-3 text-sm">
+                              {userTeamMap.get(student.user_id) ? (
+                                <TeamBadge teamNumber={userTeamMap.get(student.user_id)!} size="sm" />
+                              ) : (
+                                <span className="text-gray-400 text-xs">Geen team</span>
+                              )}
+                            </td>
+                          )}
                           <td className="px-4 py-3 text-center text-lg">
                             {getStatusIcon(student.self_assessment_status)}
                           </td>

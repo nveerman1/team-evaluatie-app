@@ -21,11 +21,11 @@ def clamp(x: float, lo: float, hi: float) -> float:
 
 # Probeer group/evaluation te importeren; val veilig terug als de modellen anders heten/ontbreken
 try:
-    from app.infra.db.models import GroupMember, Group, Evaluation
+    from app.infra.db.models import GroupMember, Group, Evaluation, ProjectTeam, ProjectTeamMember
 
     HAS_GROUP_MODELS = True
 except Exception:
-    GroupMember = Group = Evaluation = None  # type: ignore
+    GroupMember = Group = Evaluation = ProjectTeam = ProjectTeamMember = None  # type: ignore
     HAS_GROUP_MODELS = False
 
 
@@ -126,6 +126,34 @@ def preview_grades(
         #     .all()
         # )
         students = []
+
+    # 3.5) Fetch evaluation and build project team mapping if evaluation has a project
+    evaluation = None
+    project_team_map: Dict[int, int] = {}
+    if Evaluation and ProjectTeam and ProjectTeamMember:
+        try:
+            evaluation = db.get(Evaluation, evaluation_id)
+            if evaluation and getattr(evaluation, 'project_id', None):
+                project_teams = (
+                    db.query(ProjectTeam)
+                    .filter(
+                        ProjectTeam.project_id == evaluation.project_id,
+                        ProjectTeam.school_id == getattr(evaluation, 'school_id', None),
+                    )
+                    .all()
+                )
+                
+                for team in project_teams:
+                    members = (
+                        db.query(ProjectTeamMember)
+                        .filter(ProjectTeamMember.project_team_id == team.id)
+                        .all()
+                    )
+                    for member in members:
+                        project_team_map[member.user_id] = team.team_number
+        except Exception as e:
+            print(f"[grades.preview] project teams mapping failed: {e!r}")
+            project_team_map = {}
 
     # 4) Defaults (tot je echte berekeningen zijn aangesloten)
     DEFAULT_GROUP = group_grade if group_grade is not None else 7.0
@@ -292,6 +320,13 @@ def preview_grades(
         # afronden en begrenzen (alleen als er een waarde is)
         suggested = clamp(round(suggested_val, 1), 1.0, 10.0) if suggested_val is not None else None
 
+        # If evaluation has a project, only use project teams (don't fallback to user.team_number)
+        # If no project, use user.team_number
+        if evaluation and getattr(evaluation, 'project_id', None):
+            team_num = project_team_map.get(u.id, None)
+        else:
+            team_num = getattr(u, "team_number", None)
+        
         items.append(
             GradePreviewItem(
                 user_id=u.id,
@@ -300,8 +335,7 @@ def preview_grades(
                 gcf=gcf,  # placeholder
                 spr=spr,  # placeholder
                 suggested_grade=suggested,  # 1–10
-                # Gebruik het teamnummer uit admin/students als bron van waarheid
-                team_number=getattr(u, "team_number", None),
+                team_number=team_num,
                 class_name=getattr(u, "class_name", None),
             )
         )

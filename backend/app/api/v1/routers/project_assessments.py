@@ -18,6 +18,8 @@ from app.infra.db.models import (
     GroupMember,
     User,
     Course,
+    ProjectTeam,
+    ProjectTeamMember,
 )
 from app.api.v1.schemas.project_assessments import (
     ProjectAssessmentCreate,
@@ -267,9 +269,27 @@ def get_project_assessment(
         if not is_member:
             raise HTTPException(status_code=403, detail="Not authorized to view this assessment")
         # Students should only see their own team's scores
-        student_info = db.query(User).filter(User.id == user.id).first()
-        if student_info and student_info.team_number:
-            team_number = student_info.team_number
+        # Get team number from project teams if available, otherwise use user.team_number
+        if pa.project_id:
+            # Find team number from project teams
+            project_team_member = db.query(ProjectTeamMember).join(
+                ProjectTeam, ProjectTeam.id == ProjectTeamMember.project_team_id
+            ).filter(
+                ProjectTeam.project_id == pa.project_id,
+                ProjectTeam.school_id == user.school_id,
+                ProjectTeamMember.user_id == user.id,
+            ).first()
+            if project_team_member:
+                team = db.query(ProjectTeam).filter(
+                    ProjectTeam.id == project_team_member.project_team_id
+                ).first()
+                if team:
+                    team_number = team.team_number
+        else:
+            # Fallback to user.team_number for legacy assessments
+            student_info = db.query(User).filter(User.id == user.id).first()
+            if student_info and student_info.team_number:
+                team_number = student_info.team_number
     elif user.role in ("teacher", "admin") and pa.teacher_id != user.id:
         raise HTTPException(status_code=403, detail="Not authorized to view this assessment")
     
@@ -519,24 +539,49 @@ def get_assessment_teams_overview(
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
     
-    # Get all users in this course/cluster, grouped by team_number
-    # Users can be linked via GroupMember OR have the same course through their team
+    # Get all users in this course/cluster
     members_in_group = db.query(User).join(
         GroupMember, GroupMember.user_id == User.id
     ).filter(
         GroupMember.group_id == group.id,
         GroupMember.school_id == user.school_id,
         GroupMember.active == True,
-        User.team_number.isnot(None),  # Only users with team numbers
     ).all()
     
+    # Build user_id -> project team_number mapping if assessment has a project
+    user_team_map: dict[int, int] = {}
+    if pa.project_id:
+        project_teams = (
+            db.query(ProjectTeam)
+            .filter(
+                ProjectTeam.project_id == pa.project_id,
+                ProjectTeam.school_id == user.school_id,
+            )
+            .all()
+        )
+        
+        for team in project_teams:
+            members = (
+                db.query(ProjectTeamMember)
+                .filter(ProjectTeamMember.project_team_id == team.id)
+                .all()
+            )
+            for member in members:
+                user_team_map[member.user_id] = team.team_number
+    
     # Group users by team_number
+    # If assessment has project_id, only use project teams (don't fallback to user.team_number)
+    # If no project_id, use user.team_number
     teams_dict: dict[int, List[User]] = {}
     for u in members_in_group:
-        if u.team_number is not None:
-            if u.team_number not in teams_dict:
-                teams_dict[u.team_number] = []
-            teams_dict[u.team_number].append(u)
+        if pa.project_id:
+            team_num = user_team_map.get(u.id, None)
+        else:
+            team_num = u.team_number
+        if team_num is not None:
+            if team_num not in teams_dict:
+                teams_dict[team_num] = []
+            teams_dict[team_num].append(u)
     
     # Get teacher name for updated_by
     teacher = db.query(User).filter(User.id == pa.teacher_id).first()
@@ -822,24 +867,50 @@ def get_assessment_scores_overview(
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
     
-    # Get all users in this group, grouped by team_number
+    # Get all users in this group
     members_in_group = db.query(User).join(
         GroupMember, GroupMember.user_id == User.id
     ).filter(
         GroupMember.group_id == group.id,
         GroupMember.school_id == user.school_id,
         GroupMember.active == True,
-        User.team_number.isnot(None),
         User.archived == False,
     ).all()
     
+    # Build user_id -> project team_number mapping if assessment has a project
+    user_team_map: dict[int, int] = {}
+    if pa.project_id:
+        project_teams = (
+            db.query(ProjectTeam)
+            .filter(
+                ProjectTeam.project_id == pa.project_id,
+                ProjectTeam.school_id == user.school_id,
+            )
+            .all()
+        )
+        
+        for team in project_teams:
+            members = (
+                db.query(ProjectTeamMember)
+                .filter(ProjectTeamMember.project_team_id == team.id)
+                .all()
+            )
+            for member in members:
+                user_team_map[member.user_id] = team.team_number
+    
     # Group users by team_number
+    # If assessment has project_id, only use project teams (don't fallback to user.team_number)
+    # If no project_id, use user.team_number
     teams_dict: dict[int, List[User]] = {}
     for u in members_in_group:
-        if u.team_number is not None:
-            if u.team_number not in teams_dict:
-                teams_dict[u.team_number] = []
-            teams_dict[u.team_number].append(u)
+        if pa.project_id:
+            team_num = user_team_map.get(u.id, None)
+        else:
+            team_num = u.team_number
+        if team_num is not None:
+            if team_num not in teams_dict:
+                teams_dict[team_num] = []
+            teams_dict[team_num].append(u)
     
     # Get all scores for this assessment
     all_scores = db.query(ProjectAssessmentScore).filter(
@@ -1016,7 +1087,43 @@ def get_assessment_students_overview(
         GroupMember.active == True,
         User.role == "student",
         User.archived == False,
-    ).order_by(User.class_name, User.team_number, User.name).all()
+    ).all()
+    
+    # Build user_id -> project team_number mapping if assessment has a project
+    user_team_map: dict[int, int] = {}
+    if pa.project_id:
+        project_teams = (
+            db.query(ProjectTeam)
+            .filter(
+                ProjectTeam.project_id == pa.project_id,
+                ProjectTeam.school_id == user.school_id,
+            )
+            .all()
+        )
+        
+        for team in project_teams:
+            members = (
+                db.query(ProjectTeamMember)
+                .filter(ProjectTeamMember.project_team_id == team.id)
+                .all()
+            )
+            for member in members:
+                user_team_map[member.user_id] = team.team_number
+    
+    # Sort students by class_name, then by team_number, then by name
+    # If assessment has project_id, only use project teams (don't fallback to user.team_number)
+    # If no project_id, use user.team_number
+    students_with_teams = []
+    for s in students:
+        if pa.project_id:
+            team_num = user_team_map.get(s.id, None)
+        else:
+            team_num = s.team_number
+        students_with_teams.append((s, team_num))
+    
+    # Sort by class_name, team_number, name
+    students_with_teams.sort(key=lambda x: (x[0].class_name or "", x[1] or 0, x[0].name or ""))
+    students = [s[0] for s in students_with_teams]
     
     # Get all scores for this assessment
     all_scores = db.query(ProjectAssessmentScore).filter(
@@ -1052,8 +1159,12 @@ def get_assessment_students_overview(
     deviating_count = 0  # Count students with at least one override
     
     for student in students:
-        # Get scores for this student's team
-        team_num = student.team_number
+        # If assessment has project_id, only use project teams (don't fallback to user.team_number)
+        # If no project_id, use user.team_number
+        if pa.project_id:
+            team_num = user_team_map.get(student.id, None)
+        else:
+            team_num = student.team_number
         team_name = f"Team {team_num}" if team_num else None
         
         # Build criterion scores for this student

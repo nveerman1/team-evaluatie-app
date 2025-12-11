@@ -13,9 +13,10 @@ export const omzaService = {
   /**
    * Get OMZA data for an evaluation
    */
-  async getOmzaData(evaluationId: number): Promise<OmzaDataResponse> {
+  async getOmzaData(evaluationId: number, signal?: AbortSignal): Promise<OmzaDataResponse> {
     const response = await api.get<OmzaDataResponse>(
-      `/omza/evaluations/${evaluationId}/data`
+      `/omza/evaluations/${evaluationId}/data`,
+      { signal }
     );
     return response.data;
   },
@@ -53,12 +54,14 @@ export const omzaService = {
    */
   async getStandardComments(
     evaluationId: number,
+    signal?: AbortSignal,
     category?: string
   ): Promise<StandardComment[]> {
     const response = await api.get<StandardComment[]>(
       `/omza/evaluations/${evaluationId}/standard-comments`,
       {
         params: category ? { category } : undefined,
+        signal,
       }
     );
     return response.data;

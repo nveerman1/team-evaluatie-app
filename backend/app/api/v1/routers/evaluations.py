@@ -23,6 +23,7 @@ from app.infra.db.models import (
     GroupMember,
     FeedbackSummary,
     Grade,
+    Project,
     ProjectTeam,
     ProjectTeamMember,
 )
@@ -767,6 +768,219 @@ def _calc_avg(scores: List[float]) -> float:
     if not scores:
         return 0.0
     return round(sum(scores) / len(scores), 1)
+
+
+@router.get("/{evaluation_id}/teams")
+def get_evaluation_teams(
+    evaluation_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """
+    Get all teams and their members for an evaluation's project.
+    Returns team information with members and their allocation status.
+    """
+    if not user or not getattr(user, "school_id", None):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Niet ingelogd"
+        )
+    
+    # Get evaluation
+    evaluation = (
+        db.query(Evaluation)
+        .filter(
+            Evaluation.id == evaluation_id,
+            Evaluation.school_id == user.school_id
+        )
+        .first()
+    )
+    if not evaluation:
+        raise HTTPException(status_code=404, detail="Evaluation not found")
+    
+    # If evaluation doesn't have a project, return empty
+    if not evaluation.project_id:
+        return {
+            "project_id": None,
+            "project_name": None,
+            "teams": []
+        }
+    
+    # Get project info
+    project = db.query(Project).filter(Project.id == evaluation.project_id).first()
+    project_name = project.title if project else None
+    
+    # Get all teams for the project
+    teams = (
+        db.query(ProjectTeam)
+        .filter(
+            ProjectTeam.project_id == evaluation.project_id,
+            ProjectTeam.school_id == user.school_id
+        )
+        .order_by(ProjectTeam.team_number)
+        .all()
+    )
+    
+    # Get all allocated user IDs for this evaluation
+    allocated_user_ids = {
+        user_id for (user_id,) in db.query(Allocation.reviewee_id)
+        .filter(Allocation.evaluation_id == evaluation_id)
+        .distinct()
+    }
+    
+    result = []
+    for team in teams:
+        # Get team members
+        members_query = (
+            db.query(ProjectTeamMember, User)
+            .join(User, ProjectTeamMember.user_id == User.id)
+            .filter(
+                ProjectTeamMember.project_team_id == team.id,
+                User.archived.is_(False)
+            )
+            .all()
+        )
+        
+        members = [
+            {
+                "user_id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "role": member.role,
+                "is_allocated": user.id in allocated_user_ids,
+            }
+            for member, user in members_query
+        ]
+        
+        result.append({
+            "team_id": team.id,
+            "team_number": team.team_number,
+            "display_name": team.display_name_at_time,
+            "member_count": len(members),
+            "members": members,
+        })
+    
+    return {
+        "project_id": evaluation.project_id,
+        "project_name": project_name,
+        "teams": result,
+    }
+
+
+@router.get("/{evaluation_id}/allocations-with-teams")
+def get_allocations_with_teams(
+    evaluation_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """
+    Get allocations enriched with team information.
+    Shows which team each evaluator and evaluatee belongs to.
+    """
+    if not user or not getattr(user, "school_id", None):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Niet ingelogd"
+        )
+    
+    # Get evaluation
+    evaluation = (
+        db.query(Evaluation)
+        .filter(
+            Evaluation.id == evaluation_id,
+            Evaluation.school_id == user.school_id
+        )
+        .first()
+    )
+    if not evaluation:
+        raise HTTPException(status_code=404, detail="Evaluation not found")
+    
+    # Get allocations
+    allocations_query = (
+        db.query(Allocation)
+        .filter(
+            Allocation.evaluation_id == evaluation_id,
+            Allocation.school_id == user.school_id
+        )
+        .all()
+    )
+    
+    # If no project, return allocations without team info
+    if not evaluation.project_id:
+        # Get all unique user IDs from allocations
+        user_ids = set()
+        for alloc in allocations_query:
+            user_ids.add(alloc.reviewer_id)
+            user_ids.add(alloc.reviewee_id)
+        
+        # Fetch all users in a single query
+        users = db.query(User).filter(User.id.in_(user_ids)).all()
+        user_map = {u.id: u for u in users}
+        
+        result = []
+        for alloc in allocations_query:
+            evaluator = user_map.get(alloc.reviewer_id)
+            evaluatee = user_map.get(alloc.reviewee_id)
+            
+            result.append({
+                "id": alloc.id,
+                "evaluator_id": alloc.reviewer_id,
+                "evaluator_name": evaluator.name if evaluator else None,
+                "evaluator_team": None,
+                "evaluatee_id": alloc.reviewee_id,
+                "evaluatee_name": evaluatee.name if evaluatee else None,
+                "evaluatee_team": None,
+                "status": "completed" if alloc.submitted_at else "pending",
+            })
+        
+        return {"allocations": result}
+    
+    # Build mapping of user_id -> team_number
+    user_team_map = {}
+    teams = (
+        db.query(ProjectTeam)
+        .filter(
+            ProjectTeam.project_id == evaluation.project_id,
+            ProjectTeam.school_id == user.school_id
+        )
+        .all()
+    )
+    
+    for team in teams:
+        members = (
+            db.query(ProjectTeamMember)
+            .filter(ProjectTeamMember.project_team_id == team.id)
+            .all()
+        )
+        for member in members:
+            user_team_map[member.user_id] = team.team_number
+    
+    # Get all unique user IDs from allocations
+    user_ids = set()
+    for alloc in allocations_query:
+        user_ids.add(alloc.reviewer_id)
+        user_ids.add(alloc.reviewee_id)
+    
+    # Fetch all users in a single query
+    users = db.query(User).filter(User.id.in_(user_ids)).all()
+    user_map = {u.id: u for u in users}
+    
+    # Build result with team info
+    result = []
+    for alloc in allocations_query:
+        evaluator = user_map.get(alloc.reviewer_id)
+        evaluatee = user_map.get(alloc.reviewee_id)
+        
+        result.append({
+            "id": alloc.id,
+            "evaluator_id": alloc.reviewer_id,
+            "evaluator_name": evaluator.name if evaluator else None,
+            "evaluator_team": user_team_map.get(alloc.reviewer_id),
+            "evaluatee_id": alloc.reviewee_id,
+            "evaluatee_name": evaluatee.name if evaluatee else None,
+            "evaluatee_team": user_team_map.get(alloc.reviewee_id),
+            "status": "completed" if alloc.submitted_at else "pending",
+        })
+    
+    return {"allocations": result}
 
 
 @router.get("/my/peer-results")

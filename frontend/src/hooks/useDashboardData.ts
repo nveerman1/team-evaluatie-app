@@ -106,16 +106,16 @@ export function useDashboardData(evaluationId?: number): DashboardState {
   const [loading, setLoading] = useState<boolean>(true);
   const [err, setErr] = useState<string | null>(null);
 
-  const fetchAll = useCallback(async (id: number) => {
+  const fetchAll = useCallback(async (id: number, signal?: AbortSignal) => {
     setLoading(true);
     setErr(null);
     try {
       const [dash, flagsRes, prv, progress, kpis] = await Promise.all([
-        dashboardService.getDashboard(id, true), // include_breakdown=true
-        dashboardService.getFlags(id),
-        dashboardService.getGradePreview(id),
-        dashboardService.getStudentProgress(id),
-        dashboardService.getKPIs(id),
+        dashboardService.getDashboard(id, true, signal), // include_breakdown=true
+        dashboardService.getFlags(id, signal),
+        dashboardService.getGradePreview(id, signal),
+        dashboardService.getStudentProgress(id, signal),
+        dashboardService.getKPIs(id, signal),
       ]);
 
       setDashboard(dash as DashboardResponse);
@@ -123,13 +123,16 @@ export function useDashboardData(evaluationId?: number): DashboardState {
       setPreview(prv as GradePreviewResponse);
       setStudentProgress(progress);
       setKpisData(kpis);
-    } catch (e) {
-      setErr(errorMsg(e, "Ophalen van dashboarddata mislukte"));
-      setDashboard(null);
-      setFlagsArr([]);
-      setPreview(null);
-      setStudentProgress(null);
-      setKpisData(null);
+    } catch (e: any) {
+      // Don't set error state for canceled requests
+      if (e.name !== 'AbortError' && e.name !== 'CanceledError' && e.message !== 'canceled') {
+        setErr(errorMsg(e, "Ophalen van dashboarddata mislukte"));
+        setDashboard(null);
+        setFlagsArr([]);
+        setPreview(null);
+        setStudentProgress(null);
+        setKpisData(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -146,7 +149,11 @@ export function useDashboardData(evaluationId?: number): DashboardState {
       setKpisData(null);
       return;
     }
-    void fetchAll(evaluationId);
+    
+    const controller = new AbortController();
+    void fetchAll(evaluationId, controller.signal);
+    
+    return () => controller.abort();
   }, [evaluationId, fetchAll]);
 
   const kpis = useMemo(() => {
@@ -180,7 +187,11 @@ export function useDashboardData(evaluationId?: number): DashboardState {
   }, [dashboard, kpisData]);
 
   const refresh = useCallback(() => {
-    if (evaluationId) void fetchAll(evaluationId);
+    if (evaluationId) {
+      const controller = new AbortController();
+      void fetchAll(evaluationId, controller.signal);
+      return () => controller.abort();
+    }
   }, [evaluationId, fetchAll]);
 
   return {

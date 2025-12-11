@@ -22,6 +22,8 @@ from app.infra.db.models import (
     Group,
     GroupMember,
     LearningObjective,
+    ProjectTeam,
+    ProjectTeamMember,
 )
 from app.api.v1.schemas.project_notes import (
     ProjectNotesContextOut,
@@ -252,8 +254,8 @@ async def get_context(
     )
     context_dict["note_count"] = note_count or 0
 
-    # Get teams for this context (based on course_id)
-    # Teams are formed by grouping students by their team_number field
+    # Get teams for this context (based on project_id if available, otherwise course_id)
+    # Teams are formed either from project teams or by grouping students by their team_number field
     teams = []
     students = []
 
@@ -273,13 +275,39 @@ async def get_context(
             .all()
         )
 
+        # Build user_id -> project team_number mapping if context has a project
+        user_team_map: dict[int, int] = {}
+        if context.project_id:
+            project_teams = (
+                db.query(ProjectTeam)
+                .filter(
+                    ProjectTeam.project_id == context.project_id,
+                    ProjectTeam.school_id == current_user.school_id,
+                )
+                .all()
+            )
+            
+            for team in project_teams:
+                members = (
+                    db.query(ProjectTeamMember)
+                    .filter(ProjectTeamMember.project_team_id == team.id)
+                    .all()
+                )
+                for member in members:
+                    user_team_map[member.user_id] = team.team_number
+
         # Group students by team_number
+        # If context has project_id, only use project teams (don't fallback to user.team_number)
+        # If no project_id, use user.team_number
         teams_dict = {}
         students_without_team = []
         
         for student in all_students:
-            if student.team_number is not None:
+            if context.project_id:
+                team_num = user_team_map.get(student.id, None)
+            else:
                 team_num = student.team_number
+            if team_num is not None:
                 if team_num not in teams_dict:
                     teams_dict[team_num] = []
                 teams_dict[team_num].append(student)

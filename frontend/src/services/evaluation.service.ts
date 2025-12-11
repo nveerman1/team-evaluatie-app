@@ -3,7 +3,9 @@ import {
   EvaluationListResponse,
   Evaluation,
   EvalStatus,
-  EvaluationCreateDto, // zie dtos/evaluation.dto.ts (voeg toe als je 'm nog niet hebt)
+  EvaluationCreateDto,
+  EvaluationTeamContext,
+  AllocationsWithTeamsResponse,
   // Optional: als je een apart update-type hebt
   // EvaluationUpdateDto,
 } from "@/dtos/evaluation.dto";
@@ -77,5 +79,33 @@ export const evaluationService = {
    */
   async deleteEvaluation(id: number): Promise<void> {
     await api.delete(`/evaluations/${id}`);
+  },
+
+  /**
+   * Get teams and members for an evaluation's project
+   */
+  async getEvaluationTeams(
+    evaluationId: number,
+    signal?: AbortSignal
+  ): Promise<EvaluationTeamContext> {
+    const { data } = await api.get<EvaluationTeamContext>(
+      `/evaluations/${evaluationId}/teams`,
+      { signal }
+    );
+    return data;
+  },
+
+  /**
+   * Get allocations enriched with team information
+   */
+  async getAllocationsWithTeams(
+    evaluationId: number,
+    signal?: AbortSignal
+  ): Promise<AllocationsWithTeamsResponse> {
+    const { data } = await api.get<AllocationsWithTeamsResponse>(
+      `/evaluations/${evaluationId}/allocations-with-teams`,
+      { signal }
+    );
+    return data;
   },
 };
