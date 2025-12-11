@@ -141,6 +141,7 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
             placeholder="Zoek op organisatie of contactpersoon..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Zoeken op organisatie of contactpersoon"
             className="flex-1 min-w-[240px] rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
 
@@ -150,6 +151,7 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
               setSelectedSector(e.target.value);
               setPage(1);
             }}
+            aria-label="Sector selecteren"
             className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm focus:outline-none"
           >
             <option value="Alle">Alle sectoren</option>
@@ -166,6 +168,7 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
               setSelectedLevel(e.target.value);
               setPage(1);
             }}
+            aria-label="Niveau selecteren"
             className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm focus:outline-none"
           >
             <option value="Alle">Alle niveaus</option>
@@ -179,6 +182,7 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
               setSelectedStatus(e.target.value);
               setPage(1);
             }}
+            aria-label="Status selecteren"
             className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm focus:outline-none"
           >
             <option value="Alle">Alle statussen</option>
@@ -188,6 +192,7 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
 
           <button
             onClick={handleExportCSV}
+            aria-label="Exporteer naar CSV"
             className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50"
           >
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" /> CSV
