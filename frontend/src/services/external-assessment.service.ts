@@ -116,10 +116,13 @@ export const externalAssessmentService = {
    * Get external assessment status for all teams in a project
    */
   async getProjectExternalStatus(
-    projectId: number
+    projectId: number,
+    groupId?: number
   ): Promise<ExternalAssessmentStatus[]> {
+    const params = groupId ? { group_id: groupId } : {};
     const response = await api.get(
-      `/projects/external-management/projects/${projectId}/external-status`
+      `/projects/external-management/projects/${projectId}/external-status`,
+      { params }
     );
     return response.data;
   },

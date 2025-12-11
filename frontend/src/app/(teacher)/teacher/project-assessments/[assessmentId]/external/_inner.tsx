@@ -67,7 +67,8 @@ export default function ExternalAssessmentPageInner() {
         try {
           const statuses =
             await externalAssessmentService.getProjectExternalStatus(
-              overview.assessment.project_id
+              overview.assessment.project_id,
+              overview.assessment.group_id  // Pass group_id to filter by this assessment
             );
           setExternalStatuses(statuses);
         } catch (statusErr) {

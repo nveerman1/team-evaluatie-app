@@ -326,13 +326,18 @@ def create_bulk_invitations(
 @router.get("/projects/{project_id}/external-status", response_model=List[ExternalAssessmentStatus])
 def get_project_external_status(
     project_id: int,
+    group_id: Optional[int] = None,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
     """
     Get external assessment status for all teams in a project.
     Teams are identified by project_teams.team_number.
-    External invitations are matched across all groups in the project's course.
+    External invitations are matched by group_id to scope to specific assessments.
+    
+    Args:
+        project_id: The project ID
+        group_id: Optional group_id to filter external invitations for a specific assessment
     """
     require_role(user, ["teacher", "admin"])
     
@@ -358,6 +363,14 @@ def get_project_external_status(
         return []
     
     course_group_ids = [g.id for g in course_groups]
+    
+    # If group_id is provided, filter to only that group (for assessment-specific filtering)
+    if group_id:
+        if group_id not in course_group_ids:
+            raise HTTPException(status_code=400, detail="Group does not belong to this project's course")
+        filter_group_ids = [group_id]
+    else:
+        filter_group_ids = course_group_ids
     
     # Try to get project teams first
     project_teams = db.query(ProjectTeam).filter(
@@ -387,25 +400,25 @@ def get_project_external_status(
             team_name = f"Team {project_team.team_number}"
             
             # Get external link if exists for this team
-            # Match by team_number and optionally by the project team's group (team_id)
-            # If project_team.team_id is set, use it for more precise matching
-            # Otherwise, search across all course groups (fallback for teams without group reference)
-            if project_team.team_id:
+            # Match by team_number and filter by the specified group(s)
+            # If project_team.team_id is set and in filter_group_ids, use it for precise matching
+            # Otherwise, search across filter_group_ids
+            if project_team.team_id and project_team.team_id in filter_group_ids:
                 # Precise match: external invitation must be for this specific group
                 link = db.query(ProjectTeamExternal).filter(
                     ProjectTeamExternal.group_id == project_team.team_id,
                     ProjectTeamExternal.team_number == project_team.team_number,
                 ).first()
             else:
-                # Fallback: search across all course groups
+                # Search across filtered groups
                 link = db.query(ProjectTeamExternal).filter(
-                    ProjectTeamExternal.group_id.in_(course_group_ids),
+                    ProjectTeamExternal.group_id.in_(filter_group_ids),
                     ProjectTeamExternal.team_number == project_team.team_number,
                 ).first()
             
             # Determine the group_id to use for the response
-            # Use the external link's group_id if it exists, otherwise use team_id or first course group
-            response_group_id = link.group_id if link else (project_team.team_id or course_group_ids[0] if course_group_ids else 0)
+            # Use the external link's group_id if it exists, otherwise use team_id or first filtered group
+            response_group_id = link.group_id if link else (project_team.team_id or filter_group_ids[0] if filter_group_ids else 0)
             
             # Include all teams that have team_number
             if link:
@@ -442,9 +455,9 @@ def get_project_external_status(
         # Fallback: No project teams exist yet, get teams from external invitations
         # This ensures external invitations show up even if project teams haven't been created
         
-        # Get all external invitations for groups in this course
+        # Get all external invitations for filtered groups
         external_links = db.query(ProjectTeamExternal).filter(
-            ProjectTeamExternal.group_id.in_(course_group_ids),
+            ProjectTeamExternal.group_id.in_(filter_group_ids),
             ProjectTeamExternal.school_id == user.school_id,
         ).all()
         
@@ -463,7 +476,7 @@ def get_project_external_status(
                 ProjectTeam.school_id == user.school_id,
             ).filter(
                 (ProjectTeam.project_id == project_id) |
-                (ProjectTeam.team_id.in_(course_group_ids))
+                (ProjectTeam.team_id.in_(filter_group_ids))
             ).first()
             
             if potential_team:
