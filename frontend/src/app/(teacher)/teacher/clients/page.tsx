@@ -250,162 +250,151 @@ function CommunicationTab() {
   }, []);
 
   return (
-    <>
-      {/* Mail selection block */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-900">Mail naar opdrachtgevers</h2>
-          <p className="text-sm text-slate-600 mt-1">
-            Kies schooljaar, niveau en een template om meerdere opdrachtgevers tegelijk te mailen.
+    <div className="flex flex-col gap-4">
+      {/* Bulk communicatie - Two column layout */}
+      <div className="grid gap-4 lg:grid-cols-[3fr,2fr]">
+        {/* Left column: Mail naar opdrachtgevers */}
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+          <h2 className="text-sm font-semibold text-slate-900">Mail naar opdrachtgevers</h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Kies een schooljaar, niveau en mailtemplate om meerdere opdrachtgevers tegelijk te mailen.
           </p>
-        </div>
 
-        {/* Filter row */}
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="text-xs font-medium text-slate-600 block mb-1.5">Schooljaar</label>
-            <select 
-              value={schoolYear}
-              onChange={(e) => setSchoolYear(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-            >
-              <option>2025-2026</option>
-              <option>2024-2025</option>
-              <option>2023-2024</option>
-            </select>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <div className="flex flex-col gap-1 text-xs">
+              <span className="font-medium text-slate-600">Schooljaar</span>
+              <select
+                value={schoolYear}
+                onChange={(e) => setSchoolYear(e.target.value)}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 shadow-sm focus:outline-none"
+              >
+                <option>2025-2026</option>
+                <option>2024-2025</option>
+                <option>2023-2024</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1 text-xs">
+              <span className="font-medium text-slate-600">Niveau</span>
+              <select
+                value={level}
+                onChange={(e) => setLevel(e.target.value)}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 shadow-sm focus:outline-none"
+              >
+                <option>Alle</option>
+                <option>Onderbouw</option>
+                <option>Bovenbouw</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1 text-xs">
+              <span className="font-medium text-slate-600">Template</span>
+              <select
+                value={template}
+                onChange={(e) => setTemplate(e.target.value)}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 shadow-sm focus:outline-none"
+                disabled={templatesLoading}
+              >
+                {templatesLoading ? (
+                  <option>Laden...</option>
+                ) : mailTemplates.length > 0 ? (
+                  mailTemplates.map((t) => (
+                    <option key={t.id} value={t.type}>{t.name}</option>
+                  ))
+                ) : (
+                  <>
+                    <option value="opvolgmail">Opvolgmail volgend schooljaar</option>
+                    <option value="startproject">Startproject-mail</option>
+                    <option value="tussenpresentatie">Uitnodiging tussenpresentatie</option>
+                    <option value="eindpresentatie">Uitnodiging eindpresentatie</option>
+                    <option value="bedankmail">Bedankmail</option>
+                  </>
+                )}
+              </select>
+            </div>
           </div>
-          <div className="flex-1">
-            <label className="text-xs font-medium text-slate-600 block mb-1.5">Niveau</label>
-            <select 
-              value={level}
-              onChange={(e) => setLevel(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-            >
-              <option>Alle</option>
-              <option>Onderbouw</option>
-              <option>Bovenbouw</option>
-            </select>
-          </div>
-          <div className="flex-1">
-            <label className="text-xs font-medium text-slate-600 block mb-1.5">Template</label>
-            <select 
-              value={template}
-              onChange={(e) => setTemplate(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-              disabled={templatesLoading}
-            >
-              {templatesLoading ? (
-                <option>Laden...</option>
-              ) : mailTemplates.length > 0 ? (
-                mailTemplates.map((t) => (
-                  <option key={t.id} value={t.type}>{t.name}</option>
-                ))
+
+          <div className="mt-4 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-100">
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <p className="font-medium text-slate-800">Geselecteerde opdrachtgevers</p>
+              <button
+                onClick={toggleAll}
+                className="text-xs font-medium text-indigo-600 hover:underline"
+              >
+                {selectedClients.length === filteredClients.length ? "Deselecteer alles" : "Selecteer alles"}
+              </button>
+            </div>
+            <div className="mt-3 flex flex-col gap-2 text-sm max-h-64 overflow-y-auto">
+              {clientsLoading ? (
+                <div className="p-4 text-center text-slate-500 text-sm">
+                  Laden...
+                </div>
+              ) : filteredClients.length === 0 ? (
+                <div className="p-4 text-center text-slate-500 text-sm">
+                  Geen opdrachtgevers gevonden die aan de criteria voldoen.
+                </div>
               ) : (
-                <>
-                  <option value="opvolgmail">Opvolgmail volgend schooljaar</option>
-                  <option value="startproject">Startproject-mail</option>
-                  <option value="tussenpresentatie">Uitnodiging tussenpresentatie</option>
-                  <option value="eindpresentatie">Uitnodiging eindpresentatie</option>
-                  <option value="bedankmail">Bedankmail</option>
-                </>
+                filteredClients.map((client) => (
+                  <label key={client.id} className="flex items-start gap-2 text-xs text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={selectedClients.includes(client.id)}
+                      onChange={() => toggleClient(client.id)}
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span>
+                      <span className="font-medium">{client.organization}</span>
+                      <span className="text-slate-400"> · {client.email}</span>
+                      <span className="block text-[11px] text-slate-500">
+                        {client.level} · {client.projects_this_year || 0} projecten totaal
+                      </span>
+                    </span>
+                  </label>
+                ))
               )}
-            </select>
-          </div>
-        </div>
-
-        {/* Client selection list */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-medium text-slate-600">
-              Opdrachtgevers ({filteredClients.length} gevonden)
-            </label>
-            <button 
-              onClick={toggleAll}
-              className="text-xs text-sky-600 hover:text-sky-700 font-medium"
-            >
-              {selectedClients.length === filteredClients.length ? "Deselecteer alles" : "Selecteer alles"}
-            </button>
+            </div>
           </div>
 
-          <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 max-h-80 overflow-y-auto">
-            {clientsLoading ? (
-              <div className="p-4 text-center text-slate-500 text-sm">
-                Laden...
-              </div>
-            ) : filteredClients.length === 0 ? (
-              <div className="p-4 text-center text-slate-500 text-sm">
-                Geen opdrachtgevers gevonden die aan de criteria voldoen.
-              </div>
-            ) : (
-              filteredClients.map((client) => (
-                <label 
-                  key={client.id}
-                  className="flex items-center gap-3 p-3 hover:bg-slate-50 cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedClients.includes(client.id)}
-                    onChange={() => toggleClient(client.id)}
-                    className="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
-                  />
-                  <div className="flex-1">
-                    <div className="text-sm font-medium text-slate-900">{client.organization}</div>
-                    <div className="text-xs text-slate-500">{client.email || 'Geen email'}</div>
-                  </div>
-                  <div className="text-xs text-slate-500">{client.level || 'N/A'}</div>
-                </label>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Bottom bar */}
-        <div className="bg-sky-50 border border-sky-200 rounded-lg p-4">
-          <button 
+          <button
             onClick={handleSendBulkEmail}
             disabled={selectedClients.length === 0}
-            className={`w-full rounded-lg px-4 py-3 text-sm font-semibold shadow-sm ${
+            className={`mt-4 inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-medium shadow-sm transition ${
               selectedClients.length > 0
-                ? 'bg-sky-600 text-white hover:bg-sky-700'
-                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                : "bg-slate-200 text-slate-400 cursor-not-allowed"
             }`}
           >
-            📧 Open mail in Outlook voor geselecteerde opdrachtgevers ({selectedClients.length})
+            Mail versturen via Outlook ({selectedClients.length})
           </button>
         </div>
-      </section>
 
-      {/* Recent communications */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">Laatste communicatie</h2>
-        {communicationsLoading ? (
-          <div className="text-center py-8 text-slate-500">Laden...</div>
-        ) : recentCommunications.length > 0 ? (
-          <div className="space-y-3">
-            {recentCommunications.map((comm) => (
-              <div 
-                key={comm.id}
-                className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50"
-              >
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-slate-900">{comm.title}</div>
-                  <div className="text-xs text-slate-500 mt-0.5">
-                    {comm.organization} · {comm.date}
-                  </div>
-                </div>
-                <Link
-                  href={`/teacher/clients/${comm.client_id}`}
-                  className="text-xs font-medium text-sky-600 hover:text-sky-700 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-white"
-                >
-                  Opdrachtgever openen
-                </Link>
-              </div>
-            ))}
+        {/* Right column: Laatste communicatie log */}
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-slate-900">Laatste communicatie</h3>
+            <button className="text-xs font-medium text-indigo-600 hover:underline">Nieuwe notitie</button>
           </div>
-        ) : (
-          <div className="text-center py-8 text-slate-500">Nog geen communicatie gelogd</div>
-        )}
-      </section>
-    </>
+          {communicationsLoading ? (
+            <div className="text-center py-8 text-slate-500 text-sm">Laden...</div>
+          ) : recentCommunications.length > 0 ? (
+            <ul className="space-y-3 text-sm">
+              {recentCommunications.map((comm) => (
+                <li
+                  key={comm.id}
+                  className="rounded-xl bg-white/80 p-3 shadow-sm ring-1 ring-slate-100"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-medium text-slate-700">Email</p>
+                    <p className="text-[11px] text-slate-400">{comm.date}</p>
+                  </div>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{comm.title}</p>
+                  <p className="text-xs text-slate-500">{comm.organization}</p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="text-center py-8 text-slate-500 text-sm">Nog geen communicatie gelogd</div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

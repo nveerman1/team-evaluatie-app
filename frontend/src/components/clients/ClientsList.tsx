@@ -103,17 +103,19 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
         {/* Expertise tags */}
         <div>
-          <h3 className="text-sm font-semibold text-slate-800 mb-3">Expertise-tags</h3>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Expertise-tags</span>
+          </div>
           {uniqueTags.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {uniqueTags.map((tag) => (
                 <button
                   key={tag}
                   onClick={() => handleTagClick(tag)}
-                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium cursor-pointer transition-colors ${
+                  className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-colors ring-1 ${
                     selectedTag === tag
-                      ? "bg-purple-500 border-purple-600 text-white"
-                      : "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
+                      ? "bg-violet-500 text-white ring-violet-600"
+                      : "bg-violet-50 text-violet-700 ring-violet-100 hover:bg-violet-100"
                   }`}
                 >
                   {tag}
@@ -143,7 +145,7 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
               placeholder="Zoek op organisatie of contactpersoon..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+              className="w-full rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
           </div>
 
@@ -156,7 +158,7 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
                   setSelectedSector(e.target.value);
                   setPage(1);
                 }}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm focus:outline-none"
               >
                 <option value="Alle">Alle sectoren</option>
                 {uniqueSectors.map((sector) => (
@@ -175,7 +177,7 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
                   setSelectedLevel(e.target.value);
                   setPage(1);
                 }}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm focus:outline-none"
               >
                 <option value="Alle">Alle niveaus</option>
                 <option value="Onderbouw">Onderbouw</option>
@@ -191,7 +193,7 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
                   setSelectedStatus(e.target.value);
                   setPage(1);
                 }}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm focus:outline-none"
               >
                 <option value="Alle">Alle statussen</option>
                 <option value="Actief">Actief</option>
@@ -201,9 +203,9 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
 
             <button
               onClick={handleExportCSV}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50"
             >
-              📊 CSV
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" /> CSV
             </button>
           </div>
         </div>
@@ -220,41 +222,39 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
               <span className="text-slate-500"> (van {data.total} totaal)</span>
             )}
           </div>
-          <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <table className="min-w-full divide-y divide-slate-200 text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-4 py-3">Organisatie</th>
-                  <th className="px-4 py-3">Contact</th>
-                  <th className="px-4 py-3">Email</th>
-                  <th className="px-4 py-3">Sector</th>
-                  <th className="px-4 py-3">Niveau</th>
-                  <th className="px-4 py-3">Projecten</th>
-                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3 text-left font-medium">Organisatie</th>
+                  <th className="px-4 py-3 text-left font-medium">Contact</th>
+                  <th className="px-4 py-3 text-left font-medium">Email</th>
+                  <th className="px-4 py-3 text-left font-medium">Sector</th>
+                  <th className="px-4 py-3 text-left font-medium">Niveau</th>
+                  <th className="px-4 py-3 text-left font-medium">Projecten</th>
+                  <th className="px-4 py-3 text-left font-medium">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredData.items.map((client) => (
-                  <tr key={client.id} className="hover:bg-slate-50">
+                  <tr key={client.id} className="hover:bg-indigo-50/60 transition">
                     <td className="px-4 py-3">
-                      <Link href={`/teacher/clients/${client.id}`} className="font-medium text-sky-700 hover:underline">
+                      <Link href={`/teacher/clients/${client.id}`} className="font-medium text-slate-900 hover:underline">
                         {client.organization}
                       </Link>
-                      {client.tags && client.tags.length > 0 && (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {client.tags.map((tag, idx) => (
-                            <span key={idx} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">{tag}</span>
-                          ))}
-                        </div>
-                      )}
                     </td>
-                    <td className="px-4 py-3">{client.contact_name || "-"}</td>
-                    <td className="px-4 py-3">{client.email || "-"}</td>
-                    <td className="px-4 py-3">{client.sector || "-"}</td>
-                    <td className="px-4 py-3">{client.level || "-"}</td>
-                    <td className="px-4 py-3 text-center">{client.projects_this_year}</td>
+                    <td className="px-4 py-3 text-sm text-slate-700">{client.contact_name || "-"}</td>
+                    <td className="px-4 py-3 text-xs text-slate-500">{client.email || "-"}</td>
+                    <td className="px-4 py-3 text-sm text-slate-700">{client.sector || "-"}</td>
+                    <td className="px-4 py-3 text-sm text-slate-700">{client.level || "-"}</td>
+                    <td className="px-4 py-3 text-sm text-slate-700">{client.projects_this_year}</td>
                     <td className="px-4 py-3">
-                      <span className={`rounded-full px-2 py-0.5 text-xs ${client.active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100"}`}>
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ${
+                        client.active 
+                          ? "bg-emerald-100 text-emerald-700 ring-emerald-200" 
+                          : "bg-slate-100 text-slate-700 ring-slate-200"
+                      }`}>
+                        <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
                         {client.status}
                       </span>
                     </td>
