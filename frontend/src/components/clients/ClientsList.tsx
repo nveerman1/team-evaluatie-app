@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useClients } from "@/hooks/useClients";
 import { clientService } from "@/services";
@@ -28,6 +28,13 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
     tags: selectedTag,
     refreshKey,
   });
+
+  // Reset page to 1 when search query changes
+  useEffect(() => {
+    if (searchQuery) {
+      setPage(1);
+    }
+  }, [searchQuery]);
 
   const handleExportCSV = async () => {
     try {
@@ -64,25 +71,31 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
     }
   };
 
-  // Get unique tags from all clients in the current dataset
-  const uniqueTags = data?.items
-    ? Array.from(new Set(data.items.flatMap((client) => client.tags || [])))
-        .sort()
-    : [];
+  // Memoize unique tags calculation to avoid unnecessary recalculations
+  const uniqueTags = useMemo(() => {
+    return data?.items
+      ? Array.from(new Set(data.items.flatMap((client) => client.tags || [])))
+          .sort()
+      : [];
+  }, [data]);
 
-  // Get unique sectors from all clients for the dropdown (client-side filtering)
-  const uniqueSectors = data?.items
-    ? Array.from(new Set(data.items.map((client) => client.sector).filter((s): s is string => !!s)))
-        .sort()
-    : [];
+  // Memoize unique sectors calculation to avoid unnecessary recalculations
+  const uniqueSectors = useMemo(() => {
+    return data?.items
+      ? Array.from(new Set(data.items.map((client) => client.sector).filter((s): s is string => !!s)))
+          .sort()
+      : [];
+  }, [data]);
 
-  // Apply client-side sector filter
-  const filteredData = data ? {
-    ...data,
-    items: selectedSector !== "Alle" 
-      ? data.items.filter(client => client.sector === selectedSector)
-      : data.items
-  } : null;
+  // Memoize filtered data to avoid unnecessary recalculations
+  const filteredData = useMemo(() => {
+    return data ? {
+      ...data,
+      items: selectedSector !== "Alle" 
+        ? data.items.filter(client => client.sector === selectedSector)
+        : data.items
+    } : null;
+  }, [data, selectedSector]);
 
   return (
     <div className="space-y-4">
