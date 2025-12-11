@@ -231,7 +231,7 @@ export default function ExternalAssessmentPageInner() {
         <div className="flex flex-wrap gap-3 items-center">
           <input
             className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Zoek op team, lid of opdrachtgever..."
+            placeholder="Zoek op team, lid of externe beoordelaar..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -281,7 +281,7 @@ export default function ExternalAssessmentPageInner() {
                     Leden
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
-                    Opdrachtgever
+                    Externe beoordelaar
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
                     Status extern
@@ -395,7 +395,7 @@ export default function ExternalAssessmentPageInner() {
                     {/* Evaluator Info */}
                     <div className="bg-gray-50 rounded-lg p-4">
                       <h3 className="text-sm font-medium text-gray-700 mb-2">
-                        Opdrachtgever
+                        Externe beoordelaar
                       </h3>
                       <div className="text-gray-900">
                         {detailData.external_evaluator.name}
