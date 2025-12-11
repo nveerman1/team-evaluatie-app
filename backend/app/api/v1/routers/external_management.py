@@ -20,6 +20,7 @@ from app.infra.db.models import (
     Rubric,
     ProjectTeam,
     ProjectTeamMember,
+    ProjectAssessment,
 )
 from app.api.v1.schemas.external_assessments import (
     ExternalEvaluatorCreate,
