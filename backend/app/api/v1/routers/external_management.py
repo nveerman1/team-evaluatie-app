@@ -358,15 +358,15 @@ def get_project_external_status(
     
     for project_team in project_teams:
         # Get team members from project_team_members
-        team_members_records = db.query(ProjectTeamMember, User).join(
-            User, ProjectTeamMember.user_id == User.id
+        team_members_records = db.query(User).join(
+            ProjectTeamMember, ProjectTeamMember.user_id == User.id
         ).filter(
             ProjectTeamMember.project_team_id == project_team.id,
             ProjectTeamMember.school_id == user.school_id,
         ).all()
         
         # Build list of member names
-        member_names = ", ".join([u.name or u.email for _, u in team_members_records])
+        member_names = ", ".join([u.name or u.email for u in team_members_records])
         team_name = f"Team {project_team.team_number}" if project_team.team_number else project_team.display_name_at_time
         
         # Get external link if exists for this team
@@ -380,10 +380,14 @@ def get_project_external_status(
         
         # Only include teams that have external links
         if link:
+            # team_id should always be present when a link exists, but check to be safe
+            if not project_team.team_id:
+                continue  # Skip teams without team_id (shouldn't happen in practice)
+            
             evaluator = db.get(ExternalEvaluator, link.external_evaluator_id)
             status_list.append(
                 ExternalAssessmentStatus(
-                    team_id=project_team.team_id or 0,  # Use team_id (group_id) from project_team
+                    team_id=project_team.team_id,
                     team_number=project_team.team_number,
                     team_name=team_name,
                     members=member_names,
