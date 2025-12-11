@@ -357,8 +357,12 @@ def get_project_external_status(
     status_list = []
     
     for project_team in project_teams:
-        # Skip teams without team_id (group reference) as they can't have external links
+        # Skip teams without team_id (group reference) as external invitations require a group
         if not project_team.team_id:
+            continue
+        
+        # Skip teams without team_number as external invitations use team_number for identification
+        if project_team.team_number is None:
             continue
         
         # Get team members from project_team_members
@@ -374,15 +378,14 @@ def get_project_external_status(
         team_name = f"Team {project_team.team_number}" if project_team.team_number else project_team.display_name_at_time
         
         # Get external link if exists for this team
-        # Note: ProjectTeamExternal uses group_id + team_number, so we need to find the matching link
-        link = None
-        if project_team.team_number is not None:
-            link = db.query(ProjectTeamExternal).filter(
-                ProjectTeamExternal.group_id == project_team.team_id,
-                ProjectTeamExternal.team_number == project_team.team_number,
-            ).first()
+        # Note: ProjectTeamExternal uses group_id + team_number for identification
+        # Both team_id and team_number are guaranteed to be non-null at this point
+        link = db.query(ProjectTeamExternal).filter(
+            ProjectTeamExternal.group_id == project_team.team_id,
+            ProjectTeamExternal.team_number == project_team.team_number,
+        ).first()
         
-        # Include team regardless of whether it has an external link
+        # Include all teams that have both team_id and team_number
         if link:
             evaluator = db.get(ExternalEvaluator, link.external_evaluator_id)
             status_list.append(
