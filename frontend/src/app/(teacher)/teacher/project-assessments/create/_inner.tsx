@@ -49,7 +49,7 @@ export default function CreateProjectAssessmentInner() {
   useEffect(() => {
     if (filteredGroups.length === 1) {
       setGroupId(filteredGroups[0].id);
-    } else if (filteredGroups.length === 0) {
+    } else {
       setGroupId("");
     }
   }, [filteredGroups]);
@@ -161,7 +161,7 @@ export default function CreateProjectAssessmentInner() {
             </label>
             <select
               className="w-full px-3 py-2 border rounded-lg"
-              value={courseId === "" ? "" : Number(courseId)}
+              value={courseId}
               onChange={(e) => {
                 setCourseId(e.target.value ? Number(e.target.value) : "");
                 setProjectId(""); // Reset project when course changes
@@ -188,7 +188,7 @@ export default function CreateProjectAssessmentInner() {
             </label>
             <select
               className="w-full px-3 py-2 border rounded-lg"
-              value={projectId === "" ? "" : Number(projectId)}
+              value={projectId}
               onChange={(e) => {
                 setProjectId(e.target.value ? Number(e.target.value) : "");
               }}
