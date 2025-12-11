@@ -483,8 +483,6 @@ def get_project_external_status(
                 )
     
     return status_list
-    
-    return status_list
 
 
 @router.get("/groups/{group_id}/external-advisory")
