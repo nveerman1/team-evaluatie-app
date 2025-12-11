@@ -44,7 +44,7 @@ function buildMailto({ to, bcc, subject, body }: { to?: string; bcc?: string; su
 }
 
 export default function ClientsPage() {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "running" | "list" | "communication">("dashboard");
+  const [activeTab, setActiveTab] = useState<"list" | "communication">("list");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -63,7 +63,7 @@ export default function ClientsPage() {
               Opdrachtgevers
             </h1>
             <p className="text-slate-600 mt-1 text-sm">
-              Beheer contactgegevens, projecten en samenwerkingen met externe partners.
+              Beheer organisaties en contactpersonen. Klik op een opdrachtgever voor details.
             </p>
           </div>
           <button 
@@ -87,26 +87,6 @@ export default function ClientsPage() {
         {/* Tab Navigation */}
         <div className="flex border-b border-slate-200">
         <button
-          onClick={() => setActiveTab("dashboard")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === "dashboard"
-              ? "border-sky-500 text-sky-700"
-              : "border-transparent text-slate-500 hover:text-slate-700"
-          }`}
-        >
-          Inzicht &amp; relatie-health
-        </button>
-        <button
-          onClick={() => setActiveTab("running")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === "running"
-              ? "border-sky-500 text-sky-700"
-              : "border-transparent text-slate-500 hover:text-slate-700"
-          }`}
-        >
-          Lopende Projecten
-        </button>
-        <button
           onClick={() => setActiveTab("list")}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === "list"
@@ -114,7 +94,7 @@ export default function ClientsPage() {
               : "border-transparent text-slate-500 hover:text-slate-700"
           }`}
         >
-          Lijst &amp; filters
+          Alle opdrachtgevers
         </button>
         <button
           onClick={() => setActiveTab("communication")}
@@ -124,13 +104,11 @@ export default function ClientsPage() {
               : "border-transparent text-slate-500 hover:text-slate-700"
           }`}
         >
-          Communicatie
+          Communicatie &amp; bulkmail
         </button>
       </div>
 
         {/* Tab Content */}
-        {activeTab === "dashboard" && <DashboardTab onNavigateToList={() => setActiveTab("list")} />}
-        {activeTab === "running" && <RunningProjectsTab />}
         {activeTab === "list" && <ListTab refreshKey={refreshKey} />}
         {activeTab === "communication" && <CommunicationTab />}
       </div>
@@ -138,700 +116,61 @@ export default function ClientsPage() {
   );
 }
 
-// Tab 1: Dashboard - Inzicht & relatie-health
-function DashboardTab({ onNavigateToList }: { onNavigateToList: () => void }) {
-  const [kpiData, setKpiData] = useState<any>(null);
-  const [newClients, setNewClients] = useState<any>(null);
-  const [topCollaborations, setTopCollaborations] = useState<any>(null);
-  const [atRiskClients, setAtRiskClients] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true);
-        const [kpi, newClientsData, topCollab, atRisk] = await Promise.all([
-          clientService.getDashboardKPI(),
-          clientService.getNewClients(3),
-          clientService.getTopCollaborations(3),
-          clientService.getAtRiskClients(3),
-        ]);
-        setKpiData(kpi);
-        setNewClients(newClientsData);
-        setTopCollaborations(topCollab);
-        setAtRiskClients(atRisk);
-      } catch (err) {
-        console.error("Error fetching dashboard data:", err);
-        setError("Er is een fout opgetreden bij het laden van de gegevens.");
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-slate-500">Laden...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
-        {error}
-      </div>
-    );
-  }
-
-  const avgProjectsPerClient = kpiData?.active_clients > 0 
-    ? (kpiData.projects_this_year / kpiData.active_clients).toFixed(1)
-    : "0";
-
-  return (
-    <>
-      {/* KPI Cards in one row */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs text-slate-500">Actieve opdrachtgevers</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">{kpiData?.active_clients || 0}</p>
-          {kpiData?.change_from_last_year !== 0 && (
-            <p className={`mt-1 text-[11px] ${kpiData?.change_from_last_year > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-              {kpiData?.change_from_last_year > 0 ? '+' : ''}{kpiData?.change_from_last_year} t.o.v. vorig jaar
-            </p>
-          )}
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs text-slate-500">Projecten dit jaar</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">{kpiData?.projects_this_year || 0}</p>
-          <p className="mt-1 text-[11px] text-slate-500">Gem. {avgProjectsPerClient} per opdrachtgever</p>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs text-slate-500">Risico op afhaak</p>
-          <p className="mt-1 text-2xl font-semibold text-amber-600">{kpiData?.at_risk_count || 0}</p>
-          <p className="mt-1 text-[11px] text-amber-600">&gt; 1 jaar geen project</p>
-        </div>
-      </div>
-
-      {/* Insights in 3 columns */}
-      <div className="grid gap-4 md:grid-cols-3">
-        {/* Nieuwe opdrachtgevers */}
-        <section className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 shadow-sm">
-          <h3 className="text-sm font-semibold text-emerald-900 mb-3">
-            ✨ Nieuwe opdrachtgevers
-          </h3>
-          <p className="text-xs text-slate-600 mb-3">Recent toegevoegde organisaties</p>
-          <div className="space-y-2">
-            {newClients?.items && newClients.items.length > 0 ? (
-              newClients.items.map((client: any) => (
-                <Link 
-                  key={client.id} 
-                  href={`/teacher/clients/${client.id}`}
-                  className="flex items-center justify-between p-2 bg-white rounded-lg border border-emerald-100 hover:bg-emerald-50/50 transition-colors"
-                >
-                  <div>
-                    <span className="text-sm text-slate-800 font-medium">{client.organization}</span>
-                    {client.sector && <span className="text-xs text-slate-500 ml-2">· {client.sector}</span>}
-                  </div>
-                  <span className="text-xs text-slate-500">{client.created_at}</span>
-                </Link>
-              ))
-            ) : (
-              <p className="text-xs text-slate-500 py-2">Geen nieuwe opdrachtgevers</p>
-            )}
-          </div>
-          {newClients?.has_more && (
-            <button 
-              onClick={onNavigateToList}
-              className="mt-3 w-full text-xs text-emerald-700 hover:text-emerald-800 font-medium"
-            >
-              Bekijk alle {newClients.total} opdrachtgevers →
-            </button>
-          )}
-        </section>
-
-        {/* Top-samenwerkingen */}
-        <section className="rounded-2xl border border-sky-200 bg-sky-50/50 p-4 shadow-sm">
-          <h3 className="text-sm font-semibold text-sky-900 mb-3">
-            🏆 Top-samenwerkingen
-          </h3>
-          <p className="text-xs text-slate-600 mb-3">Organisaties met meeste projecten / jaren samenwerking</p>
-          <div className="space-y-2">
-            {topCollaborations?.items && topCollaborations.items.length > 0 ? (
-              topCollaborations.items.map((client: any) => (
-                <Link 
-                  key={client.id}
-                  href={`/teacher/clients/${client.id}`}
-                  className="flex items-center justify-between p-2 bg-white rounded-lg border border-sky-100 hover:bg-sky-50/50 transition-colors"
-                >
-                  <div>
-                    <span className="text-sm text-slate-800 font-medium">{client.organization}</span>
-                    {client.years_active && <span className="text-xs text-slate-500 ml-2">· {client.years_active} jaar</span>}
-                  </div>
-                  <span className="text-xs font-medium text-sky-700">{client.project_count} projecten</span>
-                </Link>
-              ))
-            ) : (
-              <p className="text-xs text-slate-500 py-2">Geen samenwerkingen gevonden</p>
-            )}
-          </div>
-          {topCollaborations?.has_more && (
-            <button 
-              onClick={onNavigateToList}
-              className="mt-3 w-full text-xs text-sky-700 hover:text-sky-800 font-medium"
-            >
-              Bekijk alle {topCollaborations.total} opdrachtgevers →
-            </button>
-          )}
-        </section>
-
-        {/* Risico op afhaak */}
-        <section className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm">
-          <h3 className="text-sm font-semibold text-amber-900 mb-3">
-            ⚠️ Risico op afhaak
-          </h3>
-          <p className="text-xs text-slate-600 mb-3">Organisaties waarbij lastActive &gt; 1 jaar geleden</p>
-          <div className="space-y-2">
-            {atRiskClients?.items && atRiskClients.items.length > 0 ? (
-              atRiskClients.items.map((client: any) => (
-                <Link 
-                  key={client.id}
-                  href={`/teacher/clients/${client.id}`}
-                  className="flex flex-col p-2 bg-white rounded-lg border border-amber-100 hover:bg-amber-50/50 transition-colors"
-                >
-                  <span className="text-sm text-slate-800 font-medium">{client.organization}</span>
-                  <span className="text-xs text-slate-500">
-                    Laatst: {client.last_active || "Nooit"}
-                  </span>
-                </Link>
-              ))
-            ) : (
-              <p className="text-xs text-slate-500 py-2">Geen risico-opdrachtgevers</p>
-            )}
-          </div>
-          {atRiskClients?.has_more && (
-            <button 
-              onClick={onNavigateToList}
-              className="mt-3 w-full text-xs text-amber-700 hover:text-amber-800 font-medium"
-            >
-              Bekijk alle {atRiskClients.total} opdrachtgevers →
-            </button>
-          )}
-        </section>
-      </div>
-    </>
-  );
-}
-
-// Tab 2: Running Projects
-function RunningProjectsTab() {
-  const [projects, setProjects] = useState<{project_id: number; project_title: string; course_name?: string; client_organization?: string; client_email?: string; class_name?: string; team_number?: number; student_names: string[]; start_date?: string; end_date?: string; next_moment_type?: string; next_moment_date?: string; project_status: string}[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Filters
-  const [courseFilter, setCourseFilter] = useState<string>("Alle vakken");
-  const [schoolYearFilter, setSchoolYearFilter] = useState<string>("2025-2026");
-  const [searchFilter, setSearchFilter] = useState<string>("");
-  const [debouncedSearchFilter, setDebouncedSearchFilter] = useState<string>("");
-  
-  // Sorting
-  const [sortBy, setSortBy] = useState<string>("");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  
-  // Pagination
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [pages, setPages] = useState(0);
-  const perPage = 20;
-  
-  // Bulk email
-  const [selectedProjects, setSelectedProjects] = useState<number[]>([]);
-  const [emailTemplate, setEmailTemplate] = useState("");
-  
-  // Available courses for filter - extracted from actual project data
-  const [availableCourses, setAvailableCourses] = useState<string[]>([]);
-  
-  // Mail templates from API
-  const [mailTemplates, setMailTemplates] = useState<MailTemplateDto[]>([]);
-  const [templatesLoading, setTemplatesLoading] = useState(true);
-  
-  // Fetch mail templates
-  useEffect(() => {
-    async function fetchMailTemplates() {
-      try {
-        setTemplatesLoading(true);
-        const templates = await listMailTemplates({ is_active: true });
-        setMailTemplates(templates);
-        // Set default template to first one if available (only on initial load)
-        if (templates.length > 0) {
-          setEmailTemplate((prev) => prev === "" ? templates[0].type : prev);
-        } else {
-          setEmailTemplate((prev) => prev === "" ? "opvolgmail" : prev);
-        }
-      } catch (err) {
-        console.error("Error fetching mail templates:", err);
-        // Fall back to default template type (only on initial load)
-        setEmailTemplate((prev) => prev === "" ? "opvolgmail" : prev);
-      } finally {
-        setTemplatesLoading(false);
-      }
-    }
-    fetchMailTemplates();
-  }, []);
-  
-  // Debounce search filter
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchFilter(searchFilter);
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, [searchFilter]);
-  
-  // Fetch projects with filters
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true);
-        const { projectService } = await import("@/services/project.service");
-        
-        // Build params for API call - don't send search to backend, we'll filter client-side
-        const baseParams: {
-          page: number;
-          per_page: number;
-          sort_by?: string;
-          sort_order: "asc" | "desc";
-          school_year?: string;
-        } = {
-          page: 1,
-          per_page: 100, // Max allowed by backend
-          sort_by: sortBy || undefined,
-          sort_order: sortOrder,
-        };
-        
-        if (schoolYearFilter && schoolYearFilter !== "Alle jaren") {
-          baseParams.school_year = schoolYearFilter;
-        }
-        
-        // Fetch first page to get total count
-        const firstPageData = await projectService.getRunningProjectsOverview(baseParams);
-        let allProjects = [...(firstPageData.items || [])];
-        
-        // Fetch remaining pages if needed
-        const totalPages = firstPageData.pages || 1;
-        if (totalPages > 1) {
-          const remainingPages = [];
-          for (let p = 2; p <= totalPages; p++) {
-            remainingPages.push(
-              projectService.getRunningProjectsOverview({ ...baseParams, page: p })
-            );
-          }
-          const remainingData = await Promise.all(remainingPages);
-          remainingData.forEach(data => {
-            allProjects = allProjects.concat(data.items || []);
-          });
-        }
-        
-        // Client-side search filter - search across all visible fields
-        if (debouncedSearchFilter.trim()) {
-          const searchTerm = debouncedSearchFilter.trim().toLowerCase();
-          allProjects = allProjects.filter(p => {
-            const searchableText = [
-              p.project_title,
-              p.course_name,
-              p.client_organization,
-              p.class_name,
-              p.team_number?.toString(),
-              ...(p.student_names || [])
-            ].filter(Boolean).join(' ').toLowerCase();
-            
-            return searchableText.includes(searchTerm);
-          });
-        }
-        
-        // Filter by course on frontend
-        let filteredProjects = allProjects;
-        if (courseFilter && courseFilter !== "Alle vakken") {
-          filteredProjects = allProjects.filter(p => p.course_name === courseFilter);
-        }
-        
-        // Apply pagination client-side
-        const startIdx = (page - 1) * perPage;
-        const paginatedProjects = filteredProjects.slice(startIdx, startIdx + perPage);
-        
-        setProjects(paginatedProjects);
-        setTotal(filteredProjects.length);
-        setPages(Math.ceil(filteredProjects.length / perPage));
-        
-        // Extract unique course names from all projects for dropdown (before filtering)
-        // Use the original full data set
-        const allProjectsForCourses = allProjects;
-        const uniqueCourses = Array.from(new Set(
-          allProjectsForCourses
-            .map(p => p.course_name)
-            .filter((name): name is string => !!name)
-        )).sort();
-        setAvailableCourses(uniqueCourses);
-      } catch (err) {
-        console.error("Error fetching running projects data:", err);
-        setError("Er is een fout opgetreden bij het laden van de gegevens.");
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, [page, courseFilter, schoolYearFilter, debouncedSearchFilter, sortBy, sortOrder, perPage]);
-  
-  const handleSort = (field: string) => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(field);
-      setSortOrder("asc");
-    }
-  };
-  
-  const handleExport = () => {
-    // TODO: Implement export functionality
-    alert("Export functionaliteit komt binnenkort beschikbaar");
-  };
-  
-  const toggleProject = (projectId: number) => {
-    if (selectedProjects.includes(projectId)) {
-      setSelectedProjects(selectedProjects.filter(id => id !== projectId));
-    } else {
-      setSelectedProjects([...selectedProjects, projectId]);
-    }
-  };
-  
-  const toggleAll = () => {
-    if (selectedProjects.length === projects.length) {
-      setSelectedProjects([]);
-    } else {
-      setSelectedProjects(projects.map(p => p.project_id));
-    }
-  };
-  
-  const handleSendBulkEmail = () => {
-    const selectedEmails = projects
-      .filter(p => selectedProjects.includes(p.project_id) && p.client_email)
-      .map(p => p.client_email)
-      .filter((email): email is string => !!email)
-      .join(";");
-    
-    if (!selectedEmails) {
-      alert("Geen opdrachtgevers met email geselecteerd");
-      return;
-    }
-    
-    // First try to find the template from API, then fall back to default
-    const apiTemplate = mailTemplates.find(t => t.type === emailTemplate);
-    let emailSubject: string;
-    let emailBody: string;
-    
-    if (apiTemplate) {
-      // Use template from API, replace {schoolYear} variable if present
-      emailSubject = apiTemplate.subject.replace(/\{schoolYear\}/g, schoolYearFilter);
-      emailBody = apiTemplate.body.replace(/\{schoolYear\}/g, schoolYearFilter);
-    } else {
-      // Fall back to default templates
-      const defaultTemplate = DEFAULT_TEMPLATES[emailTemplate] || DEFAULT_TEMPLATES.opvolgmail;
-      emailSubject = defaultTemplate.subject.replace(/volgend schooljaar/g, `schooljaar ${schoolYearFilter}`);
-      emailBody = defaultTemplate.body;
-    }
-    
-    const mailtoLink = buildMailto({
-      to: selectedEmails,
-      subject: emailSubject,
-      body: emailBody,
-    });
-    
-    window.open(mailtoLink, '_self');
-  };
-  
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-slate-500">Laden...</div>
-      </div>
-    );
-  }
-  
-  if (error) {
-    return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
-        {error}
-      </div>
-    );
-  }
-  
-  return (
-    <>
-      {/* Filters */}
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1.5">Zoeken</label>
-            <input 
-              type="text"
-              value={searchFilter}
-              onChange={(e) => setSearchFilter(e.target.value)}
-              placeholder="Zoek leerling, team of opdrachtgever…"
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1.5">Vak</label>
-            <select 
-              value={courseFilter}
-              onChange={(e) => setCourseFilter(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-            >
-              <option>Alle vakken</option>
-              {availableCourses.map(courseName => (
-                <option key={courseName} value={courseName}>{courseName}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-slate-600 block mb-1.5">Schooljaar</label>
-            <select 
-              value={schoolYearFilter}
-              onChange={(e) => setSchoolYearFilter(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-            >
-              <option>2025-2026</option>
-              <option>2024-2025</option>
-              <option>2023-2024</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      
-      {/* Bulk Email Section */}
-      {selectedProjects.length > 0 && (
-        <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center gap-4">
-            <div className="flex-1">
-              <p className="text-sm font-medium text-slate-900">
-                {selectedProjects.length} project{selectedProjects.length > 1 ? "en" : ""} geselecteerd
-              </p>
-              <p className="text-xs text-slate-600 mt-0.5">
-                {projects.filter(p => selectedProjects.includes(p.project_id) && p.client_email).length} opdrachtgever(s) met email
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <select
-                value={emailTemplate}
-                onChange={(e) => setEmailTemplate(e.target.value)}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/60"
-                disabled={templatesLoading}
-              >
-                {templatesLoading ? (
-                  <option>Laden...</option>
-                ) : mailTemplates.length > 0 ? (
-                  mailTemplates.map((t) => (
-                    <option key={t.id} value={t.type}>{t.name}</option>
-                  ))
-                ) : (
-                  <>
-                    <option value="opvolgmail">Opvolgmail</option>
-                    <option value="startproject">Startproject uitnodiging</option>
-                    <option value="tussenpresentatie">Tussenpresentatie uitnodiging</option>
-                    <option value="eindpresentatie">Eindpresentatie uitnodiging</option>
-                    <option value="bedankmail">Bedankmail</option>
-                  </>
-                )}
-              </select>
-              <button
-                onClick={handleSendBulkEmail}
-                className="rounded-xl border border-sky-300 bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 shadow-sm"
-              >
-                📧 Mail versturen via Outlook
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Table Header */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-600">{total} lopende projecten</p>
-        <button 
-          onClick={handleExport}
-          className="text-xs font-medium text-slate-600 hover:text-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-white"
-        >
-          Exporteer overzicht
-        </button>
-      </div>
-      
-      {/* Table */}
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-200">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium text-slate-600">
-                  <input
-                    type="checkbox"
-                    checked={projects.length > 0 && selectedProjects.length === projects.length}
-                    onChange={toggleAll}
-                    className="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
-                  />
-                </th>
-                <th 
-                  className="px-4 py-3 text-left font-medium text-slate-600 cursor-pointer hover:bg-slate-100"
-                  onClick={() => handleSort("course")}
-                >
-                  <div className="flex items-center gap-1">
-                    Vak
-                    {sortBy === "course" && (
-                      <span className="text-xs">{sortOrder === "asc" ? "▲" : "▼"}</span>
-                    )}
-                  </div>
-                </th>
-                <th 
-                  className="px-4 py-3 text-left font-medium text-slate-600 cursor-pointer hover:bg-slate-100"
-                  onClick={() => handleSort("project")}
-                >
-                  <div className="flex items-center gap-1">
-                    Project
-                    {sortBy === "project" && (
-                      <span className="text-xs">{sortOrder === "asc" ? "▲" : "▼"}</span>
-                    )}
-                  </div>
-                </th>
-                <th 
-                  className="px-4 py-3 text-left font-medium text-slate-600 cursor-pointer hover:bg-slate-100"
-                  onClick={() => handleSort("client")}
-                >
-                  <div className="flex items-center gap-1">
-                    Opdrachtgever
-                    {sortBy === "client" && (
-                      <span className="text-xs">{sortOrder === "asc" ? "▲" : "▼"}</span>
-                    )}
-                  </div>
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-slate-600">
-                  Team &amp; Leerlingen
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-slate-600">
-                  Periode
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-slate-600">
-                  Mail opdrachtgever
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
-                    Laden...
-                  </td>
-                </tr>
-              ) : projects.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
-                    Geen lopende projecten gevonden
-                  </td>
-                </tr>
-              ) : (
-                projects.map((project, idx) => (
-                  <tr key={project.project_id} className={idx % 2 === 1 ? "bg-slate-50/50" : ""}>
-                    <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedProjects.includes(project.project_id)}
-                        onChange={() => toggleProject(project.project_id)}
-                        className="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
-                      />
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">
-                      {project.course_name || "-"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-slate-900">{project.project_title}</div>
-                      <div className="text-xs text-slate-500 mt-0.5">{project.project_status}</div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">
-                      {project.client_organization || "-"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-slate-700">
-                        {project.class_name || "-"}
-                        {project.team_number && ` · Team ${project.team_number}`}
-                      </div>
-                      {project.student_names && project.student_names.length > 0 && (
-                        <div className="text-xs text-slate-500 mt-0.5 truncate max-w-xs">
-                          {project.student_names.join(", ")}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-slate-700 whitespace-nowrap">
-                      {project.start_date && project.end_date ? (
-                        <>
-                          {new Date(project.start_date).toLocaleDateString("nl-NL", { month: "short", year: "numeric" })} – {new Date(project.end_date).toLocaleDateString("nl-NL", { month: "short", year: "numeric" })}
-                        </>
-                      ) : "-"}
-                    </td>
-                    <td className="px-4 py-3">
-                      {project.client_email ? (
-                        <a
-                          href={`mailto:${project.client_email}?subject=Project: ${encodeURIComponent(project.project_title)}`}
-                          className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-slate-700 rounded-lg border border-slate-200 hover:bg-slate-50"
-                        >
-                          📧 Mail
-                        </a>
-                      ) : (
-                        <span className="text-slate-400">-</span>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      
-      {/* Pagination */}
-      {pages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <button
-            onClick={() => setPage(Math.max(1, page - 1))}
-            disabled={page === 1}
-            className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Vorige
-          </button>
-          <span className="text-sm text-slate-600">
-            Pagina {page} van {pages}
-          </span>
-          <button
-            onClick={() => setPage(Math.min(pages, page + 1))}
-            disabled={page === pages}
-            className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Volgende
-          </button>
-        </div>
-      )}
-    </>
-  );
-}
-
-// Tab 3: List & filters
+// Tab 1: List & filters with KPI cards
 function ListTab({ refreshKey }: { refreshKey?: number }) {
-  return <ClientsList refreshKey={refreshKey} />;
+  const [kpiData, setKpiData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchKPIData() {
+      try {
+        setLoading(true);
+        const kpi = await clientService.getDashboardKPI();
+        setKpiData(kpi);
+      } catch (err) {
+        console.error("Error fetching KPI data:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchKPIData();
+  }, [refreshKey]);
+
+  // Mock value for clients without projects - in real scenario this would come from API
+  const clientsWithoutProjectsThisYear = 0;
+
+  return (
+    <>
+      {/* KPI Cards */}
+      {loading ? (
+        <div className="text-center py-4 text-slate-500">Laden...</div>
+      ) : (
+        <div className="grid grid-cols-3 gap-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs text-slate-500">Opdrachtgevers totaal</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-900">{(kpiData?.active_clients || 0) + (kpiData?.inactive_clients || 0)}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs text-slate-500">Actieve opdrachtgevers</p>
+            <p className="mt-1 text-2xl font-semibold text-emerald-600">{kpiData?.active_clients || 0}</p>
+            <p className="mt-1 text-[11px] text-slate-500">Status: Actief</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs text-slate-500">Zonder project dit jaar</p>
+            <p className="mt-1 text-2xl font-semibold text-amber-600">{clientsWithoutProjectsThisYear}</p>
+            <p className="mt-1 text-[11px] text-slate-500">Geen lopend project</p>
+          </div>
+        </div>
+      )}
+
+      {/* Clients List */}
+      <ClientsList refreshKey={refreshKey} />
+    </>
+  );
 }
 
 
-// Tab 4: Communication
+// Tab 2: Communication
 function CommunicationTab() {
   const [schoolYear, setSchoolYear] = useState("2025-2026");
   const [level, setLevel] = useState("Alle");
