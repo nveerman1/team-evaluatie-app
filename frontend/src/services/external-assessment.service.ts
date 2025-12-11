@@ -117,9 +117,9 @@ export const externalAssessmentService = {
    */
   async getProjectExternalStatus(
     projectId: number,
-    groupId?: number
+    assessmentId?: number
   ): Promise<ExternalAssessmentStatus[]> {
-    const params = groupId ? { group_id: groupId } : {};
+    const params = assessmentId ? { assessment_id: assessmentId } : {};
     const response = await api.get(
       `/projects/external-management/projects/${projectId}/external-status`,
       { params }
