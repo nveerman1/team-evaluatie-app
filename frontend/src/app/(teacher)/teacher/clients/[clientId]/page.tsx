@@ -258,7 +258,7 @@ function KpiCard({
 
 // Collaboration Overview Card with real API data
 function CollaborationOverviewCard({ clientId }: { clientId: number }) {
-  const [projects, setProjects] = useState<any[]>([]);
+  const [projects, setProjects] = useState<{ id: number; title: string; role: string; start_date?: string; end_date?: string; }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -286,8 +286,8 @@ function CollaborationOverviewCard({ clientId }: { clientId: number }) {
         const startDate = p.start_date ? new Date(p.start_date) : null;
         return endDate || startDate;
       })
-      .filter(date => date !== null)
-      .map(date => date!.getFullYear());
+      .filter((date): date is Date => date !== null)
+      .map(date => date.getFullYear());
     
     if (years.length === 0) return "-";
     
@@ -645,6 +645,14 @@ function CommunicatieTab({ client }: { client: any }) {
     fetchMailTemplates();
   }, []);
 
+  // Helper function to replace template variables
+  const replaceTemplateVariables = (text: string): string => {
+    return text
+      .replace(/\{contactName\}/g, client.contact_name || 'opdrachtgever')
+      .replace(/\{organization\}/g, client.organization || '')
+      .replace(/\{email\}/g, client.email || '');
+  };
+
   const generateEmail = () => {
     const template = mailTemplates.find(t => t.type === selectedTemplate);
     if (!template) {
@@ -652,17 +660,14 @@ function CommunicatieTab({ client }: { client: any }) {
       return;
     }
     
-    // Use template body and replace basic variables
-    let body = template.body;
-    body = body.replace(/\{contactName\}/g, client.contact_name || 'opdrachtgever');
-    body = body.replace(/\{organization\}/g, client.organization || '');
-    
+    // Use template body and replace variables
+    const body = replaceTemplateVariables(template.body);
     setEmailPreview(body);
   };
 
   const handleOpenInOutlook = () => {
     const template = mailTemplates.find(t => t.type === selectedTemplate);
-    const subject = template ? template.subject.replace(/\{organization\}/g, client.organization || '') : '';
+    const subject = template ? replaceTemplateVariables(template.subject) : '';
     
     const mailtoLink = buildMailto({
       to: client.email || "",
