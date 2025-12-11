@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useClients } from "@/hooks/useClients";
 import { clientService } from "@/services";
@@ -13,6 +13,8 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLevel, setSelectedLevel] = useState<string>("Alle");
   const [selectedStatus, setSelectedStatus] = useState<string>("Alle");
+  const [selectedSector, setSelectedSector] = useState<string>("Alle");
+  const [selectedTag, setSelectedTag] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(1);
   const perPage = 20;
 
@@ -23,8 +25,16 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
     level: selectedLevel !== "Alle" ? selectedLevel : undefined,
     status: selectedStatus !== "Alle" ? selectedStatus : undefined,
     search: searchQuery || undefined,
+    tags: selectedTag,
     refreshKey,
   });
+
+  // Reset page to 1 when search query changes
+  useEffect(() => {
+    if (searchQuery) {
+      setPage(1);
+    }
+  }, [searchQuery]);
 
   const handleExportCSV = async () => {
     try {
@@ -32,6 +42,7 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
         level: selectedLevel !== "Alle" ? selectedLevel : undefined,
         status: selectedStatus !== "Alle" ? selectedStatus : undefined,
         search: searchQuery || undefined,
+        tags: selectedTag,
       });
       
       const url = window.URL.createObjectURL(blob);
@@ -48,117 +59,191 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
     }
   };
 
+  const handleTagClick = (tag: string) => {
+    if (selectedTag === tag) {
+      // Deselect if already selected
+      setSelectedTag(undefined);
+    } else {
+      // Select the new tag
+      setSelectedTag(tag);
+      // Reset to page 1 when changing filter
+      setPage(1);
+    }
+  };
+
+  // Memoize unique tags calculation to avoid unnecessary recalculations
+  const uniqueTags = useMemo(() => {
+    return data?.items
+      ? Array.from(new Set(data.items.flatMap((client) => client.tags || [])))
+          .sort()
+      : [];
+  }, [data]);
+
+  // Memoize unique sectors calculation to avoid unnecessary recalculations
+  const uniqueSectors = useMemo(() => {
+    return data?.items
+      ? Array.from(new Set(data.items.map((client) => client.sector).filter((s): s is string => !!s)))
+          .sort()
+      : [];
+  }, [data]);
+
+  // Memoize filtered data to avoid unnecessary recalculations
+  const filteredData = useMemo(() => {
+    return data ? {
+      ...data,
+      items: selectedSector !== "Alle" 
+        ? data.items.filter(client => client.sector === selectedSector)
+        : data.items
+    } : null;
+  }, [data, selectedSector]);
+
   return (
     <div className="space-y-4">
-      {/* Expertise tags */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h3 className="text-sm font-semibold text-slate-800 mb-3">Expertise-tags</h3>
-        <div className="flex flex-wrap gap-2">
-          {[
-            "Duurzaamheid",
-            "AI/Tech",
-            "Healthcare",
-            "Mobiliteit",
-            "Circulaire economie",
-            "Defensie",
-            "Mixed-use",
-            "Stadsontwikkeling",
-          ].map((tag, idx) => (
-            <span
-              key={idx}
-              className="inline-flex items-center rounded-full bg-purple-50 border border-purple-200 px-3 py-1 text-xs font-medium text-purple-700 cursor-pointer hover:bg-purple-100"
-            >
-              {tag}
-            </span>
-          ))}
+      {/* Combined Filters Card */}
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
+        {/* Expertise tags - inline with label */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Expertise-tags</span>
+          {uniqueTags.length > 0 ? (
+            <>
+              {uniqueTags.map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => handleTagClick(tag)}
+                  className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-colors ring-1 ${
+                    selectedTag === tag
+                      ? "bg-violet-500 text-white ring-violet-600"
+                      : "bg-violet-50 text-violet-700 ring-violet-100 hover:bg-violet-100"
+                  }`}
+                >
+                  {tag}
+                  {selectedTag === tag && <span className="ml-1.5">✓</span>}
+                </button>
+              ))}
+              {selectedTag && (
+                <button
+                  onClick={() => setSelectedTag(undefined)}
+                  className="inline-flex items-center rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200"
+                >
+                  ✕ Wis filter
+                </button>
+              )}
+            </>
+          ) : (
+            <p className="text-xs text-slate-500">Geen tags gevonden. Tags worden toegevoegd bij het aanmaken van een opdrachtgever.</p>
+          )}
+        </div>
+
+        {/* Search and Dropdowns - all in one row */}
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="text"
+            placeholder="Zoek op organisatie of contactpersoon..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Zoeken op organisatie of contactpersoon"
+            className="flex-1 min-w-[240px] rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+
+          <select
+            value={selectedSector}
+            onChange={(e) => {
+              setSelectedSector(e.target.value);
+              setPage(1);
+            }}
+            aria-label="Sector selecteren"
+            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm focus:outline-none"
+          >
+            <option value="Alle">Alle sectoren</option>
+            {uniqueSectors.map((sector) => (
+              <option key={sector} value={sector}>
+                {sector}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={selectedLevel}
+            onChange={(e) => {
+              setSelectedLevel(e.target.value);
+              setPage(1);
+            }}
+            aria-label="Niveau selecteren"
+            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm focus:outline-none"
+          >
+            <option value="Alle">Alle niveaus</option>
+            <option value="Onderbouw">Onderbouw</option>
+            <option value="Bovenbouw">Bovenbouw</option>
+          </select>
+
+          <select
+            value={selectedStatus}
+            onChange={(e) => {
+              setSelectedStatus(e.target.value);
+              setPage(1);
+            }}
+            aria-label="Status selecteren"
+            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm focus:outline-none"
+          >
+            <option value="Alle">Alle statussen</option>
+            <option value="Actief">Actief</option>
+            <option value="Inactief">Inactief</option>
+          </select>
+
+          <button
+            onClick={handleExportCSV}
+            aria-label="Exporteer naar CSV"
+            className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+          >
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" /> CSV
+          </button>
         </div>
       </section>
-
-      {/* Search & Filters */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex-1 max-w-md">
-            <input
-              type="text"
-              placeholder="Zoek op organisatie of contactpersoon..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={selectedLevel}
-              onChange={(e) => setSelectedLevel(e.target.value)}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            >
-              <option value="Alle">Alle niveaus</option>
-              <option value="Onderbouw">Onderbouw</option>
-              <option value="Bovenbouw">Bovenbouw</option>
-            </select>
-
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            >
-              <option value="Alle">Alle statussen</option>
-              <option value="Actief">Actief</option>
-              <option value="Inactief">Inactief</option>
-            </select>
-
-            <button
-              onClick={handleExportCSV}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
-              📊 CSV
-            </button>
-          </div>
-        </div>
-      </div>
 
       {loading && <div className="text-center py-8">Laden...</div>}
       {error && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">Fout: {error}</div>}
 
-      {data && (
+      {filteredData && (
         <>
-          <div className="text-sm text-slate-600">{data.total} opdrachtgever(s) gevonden</div>
-          <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase">
+          <div className="text-sm text-slate-600">
+            {filteredData.items.length} opdrachtgever(s) {selectedSector !== "Alle" ? "getoond" : "gevonden"}
+            {data && selectedSector !== "Alle" && data.total !== filteredData.items.length && (
+              <span className="text-slate-500"> (van {data.total} totaal)</span>
+            )}
+          </div>
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <table className="min-w-full divide-y divide-slate-200 text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-4 py-3">Organisatie</th>
-                  <th className="px-4 py-3">Contact</th>
-                  <th className="px-4 py-3">Email</th>
-                  <th className="px-4 py-3">Sector</th>
-                  <th className="px-4 py-3">Niveau</th>
-                  <th className="px-4 py-3">Projecten</th>
-                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3 text-left font-medium">Organisatie</th>
+                  <th className="px-4 py-3 text-left font-medium">Contact</th>
+                  <th className="px-4 py-3 text-left font-medium">Email</th>
+                  <th className="px-4 py-3 text-left font-medium">Sector</th>
+                  <th className="px-4 py-3 text-left font-medium">Niveau</th>
+                  <th className="px-4 py-3 text-left font-medium">Projecten</th>
+                  <th className="px-4 py-3 text-left font-medium">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {data.items.map((client) => (
-                  <tr key={client.id} className="hover:bg-slate-50">
+                {filteredData.items.map((client) => (
+                  <tr key={client.id} className="hover:bg-indigo-50/60 transition">
                     <td className="px-4 py-3">
-                      <Link href={`/teacher/clients/${client.id}`} className="font-medium text-sky-700 hover:underline">
+                      <Link href={`/teacher/clients/${client.id}`} className="font-semibold text-slate-900 hover:underline">
                         {client.organization}
                       </Link>
-                      {client.tags && client.tags.length > 0 && (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {client.tags.map((tag, idx) => (
-                            <span key={idx} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">{tag}</span>
-                          ))}
-                        </div>
-                      )}
                     </td>
-                    <td className="px-4 py-3">{client.contact_name || "-"}</td>
-                    <td className="px-4 py-3">{client.email || "-"}</td>
-                    <td className="px-4 py-3">{client.sector || "-"}</td>
-                    <td className="px-4 py-3">{client.level || "-"}</td>
-                    <td className="px-4 py-3 text-center">{client.projects_this_year}</td>
+                    <td className="px-4 py-3 text-sm text-slate-700">{client.contact_name || "-"}</td>
+                    <td className="px-4 py-3 text-xs text-slate-500">{client.email || "-"}</td>
+                    <td className="px-4 py-3 text-sm text-slate-700">{client.sector || "-"}</td>
+                    <td className="px-4 py-3 text-sm text-slate-700">{client.level || "-"}</td>
+                    <td className="px-4 py-3 text-sm text-slate-700">{client.projects_this_year}</td>
                     <td className="px-4 py-3">
-                      <span className={`rounded-full px-2 py-0.5 text-xs ${client.active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100"}`}>
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ${
+                        client.active 
+                          ? "bg-emerald-100 text-emerald-700 ring-emerald-200" 
+                          : "bg-slate-100 text-slate-700 ring-slate-200"
+                      }`}>
+                        <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
                         {client.status}
                       </span>
                     </td>

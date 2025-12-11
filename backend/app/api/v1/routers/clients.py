@@ -372,6 +372,7 @@ def list_clients(
     level: Optional[str] = None,
     status: Optional[str] = None,
     search: Optional[str] = None,
+    tags: Optional[str] = None,
 ):
     """
     List all clients with filtering and pagination
@@ -389,6 +390,10 @@ def list_clients(
             query = query.filter(Client.active.is_(True))
         elif status == "Inactief":
             query = query.filter(Client.active.is_(False))
+    
+    # Filter by tags (if tags is provided, filter clients that have this tag)
+    if tags:
+        query = query.filter(Client.tags.contains([tags]))
     
     # Search filter
     if search:
@@ -859,6 +864,7 @@ def export_clients_csv(
     level: Optional[str] = None,
     status: Optional[str] = None,
     search: Optional[str] = None,
+    tags: Optional[str] = None,
 ):
     """
     Export clients to CSV file
@@ -874,6 +880,9 @@ def export_clients_csv(
             query = query.filter(Client.active.is_(True))
         elif status == "Inactief":
             query = query.filter(Client.active.is_(False))
+    
+    if tags:
+        query = query.filter(Client.tags.contains([tags]))
     
     if search:
         search_filter = or_(
