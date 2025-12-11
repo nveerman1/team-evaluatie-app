@@ -43,6 +43,23 @@ function buildMailto({ to, bcc, subject, body }: { to?: string; bcc?: string; su
   return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
+/**
+ * Type for KPI data returned from the client dashboard API
+ * Used to display key metrics about clients and their activity
+ */
+interface KpiData {
+  /** Number of clients with "Actief" status */
+  active_clients: number;
+  /** Number of clients with "Inactief" status (optional) */
+  inactive_clients?: number;
+  /** Total number of projects in the current school year (optional) */
+  projects_this_year?: number;
+  /** Number of clients at risk of churning (no project > 1 year) (optional) */
+  at_risk_count?: number;
+  /** Change in active clients compared to last year (optional) */
+  change_from_last_year?: number;
+}
+
 export default function ClientsPage() {
   const [activeTab, setActiveTab] = useState<"list" | "communication">("list");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -118,17 +135,20 @@ export default function ClientsPage() {
 
 // Tab 1: List & filters with KPI cards
 function ListTab({ refreshKey }: { refreshKey?: number }) {
-  const [kpiData, setKpiData] = useState<any>(null);
+  const [kpiData, setKpiData] = useState<KpiData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchKPIData() {
       try {
         setLoading(true);
+        setError(null);
         const kpi = await clientService.getDashboardKPI();
         setKpiData(kpi);
       } catch (err) {
         console.error("Error fetching KPI data:", err);
+        setError("Kon KPI-gegevens niet laden");
       } finally {
         setLoading(false);
       }
@@ -136,19 +156,29 @@ function ListTab({ refreshKey }: { refreshKey?: number }) {
     fetchKPIData();
   }, [refreshKey]);
 
-  // Mock value for clients without projects - in real scenario this would come from API
+  // TODO: Replace with actual API endpoint that returns clients without active projects this year
+  // Currently returns 0 as a placeholder. Future implementation should query:
+  // - Clients with status "Actief"
+  // - That have NO projects linked in the current school year
   const clientsWithoutProjectsThisYear = 0;
+
+  // Calculate total clients (active + inactive)
+  const totalClients = (kpiData?.active_clients || 0) + (kpiData?.inactive_clients || 0);
 
   return (
     <>
       {/* KPI Cards */}
       {loading ? (
         <div className="text-center py-4 text-slate-500">Laden...</div>
+      ) : error ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          {error} - De lijst met opdrachtgevers is nog steeds beschikbaar hieronder.
+        </div>
       ) : (
         <div className="grid grid-cols-3 gap-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-xs text-slate-500">Opdrachtgevers totaal</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">{(kpiData?.active_clients || 0) + (kpiData?.inactive_clients || 0)}</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-900">{totalClients}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-xs text-slate-500">Actieve opdrachtgevers</p>
