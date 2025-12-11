@@ -332,7 +332,7 @@ def get_project_external_status(
     """
     Get external assessment status for all teams in a project.
     Teams are identified by project_teams.team_number.
-    Only returns teams that have external evaluator links (ProjectTeamExternal records).
+    Returns all project teams with their external invitation status.
     """
     require_role(user, ["teacher", "admin"])
     
@@ -357,6 +357,10 @@ def get_project_external_status(
     status_list = []
     
     for project_team in project_teams:
+        # Skip teams without team_id (group reference) as they can't have external links
+        if not project_team.team_id:
+            continue
+        
         # Get team members from project_team_members
         team_members_records = db.query(User).join(
             ProjectTeamMember, ProjectTeamMember.user_id == User.id
@@ -372,18 +376,14 @@ def get_project_external_status(
         # Get external link if exists for this team
         # Note: ProjectTeamExternal uses group_id + team_number, so we need to find the matching link
         link = None
-        if project_team.team_id and project_team.team_number is not None:
+        if project_team.team_number is not None:
             link = db.query(ProjectTeamExternal).filter(
                 ProjectTeamExternal.group_id == project_team.team_id,
                 ProjectTeamExternal.team_number == project_team.team_number,
             ).first()
         
-        # Only include teams that have external links
+        # Include team regardless of whether it has an external link
         if link:
-            # team_id should always be present when a link exists, but check to be safe
-            if not project_team.team_id:
-                continue  # Skip teams without team_id (shouldn't happen in practice)
-            
             evaluator = db.get(ExternalEvaluator, link.external_evaluator_id)
             status_list.append(
                 ExternalAssessmentStatus(
@@ -396,6 +396,21 @@ def get_project_external_status(
                     invitation_sent=(link.status != "NOT_INVITED"),
                     submitted_at=link.submitted_at,
                     updated_at=link.updated_at,
+                )
+            )
+        else:
+            # Team exists but has no external invitation yet
+            status_list.append(
+                ExternalAssessmentStatus(
+                    team_id=project_team.team_id,
+                    team_number=project_team.team_number,
+                    team_name=team_name,
+                    members=member_names,
+                    external_evaluator=None,
+                    status="NOT_INVITED",
+                    invitation_sent=False,
+                    submitted_at=None,
+                    updated_at=None,
                 )
             )
     
