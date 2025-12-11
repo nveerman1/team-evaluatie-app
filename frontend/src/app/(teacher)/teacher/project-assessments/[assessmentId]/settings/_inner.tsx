@@ -301,6 +301,7 @@ export default function SettingsPageInner() {
     try {
       const request: BulkInviteRequest = {
         mode: "ALL_TEAMS",
+        assessment_id: assessmentId,  // Add assessment_id
         all_teams_config: {
           evaluator_name: allTeamsConfig.evaluator_name,
           evaluator_email: allTeamsConfig.evaluator_email,
@@ -343,6 +344,7 @@ export default function SettingsPageInner() {
     try {
       const request: BulkInviteRequest = {
         mode: "PER_TEAM",
+        assessment_id: assessmentId,  // Add assessment_id
         per_team_configs: [
           {
             group_id: config.group_id,

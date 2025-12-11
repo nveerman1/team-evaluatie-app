@@ -201,6 +201,7 @@ class ExternalAssessmentAllTeamsConfig(BaseModel):
 class BulkInviteRequest(BaseModel):
     """Request to send invitations in bulk"""
     mode: str  # PER_TEAM | ALL_TEAMS
+    assessment_id: Optional[int] = None  # Assessment ID to associate invitations with
     per_team_configs: Optional[List[ExternalAssessmentPerTeamConfig]] = None
     all_teams_config: Optional[ExternalAssessmentAllTeamsConfig] = None
 

@@ -217,6 +217,7 @@ def create_bulk_invitations(
                 school_id=user.school_id,
                 group_id=config.group_id,
                 team_number=config.team_number,
+                assessment_id=payload.assessment_id,  # Set assessment_id from payload
                 external_evaluator_id=evaluator.id,
                 invitation_token=token,
                 token_expires_at=datetime.utcnow() + timedelta(days=90),
@@ -297,6 +298,7 @@ def create_bulk_invitations(
                 school_id=user.school_id,
                 group_id=team_info.group_id,
                 team_number=team_info.team_number,
+                assessment_id=payload.assessment_id,  # Set assessment_id from payload
                 external_evaluator_id=evaluator.id,
                 invitation_token=token,  # Same token for all teams
                 token_expires_at=datetime.utcnow() + timedelta(days=90),

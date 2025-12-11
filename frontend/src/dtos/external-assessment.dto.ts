@@ -148,6 +148,7 @@ export interface ExternalAssessmentAllTeamsConfig {
 
 export interface BulkInviteRequest {
   mode: 'PER_TEAM' | 'ALL_TEAMS';
+  assessment_id?: number;
   per_team_configs?: ExternalAssessmentPerTeamConfig[];
   all_teams_config?: ExternalAssessmentAllTeamsConfig;
 }
