@@ -26,6 +26,7 @@ export const clientService = {
     level?: string;
     status?: string;
     search?: string;
+    tags?: string;
   }): Promise<ClientListResponse> {
     const response = await api.get<ClientListResponse>("/clients", { params });
     return response.data;
@@ -118,6 +119,7 @@ export const clientService = {
     level?: string;
     status?: string;
     search?: string;
+    tags?: string;
   }): Promise<Blob> {
     const response = await api.get("/clients/export/csv", {
       params,

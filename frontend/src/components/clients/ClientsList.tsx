@@ -13,6 +13,8 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLevel, setSelectedLevel] = useState<string>("Alle");
   const [selectedStatus, setSelectedStatus] = useState<string>("Alle");
+  const [selectedSector, setSelectedSector] = useState<string>("Alle");
+  const [selectedTag, setSelectedTag] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(1);
   const perPage = 20;
 
@@ -23,6 +25,7 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
     level: selectedLevel !== "Alle" ? selectedLevel : undefined,
     status: selectedStatus !== "Alle" ? selectedStatus : undefined,
     search: searchQuery || undefined,
+    tags: selectedTag,
     refreshKey,
   });
 
@@ -32,6 +35,7 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
         level: selectedLevel !== "Alle" ? selectedLevel : undefined,
         status: selectedStatus !== "Alle" ? selectedStatus : undefined,
         search: searchQuery || undefined,
+        tags: selectedTag,
       });
       
       const url = window.URL.createObjectURL(blob);
@@ -48,36 +52,79 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
     }
   };
 
+  const handleTagClick = (tag: string) => {
+    if (selectedTag === tag) {
+      // Deselect if already selected
+      setSelectedTag(undefined);
+    } else {
+      // Select the new tag
+      setSelectedTag(tag);
+      // Reset to page 1 when changing filter
+      setPage(1);
+    }
+  };
+
+  // Get unique tags from all clients in the current dataset
+  const uniqueTags = data?.items
+    ? Array.from(new Set(data.items.flatMap((client) => client.tags || [])))
+        .sort()
+    : [];
+
+  // Get unique sectors from all clients for the dropdown (client-side filtering)
+  const uniqueSectors = data?.items
+    ? Array.from(new Set(data.items.map((client) => client.sector).filter((s): s is string => !!s)))
+        .sort()
+    : [];
+
+  // Apply client-side sector filter
+  const filteredData = data ? {
+    ...data,
+    items: selectedSector !== "Alle" 
+      ? data.items.filter(client => client.sector === selectedSector)
+      : data.items
+  } : null;
+
   return (
     <div className="space-y-4">
-      {/* Expertise tags */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h3 className="text-sm font-semibold text-slate-800 mb-3">Expertise-tags</h3>
-        <div className="flex flex-wrap gap-2">
-          {[
-            "Duurzaamheid",
-            "AI/Tech",
-            "Healthcare",
-            "Mobiliteit",
-            "Circulaire economie",
-            "Defensie",
-            "Mixed-use",
-            "Stadsontwikkeling",
-          ].map((tag, idx) => (
-            <span
-              key={idx}
-              className="inline-flex items-center rounded-full bg-purple-50 border border-purple-200 px-3 py-1 text-xs font-medium text-purple-700 cursor-pointer hover:bg-purple-100"
-            >
-              {tag}
-            </span>
-          ))}
+      {/* Combined Filters Card */}
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
+        {/* Expertise tags */}
+        <div>
+          <h3 className="text-sm font-semibold text-slate-800 mb-3">Expertise-tags</h3>
+          {uniqueTags.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {uniqueTags.map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => handleTagClick(tag)}
+                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium cursor-pointer transition-colors ${
+                    selectedTag === tag
+                      ? "bg-purple-500 border-purple-600 text-white"
+                      : "bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
+                  }`}
+                >
+                  {tag}
+                  {selectedTag === tag && <span className="ml-1.5">✓</span>}
+                </button>
+              ))}
+              {selectedTag && (
+                <button
+                  onClick={() => setSelectedTag(undefined)}
+                  className="inline-flex items-center rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200"
+                >
+                  ✕ Wis filter
+                </button>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-slate-500">Geen tags gevonden. Tags worden toegevoegd bij het aanmaken van een opdrachtgever.</p>
+          )}
         </div>
-      </section>
 
-      {/* Search & Filters */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        {/* Search and Dropdowns */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between pt-2 border-t border-slate-100">
           <div className="flex-1 max-w-md">
+            <label className="text-xs font-medium text-slate-600 block mb-1.5">Zoeken</label>
             <input
               type="text"
               placeholder="Zoek op organisatie of contactpersoon..."
@@ -87,26 +134,48 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={selectedLevel}
-              onChange={(e) => setSelectedLevel(e.target.value)}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            >
-              <option value="Alle">Alle niveaus</option>
-              <option value="Onderbouw">Onderbouw</option>
-              <option value="Bovenbouw">Bovenbouw</option>
-            </select>
+          <div className="flex flex-wrap items-end gap-2">
+            <div>
+              <label className="text-xs font-medium text-slate-600 block mb-1.5">Sector</label>
+              <select
+                value={selectedSector}
+                onChange={(e) => setSelectedSector(e.target.value)}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              >
+                <option value="Alle">Alle sectoren</option>
+                {uniqueSectors.map((sector) => (
+                  <option key={sector} value={sector}>
+                    {sector}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            >
-              <option value="Alle">Alle statussen</option>
-              <option value="Actief">Actief</option>
-              <option value="Inactief">Inactief</option>
-            </select>
+            <div>
+              <label className="text-xs font-medium text-slate-600 block mb-1.5">Niveau</label>
+              <select
+                value={selectedLevel}
+                onChange={(e) => setSelectedLevel(e.target.value)}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              >
+                <option value="Alle">Alle niveaus</option>
+                <option value="Onderbouw">Onderbouw</option>
+                <option value="Bovenbouw">Bovenbouw</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-slate-600 block mb-1.5">Status</label>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              >
+                <option value="Alle">Alle statussen</option>
+                <option value="Actief">Actief</option>
+                <option value="Inactief">Inactief</option>
+              </select>
+            </div>
 
             <button
               onClick={handleExportCSV}
@@ -116,14 +185,14 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
             </button>
           </div>
         </div>
-      </div>
+      </section>
 
       {loading && <div className="text-center py-8">Laden...</div>}
       {error && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">Fout: {error}</div>}
 
-      {data && (
+      {filteredData && (
         <>
-          <div className="text-sm text-slate-600">{data.total} opdrachtgever(s) gevonden</div>
+          <div className="text-sm text-slate-600">{filteredData.items.length} opdrachtgever(s) gevonden</div>
           <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase">
@@ -138,7 +207,7 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {data.items.map((client) => (
+                {filteredData.items.map((client) => (
                   <tr key={client.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3">
                       <Link href={`/teacher/clients/${client.id}`} className="font-medium text-sky-700 hover:underline">

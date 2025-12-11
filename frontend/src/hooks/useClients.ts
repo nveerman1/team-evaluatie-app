@@ -17,6 +17,7 @@ export function useClients(params?: {
   level?: string;
   status?: string;
   search?: string;
+  tags?: string;
   autoFetch?: boolean;
   refreshKey?: number;
 }) {
@@ -52,6 +53,7 @@ export function useClients(params?: {
     params?.per_page,
     params?.level,
     params?.status,
+    params?.tags,
     debouncedSearch,
     params?.autoFetch,
     params?.refreshKey,
