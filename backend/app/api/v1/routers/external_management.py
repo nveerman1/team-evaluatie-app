@@ -196,8 +196,9 @@ def create_bulk_invitations(
                 db.add(evaluator)
                 db.flush()
             
-            # Check if link already exists for this group + team_number
+            # Check if link already exists for this assessment + group + team_number
             existing_link = db.query(ProjectTeamExternal).filter(
+                ProjectTeamExternal.assessment_id == payload.assessment_id,
                 ProjectTeamExternal.group_id == config.group_id,
                 ProjectTeamExternal.team_number == config.team_number,
                 ProjectTeamExternal.external_evaluator_id == evaluator.id,
@@ -276,8 +277,9 @@ def create_bulk_invitations(
             if not group:
                 continue
             
-            # Check if link already exists for this group + team_number
+            # Check if link already exists for this assessment + group + team_number
             existing_link = db.query(ProjectTeamExternal).filter(
+                ProjectTeamExternal.assessment_id == payload.assessment_id,
                 ProjectTeamExternal.group_id == team_info.group_id,
                 ProjectTeamExternal.team_number == team_info.team_number,
                 ProjectTeamExternal.external_evaluator_id == evaluator.id,
