@@ -139,7 +139,10 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
               <label className="text-xs font-medium text-slate-600 block mb-1.5">Sector</label>
               <select
                 value={selectedSector}
-                onChange={(e) => setSelectedSector(e.target.value)}
+                onChange={(e) => {
+                  setSelectedSector(e.target.value);
+                  setPage(1);
+                }}
                 className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
               >
                 <option value="Alle">Alle sectoren</option>
@@ -155,7 +158,10 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
               <label className="text-xs font-medium text-slate-600 block mb-1.5">Niveau</label>
               <select
                 value={selectedLevel}
-                onChange={(e) => setSelectedLevel(e.target.value)}
+                onChange={(e) => {
+                  setSelectedLevel(e.target.value);
+                  setPage(1);
+                }}
                 className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
               >
                 <option value="Alle">Alle niveaus</option>
@@ -168,7 +174,10 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
               <label className="text-xs font-medium text-slate-600 block mb-1.5">Status</label>
               <select
                 value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
+                onChange={(e) => {
+                  setSelectedStatus(e.target.value);
+                  setPage(1);
+                }}
                 className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
               >
                 <option value="Alle">Alle statussen</option>
@@ -192,7 +201,12 @@ export function ClientsList({ refreshKey }: ClientsListProps) {
 
       {filteredData && (
         <>
-          <div className="text-sm text-slate-600">{filteredData.items.length} opdrachtgever(s) gevonden</div>
+          <div className="text-sm text-slate-600">
+            {filteredData.items.length} opdrachtgever(s) {selectedSector !== "Alle" ? "getoond" : "gevonden"}
+            {data && selectedSector !== "Alle" && data.total !== filteredData.items.length && (
+              <span className="text-slate-500"> (van {data.total} totaal)</span>
+            )}
+          </div>
           <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase">
