@@ -7,6 +7,8 @@ import { useClient, useClientLogs } from "@/hooks/useClients";
 import { ClientEditModal } from "@/components/clients/ClientEditModal";
 import { AddNoteModal } from "@/components/clients/AddNoteModal";
 import { clientService, projectService } from "@/services";
+import { listMailTemplates } from "@/services/mail-template.service";
+import type { MailTemplateDto } from "@/dtos/mail-template.dto";
 
 // Helper function for building mailto links
 function buildMailto({ to, subject, body }: { to: string; subject: string; body: string }) {
@@ -184,28 +186,7 @@ export default function ClientDetailPage() {
         </div>
 
         {/* Samenwerking */}
-        <div className="flex flex-col rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-          <h2 className="text-sm font-semibold text-slate-900">Overzicht samenwerking</h2>
-          <p className="mt-1 text-xs text-slate-500">
-            Samenvatting van alle projecten en samenwerking met deze opdrachtgever.
-          </p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
-            <KpiCard
-              label="Projecten totaal"
-              value="5"
-              sublabel="Sinds start samenwerking"
-            />
-            <KpiCard
-              label="Laatste jaar actief"
-              value="2024–2025"
-            />
-            <KpiCard
-              label="Relatiestatus"
-              value="Stevige samenwerking"
-              highlight
-            />
-          </div>
-        </div>
+        <CollaborationOverviewCard clientId={clientId} />
       </section>
 
       {/* Tabs */}
@@ -271,6 +252,93 @@ function KpiCard({
         <span className="text-base font-semibold text-slate-900 line-clamp-2">{value}</span>
       </div>
       {sublabel && <span className="mt-1 text-[11px] text-slate-500">{sublabel}</span>}
+    </div>
+  );
+}
+
+// Collaboration Overview Card with real API data
+function CollaborationOverviewCard({ clientId }: { clientId: number }) {
+  const [projects, setProjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadProjects() {
+      try {
+        setLoading(true);
+        const response = await clientService.getClientProjects(clientId);
+        setProjects(response.items || []);
+      } catch (err) {
+        console.error("Failed to load projects:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadProjects();
+  }, [clientId]);
+
+  // Calculate latest active year from projects
+  const getLatestYear = () => {
+    if (projects.length === 0) return "-";
+    
+    const years = projects
+      .map(p => {
+        const endDate = p.end_date ? new Date(p.end_date) : null;
+        const startDate = p.start_date ? new Date(p.start_date) : null;
+        return endDate || startDate;
+      })
+      .filter(date => date !== null)
+      .map(date => date!.getFullYear());
+    
+    if (years.length === 0) return "-";
+    
+    const maxYear = Math.max(...years);
+    const minYear = Math.min(...years);
+    
+    if (maxYear === minYear) return maxYear.toString();
+    return `${minYear}–${maxYear}`;
+  };
+
+  // Determine relationship status based on project count
+  const getRelationshipStatus = () => {
+    const count = projects.length;
+    if (count === 0) return "Geen projecten";
+    if (count === 1) return "Nieuwe relatie";
+    if (count <= 3) return "Groeiende samenwerking";
+    if (count <= 6) return "Stevige samenwerking";
+    return "Langdurig partner";
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+        <h2 className="text-sm font-semibold text-slate-900">Overzicht samenwerking</h2>
+        <p className="mt-1 text-xs text-slate-500">Laden...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+      <h2 className="text-sm font-semibold text-slate-900">Overzicht samenwerking</h2>
+      <p className="mt-1 text-xs text-slate-500">
+        Samenvatting van alle projecten en samenwerking met deze opdrachtgever.
+      </p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        <KpiCard
+          label="Projecten totaal"
+          value={projects.length.toString()}
+          sublabel="Sinds start samenwerking"
+        />
+        <KpiCard
+          label="Laatste jaar actief"
+          value={getLatestYear()}
+        />
+        <KpiCard
+          label="Relatiestatus"
+          value={getRelationshipStatus()}
+          highlight={projects.length >= 3}
+        />
+      </div>
     </div>
   );
 }
@@ -553,51 +621,49 @@ function DocumentenTab() {
 
 // TAB: Communicatie
 function CommunicatieTab({ client }: { client: any }) {
-  const [selectedTemplate, setSelectedTemplate] = useState("startproject");
-  const [selectedModule, setSelectedModule] = useState("");
-  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState("");
   const [emailPreview, setEmailPreview] = useState("");
+  const [mailTemplates, setMailTemplates] = useState<MailTemplateDto[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
 
-  const templates = {
-    startproject: "Startproject",
-    tussenpresentatie: "Tussenpresentatie",
-    eindpresentatie: "Eindpresentatie",
-    bedankmail: "Bedankmail",
-  };
-
-  const mockModules = [
-    { id: "5v1", label: "5V1 - Bovenbouw VWO" },
-    { id: "4h2", label: "4H2 - Bovenbouw HAVO" },
-    { id: "3h1", label: "3H1 - Onderbouw HAVO" },
-  ];
-
-  const mockTeams = [
-    { id: "t1", label: "Team 1" },
-    { id: "t2", label: "Team 2" },
-    { id: "t3", label: "Team 3" },
-    { id: "t4", label: "Team 4" },
-  ];
+  // Load mail templates on mount
+  useEffect(() => {
+    async function fetchMailTemplates() {
+      try {
+        setLoadingTemplates(true);
+        const templates = await listMailTemplates({ is_active: true });
+        setMailTemplates(templates);
+        if (templates.length > 0) {
+          setSelectedTemplate(templates[0].type);
+        }
+      } catch (err) {
+        console.error("Error fetching mail templates:", err);
+      } finally {
+        setLoadingTemplates(false);
+      }
+    }
+    fetchMailTemplates();
+  }, []);
 
   const generateEmail = () => {
-    const template = templates[selectedTemplate as keyof typeof templates];
-    const moduleName = mockModules.find(m => m.id === selectedModule)?.label || "N/A";
-    const teams = selectedTeams.map(t => mockTeams.find(mt => mt.id === t)?.label || t).join(", ");
+    const template = mailTemplates.find(t => t.type === selectedTemplate);
+    if (!template) {
+      setEmailPreview("");
+      return;
+    }
     
-    const preview = `Beste ${client.contact_name || 'opdrachtgever'},
-
-Hierbij nodigen wij u uit voor de ${template.toLowerCase()} van het project.
-
-Module: ${moduleName}
-Teams: ${teams}
-
-Met vriendelijke groet,
-Het docententeam`;
-
-    setEmailPreview(preview);
+    // Use template body and replace basic variables
+    let body = template.body;
+    body = body.replace(/\{contactName\}/g, client.contact_name || 'opdrachtgever');
+    body = body.replace(/\{organization\}/g, client.organization || '');
+    
+    setEmailPreview(body);
   };
 
   const handleOpenInOutlook = () => {
-    const subject = `${templates[selectedTemplate as keyof typeof templates]} - ${client.organization}`;
+    const template = mailTemplates.find(t => t.type === selectedTemplate);
+    const subject = template ? template.subject.replace(/\{organization\}/g, client.organization || '') : '';
+    
     const mailtoLink = buildMailto({
       to: client.email || "",
       subject,
@@ -628,65 +694,39 @@ Het docententeam`;
       {/* Template selector */}
       <div className="space-y-1.5">
         <label className="text-xs font-medium text-slate-600">Template</label>
-        <select 
-          value={selectedTemplate}
-          onChange={(e) => setSelectedTemplate(e.target.value)}
-          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/60"
-        >
-          {Object.entries(templates).map(([key, label]) => (
-            <option key={key} value={key}>{label}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Module / Class selector */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-medium text-slate-600">Module / Klas</label>
-        <select 
-          value={selectedModule}
-          onChange={(e) => setSelectedModule(e.target.value)}
-          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/60"
-        >
-          <option value="">Selecteer module...</option>
-          {mockModules.map((module) => (
-            <option key={module.id} value={module.id}>{module.label}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Teams selector */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-medium text-slate-600">Teams</label>
-        <div className="flex flex-wrap gap-2">
-          {mockTeams.map((team) => (
-            <button
-              key={team.id}
-              onClick={() => {
-                if (selectedTeams.includes(team.id)) {
-                  setSelectedTeams(selectedTeams.filter(t => t !== team.id));
-                } else {
-                  setSelectedTeams([...selectedTeams, team.id]);
-                }
-              }}
-              className={`px-3 py-1.5 rounded-lg border text-xs font-medium ${
-                selectedTeams.includes(team.id)
-                  ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              {team.label}
-            </button>
-          ))}
-        </div>
+        {loadingTemplates ? (
+          <div className="text-sm text-slate-500">Laden...</div>
+        ) : mailTemplates.length === 0 ? (
+          <div className="text-sm text-slate-500">
+            Geen actieve templates beschikbaar. Maak templates aan in{" "}
+            <Link href="/teacher/admin/templates?tab=mail" className="text-indigo-600 hover:underline">
+              Template beheer
+            </Link>
+          </div>
+        ) : (
+          <select 
+            value={selectedTemplate}
+            onChange={(e) => setSelectedTemplate(e.target.value)}
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/60"
+          >
+            {mailTemplates.map((template) => (
+              <option key={template.id} value={template.type}>
+                {template.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Generate button */}
-      <button 
-        onClick={generateEmail}
-        className="w-full rounded-lg border border-indigo-500 bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
-      >
-        Genereer mail preview
-      </button>
+      {mailTemplates.length > 0 && (
+        <button 
+          onClick={generateEmail}
+          className="w-full rounded-lg border border-indigo-500 bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+        >
+          Genereer mail preview
+        </button>
+      )}
 
       {/* Email preview */}
       {emailPreview && (
