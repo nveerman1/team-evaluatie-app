@@ -298,10 +298,18 @@ def get_project_assessment(
     if not rubric:
         raise HTTPException(status_code=404, detail="Rubric not found")
     
-    criteria = db.query(RubricCriterion).filter(
+    # Order criteria by order column (if exists), then by id - same as rubric edit page
+    criteria_query = db.query(RubricCriterion).filter(
         RubricCriterion.rubric_id == rubric.id,
         RubricCriterion.school_id == user.school_id,
-    ).order_by(RubricCriterion.id.asc()).all()
+    )
+    if hasattr(RubricCriterion, "order"):
+        criteria_query = criteria_query.order_by(
+            RubricCriterion.order.asc().nulls_last(), RubricCriterion.id.asc()
+        )
+    else:
+        criteria_query = criteria_query.order_by(RubricCriterion.id.asc())
+    criteria = criteria_query.all()
     
     # Get scores - filter by team_number if provided
     scores_query = db.query(ProjectAssessmentScore).filter(
@@ -851,11 +859,18 @@ def get_assessment_scores_overview(
     if not rubric:
         raise HTTPException(status_code=404, detail="Rubric not found")
     
-    # Get all criteria
-    criteria = db.query(RubricCriterion).filter(
+    # Get all criteria - order by order column (if exists), then by id - same as rubric edit page
+    criteria_query = db.query(RubricCriterion).filter(
         RubricCriterion.rubric_id == rubric.id,
         RubricCriterion.school_id == user.school_id,
-    ).order_by(RubricCriterion.id.asc()).all()
+    )
+    if hasattr(RubricCriterion, "order"):
+        criteria_query = criteria_query.order_by(
+            RubricCriterion.order.asc().nulls_last(), RubricCriterion.id.asc()
+        )
+    else:
+        criteria_query = criteria_query.order_by(RubricCriterion.id.asc())
+    criteria = criteria_query.all()
     
     criteria_list = [
         {"id": c.id, "name": c.name, "weight": c.weight, "category": getattr(c, "category", None), "descriptors": c.descriptors}
@@ -1062,11 +1077,18 @@ def get_assessment_students_overview(
     if not rubric:
         raise HTTPException(status_code=404, detail="Rubric not found")
     
-    # Get all criteria
-    criteria = db.query(RubricCriterion).filter(
+    # Get all criteria - order by order column (if exists), then by id - same as rubric edit page
+    criteria_query = db.query(RubricCriterion).filter(
         RubricCriterion.rubric_id == rubric.id,
         RubricCriterion.school_id == user.school_id,
-    ).order_by(RubricCriterion.id.asc()).all()
+    )
+    if hasattr(RubricCriterion, "order"):
+        criteria_query = criteria_query.order_by(
+            RubricCriterion.order.asc().nulls_last(), RubricCriterion.id.asc()
+        )
+    else:
+        criteria_query = criteria_query.order_by(RubricCriterion.id.asc())
+    criteria = criteria_query.all()
     
     criteria_list = [
         {"id": c.id, "name": c.name, "weight": c.weight, "category": getattr(c, "category", None), "descriptors": c.descriptors}

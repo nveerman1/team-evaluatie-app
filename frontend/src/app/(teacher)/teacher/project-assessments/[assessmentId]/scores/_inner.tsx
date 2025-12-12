@@ -146,8 +146,44 @@ export default function ScoresOverviewInner() {
   }
 
   function handleCellKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" || e.key === "Tab") {
+      e.preventDefault();
       handleCellBlur();
+      
+      // Move to next/previous cell on Tab/Shift+Tab
+      if (e.key === "Tab" && editingCell && currentData) {
+        const currentCriterionIndex = currentData.criteria.findIndex(
+          (c) => c.id === editingCell.criterionId
+        );
+        
+        if (e.shiftKey) {
+          // Shift+Tab: Move to previous criterion
+          if (currentCriterionIndex > 0) {
+            const prevCriterion = currentData.criteria[currentCriterionIndex - 1];
+            setTimeout(() => {
+              handleCellClick(
+                prevCriterion.id,
+                undefined,
+                editingCell.teamNumber,
+                editingCell.studentId
+              );
+            }, 50);
+          }
+        } else {
+          // Tab: Move to next criterion
+          if (currentCriterionIndex < currentData.criteria.length - 1) {
+            const nextCriterion = currentData.criteria[currentCriterionIndex + 1];
+            setTimeout(() => {
+              handleCellClick(
+                nextCriterion.id,
+                undefined,
+                editingCell.teamNumber,
+                editingCell.studentId
+              );
+            }, 50);
+          }
+        }
+      }
     } else if (e.key === "Escape") {
       setEditingCell(null);
     }
@@ -634,6 +670,7 @@ export default function ScoresOverviewInner() {
                                 undefined  // no studentId for team scores
                               )
                             }
+                            tabIndex={0}
                             className={`px-3 py-1 rounded-full border text-xs font-medium transition ${
                               cs.score !== null && cs.score !== undefined
                                 ? getScoreColor(cs.score, data.rubric_scale_min, data.rubric_scale_max)
@@ -812,6 +849,7 @@ export default function ScoresOverviewInner() {
                                   student.student_id
                                 );
                               }}
+                              tabIndex={0}
                               className={`px-3 py-1 rounded-full border text-xs font-medium transition ${
                                 cs.score !== null && cs.score !== undefined
                                   ? getScoreColor(cs.score, studentsData.rubric_scale_min, studentsData.rubric_scale_max)
