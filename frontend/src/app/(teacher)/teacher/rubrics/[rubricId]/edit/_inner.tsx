@@ -96,6 +96,8 @@ export default function EditRubricPageInner() {
         ]);
         if (!mounted) return;
         setRubric(r.data);
+        // Items come from backend already sorted by order field
+        // Just map them to the expected format
         setItems(
           (c.data || []).map((ci) => ({
             id: ci.id,

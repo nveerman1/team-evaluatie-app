@@ -538,7 +538,7 @@ def batch_upsert_criteria(
             out.append(c)
 
     db.commit()
-    # herladen in gewenste volgorde
+    # herladen in gewenste volgorde - use consistent ordering with other endpoints
     result = [
         _to_out_criterion(c)
         for c in db.query(RubricCriterion)
@@ -548,7 +548,7 @@ def batch_upsert_criteria(
             RubricCriterion.rubric_id == rubric_id,
         )
         .order_by(
-            getattr(RubricCriterion, "order", RubricCriterion.id).asc(),
+            RubricCriterion.order.asc().nulls_last(),
             RubricCriterion.id.asc(),
         )
         .all()
