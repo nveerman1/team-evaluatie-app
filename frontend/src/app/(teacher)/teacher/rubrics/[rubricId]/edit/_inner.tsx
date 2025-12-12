@@ -294,7 +294,7 @@ export default function EditRubricPageInner() {
           name: it.name?.trim() || `Criterium ${i + 1}`,
           weight: Number(it.weight) || 1.0,
           category: it.category ?? null,
-          order: it.order ?? i + 1,
+          order: i + 1,  // Use array index as global order, not per-category order
           descriptors: {
             level1: it.descriptors?.level1 ?? "",
             level2: it.descriptors?.level2 ?? "",
