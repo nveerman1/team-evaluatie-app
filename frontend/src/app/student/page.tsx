@@ -11,7 +11,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Search, ClipboardCheck, Target, Trophy, BarChart3, Sparkles } from "lucide-react";
 import { EvaluationDashboardCard } from "@/components/student/dashboard/EvaluationDashboardCard";
-import { ScanDashboardCard } from "@/components/student/dashboard/ScanDashboardCard";
 import { ProjectAssessmentDashboardCard } from "@/components/student/dashboard/ProjectAssessmentDashboardCard";
 import { OverviewTab } from "@/components/student/dashboard/OverviewTab";
 import { CompetencyScanTab } from "@/components/student/competency/CompetencyScanTab";
@@ -25,14 +24,14 @@ export default function StudentDashboard() {
     loading: projectLoading,
     error: projectError,
   } = useStudentProjectAssessments();
-  const { items: peerResults, loading: peerLoading } = usePeerFeedbackResults();
+  const { items: peerResults } = usePeerFeedbackResults();
 
   // Tab state
   const [activeTab, setActiveTab] = useState<string>("evaluaties");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  // Get open evaluations early (before conditional returns)
-  const openEvaluations = dashboard?.openEvaluations || [];
+  // Memoize open evaluations to avoid changing on every render
+  const openEvaluations = useMemo(() => dashboard?.openEvaluations || [], [dashboard?.openEvaluations]);
 
   // Filter evaluations by search query
   const filteredEvaluations = useMemo(() => {

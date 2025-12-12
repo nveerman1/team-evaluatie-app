@@ -2,16 +2,14 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import {
   ChevronRight,
   MessageSquare,
   Target,
   FileText,
   TrendingUp,
-  BookOpen,
 } from "lucide-react";
-import { StatPill, ScoreRow, StatusBadge, OmzaTeacherBadge, SectionHeader, OmzaTeacherStatus } from "./helpers";
+import { StatPill, ScoreRow, StatusBadge, OmzaTeacherBadge, OmzaTeacherStatus } from "./helpers";
 import { EvaluationResult } from "@/dtos";
 import Link from "next/link";
 import {
@@ -23,12 +21,39 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+type LearningGoal = {
+  id: string;
+  title: string;
+  status: "actief" | "afgerond";
+  since?: string;
+  related?: string;
+};
+
+type Reflection = {
+  id: string;
+  title: string;
+  type: string;
+  date: string;
+};
+
+type ProjectResult = {
+  id: string;
+  project: string;
+  meta?: string;
+  opdrachtgever?: string;
+  periode?: string;
+  eindcijfer?: number;
+  proces?: number;
+  eindresultaat?: number;
+  communicatie?: number;
+};
+
 type OverviewTabProps = {
   peerResults: EvaluationResult[];
-  competencyData?: any; // TODO: Define proper type based on API
-  learningGoals?: any[]; // TODO: Define proper type
-  reflections?: any[]; // TODO: Define proper type
-  projectResults?: any[]; // TODO: Define proper type
+  competencyData?: unknown;
+  learningGoals?: LearningGoal[];
+  reflections?: Reflection[];
+  projectResults?: ProjectResult[];
 };
 
 export function OverviewTab({ 
@@ -96,7 +121,7 @@ export function OverviewTab({
       { category: "Communicatie & presenteren", value: 3.8 },
       { category: "Reflectie & professionele houding", value: 3.4 },
     ];
-  }, [competencyData]);
+  }, []);
 
   return (
     <div className="space-y-4">
