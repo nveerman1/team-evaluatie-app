@@ -221,6 +221,14 @@ export default function ProjectAssessmentsListInner() {
                 const totalTeams = item.teams?.length || 0;
                 const progressPercentage = totalTeams > 0 ? (readyTeams / totalTeams) * 100 : 0;
 
+                // Calculate latest updated_at from teams
+                const latestTeamUpdate = item.teams
+                  ?.map(t => t.updated_at)
+                  .filter((date): date is string => date != null)
+                  .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
+                
+                const displayDate = latestTeamUpdate || item.updated_at;
+
             return (
               <div
                 key={item.id}
@@ -273,7 +281,7 @@ export default function ProjectAssessmentsListInner() {
 
                   {/* Last updated */}
                   <div className="text-xs text-slate-500">
-                    Laatst bijgewerkt: {item.updated_at ? new Date(item.updated_at).toLocaleDateString("nl-NL") : "Onbekend"}
+                    Laatst bijgewerkt: {displayDate ? new Date(displayDate).toLocaleDateString("nl-NL") : "Onbekend"}
                   </div>
                 </div>
 
