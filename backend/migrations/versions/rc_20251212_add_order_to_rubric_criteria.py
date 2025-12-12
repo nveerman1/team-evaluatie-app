@@ -26,22 +26,8 @@ def upgrade():
         "ix_rubric_criteria_order", "rubric_criteria", ["order"], unique=False
     )
     
-    # Backfill order values for existing criteria based on their current ID order
-    # This ensures existing rubrics maintain their current display order
-    op.execute("""
-        WITH ordered_criteria AS (
-            SELECT 
-                id,
-                rubric_id,
-                ROW_NUMBER() OVER (PARTITION BY rubric_id ORDER BY id) as row_num
-            FROM rubric_criteria
-            WHERE "order" IS NULL
-        )
-        UPDATE rubric_criteria rc
-        SET "order" = oc.row_num
-        FROM ordered_criteria oc
-        WHERE rc.id = oc.id
-    """)
+    # Note: Backfill is done in a separate migration (rc_20251212_02_backfill_order)
+    # to handle cases where this migration was already run before the backfill was added
 
 
 def downgrade():
