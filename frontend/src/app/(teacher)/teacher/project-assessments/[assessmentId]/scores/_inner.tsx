@@ -556,14 +556,18 @@ export default function ScoresOverviewInner() {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           {viewMode === "teams" && data && (() => {
-            // Group criteria by category
-            const grouped = data.criteria.reduce((acc, c) => {
+            // Group criteria by category, preserving order from data.criteria
+            const grouped: Record<string, typeof data.criteria> = {};
+            const categories: string[] = [];
+            
+            data.criteria.forEach((c) => {
               const cat = c.category || "Overig";
-              if (!acc[cat]) acc[cat] = [];
-              acc[cat].push(c);
-              return acc;
-            }, {} as Record<string, typeof data.criteria>);
-            const categories = Object.keys(grouped);
+              if (!grouped[cat]) {
+                grouped[cat] = [];
+                categories.push(cat);  // Preserve first appearance order
+              }
+              grouped[cat].push(c);
+            });
 
             return (
             <table className="min-w-full divide-y divide-gray-200 text-sm">
@@ -725,14 +729,18 @@ export default function ScoresOverviewInner() {
           })()}
 
           {viewMode === "students" && studentsData && (() => {
-            // Group criteria by category
-            const grouped = studentsData.criteria.reduce((acc, c) => {
+            // Group criteria by category, preserving order from studentsData.criteria
+            const grouped: Record<string, typeof studentsData.criteria> = {};
+            const categories: string[] = [];
+            
+            studentsData.criteria.forEach((c) => {
               const cat = c.category || "Overig";
-              if (!acc[cat]) acc[cat] = [];
-              acc[cat].push(c);
-              return acc;
-            }, {} as Record<string, typeof studentsData.criteria>);
-            const categories = Object.keys(grouped);
+              if (!grouped[cat]) {
+                grouped[cat] = [];
+                categories.push(cat);  // Preserve first appearance order
+              }
+              grouped[cat].push(c);
+            });
 
             return (
             <table className="min-w-full divide-y divide-gray-200 text-sm">
