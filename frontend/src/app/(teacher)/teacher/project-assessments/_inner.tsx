@@ -103,6 +103,16 @@ export default function ProjectAssessmentsListInner() {
     return matchesSearch;
   });
 
+  // Group assessments by course
+  const groupedByCourse: Record<string, AssessmentWithTeams[]> = {};
+  filteredData.forEach((item) => {
+    const courseKey = item.course_name || "Geen vak";
+    if (!groupedByCourse[courseKey]) {
+      groupedByCourse[courseKey] = [];
+    }
+    groupedByCourse[courseKey].push(item);
+  });
+
   return (
     <>
       {/* Page Header */}
@@ -198,13 +208,18 @@ export default function ProjectAssessmentsListInner() {
             Geen projectbeoordelingen gevonden.
           </div>
         )}
-      {!loading && !error && filteredData.length > 0 && (
-        <div className="space-y-3">
-          {filteredData.map((item) => {
-            // Calculate ready teams
-            const readyTeams = item.teams?.filter(t => t.status === "completed").length || 0;
-            const totalTeams = item.teams?.length || 0;
-            const progressPercentage = totalTeams > 0 ? (readyTeams / totalTeams) * 100 : 0;
+      {!loading && !error && Object.keys(groupedByCourse).length > 0 &&
+        Object.keys(groupedByCourse).map((courseName) => (
+          <section key={courseName} className="space-y-3">
+            <h3 className="text-lg font-semibold text-slate-800 px-2">
+              {courseName}
+            </h3>
+            <div className="space-y-3">
+              {groupedByCourse[courseName].map((item) => {
+                // Calculate ready teams
+                const readyTeams = item.teams?.filter(t => t.status === "completed").length || 0;
+                const totalTeams = item.teams?.length || 0;
+                const progressPercentage = totalTeams > 0 ? (readyTeams / totalTeams) * 100 : 0;
 
             return (
               <div
@@ -306,8 +321,9 @@ export default function ProjectAssessmentsListInner() {
               </div>
             );
           })}
-        </div>
-      )}
+            </div>
+          </section>
+        ))}
       </main>
     </>
   );
