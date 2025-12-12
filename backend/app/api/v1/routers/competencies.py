@@ -1659,7 +1659,7 @@ def get_class_heatmap(
         raise HTTPException(status_code=404, detail="Window not found")
 
     # Get selected competencies for this window (if specified in settings)
-    selected_competency_ids = window.settings.get("selected_competency_ids", [])
+    selected_competency_ids = (window.settings or {}).get("selected_competency_ids", [])
 
     if selected_competency_ids:
         # Filter to only selected competencies
