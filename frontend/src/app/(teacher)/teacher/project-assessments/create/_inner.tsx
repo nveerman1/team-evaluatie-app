@@ -1,16 +1,18 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import api, { ApiAuthError } from "@/lib/api";
 import { projectAssessmentService, rubricService, projectService } from "@/services";
 import { RubricListItem, ProjectAssessmentCreate } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
 import type { ProjectListItem } from "@/dtos/project.dto";
+import { useCourses } from "@/hooks";
 
 type Group = {
   id: number;
   name: string;
   team_number?: number | null;
+  course_id?: number | null;
 };
 
 export default function CreateProjectAssessmentInner() {
@@ -22,12 +24,35 @@ export default function CreateProjectAssessmentInner() {
   const [rubrics, setRubrics] = useState<RubricListItem[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
+  const { courses } = useCourses();
 
   const [title, setTitle] = useState("");
+  const [courseId, setCourseId] = useState<number | "">("");
   const [rubricId, setRubricId] = useState<number | "">("");
   const [groupId, setGroupId] = useState<number | "">("");
   const [projectId, setProjectId] = useState<number | "">("");
   const [version, setVersion] = useState("");
+
+  // Filter projects based on selected course
+  const filteredProjects = useMemo(() => {
+    if (!courseId || courseId === "") return [];
+    return projects.filter(p => p.course_id === Number(courseId));
+  }, [projects, courseId]);
+
+  // Filter groups based on selected course
+  const filteredGroups = useMemo(() => {
+    if (!courseId || courseId === "") return [];
+    return groups.filter(g => g.course_id === Number(courseId));
+  }, [groups, courseId]);
+
+  // Auto-select group when course changes and there's only one group
+  useEffect(() => {
+    if (filteredGroups.length === 1) {
+      setGroupId(filteredGroups[0].id);
+    } else {
+      setGroupId("");
+    }
+  }, [filteredGroups]);
 
   useEffect(() => {
     async function loadData() {
@@ -58,8 +83,16 @@ export default function CreateProjectAssessmentInner() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!courseId) {
+      setError("Selecteer een course");
+      return;
+    }
+    if (!projectId) {
+      setError("Selecteer een project");
+      return;
+    }
     if (!rubricId || !groupId) {
-      setError("Selecteer een rubric en team");
+      setError("Selecteer een rubric en cluster");
       return;
     }
 
@@ -95,7 +128,7 @@ export default function CreateProjectAssessmentInner() {
       <header>
         <h1 className="text-2xl font-semibold">Nieuwe projectbeoordeling</h1>
         <p className="text-gray-600">
-          Maak een projectbeoordeling aan voor een cluster.
+          Maak een projectbeoordeling aan voor een project.
         </p>
       </header>
 
@@ -120,25 +153,59 @@ export default function CreateProjectAssessmentInner() {
           />
         </div>
 
-        <div className="space-y-1">
-          <label className="block text-sm font-medium">
-            Project (optioneel)
-          </label>
-          <select
-            className="w-full border rounded-lg px-3 py-2"
-            value={projectId}
-            onChange={(e) => setProjectId(Number(e.target.value) || "")}
-          >
-            <option value="">-- Geen project --</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.title}
-              </option>
-            ))}
-          </select>
-          <p className="text-sm text-gray-500">
-            Koppel deze beoordeling aan een bestaand project (optioneel).
-          </p>
+        {/* Course & Project */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <label className="block text-sm font-medium">
+              Course <span className="text-red-500">*</span>
+            </label>
+            <select
+              className="w-full px-3 py-2 border rounded-lg"
+              value={courseId}
+              onChange={(e) => {
+                setCourseId(e.target.value ? Number(e.target.value) : "");
+                setProjectId(""); // Reset project when course changes
+                setGroupId(""); // Reset group when course changes
+              }}
+              required
+              disabled={loading}
+            >
+              <option value="">— Kies course —</option>
+              {courses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500">
+              Bepaalt welke projecten en clusters beschikbaar zijn.
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-sm font-medium">
+              Project <span className="text-red-500">*</span>
+            </label>
+            <select
+              className="w-full px-3 py-2 border rounded-lg"
+              value={projectId}
+              onChange={(e) => {
+                setProjectId(e.target.value ? Number(e.target.value) : "");
+              }}
+              required
+              disabled={loading || !courseId}
+            >
+              <option value="">— Kies project —</option>
+              {filteredProjects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500">
+              Koppel deze beoordeling aan een project.
+            </p>
+          </div>
         </div>
 
         <div className="space-y-1">
@@ -168,31 +235,6 @@ export default function CreateProjectAssessmentInner() {
 
         <div className="space-y-1">
           <label className="block text-sm font-medium">
-            Cluster <span className="text-red-500">*</span>
-          </label>
-          <select
-            className="w-full border rounded-lg px-3 py-2"
-            value={groupId}
-            onChange={(e) => setGroupId(Number(e.target.value) || "")}
-            required
-          >
-            <option value="">-- Selecteer cluster --</option>
-            {groups.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-                {g.team_number ? ` (Team ${g.team_number})` : ""}
-              </option>
-            ))}
-          </select>
-          {groups.length === 0 && (
-            <p className="text-sm text-amber-600">
-              Geen cluster gevonden. Maak eerst clusters aan in de admin sectie.
-            </p>
-          )}
-        </div>
-
-        <div className="space-y-1">
-          <label className="block text-sm font-medium">
             Versie (optioneel)
           </label>
           <input
@@ -206,7 +248,7 @@ export default function CreateProjectAssessmentInner() {
         <div className="flex items-center gap-3">
           <button
             type="submit"
-            disabled={saving || rubrics.length === 0 || groups.length === 0}
+            disabled={saving || rubrics.length === 0 || courses.length === 0 || !courseId || filteredGroups.length === 0}
             className="px-4 py-2 rounded-xl bg-black text-white disabled:opacity-60"
           >
             {saving ? "Opslaan…" : "Opslaan & verder"}
