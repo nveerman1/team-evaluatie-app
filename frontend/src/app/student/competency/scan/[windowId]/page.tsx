@@ -52,10 +52,10 @@ export default function SelfScanPage() {
       
       setCompetencies(filteredComps);
 
-      // Load rubric levels for each competency
+      // Load rubric levels for each competency (only filtered ones)
       const levelsMap: Record<number, any[]> = {};
       await Promise.all(
-        comps.map(async (comp) => {
+        filteredComps.map(async (comp) => {
           try {
             const levels = await competencyService.getRubricLevels(comp.id);
             levelsMap[comp.id] = levels;
