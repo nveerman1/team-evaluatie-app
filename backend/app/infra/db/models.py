@@ -2349,6 +2349,9 @@ class ProjectTeamExternal(Base):
     project_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"), nullable=True, index=True
     )
+    assessment_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("project_assessments.id", ondelete="CASCADE"), nullable=True, index=True
+    )
 
     # Team number within the group (identifies specific team, not just the course group)
     team_number: Mapped[Optional[int]] = mapped_column(nullable=True, index=True)
@@ -2380,11 +2383,13 @@ class ProjectTeamExternal(Base):
         back_populates="team_links"
     )
     project: Mapped["Project"] = relationship()
+    assessment: Mapped[Optional["ProjectAssessment"]] = relationship()
 
     __table_args__ = (
         Index("ix_project_team_external_group", "group_id"),
         Index("ix_project_team_external_evaluator", "external_evaluator_id"),
         Index("ix_project_team_external_project", "project_id"),
+        Index("ix_project_team_external_assessment", "assessment_id"),
         Index("ix_project_team_external_status", "status"),
         Index("ix_project_team_external_token", "invitation_token"),
         Index("ix_project_team_external_group_team", "group_id", "team_number"),

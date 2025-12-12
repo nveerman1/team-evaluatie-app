@@ -62,20 +62,13 @@ export default function ExternalAssessmentPageInner() {
         await projectAssessmentService.getTeamOverview(assessmentId);
       setAssessmentData(overview);
 
-      // For now, we use a placeholder project_id. In a real implementation,
-      // we would need to get the project_id from the assessment or group.
-      // Let's try to get external status using the assessment's group_id first team
-      // as the project context
-      if (overview.teams.length > 0) {
-        // Try to fetch external status using assessment's metadata or course info
-        // For now, assume project_id might be in assessment metadata or we need to derive it
+      // Get external status if assessment has a project_id
+      if (overview.assessment.project_id) {
         try {
-          // Use a reasonable project_id - in practice this should come from assessment metadata
-          // For this demo, let's use the course_id or a derived value
-          const projectId = overview.assessment.metadata_json?.project_id || 1;
           const statuses =
             await externalAssessmentService.getProjectExternalStatus(
-              projectId
+              overview.assessment.project_id,
+              assessmentId  // Pass assessment_id to filter by this assessment
             );
           setExternalStatuses(statuses);
         } catch (statusErr) {
@@ -83,6 +76,9 @@ export default function ExternalAssessmentPageInner() {
           console.warn("Could not fetch external status:", statusErr);
           setExternalStatuses([]);
         }
+      } else {
+        // No project_id means no external assessments can be configured
+        setExternalStatuses([]);
       }
     } catch (e: unknown) {
       if (e instanceof ApiAuthError) {
@@ -235,7 +231,7 @@ export default function ExternalAssessmentPageInner() {
         <div className="flex flex-wrap gap-3 items-center">
           <input
             className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Zoek op team, lid of opdrachtgever..."
+            placeholder="Zoek op team, lid of externe beoordelaar..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -285,7 +281,7 @@ export default function ExternalAssessmentPageInner() {
                     Leden
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
-                    Opdrachtgever
+                    Externe beoordelaar
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
                     Status extern
@@ -399,7 +395,7 @@ export default function ExternalAssessmentPageInner() {
                     {/* Evaluator Info */}
                     <div className="bg-gray-50 rounded-lg p-4">
                       <h3 className="text-sm font-medium text-gray-700 mb-2">
-                        Opdrachtgever
+                        Externe beoordelaar
                       </h3>
                       <div className="text-gray-900">
                         {detailData.external_evaluator.name}
