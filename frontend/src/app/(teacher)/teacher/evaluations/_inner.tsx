@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useUrlState, useEvaluations, useCourses } from "@/hooks";
 import { evaluationService } from "@/services";
 import type { Evaluation } from "@/dtos/evaluation.dto";
-import { Loading, ErrorMessage, Toast, StatusBadge } from "@/components";
+import { Loading, ErrorMessage, Toast } from "@/components";
 import { formatDate } from "@/utils";
 
 const STATUSES_FILTER = [
@@ -216,7 +216,24 @@ export default function EvaluationsListInner() {
                     <h3 className="text-base font-semibold text-slate-900">
                       {e.title}
                     </h3>
-                    <StatusBadge status={e.status} />
+                    {/* Status badge */}
+                    {e.status === "open" ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-green-100">
+                        Open
+                      </span>
+                    ) : e.status === "closed" ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-700 ring-1 ring-gray-100">
+                        Gesloten
+                      </span>
+                    ) : e.status === "published" ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-green-100">
+                        Gepubliceerd
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-amber-100">
+                        Concept
+                      </span>
+                    )}
                   </div>
 
                   {/* Deadlines */}
