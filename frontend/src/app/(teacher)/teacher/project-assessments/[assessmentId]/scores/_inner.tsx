@@ -9,6 +9,9 @@ import { Loading, ErrorMessage } from "@/components";
 
 type ViewMode = "teams" | "students";
 
+// Delay in ms before focusing the next cell after tab navigation
+const TAB_NAVIGATION_DELAY_MS = 50;
+
 export default function ScoresOverviewInner() {
   const params = useParams();
   const assessmentId = Number(params?.assessmentId);
@@ -145,44 +148,37 @@ export default function ScoresOverviewInner() {
     }
   }
 
+  // Helper function to navigate to adjacent cell
+  function navigateToAdjacentCell(indexOffset: number) {
+    if (!editingCell || !currentData) return;
+    
+    const currentCriterionIndex = currentData.criteria.findIndex(
+      (c) => c.id === editingCell.criterionId
+    );
+    const targetIndex = currentCriterionIndex + indexOffset;
+    
+    // Check if target index is within bounds
+    if (targetIndex >= 0 && targetIndex < currentData.criteria.length) {
+      const targetCriterion = currentData.criteria[targetIndex];
+      setTimeout(() => {
+        handleCellClick(
+          targetCriterion.id,
+          undefined,
+          editingCell.teamNumber,
+          editingCell.studentId
+        );
+      }, TAB_NAVIGATION_DELAY_MS);
+    }
+  }
+
   function handleCellKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" || e.key === "Tab") {
       e.preventDefault();
       handleCellBlur();
       
       // Move to next/previous cell on Tab/Shift+Tab
-      if (e.key === "Tab" && editingCell && currentData) {
-        const currentCriterionIndex = currentData.criteria.findIndex(
-          (c) => c.id === editingCell.criterionId
-        );
-        
-        if (e.shiftKey) {
-          // Shift+Tab: Move to previous criterion
-          if (currentCriterionIndex > 0) {
-            const prevCriterion = currentData.criteria[currentCriterionIndex - 1];
-            setTimeout(() => {
-              handleCellClick(
-                prevCriterion.id,
-                undefined,
-                editingCell.teamNumber,
-                editingCell.studentId
-              );
-            }, 50);
-          }
-        } else {
-          // Tab: Move to next criterion
-          if (currentCriterionIndex < currentData.criteria.length - 1) {
-            const nextCriterion = currentData.criteria[currentCriterionIndex + 1];
-            setTimeout(() => {
-              handleCellClick(
-                nextCriterion.id,
-                undefined,
-                editingCell.teamNumber,
-                editingCell.studentId
-              );
-            }, 50);
-          }
-        }
+      if (e.key === "Tab") {
+        navigateToAdjacentCell(e.shiftKey ? -1 : 1);
       }
     } else if (e.key === "Escape") {
       setEditingCell(null);
