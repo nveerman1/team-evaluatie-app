@@ -9,6 +9,9 @@ import { Loading, ErrorMessage } from "@/components";
 
 type ViewMode = "teams" | "students";
 
+// Delay in ms before focusing the next cell after tab navigation
+const TAB_NAVIGATION_DELAY_MS = 50;
+
 export default function ScoresOverviewInner() {
   const params = useParams();
   const assessmentId = Number(params?.assessmentId);
@@ -145,9 +148,38 @@ export default function ScoresOverviewInner() {
     }
   }
 
+  // Helper function to navigate to adjacent cell
+  function navigateToAdjacentCell(indexOffset: number) {
+    if (!editingCell || !currentData) return;
+    
+    const currentCriterionIndex = currentData.criteria.findIndex(
+      (c) => c.id === editingCell.criterionId
+    );
+    const targetIndex = currentCriterionIndex + indexOffset;
+    
+    // Check if target index is within bounds
+    if (targetIndex >= 0 && targetIndex < currentData.criteria.length) {
+      const targetCriterion = currentData.criteria[targetIndex];
+      setTimeout(() => {
+        handleCellClick(
+          targetCriterion.id,
+          undefined,
+          editingCell.teamNumber,
+          editingCell.studentId
+        );
+      }, TAB_NAVIGATION_DELAY_MS);
+    }
+  }
+
   function handleCellKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" || e.key === "Tab") {
+      e.preventDefault();
       handleCellBlur();
+      
+      // Move to next/previous cell on Tab/Shift+Tab
+      if (e.key === "Tab") {
+        navigateToAdjacentCell(e.shiftKey ? -1 : 1);
+      }
     } else if (e.key === "Escape") {
       setEditingCell(null);
     }
@@ -524,14 +556,18 @@ export default function ScoresOverviewInner() {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           {viewMode === "teams" && data && (() => {
-            // Group criteria by category
-            const grouped = data.criteria.reduce((acc, c) => {
+            // Group criteria by category, preserving order from data.criteria
+            const grouped: Record<string, typeof data.criteria> = {};
+            const categories: string[] = [];
+            
+            data.criteria.forEach((c) => {
               const cat = c.category || "Overig";
-              if (!acc[cat]) acc[cat] = [];
-              acc[cat].push(c);
-              return acc;
-            }, {} as Record<string, typeof data.criteria>);
-            const categories = Object.keys(grouped);
+              if (!grouped[cat]) {
+                grouped[cat] = [];
+                categories.push(cat);  // Preserve first appearance order
+              }
+              grouped[cat].push(c);
+            });
 
             return (
             <table className="min-w-full divide-y divide-gray-200 text-sm">
@@ -634,6 +670,7 @@ export default function ScoresOverviewInner() {
                                 undefined  // no studentId for team scores
                               )
                             }
+                            tabIndex={0}
                             className={`px-3 py-1 rounded-full border text-xs font-medium transition ${
                               cs.score !== null && cs.score !== undefined
                                 ? getScoreColor(cs.score, data.rubric_scale_min, data.rubric_scale_max)
@@ -692,14 +729,18 @@ export default function ScoresOverviewInner() {
           })()}
 
           {viewMode === "students" && studentsData && (() => {
-            // Group criteria by category
-            const grouped = studentsData.criteria.reduce((acc, c) => {
+            // Group criteria by category, preserving order from studentsData.criteria
+            const grouped: Record<string, typeof studentsData.criteria> = {};
+            const categories: string[] = [];
+            
+            studentsData.criteria.forEach((c) => {
               const cat = c.category || "Overig";
-              if (!acc[cat]) acc[cat] = [];
-              acc[cat].push(c);
-              return acc;
-            }, {} as Record<string, typeof studentsData.criteria>);
-            const categories = Object.keys(grouped);
+              if (!grouped[cat]) {
+                grouped[cat] = [];
+                categories.push(cat);  // Preserve first appearance order
+              }
+              grouped[cat].push(c);
+            });
 
             return (
             <table className="min-w-full divide-y divide-gray-200 text-sm">
@@ -812,6 +853,7 @@ export default function ScoresOverviewInner() {
                                   student.student_id
                                 );
                               }}
+                              tabIndex={0}
                               className={`px-3 py-1 rounded-full border text-xs font-medium transition ${
                                 cs.score !== null && cs.score !== undefined
                                   ? getScoreColor(cs.score, studentsData.rubric_scale_min, studentsData.rubric_scale_max)

@@ -411,6 +411,9 @@ class RubricCriterion(Base):
     category: Mapped[Optional[str]] = mapped_column(
         String(100), nullable=True, index=True
     )
+    order: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True, index=True
+    )  # Display order for criteria within a rubric
     visible_to_external: Mapped[bool] = mapped_column(
         Boolean, default=True, nullable=False
     )  # Whether this criterion is visible to external evaluators

@@ -96,17 +96,33 @@ export default function EditRubricPageInner() {
         ]);
         if (!mounted) return;
         setRubric(r.data);
-        setItems(
-          (c.data || []).map((ci) => ({
-            id: ci.id,
-            name: ci.name,
-            weight: ci.weight,
-            category: ci.category ?? null,
-            order: ci.order ?? null,
-            descriptors: { ...EMPTY_DESC, ...(ci.descriptors || {}) },
-            learning_objective_ids: ci.learning_objective_ids || [],
-          })),
-        );
+        // Map items from API response
+        const mappedItems = (c.data || []).map((ci) => ({
+          id: ci.id,
+          name: ci.name,
+          weight: ci.weight,
+          category: ci.category ?? null,
+          order: ci.order ?? null,
+          descriptors: { ...EMPTY_DESC, ...(ci.descriptors || {}) },
+          learning_objective_ids: ci.learning_objective_ids || [],
+        }));
+        
+        // Sort items by category order (as defined in RubricEditor), then by order within category
+        // This ensures the items array matches the visual display order
+        const categoryOrder: Record<string, number> = {
+          "Projectproces": 0,
+          "Eindresultaat": 1,
+          "Communicatie": 2,
+        };
+        
+        const sortedItems = [...mappedItems].sort((a, b) => {
+          const catOrderA = categoryOrder[a.category || ""] ?? 999;
+          const catOrderB = categoryOrder[b.category || ""] ?? 999;
+          if (catOrderA !== catOrderB) return catOrderA - catOrderB;
+          return (a.order ?? 0) - (b.order ?? 0);
+        });
+        
+        setItems(sortedItems);
       } catch (e: unknown) {
         const err = e as { response?: { data?: { detail?: string } }; message?: string };
         setError(err?.response?.data?.detail || err?.message || "Laden mislukt");
@@ -294,7 +310,7 @@ export default function EditRubricPageInner() {
           name: it.name?.trim() || `Criterium ${i + 1}`,
           weight: Number(it.weight) || 1.0,
           category: it.category ?? null,
-          order: it.order ?? i + 1,
+          order: i + 1,  // Use array index as global order, not per-category order
           descriptors: {
             level1: it.descriptors?.level1 ?? "",
             level2: it.descriptors?.level2 ?? "",

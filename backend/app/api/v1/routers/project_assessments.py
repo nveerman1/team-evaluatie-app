@@ -50,6 +50,24 @@ from app.api.v1.schemas.project_assessments import (
 router = APIRouter(prefix="/project-assessments", tags=["project-assessments"])
 
 
+def _get_ordered_criteria_query(db: Session, rubric_id: int, school_id: int):
+    """
+    Helper function to get criteria query with consistent ordering.
+    Orders by 'order' column (if exists), then by id - same as rubric edit page.
+    """
+    criteria_query = db.query(RubricCriterion).filter(
+        RubricCriterion.rubric_id == rubric_id,
+        RubricCriterion.school_id == school_id,
+    )
+    if hasattr(RubricCriterion, "order"):
+        criteria_query = criteria_query.order_by(
+            RubricCriterion.order.asc().nulls_last(), RubricCriterion.id.asc()
+        )
+    else:
+        criteria_query = criteria_query.order_by(RubricCriterion.id.asc())
+    return criteria_query
+
+
 def _to_out_assessment(pa: ProjectAssessment) -> ProjectAssessmentOut:
     return ProjectAssessmentOut.model_validate(
         {
@@ -298,10 +316,8 @@ def get_project_assessment(
     if not rubric:
         raise HTTPException(status_code=404, detail="Rubric not found")
     
-    criteria = db.query(RubricCriterion).filter(
-        RubricCriterion.rubric_id == rubric.id,
-        RubricCriterion.school_id == user.school_id,
-    ).order_by(RubricCriterion.id.asc()).all()
+    # Get criteria with consistent ordering
+    criteria = _get_ordered_criteria_query(db, rubric.id, user.school_id).all()
     
     # Get scores - filter by team_number if provided
     scores_query = db.query(ProjectAssessmentScore).filter(
@@ -851,11 +867,8 @@ def get_assessment_scores_overview(
     if not rubric:
         raise HTTPException(status_code=404, detail="Rubric not found")
     
-    # Get all criteria
-    criteria = db.query(RubricCriterion).filter(
-        RubricCriterion.rubric_id == rubric.id,
-        RubricCriterion.school_id == user.school_id,
-    ).order_by(RubricCriterion.id.asc()).all()
+    # Get all criteria with consistent ordering
+    criteria = _get_ordered_criteria_query(db, rubric.id, user.school_id).all()
     
     criteria_list = [
         {"id": c.id, "name": c.name, "weight": c.weight, "category": getattr(c, "category", None), "descriptors": c.descriptors}
@@ -1062,11 +1075,8 @@ def get_assessment_students_overview(
     if not rubric:
         raise HTTPException(status_code=404, detail="Rubric not found")
     
-    # Get all criteria
-    criteria = db.query(RubricCriterion).filter(
-        RubricCriterion.rubric_id == rubric.id,
-        RubricCriterion.school_id == user.school_id,
-    ).order_by(RubricCriterion.id.asc()).all()
+    # Get all criteria with consistent ordering
+    criteria = _get_ordered_criteria_query(db, rubric.id, user.school_id).all()
     
     criteria_list = [
         {"id": c.id, "name": c.name, "weight": c.weight, "category": getattr(c, "category", None), "descriptors": c.descriptors}
