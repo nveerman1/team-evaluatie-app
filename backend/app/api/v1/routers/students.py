@@ -494,7 +494,7 @@ def export_students_csv(
 def list_courses(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     rows = (
         db.query(Course)
-        .filter(Course.school_id == current_user.school_id)
+        .filter(Course.school_id == current_user.school_id, Course.is_active)
         .order_by(Course.name.asc())
         .all()
     )
