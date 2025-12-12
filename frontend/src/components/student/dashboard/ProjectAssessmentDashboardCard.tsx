@@ -27,12 +27,12 @@ export function ProjectAssessmentDashboardCard({
               </h3>
               <Badge
                 className={
-                  isPublished
-                    ? "rounded-full bg-slate-100 text-slate-700"
-                    : "rounded-full bg-slate-900 text-white"
+                  !isPublished
+                    ? "rounded-full bg-slate-900 text-white"
+                    : "rounded-full bg-slate-100 text-slate-700"
                 }
               >
-                {isPublished ? "Gesloten" : "Open"}
+                {!isPublished ? "Open" : "Gesloten"}
               </Badge>
             </div>
             <div className="text-sm text-slate-600">

@@ -111,8 +111,9 @@ export function OverviewTab({
 
   // Competency profile data for radar chart
   const competencyProfileData = React.useMemo(() => {
-    // TODO: Map actual competency data from API
-    // For now, create placeholder structure
+    // TODO: Replace with actual competency data from API when available
+    // PLACEHOLDER DATA - This should be replaced with real aggregated scan data
+    // mapped to these 6 categories from the competency scan results
     return [
       { category: "Samenwerken", value: 4.2 },
       { category: "Plannen & organiseren", value: 3.7 },

@@ -228,8 +228,11 @@ export default function StudentDashboard() {
             <TabsContent value="overzicht" className="mt-6 space-y-4">
               <OverviewTab 
                 peerResults={peerResults}
+                // TODO: Connect to learning goals API when available
                 learningGoals={[]}
+                // TODO: Connect to reflections API when available
                 reflections={[]}
+                // TODO: Connect to project results API when available (with rubric category scores)
                 projectResults={[]}
               />
             </TabsContent>
