@@ -79,7 +79,7 @@ def _get_user_course_ids(db: Session, user: User) -> list[int]:
     """Get all course IDs that a teacher is assigned to"""
     if user.role not in ("teacher", "admin"):
         return []
-    
+
     course_ids_query = select(TeacherCourse.course_id).where(
         TeacherCourse.school_id == user.school_id,
         TeacherCourse.teacher_id == user.id,
@@ -98,20 +98,20 @@ def _to_competency_out(comp: Competency, current_user_id: int) -> CompetencyOut:
         competency_type = "teacher"
     else:
         competency_type = "shared"
-    
+
     # Get category info if available
     category_name = None
     category_description = None
     if comp.competency_category:
         category_name = comp.competency_category.name
         category_description = comp.competency_category.description
-    
+
     # Build level_descriptors dict from rubric_levels relationship
     level_descriptors = {}
-    if hasattr(comp, 'rubric_levels') and comp.rubric_levels:
+    if hasattr(comp, "rubric_levels") and comp.rubric_levels:
         for rl in comp.rubric_levels:
             level_descriptors[str(rl.level)] = rl.description
-    
+
     return CompetencyOut.model_validate(
         {
             "id": comp.id,
@@ -125,7 +125,7 @@ def _to_competency_out(comp: Competency, current_user_id: int) -> CompetencyOut:
             "course_id": comp.course_id,
             "is_template": comp.is_template,
             "competency_type": competency_type,
-            "phase": getattr(comp, 'phase', None),  # Optional phase field
+            "phase": getattr(comp, "phase", None),  # Optional phase field
             "category_name": category_name,
             "category_description": category_description,
             "level_descriptors": level_descriptors,
@@ -144,7 +144,7 @@ def _to_competency_out(comp: Competency, current_user_id: int) -> CompetencyOut:
 def _check_can_modify(comp: Competency, user: User) -> bool:
     """
     Check if user can modify the competency.
-    
+
     - Admins can modify template/central competencies (is_template=True)
     - Teachers can only modify their own teacher-specific competencies (teacher_id=current_user)
     """
@@ -175,7 +175,9 @@ def list_categories(
 
 
 @router.post(
-    "/categories", response_model=CompetencyCategoryOut, status_code=status.HTTP_201_CREATED
+    "/categories",
+    response_model=CompetencyCategoryOut,
+    status_code=status.HTTP_201_CREATED,
 )
 def create_category(
     data: CompetencyCategoryCreate,
@@ -260,9 +262,7 @@ def delete_category(
 ):
     """Delete a competency category (admin only)"""
     if current_user.role != "admin":
-        raise HTTPException(
-            status_code=403, detail="Only admins can delete categories"
-        )
+        raise HTTPException(status_code=403, detail="Only admins can delete categories")
 
     category = db.get(CompetencyCategory, category_id)
     if not category or category.school_id != current_user.school_id:
@@ -279,14 +279,16 @@ def delete_category(
 @router.get("/tree", response_model=CompetencyTree)
 def get_competency_tree(
     active_only: bool = Query(True),
-    templates_only: bool = Query(True, description="Only show central/template competencies (for admin views)"),
+    templates_only: bool = Query(
+        True, description="Only show central/template competencies (for admin views)"
+    ),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
     Get the full competency tree: categories → competencies
     This is useful for dropdown selectors and hierarchical displays.
-    
+
     By default, only shows central/template competencies (is_template=True).
     Set templates_only=False to include all competencies.
     """
@@ -303,14 +305,14 @@ def get_competency_tree(
     tree_items = []
     for cat in categories:
         competencies = cat.competencies
-        
+
         # Filter by is_template if templates_only is True
         if templates_only:
             competencies = [c for c in competencies if c.is_template]
-        
+
         if active_only:
             competencies = [c for c in competencies if c.active]
-        
+
         # Sort competencies by order
         competencies = sorted(competencies, key=lambda c: (c.order, c.name))
 
@@ -349,16 +351,20 @@ def list_competencies(
 ):
     """
     List all competencies for the school.
-    
+
     This is the legacy endpoint that returns only central/template competencies
     for backward compatibility. Use /teacher-list for the full two-tier view.
     """
-    query = select(Competency).options(
-        selectinload(Competency.competency_category),
-        selectinload(Competency.rubric_levels)
-    ).where(
-        Competency.school_id == current_user.school_id,
-        Competency.is_template == True,  # Only templates for backward compatibility
+    query = (
+        select(Competency)
+        .options(
+            selectinload(Competency.competency_category),
+            selectinload(Competency.rubric_levels),
+        )
+        .where(
+            Competency.school_id == current_user.school_id,
+            Competency.is_template == True,  # Only templates for backward compatibility
+        )
     )
     if active_only:
         query = query.where(Competency.active == True)
@@ -374,43 +380,57 @@ def list_teacher_competencies(
     limit: int = Query(50, ge=1, le=100),
     active_only: bool = Query(True),
     competency_type: Optional[Literal["central", "teacher", "shared", "all"]] = None,
-    include_teacher_competencies: bool = Query(False, description="Include teacher's own competencies"),
-    include_course_competencies: bool = Query(False, description="Include teacher competencies from shared courses"),
+    include_teacher_competencies: bool = Query(
+        False, description="Include teacher's own competencies"
+    ),
+    include_course_competencies: bool = Query(
+        False, description="Include teacher competencies from shared courses"
+    ),
     subject_id: Optional[int] = None,
     category_id: Optional[int] = None,
-    phase: Optional[str] = Query(None, description="Filter by phase: 'onderbouw' or 'bovenbouw'"),
+    phase: Optional[str] = Query(
+        None, description="Filter by phase: 'onderbouw' or 'bovenbouw'"
+    ),
     search: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
     List competencies with two-tier filtering for teachers.
-    
+
     Filtering logic:
     - competency_type="central": Only central/template competencies
     - competency_type="teacher": Only the current teacher's own competencies
     - competency_type="shared": Only shared competencies from courses the teacher is in
-    - competency_type="all" or not specified: 
+    - competency_type="all" or not specified:
       - If include_teacher_competencies=True: both central and user's teacher competencies
       - If include_course_competencies=True: also include shared course competencies
       - Otherwise: central competencies only (backward compatible)
-    
+
     - subject_id: Filter by subject (for central competencies)
     - category_id: Filter by competency category
     - phase: Filter by phase ('onderbouw' or 'bovenbouw')
     - search: Search in name/description
     """
-    query = select(Competency).options(
-        selectinload(Competency.competency_category),
-        selectinload(Competency.rubric_levels)
-    ).where(Competency.school_id == current_user.school_id)
-    
+    query = (
+        select(Competency)
+        .options(
+            selectinload(Competency.competency_category),
+            selectinload(Competency.rubric_levels),
+        )
+        .where(Competency.school_id == current_user.school_id)
+    )
+
     if active_only:
         query = query.where(Competency.active == True)
 
     # Get course IDs the current user is assigned to (for shared course competencies)
     user_course_ids = []
-    if include_teacher_competencies or include_course_competencies or competency_type in ("teacher", "shared", "all"):
+    if (
+        include_teacher_competencies
+        or include_course_competencies
+        or competency_type in ("teacher", "shared", "all")
+    ):
         user_course_ids = _get_user_course_ids(db, current_user)
 
     # Filter by competency type
@@ -418,34 +438,39 @@ def list_teacher_competencies(
         query = query.where(Competency.is_template == True)
     elif competency_type == "teacher":
         query = query.where(
-            Competency.is_template == False,
-            Competency.teacher_id == current_user.id
+            Competency.is_template == False, Competency.teacher_id == current_user.id
         )
     elif competency_type == "shared":
         if user_course_ids:
             query = query.where(
                 Competency.is_template == False,
                 Competency.teacher_id != current_user.id,
-                Competency.course_id.in_(user_course_ids)
+                Competency.course_id.in_(user_course_ids),
             )
         else:
             # No shared competencies if user has no courses
             query = query.where(Competency.id == -1)  # No results
-    elif competency_type == "all" or include_teacher_competencies or include_course_competencies:
+    elif (
+        competency_type == "all"
+        or include_teacher_competencies
+        or include_course_competencies
+    ):
         # Include central + own + shared based on flags
         conditions = [Competency.is_template == True]
-        
+
         if include_teacher_competencies or competency_type == "all":
             conditions.append(Competency.teacher_id == current_user.id)
-        
-        if (include_course_competencies or competency_type == "all") and user_course_ids:
+
+        if (
+            include_course_competencies or competency_type == "all"
+        ) and user_course_ids:
             # Include teacher competencies from shared courses
             conditions.append(
-                (Competency.is_template == False) & 
-                (Competency.teacher_id != current_user.id) &
-                Competency.course_id.in_(user_course_ids)
+                (Competency.is_template == False)
+                & (Competency.teacher_id != current_user.id)
+                & Competency.course_id.in_(user_course_ids)
             )
-        
+
         query = query.where(or_(*conditions))
     else:
         # Default: backward compatible - only central/templates
@@ -454,11 +479,11 @@ def list_teacher_competencies(
     # Filter by subject_id (for central competencies)
     if subject_id is not None:
         query = query.where(Competency.subject_id == subject_id)
-    
+
     # Filter by category_id
     if category_id is not None:
         query = query.where(Competency.category_id == category_id)
-    
+
     # Filter by phase (onderbouw/bovenbouw)
     if phase is not None:
         query = query.where(Competency.phase == phase)
@@ -477,7 +502,7 @@ def list_teacher_competencies(
     query = query.order_by(
         Competency.is_template.desc(),  # Central first
         Competency.order,
-        Competency.name
+        Competency.name,
     )
 
     # Count total
@@ -506,11 +531,11 @@ def create_competency(
 ):
     """
     Create a new competency.
-    
+
     For central/template competencies (admin only):
     - Set is_template=True
     - subject_id should be provided
-    
+
     For teacher-specific competencies:
     - Set is_template=False (default)
     - teacher_id is automatically set to current user
@@ -520,31 +545,29 @@ def create_competency(
         raise HTTPException(
             status_code=403, detail="Only teachers can create competencies"
         )
-    
+
     # Validate: only admins can create template competencies
     if data.is_template and current_user.role != "admin":
         raise HTTPException(
             status_code=403,
-            detail="Only admins can create central/template competencies"
+            detail="Only admins can create central/template competencies",
         )
-    
+
     # Set teacher_id for teacher-specific competencies
     teacher_id = None if data.is_template else current_user.id
-    
+
     # Extract level_descriptors before creating competency
     level_descriptors = data.level_descriptors if data.level_descriptors else {}
-    
+
     # Create competency without level_descriptors (it's not a column)
-    data_dict = data.model_dump(exclude={'level_descriptors'})
+    data_dict = data.model_dump(exclude={"level_descriptors"})
     competency = Competency(
-        school_id=current_user.school_id,
-        teacher_id=teacher_id,
-        **data_dict
+        school_id=current_user.school_id, teacher_id=teacher_id, **data_dict
     )
     db.add(competency)
     try:
         db.flush()  # Get the competency ID
-        
+
         # Create rubric levels
         for level_str, description in level_descriptors.items():
             if description and description.strip():
@@ -552,20 +575,24 @@ def create_competency(
                     school_id=current_user.school_id,
                     competency_id=competency.id,
                     level=int(level_str),
-                    description=description.strip()
+                    description=description.strip(),
                 )
                 db.add(rubric_level)
-        
+
         db.commit()
         db.refresh(competency)
-        
+
         # Re-fetch with relationships loaded
-        query = select(Competency).options(
-            selectinload(Competency.competency_category),
-            selectinload(Competency.rubric_levels)
-        ).where(Competency.id == competency.id)
+        query = (
+            select(Competency)
+            .options(
+                selectinload(Competency.competency_category),
+                selectinload(Competency.rubric_levels),
+            )
+            .where(Competency.id == competency.id)
+        )
         competency = db.execute(query).scalar_one()
-        
+
         return _to_competency_out(competency, current_user.id)
     except IntegrityError as e:
         db.rollback()
@@ -586,15 +613,19 @@ def get_competency(
     current_user: User = Depends(get_current_user),
 ):
     """Get a specific competency"""
-    query = select(Competency).options(
-        selectinload(Competency.competency_category),
-        selectinload(Competency.rubric_levels)
-    ).where(Competency.id == competency_id)
+    query = (
+        select(Competency)
+        .options(
+            selectinload(Competency.competency_category),
+            selectinload(Competency.rubric_levels),
+        )
+        .where(Competency.id == competency_id)
+    )
     competency = db.execute(query).scalar_one_or_none()
-    
+
     if not competency or competency.school_id != current_user.school_id:
         raise HTTPException(status_code=404, detail="Competency not found")
-    
+
     # Check visibility:
     # - Templates are visible to all
     # - Teacher competencies are visible to owner
@@ -607,7 +638,7 @@ def get_competency(
                 raise HTTPException(status_code=404, detail="Competency not found")
         else:
             raise HTTPException(status_code=404, detail="Competency not found")
-    
+
     return _to_competency_out(competency, current_user.id)
 
 
@@ -620,7 +651,7 @@ def update_competency(
 ):
     """
     Update a competency.
-    
+
     - Template competencies: only admins can update
     - Teacher competencies: only the owning teacher can update
     """
@@ -638,19 +669,20 @@ def update_competency(
         if competency.is_template:
             raise HTTPException(
                 status_code=403,
-                detail="Only admins can modify central/template competencies"
+                detail="Only admins can modify central/template competencies",
             )
         else:
             raise HTTPException(
-                status_code=403,
-                detail="You can only modify your own competencies"
+                status_code=403, detail="You can only modify your own competencies"
             )
 
     # Extract level_descriptors if provided
-    level_descriptors = data.level_descriptors if data.level_descriptors is not None else None
+    level_descriptors = (
+        data.level_descriptors if data.level_descriptors is not None else None
+    )
 
     # Update fields (exclude is_template, teacher_id, and level_descriptors)
-    update_data = data.model_dump(exclude_unset=True, exclude={'level_descriptors'})
+    update_data = data.model_dump(exclude_unset=True, exclude={"level_descriptors"})
     for key, value in update_data.items():
         if key not in ("is_template", "teacher_id"):  # These cannot be changed
             setattr(competency, key, value)
@@ -660,7 +692,7 @@ def update_competency(
         # Delete existing rubric levels
         for rl in competency.rubric_levels[:]:  # Create a copy to iterate
             db.delete(rl)
-        
+
         # Create new rubric levels
         for level_str, description in level_descriptors.items():
             if description and description.strip():
@@ -668,20 +700,24 @@ def update_competency(
                     school_id=current_user.school_id,
                     competency_id=competency.id,
                     level=int(level_str),
-                    description=description.strip()
+                    description=description.strip(),
                 )
                 db.add(rubric_level)
 
     try:
         db.commit()
-        
+
         # Re-fetch with relationships loaded
-        query = select(Competency).options(
-            selectinload(Competency.competency_category),
-            selectinload(Competency.rubric_levels)
-        ).where(Competency.id == competency.id)
+        query = (
+            select(Competency)
+            .options(
+                selectinload(Competency.competency_category),
+                selectinload(Competency.rubric_levels),
+            )
+            .where(Competency.id == competency.id)
+        )
         competency = db.execute(query).scalar_one()
-        
+
         return _to_competency_out(competency, current_user.id)
     except IntegrityError as e:
         db.rollback()
@@ -705,7 +741,7 @@ def delete_competency(
 ):
     """
     Delete a competency.
-    
+
     - Template competencies: only admins can delete
     - Teacher competencies: only the owning teacher can delete
     """
@@ -723,12 +759,11 @@ def delete_competency(
         if competency.is_template:
             raise HTTPException(
                 status_code=403,
-                detail="Only admins can delete central/template competencies"
+                detail="Only admins can delete central/template competencies",
             )
         else:
             raise HTTPException(
-                status_code=403,
-                detail="You can only delete your own competencies"
+                status_code=403, detail="You can only delete your own competencies"
             )
 
     db.delete(competency)
@@ -1411,7 +1446,7 @@ def get_my_window_overview(
         if score.competency_id not in external_score_map:
             external_score_map[score.competency_id] = []
         external_score_map[score.competency_id].append(score.score)
-    
+
     # Calculate averages
     external_avg_map = {}
     for comp_id, scores in external_score_map.items():
@@ -1545,7 +1580,7 @@ def get_student_window_overview(
         if score.competency_id not in external_score_map:
             external_score_map[score.competency_id] = []
         external_score_map[score.competency_id].append(score.score)
-    
+
     # Calculate averages
     external_avg_map = {}
     for comp_id, scores in external_score_map.items():
@@ -1623,19 +1658,38 @@ def get_class_heatmap(
     if not window or window.school_id != current_user.school_id:
         raise HTTPException(status_code=404, detail="Window not found")
 
-    # Get all active competencies
-    competencies = (
-        db.execute(
-            select(Competency)
-            .where(
-                Competency.school_id == current_user.school_id,
-                Competency.active == True,
+    # Get selected competencies for this window (if specified in settings)
+    selected_competency_ids = (window.settings or {}).get("selected_competency_ids", [])
+
+    if selected_competency_ids:
+        # Filter to only selected competencies
+        competencies = (
+            db.execute(
+                select(Competency)
+                .where(
+                    Competency.school_id == current_user.school_id,
+                    Competency.active,
+                    Competency.id.in_(selected_competency_ids),
+                )
+                .order_by(Competency.order)
             )
-            .order_by(Competency.order)
+            .scalars()
+            .all()
         )
-        .scalars()
-        .all()
-    )
+    else:
+        # Fallback: Get all active competencies (for windows created before this feature)
+        competencies = (
+            db.execute(
+                select(Competency)
+                .where(
+                    Competency.school_id == current_user.school_id,
+                    Competency.active,
+                )
+                .order_by(Competency.order)
+            )
+            .scalars()
+            .all()
+        )
 
     # Get students from the window's course (filter by class if specified, exclude archived)
     if window.course_id:
@@ -1749,9 +1803,11 @@ def get_window_goals(
     if results:
         comp_ids = [r[0].competency_id for r in results if r[0].competency_id]
         if comp_ids:
-            competencies = db.execute(
-                select(Competency).where(Competency.id.in_(comp_ids))
-            ).scalars().all()
+            competencies = (
+                db.execute(select(Competency).where(Competency.id.in_(comp_ids)))
+                .scalars()
+                .all()
+            )
             competency_map = {c.id: c.name for c in competencies}
 
     items = []
@@ -1765,7 +1821,11 @@ def get_window_goals(
                 goal_text=goal.goal_text,
                 success_criteria=goal.success_criteria,
                 competency_id=goal.competency_id,
-                competency_name=competency_map.get(goal.competency_id) if goal.competency_id else None,
+                competency_name=(
+                    competency_map.get(goal.competency_id)
+                    if goal.competency_id
+                    else None
+                ),
                 status=goal.status,
                 submitted_at=goal.submitted_at,
                 updated_at=goal.updated_at,
@@ -1788,7 +1848,9 @@ def get_window_reflections(
 ):
     """Get all reflections for a window (teacher only)"""
     if current_user.role not in ["teacher", "admin"]:
-        raise HTTPException(status_code=403, detail="Only teachers can view all reflections")
+        raise HTTPException(
+            status_code=403, detail="Only teachers can view all reflections"
+        )
 
     window = db.get(CompetencyWindow, window_id)
     if not window or window.school_id != current_user.school_id:
@@ -1816,9 +1878,13 @@ def get_window_reflections(
     if results:
         goal_ids = [r[0].goal_id for r in results if r[0].goal_id]
         if goal_ids:
-            goals = db.execute(
-                select(CompetencyGoal).where(CompetencyGoal.id.in_(goal_ids))
-            ).scalars().all()
+            goals = (
+                db.execute(
+                    select(CompetencyGoal).where(CompetencyGoal.id.in_(goal_ids))
+                )
+                .scalars()
+                .all()
+            )
             goal_map = {g.id: g.goal_text for g in goals}
 
     items = []
@@ -1831,7 +1897,9 @@ def get_window_reflections(
                 class_name=user.class_name,
                 text=reflection.text,
                 goal_id=reflection.goal_id,
-                goal_text=goal_map.get(reflection.goal_id) if reflection.goal_id else None,
+                goal_text=(
+                    goal_map.get(reflection.goal_id) if reflection.goal_id else None
+                ),
                 goal_achieved=reflection.goal_achieved,
                 evidence=reflection.evidence,
                 submitted_at=reflection.submitted_at,

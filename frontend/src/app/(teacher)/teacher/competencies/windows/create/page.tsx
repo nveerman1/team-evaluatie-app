@@ -23,8 +23,8 @@ export default function CreateWindowPage() {
     description: "",
     class_names: [],
     course_id: undefined,
-    start_date: "",
-    end_date: "",
+    start_date: undefined,
+    end_date: undefined,
     status: "draft",
     require_self_score: true,
     require_goal: false,
@@ -185,7 +185,7 @@ export default function CreateWindowPage() {
           {/* Course Dropdown */}
           <div>
             <label className="block text-sm font-medium mb-2">
-              Vak/Course
+              Vak
             </label>
             <select
               value={formData.course_id || ""}
@@ -223,7 +223,7 @@ export default function CreateWindowPage() {
                     ...formData,
                     start_date: e.target.value
                       ? new Date(e.target.value).toISOString()
-                      : "",
+                      : undefined,
                   })
                 }
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -241,7 +241,7 @@ export default function CreateWindowPage() {
                     ...formData,
                     end_date: e.target.value
                       ? new Date(e.target.value).toISOString()
-                      : "",
+                      : undefined,
                   })
                 }
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
