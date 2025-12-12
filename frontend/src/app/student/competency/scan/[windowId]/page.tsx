@@ -43,7 +43,14 @@ export default function SelfScanPage() {
       ]);
 
       setWindow(win);
-      setCompetencies(comps);
+      
+      // Filter competencies to only show those selected for this window
+      const selectedCompetencyIds = win.settings?.selected_competency_ids || [];
+      const filteredComps = selectedCompetencyIds.length > 0
+        ? comps.filter((comp) => selectedCompetencyIds.includes(comp.id))
+        : comps; // Fallback: show all if no selection (backward compatibility)
+      
+      setCompetencies(filteredComps);
 
       // Load rubric levels for each competency
       const levelsMap: Record<number, any[]> = {};
