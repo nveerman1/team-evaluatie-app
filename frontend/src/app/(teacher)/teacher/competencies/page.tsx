@@ -93,7 +93,13 @@ export default function CompetenciesPage() {
 
   const deleteWindow = async (id: number) => {
     const window = windows.find((w) => w.id === id);
-    if (!confirm(`Weet je zeker dat je het venster "${window?.title}" wilt verwijderen?`)) {
+    if (!window) {
+      setToast("Venster niet gevonden.");
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
+    
+    if (!confirm(`Weet je zeker dat je het venster "${window.title}" wilt verwijderen?`)) {
       return;
     }
 
@@ -103,8 +109,8 @@ export default function CompetenciesPage() {
       setWindows((prev) => prev.filter((w) => w.id !== id));
       setToast("Venster succesvol verwijderd.");
       setTimeout(() => setToast(null), 1500);
-    } catch (err: any) {
-      const errorMsg = err?.response?.data?.detail || err?.message || "Venster verwijderen mislukt";
+    } catch (e: unknown) {
+      const errorMsg = e instanceof Error ? e.message : "Venster verwijderen mislukt";
       setToast(errorMsg);
       setTimeout(() => setToast(null), 3000);
     } finally {
