@@ -24,17 +24,21 @@ export default function ProjectAssessmentsListInner() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [courseFilter, setCourseFilter] = useState<string>("all");
 
+  // Build courses list from actual assessments data
   useEffect(() => {
-    async function loadCourses() {
-      try {
-        const response = await api.get<Course[]>("/students/courses");
-        setCourses(Array.isArray(response.data) ? response.data : []);
-      } catch (e) {
-        console.error("Failed to load courses", e);
-      }
+    if (data.length > 0) {
+      const uniqueCourses = new Map<number, Course>();
+      data.forEach(item => {
+        if (item.course_id && item.course_name) {
+          uniqueCourses.set(item.course_id, {
+            id: item.course_id,
+            name: item.course_name
+          });
+        }
+      });
+      setCourses(Array.from(uniqueCourses.values()));
     }
-    loadCourses();
-  }, []);
+  }, [data]);
 
   async function fetchList(courseId?: number, status?: string) {
     setLoading(true);
