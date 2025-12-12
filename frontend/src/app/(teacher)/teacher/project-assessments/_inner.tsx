@@ -272,11 +272,9 @@ export default function ProjectAssessmentsListInner() {
                   </div>
 
                   {/* Last updated */}
-                  {item.updated_at && (
-                    <div className="text-xs text-slate-500">
-                      Laatst bijgewerkt: {new Date(item.updated_at).toLocaleDateString("nl-NL")}
-                    </div>
-                  )}
+                  <div className="text-xs text-slate-500">
+                    Laatst bijgewerkt: {item.updated_at ? new Date(item.updated_at).toLocaleDateString("nl-NL") : "Onbekend"}
+                  </div>
                 </div>
 
                 {/* Right side: buttons */}
