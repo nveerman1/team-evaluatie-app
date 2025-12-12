@@ -20,24 +20,24 @@ export default function EvaluationsListInner() {
   const { q: query, status, course_id: courseIdStr, setParams } = useUrlState();
   const courseIdNum = courseIdStr ? Number(courseIdStr) : undefined;
 
-  // Evaluations met filters - only show peer evaluations on this page
-  const { evaluations, loading, error, setEvaluations } = useEvaluations({
+  // Evaluations - fetch ALL evaluations (no course_id filter) so we can build courses list
+  // We'll filter by course_id on the frontend
+  const { evaluations: allEvaluations, loading, error, setEvaluations } = useEvaluations({
     query,
     status,
-    course_id: courseIdNum,
     evaluation_type: "peer",
   });
 
-  // Courses via hook - but we'll build courses from actual evaluations data
+  // Courses via hook
   const { courseNameById } = useCourses();
   
   // Build courses list from actual evaluations data (only courses that have evaluations)
   const [coursesFromData, setCoursesFromData] = useState<Array<{id: number, name: string}>>([]);
   
   useEffect(() => {
-    if (evaluations.length > 0) {
+    if (allEvaluations.length > 0) {
       const uniqueCourses = new Map<number, {id: number, name: string}>();
-      evaluations.forEach(item => {
+      allEvaluations.forEach(item => {
         if (item.course_id && item.cluster) {
           uniqueCourses.set(item.course_id, {
             id: item.course_id,
@@ -47,7 +47,12 @@ export default function EvaluationsListInner() {
       });
       setCoursesFromData(Array.from(uniqueCourses.values()));
     }
-  }, [evaluations]);
+  }, [allEvaluations]);
+
+  // Filter evaluations by course_id on the frontend
+  const evaluations = courseIdNum 
+    ? allEvaluations.filter(e => e.course_id === courseIdNum)
+    : allEvaluations;
 
   // UI state
   const [deletingId, setDeletingId] = useState<number | null>(null);

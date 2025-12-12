@@ -20,6 +20,7 @@ export default function CompetenciesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [query, setQuery] = useState("");
   const [toast, setToast] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     loadData();
@@ -28,12 +29,26 @@ export default function CompetenciesPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [wins, coursesData] = await Promise.all([
-        competencyService.getWindows(),
-        courseService.getCourses(),
-      ]);
+      const wins = await competencyService.getWindows();
       setWindows(wins);
-      setCourses(coursesData);
+      
+      // Build courses list from actual windows data (only courses that have windows)
+      // We need to fetch course details for each unique course_id
+      const uniqueCourseIds = new Set<number>();
+      wins.forEach(window => {
+        if (window.course_id) {
+          uniqueCourseIds.add(window.course_id);
+        }
+      });
+      
+      // Fetch course details for the unique course IDs
+      if (uniqueCourseIds.size > 0) {
+        const allCourses = await courseService.getCourses();
+        const relevantCourses = allCourses.filter(c => uniqueCourseIds.has(c.id));
+        setCourses(relevantCourses);
+      } else {
+        setCourses([]);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
@@ -75,6 +90,27 @@ export default function CompetenciesPage() {
     acc[courseId].push(window);
     return acc;
   }, {} as Record<number, CompetencyWindow[]>);
+
+  const deleteWindow = async (id: number) => {
+    const window = windows.find((w) => w.id === id);
+    if (!confirm(`Weet je zeker dat je het venster "${window?.title}" wilt verwijderen?`)) {
+      return;
+    }
+
+    setDeletingId(id);
+    try {
+      await competencyService.deleteWindow(id);
+      setWindows((prev) => prev.filter((w) => w.id !== id));
+      setToast("Venster succesvol verwijderd.");
+      setTimeout(() => setToast(null), 1500);
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.detail || err?.message || "Venster verwijderen mislukt";
+      setToast(errorMsg);
+      setTimeout(() => setToast(null), 3000);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   if (loading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
@@ -255,6 +291,32 @@ export default function CompetenciesPage() {
                         >
                           Reflecties
                         </Link>
+
+                        {/* Delete button - icon only */}
+                        <button
+                          onClick={() => deleteWindow(window.id)}
+                          disabled={deletingId === window.id}
+                          aria-label="Verwijder venster"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-100 bg-red-50 text-red-500 transition hover:border-red-200 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {deletingId === window.id ? (
+                            <span className="text-xs">...</span>
+                          ) : (
+                            <svg
+                              className="h-4 w-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                          )}
+                        </button>
                       </div>
                     </div>
                   ))}
