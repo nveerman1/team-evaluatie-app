@@ -1666,6 +1666,7 @@ def get_class_heatmap(
         competencies = (
             db.execute(
                 select(Competency)
+                .options(selectinload(Competency.competency_category))
                 .where(
                     Competency.school_id == current_user.school_id,
                     Competency.active,
@@ -1681,6 +1682,7 @@ def get_class_heatmap(
         competencies = (
             db.execute(
                 select(Competency)
+                .options(selectinload(Competency.competency_category))
                 .where(
                     Competency.school_id == current_user.school_id,
                     Competency.active,
@@ -1752,10 +1754,15 @@ def get_class_heatmap(
             )
         )
 
+    # Convert competencies to CompetencyOut schema with category info
+    competencies_out = [
+        _to_competency_out(comp, current_user.id) for comp in competencies
+    ]
+
     return ClassHeatmap(
         window_id=window_id,
         window_title=window.title,
-        competencies=competencies,
+        competencies=competencies_out,
         rows=rows,
     )
 

@@ -38,7 +38,7 @@ export default function AnalyseTabPage() {
   const categoryScores: Record<string, { total: number; count: number }> = {};
   
   heatmap.competencies.forEach((comp) => {
-    const category = comp.category || "Overig";
+    const category = comp.category_name || comp.category || "Overig";
     if (!categoryScores[category]) {
       categoryScores[category] = { total: 0, count: 0 };
     }
@@ -72,7 +72,7 @@ export default function AnalyseTabPage() {
     return {
       id: comp.id,
       name: comp.name,
-      category: comp.category || "Overig",
+      category: comp.category_name || comp.category || "Overig",
       average: count > 0 ? total / count : 0,
       count,
     };
