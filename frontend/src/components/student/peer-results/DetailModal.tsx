@@ -40,9 +40,9 @@ export function DetailModal({ open, onClose, evaluation }: DetailModalProps) {
 
   const teamContributionLabel =
     evaluation.teamContributionLabel ??
-    (teamContributionFactor !== undefined
+    (teamContributionFactor != null
       ? getTeamContributionLabel(teamContributionFactor)
-      : undefined);
+      : null);
 
   // Use omzaAverages if provided, otherwise calculate from peers
   const omzaAverages = evaluation.omzaAverages ?? [
@@ -144,7 +144,7 @@ export function DetailModal({ open, onClose, evaluation }: DetailModalProps) {
 
                 {/* Samenvattende cijfers */}
                 <div className="space-y-3">
-                  {teamContributionFactor !== undefined && (
+                  {teamContributionFactor != null && (
                     <div className="rounded-xl border border-slate-100 bg-indigo-50/70 p-3">
                       <p className="text-xs font-semibold text-slate-700">
                         Team-bijdrage (correctiefactor)

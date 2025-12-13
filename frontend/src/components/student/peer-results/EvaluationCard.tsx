@@ -40,9 +40,9 @@ export function EvaluationCard({ data, onOpen }: EvaluationCardProps) {
 
   const teamContributionLabel =
     data.teamContributionLabel ??
-    (teamContributionFactor !== undefined
+    (teamContributionFactor != null
       ? getTeamContributionLabel(teamContributionFactor)
-      : undefined);
+      : null);
 
   // Use omzaAverages if provided, otherwise calculate from peers
   const omzaAverages = data.omzaAverages ?? [
@@ -125,7 +125,7 @@ export function EvaluationCard({ data, onOpen }: EvaluationCardProps) {
         {/* Samenvattende KPI's rechts */}
         <div className="space-y-3">
           {/* Team-bijdrage / correctiefactor */}
-          {teamContributionFactor !== undefined && (
+          {teamContributionFactor != null && (
             <div className="rounded-xl border border-slate-100 bg-indigo-50/60 p-3">
               <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
                 <span>Team-bijdrage</span>

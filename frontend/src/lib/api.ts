@@ -89,9 +89,13 @@ instance.interceptors.response.use(
 
     // Netwerk/overige fouten één keer loggen
     // (bijv. 404/500 of geen response door netwerkfout)
-    const tag = err.response ? "[API ERROR]" : "[API NETWORK ERROR]";
-    // eslint-disable-next-line no-console
-    console.error(tag, err.message || err);
+    // Silently ignore 404 errors for /users/me endpoint - it's expected when not authenticated
+    const isUserMeNotFound = status === 404 && err.config?.url?.includes('/users/me');
+    if (!isUserMeNotFound) {
+      const tag = err.response ? "[API ERROR]" : "[API NETWORK ERROR]";
+      // eslint-disable-next-line no-console
+      console.error(tag, err.message || err);
+    }
     return Promise.reject(err);
   },
 );

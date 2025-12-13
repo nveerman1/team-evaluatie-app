@@ -40,8 +40,12 @@ export default function OverzichtPage() {
         const response = await api.get("/users/me", { signal: controller.signal });
         setCurrentUserId(response.data.id);
       } catch (e: any) {
+        // Silently ignore 404 errors for /users/me endpoint - it's expected when not authenticated
+        // or endpoint doesn't exist. The page works fine without currentUserId (team section won't show).
         if (e.name !== 'AbortError' && e.name !== 'CanceledError' && e.message !== 'canceled') {
-          console.error("Failed to load current user:", e);
+          if (e?.response?.status !== 404) {
+            console.error("Failed to load current user:", e);
+          }
         }
       }
     }
@@ -167,7 +171,7 @@ export default function OverzichtPage() {
   // Calculate team contribution factor and label
   // Must be before early returns to follow Rules of Hooks
   const teamContributionFactor = useMemo(() => {
-    if (!evaluationData) return undefined;
+    if (!evaluationData) return null;
     return getTeamContributionFactor(
       evaluationData.teamContributionFactor,
       evaluationData.gcfScore
@@ -175,11 +179,11 @@ export default function OverzichtPage() {
   }, [evaluationData]);
 
   const teamContributionLabel = useMemo(() => {
-    if (!evaluationData) return undefined;
+    if (!evaluationData) return null;
     return evaluationData.teamContributionLabel ??
-      (teamContributionFactor !== undefined
+      (teamContributionFactor != null
         ? getTeamContributionLabel(teamContributionFactor)
-        : undefined);
+        : null);
   }, [evaluationData, teamContributionFactor]);
 
   // Use omzaAverages if provided, otherwise calculate from peers
@@ -300,7 +304,7 @@ export default function OverzichtPage() {
             {/* Right column: Team-bijdrage + Docentbeoordeling */}
             <div className="space-y-3">
               {/* Team-bijdrage / correctiefactor (GCF) */}
-              {teamContributionFactor !== undefined && (
+              {teamContributionFactor != null && (
                 <div className="rounded-xl border border-slate-100 bg-indigo-50/60 p-3">
                   <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
                     <span>Team-bijdrage</span>
@@ -334,7 +338,7 @@ export default function OverzichtPage() {
               )}
 
               {/* Docentbeoordeling samenvatting */}
-              {evaluationData.teacherGrade !== undefined && (
+              {evaluationData.teacherGrade != null && (
                 <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
                   <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
                     <span>Docent-beoordeling</span>
