@@ -47,7 +47,7 @@ export function EvaluationDashboardCard({ evaluation }: EvaluationDashboardCardP
               </span>
             </div>
 
-            <div className="mt-3 grid grid-cols-1 gap-1 sm:grid-cols-3">
+            <div className="mt-3 grid grid-cols-1 gap-0.5 sm:grid-cols-3">
               <ActionChip done={evaluation.selfCompleted} label="Zelfbeoordeling" />
               <ActionChip
                 done={evaluation.peersCompleted === evaluation.peersTotal && evaluation.peersTotal > 0}
