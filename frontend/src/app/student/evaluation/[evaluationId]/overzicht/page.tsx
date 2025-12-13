@@ -40,8 +40,12 @@ export default function OverzichtPage() {
         const response = await api.get("/users/me", { signal: controller.signal });
         setCurrentUserId(response.data.id);
       } catch (e: any) {
+        // Silently ignore 404 errors for /users/me endpoint - it's expected when not authenticated
+        // or endpoint doesn't exist. The page works fine without currentUserId (team section won't show).
         if (e.name !== 'AbortError' && e.name !== 'CanceledError' && e.message !== 'canceled') {
-          console.error("Failed to load current user:", e);
+          if (e?.response?.status !== 404) {
+            console.error("Failed to load current user:", e);
+          }
         }
       }
     }
