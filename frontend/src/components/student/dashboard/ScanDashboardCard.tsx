@@ -10,12 +10,14 @@ type ScanDashboardCardProps = {
   window: CompetencyWindow;
   hasInvites?: boolean;
   onShowInvites?: () => void;
+  onInviteExternal?: () => void;
 };
 
 export function ScanDashboardCard({ 
   window, 
   hasInvites = false,
-  onShowInvites 
+  onShowInvites,
+  onInviteExternal
 }: ScanDashboardCardProps) {
   const isOpen = window.status === "open";
   
@@ -72,6 +74,16 @@ export function ScanDashboardCard({
                 <Link href={`/student/competency/reflection/${window.id}`}>
                   Reflectie
                 </Link>
+              </Button>
+            )}
+            {hasInvites && onInviteExternal && (
+              <Button 
+                onClick={onInviteExternal} 
+                variant="secondary" 
+                size="sm" 
+                className="rounded-xl bg-emerald-600 text-white hover:bg-emerald-700"
+              >
+                Nodig Externen Uit
               </Button>
             )}
           </div>
