@@ -67,8 +67,19 @@ export default function SelfScanPage() {
       );
       setRubricLevels(levelsMap);
 
-      // Pre-populate with existing scores
+      // Pre-populate with existing scores or defaults
       const scoreMap: Record<number, CompetencySelfScoreInput> = {};
+      
+      // First, initialize all competencies with default score of 1
+      filteredComps.forEach((comp) => {
+        scoreMap[comp.id] = {
+          competency_id: comp.id,
+          score: 1,
+          example: "",
+        };
+      });
+      
+      // Then override with existing scores if any
       existing.forEach((score) => {
         scoreMap[score.competency_id] = {
           competency_id: score.competency_id,
@@ -100,7 +111,7 @@ export default function SelfScanPage() {
       ...prev,
       [competencyId]: {
         competency_id: competencyId,
-        score: prev[competencyId]?.score || 3,
+        score: prev[competencyId]?.score || 1,
         example,
       },
     }));
@@ -165,18 +176,6 @@ export default function SelfScanPage() {
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-6 py-6 space-y-6">
 
-        {successMessage && (
-          <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
-            {successMessage}
-          </div>
-        )}
-
-        {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-            {error}
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Competencies */}
           {competencies.map((comp) => {
@@ -184,7 +183,7 @@ export default function SelfScanPage() {
             { length: comp.scale_max - comp.scale_min + 1 },
             (_, i) => comp.scale_min + i
           );
-          const currentScore = scores[comp.id]?.score || 3;
+          const currentScore = scores[comp.id]?.score || 1;
           const compRubricLevels = rubricLevels[comp.id] || [];
 
           // Default labels if no rubric levels are defined
@@ -277,6 +276,19 @@ export default function SelfScanPage() {
               </div>
             );
           })}
+
+          {/* Messages */}
+          {successMessage && (
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
+              {successMessage}
+            </div>
+          )}
+
+          {error && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+              {error}
+            </div>
+          )}
 
           {/* Submit Button */}
           <div className="flex gap-3">

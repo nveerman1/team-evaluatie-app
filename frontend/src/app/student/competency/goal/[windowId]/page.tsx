@@ -46,20 +46,15 @@ export default function GoalPage() {
       ]);
 
       setWindow(win);
-      setCompetencies(comps);
+      
+      // Filter competencies to only show those selected for this window
+      const selectedCompetencyIds = win.settings?.selected_competency_ids || [];
+      const filteredComps = selectedCompetencyIds.length > 0
+        ? comps.filter((comp) => selectedCompetencyIds.includes(comp.id))
+        : comps; // Fallback: show all if no selection (backward compatibility)
+      
+      setCompetencies(filteredComps);
       setExistingGoals(goals);
-
-      // Pre-populate if goal exists
-      if (goals.length > 0) {
-        const goal = goals[0];
-        setFormData({
-          window_id: windowId,
-          goal_text: goal.goal_text,
-          success_criteria: goal.success_criteria || "",
-          competency_id: goal.competency_id || undefined,
-          status: goal.status,
-        });
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
@@ -82,9 +77,24 @@ export default function GoalPage() {
       await competencyService.createGoal(formData);
 
       setSuccessMessage("Leerdoel succesvol opgeslagen!");
+      
+      // Reset form to allow adding another goal
+      setFormData({
+        window_id: windowId,
+        goal_text: "",
+        success_criteria: "",
+        competency_id: undefined,
+        status: "in_progress",
+      });
+      
+      // Reload goals to show the new one
+      const goals = await competencyService.getMyGoals(windowId);
+      setExistingGoals(goals);
+      
+      // Clear success message after 3 seconds
       setTimeout(() => {
-        router.push("/student");
-      }, 2000);
+        setSuccessMessage(null);
+      }, 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save goal");
     } finally {
@@ -113,29 +123,70 @@ export default function GoalPage() {
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-6 py-6 space-y-6">
 
-        {successMessage && (
-          <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
-            {successMessage}
-          </div>
-        )}
-
-        {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-            {error}
-          </div>
-        )}
-
+        {/* Existing Goals List */}
         {existingGoals.length > 0 && (
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-700">
-              💡 Je hebt al een leerdoel voor deze periode. Het onderstaande
-              formulier toont je huidige leerdoel. Je kunt een nieuw leerdoel
-              toevoegen door op &apos;Opslaan&apos; te klikken.
-            </p>
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold text-gray-900">
+              Mijn Leerdoelen ({existingGoals.length})
+            </h2>
+            {existingGoals.map((goal) => {
+              const competency = competencies.find((c) => c.id === goal.competency_id);
+              return (
+                <div
+                  key={goal.id}
+                  className="p-5 border border-gray-200/80 shadow-sm rounded-xl bg-white space-y-3"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      {competency && (
+                        <div className="text-sm text-purple-600 font-medium mb-1">
+                          {competency.name}
+                        </div>
+                      )}
+                      <p className="text-gray-900 font-medium">{goal.goal_text}</p>
+                      {goal.success_criteria && (
+                        <div className="mt-2">
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium">Succescriterium:</span>{" "}
+                            {goal.success_criteria}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <span
+                      className={`px-3 py-1 text-xs font-medium rounded-full ${
+                        goal.status === "achieved"
+                          ? "bg-green-100 text-green-700"
+                          : goal.status === "not_achieved"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-blue-100 text-blue-700"
+                      }`}
+                    >
+                      {goal.status === "achieved"
+                        ? "Behaald"
+                        : goal.status === "not_achieved"
+                        ? "Niet behaald"
+                        : "Bezig"}
+                    </span>
+                  </div>
+                  {goal.submitted_at && (
+                    <p className="text-xs text-gray-500">
+                      Aangemaakt op:{" "}
+                      {new Date(goal.submitted_at).toLocaleDateString("nl-NL")}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        {/* New Goal Form */}
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            {existingGoals.length > 0 ? "Nieuw Leerdoel Toevoegen" : "Leerdoel Aanmaken"}
+          </h2>
+          <form onSubmit={handleSubmit} className="space-y-6">
           <div className="p-6 border border-gray-200/80 shadow-sm rounded-xl bg-white space-y-4">
           {/* Competency Selection */}
           <div>
@@ -213,6 +264,19 @@ export default function GoalPage() {
             </div>
           </div>
 
+          {/* Messages */}
+          {successMessage && (
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
+              {successMessage}
+            </div>
+          )}
+
+          {error && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+              {error}
+            </div>
+          )}
+
           {/* Submit Button */}
           <div className="flex gap-3">
             <button
@@ -231,6 +295,7 @@ export default function GoalPage() {
             </button>
           </div>
         </form>
+        </div>
       </main>
     </div>
   );
