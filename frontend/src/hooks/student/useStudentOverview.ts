@@ -84,8 +84,7 @@ export function useStudentOverview() {
         
         const evaluationReflections = (await Promise.allSettled(reflectionPromises))
           .filter((result) => result.status === "fulfilled" && result.value !== null)
-          .map((result) => (result as PromiseFulfilledResult<OverviewReflection | null>).value!)
-          .filter((refl): refl is OverviewReflection => refl !== null);
+          .map((result) => (result as PromiseFulfilledResult<OverviewReflection | null>).value) as OverviewReflection[];
         
         reflections.push(...evaluationReflections);
       } catch {
@@ -127,10 +126,9 @@ export function useStudentOverview() {
             });
 
             // Normalize category names to lowercase for consistent lookups
-            const normalizedAverages: Record<string, number> = {};
-            Object.entries(categoryAverages).forEach(([key, value]) => {
-              normalizedAverages[key.toLowerCase()] = value;
-            });
+            const normalizedAverages = Object.fromEntries(
+              Object.entries(categoryAverages).map(([key, value]) => [key.toLowerCase(), value])
+            );
 
             // Extract specific categories (with normalized names)
             const proces = normalizedAverages["proces"];
@@ -161,8 +159,7 @@ export function useStudentOverview() {
         
         const assessmentResults = (await Promise.allSettled(assessmentPromises))
           .filter((result) => result.status === "fulfilled" && result.value !== null)
-          .map((result) => (result as PromiseFulfilledResult<OverviewProjectResult | null>).value!)
-          .filter((res): res is OverviewProjectResult => res !== null);
+          .map((result) => (result as PromiseFulfilledResult<OverviewProjectResult | null>).value) as OverviewProjectResult[];
         
         projectResults.push(...assessmentResults);
       } catch {
