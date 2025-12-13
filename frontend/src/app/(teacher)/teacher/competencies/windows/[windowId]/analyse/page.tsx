@@ -115,9 +115,9 @@ export default function AnalyseTabPage() {
         <h2 className="text-lg font-semibold text-slate-900 mb-4">Radardiagram - Klasgemiddelden per categorie</h2>
         <div className="flex flex-col md:flex-row gap-8">
           {/* Radar chart */}
-          <div className="flex-1 min-h-[300px] flex items-center justify-center">
+          <div className="flex-1 min-h-[250px] flex items-center justify-center">
             {radarData.length > 0 ? (
-              <CompetencyRadarChart items={radarData} size={300} maxValue={5} />
+              <CompetencyRadarChart items={radarData} size={250} maxValue={5} />
             ) : (
               <div className="text-center text-slate-500">
                 <svg

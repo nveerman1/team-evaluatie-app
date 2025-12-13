@@ -1525,20 +1525,40 @@ def get_student_window_overview(
     if not student or student.school_id != current_user.school_id:
         raise HTTPException(status_code=404, detail="Student not found")
 
-    # Get all competencies with category relationship
-    competencies = (
-        db.execute(
-            select(Competency)
-            .options(selectinload(Competency.competency_category))
-            .where(
-                Competency.school_id == current_user.school_id,
-                Competency.active == True,
+    # Get selected competencies for this window (if specified in settings)
+    selected_competency_ids = (window.settings or {}).get("selected_competency_ids", [])
+
+    if selected_competency_ids:
+        # Filter to only selected competencies
+        competencies = (
+            db.execute(
+                select(Competency)
+                .options(selectinload(Competency.competency_category))
+                .where(
+                    Competency.school_id == current_user.school_id,
+                    Competency.active,
+                    Competency.id.in_(selected_competency_ids),
+                )
+                .order_by(Competency.order)
             )
-            .order_by(Competency.order)
+            .scalars()
+            .all()
         )
-        .scalars()
-        .all()
-    )
+    else:
+        # Fallback: Get all active competencies (for windows created before this feature)
+        competencies = (
+            db.execute(
+                select(Competency)
+                .options(selectinload(Competency.competency_category))
+                .where(
+                    Competency.school_id == current_user.school_id,
+                    Competency.active,
+                )
+                .order_by(Competency.order)
+            )
+            .scalars()
+            .all()
+        )
 
     # Get self scores
     self_scores = (
