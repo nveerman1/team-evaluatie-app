@@ -132,6 +132,24 @@ export function CompetencyScanDashboardTab({ searchQuery = "" }: CompetencyScanD
                     }
                   }
                 }}
+                onInviteExternal={async () => {
+                  let userId = currentUserId;
+                  if (!userId) {
+                    try {
+                      const overview = await competencyService.getMyWindowOverview(window.id);
+                      userId = overview.user_id;
+                      setCurrentUserId(userId);
+                    } catch (err) {
+                      console.error("Failed to get user ID:", err);
+                    }
+                  }
+                  if (userId) {
+                    setShowInviteModal({
+                      windowId: window.id,
+                      userId: userId,
+                    });
+                  }
+                }}
               />
               {isExternalFeedbackEnabled(window) && 
                expandedWindow === window.id && 
