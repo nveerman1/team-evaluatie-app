@@ -36,28 +36,30 @@ export default function AnalyseTabPage() {
   if (!heatmap) return <ErrorMessage message="Data not found" />;
 
   // Calculate category averages
-  const categoryScores: Record<string, { total: number; count: number }> = {};
-  
-  heatmap.competencies.forEach((comp) => {
-    const category = comp.category_name || comp.category || "Overig";
-    if (!categoryScores[category]) {
-      categoryScores[category] = { total: 0, count: 0 };
-    }
+  const categoryAverages = useMemo(() => {
+    const categoryScores: Record<string, { total: number; count: number }> = {};
     
-    heatmap.rows.forEach((row) => {
-      const score = row.scores[comp.id];
-      if (score !== undefined) {
-        categoryScores[category].total += score;
-        categoryScores[category].count += 1;
+    heatmap.competencies.forEach((comp) => {
+      const category = comp.category_name || comp.category || "Overig";
+      if (!categoryScores[category]) {
+        categoryScores[category] = { total: 0, count: 0 };
       }
+      
+      heatmap.rows.forEach((row) => {
+        const score = row.scores[comp.id];
+        if (score !== undefined) {
+          categoryScores[category].total += score;
+          categoryScores[category].count += 1;
+        }
+      });
     });
-  });
 
-  const categoryAverages = Object.entries(categoryScores).map(([category, data]) => ({
-    category,
-    average: data.count > 0 ? data.total / data.count : 0,
-    count: data.count,
-  }));
+    return Object.entries(categoryScores).map(([category, data]) => ({
+      category,
+      average: data.count > 0 ? data.total / data.count : 0,
+      count: data.count,
+    }));
+  }, [heatmap]);
 
   // Prepare radar chart data
   const radarData = useMemo(() => {
@@ -68,26 +70,30 @@ export default function AnalyseTabPage() {
   }, [categoryAverages]);
 
   // Calculate overall class average per competency
-  const competencyAverages = heatmap.competencies.map((comp) => {
-    let total = 0;
-    let count = 0;
-    heatmap.rows.forEach((row) => {
-      const score = row.scores[comp.id];
-      if (score !== undefined) {
-        total += score;
-        count += 1;
-      }
+  const competencyAverages = useMemo(() => {
+    return heatmap.competencies.map((comp) => {
+      let total = 0;
+      let count = 0;
+      heatmap.rows.forEach((row) => {
+        const score = row.scores[comp.id];
+        if (score !== undefined) {
+          total += score;
+          count += 1;
+        }
+      });
+      return {
+        id: comp.id,
+        name: comp.name,
+        category: comp.category_name || comp.category || "Overig",
+        average: count > 0 ? total / count : 0,
+        count,
+      };
     });
-    return {
-      id: comp.id,
-      name: comp.name,
-      category: comp.category_name || comp.category || "Overig",
-      average: count > 0 ? total / count : 0,
-      count,
-    };
-  });
+  }, [heatmap]);
 
-  const filledScans = heatmap.rows.filter((r) => Object.keys(r.scores).length > 0).length;
+  const filledScans = useMemo(() => {
+    return heatmap.rows.filter((r) => Object.keys(r.scores).length > 0).length;
+  }, [heatmap]);
 
   return (
     <div className="space-y-6">
