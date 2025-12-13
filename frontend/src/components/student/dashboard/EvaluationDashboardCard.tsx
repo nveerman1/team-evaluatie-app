@@ -47,7 +47,7 @@ export function EvaluationDashboardCard({ evaluation }: EvaluationDashboardCardP
               </span>
             </div>
 
-            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="mt-3 grid grid-cols-1 gap-1 sm:grid-cols-3">
               <ActionChip done={evaluation.selfCompleted} label="Zelfbeoordeling" />
               <ActionChip
                 done={evaluation.peersCompleted === evaluation.peersTotal && evaluation.peersTotal > 0}
@@ -57,9 +57,9 @@ export function EvaluationDashboardCard({ evaluation }: EvaluationDashboardCardP
             </div>
 
             {/* Progress bar */}
-            <div className="mt-3">
+            <div className="mt-3 max-w-md">
               <Progress 
-                className="[&>div]:bg-indigo-500"
+                className="h-3 [&>div]:bg-indigo-500"
                 value={evaluation.progress}
               />
             </div>

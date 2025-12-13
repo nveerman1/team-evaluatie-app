@@ -40,6 +40,13 @@ export default function StudentDashboard() {
     return openEvaluations.filter((e) => e.title.toLowerCase().includes(q));
   }, [openEvaluations, searchQuery]);
 
+  // Filter project assessments by search query
+  const filteredProjectAssessments = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return projectAssessments;
+    return projectAssessments.filter((p) => p.title.toLowerCase().includes(q));
+  }, [projectAssessments, searchQuery]);
+
   if (loading || userLoading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
   if (!dashboard) return <ErrorMessage message="Kon dashboard niet laden" />;
@@ -186,7 +193,7 @@ export default function StudentDashboard() {
 
             {/* COMPETENTIESCAN */}
             <TabsContent value="scans" className="mt-6 space-y-4">
-              <CompetencyScanDashboardTab />
+              <CompetencyScanDashboardTab searchQuery={searchQuery} />
             </TabsContent>
 
             {/* PROJECTBEOORDELINGEN */}
@@ -208,14 +215,14 @@ export default function StudentDashboard() {
                   <Loading />
                 ) : projectError ? (
                   <ErrorMessage message={projectError} />
-                ) : projectAssessments.length === 0 ? (
+                ) : filteredProjectAssessments.length === 0 ? (
                   <div className="p-8 rounded-xl shadow-sm bg-slate-50 text-center">
                     <p className="text-slate-500">
-                      Nog geen projectbeoordelingen beschikbaar.
+                      {searchQuery ? "Geen projectbeoordelingen gevonden met deze zoekopdracht." : "Nog geen projectbeoordelingen beschikbaar."}
                     </p>
                   </div>
                 ) : (
-                  projectAssessments.map((assessment) => (
+                  filteredProjectAssessments.map((assessment) => (
                     <ProjectAssessmentDashboardCard key={assessment.id} assessment={assessment} />
                   ))
                 )}

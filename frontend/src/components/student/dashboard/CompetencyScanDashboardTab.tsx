@@ -13,7 +13,11 @@ import {
   ExternalInviteList,
 } from "@/components/competency/ExternalInviteComponents";
 
-export function CompetencyScanDashboardTab() {
+type CompetencyScanDashboardTabProps = {
+  searchQuery?: string;
+};
+
+export function CompetencyScanDashboardTab({ searchQuery = "" }: CompetencyScanDashboardTabProps) {
   const [windows, setWindows] = useState<CompetencyWindow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +84,11 @@ export function CompetencyScanDashboardTab() {
     );
   }
 
+  // Filter windows by search query
+  const filteredWindows = searchQuery.trim()
+    ? windows.filter((w) => w.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    : windows;
+
   const openScansCount = windows.filter((w) => w.status === "open").length;
 
   return (
@@ -108,8 +117,8 @@ export function CompetencyScanDashboardTab() {
 
       {/* Scan Cards */}
       <div className="grid gap-4">
-        {windows.length > 0 ? (
-          windows.map((window) => (
+        {filteredWindows.length > 0 ? (
+          filteredWindows.map((window) => (
             <div key={window.id} className="space-y-2">
               <ScanDashboardCard
                 window={window}
@@ -139,7 +148,7 @@ export function CompetencyScanDashboardTab() {
         ) : (
           <div className="p-8 rounded-xl shadow-sm bg-slate-50 text-center">
             <p className="text-slate-500">
-              Geen open competentiescans op dit moment.
+              {searchQuery ? "Geen competentiescans gevonden met deze zoekopdracht." : "Geen open competentiescans op dit moment."}
             </p>
           </div>
         )}
