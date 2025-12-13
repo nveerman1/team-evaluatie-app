@@ -43,11 +43,13 @@ export function CompetencyRadarChart({
     );
   }
 
-  // Add padding around the chart for labels
-  const padding = 60; // Extra space for labels
-  const totalSize = size + padding * 2;
-  const centerX = totalSize / 2;
-  const centerY = totalSize / 2;
+  // Add padding around the chart for labels (less on top/bottom)
+  const paddingHorizontal = 60; // Extra space for side labels
+  const paddingVertical = 35; // Less padding on top/bottom
+  const totalWidth = size + paddingHorizontal * 2;
+  const totalHeight = size + paddingVertical * 2;
+  const centerX = totalWidth / 2;
+  const centerY = totalHeight / 2;
   const maxRadius = size / 2; // Use full chart area
   const labelRadius = maxRadius * 1.15; // Position labels outside the chart
 
@@ -68,11 +70,11 @@ export function CompetencyRadarChart({
   return (
     <div
       className="relative flex items-center justify-center"
-      style={{ width: totalSize, height: totalSize }}
+      style={{ width: totalWidth, height: totalHeight }}
     >
       <svg
-        width={totalSize}
-        height={totalSize}
+        width={totalWidth}
+        height={totalHeight}
         className="overflow-visible"
       >
         {/* Concentric circles */}
