@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { competencyService } from "@/services";
 import type { ClassHeatmap } from "@/dtos";
 import { Loading, ErrorMessage, Tile } from "@/components";
-import { CompetencyRadarChart } from "@/components/student/competency/CompetencyRadarChart";
+import { CompetencyRadarChart, CATEGORY_COLORS } from "@/components/student/competency/CompetencyRadarChart";
 
 export default function AnalyseTabPage() {
   const params = useParams();
@@ -114,10 +114,24 @@ export default function AnalyseTabPage() {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
         <h2 className="text-lg font-semibold text-slate-900 mb-4">Radardiagram - Klasgemiddelden per categorie</h2>
         <div className="flex flex-col md:flex-row gap-8">
-          {/* Radar chart */}
-          <div className="flex-1 min-h-[300px] flex items-center justify-center">
+          {/* Radar chart with legend */}
+          <div className="flex-1 min-h-[300px] flex flex-col items-center justify-center gap-4">
             {radarData.length > 0 ? (
-              <CompetencyRadarChart items={radarData} size={300} maxValue={5} />
+              <>
+                <CompetencyRadarChart items={radarData} size={300} maxValue={5} />
+                {/* Legend */}
+                <div className="flex flex-wrap gap-3 justify-center max-w-md">
+                  {radarData.map((item, index) => (
+                    <div key={item.name} className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full border border-white"
+                        style={{ backgroundColor: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }}
+                      />
+                      <span className="text-xs text-slate-700">{item.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
             ) : (
               <div className="text-center text-slate-500">
                 <svg
