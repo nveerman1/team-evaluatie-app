@@ -81,8 +81,8 @@ export default function StudentDetailPage() {
 
   const handleInviteSuccess = () => {
     setShowInviteModal(false);
-    // Optionally refresh data
-    loadData();
+    // Refresh will happen when user expands the invite list
+    // No need to reload all data since invites don't affect scores
   };
 
   return (
