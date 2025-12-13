@@ -129,8 +129,8 @@ export function OverviewTab({
       {/* Header block */}
       <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
         <CardContent className="p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1 flex-1">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-slate-600" />
                 <h2 className="text-lg font-semibold text-slate-900">Overzicht</h2>
@@ -139,7 +139,7 @@ export function OverviewTab({
                 Peer-feedback (OMZA), jouw leerdoelen & reflecties, je competentieprofiel en projectresultaten.
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
               <StatPill
                 icon={<MessageSquare className="h-4 w-4" />}
                 label="OMZA gem."
@@ -338,25 +338,25 @@ export function OverviewTab({
       </div>
 
       {/* Project Results Table */}
-      {projectResults.length > 0 && (
-        <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
-          <CardHeader className="pb-2">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <CardTitle className="text-base">Alle projectbeoordelingen</CardTitle>
-                <p className="text-sm text-slate-600">Vergelijk je projecten en open details per beoordeling.</p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="secondary" size="sm" className="rounded-xl">
-                  Sorteren op nieuwste
-                </Button>
-                <Button variant="secondary" size="sm" className="rounded-xl">
-                  Exporteren als PDF
-                </Button>
-              </div>
+      <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
+        <CardHeader className="pb-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <CardTitle className="text-base">Alle projectbeoordelingen</CardTitle>
+              <p className="text-sm text-slate-600">Vergelijk je projecten en open details per beoordeling.</p>
             </div>
-          </CardHeader>
-          <CardContent>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="secondary" size="sm" className="rounded-xl">
+                Sorteren op nieuwste
+              </Button>
+              <Button variant="secondary" size="sm" className="rounded-xl">
+                Exporteren als PDF
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {projectResults.length > 0 ? (
             <div className="overflow-x-auto rounded-xl border">
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-50">
@@ -400,9 +400,13 @@ export function OverviewTab({
                 </tbody>
               </table>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          ) : (
+            <div className="text-center py-8 text-sm text-slate-600">
+              Nog geen projectresultaten beschikbaar. Deze verschijnen zodra projecten zijn beoordeeld.
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

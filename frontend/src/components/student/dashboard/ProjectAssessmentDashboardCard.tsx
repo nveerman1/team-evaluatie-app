@@ -20,7 +20,7 @@ export function ProjectAssessmentDashboardCard({
     <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
       <CardContent className="p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-1">
+          <div className="flex-1 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-base font-semibold text-slate-900">
                 {assessment.title}
@@ -50,7 +50,7 @@ export function ProjectAssessmentDashboardCard({
             )}
           </div>
 
-          <div className="flex items-center gap-2 sm:justify-end">
+          <div className="flex shrink-0 items-start gap-2 sm:justify-end">
             <Button asChild className="rounded-xl" size="sm">
               <Link href={`/student/project-assessments/${assessment.id}`}>
                 Bekijk

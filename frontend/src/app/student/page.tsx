@@ -13,7 +13,7 @@ import { Search, ClipboardCheck, Target, Trophy, BarChart3, Sparkles } from "luc
 import { EvaluationDashboardCard } from "@/components/student/dashboard/EvaluationDashboardCard";
 import { ProjectAssessmentDashboardCard } from "@/components/student/dashboard/ProjectAssessmentDashboardCard";
 import { OverviewTab } from "@/components/student/dashboard/OverviewTab";
-import { CompetencyScanTab } from "@/components/student/competency/CompetencyScanTab";
+import { CompetencyScanDashboardTab } from "@/components/student/dashboard/CompetencyScanDashboardTab";
 import Link from "next/link";
 
 export default function StudentDashboard() {
@@ -53,15 +53,15 @@ export default function StudentDashboard() {
       {/* Header (full width, donker, in lijn met docentenpagina) */}
       <div className="w-full bg-slate-800 text-white shadow-sm">
         <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="text-left">
               <h1 className="text-3xl font-bold tracking-tight">Mijn Dashboard</h1>
               <p className="mt-1 max-w-xl text-sm text-white/70">
                 Overzicht van je evaluaties, ontwikkeling en projectresultaten.
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 sm:self-start">
               <div className="text-right">
                 <div className="text-sm font-semibold">{studentName}</div>
                 <div className="text-xs text-white/70">{studentClass}</div>
@@ -125,18 +125,16 @@ export default function StudentDashboard() {
                 </TabsTrigger>
               </TabsList>
 
-              {/* Search bar (only for evaluaties tab) */}
-              {activeTab === "evaluaties" && (
-                <div className="relative w-full sm:w-72">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <Input
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Zoek…"
-                    className="h-11 rounded-2xl bg-white pl-9 shadow-sm ring-1 ring-slate-200 focus-visible:ring-2 focus-visible:ring-indigo-500"
-                  />
-                </div>
-              )}
+              {/* Search bar - always visible */}
+              <div className="relative w-full sm:w-72">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Zoek…"
+                  className="h-11 rounded-2xl bg-white pl-9 shadow-sm ring-1 ring-slate-200 focus-visible:ring-2 focus-visible:ring-indigo-500"
+                />
+              </div>
             </div>
 
             {/* EVALUATIES */}
@@ -144,8 +142,8 @@ export default function StudentDashboard() {
               {/* Compacte intro */}
               <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
                 <CardContent className="p-5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="space-y-1">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="space-y-1 flex-1">
                       <div className="flex items-center gap-2">
                         <Sparkles className="h-4 w-4 text-slate-600" />
                         <p className="text-sm font-semibold text-slate-900">
@@ -157,7 +155,7 @@ export default function StudentDashboard() {
                         teruglezen.
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       <Badge variant="secondary" className="rounded-full bg-indigo-50 text-indigo-700">
                         Open: {openEvaluations.filter((e) => e.status === "open").length}
                       </Badge>
@@ -188,7 +186,7 @@ export default function StudentDashboard() {
 
             {/* COMPETENTIESCAN */}
             <TabsContent value="scans" className="mt-6 space-y-4">
-              <CompetencyScanTab />
+              <CompetencyScanDashboardTab />
             </TabsContent>
 
             {/* PROJECTBEOORDELINGEN */}
