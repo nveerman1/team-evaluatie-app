@@ -3,9 +3,13 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { competencyService } from "@/services";
-import type { StudentCompetencyOverview, CompetencySelfScore } from "@/dtos";
+import type { StudentCompetencyOverview, CompetencySelfScore, CompetencyWindow } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
 import Link from "next/link";
+import {
+  ExternalInviteModal,
+  ExternalInviteList,
+} from "@/components/competency/ExternalInviteComponents";
 
 export default function StudentDetailPage() {
   const params = useParams();
@@ -15,8 +19,11 @@ export default function StudentDetailPage() {
   const [overview, setOverview] = useState<StudentCompetencyOverview | null>(null);
   const [selfScores, setSelfScores] = useState<CompetencySelfScore[]>([]);
   const [rubricLevels, setRubricLevels] = useState<Record<number, any[]>>({});
+  const [window, setWindow] = useState<CompetencyWindow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [expandedInvites, setExpandedInvites] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -26,12 +33,14 @@ export default function StudentDetailPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [data, scores] = await Promise.all([
+      const [data, scores, windowData] = await Promise.all([
         competencyService.getStudentWindowOverview(windowId, userId),
         competencyService.getMySelfScores(windowId).catch(() => []), // Fallback if not accessible
+        competencyService.getWindow(windowId),
       ]);
       setOverview(data);
       setSelfScores(scores);
+      setWindow(windowData);
 
       // Load rubric levels for each competency
       const levelsMap: Record<number, any[]> = {};
@@ -66,6 +75,16 @@ export default function StudentDetailPage() {
     return rubricLevel;
   };
 
+  const isExternalFeedbackEnabled = () => {
+    return window?.settings?.allow_external_feedback === true;
+  };
+
+  const handleInviteSuccess = () => {
+    setShowInviteModal(false);
+    // Optionally refresh data
+    loadData();
+  };
+
   return (
     <main className="p-6 max-w-6xl mx-auto space-y-6">
       {/* Header */}
@@ -83,6 +102,39 @@ export default function StudentDetailPage() {
           Gedetailleerd overzicht van competentiescores, leerdoelen en reflecties
         </p>
       </div>
+
+      {/* External Invites Section */}
+      {isExternalFeedbackEnabled() && (
+        <div className="p-5 border rounded-xl bg-white space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Externe Beoordelaars</h2>
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className="rounded-lg bg-emerald-600 text-white text-sm px-3 py-1.5 hover:bg-emerald-700 transition-colors"
+            >
+              Nodig Externen Uit
+            </button>
+          </div>
+          
+          {/* External Invites List - Expandable */}
+          <div>
+            <button
+              onClick={() => setExpandedInvites(!expandedInvites)}
+              className="text-sm text-blue-700 underline flex items-center gap-1 hover:text-blue-900"
+            >
+              <span>{expandedInvites ? "▼" : "▶"}</span> Bekijk Uitnodigingen
+            </button>
+            {expandedInvites && (
+              <div className="mt-3">
+                <ExternalInviteList
+                  windowId={windowId}
+                  subjectUserId={userId}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Competency Scores */}
       <div className="p-5 border rounded-xl bg-white">
@@ -277,6 +329,16 @@ export default function StudentDetailPage() {
             </p>
           </div>
         )}
+
+      {/* External Invite Modal */}
+      {showInviteModal && (
+        <ExternalInviteModal
+          windowId={windowId}
+          subjectUserId={userId}
+          onClose={() => setShowInviteModal(false)}
+          onSuccess={handleInviteSuccess}
+        />
+      )}
     </main>
   );
 }
