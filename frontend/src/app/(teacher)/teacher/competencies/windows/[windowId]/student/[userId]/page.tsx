@@ -40,7 +40,7 @@ export default function StudentDetailPage() {
     const categoryScores: Record<string, { total: number; count: number }> = {};
     
     overview.scores.forEach((score) => {
-      const category = score.category_name || "Overig";
+      const category = score.category_name || score.category || "Overig";
       if (!categoryScores[category]) {
         categoryScores[category] = { total: 0, count: 0 };
       }
@@ -201,7 +201,15 @@ export default function StudentDetailPage() {
                     </td>
                     <td className="px-4 py-3 text-center">
                       {score.self_score !== null && score.self_score !== undefined ? (
-                        <span className="inline-flex px-2.5 py-1 rounded-md text-sm font-medium bg-blue-100 text-blue-700">
+                        <span
+                          className={`inline-flex px-2.5 py-1 rounded-md text-sm font-medium ${
+                            score.self_score >= 4
+                              ? "bg-green-100 text-green-700"
+                              : score.self_score >= 3
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-orange-100 text-orange-700"
+                          }`}
+                        >
                           {score.self_score.toFixed(1)}
                         </span>
                       ) : (
@@ -210,7 +218,15 @@ export default function StudentDetailPage() {
                     </td>
                     <td className="px-4 py-3 text-center">
                       {score.external_score !== null && score.external_score !== undefined ? (
-                        <span className="inline-flex px-2.5 py-1 rounded-md text-sm font-medium bg-green-100 text-green-700">
+                        <span
+                          className={`inline-flex px-2.5 py-1 rounded-md text-sm font-medium ${
+                            score.external_score >= 4
+                              ? "bg-green-100 text-green-700"
+                              : score.external_score >= 3
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-orange-100 text-orange-700"
+                          }`}
+                        >
                           {score.external_score.toFixed(1)}
                           {score.external_count > 0 && (
                             <span className="ml-1 text-xs">({score.external_count})</span>
