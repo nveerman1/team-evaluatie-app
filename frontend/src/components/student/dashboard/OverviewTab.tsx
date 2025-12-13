@@ -10,7 +10,13 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { StatPill, ScoreRow, StatusBadge, OmzaTeacherBadge, OmzaTeacherStatus } from "./helpers";
-import { EvaluationResult } from "@/dtos";
+import type {
+  EvaluationResult,
+  OverviewCompetencyProfile,
+  OverviewLearningGoal,
+  OverviewReflection,
+  OverviewProjectResult,
+} from "@/dtos";
 import Link from "next/link";
 import {
   RadarChart,
@@ -21,44 +27,12 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-type LearningGoal = {
-  id: string;
-  title: string;
-  status: "actief" | "afgerond";
-  since?: string;
-  related?: string;
-};
-
-type Reflection = {
-  id: string;
-  title: string;
-  type: string;
-  date: string;
-};
-
-type ProjectResult = {
-  id: string;
-  project: string;
-  meta?: string;
-  opdrachtgever?: string;
-  periode?: string;
-  eindcijfer?: number;
-  proces?: number;
-  eindresultaat?: number;
-  communicatie?: number;
-};
-
-type CompetencyProfileData = {
-  category: string;
-  value: number;
-};
-
 type OverviewTabProps = {
   peerResults: EvaluationResult[];
-  competencyProfile?: CompetencyProfileData[];
-  learningGoals?: LearningGoal[];
-  reflections?: Reflection[];
-  projectResults?: ProjectResult[];
+  competencyProfile?: OverviewCompetencyProfile[];
+  learningGoals?: OverviewLearningGoal[];
+  reflections?: OverviewReflection[];
+  projectResults?: OverviewProjectResult[];
 };
 
 export function OverviewTab({ 

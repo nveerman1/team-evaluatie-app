@@ -3,60 +3,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { studentService, projectAssessmentService } from "@/services";
 import { ApiAuthError } from "@/lib/api";
-
-/**
- * Learning goal type for the overview tab
- */
-type LearningGoal = {
-  id: string;
-  title: string;
-  status: "actief" | "afgerond";
-  since?: string;
-  related?: string;
-};
-
-/**
- * Reflection type for the overview tab
- */
-type Reflection = {
-  id: string;
-  title: string;
-  type: string;
-  date: string;
-};
-
-/**
- * Project result type for the overview tab
- */
-type ProjectResult = {
-  id: string;
-  project: string;
-  meta?: string;
-  opdrachtgever?: string;
-  periode?: string;
-  eindcijfer?: number;
-  proces?: number;
-  eindresultaat?: number;
-  communicatie?: number;
-};
-
-/**
- * Competency profile category score
- */
-type CompetencyProfileData = {
-  category: string;
-  value: number;
-};
-
-/**
- * Overview data for the student dashboard
- */
-export type StudentOverviewData = {
-  competencyProfile: CompetencyProfileData[];
-  learningGoals: LearningGoal[];
-  reflections: Reflection[];
-  projectResults: ProjectResult[];
-};
+import type {
+  StudentOverviewData,
+  OverviewLearningGoal,
+  OverviewReflection,
+  OverviewProjectResult,
+  OverviewCompetencyProfile,
+} from "@/dtos";
 
 /**
  * Hook to fetch all data needed for the student overview tab
@@ -80,7 +33,7 @@ export function useStudentOverview() {
       const growthData = await studentService.getGrowthData();
 
       // Transform competency profile from growth data
-      const competencyProfile: CompetencyProfileData[] = growthData.competency_profile.map(
+      const competencyProfile: OverviewCompetencyProfile[] = growthData.competency_profile.map(
         (item) => ({
           category: item.name,
           value: item.value,
@@ -88,7 +41,7 @@ export function useStudentOverview() {
       );
 
       // Transform learning goals from growth data
-      const learningGoals: LearningGoal[] = growthData.goals.map((goal) => ({
+      const learningGoals: OverviewLearningGoal[] = growthData.goals.map((goal) => ({
         id: goal.id,
         title: goal.title,
         status: goal.status === "active" ? "actief" : "afgerond",
@@ -96,7 +49,7 @@ export function useStudentOverview() {
       }));
 
       // Transform reflections from growth data (competency scan reflections)
-      const reflections: Reflection[] = growthData.reflections.map((refl) => ({
+      const reflections: OverviewReflection[] = growthData.reflections.map((refl) => ({
         id: refl.id,
         title: refl.scan_title,
         type: "Competentiescan",
@@ -107,30 +60,40 @@ export function useStudentOverview() {
       try {
         const evaluations = await studentService.getMyEvaluations();
         
-        // Get reflections from closed evaluations
-        for (const evaluation of evaluations) {
-          if (evaluation.status === "closed" && evaluation.reflectionCompleted) {
-            try {
-              const reflection = await studentService.getReflection(evaluation.id);
-              if (reflection && reflection.submitted_at) {
-                reflections.push({
-                  id: `eval-${evaluation.id}`,
-                  title: evaluation.title,
-                  type: "Evaluatie",
-                  date: new Date(reflection.submitted_at).toLocaleDateString("nl-NL"),
-                });
-              }
-            } catch {
-              // Ignore errors for individual reflections
+        // Get reflections from closed evaluations in parallel
+        const closedEvaluations = evaluations.filter(
+          (e) => e.status === "closed" && e.reflectionCompleted
+        );
+        
+        const reflectionPromises = closedEvaluations.map(async (evaluation) => {
+          try {
+            const reflection = await studentService.getReflection(evaluation.id);
+            if (reflection && reflection.submitted_at) {
+              return {
+                id: `eval-${evaluation.id}`,
+                title: evaluation.title,
+                type: "Evaluatie",
+                date: new Date(reflection.submitted_at).toLocaleDateString("nl-NL"),
+              };
             }
+          } catch {
+            // Ignore errors for individual reflections
           }
-        }
+          return null;
+        });
+        
+        const evaluationReflections = (await Promise.allSettled(reflectionPromises))
+          .filter((result) => result.status === "fulfilled" && result.value !== null)
+          .map((result) => (result as PromiseFulfilledResult<OverviewReflection | null>).value!)
+          .filter((refl): refl is OverviewReflection => refl !== null);
+        
+        reflections.push(...evaluationReflections);
       } catch {
         // If we can't fetch evaluation reflections, continue with what we have
       }
 
       // Fetch published project assessments
-      const projectResults: ProjectResult[] = [];
+      const projectResults: OverviewProjectResult[] = [];
       try {
         const assessmentsData = await projectAssessmentService.getProjectAssessments(
           undefined,
@@ -138,8 +101,8 @@ export function useStudentOverview() {
           "published"
         );
 
-        // For each published assessment, fetch details to get scores and grade
-        for (const assessment of assessmentsData.items || []) {
+        // Fetch all assessment details in parallel
+        const assessmentPromises = (assessmentsData.items || []).map(async (assessment) => {
           try {
             const details = await projectAssessmentService.getProjectAssessment(assessment.id);
             
@@ -163,12 +126,18 @@ export function useStudentOverview() {
               categoryAverages[category] = avg;
             });
 
-            // Extract specific categories (if they exist)
-            const proces = categoryAverages["Proces"] || categoryAverages["proces"];
-            const eindresultaat = categoryAverages["Eindresultaat"] || categoryAverages["eindresultaat"];
-            const communicatie = categoryAverages["Communicatie"] || categoryAverages["communicatie"];
+            // Normalize category names to lowercase for consistent lookups
+            const normalizedAverages: Record<string, number> = {};
+            Object.entries(categoryAverages).forEach(([key, value]) => {
+              normalizedAverages[key.toLowerCase()] = value;
+            });
 
-            projectResults.push({
+            // Extract specific categories (with normalized names)
+            const proces = normalizedAverages["proces"];
+            const eindresultaat = normalizedAverages["eindresultaat"];
+            const communicatie = normalizedAverages["communicatie"];
+
+            return {
               id: assessment.id.toString(),
               project: assessment.title,
               meta: assessment.group_name || undefined,
@@ -183,11 +152,19 @@ export function useStudentOverview() {
               proces,
               eindresultaat,
               communicatie,
-            });
+            };
           } catch {
-            // If we can't fetch details for this assessment, skip it
+            // If we can't fetch details for this assessment, return null
+            return null;
           }
-        }
+        });
+        
+        const assessmentResults = (await Promise.allSettled(assessmentPromises))
+          .filter((result) => result.status === "fulfilled" && result.value !== null)
+          .map((result) => (result as PromiseFulfilledResult<OverviewProjectResult | null>).value!)
+          .filter((res): res is OverviewProjectResult => res !== null);
+        
+        projectResults.push(...assessmentResults);
       } catch {
         // If we can't fetch project assessments, continue with empty array
       }
