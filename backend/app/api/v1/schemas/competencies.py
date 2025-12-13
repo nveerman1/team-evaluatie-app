@@ -416,6 +416,7 @@ class CompetencyScore(BaseModel):
     """Aggregated score for one competency in one window"""
     competency_id: int
     competency_name: str
+    category_name: Optional[str] = None
     self_score: Optional[float] = None
     peer_score: Optional[float] = None
     teacher_score: Optional[float] = None

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { competencyService } from "@/services";
 import type { StudentCompetencyOverview } from "@/dtos";
@@ -16,6 +16,7 @@ export default function StudentDetailPage() {
   const [overview, setOverview] = useState<StudentCompetencyOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedGoals, setExpandedGoals] = useState<Set<number>>(new Set());
 
   const loadData = useCallback(async () => {
     try {
@@ -32,6 +33,16 @@ export default function StudentDetailPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const toggleGoal = (id: number) => {
+    const newExpanded = new Set(expandedGoals);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedGoals(newExpanded);
+  };
 
   // Calculate category averages (must be called before early returns)
   const categoryAverages = useMemo(() => {
@@ -262,48 +273,119 @@ export default function StudentDetailPage() {
 
       {/* Goals */}
       {overview.goals.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Leerdoelen</h2>
-          <div className="space-y-3">
-            {overview.goals.map((goal) => (
-              <div
-                key={goal.id}
-                className="p-4 bg-purple-50 border border-purple-200 rounded-lg"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-slate-900 mb-2">{goal.goal_text}</h3>
-                    {goal.success_criteria && (
-                      <p className="text-sm text-slate-600 mb-2">
-                        <span className="font-medium">Succescriterium:</span>{" "}
-                        {goal.success_criteria}
-                      </p>
-                    )}
-                    {goal.submitted_at && (
-                      <p className="text-xs text-slate-500">
-                        Ingediend op:{" "}
-                        {new Date(goal.submitted_at).toLocaleDateString("nl-NL")}
-                      </p>
-                    )}
-                  </div>
-                  <span
-                    className={`px-3 py-1 rounded text-xs font-medium whitespace-nowrap ${
-                      goal.status === "achieved"
-                        ? "bg-green-100 text-green-700"
-                        : goal.status === "not_achieved"
-                        ? "bg-red-100 text-red-700"
-                        : "bg-blue-100 text-blue-700"
-                    }`}
-                  >
-                    {goal.status === "achieved"
-                      ? "Behaald"
-                      : goal.status === "not_achieved"
-                      ? "Niet behaald"
-                      : "Bezig"}
-                  </span>
-                </div>
-              </div>
-            ))}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
+            <h2 className="text-lg font-semibold text-slate-900">Leerdoelen</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 text-sm">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
+                    Competentie
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
+                    Leerdoel
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                    Laatste update
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 tracking-wide">
+                    Actie
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {overview.goals.map((goal) => {
+                  const competency = overview.scores.find(s => s.competency_id === goal.competency_id);
+                  const isExpanded = expandedGoals.has(goal.id);
+                  
+                  return (
+                    <React.Fragment key={goal.id}>
+                      <tr className="bg-white hover:bg-slate-50">
+                        <td className="px-5 py-3 text-sm text-slate-600">
+                          {competency?.competency_name || "–"}
+                        </td>
+                        <td className="px-5 py-3 text-sm text-slate-800">
+                          <div className="max-w-md truncate" title={goal.goal_text}>
+                            {goal.goal_text}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span
+                            className={`inline-flex px-3 py-1 rounded text-xs font-medium ${
+                              goal.status === "achieved"
+                                ? "bg-green-100 text-green-700"
+                                : goal.status === "not_achieved"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-blue-100 text-blue-700"
+                            }`}
+                          >
+                            {goal.status === "achieved"
+                              ? "Behaald"
+                              : goal.status === "not_achieved"
+                              ? "Niet behaald"
+                              : "Bezig"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center text-sm text-slate-600">
+                          {goal.updated_at
+                            ? new Date(goal.updated_at).toLocaleDateString("nl-NL")
+                            : goal.submitted_at
+                            ? new Date(goal.submitted_at).toLocaleDateString("nl-NL")
+                            : "–"}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => toggleGoal(goal.id)}
+                            className="text-blue-600 hover:text-blue-800 text-sm"
+                          >
+                            {isExpanded ? "Inklappen" : "Details"}
+                          </button>
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr className="bg-slate-50">
+                          <td colSpan={5} className="px-5 py-4">
+                            <div className="space-y-3">
+                              <div>
+                                <span className="text-sm font-medium text-slate-700">
+                                  Volledig leerdoel:
+                                </span>
+                                <p className="text-sm text-slate-600 mt-1">
+                                  {goal.goal_text}
+                                </p>
+                              </div>
+                              {goal.success_criteria && (
+                                <div>
+                                  <span className="text-sm font-medium text-slate-700">
+                                    Succescriteria:
+                                  </span>
+                                  <p className="text-sm text-slate-600 mt-1">
+                                    {goal.success_criteria}
+                                  </p>
+                                </div>
+                              )}
+                              <div className="flex gap-4 text-sm text-slate-500">
+                                {goal.submitted_at && (
+                                  <span>
+                                    Ingediend:{" "}
+                                    {new Date(goal.submitted_at).toLocaleDateString("nl-NL")}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
