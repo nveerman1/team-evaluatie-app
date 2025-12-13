@@ -45,7 +45,8 @@ export function CompetencyRadarChart({
 
   const centerX = size / 2;
   const centerY = size / 2;
-  const maxRadius = (size / 2) * 0.85; // Leave some padding
+  const maxRadius = (size / 2) * 0.7; // Reduced to leave more padding for labels
+  const labelRadius = (size / 2) * 0.88; // Position for text labels
 
   // Calculate polygon points for the data
   const radarPoints = items.map((item, index) => {
@@ -145,6 +146,68 @@ export function CompetencyRadarChart({
           r={3}
           fill="#3b82f6"
         />
+
+        {/* Category labels at axis endpoints */}
+        {items.map((item, index) => {
+          const angle = (index / items.length) * Math.PI * 2 - Math.PI / 2;
+          const labelX = centerX + labelRadius * Math.cos(angle);
+          const labelY = centerY + labelRadius * Math.sin(angle);
+          
+          // Determine text anchor based on angle for better positioning
+          let textAnchor: "start" | "middle" | "end" = "middle";
+          if (Math.cos(angle) > 0.3) textAnchor = "start";
+          else if (Math.cos(angle) < -0.3) textAnchor = "end";
+          
+          // Shorten long labels based on specific mappings
+          let displayName = item.name;
+          if (item.name.includes("Reflectie & Professionele houding")) {
+            displayName = "Professionele houding";
+          } else if (item.name.includes("Communicatie & Presenteren")) {
+            displayName = "Communicatie";
+          } else if (item.name.includes("Creatief denken & probleemoplossen")) {
+            displayName = "Creatief denken";
+          }
+          
+          // Split label into multiple lines if it's still too long
+          const words = displayName.split(" ");
+          const lines: string[] = [];
+          if (words.length > 2 && displayName.length > 20) {
+            // Split into two lines
+            const midPoint = Math.ceil(words.length / 2);
+            lines.push(words.slice(0, midPoint).join(" "));
+            lines.push(words.slice(midPoint).join(" "));
+          } else {
+            lines.push(displayName);
+          }
+          
+          // Adjust vertical alignment based on position
+          const baseY = labelY;
+          const lineHeight = 12;
+          const startOffset = lines.length > 1 ? -lineHeight / 2 : 0;
+          
+          return (
+            <g key={`label-${index}`}>
+              {lines.map((line, lineIndex) => {
+                let dy = startOffset + lineIndex * lineHeight;
+                if (Math.sin(angle) < -0.5) dy += lineHeight; // Top labels
+                else if (Math.sin(angle) > 0.5) dy -= lineHeight / 2; // Bottom labels
+                
+                return (
+                  <text
+                    key={`label-${index}-${lineIndex}`}
+                    x={labelX}
+                    y={baseY + dy}
+                    textAnchor={textAnchor}
+                    className="text-xs font-medium fill-slate-700"
+                    style={{ fontSize: "10px" }}
+                  >
+                    {line}
+                  </text>
+                );
+              })}
+            </g>
+          );
+        })}
       </svg>
     </div>
   );
