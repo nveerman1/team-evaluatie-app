@@ -1525,10 +1525,11 @@ def get_student_window_overview(
     if not student or student.school_id != current_user.school_id:
         raise HTTPException(status_code=404, detail="Student not found")
 
-    # Get all competencies
+    # Get all competencies with category relationship
     competencies = (
         db.execute(
             select(Competency)
+            .options(selectinload(Competency.competency_category))
             .where(
                 Competency.school_id == current_user.school_id,
                 Competency.active == True,
@@ -1597,10 +1598,16 @@ def get_student_window_overview(
         self_score_obj = self_score_map.get(comp.id)
         teacher_obs_obj = teacher_obs_map.get(comp.id)
 
+        # Get category name from relationship
+        category_name = None
+        if comp.competency_category:
+            category_name = comp.competency_category.name
+
         scores.append(
             CompetencyScore(
                 competency_id=comp.id,
                 competency_name=comp.name,
+                category_name=category_name,
                 self_score=float(self_score_obj.score) if self_score_obj else None,
                 peer_score=None,  # TODO: implement peer score calculation
                 teacher_score=float(teacher_obs_obj.score) if teacher_obs_obj else None,
