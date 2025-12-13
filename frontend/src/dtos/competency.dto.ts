@@ -285,6 +285,7 @@ export interface CompetencyTeacherObservationCreate {
 export interface CompetencyScore {
   competency_id: number;
   competency_name: string;
+  category_name?: string;
   self_score?: number;
   peer_score?: number;
   teacher_score?: number;
