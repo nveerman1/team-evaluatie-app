@@ -94,13 +94,13 @@ export function CompetencyScanDashboardTab({ searchQuery = "" }: CompetencyScanD
   return (
     <div className="space-y-4">
       {/* Mijn ontwikkeling Card */}
-      <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
+      <Card className="rounded-2xl border-slate-200 bg-slate-50">
         <CardContent className="p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1 flex-1">
               <div className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-slate-600" />
-                <h2 className="text-lg font-semibold text-slate-900">Mijn ontwikkeling</h2>
+                <Target className="h-4 w-4 text-slate-600" />
+                <p className="text-sm font-semibold text-slate-900">Mijn ontwikkeling</p>
               </div>
               <p className="text-sm text-slate-600">
                 Hier vind je je competentiescans, leerdoelen en reflecties.

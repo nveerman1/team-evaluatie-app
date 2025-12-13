@@ -147,7 +147,7 @@ export default function StudentDashboard() {
             {/* EVALUATIES */}
             <TabsContent value="evaluaties" className="mt-6 space-y-4">
               {/* Compacte intro */}
-              <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
+              <Card className="rounded-2xl border-slate-200 bg-slate-50">
                 <CardContent className="p-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="space-y-1 flex-1">
@@ -198,11 +198,11 @@ export default function StudentDashboard() {
 
             {/* PROJECTBEOORDELINGEN */}
             <TabsContent value="projecten" className="mt-6 space-y-4">
-              <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
+              <Card className="rounded-2xl border-slate-200 bg-slate-50">
                 <CardContent className="p-5">
                   <div className="flex items-center gap-2">
-                    <Trophy className="h-5 w-5 text-slate-600" />
-                    <h2 className="text-lg font-semibold text-slate-900">Mijn projectresultaten</h2>
+                    <Trophy className="h-4 w-4 text-slate-600" />
+                    <p className="text-sm font-semibold text-slate-900">Mijn projectresultaten</p>
                   </div>
                   <p className="text-sm text-slate-600 mt-1">
                     Beoordelingen per project. Klik door voor rubric, feedback en je eindresultaat.

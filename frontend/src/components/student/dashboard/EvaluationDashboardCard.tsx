@@ -22,7 +22,7 @@ export function EvaluationDashboardCard({ evaluation }: EvaluationDashboardCardP
   const peerLabel = `Peer-evaluaties (${evaluation.peersCompleted}/${evaluation.peersTotal})`;
   
   return (
-    <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
+    <Card className="rounded-2xl border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
       <CardContent className="p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1 space-y-2">

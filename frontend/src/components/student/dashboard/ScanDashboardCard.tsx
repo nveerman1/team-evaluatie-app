@@ -20,7 +20,7 @@ export function ScanDashboardCard({
   const isOpen = window.status === "open";
   
   return (
-    <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
+    <Card className="rounded-2xl border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
       <CardContent className="p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
