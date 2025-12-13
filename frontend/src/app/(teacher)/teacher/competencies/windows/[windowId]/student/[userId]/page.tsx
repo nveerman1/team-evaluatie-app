@@ -221,86 +221,86 @@ export default function StudentDetailPage() {
                         className="bg-white hover:bg-slate-50 cursor-pointer"
                         onClick={() => toggleCompetency(score.competency_id)}
                       >
-                    <td className="px-5 py-3 text-sm text-slate-600">
-                      {score.category_name || "Overig"}
-                    </td>
-                    <td className="px-5 py-3 text-sm text-slate-800 font-medium">
-                      {score.competency_name}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {score.self_score !== null && score.self_score !== undefined ? (
-                        <span
-                          className={`inline-flex px-2.5 py-1 rounded-md text-sm font-medium ${
-                            score.self_score >= 4
-                              ? "bg-green-100 text-green-700"
-                              : score.self_score >= 3
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-orange-100 text-orange-700"
-                          }`}
-                        >
-                          {score.self_score.toFixed(1)}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400">–</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {score.external_score !== null && score.external_score !== undefined ? (
-                        <span
-                          className={`inline-flex px-2.5 py-1 rounded-md text-sm font-medium ${
-                            score.external_score >= 4
-                              ? "bg-green-100 text-green-700"
-                              : score.external_score >= 3
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-orange-100 text-orange-700"
-                          }`}
-                        >
-                          {score.external_score.toFixed(1)}
-                          {score.external_count > 0 && (
-                            <span className="ml-1 text-xs">({score.external_count})</span>
-                          )}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400">–</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {score.final_score !== null && score.final_score !== undefined ? (
-                        <span
-                          className={`inline-flex px-2.5 py-1 rounded-md text-sm font-medium ${
-                            score.final_score >= 4
-                              ? "bg-green-100 text-green-700"
-                              : score.final_score >= 3
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-orange-100 text-orange-700"
-                          }`}
-                        >
-                          {score.final_score.toFixed(1)}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400">–</span>
-                      )}
-                    </td>
-                  </tr>
-                  {isExpanded && score.self_level_description && (
-                    <tr className="bg-slate-50">
-                      <td colSpan={5} className="px-5 py-4">
-                        <div className="space-y-2">
-                          <div className="flex items-start gap-2">
-                            <span className="text-sm font-medium text-slate-700 min-w-[120px]">
-                              Niveau {score.self_score ? Math.round(score.self_score) : ''}:
+                        <td className="px-5 py-3 text-sm text-slate-600">
+                          {score.category_name || "Overig"}
+                        </td>
+                        <td className="px-5 py-3 text-sm text-slate-800 font-medium">
+                          {score.competency_name}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {score.self_score !== null && score.self_score !== undefined ? (
+                            <span
+                              className={`inline-flex px-2.5 py-1 rounded-md text-sm font-medium ${
+                                score.self_score >= 4
+                                  ? "bg-green-100 text-green-700"
+                                  : score.self_score >= 3
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-orange-100 text-orange-700"
+                              }`}
+                            >
+                              {score.self_score.toFixed(1)}
                             </span>
-                            <p className="text-sm text-slate-600 flex-1">
-                              {score.self_level_description}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              );
-            })}
+                          ) : (
+                            <span className="text-slate-400">–</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {score.external_score !== null && score.external_score !== undefined ? (
+                            <span
+                              className={`inline-flex px-2.5 py-1 rounded-md text-sm font-medium ${
+                                score.external_score >= 4
+                                  ? "bg-green-100 text-green-700"
+                                  : score.external_score >= 3
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-orange-100 text-orange-700"
+                              }`}
+                            >
+                              {score.external_score.toFixed(1)}
+                              {score.external_count > 0 && (
+                                <span className="ml-1 text-xs">({score.external_count})</span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">–</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {score.final_score !== null && score.final_score !== undefined ? (
+                            <span
+                              className={`inline-flex px-2.5 py-1 rounded-md text-sm font-medium ${
+                                score.final_score >= 4
+                                  ? "bg-green-100 text-green-700"
+                                  : score.final_score >= 3
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-orange-100 text-orange-700"
+                              }`}
+                            >
+                              {score.final_score.toFixed(1)}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">–</span>
+                          )}
+                        </td>
+                      </tr>
+                      {isExpanded && score.self_level_description && (
+                        <tr className="bg-slate-50">
+                          <td colSpan={5} className="px-5 py-4">
+                            <div className="space-y-2">
+                              <div className="flex items-start gap-2">
+                                <span className="text-sm font-medium text-slate-700 min-w-[120px]">
+                                  Niveau {score.self_score ? Math.round(score.self_score) : ''}:
+                                </span>
+                                <p className="text-sm text-slate-600 flex-1">
+                                  {score.self_level_description}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
             </tbody>
           </table>
         </div>
