@@ -51,11 +51,11 @@ export function formatDelta(delta: number): string {
 
 // Get teamContributionFactor - gcfScore now comes directly as 0.90-1.10
 export function getTeamContributionFactor(
-  teamContributionFactor?: number | null,
-  gcfScore?: number | null
+  teamContributionFactor: number | null | undefined,
+  gcfScore: number | null | undefined
 ): number | null {
-  if (teamContributionFactor !== undefined && teamContributionFactor !== null) return teamContributionFactor;
-  if (gcfScore !== undefined && gcfScore !== null) return gcfScore; // gcfScore is already in 0.90-1.10 range
+  if (teamContributionFactor != null) return teamContributionFactor;
+  if (gcfScore != null) return gcfScore; // gcfScore is already in 0.90-1.10 range
   return null;
 }
 

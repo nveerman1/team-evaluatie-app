@@ -181,7 +181,7 @@ export default function OverzichtPage() {
   const teamContributionLabel = useMemo(() => {
     if (!evaluationData) return null;
     return evaluationData.teamContributionLabel ??
-      (teamContributionFactor !== null && teamContributionFactor !== undefined
+      (teamContributionFactor != null
         ? getTeamContributionLabel(teamContributionFactor)
         : null);
   }, [evaluationData, teamContributionFactor]);
@@ -304,7 +304,7 @@ export default function OverzichtPage() {
             {/* Right column: Team-bijdrage + Docentbeoordeling */}
             <div className="space-y-3">
               {/* Team-bijdrage / correctiefactor (GCF) */}
-              {teamContributionFactor !== null && teamContributionFactor !== undefined && (
+              {teamContributionFactor != null && (
                 <div className="rounded-xl border border-slate-100 bg-indigo-50/60 p-3">
                   <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
                     <span>Team-bijdrage</span>
