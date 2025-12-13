@@ -43,10 +43,13 @@ export function CompetencyRadarChart({
     );
   }
 
-  const centerX = size / 2;
-  const centerY = size / 2;
+  // Use a larger viewBox to accommodate labels, but keep visual size the same
+  const padding = 40; // Extra padding for labels
+  const viewBoxSize = size + padding * 2;
+  const centerX = viewBoxSize / 2;
+  const centerY = viewBoxSize / 2;
   const maxRadius = (size / 2) * 0.7; // Reduced to leave more padding for labels
-  const labelRadius = (size / 2) * 0.88; // Position for text labels
+  const labelRadius = (size / 2) * 0.88 + padding; // Position for text labels (adjusted for padding)
 
   // Calculate polygon points for the data
   const radarPoints = items.map((item, index) => {
@@ -70,6 +73,7 @@ export function CompetencyRadarChart({
       <svg
         width={size}
         height={size}
+        viewBox={`0 0 ${viewBoxSize} ${viewBoxSize}`}
         className="absolute inset-0"
       >
         {/* Concentric circles */}
