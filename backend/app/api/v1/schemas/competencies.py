@@ -418,6 +418,7 @@ class CompetencyScore(BaseModel):
     competency_name: str
     category_name: Optional[str] = None
     self_score: Optional[float] = None
+    self_level_description: Optional[str] = None  # Rubric level description for self score
     peer_score: Optional[float] = None
     teacher_score: Optional[float] = None
     external_score: Optional[float] = None

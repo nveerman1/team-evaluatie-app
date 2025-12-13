@@ -17,6 +17,7 @@ export default function StudentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedGoals, setExpandedGoals] = useState<Set<number>>(new Set());
+  const [expandedCompetencies, setExpandedCompetencies] = useState<Set<number>>(new Set());
 
   const loadData = useCallback(async () => {
     try {
@@ -42,6 +43,16 @@ export default function StudentDetailPage() {
       newExpanded.add(id);
     }
     setExpandedGoals(newExpanded);
+  };
+
+  const toggleCompetency = (id: number) => {
+    const newExpanded = new Set(expandedCompetencies);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedCompetencies(newExpanded);
   };
 
   // Calculate category averages (must be called before early returns)
@@ -135,7 +146,7 @@ export default function StudentDetailPage() {
           </div>
           
           {/* Category scores */}
-          <div className="flex-1">
+          <div className="flex-1 flex flex-col justify-center">
             <h3 className="text-sm font-medium text-slate-700 mb-3">Scores per categorie</h3>
             <div className="space-y-3">
               {categoryAverages
@@ -202,8 +213,14 @@ export default function StudentDetailPage() {
                   if (catA !== catB) return catA.localeCompare(catB);
                   return a.competency_name.localeCompare(b.competency_name);
                 })
-                .map((score) => (
-                  <tr key={score.competency_id} className="bg-white hover:bg-slate-50">
+                .map((score) => {
+                  const isExpanded = expandedCompetencies.has(score.competency_id);
+                  return (
+                    <React.Fragment key={score.competency_id}>
+                      <tr 
+                        className="bg-white hover:bg-slate-50 cursor-pointer"
+                        onClick={() => toggleCompetency(score.competency_id)}
+                      >
                     <td className="px-5 py-3 text-sm text-slate-600">
                       {score.category_name || "Overig"}
                     </td>
@@ -265,7 +282,25 @@ export default function StudentDetailPage() {
                       )}
                     </td>
                   </tr>
-                ))}
+                  {isExpanded && score.self_level_description && (
+                    <tr className="bg-slate-50">
+                      <td colSpan={5} className="px-5 py-4">
+                        <div className="space-y-2">
+                          <div className="flex items-start gap-2">
+                            <span className="text-sm font-medium text-slate-700 min-w-[120px]">
+                              Niveau {score.self_score ? Math.round(score.self_score) : ''}:
+                            </span>
+                            <p className="text-sm text-slate-600 flex-1">
+                              {score.self_level_description}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              );
+            })}
             </tbody>
           </table>
         </div>

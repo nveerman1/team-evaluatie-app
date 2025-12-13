@@ -1534,6 +1534,7 @@ def get_student_window_overview(
             db.execute(
                 select(Competency)
                 .options(selectinload(Competency.competency_category))
+                .options(selectinload(Competency.rubric_levels))
                 .where(
                     Competency.school_id == current_user.school_id,
                     Competency.active,
@@ -1550,6 +1551,7 @@ def get_student_window_overview(
             db.execute(
                 select(Competency)
                 .options(selectinload(Competency.competency_category))
+                .options(selectinload(Competency.rubric_levels))
                 .where(
                     Competency.school_id == current_user.school_id,
                     Competency.active,
@@ -1623,12 +1625,25 @@ def get_student_window_overview(
         if comp.competency_category:
             category_name = comp.competency_category.name
 
+        # Get rubric level description for self score
+        self_level_description = None
+        if self_score_obj and comp.rubric_levels:
+            # Round to nearest integer level (1-5)
+            level = round(self_score_obj.score)
+            level = max(1, min(5, level))  # Clamp to 1-5 range
+            # Find matching rubric level
+            for rubric_level in comp.rubric_levels:
+                if rubric_level.level == level:
+                    self_level_description = rubric_level.description
+                    break
+
         scores.append(
             CompetencyScore(
                 competency_id=comp.id,
                 competency_name=comp.name,
                 category_name=category_name,
                 self_score=float(self_score_obj.score) if self_score_obj else None,
+                self_level_description=self_level_description,
                 peer_score=None,  # TODO: implement peer score calculation
                 teacher_score=float(teacher_obs_obj.score) if teacher_obs_obj else None,
                 external_score=external_avg_map.get(comp.id),
