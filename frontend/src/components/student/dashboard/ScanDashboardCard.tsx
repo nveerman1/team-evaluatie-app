@@ -81,7 +81,7 @@ export function ScanDashboardCard({
                 onClick={onInviteExternal} 
                 variant="secondary" 
                 size="sm" 
-                className="rounded-xl bg-emerald-600 text-white hover:bg-emerald-700"
+                className="rounded-xl"
               >
                 Nodig Externen Uit
               </Button>
