@@ -70,11 +70,11 @@ export default function SelfScanPage() {
       // Pre-populate with existing scores or defaults
       const scoreMap: Record<number, CompetencySelfScoreInput> = {};
       
-      // First, initialize all competencies with default score of 3
+      // First, initialize all competencies with default score of 1
       filteredComps.forEach((comp) => {
         scoreMap[comp.id] = {
           competency_id: comp.id,
-          score: 3,
+          score: 1,
           example: "",
         };
       });
@@ -111,7 +111,7 @@ export default function SelfScanPage() {
       ...prev,
       [competencyId]: {
         competency_id: competencyId,
-        score: prev[competencyId]?.score || 3,
+        score: prev[competencyId]?.score || 1,
         example,
       },
     }));
@@ -183,7 +183,7 @@ export default function SelfScanPage() {
             { length: comp.scale_max - comp.scale_min + 1 },
             (_, i) => comp.scale_min + i
           );
-          const currentScore = scores[comp.id]?.score || 3;
+          const currentScore = scores[comp.id]?.score || 1;
           const compRubricLevels = rubricLevels[comp.id] || [];
 
           // Default labels if no rubric levels are defined
