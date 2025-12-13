@@ -167,7 +167,7 @@ export default function OverzichtPage() {
   // Calculate team contribution factor and label
   // Must be before early returns to follow Rules of Hooks
   const teamContributionFactor = useMemo(() => {
-    if (!evaluationData) return undefined;
+    if (!evaluationData) return null;
     return getTeamContributionFactor(
       evaluationData.teamContributionFactor,
       evaluationData.gcfScore
@@ -175,11 +175,11 @@ export default function OverzichtPage() {
   }, [evaluationData]);
 
   const teamContributionLabel = useMemo(() => {
-    if (!evaluationData) return undefined;
+    if (!evaluationData) return null;
     return evaluationData.teamContributionLabel ??
-      (teamContributionFactor !== undefined
+      (teamContributionFactor !== null && teamContributionFactor !== undefined
         ? getTeamContributionLabel(teamContributionFactor)
-        : undefined);
+        : null);
   }, [evaluationData, teamContributionFactor]);
 
   // Use omzaAverages if provided, otherwise calculate from peers
@@ -300,7 +300,7 @@ export default function OverzichtPage() {
             {/* Right column: Team-bijdrage + Docentbeoordeling */}
             <div className="space-y-3">
               {/* Team-bijdrage / correctiefactor (GCF) */}
-              {teamContributionFactor !== undefined && (
+              {teamContributionFactor !== null && teamContributionFactor !== undefined && (
                 <div className="rounded-xl border border-slate-100 bg-indigo-50/60 p-3">
                   <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
                     <span>Team-bijdrage</span>
