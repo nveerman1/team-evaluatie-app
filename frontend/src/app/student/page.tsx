@@ -1,48 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useStudentDashboard, useCurrentUser } from "@/hooks";
 import { useStudentProjectAssessments } from "@/hooks/useStudentProjectAssessments";
-import { EvaluationCard } from "@/components/student";
-import { CompetencyScanTab } from "@/components/student/competency/CompetencyScanTab";
+import { usePeerFeedbackResults } from "@/hooks/usePeerFeedbackResults";
 import { Loading, ErrorMessage } from "@/components";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Search, ClipboardCheck, Target, Trophy, BarChart3, Sparkles } from "lucide-react";
+import { EvaluationDashboardCard } from "@/components/student/dashboard/EvaluationDashboardCard";
+import { ProjectAssessmentDashboardCard } from "@/components/student/dashboard/ProjectAssessmentDashboardCard";
+import { OverviewTab } from "@/components/student/dashboard/OverviewTab";
+import { CompetencyScanDashboardTab } from "@/components/student/dashboard/CompetencyScanDashboardTab";
 import Link from "next/link";
-
-// SummaryTile component matching mockup design
-const SummaryTile = ({
-  icon,
-  title,
-  value,
-  hint,
-  color = "bg-white",
-  onClick,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  value: string | number;
-  hint?: string;
-  color?: string;
-  onClick?: () => void;
-}) => {
-  const Component = onClick ? "button" : "div";
-  return (
-    <Component
-      onClick={onClick}
-      className={`rounded-2xl ${color} border border-gray-300 shadow-sm p-4 flex items-center gap-4 w-full transition-all duration-200 ${
-        onClick ? "cursor-pointer hover:shadow-md" : ""
-      }`}
-    >
-      <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-lg">
-        {icon}
-      </div>
-      <div className="flex-1 text-left">
-        <div className="text-sm text-gray-500">{title}</div>
-        <div className="text-2xl font-semibold leading-6">{value}</div>
-        {hint && <div className="text-xs text-gray-400 mt-1">{hint}</div>}
-      </div>
-    </Component>
-  );
-};
 
 export default function StudentDashboard() {
   const { dashboard, loading, error } = useStudentDashboard();
@@ -52,14 +24,28 @@ export default function StudentDashboard() {
     loading: projectLoading,
     error: projectError,
   } = useStudentProjectAssessments();
+  const { items: peerResults } = usePeerFeedbackResults();
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<
-    "evaluaties" | "competenties" | "projecten"
-  >("evaluaties");
+  const [activeTab, setActiveTab] = useState<string>("evaluaties");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
-  // Get open evaluations early (before conditional returns)
-  const openEvaluations = dashboard?.openEvaluations || [];
+  // Memoize open evaluations to avoid changing on every render
+  const openEvaluations = useMemo(() => dashboard?.openEvaluations || [], [dashboard?.openEvaluations]);
+
+  // Filter evaluations by search query
+  const filteredEvaluations = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return openEvaluations;
+    return openEvaluations.filter((e) => e.title.toLowerCase().includes(q));
+  }, [openEvaluations, searchQuery]);
+
+  // Filter project assessments by search query
+  const filteredProjectAssessments = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return projectAssessments;
+    return projectAssessments.filter((p) => p.title.toLowerCase().includes(q));
+  }, [projectAssessments, searchQuery]);
 
   if (loading || userLoading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
@@ -70,39 +56,36 @@ export default function StudentDashboard() {
   const studentClass = user?.class_name || dashboard.userClass || "—";
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* HEADER met subtiele onderrand + vaste 2-koloms layout */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
-        <header className="px-6 pt-8 pb-4">
-          <div className="max-w-6xl mx-auto">
-            {/* Forceer links/rechts met grid i.p.v. flex zodat het nooit 'wegschuift' */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-              {/* Links: titel + subtitel, expliciet links uitlijnen */}
-              <div className="text-left">
-                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
-                  Mijn Dashboard
-                </h1>
-                <p className="text-gray-600 mt-1 text-sm">
-                  Overzicht van jouw evaluaties, reflecties en groei.
-                </p>
-              </div>
+    <div className="min-h-screen bg-slate-100">
+      {/* Header (full width, donker, in lijn met docentenpagina) */}
+      <div className="w-full bg-slate-800 text-white shadow-sm">
+        <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="text-left">
+              <h1 className="text-3xl font-bold tracking-tight">Mijn Dashboard</h1>
+              <p className="mt-1 max-w-xl text-sm text-white/70">
+                Overzicht van je evaluaties, ontwikkeling en projectresultaten.
+              </p>
+            </div>
 
-              {/* Rechts: naam + klas, expliciet rechts uitlijnen op md+ */}
-              <div className="md:text-right">
-                <div className="text-lg font-medium text-gray-900">
-                  {studentName}
-                </div>
-                <div className="text-sm text-gray-600">{studentClass}</div>
+            <div className="flex items-center gap-3 sm:self-start">
+              <div className="text-right">
+                <div className="text-sm font-semibold">{studentName}</div>
+                <div className="text-xs text-white/70">{studentClass}</div>
+              </div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/20 font-semibold">
+                {studentName.charAt(0)}
               </div>
             </div>
           </div>
-        </header>
+        </div>
       </div>
 
-      <section className="px-6 pt-6 pb-10">
+      {/* Page container */}
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
         {/* Self-Assessment Required Message */}
         {dashboard.needsSelfAssessment && (
-          <div className="max-w-6xl mx-auto mb-6 p-6 border rounded-xl bg-amber-50 border-amber-200">
+          <div className="mb-6 p-6 border rounded-xl bg-amber-50 border-amber-200">
             <div className="flex items-start gap-3">
               <div className="text-amber-600 text-xl">⚠️</div>
               <div>
@@ -118,200 +101,149 @@ export default function StudentDashboard() {
           </div>
         )}
 
-        {/* KPI Cards */}
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 w-full">
-          <SummaryTile
-            icon={<span>📋</span>}
-            title="Open Evaluaties"
-            value={openEvaluations.length}
-            hint={`${openEvaluations.length}/${openEvaluations.length} deze periode`}
-            onClick={() => setActiveTab("evaluaties")}
-          />
-          <SummaryTile
-            icon={<span>🧭</span>}
-            title="Open Scans"
-            value={dashboard.openScans}
-            hint="Competentiescan"
-            color="bg-green-50"
-            onClick={() => setActiveTab("competenties")}
-          />
-          <SummaryTile
-            icon={<span>🆕</span>}
-            title="Nieuwe Beoordeling"
-            value={dashboard.newAssessments}
-            hint={`${dashboard.newAssessments} ${dashboard.newAssessments === 1 ? "nieuw project" : "nieuwe projecten"}`}
-            color="bg-orange-50"
-            onClick={() => setActiveTab("projecten")}
-          />
-        </div>
+        {/* Tabs */}
+        <div className="mt-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <TabsList className="h-11 w-full justify-start gap-1 rounded-2xl bg-white p-1 shadow-sm sm:w-auto">
+                <TabsTrigger
+                  value="evaluaties"
+                  className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
+                >
+                  <ClipboardCheck className="mr-2 h-4 w-4" /> Evaluaties
+                </TabsTrigger>
+                <TabsTrigger
+                  value="scans"
+                  className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
+                >
+                  <Target className="mr-2 h-4 w-4" /> Competentiescan
+                </TabsTrigger>
+                <TabsTrigger
+                  value="projecten"
+                  className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
+                >
+                  <Trophy className="mr-2 h-4 w-4" /> Projectbeoordelingen
+                </TabsTrigger>
+                <TabsTrigger
+                  value="overzicht"
+                  className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
+                >
+                  <BarChart3 className="mr-2 h-4 w-4" /> Overzicht
+                </TabsTrigger>
+              </TabsList>
 
-        {/* Tab Navigation */}
-        <div className="max-w-6xl mx-auto flex gap-2 bg-gray-200 rounded-2xl p-1 w-full">
-          <button
-            onClick={() => setActiveTab("evaluaties")}
-            className={`px-4 py-2 rounded-xl text-sm font-medium ${
-              activeTab === "evaluaties"
-                ? "bg-white shadow-sm"
-                : "text-gray-600 hover:text-gray-800"
-            }`}
-          >
-            🧾 Evaluaties
-          </button>
-          <button
-            onClick={() => setActiveTab("competenties")}
-            className={`px-4 py-2 rounded-xl text-sm font-medium ${
-              activeTab === "competenties"
-                ? "bg-white shadow-sm"
-                : "text-gray-600 hover:text-gray-800"
-            }`}
-          >
-            🌱 Competentiescan
-          </button>
-          <button
-            onClick={() => setActiveTab("projecten")}
-            className={`px-4 py-2 rounded-xl text-sm font-medium ${
-              activeTab === "projecten"
-                ? "bg-white shadow-sm"
-                : "text-gray-600 hover:text-gray-800"
-            }`}
-          >
-            🧠 Projectbeoordelingen
-          </button>
-        </div>
-
-        {/* Tab Content */}
-        {activeTab === "evaluaties" && (
-          <div className="max-w-6xl mx-auto mt-5 space-y-4 w-full transition-all duration-300">
-            {/* Peer-feedback Results Card */}
-            <div className="rounded-xl border border-gray-300 shadow-sm bg-blue-50 p-4 space-y-3 w-full">
-              <div className="px-4 py-2 rounded-t-xl font-semibold text-sm bg-blue-200 text-blue-900">
-                Peer-feedback resultaten
+              {/* Search bar - always visible */}
+              <div className="relative w-full sm:w-72">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Zoek…"
+                  className="h-11 rounded-2xl bg-white pl-9 shadow-sm ring-1 ring-slate-200 focus-visible:ring-2 focus-visible:ring-indigo-500"
+                />
               </div>
-              <div className="text-sm text-gray-700">
-                {dashboard.completedEvaluations > 0 ? (
-                  <>
-                    Je hebt {dashboard.completedEvaluations} voltooide evaluatie
-                    {dashboard.completedEvaluations !== 1 ? "s" : ""}. Klik op
-                    &apos;Bekijk alle resultaten&apos; om je cijfers en feedback
-                    te zien.
-                  </>
+            </div>
+
+            {/* EVALUATIES */}
+            <TabsContent value="evaluaties" className="mt-6 space-y-4">
+              {/* Compacte intro */}
+              <Card className="rounded-2xl border-slate-200 bg-slate-50">
+                <CardContent className="p-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="space-y-1 flex-1">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-slate-600" />
+                        <p className="text-sm font-semibold text-slate-900">
+                          Wat moet ik nu doen?
+                        </p>
+                      </div>
+                      <p className="text-sm text-slate-600">
+                        Open evaluaties staan bovenaan. Afgeronde evaluaties kun je
+                        teruglezen.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge variant="secondary" className="rounded-full bg-indigo-50 text-indigo-700">
+                        Open: {openEvaluations.filter((e) => e.status === "open").length}
+                      </Badge>
+                      <Link href="/student/results">
+                        <Badge variant="secondary" className="rounded-full bg-indigo-50 text-indigo-700 cursor-pointer hover:bg-indigo-100">
+                          Afgerond: {dashboard.completedEvaluations}
+                        </Badge>
+                      </Link>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="grid gap-4">
+                {filteredEvaluations.length === 0 ? (
+                  <div className="p-8 rounded-xl shadow-sm bg-slate-50 text-center">
+                    <p className="text-slate-500">
+                      {searchQuery ? "Geen evaluaties gevonden met deze zoekopdracht." : "Geen open evaluaties op dit moment."}
+                    </p>
+                  </div>
                 ) : (
-                  <>
-                    Je hebt evaluaties toegewezen, maar nog geen voltooide
-                    resultaten. Zodra ze zijn afgerond verschijnen ze hier.
-                  </>
+                  filteredEvaluations.map((evaluation) => (
+                    <EvaluationDashboardCard key={evaluation.id} evaluation={evaluation} />
+                  ))
                 )}
               </div>
-              <Link
-                href="/student/results"
-                className="text-sm text-blue-700 underline"
-              >
-                Bekijk alle resultaten →
-              </Link>
-            </div>
+            </TabsContent>
 
-            {/* Evaluation Cards */}
-            {openEvaluations.length === 0 ? (
-              <div className="p-8 rounded-xl shadow-sm bg-gray-50 text-center">
-                <p className="text-gray-500">
-                  Geen open evaluaties op dit moment.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {openEvaluations.map((evaluation) => (
-                  <EvaluationCard key={evaluation.id} evaluation={evaluation} />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+            {/* COMPETENTIESCAN */}
+            <TabsContent value="scans" className="mt-6 space-y-4">
+              <CompetencyScanDashboardTab searchQuery={searchQuery} />
+            </TabsContent>
 
-        {activeTab === "competenties" && (
-          <div className="max-w-6xl mx-auto mt-5 space-y-4 w-full transition-all duration-300">
-            <CompetencyScanTab />
-          </div>
-        )}
-
-        {activeTab === "projecten" && (
-          <div className="max-w-6xl mx-auto mt-5 space-y-4 w-full transition-all duration-300">
-            {/* Project Results Overview Banner */}
-            <div className="rounded-xl border border-gray-300 shadow-sm bg-purple-50 p-4 space-y-3 w-full">
-              <div className="px-4 py-2 rounded-t-xl font-semibold text-sm bg-purple-200 text-purple-900">
-                Mijn Projectresultaten
-              </div>
-              <div className="text-sm text-gray-700">
-                Bekijk je ontwikkeling in projectvaardigheden over meerdere
-                projecten. Zie trends in categorieën, je voortgang per
-                rubric-onderdeel en je gemiddelde cijfer.
-              </div>
-              <Link
-                href="/student/projects/overview"
-                className="rounded-lg bg-purple-600 text-white text-sm px-3 py-1.5 mt-2 inline-block hover:bg-purple-700 transition-colors"
-              >
-                Bekijk Projectoverzicht →
-              </Link>
-            </div>
-
-            {/* Project Assessments List */}
-            <div className="rounded-xl shadow-sm bg-gray-50 p-4 space-y-3 w-full">
-              <div className="px-4 py-2 rounded-t-xl font-semibold text-sm bg-gray-200 text-gray-800">
-                Projectbeoordelingen
-              </div>
-              {projectLoading ? (
-                <Loading />
-              ) : projectError ? (
-                <ErrorMessage message={projectError} />
-              ) : projectAssessments.length === 0 ? (
-                <div className="p-8 text-center">
-                  <p className="text-gray-500">
-                    Nog geen projectbeoordelingen beschikbaar.
+            {/* PROJECTBEOORDELINGEN */}
+            <TabsContent value="projecten" className="mt-6 space-y-4">
+              <Card className="rounded-2xl border-slate-200 bg-slate-50">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-slate-600" />
+                    <p className="text-sm font-semibold text-slate-900">Mijn projectresultaten</p>
+                  </div>
+                  <p className="text-sm text-slate-600 mt-1">
+                    Beoordelingen per project. Klik door voor rubric, feedback en je eindresultaat.
                   </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {projectAssessments.map((assessment) => (
-                    <Link
-                      key={assessment.id}
-                      href={`/student/project-assessments/${assessment.id}`}
-                      className="block rounded-lg shadow-sm p-4 bg-white hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="font-medium text-base text-gray-900 flex items-center gap-2">
-                            {assessment.title}
-                            <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-medium">
-                              Gesloten
-                            </span>
-                          </div>
-                          <div className="text-sm text-gray-500 mt-1">
-                            Team: {assessment.group_name || "Onbekend"} |
-                            Beoordeeld door:{" "}
-                            {assessment.teacher_name || "Onbekend"}
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <button className="rounded-lg bg-blue-600 text-white text-sm px-3 py-1.5">
-                            Bekijk →
-                          </button>
-                        </div>
-                      </div>
-                      {assessment.published_at && (
-                        <div className="text-sm text-gray-600 mt-2">
-                          Datum gepubliceerd:{" "}
-                          {new Date(assessment.published_at).toLocaleDateString(
-                            "nl-NL",
-                          )}
-                        </div>
-                      )}
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </section>
+                </CardContent>
+              </Card>
+
+              <div className="grid gap-4">
+                {projectLoading ? (
+                  <Loading />
+                ) : projectError ? (
+                  <ErrorMessage message={projectError} />
+                ) : filteredProjectAssessments.length === 0 ? (
+                  <div className="p-8 rounded-xl shadow-sm bg-slate-50 text-center">
+                    <p className="text-slate-500">
+                      {searchQuery ? "Geen projectbeoordelingen gevonden met deze zoekopdracht." : "Nog geen projectbeoordelingen beschikbaar."}
+                    </p>
+                  </div>
+                ) : (
+                  filteredProjectAssessments.map((assessment) => (
+                    <ProjectAssessmentDashboardCard key={assessment.id} assessment={assessment} />
+                  ))
+                )}
+              </div>
+            </TabsContent>
+
+            {/* OVERZICHT */}
+            <TabsContent value="overzicht" className="mt-6 space-y-4">
+              <OverviewTab 
+                peerResults={peerResults}
+                // TODO: Connect to learning goals API when available
+                learningGoals={[]}
+                // TODO: Connect to reflections API when available
+                reflections={[]}
+                // TODO: Connect to project results API when available (with rubric category scores)
+                projectResults={[]}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
     </div>
   );
 }
