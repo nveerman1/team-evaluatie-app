@@ -146,7 +146,7 @@ export default function AnalyseTabPage() {
           </div>
           
           {/* Category scores table */}
-          <div className="flex-1">
+          <div className="flex-1 flex flex-col justify-center">
             <h3 className="text-sm font-medium text-slate-700 mb-3">Scores per categorie</h3>
             <div className="space-y-3">
               {categoryAverages
