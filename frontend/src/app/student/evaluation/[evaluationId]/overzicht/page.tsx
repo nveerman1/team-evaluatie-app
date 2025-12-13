@@ -338,7 +338,7 @@ export default function OverzichtPage() {
               )}
 
               {/* Docentbeoordeling samenvatting */}
-              {evaluationData.teacherGrade !== undefined && (
+              {evaluationData.teacherGrade != null && (
                 <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
                   <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
                     <span>Docent-beoordeling</span>
