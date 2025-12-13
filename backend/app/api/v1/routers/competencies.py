@@ -1525,19 +1525,42 @@ def get_student_window_overview(
     if not student or student.school_id != current_user.school_id:
         raise HTTPException(status_code=404, detail="Student not found")
 
-    # Get all competencies
-    competencies = (
-        db.execute(
-            select(Competency)
-            .where(
-                Competency.school_id == current_user.school_id,
-                Competency.active == True,
+    # Get selected competencies for this window (if specified in settings)
+    selected_competency_ids = (window.settings or {}).get("selected_competency_ids", [])
+
+    if selected_competency_ids:
+        # Filter to only selected competencies
+        competencies = (
+            db.execute(
+                select(Competency)
+                .options(selectinload(Competency.competency_category))
+                .options(selectinload(Competency.rubric_levels))
+                .where(
+                    Competency.school_id == current_user.school_id,
+                    Competency.active,
+                    Competency.id.in_(selected_competency_ids),
+                )
+                .order_by(Competency.order)
             )
-            .order_by(Competency.order)
+            .scalars()
+            .all()
         )
-        .scalars()
-        .all()
-    )
+    else:
+        # Fallback: Get all active competencies (for windows created before this feature)
+        competencies = (
+            db.execute(
+                select(Competency)
+                .options(selectinload(Competency.competency_category))
+                .options(selectinload(Competency.rubric_levels))
+                .where(
+                    Competency.school_id == current_user.school_id,
+                    Competency.active,
+                )
+                .order_by(Competency.order)
+            )
+            .scalars()
+            .all()
+        )
 
     # Get self scores
     self_scores = (
@@ -1597,11 +1620,30 @@ def get_student_window_overview(
         self_score_obj = self_score_map.get(comp.id)
         teacher_obs_obj = teacher_obs_map.get(comp.id)
 
+        # Get category name from relationship
+        category_name = None
+        if comp.competency_category:
+            category_name = comp.competency_category.name
+
+        # Get rubric level description for self score
+        self_level_description = None
+        if self_score_obj and comp.rubric_levels:
+            # Round to nearest integer level (1-5)
+            level = round(self_score_obj.score)
+            level = max(1, min(5, level))  # Clamp to 1-5 range
+            # Find matching rubric level
+            for rubric_level in comp.rubric_levels:
+                if rubric_level.level == level:
+                    self_level_description = rubric_level.description
+                    break
+
         scores.append(
             CompetencyScore(
                 competency_id=comp.id,
                 competency_name=comp.name,
+                category_name=category_name,
                 self_score=float(self_score_obj.score) if self_score_obj else None,
+                self_level_description=self_level_description,
                 peer_score=None,  # TODO: implement peer score calculation
                 teacher_score=float(teacher_obs_obj.score) if teacher_obs_obj else None,
                 external_score=external_avg_map.get(comp.id),
@@ -1666,6 +1708,7 @@ def get_class_heatmap(
         competencies = (
             db.execute(
                 select(Competency)
+                .options(selectinload(Competency.competency_category))
                 .where(
                     Competency.school_id == current_user.school_id,
                     Competency.active,
@@ -1681,6 +1724,7 @@ def get_class_heatmap(
         competencies = (
             db.execute(
                 select(Competency)
+                .options(selectinload(Competency.competency_category))
                 .where(
                     Competency.school_id == current_user.school_id,
                     Competency.active,
@@ -1752,10 +1796,15 @@ def get_class_heatmap(
             )
         )
 
+    # Convert competencies to CompetencyOut schema with category info
+    competencies_out = [
+        _to_competency_out(comp, current_user.id) for comp in competencies
+    ]
+
     return ClassHeatmap(
         window_id=window_id,
         window_title=window.title,
-        competencies=competencies,
+        competencies=competencies_out,
         rows=rows,
     )
 

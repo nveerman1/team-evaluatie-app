@@ -285,7 +285,10 @@ export interface CompetencyTeacherObservationCreate {
 export interface CompetencyScore {
   competency_id: number;
   competency_name: string;
+  category?: string; // Legacy field for backward compatibility
+  category_name?: string;
   self_score?: number;
+  self_level_description?: string; // Rubric level description for self score
   peer_score?: number;
   teacher_score?: number;
   external_score?: number;
