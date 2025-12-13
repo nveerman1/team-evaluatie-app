@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { competencyService } from "@/services";
 import type { ClassHeatmap } from "@/dtos";
 import { Loading, ErrorMessage, Tile } from "@/components";
+import { CompetencyRadarChart } from "@/components/student/competency/CompetencyRadarChart";
 
 export default function AnalyseTabPage() {
   const params = useParams();
@@ -58,6 +59,14 @@ export default function AnalyseTabPage() {
     count: data.count,
   }));
 
+  // Prepare radar chart data
+  const radarData = useMemo(() => {
+    return categoryAverages.map((item) => ({
+      name: item.category,
+      value: item.average,
+    }));
+  }, [categoryAverages]);
+
   // Calculate overall class average per competency
   const competencyAverages = heatmap.competencies.map((comp) => {
     let total = 0;
@@ -90,35 +99,39 @@ export default function AnalyseTabPage() {
         <Tile label="Ingevulde scans" value={filledScans} />
       </section>
 
-      {/* Radar diagram placeholder */}
+      {/* Radar diagram */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
         <h2 className="text-lg font-semibold text-slate-900 mb-4">Radardiagram - Klasgemiddelden per categorie</h2>
         <div className="flex flex-col md:flex-row gap-8">
-          {/* Placeholder for radar chart */}
-          <div className="flex-1 min-h-[300px] bg-slate-50 rounded-xl flex items-center justify-center border-2 border-dashed border-slate-200">
-            <div className="text-center text-slate-500">
-              <svg
-                className="w-16 h-16 mx-auto mb-4 text-slate-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"
-                />
-              </svg>
-              <p className="text-sm font-medium">Radardiagram</p>
-              <p className="text-xs mt-1">Visualisatie van klasgemiddelden</p>
-            </div>
+          {/* Radar chart */}
+          <div className="flex-1 min-h-[300px] flex items-center justify-center">
+            {radarData.length > 0 ? (
+              <CompetencyRadarChart items={radarData} size={300} maxValue={5} />
+            ) : (
+              <div className="text-center text-slate-500">
+                <svg
+                  className="w-16 h-16 mx-auto mb-4 text-slate-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"
+                  />
+                </svg>
+                <p className="text-sm font-medium">Radardiagram</p>
+                <p className="text-xs mt-1">Geen data beschikbaar</p>
+              </div>
+            )}
           </div>
           
           {/* Category scores table */}
