@@ -31,12 +31,10 @@ export default function AnalyseTabPage() {
     loadData();
   }, [loadData]);
 
-  if (loading) return <Loading />;
-  if (error) return <ErrorMessage message={error} />;
-  if (!heatmap) return <ErrorMessage message="Data not found" />;
-
-  // Calculate category averages
+  // Calculate category averages (must be called before early returns)
   const categoryAverages = useMemo(() => {
+    if (!heatmap) return [];
+    
     const categoryScores: Record<string, { total: number; count: number }> = {};
     
     heatmap.competencies.forEach((comp) => {
@@ -61,7 +59,7 @@ export default function AnalyseTabPage() {
     }));
   }, [heatmap]);
 
-  // Prepare radar chart data
+  // Prepare radar chart data (must be called before early returns)
   const radarData = useMemo(() => {
     return categoryAverages.map((item) => ({
       name: item.category,
@@ -69,8 +67,10 @@ export default function AnalyseTabPage() {
     }));
   }, [categoryAverages]);
 
-  // Calculate overall class average per competency
+  // Calculate overall class average per competency (must be called before early returns)
   const competencyAverages = useMemo(() => {
+    if (!heatmap) return [];
+    
     return heatmap.competencies.map((comp) => {
       let total = 0;
       let count = 0;
@@ -92,8 +92,13 @@ export default function AnalyseTabPage() {
   }, [heatmap]);
 
   const filledScans = useMemo(() => {
+    if (!heatmap) return 0;
     return heatmap.rows.filter((r) => Object.keys(r.scores).length > 0).length;
   }, [heatmap]);
+
+  if (loading) return <Loading />;
+  if (error) return <ErrorMessage message={error} />;
+  if (!heatmap) return <ErrorMessage message="Data not found" />;
 
   return (
     <div className="space-y-6">
