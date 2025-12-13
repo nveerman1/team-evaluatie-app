@@ -48,9 +48,14 @@ type ProjectResult = {
   communicatie?: number;
 };
 
+type CompetencyProfileData = {
+  category: string;
+  value: number;
+};
+
 type OverviewTabProps = {
   peerResults: EvaluationResult[];
-  competencyData?: unknown;
+  competencyProfile?: CompetencyProfileData[];
   learningGoals?: LearningGoal[];
   reflections?: Reflection[];
   projectResults?: ProjectResult[];
@@ -58,7 +63,7 @@ type OverviewTabProps = {
 
 export function OverviewTab({ 
   peerResults,
-  competencyData,
+  competencyProfile = [],
   learningGoals = [],
   reflections = [],
   projectResults = []
@@ -109,20 +114,15 @@ export function OverviewTab({
     return "urgent";
   };
 
-  // Competency profile data for radar chart
+  // Competency profile data for radar chart - use real data from API
   const competencyProfileData = React.useMemo(() => {
-    // TODO: Replace with actual competency data from API when available
-    // PLACEHOLDER DATA - This should be replaced with real aggregated scan data
-    // mapped to these 6 categories from the competency scan results
-    return [
-      { category: "Samenwerken", value: 4.2 },
-      { category: "Plannen & organiseren", value: 3.7 },
-      { category: "Creatief denken & problemen oplossen", value: 3.6 },
-      { category: "Technische vaardigheden", value: 3.9 },
-      { category: "Communicatie & presenteren", value: 3.8 },
-      { category: "Reflectie & professionele houding", value: 3.4 },
-    ];
-  }, []);
+    // If no data from API, return empty array
+    if (!competencyProfile || competencyProfile.length === 0) {
+      return [];
+    }
+    
+    return competencyProfile;
+  }, [competencyProfile]);
 
   return (
     <div className="space-y-4">
@@ -234,29 +234,46 @@ export function OverviewTab({
             </p>
           </CardHeader>
           <CardContent>
-            <div className="h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={competencyProfileData} outerRadius="80%">
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="category" tick={{ fontSize: 11 }} />
-                  <PolarRadiusAxis angle={30} domain={[0, 5]} tickCount={6} />
-                  <Radar
-                    name="Score"
-                    dataKey="value"
-                    stroke="#6366f1"
-                    fill="rgba(99, 102, 241, 0.25)"
-                    strokeWidth={2}
-                  />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <Button asChild variant="secondary" className="rounded-xl">
-                <Link href="/student/competency/growth">
-                  Bekijk scans <ChevronRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
+            {competencyProfileData.length > 0 ? (
+              <>
+                <div className="h-72 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart data={competencyProfileData} outerRadius="80%">
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="category" tick={{ fontSize: 11 }} />
+                      <PolarRadiusAxis angle={30} domain={[0, 5]} tickCount={6} />
+                      <Radar
+                        name="Score"
+                        dataKey="value"
+                        stroke="#6366f1"
+                        fill="rgba(99, 102, 241, 0.25)"
+                        strokeWidth={2}
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <Button asChild variant="secondary" className="rounded-xl">
+                    <Link href="/student/competency/growth">
+                      Bekijk scans <ChevronRight className="ml-1 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="py-8 text-center">
+                <p className="text-sm text-slate-600">
+                  Nog geen competentiescan ingevuld. Vul eerst een scan in om je profiel te zien.
+                </p>
+                <div className="mt-3">
+                  <Button asChild variant="secondary" className="rounded-xl">
+                    <Link href="/student/competency/growth">
+                      Ga naar scans <ChevronRight className="ml-1 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

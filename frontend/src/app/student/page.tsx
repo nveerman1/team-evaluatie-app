@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useStudentDashboard, useCurrentUser } from "@/hooks";
+import { useStudentDashboard, useCurrentUser, useStudentOverview } from "@/hooks";
 import { useStudentProjectAssessments } from "@/hooks/useStudentProjectAssessments";
 import { usePeerFeedbackResults } from "@/hooks/usePeerFeedbackResults";
 import { Loading, ErrorMessage } from "@/components";
@@ -25,6 +25,7 @@ export default function StudentDashboard() {
     error: projectError,
   } = useStudentProjectAssessments();
   const { items: peerResults } = usePeerFeedbackResults();
+  const { data: overviewData, isLoading: overviewLoading } = useStudentOverview();
 
   // Tab state
   const [activeTab, setActiveTab] = useState<string>("evaluaties");
@@ -231,15 +232,17 @@ export default function StudentDashboard() {
 
             {/* OVERZICHT */}
             <TabsContent value="overzicht" className="mt-6 space-y-4">
-              <OverviewTab 
-                peerResults={peerResults}
-                // TODO: Connect to learning goals API when available
-                learningGoals={[]}
-                // TODO: Connect to reflections API when available
-                reflections={[]}
-                // TODO: Connect to project results API when available (with rubric category scores)
-                projectResults={[]}
-              />
+              {overviewLoading ? (
+                <Loading />
+              ) : (
+                <OverviewTab 
+                  peerResults={peerResults}
+                  competencyProfile={overviewData.competencyProfile}
+                  learningGoals={overviewData.learningGoals}
+                  reflections={overviewData.reflections}
+                  projectResults={overviewData.projectResults}
+                />
+              )}
             </TabsContent>
           </Tabs>
         </div>
