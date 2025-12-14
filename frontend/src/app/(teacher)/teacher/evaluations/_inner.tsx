@@ -227,10 +227,6 @@ export default function EvaluationsListInner() {
                         Open
                       </span>
                     ) : e.status === "closed" ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-700 ring-1 ring-gray-100">
-                        Gesloten
-                      </span>
-                    ) : e.status === "published" ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-green-100">
                         Gepubliceerd
                       </span>

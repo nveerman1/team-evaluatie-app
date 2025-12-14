@@ -64,8 +64,8 @@ function EvaluationLayoutInner({ children }: LayoutProps) {
     
     setPublishing(true);
     try {
-      // If changing to published status and on grades page with publishGrades function
-      if (newStatus === "published" && publishGrades) {
+      // If changing to closed status and on grades page with publishGrades function
+      if (newStatus === "closed" && publishGrades) {
         await publishGrades();
         showToast("Cijfers gepubliceerd!");
       }
@@ -78,9 +78,9 @@ function EvaluationLayoutInner({ children }: LayoutProps) {
       const statusLabels: Record<string, string> = {
         draft: "concept",
         open: "open",
-        published: "gepubliceerd"
+        closed: "gepubliceerd"
       };
-      if (newStatus !== "published" || !publishGrades) {
+      if (newStatus !== "closed" || !publishGrades) {
         showToast(`Status gewijzigd naar "${statusLabels[newStatus]}"`);
       }
     } catch (e: unknown) {
@@ -156,7 +156,7 @@ function EvaluationLayoutInner({ children }: LayoutProps) {
                 options={[
                   { value: "draft", label: "Concept" },
                   { value: "open", label: "Open" },
-                  { value: "published", label: "Gepubliceerd" },
+                  { value: "closed", label: "Gepubliceerd" },
                 ]}
                 value={data.status}
                 onChange={handleStatusChange}
