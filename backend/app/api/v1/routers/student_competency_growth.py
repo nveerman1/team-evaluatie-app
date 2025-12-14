@@ -29,7 +29,7 @@ from app.infra.db.models import (
     Competency,
     Group,
     GroupMember,
-    ExternalCompetencyScore,
+    CompetencyExternalScore,
 )
 from pydantic import BaseModel
 
@@ -348,12 +348,12 @@ def _get_detailed_competency_scores(
 
         # Get most recent external scores
         external_scores = (
-            db.query(ExternalCompetencyScore, CompetencyWindow)
-            .join(CompetencyWindow, CompetencyWindow.id == ExternalCompetencyScore.window_id)
+            db.query(CompetencyExternalScore, CompetencyWindow)
+            .join(CompetencyWindow, CompetencyWindow.id == CompetencyExternalScore.window_id)
             .filter(
-                ExternalCompetencyScore.subject_user_id == user_id,
-                ExternalCompetencyScore.competency_id == competency.id,
-                ExternalCompetencyScore.school_id == school_id,
+                CompetencyExternalScore.subject_user_id == user_id,
+                CompetencyExternalScore.competency_id == competency.id,
+                CompetencyExternalScore.school_id == school_id,
             )
             .order_by(CompetencyWindow.start_date.desc())
             .all()
