@@ -189,7 +189,7 @@ export default function ProjectOverviewPage() {
       <main className={studentStyles.layout.pageContainer}>
         <PageHeader />
         <div className={studentStyles.layout.contentWrapper}>
-          <div className="rounded-2xl border-slate-200 bg-white p-8 text-center shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
             <div className="mb-4 text-6xl">📊</div>
             <h2 className={studentStyles.typography.sectionTitle + " mb-2"}>
               Nog geen projectbeoordelingen

@@ -193,7 +193,7 @@ export default function SelfScanPage() {
           const defaultLabels = ["Startend", "Basis", "Competent", "Gevorderd", "Excellent"];
 
             return (
-              <div key={comp.id} className="rounded-2xl border-slate-200 bg-white shadow-sm p-5 space-y-4">
+              <div key={comp.id} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div>
                 <h3 className={studentStyles.typography.cardTitle}>{comp.name}</h3>
                 {comp.description && (

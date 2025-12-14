@@ -140,7 +140,7 @@ export default function ReflectionPage() {
 
         {/* Show goals if any */}
         {goals.length > 0 && (
-          <div className="rounded-2xl border-slate-200 bg-indigo-50 p-5 shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-indigo-50 p-5 shadow-sm">
           <h3 className={studentStyles.typography.cardTitle + " mb-3"}>Jouw Leerdoelen</h3>
           <div className="space-y-2">
             {goals.map((goal) => (
@@ -161,7 +161,7 @@ export default function ReflectionPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4 rounded-2xl border-slate-200 bg-white p-6 shadow-sm">
+          <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           {/* Goal Selection */}
           {goals.length > 0 && (
             <div>

@@ -165,7 +165,7 @@ export default function StudentWizardInner() {
 
       {/* Main Content */}
       <main className={studentStyles.layout.contentWrapper}>
-        <div className="rounded-2xl border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         {/* Step 1: Self Evaluation */}
         {step === 1 && (
           <>

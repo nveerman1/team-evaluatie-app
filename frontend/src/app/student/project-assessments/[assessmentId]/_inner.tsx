@@ -208,7 +208,7 @@ export default function StudentProjectAssessmentInner() {
       )}
 
         {/* Rubric matrices grouped by category */}
-        <div className="overflow-hidden rounded-2xl border-slate-200 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="divide-y divide-slate-100">
         {(() => {
           // Group criteria by category

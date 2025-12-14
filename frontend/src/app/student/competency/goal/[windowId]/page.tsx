@@ -137,7 +137,7 @@ export default function GoalPage() {
               return (
                 <div
                   key={goal.id}
-                  className="space-y-3 rounded-2xl border-slate-200 bg-white p-5 shadow-sm"
+                  className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -190,7 +190,7 @@ export default function GoalPage() {
             {existingGoals.length > 0 ? "Nieuw Leerdoel Toevoegen" : "Leerdoel Aanmaken"}
           </h2>
           <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4 rounded-2xl border-slate-200 bg-white p-6 shadow-sm">
+          <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           {/* Competency Selection */}
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700">
