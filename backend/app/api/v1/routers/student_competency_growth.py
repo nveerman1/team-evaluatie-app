@@ -318,11 +318,18 @@ def _calculate_competency_scores(
     ) in results:
         # Only keep the first (most recent) entry for each competency
         if competency_id not in competency_scores:
+            # Safely convert score to float with error handling
+            try:
+                recent_score = round(float(score), 1) if score is not None else None
+            except (ValueError, TypeError):
+                # Log error and use None if conversion fails
+                recent_score = None
+            
             competency_scores[competency_id] = GrowthCompetencyScore(
                 competency_id=competency_id,
                 competency_name=competency_name,
                 category_name=category_name,
-                most_recent_score=round(float(score), 1) if score else None,
+                most_recent_score=recent_score,
                 window_id=window_id,
                 window_title=window_title,
                 scan_date=_format_date(start_date),

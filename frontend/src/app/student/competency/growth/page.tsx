@@ -115,6 +115,14 @@ const DEV_MOCK_DATA: StudentGrowthData = {
     "Je laat de meeste groei zien in Samenwerken en Creatief denken: je neemt vaker initiatief in je team en onderzoekt meerdere oplossingen. Plannen & Organiseren blijft nog een aandachtspunt; je geeft zelf aan dat je planning niet altijd haalbaar is. Een passend leerdoel is: \"Ik plan mijn werk in kleinere stappen en controleer aan het einde van het blok wat af is.\" Probeer in je volgende reflectie concreet op te schrijven wat je anders hebt aangepakt.",
 };
 
+// Helper function to get score badge styling
+function getScoreBadgeClass(score: number | null): string {
+  if (score === null) return "";
+  if (score >= 4) return "bg-emerald-50 text-emerald-700";
+  if (score >= 3) return "bg-blue-50 text-blue-700";
+  return "bg-amber-50 text-amber-700";
+}
+
 // Loading skeleton for cards
 function CardSkeleton({ className = "" }: { className?: string }) {
   return (
@@ -392,13 +400,7 @@ function CompetencyScoresSection({ scores }: { scores: GrowthCompetencyScore[] }
                 <td className="px-4 py-3 text-center">
                   {score.most_recent_score !== null ? (
                     <span
-                      className={`inline-flex px-2.5 py-1 rounded-md text-sm font-medium ${
-                        score.most_recent_score >= 4
-                          ? "bg-emerald-50 text-emerald-700"
-                          : score.most_recent_score >= 3
-                          ? "bg-blue-50 text-blue-700"
-                          : "bg-amber-50 text-amber-700"
-                      }`}
+                      className={`inline-flex px-2.5 py-1 rounded-md text-sm font-medium ${getScoreBadgeClass(score.most_recent_score)}`}
                     >
                       {score.most_recent_score.toFixed(1)}
                     </span>
