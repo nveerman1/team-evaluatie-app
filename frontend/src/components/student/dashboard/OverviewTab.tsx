@@ -42,18 +42,27 @@ export function OverviewTab({
   reflections = [],
   projectResults = []
 }: OverviewTabProps) {
-  // Get the latest closed evaluation for OMZA data
-  const latestClosedResult = React.useMemo(() => {
+  // Get the latest evaluation for OMZA data (prefer closed, but use any if available)
+  const latestResult = React.useMemo(() => {
+    if (peerResults.length === 0) return null;
+    
+    // First try to find closed evaluations
     const closedResults = peerResults.filter((r) => r.status === "closed");
-    return closedResults.length > 0 ? closedResults[0] : null;
+    if (closedResults.length > 0) {
+      return closedResults[0];
+    }
+    
+    // If no closed evaluations, use the first available one
+    // (it might still have data even if not closed)
+    return peerResults[0];
   }, [peerResults]);
 
-  // Calculate OMZA averages from the latest closed peer evaluation
+  // Calculate OMZA averages from the latest peer evaluation
   const omzaScores = React.useMemo(() => {
-    if (!latestClosedResult) return [];
+    if (!latestResult) return [];
     
-    if (latestClosedResult.omzaAverages) {
-      return latestClosedResult.omzaAverages.map(avg => ({
+    if (latestResult.omzaAverages) {
+      return latestResult.omzaAverages.map(avg => ({
         key: avg.key,
         label: avg.label,
         value: avg.value,
@@ -65,7 +74,7 @@ export function OverviewTab({
     const labels = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"];
     
     return keys.map((key, idx) => {
-      const scores = latestClosedResult.peers?.map(p => p.scores[key]).filter(s => s != null) || [];
+      const scores = latestResult.peers?.map(p => p.scores[key]).filter(s => s != null) || [];
       const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
       return {
         key: key.charAt(0).toUpperCase(),
@@ -73,16 +82,16 @@ export function OverviewTab({
         value: avg,
       };
     });
-  }, [latestClosedResult]);
+  }, [latestResult]);
 
   const omzaAverage = omzaScores.length > 0 
     ? (omzaScores.reduce((sum, s) => sum + s.value, 0) / omzaScores.length).toFixed(1)
     : "0.0";
 
-  // Get teacher OMZA and comments from latest closed result
-  const teacherOmza = latestClosedResult?.teacherOmza;
-  const teacherComment = latestClosedResult?.teacherComments || latestClosedResult?.teacherGradeComment;
-  const aiSummary = latestClosedResult?.aiSummary;
+  // Get teacher OMZA and comments from latest result
+  const teacherOmza = latestResult?.teacherOmza;
+  const teacherComment = latestResult?.teacherComments || latestResult?.teacherGradeComment;
+  const aiSummary = latestResult?.aiSummary;
 
   // Map teacher OMZA scores (1-4 scale) to status
   const mapTeacherScoreToStatus = (score?: number): OmzaTeacherStatus => {
