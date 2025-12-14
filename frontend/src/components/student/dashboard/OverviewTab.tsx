@@ -177,7 +177,7 @@ export function OverviewTab({
             )}
 
             {aiSummary && (
-              <div className="rounded-xl border bg-slate-50 p-3 text-sm text-slate-700">
+              <div className="rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
                 {aiSummary}
               </div>
             )}
@@ -193,7 +193,7 @@ export function OverviewTab({
             )}
 
             {teacherComment && (
-              <div className="rounded-xl border bg-white p-3">
+              <div className="rounded-xl bg-slate-50 p-3">
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <div className="text-sm font-semibold text-slate-900">Opmerkingen van de docent</div>
                   <Badge className="rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">Docent</Badge>
