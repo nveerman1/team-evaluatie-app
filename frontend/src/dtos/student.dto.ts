@@ -181,11 +181,25 @@ export type GrowthReflection = {
 };
 
 /**
+ * Individual competency score with most recent assessment
+ */
+export type GrowthCompetencyScore = {
+  competency_id: number;
+  competency_name: string;
+  category_name: string | null;
+  most_recent_score: number | null;
+  window_id: number | null;
+  window_title: string | null;
+  scan_date: string | null;
+};
+
+/**
  * Complete student growth data from the API
  */
 export type StudentGrowthData = {
   scans: GrowthScanSummary[];
   competency_profile: GrowthCategoryScore[];
+  competency_scores: GrowthCompetencyScore[];
   goals: GrowthGoal[];
   reflections: GrowthReflection[];
   ai_summary: string | null;
