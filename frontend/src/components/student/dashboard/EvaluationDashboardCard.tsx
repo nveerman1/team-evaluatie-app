@@ -13,7 +13,9 @@ type EvaluationDashboardCardProps = {
 };
 
 export function EvaluationDashboardCard({ evaluation }: EvaluationDashboardCardProps) {
-  const isOpen = evaluation.status === "open" && evaluation.progress < 100;
+  // Check actual status from the evaluation
+  const isOpen = evaluation.status === "open";
+  const isCompleted = evaluation.progress === 100;
   
   // Get deadlines from evaluation settings
   const reviewDeadline = evaluation.settings?.deadlines?.review || evaluation.deadlines?.review;
@@ -33,12 +35,17 @@ export function EvaluationDashboardCard({ evaluation }: EvaluationDashboardCardP
               <Badge
                 className={
                   isOpen
-                    ? "rounded-full bg-slate-900 text-white"
-                    : "rounded-full bg-slate-100 text-slate-700"
+                    ? "rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"
+                    : "rounded-full bg-slate-100 text-slate-700 ring-1 ring-slate-200"
                 }
               >
                 {isOpen ? "Open" : "Gesloten"}
               </Badge>
+              {isCompleted && isOpen && (
+                <Badge className="rounded-full bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100">
+                  Afgerond
+                </Badge>
+              )}
             </div>
             <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
               <span className="inline-flex items-center gap-2">
@@ -66,8 +73,8 @@ export function EvaluationDashboardCard({ evaluation }: EvaluationDashboardCardP
           </div>
 
           <div className="flex shrink-0 flex-wrap items-start gap-2 sm:justify-end">
-            {isOpen ? (
-              <Button asChild className="rounded-xl" size="sm">
+            {isOpen && !isCompleted ? (
+              <Button asChild className="rounded-xl bg-slate-900 hover:bg-slate-800" size="sm">
                 <Link href={`/student/${evaluation.id}?step=${evaluation.nextStep || 1}`}>
                   Verder
                   <ChevronRight className="ml-1 h-4 w-4" />
@@ -76,7 +83,7 @@ export function EvaluationDashboardCard({ evaluation }: EvaluationDashboardCardP
             ) : (
               <Button asChild variant="secondary" size="sm" className="rounded-xl">
                 <Link href={`/student/evaluation/${evaluation.id}/overzicht`}>
-                  Terugkijken
+                  {isOpen && isCompleted ? "Bekijk resultaat" : "Terugkijken"}
                   <ChevronRight className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
