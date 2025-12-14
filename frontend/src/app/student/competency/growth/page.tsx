@@ -21,8 +21,8 @@ const DEV_MOCK_DATA: StudentGrowthData = {
   scans: [
     {
       id: "1",
-      title: "Startscan Q1 2025",
-      date: "30-09-2025",
+      title: "Startscan Q1 2024",
+      date: "30-09-2024",
       type: "start",
       omza: { organiseren: 2.8, meedoen: 3.2, zelfvertrouwen: 2.5, autonomie: 2.7 },
       gcf: 3.0,
@@ -32,7 +32,7 @@ const DEV_MOCK_DATA: StudentGrowthData = {
     {
       id: "2",
       title: "Test externen",
-      date: "09-11-2025",
+      date: "09-11-2024",
       type: "los",
       omza: { organiseren: 3.1, meedoen: 3.6, zelfvertrouwen: 3.2, autonomie: 3.0 },
       gcf: 3.5,
@@ -41,8 +41,8 @@ const DEV_MOCK_DATA: StudentGrowthData = {
     },
     {
       id: "3",
-      title: "Tussenscan Q2 2025",
-      date: "15-01-2026",
+      title: "Tussenscan Q2 2024",
+      date: "15-12-2024",
       type: "tussen",
       omza: { organiseren: 3.4, meedoen: 3.8, zelfvertrouwen: 3.5, autonomie: 3.3 },
       gcf: 3.8,
@@ -59,18 +59,18 @@ const DEV_MOCK_DATA: StudentGrowthData = {
     { name: "Reflectie & Professionele houding", value: 3.2 },
   ],
   competency_scores: [
-    { competency_id: 1, competency_name: "Effectief samenwerken in teams", category_name: "Samenwerken", most_recent_score: 3.8, window_id: 3, window_title: "Tussenscan Q2 2025", scan_date: "15-01-2026" },
-    { competency_id: 2, competency_name: "Actief bijdragen aan groepsdiscussies", category_name: "Samenwerken", most_recent_score: 3.6, window_id: 3, window_title: "Tussenscan Q2 2025", scan_date: "15-01-2026" },
-    { competency_id: 3, competency_name: "Taken plannen en organiseren", category_name: "Plannen & Organiseren", most_recent_score: 3.2, window_id: 3, window_title: "Tussenscan Q2 2025", scan_date: "15-01-2026" },
-    { competency_id: 4, competency_name: "Tijdmanagement", category_name: "Plannen & Organiseren", most_recent_score: 3.0, window_id: 2, window_title: "Test externen", scan_date: "09-11-2025" },
-    { competency_id: 5, competency_name: "Creatieve oplossingen bedenken", category_name: "Creatief denken & probleemoplossen", most_recent_score: 4.0, window_id: 3, window_title: "Tussenscan Q2 2025", scan_date: "15-01-2026" },
-    { competency_id: 6, competency_name: "Problemen analyseren", category_name: "Creatief denken & probleemoplossen", most_recent_score: 3.8, window_id: 3, window_title: "Tussenscan Q2 2025", scan_date: "15-01-2026" },
-    { competency_id: 7, competency_name: "Programmeren", category_name: "Technische vaardigheden", most_recent_score: 3.7, window_id: 3, window_title: "Tussenscan Q2 2025", scan_date: "15-01-2026" },
-    { competency_id: 8, competency_name: "Technische documentatie", category_name: "Technische vaardigheden", most_recent_score: 3.3, window_id: 2, window_title: "Test externen", scan_date: "09-11-2025" },
-    { competency_id: 9, competency_name: "Presenteren aan publiek", category_name: "Communicatie & Presenteren", most_recent_score: 3.4, window_id: 3, window_title: "Tussenscan Q2 2025", scan_date: "15-01-2026" },
-    { competency_id: 10, competency_name: "Schriftelijke communicatie", category_name: "Communicatie & Presenteren", most_recent_score: 3.2, window_id: 2, window_title: "Test externen", scan_date: "09-11-2025" },
-    { competency_id: 11, competency_name: "Reflecteren op eigen werk", category_name: "Reflectie & Professionele houding", most_recent_score: 3.3, window_id: 3, window_title: "Tussenscan Q2 2025", scan_date: "15-01-2026" },
-    { competency_id: 12, competency_name: "Professioneel gedrag", category_name: "Reflectie & Professionele houding", most_recent_score: 3.1, window_id: 2, window_title: "Test externen", scan_date: "09-11-2025" },
+    { competency_id: 1, competency_name: "Effectief samenwerken in teams", category_name: "Samenwerken", most_recent_score: 3.8, window_id: 3, window_title: "Tussenscan Q2 2024", scan_date: "15-12-2024" },
+    { competency_id: 2, competency_name: "Actief bijdragen aan groepsdiscussies", category_name: "Samenwerken", most_recent_score: 3.6, window_id: 3, window_title: "Tussenscan Q2 2024", scan_date: "15-12-2024" },
+    { competency_id: 3, competency_name: "Taken plannen en organiseren", category_name: "Plannen & Organiseren", most_recent_score: 3.2, window_id: 3, window_title: "Tussenscan Q2 2024", scan_date: "15-12-2024" },
+    { competency_id: 4, competency_name: "Tijdmanagement", category_name: "Plannen & Organiseren", most_recent_score: 3.0, window_id: 2, window_title: "Test externen", scan_date: "09-11-2024" },
+    { competency_id: 5, competency_name: "Creatieve oplossingen bedenken", category_name: "Creatief denken & probleemoplossen", most_recent_score: 4.0, window_id: 3, window_title: "Tussenscan Q2 2024", scan_date: "15-12-2024" },
+    { competency_id: 6, competency_name: "Problemen analyseren", category_name: "Creatief denken & probleemoplossen", most_recent_score: 3.8, window_id: 3, window_title: "Tussenscan Q2 2024", scan_date: "15-12-2024" },
+    { competency_id: 7, competency_name: "Programmeren", category_name: "Technische vaardigheden", most_recent_score: 3.7, window_id: 3, window_title: "Tussenscan Q2 2024", scan_date: "15-12-2024" },
+    { competency_id: 8, competency_name: "Technische documentatie", category_name: "Technische vaardigheden", most_recent_score: 3.3, window_id: 2, window_title: "Test externen", scan_date: "09-11-2024" },
+    { competency_id: 9, competency_name: "Presenteren aan publiek", category_name: "Communicatie & Presenteren", most_recent_score: 3.4, window_id: 3, window_title: "Tussenscan Q2 2024", scan_date: "15-12-2024" },
+    { competency_id: 10, competency_name: "Schriftelijke communicatie", category_name: "Communicatie & Presenteren", most_recent_score: 3.2, window_id: 2, window_title: "Test externen", scan_date: "09-11-2024" },
+    { competency_id: 11, competency_name: "Reflecteren op eigen werk", category_name: "Reflectie & Professionele houding", most_recent_score: 3.3, window_id: 3, window_title: "Tussenscan Q2 2024", scan_date: "15-12-2024" },
+    { competency_id: 12, competency_name: "Professioneel gedrag", category_name: "Reflectie & Professionele houding", most_recent_score: 3.1, window_id: 2, window_title: "Test externen", scan_date: "09-11-2024" },
   ],
   goals: [
     {
@@ -98,15 +98,15 @@ const DEV_MOCK_DATA: StudentGrowthData = {
   reflections: [
     {
       id: "r1",
-      date: "09-11-2025",
+      date: "09-11-2024",
       scan_title: "Test externen",
       snippet:
         "Ik merk dat samenwerken met externen mij helpt om duidelijker te communiceren en beter te plannen...",
     },
     {
       id: "r2",
-      date: "30-09-2025",
-      scan_title: "Startscan Q1 2025",
+      date: "30-09-2024",
+      scan_title: "Startscan Q1 2024",
       snippet:
         "Bij de startscan zie ik dat plannen en organiseren nog een ontwikkelpunt is. Ik wil tijdens dit project beter bijhouden wat ik af heb...",
     },
@@ -261,10 +261,6 @@ export default function GrowthPage() {
 
 // ============ Section Components ============
 
-function CompetencyProfileSection({
-  profile,
-}: {
-  profile: GrowthCategoryScore[];
 function CompetencyProfileSection({
   profile,
 }: {
