@@ -181,6 +181,35 @@ export type GrowthReflection = {
 };
 
 /**
+ * Detailed competency score for the growth page
+ */
+export type GrowthCompetencyScore = {
+  competency_id: number;
+  competency_name: string;
+  category_name: string | null;
+  most_recent_self_score: number | null;
+  most_recent_external_score: number | null;
+  most_recent_final_score: number | null;
+  window_title: string | null;
+  window_date: string | null;
+};
+
+/**
+ * Detailed goal information across all scans
+ */
+export type GrowthGoalDetailed = {
+  id: string;
+  title: string;
+  competency_name: string | null;
+  category_name: string | null;
+  status: string;
+  window_title: string;
+  window_date: string | null;
+  submitted_at: string | null;
+  updated_at: string | null;
+};
+
+/**
  * Complete student growth data from the API
  */
 export type StudentGrowthData = {
@@ -189,6 +218,8 @@ export type StudentGrowthData = {
   goals: GrowthGoal[];
   reflections: GrowthReflection[];
   ai_summary: string | null;
+  competency_scores?: GrowthCompetencyScore[];
+  goals_detailed?: GrowthGoalDetailed[];
 };
 
 // ============ Overview Tab DTOs ============

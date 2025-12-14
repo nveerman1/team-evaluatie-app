@@ -29,6 +29,7 @@ from app.infra.db.models import (
     Competency,
     Group,
     GroupMember,
+    ExternalCompetencyScore,
 )
 from pydantic import BaseModel
 
@@ -111,12 +112,40 @@ class GrowthReflection(BaseModel):
     snippet: str
 
 
+class GrowthCompetencyScore(BaseModel):
+    """Detailed competency score for the growth page"""
+    competency_id: int
+    competency_name: str
+    category_name: Optional[str]
+    most_recent_self_score: Optional[float]
+    most_recent_external_score: Optional[float]
+    most_recent_final_score: Optional[float]
+    window_title: Optional[str]
+    window_date: Optional[str]
+
+
+class GrowthGoalDetailed(BaseModel):
+    """Detailed goal information across all scans"""
+    id: str
+    title: str
+    competency_name: Optional[str]
+    category_name: Optional[str]
+    status: str  # active, completed
+    window_title: str
+    window_date: Optional[str]
+    submitted_at: Optional[str]
+    updated_at: Optional[str]
+
+
 class StudentGrowthData(BaseModel):
     scans: List[GrowthScanSummary]
     competency_profile: List[GrowthCategoryScore]
     goals: List[GrowthGoal]
     reflections: List[GrowthReflection]
     ai_summary: Optional[str]
+    # New fields for enhanced growth page
+    competency_scores: Optional[List[GrowthCompetencyScore]]
+    goals_detailed: Optional[List[GrowthGoalDetailed]]
 
 
 class AISummaryResponse(BaseModel):
@@ -272,6 +301,155 @@ def _get_goal_status_mapped(goal_status: str) -> str:
         return "completed"
     else:
         return "active"
+
+
+def _get_detailed_competency_scores(
+    db: Session, user_id: int, school_id: int
+) -> List[GrowthCompetencyScore]:
+    """
+    Get most recent scores for all competencies across all windows.
+    Returns the most recent self, external, and final score for each competency.
+    """
+    # Get all unique competencies that the student has scored
+    competencies_with_scores = (
+        db.query(Competency)
+        .join(CompetencySelfScore, CompetencySelfScore.competency_id == Competency.id)
+        .filter(
+            CompetencySelfScore.user_id == user_id,
+            CompetencySelfScore.school_id == school_id,
+        )
+        .distinct()
+        .all()
+    )
+
+    result = []
+    for competency in competencies_with_scores:
+        # Get category name
+        category_name = None
+        if competency.category_id:
+            category = db.get(CompetencyCategory, competency.category_id)
+            if category:
+                category_name = category.name
+        if not category_name:
+            category_name = competency.category
+
+        # Get most recent self score
+        most_recent_self = (
+            db.query(CompetencySelfScore, CompetencyWindow)
+            .join(CompetencyWindow, CompetencyWindow.id == CompetencySelfScore.window_id)
+            .filter(
+                CompetencySelfScore.user_id == user_id,
+                CompetencySelfScore.competency_id == competency.id,
+                CompetencySelfScore.school_id == school_id,
+            )
+            .order_by(CompetencyWindow.start_date.desc())
+            .first()
+        )
+
+        # Get most recent external scores
+        external_scores = (
+            db.query(ExternalCompetencyScore, CompetencyWindow)
+            .join(CompetencyWindow, CompetencyWindow.id == ExternalCompetencyScore.window_id)
+            .filter(
+                ExternalCompetencyScore.subject_user_id == user_id,
+                ExternalCompetencyScore.competency_id == competency.id,
+                ExternalCompetencyScore.school_id == school_id,
+            )
+            .order_by(CompetencyWindow.start_date.desc())
+            .all()
+        )
+
+        # Calculate averages
+        most_recent_self_score = None
+        most_recent_external_score = None
+        window_title = None
+        window_date = None
+
+        if most_recent_self:
+            most_recent_self_score = float(most_recent_self[0].score)
+            window_title = most_recent_self[1].title
+            window_date = _format_date(most_recent_self[1].start_date)
+
+        if external_scores:
+            # Average the external scores from the most recent window
+            external_score_values = [float(s[0].score) for s in external_scores[:3]]  # Take up to 3 most recent
+            if external_score_values:
+                most_recent_external_score = sum(external_score_values) / len(external_score_values)
+
+        # Calculate final score (average of self and external if both present)
+        most_recent_final_score = None
+        if most_recent_self_score is not None and most_recent_external_score is not None:
+            most_recent_final_score = (most_recent_self_score + most_recent_external_score) / 2
+        elif most_recent_self_score is not None:
+            most_recent_final_score = most_recent_self_score
+        elif most_recent_external_score is not None:
+            most_recent_final_score = most_recent_external_score
+
+        result.append(
+            GrowthCompetencyScore(
+                competency_id=competency.id,
+                competency_name=competency.name,
+                category_name=category_name,
+                most_recent_self_score=round(most_recent_self_score, 1) if most_recent_self_score else None,
+                most_recent_external_score=round(most_recent_external_score, 1) if most_recent_external_score else None,
+                most_recent_final_score=round(most_recent_final_score, 1) if most_recent_final_score else None,
+                window_title=window_title,
+                window_date=window_date,
+            )
+        )
+
+    # Sort by category and then by competency name
+    result.sort(key=lambda x: (x.category_name or "", x.competency_name))
+    return result
+
+
+def _get_detailed_goals(
+    db: Session, user_id: int, school_id: int
+) -> List[GrowthGoalDetailed]:
+    """
+    Get all goals across all windows with detailed information.
+    """
+    goals_data = (
+        db.query(CompetencyGoal, Competency, CompetencyWindow)
+        .outerjoin(Competency, Competency.id == CompetencyGoal.competency_id)
+        .join(CompetencyWindow, CompetencyWindow.id == CompetencyGoal.window_id)
+        .filter(
+            CompetencyGoal.user_id == user_id,
+            CompetencyGoal.school_id == school_id,
+        )
+        .order_by(CompetencyWindow.start_date.desc(), CompetencyGoal.updated_at.desc())
+        .all()
+    )
+
+    result = []
+    for goal, competency, window in goals_data:
+        competency_name = None
+        category_name = None
+        
+        if competency:
+            competency_name = competency.name
+            if competency.category_id:
+                category = db.get(CompetencyCategory, competency.category_id)
+                if category:
+                    category_name = category.name
+            elif competency.category:
+                category_name = competency.category
+
+        result.append(
+            GrowthGoalDetailed(
+                id=str(goal.id),
+                title=goal.goal_text,
+                competency_name=competency_name,
+                category_name=category_name,
+                status=_get_goal_status_mapped(goal.status),
+                window_title=window.title,
+                window_date=_format_date(window.start_date),
+                submitted_at=_format_date(goal.submitted_at),
+                updated_at=_format_date(goal.updated_at),
+            )
+        )
+
+    return result
 
 
 def _generate_ai_summary(
@@ -502,12 +680,20 @@ def get_student_growth_data(
     # 6. Generate AI summary
     ai_summary = _generate_ai_summary(scans, competency_profile, goals)
 
+    # 7. Get detailed competency scores
+    competency_scores = _get_detailed_competency_scores(db, user_id, school_id)
+
+    # 8. Get detailed goals
+    goals_detailed = _get_detailed_goals(db, user_id, school_id)
+
     return StudentGrowthData(
         scans=scans,
         competency_profile=competency_profile,
         goals=goals,
         reflections=reflections,
         ai_summary=ai_summary,
+        competency_scores=competency_scores,
+        goals_detailed=goals_detailed,
     )
 
 

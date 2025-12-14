@@ -2,19 +2,21 @@
 
 import { useState } from "react";
 import { useStudentGrowth } from "@/hooks";
-import { usePeerFeedbackResults } from "@/hooks/usePeerFeedbackResults";
 import {
   CompetencyRadarChart,
   CATEGORY_COLORS,
 } from "@/components/student/competency/CompetencyRadarChart";
-import { OMZAOverview } from "@/components/student/peer-results";
 import type {
   GrowthGoal,
   GrowthReflection,
   GrowthCategoryScore,
   StudentGrowthData,
+  GrowthScanSummary,
+  GrowthCompetencyScore,
+  GrowthGoalDetailed,
 } from "@/dtos";
 import Link from "next/link";
+import { studentStyles } from "@/styles/student-dashboard.styles";
 
 // Development mock data - used when API is unavailable
 const DEV_MOCK_DATA: StudentGrowthData = {
@@ -143,9 +145,6 @@ function CardSkeleton({ className = "" }: { className?: string }) {
 export default function GrowthPage() {
   const { data: apiData, isLoading, error, regenerateSummary, isRegenerating } =
     useStudentGrowth();
-  
-  // Fetch peer feedback results for OMZA overview (same as /student/results)
-  const { items: peerResults, loading: peerLoading } = usePeerFeedbackResults();
 
   // Use mock data when API fails (for development/preview)
   const data = apiData || (error ? DEV_MOCK_DATA : null);
@@ -187,48 +186,51 @@ export default function GrowthPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className={studentStyles.layout.pageContainer}>
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
-        <header className="px-6 py-6 max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
-              Mijn Groei
-            </h1>
-            <p className="text-gray-600 mt-1 text-sm">
-              Bekijk hoe jouw competenties, leerdoelen en reflecties zich
-              ontwikkelen over meerdere scans.
-            </p>
+      <div className={studentStyles.header.container}>
+        <div className={studentStyles.header.wrapper}>
+          <div className={studentStyles.header.flexContainer}>
+            <div className={studentStyles.header.titleSection}>
+              <h1 className={studentStyles.header.title}>
+                Mijn Groei
+              </h1>
+              <p className={studentStyles.header.subtitle}>
+                Bekijk hoe jouw competenties, leerdoelen en reflecties zich
+                ontwikkelen over meerdere scans.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/student?tab=competenties"
+                className="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20 transition-colors"
+              >
+                <span className="mr-2">←</span>
+                Terug
+              </Link>
+              <button
+                className="inline-flex items-center justify-center rounded-xl bg-white/15 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-white/25 transition-colors"
+                onClick={() => {
+                  // TODO: Implement portfolio export functionality
+                  alert("Exportfunctie komt binnenkort beschikbaar.");
+                }}
+              >
+                Exporteer voor portfolio
+              </button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Link
-              href="/student?tab=competenties"
-              className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              <span className="mr-2">←</span>
-              Terug
-            </Link>
-            <button
-              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
-              onClick={() => {
-                // TODO: Implement portfolio export functionality
-                alert("Exportfunctie komt binnenkort beschikbaar.");
-              }}
-            >
-              Exporteer voor portfolio
-            </button>
-          </div>
-        </header>
+        </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Dev mode indicator when using mock data */}
-        {error && !apiData && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 text-xs text-amber-700">
-            ⚠️ Voorbeeldmodus: Backend niet beschikbaar, mockdata wordt getoond.
-          </div>
-        )}
+      <div className={studentStyles.layout.contentWrapper}>
+        <div className="space-y-4">
+          {/* Dev mode indicator when using mock data */}
+          {error && !apiData && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 text-xs text-amber-700">
+              ⚠️ Voorbeeldmodus: Backend niet beschikbaar, mockdata wordt getoond.
+            </div>
+          )}
 
         {/* Loading skeleton */}
         {isLoading && (
@@ -249,23 +251,26 @@ export default function GrowthPage() {
         {/* Main content when data is loaded */}
         {!isLoading && data && (
           <>
-            {/* 1. Competentieprofiel (radardiagram) */}
-            <CompetencyProfileSection profile={data.competency_profile} />
+            {/* 1. Competentieprofiel (radardiagram) with scan comparison */}
+            <CompetencyProfileSection 
+              profile={data.competency_profile} 
+              scans={data.scans}
+            />
 
-            {/* 2. OMZA development over time + Profiel laatste scan */}
-            {!peerLoading && peerResults.length > 0 && (
-              <div className="-mx-4 sm:-mx-6">
-                <OMZAOverview items={peerResults} />
-              </div>
+            {/* 2. Competency Scores Table */}
+            {data.competency_scores && data.competency_scores.length > 0 && (
+              <CompetencyScoresSection scores={data.competency_scores} />
             )}
 
-            {/* 3. Goals + Reflections */}
-            <section className="grid gap-6 lg:grid-cols-2">
-              <GoalsSection goals={data.goals} />
-              <ReflectionsSection reflections={data.reflections} />
-            </section>
+            {/* 3. Learning Goals Table */}
+            {data.goals_detailed && data.goals_detailed.length > 0 && (
+              <LearningGoalsSection goals={data.goals_detailed} />
+            )}
 
-            {/* 4. AI Summary */}
+            {/* 4. Reflections */}
+            <ReflectionsSection reflections={data.reflections} />
+
+            {/* 5. AI Summary */}
             <AISummarySection
               summary={data.ai_summary}
               onRegenerate={regenerateSummary}
@@ -273,6 +278,7 @@ export default function GrowthPage() {
             />
           </>
         )}
+        </div>
       </div>
     </div>
   );
@@ -282,158 +288,306 @@ export default function GrowthPage() {
 
 function CompetencyProfileSection({
   profile,
+  scans,
 }: {
   profile: GrowthCategoryScore[];
+  scans: GrowthScanSummary[];
 }) {
+  const [selectedScan, setSelectedScan] = useState<string | null>(null);
+
   if (!profile || profile.length === 0) {
     return (
-      <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
-        <h2 className="text-lg font-semibold text-gray-900">
-          Competentieprofiel
-        </h2>
-        <p className="text-sm text-gray-500 mt-2">
-          Nog geen competentiedata beschikbaar.
-        </p>
+      <section className={studentStyles.cards.listCard.container}>
+        <div className={studentStyles.cards.listCard.content}>
+          <h2 className={studentStyles.typography.cardTitle}>
+            Competentieprofiel
+          </h2>
+          <p className={studentStyles.typography.infoText}>
+            Nog geen competentiedata beschikbaar.
+          </p>
+        </div>
       </section>
     );
   }
 
   return (
-    <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">
-            Competentieprofiel
-          </h2>
-          <p className="text-xs text-gray-500 mt-1">
-            Jouw gemiddelde niveau per competentiecategorie, op basis van
-            meerdere scans en leerdoelen.
-          </p>
-        </div>
-        <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-[11px] font-medium text-gray-600">
-          Radardiagram (categorieën)
-        </span>
-      </div>
+    <section className={studentStyles.cards.listCard.container}>
+      <div className={studentStyles.cards.listCard.content}>
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 className={studentStyles.typography.cardTitle}>
+                Competentieprofiel
+              </h2>
+              <p className={studentStyles.typography.infoTextSmall}>
+                Jouw gemiddelde niveau per competentiecategorie, op basis van
+                meerdere scans.
+              </p>
+            </div>
+            {scans && scans.length > 1 && (
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-slate-600">Vergelijk met:</label>
+                <select
+                  value={selectedScan || ""}
+                  onChange={(e) => setSelectedScan(e.target.value || null)}
+                  className="rounded-xl border-slate-200 bg-white px-3 py-1.5 text-xs focus:border-indigo-500 focus:ring-indigo-500"
+                >
+                  <option value="">Huidige gemiddelde</option>
+                  {scans.map((scan) => (
+                    <option key={scan.id} value={scan.id}>
+                      {scan.title} ({scan.date})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
 
-      <div className="grid gap-6 md:grid-cols-3 items-start">
-        {/* Radar chart */}
-        <div className="md:col-span-2 flex items-center justify-center">
-          <CompetencyRadarChart
-            items={profile.map((cat) => ({
-              name: cat.name,
-              value: cat.value,
-            }))}
-            size={256}
-            maxValue={5}
-          />
-        </div>
+          <div className="grid gap-6 md:grid-cols-3 items-start">
+            {/* Radar chart */}
+            <div className="md:col-span-2 flex items-center justify-center">
+              <CompetencyRadarChart
+                items={profile.map((cat) => ({
+                  name: cat.name,
+                  value: cat.value,
+                }))}
+                size={256}
+                maxValue={5}
+              />
+            </div>
 
-        {/* Legend + explanation */}
-        <div className="space-y-2 text-xs text-gray-600">
-          <p className="font-medium text-gray-800 mb-1">
-            Competentiecategorieën
-          </p>
-          <ul className="space-y-1">
-            {profile.map((cat, index) => (
-              <li
-                key={cat.name}
-                className="flex items-center justify-between gap-2"
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full"
-                    style={{
-                      backgroundColor:
-                        CATEGORY_COLORS[index % CATEGORY_COLORS.length],
-                    }}
-                  />
-                  <span>{cat.name}</span>
-                </div>
-                <span className="text-gray-700 font-medium">
-                  {cat.value.toFixed(1)}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 text-[11px] text-gray-500">
-            In de echte versie kun je hier filteren op periode of specifieke
-            scans om te zien hoe je profiel verandert.
-          </p>
+            {/* Legend + explanation */}
+            <div className="space-y-2">
+              <p className={studentStyles.typography.metaText}>
+                Competentiecategorieën
+              </p>
+              <ul className="space-y-1.5">
+                {profile.map((cat, index) => (
+                  <li
+                    key={cat.name}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full"
+                        style={{
+                          backgroundColor:
+                            CATEGORY_COLORS[index % CATEGORY_COLORS.length],
+                        }}
+                      />
+                      <span className={studentStyles.typography.infoTextSmall}>
+                        {cat.name}
+                      </span>
+                    </div>
+                    <span className="text-sm font-semibold text-slate-900">
+                      {cat.value.toFixed(1)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
-function GoalsSection({ goals }: { goals: GrowthGoal[] }) {
+function CompetencyScoresSection({ scores }: { scores: GrowthCompetencyScore[] }) {
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">Leerdoelen</h2>
-        <button
-          className="rounded-lg border border-gray-200 bg-white px-3.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-          onClick={() => {
-            // TODO: Implement new goal creation
-            alert("Nieuw leerdoel instellen komt binnenkort.");
-          }}
-        >
-          Nieuw leerdoel instellen
-        </button>
-      </div>
-      {!goals || goals.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6 text-center">
-          <p className="text-sm text-gray-500">
-            Je hebt nog geen leerdoelen ingesteld.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {goals.map((goal) => (
-            <div
-              key={goal.id}
-              className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 space-y-2"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="font-semibold text-gray-900 text-sm">
-                  {goal.title}
-                </h3>
-                <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
-                    goal.status === "active"
-                      ? "bg-blue-50 text-blue-700 border border-blue-100"
-                      : "bg-green-50 text-green-700 border border-green-100"
-                  }`}
-                >
-                  {goal.status === "active" ? "Actief" : "Behaald"}
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-1.5 text-[11px] text-gray-600">
-                {goal.related_competencies.map((c) => (
-                  <span
-                    key={c}
-                    className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700"
+    <section className={studentStyles.cards.listCard.container}>
+      <div className={studentStyles.cards.listCard.content}>
+        <div className="space-y-4">
+          <div>
+            <h2 className={studentStyles.typography.cardTitle}>
+              Scores per competentie
+            </h2>
+            <p className={studentStyles.typography.infoTextSmall}>
+              Meest recente scores voor elke competentie
+            </p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200">
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">
+                    Categorie
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">
+                    Competentie
+                  </th>
+                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">
+                    Self
+                  </th>
+                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">
+                    Extern
+                  </th>
+                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">
+                    Gemiddelde
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">
+                    Scan
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {scores.map((score, idx) => (
+                  <tr
+                    key={score.competency_id}
+                    className={idx < scores.length - 1 ? "border-b border-slate-100" : ""}
                   >
-                    {c}
-                  </span>
+                    <td className="px-3 py-3 text-xs text-slate-600">
+                      {score.category_name || "—"}
+                    </td>
+                    <td className="px-3 py-3 text-sm text-slate-800 font-medium">
+                      {score.competency_name}
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      {score.most_recent_self_score !== null ? (
+                        <span className="inline-flex px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-700">
+                          {score.most_recent_self_score.toFixed(1)}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      {score.most_recent_external_score !== null ? (
+                        <span className="inline-flex px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700">
+                          {score.most_recent_external_score.toFixed(1)}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      {score.most_recent_final_score !== null ? (
+                        <span
+                          className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${
+                            score.most_recent_final_score >= 4
+                              ? "bg-emerald-50 text-emerald-700"
+                              : score.most_recent_final_score >= 3
+                              ? "bg-blue-50 text-blue-700"
+                              : "bg-amber-50 text-amber-700"
+                          }`}
+                        >
+                          {score.most_recent_final_score.toFixed(1)}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-3 text-xs text-slate-600">
+                      {score.window_title ? (
+                        <div>
+                          <div className="font-medium truncate max-w-[150px]" title={score.window_title}>
+                            {score.window_title}
+                          </div>
+                          {score.window_date && (
+                            <div className="text-slate-500">{score.window_date}</div>
+                          )}
+                        </div>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                  </tr>
                 ))}
-              </div>
-              <div className="mt-2">
-                <div className="flex items-center justify-between text-[11px] text-gray-500 mb-1">
-                  <span>Voortgang</span>
-                  <span>{goal.progress}%</span>
-                </div>
-                <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                  <div
-                    className="h-1.5 rounded-full bg-blue-500"
-                    style={{ width: `${goal.progress}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      )}
-    </div>
+      </div>
+    </section>
+  );
+}
+
+function LearningGoalsSection({ goals }: { goals: GrowthGoalDetailed[] }) {
+  return (
+    <section className={studentStyles.cards.listCard.container}>
+      <div className={studentStyles.cards.listCard.content}>
+        <div className="space-y-4">
+          <div>
+            <h2 className={studentStyles.typography.cardTitle}>
+              Leerdoelen (alle scans)
+            </h2>
+            <p className={studentStyles.typography.infoTextSmall}>
+              Overzicht van al je leerdoelen over verschillende competentiescans
+            </p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200">
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">
+                    Leerdoel
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">
+                    Competentie
+                  </th>
+                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">
+                    Status
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">
+                    Scan
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">
+                    Datum
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {goals.map((goal, idx) => (
+                  <tr
+                    key={goal.id}
+                    className={idx < goals.length - 1 ? "border-b border-slate-100" : ""}
+                  >
+                    <td className="px-3 py-3 text-sm text-slate-800">
+                      <div className="max-w-md" title={goal.title}>
+                        {goal.title}
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 text-xs text-slate-600">
+                      {goal.competency_name ? (
+                        <div>
+                          <div className="font-medium">{goal.competency_name}</div>
+                          {goal.category_name && (
+                            <div className="text-slate-500">{goal.category_name}</div>
+                          )}
+                        </div>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <span
+                        className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          goal.status === "completed"
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                            : "bg-amber-50 text-amber-700 border border-amber-100"
+                        }`}
+                      >
+                        {goal.status === "completed" ? "Behaald" : "Actief"}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3 text-xs text-slate-600">
+                      <div className="max-w-[150px] truncate" title={goal.window_title}>
+                        {goal.window_title}
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 text-xs text-slate-600">
+                      {goal.window_date || goal.submitted_at || "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -443,50 +597,58 @@ function ReflectionsSection({
   reflections: GrowthReflection[];
 }) {
   return (
-    <div className="space-y-3">
-      <h2 className="text-lg font-semibold text-gray-900">
-        Reflecties over mijn groei
-      </h2>
-      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
-        {!reflections || reflections.length === 0 ? (
-          <p className="text-xs text-gray-500">
-            Je hebt nog geen reflecties geschreven. Schrijf na een scan kort op
-            wat goed ging en wat je volgende stap is.
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {reflections.map((ref, idx) => (
-              <div key={ref.id} className="flex gap-3">
-                <div className="flex flex-col items-center">
-                  <div className="w-2 h-2 rounded-full bg-blue-500 mt-1" />
-                  {idx < reflections.length - 1 && (
-                    <div className="w-px flex-1 bg-gray-200 mt-1" />
-                  )}
-                </div>
-                <div className="flex-1 space-y-1">
-                  <p className="text-[11px] text-gray-500">{ref.date}</p>
-                  <p className="text-sm font-medium text-gray-900">
-                    {ref.scan_title}
-                  </p>
-                  <p className="text-xs text-gray-600 line-clamp-2">
-                    {ref.snippet}
-                  </p>
-                  <button
-                    className="mt-1 text-[11px] font-medium text-blue-600 hover:underline"
-                    onClick={() => {
-                      // TODO: Implement full reflection view
-                      alert("Volledige reflectie weergave komt binnenkort.");
-                    }}
-                  >
-                    Open volledige reflectie
-                  </button>
-                </div>
-              </div>
-            ))}
+    <section className={studentStyles.cards.listCard.container}>
+      <div className={studentStyles.cards.listCard.content}>
+        <div className="space-y-4">
+          <div>
+            <h2 className={studentStyles.typography.cardTitle}>
+              Reflecties over mijn groei
+            </h2>
+            <p className={studentStyles.typography.infoTextSmall}>
+              Je reflecties uit verschillende competentiescans
+            </p>
           </div>
-        )}
+
+          {!reflections || reflections.length === 0 ? (
+            <p className={studentStyles.typography.infoText}>
+              Je hebt nog geen reflecties geschreven. Schrijf na een scan kort op
+              wat goed ging en wat je volgende stap is.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {reflections.map((ref, idx) => (
+                <div key={ref.id} className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <div className="w-2 h-2 rounded-full bg-indigo-500 mt-1" />
+                    {idx < reflections.length - 1 && (
+                      <div className="w-px flex-1 bg-slate-200 mt-1" />
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <p className={studentStyles.typography.metaTextSmall}>{ref.date}</p>
+                    <p className={studentStyles.typography.metaText}>
+                      {ref.scan_title}
+                    </p>
+                    <p className={studentStyles.typography.infoText + " line-clamp-2"}>
+                      {ref.snippet}
+                    </p>
+                    <button
+                      className="mt-1 text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                      onClick={() => {
+                        // TODO: Implement full reflection view
+                        alert("Volledige reflectie weergave komt binnenkort.");
+                      }}
+                    >
+                      Lees meer →
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -500,44 +662,50 @@ function AISummarySection({
   isRegenerating: boolean;
 }) {
   return (
-    <section className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 space-y-3">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">
-            AI-samenvatting van jouw groei
-          </h2>
-          <p className="text-xs text-gray-500">
-            Op basis van jouw scans, leerdoelen en reflecties.
-          </p>
-        </div>
-        <button
-          className="rounded-lg border border-gray-200 bg-white px-3.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          onClick={onRegenerate}
-          disabled={isRegenerating}
-        >
-          {isRegenerating ? "Genereren..." : "Samenvatting opnieuw genereren"}
-        </button>
-      </div>
+    <section className={studentStyles.cards.listCard.container}>
+      <div className={studentStyles.cards.listCard.content}>
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 className={studentStyles.typography.cardTitle}>
+                AI-samenvatting van jouw groei
+              </h2>
+              <p className={studentStyles.typography.infoTextSmall}>
+                Op basis van jouw scans, leerdoelen en reflecties.
+              </p>
+            </div>
+            <button
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={onRegenerate}
+              disabled={isRegenerating}
+            >
+              {isRegenerating ? "Genereren..." : "Samenvatting opnieuw genereren"}
+            </button>
+          </div>
 
-      {isRegenerating ? (
-        <div className="bg-gray-50 border border-gray-100 rounded-lg px-4 py-6 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
-          <span className="ml-3 text-sm text-gray-600">
-            Samenvatting wordt gegenereerd...
-          </span>
+          {isRegenerating ? (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-6 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600" />
+              <span className="ml-3 text-sm text-slate-600">
+                Samenvatting wordt gegenereerd...
+              </span>
+            </div>
+          ) : summary ? (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3">
+              <p className={studentStyles.typography.infoText + " text-indigo-900"}>
+                {summary}
+              </p>
+            </div>
+          ) : (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-4 text-center">
+              <p className={studentStyles.typography.infoText}>
+                Er is nog geen AI-samenvatting beschikbaar. Klik op de knop om er
+                een te genereren.
+              </p>
+            </div>
+          )}
         </div>
-      ) : summary ? (
-        <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 text-sm text-blue-900">
-          <p>{summary}</p>
-        </div>
-      ) : (
-        <div className="bg-gray-50 border border-gray-100 rounded-lg px-4 py-4 text-center">
-          <p className="text-sm text-gray-500">
-            Er is nog geen AI-samenvatting beschikbaar. Klik op de knop om er
-            een te genereren.
-          </p>
-        </div>
-      )}
+      </div>
     </section>
   );
 }
