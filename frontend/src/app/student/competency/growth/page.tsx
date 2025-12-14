@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useStudentGrowth } from "@/hooks";
-import { usePeerFeedbackResults } from "@/hooks/usePeerFeedbackResults";
 import {
   CompetencyRadarChart,
   CATEGORY_COLORS,
@@ -116,40 +115,16 @@ const DEV_MOCK_DATA: StudentGrowthData = {
     "Je laat de meeste groei zien in Samenwerken en Creatief denken: je neemt vaker initiatief in je team en onderzoekt meerdere oplossingen. Plannen & Organiseren blijft nog een aandachtspunt; je geeft zelf aan dat je planning niet altijd haalbaar is. Een passend leerdoel is: \"Ik plan mijn werk in kleinere stappen en controleer aan het einde van het blok wat af is.\" Probeer in je volgende reflectie concreet op te schrijven wat je anders hebt aangepakt.",
 };
 
-// Helper function to find the strongest and weakest OMZA domains
-function analyzeOMZA(omza: { organiseren: number; meedoen: number; zelfvertrouwen: number; autonomie: number }) {
-  const entries = Object.entries(omza) as [keyof typeof omza, number][];
-  const sorted = entries.sort((a, b) => b[1] - a[1]);
-  const labels: Record<keyof typeof omza, string> = {
-    organiseren: "Organiseren",
-    meedoen: "Meedoen",
-    zelfvertrouwen: "Zelfvertrouwen",
-    autonomie: "Autonomie",
-  };
-  return {
-    strongest: {
-      key: sorted[0][0],
-      label: labels[sorted[0][0]],
-      value: sorted[0][1],
-    },
-    weakest: {
-      key: sorted[sorted.length - 1][0],
-      label: labels[sorted[sorted.length - 1][0]],
-      value: sorted[sorted.length - 1][1],
-    },
-  };
-}
-
 // Loading skeleton for cards
 function CardSkeleton({ className = "" }: { className?: string }) {
   return (
     <div
-      className={`animate-pulse bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 ${className}`}
+      className={`animate-pulse bg-white rounded-2xl border border-slate-200 shadow-sm p-5 ${className}`}
     >
-      <div className="h-4 bg-gray-200 rounded w-1/3 mb-4" />
+      <div className="h-4 bg-slate-200 rounded w-1/3 mb-4" />
       <div className="space-y-2">
-        <div className="h-3 bg-gray-200 rounded w-full" />
-        <div className="h-3 bg-gray-200 rounded w-2/3" />
+        <div className="h-3 bg-slate-200 rounded w-full" />
+        <div className="h-3 bg-slate-200 rounded w-2/3" />
       </div>
     </div>
   );
@@ -162,33 +137,29 @@ export default function GrowthPage() {
   // Use mock data when API fails (for development/preview)
   const data = apiData || (error ? DEV_MOCK_DATA : null);
 
-  // Count goals by status (for future use, e.g., KPI display)
-  const _activeGoals = data?.goals?.filter((g) => g.status === "active").length ?? 0;
-  const _completedGoals = data?.goals?.filter((g) => g.status === "completed").length ?? 0;
-
   // Show empty state if no data
   if (!isLoading && !error && !data) {
     return (
-      <div className="min-h-screen bg-gray-100">
-        <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
-          <header className="px-6 py-6 max-w-6xl mx-auto">
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+      <div className={studentStyles.layout.pageContainer}>
+        <div className={studentStyles.header.container}>
+          <header className={studentStyles.header.wrapper}>
+            <h1 className={studentStyles.header.title}>
               Mijn Groei
             </h1>
-            <p className="text-gray-600 mt-1 text-sm">
+            <p className={studentStyles.header.subtitle}>
               Bekijk hoe jouw competenties, leerdoelen en reflecties zich
               ontwikkelen over meerdere scans.
             </p>
           </header>
         </div>
-        <main className="max-w-6xl mx-auto px-6 py-6">
-          <div className="p-8 border rounded-xl bg-gray-50 text-center">
-            <p className="text-gray-500">
+        <main className={studentStyles.layout.contentWrapper}>
+          <div className="p-8 border border-slate-200 rounded-2xl bg-slate-50 text-center">
+            <p className="text-slate-500">
               Nog geen groei-data beschikbaar. Maak eerst een competentiescan.
             </p>
             <Link
               href="/student"
-              className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className={studentStyles.buttons.primary + " mt-4 inline-block px-4 py-2 text-white"}
             >
               Terug naar Dashboard
             </Link>
@@ -239,7 +210,7 @@ export default function GrowthPage() {
       <div className={studentStyles.layout.contentWrapper + " space-y-6"}>
         {/* Dev mode indicator when using mock data */}
         {error && !apiData && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 text-xs text-amber-700">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 text-xs text-amber-700">
             ⚠️ Voorbeeldmodus: Backend niet beschikbaar, mockdata wordt getoond.
           </div>
         )}
