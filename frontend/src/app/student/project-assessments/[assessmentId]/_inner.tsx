@@ -5,6 +5,7 @@ import { ApiAuthError } from "@/lib/api";
 import { projectAssessmentService } from "@/services";
 import { ProjectAssessmentDetailOut } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
+import { studentStyles } from "@/styles/student-dashboard.styles";
 
 // Component for rendering a single rubric criterion with matrix view
 function RubricMatrixRow({
@@ -166,16 +167,16 @@ export default function StudentProjectAssessmentInner() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className={studentStyles.layout.pageContainer}>
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
-        <header className="px-6 py-6 max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+      <div className={studentStyles.header.container}>
+        <header className={studentStyles.header.wrapper}>
+          <div className={studentStyles.header.flexContainer + " mb-2"}>
+            <div className={studentStyles.header.titleSection}>
+              <h1 className={studentStyles.header.title}>
                 {data.assessment.title}
               </h1>
-              <p className="text-gray-600 mt-1 text-sm">
+              <p className={studentStyles.header.subtitle}>
                 Rubric: {data.rubric_title}
                 {data.teacher_name && <> • Beoordeeld door: {data.teacher_name}</>}
                 {data.assessment.published_at && (
@@ -185,7 +186,7 @@ export default function StudentProjectAssessmentInner() {
             </div>
             <button
               onClick={() => router.back()}
-              className="px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+              className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 sm:self-start"
             >
               ← Terug
             </button>
@@ -194,20 +195,20 @@ export default function StudentProjectAssessmentInner() {
       </div>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-6 py-6 space-y-6">
+      <main className={studentStyles.layout.contentWrapper + " space-y-6"}>
 
       {successMsg && (
-        <div className="p-3 rounded-lg bg-green-50 text-green-700 flex items-center gap-2">
+        <div className="flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-emerald-700">
           <span>✓</span>
           <span>{successMsg}</span>
         </div>
       )}
       {error && (
-        <div className="p-3 rounded-lg bg-red-50 text-red-700">{error}</div>
+        <div className="rounded-xl bg-rose-50 p-3 text-rose-700">{error}</div>
       )}
 
         {/* Rubric matrices grouped by category */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="overflow-hidden rounded-2xl border-slate-200 bg-white shadow-sm">
           <div className="divide-y divide-slate-100">
         {(() => {
           // Group criteria by category
