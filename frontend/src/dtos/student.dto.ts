@@ -190,3 +190,59 @@ export type StudentGrowthData = {
   reflections: GrowthReflection[];
   ai_summary: string | null;
 };
+
+// ============ Overview Tab DTOs ============
+
+/**
+ * Learning goal for the overview tab
+ */
+export type OverviewLearningGoal = {
+  id: string;
+  title: string;
+  status: "actief" | "afgerond";
+  since?: string;
+  related?: string;
+};
+
+/**
+ * Reflection for the overview tab
+ */
+export type OverviewReflection = {
+  id: string;
+  title: string;
+  type: string;
+  date: string;
+};
+
+/**
+ * Project result for the overview tab
+ */
+export type OverviewProjectResult = {
+  id: string;
+  project: string;
+  meta?: string;
+  opdrachtgever?: string;
+  periode?: string;
+  eindcijfer?: number;
+  proces?: number;
+  eindresultaat?: number;
+  communicatie?: number;
+};
+
+/**
+ * Competency profile category score for the overview tab
+ */
+export type OverviewCompetencyProfile = {
+  category: string;
+  value: number;
+};
+
+/**
+ * Complete overview data for the student dashboard
+ */
+export type StudentOverviewData = {
+  competencyProfile: OverviewCompetencyProfile[];
+  learningGoals: OverviewLearningGoal[];
+  reflections: OverviewReflection[];
+  projectResults: OverviewProjectResult[];
+};

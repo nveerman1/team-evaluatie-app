@@ -10,7 +10,13 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { StatPill, ScoreRow, StatusBadge, OmzaTeacherBadge, OmzaTeacherStatus } from "./helpers";
-import { EvaluationResult } from "@/dtos";
+import type {
+  EvaluationResult,
+  OverviewCompetencyProfile,
+  OverviewLearningGoal,
+  OverviewReflection,
+  OverviewProjectResult,
+} from "@/dtos";
 import Link from "next/link";
 import {
   RadarChart,
@@ -21,84 +27,71 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-type LearningGoal = {
-  id: string;
-  title: string;
-  status: "actief" | "afgerond";
-  since?: string;
-  related?: string;
-};
-
-type Reflection = {
-  id: string;
-  title: string;
-  type: string;
-  date: string;
-};
-
-type ProjectResult = {
-  id: string;
-  project: string;
-  meta?: string;
-  opdrachtgever?: string;
-  periode?: string;
-  eindcijfer?: number;
-  proces?: number;
-  eindresultaat?: number;
-  communicatie?: number;
-};
-
 type OverviewTabProps = {
   peerResults: EvaluationResult[];
-  competencyData?: unknown;
-  learningGoals?: LearningGoal[];
-  reflections?: Reflection[];
-  projectResults?: ProjectResult[];
+  competencyProfile?: OverviewCompetencyProfile[];
+  learningGoals?: OverviewLearningGoal[];
+  reflections?: OverviewReflection[];
+  projectResults?: OverviewProjectResult[];
 };
 
 export function OverviewTab({ 
   peerResults,
-  competencyData,
+  competencyProfile = [],
   learningGoals = [],
   reflections = [],
   projectResults = []
 }: OverviewTabProps) {
-  // Calculate OMZA averages from peer results
-  const omzaScores = React.useMemo(() => {
-    if (peerResults.length === 0) return [];
+  // Get the latest evaluation for OMZA data (prefer closed, but use any if available)
+  const latestResult = React.useMemo(() => {
+    if (peerResults.length === 0) return null;
     
-    const latestResult = peerResults[0]; // Assuming sorted by date
-    if (!latestResult.omzaAverages) {
-      // Fallback: calculate from peers
-      const keys = ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"] as const;
-      const labels = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"];
-      
-      return keys.map((key, idx) => {
-        const scores = latestResult.peers?.map(p => p.scores[key]).filter(s => s != null) || [];
-        const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-        return {
-          key: key.charAt(0).toUpperCase(),
-          label: labels[idx],
-          value: avg,
-        };
-      });
+    // First try to find closed evaluations
+    const closedResults = peerResults.filter((r) => r.status === "closed");
+    if (closedResults.length > 0) {
+      return closedResults[0];
     }
     
-    return latestResult.omzaAverages.map(avg => ({
-      key: avg.key,
-      label: avg.label,
-      value: avg.value,
-    }));
+    // If no closed evaluations, use the first available one
+    // (it might still have data even if not closed)
+    return peerResults[0];
   }, [peerResults]);
+
+  // Calculate OMZA averages from the latest peer evaluation
+  const omzaScores = React.useMemo(() => {
+    if (!latestResult) return [];
+    
+    if (latestResult.omzaAverages) {
+      return latestResult.omzaAverages.map(avg => ({
+        key: avg.key,
+        label: avg.label,
+        value: avg.value,
+      }));
+    }
+    
+    // Fallback: calculate from peers
+    const keys = ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"] as const;
+    const labels = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"];
+    
+    return keys.map((key, idx) => {
+      const scores = latestResult.peers?.map(p => p.scores[key]).filter(s => s != null) || [];
+      const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+      return {
+        key: key.charAt(0).toUpperCase(),
+        label: labels[idx],
+        value: avg,
+      };
+    });
+  }, [latestResult]);
 
   const omzaAverage = omzaScores.length > 0 
     ? (omzaScores.reduce((sum, s) => sum + s.value, 0) / omzaScores.length).toFixed(1)
     : "0.0";
 
   // Get teacher OMZA and comments from latest result
-  const latestResult = peerResults[0];
   const teacherOmza = latestResult?.teacherOmza;
   const teacherComment = latestResult?.teacherComments || latestResult?.teacherGradeComment;
+  const aiSummary = latestResult?.aiSummary;
 
   // Map teacher OMZA scores (1-4 scale) to status
   const mapTeacherScoreToStatus = (score?: number): OmzaTeacherStatus => {
@@ -109,20 +102,15 @@ export function OverviewTab({
     return "urgent";
   };
 
-  // Competency profile data for radar chart
+  // Competency profile data for radar chart - use real data from API
   const competencyProfileData = React.useMemo(() => {
-    // TODO: Replace with actual competency data from API when available
-    // PLACEHOLDER DATA - This should be replaced with real aggregated scan data
-    // mapped to these 6 categories from the competency scan results
-    return [
-      { category: "Samenwerken", value: 4.2 },
-      { category: "Plannen & organiseren", value: 3.7 },
-      { category: "Creatief denken & problemen oplossen", value: 3.6 },
-      { category: "Technische vaardigheden", value: 3.9 },
-      { category: "Communicatie & presenteren", value: 3.8 },
-      { category: "Reflectie & professionele houding", value: 3.4 },
-    ];
-  }, []);
+    // If no data from API, return empty array
+    if (!competencyProfile || competencyProfile.length === 0) {
+      return [];
+    }
+    
+    return competencyProfile;
+  }, [competencyProfile]);
 
   return (
     <div className="space-y-4">
@@ -176,17 +164,6 @@ export function OverviewTab({
             <p className="text-sm text-slate-600">
               Overzicht van je peer-feedback op Organiseren, Meedoen, Zelfvertrouwen en Autonomie.
             </p>
-            {teacherOmza && (
-              <div className="mt-2 flex flex-wrap items-center gap-3">
-                <div className="text-xs font-semibold text-slate-500">Docent OMZA</div>
-                <div className="flex items-center gap-3">
-                  <OmzaTeacherBadge letter="O" status={mapTeacherScoreToStatus(teacherOmza.O)} />
-                  <OmzaTeacherBadge letter="M" status={mapTeacherScoreToStatus(teacherOmza.M)} />
-                  <OmzaTeacherBadge letter="Z" status={mapTeacherScoreToStatus(teacherOmza.Z)} />
-                  <OmzaTeacherBadge letter="A" status={mapTeacherScoreToStatus(teacherOmza.A)} />
-                </div>
-              </div>
-            )}
           </CardHeader>
           <CardContent className="space-y-4">
             {omzaScores.length > 0 ? (
@@ -199,14 +176,24 @@ export function OverviewTab({
               <p className="text-sm text-slate-600">Nog geen peer-feedback beschikbaar.</p>
             )}
 
-            {latestResult?.aiSummary && (
-              <div className="rounded-xl border bg-slate-50 p-3 text-sm text-slate-700">
-                {latestResult.aiSummary}
+            {aiSummary && (
+              <div className="rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
+                {aiSummary}
+              </div>
+            )}
+
+            {teacherOmza && (
+              <div className="flex flex-wrap items-center gap-3 text-sm">
+                <div className="text-xs font-semibold text-slate-500">Docent OMZA:</div>
+                <OmzaTeacherBadge letter="O" status={mapTeacherScoreToStatus(teacherOmza.O)} />
+                <OmzaTeacherBadge letter="M" status={mapTeacherScoreToStatus(teacherOmza.M)} />
+                <OmzaTeacherBadge letter="Z" status={mapTeacherScoreToStatus(teacherOmza.Z)} />
+                <OmzaTeacherBadge letter="A" status={mapTeacherScoreToStatus(teacherOmza.A)} />
               </div>
             )}
 
             {teacherComment && (
-              <div className="rounded-xl border bg-white p-3">
+              <div className="rounded-xl bg-slate-50 p-3">
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <div className="text-sm font-semibold text-slate-900">Opmerkingen van de docent</div>
                   <Badge className="rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">Docent</Badge>
@@ -234,29 +221,46 @@ export function OverviewTab({
             </p>
           </CardHeader>
           <CardContent>
-            <div className="h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={competencyProfileData} outerRadius="80%">
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="category" tick={{ fontSize: 11 }} />
-                  <PolarRadiusAxis angle={30} domain={[0, 5]} tickCount={6} />
-                  <Radar
-                    name="Score"
-                    dataKey="value"
-                    stroke="#6366f1"
-                    fill="rgba(99, 102, 241, 0.25)"
-                    strokeWidth={2}
-                  />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <Button asChild variant="secondary" className="rounded-xl">
-                <Link href="/student/competency/growth">
-                  Bekijk scans <ChevronRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
+            {competencyProfileData.length > 0 ? (
+              <>
+                <div className="h-72 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart data={competencyProfileData} outerRadius="80%">
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="category" tick={{ fontSize: 11 }} />
+                      <PolarRadiusAxis angle={30} domain={[0, 5]} tickCount={6} />
+                      <Radar
+                        name="Score"
+                        dataKey="value"
+                        stroke="#6366f1"
+                        fill="rgba(99, 102, 241, 0.25)"
+                        strokeWidth={2}
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <Button asChild variant="secondary" className="rounded-xl">
+                    <Link href="/student/competency/growth">
+                      Bekijk scans <ChevronRight className="ml-1 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="py-8 text-center">
+                <p className="text-sm text-slate-600">
+                  Nog geen competentiescan ingevuld. Vul eerst een scan in om je profiel te zien.
+                </p>
+                <div className="mt-3">
+                  <Button asChild variant="secondary" className="rounded-xl">
+                    <Link href="/student/competency/growth">
+                      Ga naar scans <ChevronRight className="ml-1 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -272,11 +276,11 @@ export function OverviewTab({
             {learningGoals.length > 0 ? (
               <>
                 {learningGoals.slice(0, 3).map((goal) => (
-                  <div key={goal.id} className="flex flex-col gap-2 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div key={goal.id} className="flex flex-col gap-2 rounded-xl bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
                       <div className="truncate text-sm font-semibold text-slate-900">{goal.title}</div>
                       <div className="text-xs text-slate-600">
-                        {goal.since && `Sinds ${goal.since}`}
+                        {goal.since && `${goal.since}`}
                         {goal.related && ` • ${goal.related}`}
                       </div>
                     </div>
@@ -313,7 +317,7 @@ export function OverviewTab({
                 {reflections.slice(0, 3).map((r) => (
                   <button
                     key={r.id}
-                    className="w-full rounded-xl border p-3 text-left hover:bg-slate-50"
+                    className="w-full rounded-xl bg-slate-50 p-3 text-left hover:bg-slate-100"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -357,10 +361,10 @@ export function OverviewTab({
         </CardHeader>
         <CardContent>
           {projectResults.length > 0 ? (
-            <div className="overflow-x-auto rounded-xl border">
+            <div className="overflow-x-auto rounded-xl border border-slate-200">
               <table className="min-w-full text-sm">
-                <thead className="bg-slate-50">
-                  <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+                <thead>
+                  <tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
                     <th className="px-4 py-3">Project</th>
                     <th className="px-4 py-3">Opdrachtgever</th>
                     <th className="px-4 py-3">Periode</th>
@@ -373,7 +377,7 @@ export function OverviewTab({
                 </thead>
                 <tbody>
                   {projectResults.map((row) => (
-                    <tr key={row.id} className="border-t">
+                    <tr key={row.id} className="border-t border-slate-200/70 hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3">
                         <div className="font-semibold text-slate-900">{row.project}</div>
                         <div className="text-xs text-slate-600">{row.meta}</div>
@@ -381,10 +385,12 @@ export function OverviewTab({
                       <td className="px-4 py-3 text-slate-700">{row.opdrachtgever || "—"}</td>
                       <td className="px-4 py-3 text-slate-700">{row.periode || "—"}</td>
                       <td className="px-4 py-3">
-                        {row.eindcijfer && (
+                        {row.eindcijfer ? (
                           <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
                             {row.eindcijfer.toFixed(1)}
                           </span>
+                        ) : (
+                          <span className="text-slate-500">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-slate-700">{row.proces ? `${row.proces.toFixed(1)} / 5` : "—"}</td>
