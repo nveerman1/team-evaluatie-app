@@ -111,9 +111,20 @@ class GrowthReflection(BaseModel):
     snippet: str
 
 
+class GrowthCompetencyScore(BaseModel):
+    competency_id: int
+    competency_name: str
+    category_name: Optional[str]
+    most_recent_score: Optional[float]
+    window_id: Optional[int]
+    window_title: Optional[str]
+    scan_date: Optional[str]
+
+
 class StudentGrowthData(BaseModel):
     scans: List[GrowthScanSummary]
     competency_profile: List[GrowthCategoryScore]
+    competency_scores: List[GrowthCompetencyScore]  # New field
     goals: List[GrowthGoal]
     reflections: List[GrowthReflection]
     ai_summary: Optional[str]
@@ -254,6 +265,86 @@ def _calculate_competency_profile(
 
     # If no profile data, return empty list
     return profile
+
+
+def _calculate_competency_scores(
+    db: Session, user_id: int, school_id: int
+) -> List[GrowthCompetencyScore]:
+    """
+    Calculate most recent scores for all competencies the student has assessed.
+    Returns a list with the most recent score for each competency.
+    """
+    # Get all competencies the student has scored, with their most recent score
+    # Group by competency and get the latest window
+    results = (
+        db.execute(
+            select(
+                CompetencySelfScore.competency_id,
+                CompetencySelfScore.window_id,
+                CompetencySelfScore.score,
+                Competency.name,
+                CompetencyCategory.name.label("category_name"),
+                CompetencyWindow.title,
+                CompetencyWindow.start_date,
+            )
+            .select_from(CompetencySelfScore)
+            .join(Competency, Competency.id == CompetencySelfScore.competency_id)
+            .outerjoin(
+                CompetencyCategory, CompetencyCategory.id == Competency.category_id
+            )
+            .join(CompetencyWindow, CompetencyWindow.id == CompetencySelfScore.window_id)
+            .where(
+                CompetencySelfScore.user_id == user_id,
+                CompetencySelfScore.school_id == school_id,
+            )
+            .order_by(
+                CompetencySelfScore.competency_id,
+                CompetencyWindow.start_date.desc(),
+            )
+        )
+        .all()
+    )
+
+    # Get the most recent score for each competency
+    competency_scores = {}
+    for (
+        competency_id,
+        window_id,
+        score,
+        competency_name,
+        category_name,
+        window_title,
+        start_date,
+    ) in results:
+        # Only keep the first (most recent) entry for each competency
+        if competency_id not in competency_scores:
+            # Safely convert score to float with error handling
+            try:
+                recent_score = round(float(score), 1) if score is not None else None
+            except (ValueError, TypeError):
+                # Log error and use None if conversion fails
+                recent_score = None
+            
+            competency_scores[competency_id] = GrowthCompetencyScore(
+                competency_id=competency_id,
+                competency_name=competency_name,
+                category_name=category_name,
+                most_recent_score=recent_score,
+                window_id=window_id,
+                window_title=window_title,
+                scan_date=_format_date(start_date),
+            )
+
+    # Convert to list and sort by category then competency name
+    scores_list = list(competency_scores.values())
+    scores_list.sort(
+        key=lambda x: (
+            x.category_name or "ZZZ",  # Sort None to end
+            x.competency_name,
+        )
+    )
+
+    return scores_list
 
 
 def _get_goal_progress(goal_status: str) -> int:
@@ -435,6 +526,9 @@ def get_student_growth_data(
     # 3. Calculate competency profile
     competency_profile = _calculate_competency_profile(db, user_id, school_id)
 
+    # 3b. Calculate individual competency scores (most recent per competency)
+    competency_scores = _calculate_competency_scores(db, user_id, school_id)
+
     # 4. Get goals (all windows, most recent first)
     goals_data = (
         db.query(CompetencyGoal, Competency)
@@ -505,6 +599,7 @@ def get_student_growth_data(
     return StudentGrowthData(
         scans=scans,
         competency_profile=competency_profile,
+        competency_scores=competency_scores,
         goals=goals,
         reflections=reflections,
         ai_summary=ai_summary,
