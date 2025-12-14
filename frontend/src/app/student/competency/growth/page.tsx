@@ -393,6 +393,13 @@ function CompetencyProfileSection({
   );
 }
 
+// Table cell width constants for consistent layout
+const TABLE_CELL_WIDTH = {
+  small: "max-w-[150px]",
+  medium: "max-w-[200px]",
+  large: "max-w-md",
+} as const;
+
 function CompetencyScoresSection({ scores }: { scores: GrowthCompetencyScore[] }) {
   return (
     <section className={studentStyles.cards.listCard.container}>
@@ -481,7 +488,7 @@ function CompetencyScoresSection({ scores }: { scores: GrowthCompetencyScore[] }
                     <td className="px-3 py-3 text-xs text-slate-600">
                       {score.window_title ? (
                         <div>
-                          <div className="font-medium truncate max-w-[150px]" title={score.window_title}>
+                          <div className={`font-medium truncate ${TABLE_CELL_WIDTH.small}`} title={score.window_title}>
                             {score.window_title}
                           </div>
                           {score.window_date && (
@@ -545,7 +552,7 @@ function LearningGoalsSection({ goals }: { goals: GrowthGoalDetailed[] }) {
                     className={idx < goals.length - 1 ? "border-b border-slate-100" : ""}
                   >
                     <td className="px-3 py-3 text-sm text-slate-800">
-                      <div className="max-w-md" title={goal.title}>
+                      <div className={TABLE_CELL_WIDTH.large} title={goal.title}>
                         {goal.title}
                       </div>
                     </td>
@@ -573,7 +580,7 @@ function LearningGoalsSection({ goals }: { goals: GrowthGoalDetailed[] }) {
                       </span>
                     </td>
                     <td className="px-3 py-3 text-xs text-slate-600">
-                      <div className="max-w-[150px] truncate" title={goal.window_title}>
+                      <div className={`truncate ${TABLE_CELL_WIDTH.small}`} title={goal.window_title}>
                         {goal.window_title}
                       </div>
                     </td>

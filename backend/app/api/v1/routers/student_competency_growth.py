@@ -42,6 +42,9 @@ REFLECTION_SNIPPET_MAX_LENGTH = 150
 # Default score when no data is available (middle of 1-5 scale)
 DEFAULT_OMZA_SCORE = 3.0
 
+# Maximum number of recent external scores to include in average calculation
+MAX_EXTERNAL_SCORES = 3
+
 # Default mapping from competency categories to OMZA domains
 # Note: In a production system, this could be configured per school in the database
 DEFAULT_OMZA_CATEGORY_MAPPING: Dict[str, str] = {
@@ -372,7 +375,7 @@ def _get_detailed_competency_scores(
 
         if external_scores:
             # Average the external scores from the most recent window
-            external_score_values = [float(s[0].score) for s in external_scores[:3]]  # Take up to 3 most recent
+            external_score_values = [float(s[0].score) for s in external_scores[:MAX_EXTERNAL_SCORES]]
             if external_score_values:
                 most_recent_external_score = sum(external_score_values) / len(external_score_values)
 
