@@ -42,42 +42,47 @@ export function OverviewTab({
   reflections = [],
   projectResults = []
 }: OverviewTabProps) {
-  // Calculate OMZA averages from peer results
+  // Get the latest closed evaluation for OMZA data
+  const latestClosedResult = React.useMemo(() => {
+    const closedResults = peerResults.filter((r) => r.status === "closed");
+    return closedResults.length > 0 ? closedResults[0] : null;
+  }, [peerResults]);
+
+  // Calculate OMZA averages from the latest closed peer evaluation
   const omzaScores = React.useMemo(() => {
-    if (peerResults.length === 0) return [];
+    if (!latestClosedResult) return [];
     
-    const latestResult = peerResults[0]; // Assuming sorted by date
-    if (!latestResult.omzaAverages) {
-      // Fallback: calculate from peers
-      const keys = ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"] as const;
-      const labels = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"];
-      
-      return keys.map((key, idx) => {
-        const scores = latestResult.peers?.map(p => p.scores[key]).filter(s => s != null) || [];
-        const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-        return {
-          key: key.charAt(0).toUpperCase(),
-          label: labels[idx],
-          value: avg,
-        };
-      });
+    if (latestClosedResult.omzaAverages) {
+      return latestClosedResult.omzaAverages.map(avg => ({
+        key: avg.key,
+        label: avg.label,
+        value: avg.value,
+      }));
     }
     
-    return latestResult.omzaAverages.map(avg => ({
-      key: avg.key,
-      label: avg.label,
-      value: avg.value,
-    }));
-  }, [peerResults]);
+    // Fallback: calculate from peers
+    const keys = ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"] as const;
+    const labels = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"];
+    
+    return keys.map((key, idx) => {
+      const scores = latestClosedResult.peers?.map(p => p.scores[key]).filter(s => s != null) || [];
+      const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+      return {
+        key: key.charAt(0).toUpperCase(),
+        label: labels[idx],
+        value: avg,
+      };
+    });
+  }, [latestClosedResult]);
 
   const omzaAverage = omzaScores.length > 0 
     ? (omzaScores.reduce((sum, s) => sum + s.value, 0) / omzaScores.length).toFixed(1)
     : "0.0";
 
-  // Get teacher OMZA and comments from latest result
-  const latestResult = peerResults[0];
-  const teacherOmza = latestResult?.teacherOmza;
-  const teacherComment = latestResult?.teacherComments || latestResult?.teacherGradeComment;
+  // Get teacher OMZA and comments from latest closed result
+  const teacherOmza = latestClosedResult?.teacherOmza;
+  const teacherComment = latestClosedResult?.teacherComments || latestClosedResult?.teacherGradeComment;
+  const aiSummary = latestClosedResult?.aiSummary;
 
   // Map teacher OMZA scores (1-4 scale) to status
   const mapTeacherScoreToStatus = (score?: number): OmzaTeacherStatus => {
@@ -162,23 +167,19 @@ export function OverviewTab({
               <p className="text-sm text-slate-600">Nog geen peer-feedback beschikbaar.</p>
             )}
 
-            {latestResult?.aiSummary && (
+            {aiSummary && (
               <div className="rounded-xl border bg-slate-50 p-3 text-sm text-slate-700">
-                {latestResult.aiSummary}
+                {aiSummary}
               </div>
             )}
 
             {teacherOmza && (
-              <div className="rounded-xl border bg-slate-50 p-3">
-                <div className="mb-2 flex flex-wrap items-center gap-3">
-                  <div className="text-xs font-semibold text-slate-500">Docent OMZA</div>
-                  <div className="flex items-center gap-3">
-                    <OmzaTeacherBadge letter="O" status={mapTeacherScoreToStatus(teacherOmza.O)} />
-                    <OmzaTeacherBadge letter="M" status={mapTeacherScoreToStatus(teacherOmza.M)} />
-                    <OmzaTeacherBadge letter="Z" status={mapTeacherScoreToStatus(teacherOmza.Z)} />
-                    <OmzaTeacherBadge letter="A" status={mapTeacherScoreToStatus(teacherOmza.A)} />
-                  </div>
-                </div>
+              <div className="flex flex-wrap items-center gap-3 text-sm">
+                <div className="text-xs font-semibold text-slate-500">Docent OMZA:</div>
+                <OmzaTeacherBadge letter="O" status={mapTeacherScoreToStatus(teacherOmza.O)} />
+                <OmzaTeacherBadge letter="M" status={mapTeacherScoreToStatus(teacherOmza.M)} />
+                <OmzaTeacherBadge letter="Z" status={mapTeacherScoreToStatus(teacherOmza.Z)} />
+                <OmzaTeacherBadge letter="A" status={mapTeacherScoreToStatus(teacherOmza.A)} />
               </div>
             )}
 
@@ -351,10 +352,10 @@ export function OverviewTab({
         </CardHeader>
         <CardContent>
           {projectResults.length > 0 ? (
-            <div className="overflow-x-auto rounded-xl border">
+            <div className="overflow-x-auto rounded-xl border border-slate-200">
               <table className="min-w-full text-sm">
-                <thead className="bg-slate-50">
-                  <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+                <thead>
+                  <tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
                     <th className="px-4 py-3">Project</th>
                     <th className="px-4 py-3">Opdrachtgever</th>
                     <th className="px-4 py-3">Periode</th>
@@ -367,7 +368,7 @@ export function OverviewTab({
                 </thead>
                 <tbody>
                   {projectResults.map((row) => (
-                    <tr key={row.id} className="border-t">
+                    <tr key={row.id} className="border-t border-slate-200/70 hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3">
                         <div className="font-semibold text-slate-900">{row.project}</div>
                         <div className="text-xs text-slate-600">{row.meta}</div>
@@ -375,10 +376,12 @@ export function OverviewTab({
                       <td className="px-4 py-3 text-slate-700">{row.opdrachtgever || "—"}</td>
                       <td className="px-4 py-3 text-slate-700">{row.periode || "—"}</td>
                       <td className="px-4 py-3">
-                        {row.eindcijfer && (
+                        {row.eindcijfer ? (
                           <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
                             {row.eindcijfer.toFixed(1)}
                           </span>
+                        ) : (
+                          <span className="text-slate-500">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-slate-700">{row.proces ? `${row.proces.toFixed(1)} / 5` : "—"}</td>
