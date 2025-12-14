@@ -10,6 +10,7 @@ import type {
   CompetencyReflectionCreate,
 } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
+import { studentStyles } from "@/styles/student-dashboard.styles";
 
 export default function ReflectionPage() {
   const router = useRouter();
@@ -98,37 +99,39 @@ export default function ReflectionPage() {
   if (!window) return <ErrorMessage message="Window not found" />;
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className={studentStyles.layout.pageContainer}>
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
-        <header className="px-6 py-6 max-w-6xl mx-auto">
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
-            Reflectie Schrijven
-          </h1>
-          <p className="text-gray-600 mt-1 text-sm">
-            Reflecteer op je competentieontwikkeling tijdens {window.title}
-          </p>
+      <div className={studentStyles.header.container}>
+        <header className={studentStyles.header.wrapper}>
+          <div className={studentStyles.header.titleSection}>
+            <h1 className={studentStyles.header.title}>
+              Reflectie Schrijven
+            </h1>
+            <p className={studentStyles.header.subtitle}>
+              Reflecteer op je competentieontwikkeling tijdens {window.title}
+            </p>
+          </div>
         </header>
       </div>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-6 py-6 space-y-6">
+      <main className={studentStyles.layout.contentWrapper + " space-y-6"}>
 
         {successMessage && (
-          <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-700">
             {successMessage}
           </div>
         )}
 
         {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-700">
             {error}
           </div>
         )}
 
         {existingReflection && (
-          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-sm text-yellow-700">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <p className="text-sm text-amber-700">
               ⚠️ Je hebt al een reflectie voor deze periode. Let op: het indienen
               van een nieuwe reflectie kan de oude vervangen.
             </p>
@@ -137,17 +140,17 @@ export default function ReflectionPage() {
 
         {/* Show goals if any */}
         {goals.length > 0 && (
-          <div className="p-5 border border-gray-200/80 shadow-sm rounded-xl bg-purple-50">
-          <h3 className="text-lg font-semibold mb-3">Jouw Leerdoelen</h3>
+          <div className="rounded-2xl border-slate-200 bg-indigo-50 p-5 shadow-sm">
+          <h3 className={studentStyles.typography.cardTitle + " mb-3"}>Jouw Leerdoelen</h3>
           <div className="space-y-2">
             {goals.map((goal) => (
               <div
                 key={goal.id}
-                className="p-3 bg-white rounded-lg border border-purple-200"
+                className="rounded-xl border border-indigo-200 bg-white p-3"
               >
-                <p className="font-medium">{goal.goal_text}</p>
+                <p className="font-medium text-slate-900">{goal.goal_text}</p>
                 {goal.success_criteria && (
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className={studentStyles.typography.infoText + " mt-1"}>
                     Criterium: {goal.success_criteria}
                   </p>
                 )}
@@ -158,11 +161,11 @@ export default function ReflectionPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="p-6 border border-gray-200/80 shadow-sm rounded-xl bg-white space-y-4">
+          <div className="space-y-4 rounded-2xl border-slate-200 bg-white p-6 shadow-sm">
           {/* Goal Selection */}
           {goals.length > 0 && (
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="mb-2 block text-sm font-medium text-slate-700">
                 Gerelateerd Leerdoel (optioneel)
               </label>
               <select
@@ -173,7 +176,7 @@ export default function ReflectionPage() {
                     goal_id: e.target.value ? Number(e.target.value) : undefined,
                   })
                 }
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="">Selecteer een leerdoel</option>
                 {goals.map((goal) => (
@@ -190,7 +193,7 @@ export default function ReflectionPage() {
           {/* Goal Achieved */}
           {formData.goal_id && (
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="mb-2 block text-sm font-medium text-slate-700">
                 Heb je je leerdoel behaald?
               </label>
               <div className="flex gap-4">
@@ -204,7 +207,7 @@ export default function ReflectionPage() {
                     }
                     className="mr-2"
                   />
-                  <span>Ja</span>
+                  <span className="text-sm text-slate-700">Ja</span>
                 </label>
                 <label className="flex items-center">
                   <input
@@ -216,7 +219,7 @@ export default function ReflectionPage() {
                     }
                     className="mr-2"
                   />
-                  <span>Nee</span>
+                  <span className="text-sm text-slate-700">Nee</span>
                 </label>
                 <label className="flex items-center">
                   <input
@@ -228,7 +231,7 @@ export default function ReflectionPage() {
                     }
                     className="mr-2"
                   />
-                  <span>Gedeeltelijk</span>
+                  <span className="text-sm text-slate-700">Gedeeltelijk</span>
                 </label>
               </div>
             </div>
@@ -236,8 +239,8 @@ export default function ReflectionPage() {
 
           {/* Reflection Text */}
           <div>
-            <label className="block text-sm font-medium mb-2">
-              Reflectie <span className="text-red-600">*</span>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Reflectie <span className="text-rose-600">*</span>
             </label>
             <textarea
               value={formData.text}
@@ -246,17 +249,17 @@ export default function ReflectionPage() {
               }
               placeholder="Reflecteer op je competentieontwikkeling. Wat ging goed? Wat kan beter? Wat heb je geleerd?"
               rows={8}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               required
             />
-            <p className="text-sm text-gray-500 mt-1">
+            <p className={studentStyles.typography.infoTextSmall + " mt-1"}>
               Minimaal 50 woorden aanbevolen
             </p>
           </div>
 
           {/* Evidence */}
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="mb-2 block text-sm font-medium text-slate-700">
               Bewijs/Voorbeelden (optioneel)
             </label>
             <textarea
@@ -266,16 +269,16 @@ export default function ReflectionPage() {
               }
               placeholder="Beschrijf concrete voorbeelden of bewijs van je ontwikkeling..."
               rows={4}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 
           {/* Tips */}
-          <div className="p-4 bg-indigo-50 rounded-lg">
-            <h3 className="text-sm font-semibold mb-2">
+          <div className="rounded-xl bg-indigo-50 p-4">
+            <h3 className="mb-2 text-sm font-semibold text-slate-900">
               💡 Tips voor een goede reflectie:
             </h3>
-            <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
+            <ul className="list-inside list-disc space-y-1 text-sm text-slate-700">
               <li>Wees eerlijk en kritisch over je eigen ontwikkeling</li>
               <li>Geef concrete voorbeelden van situaties</li>
               <li>Beschrijf wat je hebt geleerd en waarom</li>
@@ -289,14 +292,14 @@ export default function ReflectionPage() {
             <button
               type="button"
               onClick={() => router.push("/student")}
-              className="px-6 py-2 border rounded-lg hover:bg-gray-50"
+              className={studentStyles.buttons.secondary + " border px-6 py-2"}
             >
               Annuleren
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              className={studentStyles.buttons.primary + " px-6 py-2 text-white disabled:opacity-50"}
             >
               {submitting ? "Opslaan..." : "Reflectie Indienen"}
             </button>

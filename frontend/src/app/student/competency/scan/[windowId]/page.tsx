@@ -10,6 +10,7 @@ import type {
   CompetencySelfScoreInput,
 } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
+import { studentStyles } from "@/styles/student-dashboard.styles";
 
 export default function SelfScanPage() {
   const router = useRouter();
@@ -154,27 +155,29 @@ export default function SelfScanPage() {
   if (!window) return <ErrorMessage message="Window not found" />;
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className={studentStyles.layout.pageContainer}>
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
-        <header className="px-6 py-6 max-w-6xl mx-auto">
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
-            {window.title}
-          </h1>
-          <p className="text-gray-600 mt-1 text-sm">
-            {window.description ||
-              "Beoordeel jezelf op de volgende competenties"}
-          </p>
-          {window.end_date && (
-            <p className="text-sm text-gray-500 mt-2">
-              Sluit op: {new Date(window.end_date).toLocaleDateString("nl-NL")}
+      <div className={studentStyles.header.container}>
+        <header className={studentStyles.header.wrapper}>
+          <div className={studentStyles.header.titleSection}>
+            <h1 className={studentStyles.header.title}>
+              {window.title}
+            </h1>
+            <p className={studentStyles.header.subtitle}>
+              {window.description ||
+                "Beoordeel jezelf op de volgende competenties"}
             </p>
-          )}
+            {window.end_date && (
+              <p className="mt-2 text-sm text-white/60">
+                Sluit op: {new Date(window.end_date).toLocaleDateString("nl-NL")}
+              </p>
+            )}
+          </div>
         </header>
       </div>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-6 py-6 space-y-6">
+      <main className={studentStyles.layout.contentWrapper + " space-y-6"}>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Competencies */}
@@ -190,17 +193,17 @@ export default function SelfScanPage() {
           const defaultLabels = ["Startend", "Basis", "Competent", "Gevorderd", "Excellent"];
 
             return (
-              <div key={comp.id} className="p-5 border border-gray-200/80 shadow-sm rounded-xl bg-white space-y-4">
+              <div key={comp.id} className="rounded-2xl border-slate-200 bg-white shadow-sm p-5 space-y-4">
               <div>
-                <h3 className="text-lg font-semibold mb-1">{comp.name}</h3>
+                <h3 className={studentStyles.typography.cardTitle}>{comp.name}</h3>
                 {comp.description && (
-                  <p className="text-sm text-gray-600">{comp.description}</p>
+                  <p className={studentStyles.typography.infoText}>{comp.description}</p>
                 )}
               </div>
 
               {/* Rubric Button Grid */}
               <div>
-                <label className="block text-sm font-medium mb-3">
+                <label className="mb-3 block text-sm font-medium text-slate-700">
                   Selecteer je score:
                 </label>
                 <div className="grid grid-cols-5 gap-3">
@@ -216,18 +219,18 @@ export default function SelfScanPage() {
                         key={level}
                         type="button"
                         onClick={() => handleScoreChange(comp.id, level)}
-                        className={`p-4 border-2 rounded-lg transition-all ${
+                        className={`rounded-xl border-2 p-4 transition-all ${
                           isSelected
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-gray-300 bg-white hover:bg-gray-50"
+                            ? "border-indigo-500 bg-indigo-50"
+                            : "border-slate-200 bg-white hover:bg-slate-50"
                         }`}
                       >
-                        <div className="flex flex-col items-center gap-2 h-full">
+                        <div className="flex h-full flex-col items-center gap-2">
                           {/* Check Icon or Radio Circle - Fixed height container */}
-                          <div className="flex items-center justify-center w-6 h-6 flex-shrink-0">
+                          <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center">
                             {isSelected ? (
                               <svg
-                                className="w-6 h-6 text-blue-600"
+                                className="h-6 w-6 text-indigo-600"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
                               >
@@ -238,18 +241,18 @@ export default function SelfScanPage() {
                                 />
                               </svg>
                             ) : (
-                              <div className="w-5 h-5 border-2 border-gray-300 rounded-full" />
+                              <div className="h-5 w-5 rounded-full border-2 border-slate-300" />
                             )}
                           </div>
 
                           {/* Label (instead of number) - Fixed height for alignment */}
-                          <span className="text-sm font-semibold text-gray-900 text-center flex-shrink-0">
+                          <span className="flex-shrink-0 text-center text-sm font-semibold text-slate-900">
                             {label}
                           </span>
 
                           {/* Description - Allow to grow and wrap */}
                           {description && (
-                            <span className="text-xs text-gray-600 text-center leading-tight">
+                            <span className="text-center text-xs leading-tight text-slate-600">
                               {description}
                             </span>
                           )}
@@ -262,7 +265,7 @@ export default function SelfScanPage() {
 
               {/* Example (Optional) */}
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className="mb-2 block text-sm font-medium text-slate-700">
                   Wanneer heb je dit laten zien? (optioneel)
                 </label>
                 <textarea
@@ -270,7 +273,7 @@ export default function SelfScanPage() {
                   onChange={(e) => handleExampleChange(comp.id, e.target.value)}
                   placeholder="Beschrijf een concreet voorbeeld..."
                   rows={2}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
               </div>
@@ -279,13 +282,13 @@ export default function SelfScanPage() {
 
           {/* Messages */}
           {successMessage && (
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-700">
               {successMessage}
             </div>
           )}
 
           {error && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-700">
               {error}
             </div>
           )}
@@ -295,14 +298,14 @@ export default function SelfScanPage() {
             <button
               type="button"
               onClick={() => router.push("/student")}
-              className="px-6 py-2 border rounded-lg hover:bg-gray-50"
+              className={studentStyles.buttons.secondary + " border px-6 py-2"}
             >
               Annuleren
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className={studentStyles.buttons.primary + " px-6 py-2 text-white disabled:opacity-50"}
             >
               {submitting ? "Opslaan..." : "Scan Indienen"}
             </button>
