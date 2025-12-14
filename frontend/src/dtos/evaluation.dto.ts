@@ -1,5 +1,5 @@
 // frontend/src/dtos/evaluation.dto.ts
-export type EvalStatus = "draft" | "open" | "closed" | "published"; // align met backend
+export type EvalStatus = "draft" | "open" | "closed"; // align met backend
 export type EvaluationType = "peer" | "project" | "competency";
 
 export type Evaluation = {
