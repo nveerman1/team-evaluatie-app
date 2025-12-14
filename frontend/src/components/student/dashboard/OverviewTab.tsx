@@ -150,17 +150,6 @@ export function OverviewTab({
             <p className="text-sm text-slate-600">
               Overzicht van je peer-feedback op Organiseren, Meedoen, Zelfvertrouwen en Autonomie.
             </p>
-            {teacherOmza && (
-              <div className="mt-2 flex flex-wrap items-center gap-3">
-                <div className="text-xs font-semibold text-slate-500">Docent OMZA</div>
-                <div className="flex items-center gap-3">
-                  <OmzaTeacherBadge letter="O" status={mapTeacherScoreToStatus(teacherOmza.O)} />
-                  <OmzaTeacherBadge letter="M" status={mapTeacherScoreToStatus(teacherOmza.M)} />
-                  <OmzaTeacherBadge letter="Z" status={mapTeacherScoreToStatus(teacherOmza.Z)} />
-                  <OmzaTeacherBadge letter="A" status={mapTeacherScoreToStatus(teacherOmza.A)} />
-                </div>
-              </div>
-            )}
           </CardHeader>
           <CardContent className="space-y-4">
             {omzaScores.length > 0 ? (
@@ -176,6 +165,20 @@ export function OverviewTab({
             {latestResult?.aiSummary && (
               <div className="rounded-xl border bg-slate-50 p-3 text-sm text-slate-700">
                 {latestResult.aiSummary}
+              </div>
+            )}
+
+            {teacherOmza && (
+              <div className="rounded-xl border bg-slate-50 p-3">
+                <div className="mb-2 flex flex-wrap items-center gap-3">
+                  <div className="text-xs font-semibold text-slate-500">Docent OMZA</div>
+                  <div className="flex items-center gap-3">
+                    <OmzaTeacherBadge letter="O" status={mapTeacherScoreToStatus(teacherOmza.O)} />
+                    <OmzaTeacherBadge letter="M" status={mapTeacherScoreToStatus(teacherOmza.M)} />
+                    <OmzaTeacherBadge letter="Z" status={mapTeacherScoreToStatus(teacherOmza.Z)} />
+                    <OmzaTeacherBadge letter="A" status={mapTeacherScoreToStatus(teacherOmza.A)} />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -263,11 +266,11 @@ export function OverviewTab({
             {learningGoals.length > 0 ? (
               <>
                 {learningGoals.slice(0, 3).map((goal) => (
-                  <div key={goal.id} className="flex flex-col gap-2 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div key={goal.id} className="flex flex-col gap-2 rounded-xl bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
                       <div className="truncate text-sm font-semibold text-slate-900">{goal.title}</div>
                       <div className="text-xs text-slate-600">
-                        {goal.since && `Sinds ${goal.since}`}
+                        {goal.since && `${goal.since}`}
                         {goal.related && ` • ${goal.related}`}
                       </div>
                     </div>
@@ -304,7 +307,7 @@ export function OverviewTab({
                 {reflections.slice(0, 3).map((r) => (
                   <button
                     key={r.id}
-                    className="w-full rounded-xl border p-3 text-left hover:bg-slate-50"
+                    className="w-full rounded-xl bg-slate-50 p-3 text-left hover:bg-slate-100"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">

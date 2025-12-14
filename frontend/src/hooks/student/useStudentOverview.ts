@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { studentService, projectAssessmentService } from "@/services";
+import { studentService, projectAssessmentService, projectService } from "@/services";
 import { ApiAuthError } from "@/lib/api";
 import type {
   StudentOverviewData,
@@ -56,23 +56,23 @@ export function useStudentOverview() {
         date: refl.date,
       }));
 
-      // Fetch evaluation reflections separately
+      // Fetch evaluation reflections separately (peer evaluation reflections)
       try {
         const evaluations = await studentService.getMyEvaluations();
         
-        // Get reflections from closed evaluations in parallel
-        const closedEvaluations = evaluations.filter(
-          (e) => e.status === "closed" && e.reflectionCompleted
+        // Get reflections from all evaluations that have a reflection completed
+        const evaluationsWithReflection = evaluations.filter(
+          (e) => e.reflectionCompleted
         );
         
-        const reflectionPromises = closedEvaluations.map(async (evaluation) => {
+        const reflectionPromises = evaluationsWithReflection.map(async (evaluation) => {
           try {
             const reflection = await studentService.getReflection(evaluation.id);
             if (reflection && reflection.submitted_at) {
               return {
                 id: `eval-${evaluation.id}`,
                 title: evaluation.title,
-                type: "Evaluatie",
+                type: "Peerevaluatie",
                 date: new Date(reflection.submitted_at).toLocaleDateString("nl-NL"),
               };
             }
@@ -100,10 +100,26 @@ export function useStudentOverview() {
           "published"
         );
 
+        // Filter out external assessments (those without a teacher_id)
+        const teacherAssessments = (assessmentsData.items || []).filter(
+          (assessment) => assessment.teacher_id != null
+        );
+
         // Fetch all assessment details in parallel
-        const assessmentPromises = (assessmentsData.items || []).map(async (assessment) => {
+        const assessmentPromises = teacherAssessments.map(async (assessment) => {
           try {
             const details = await projectAssessmentService.getProjectAssessment(assessment.id);
+            
+            // Get client info from project if available
+            let clientName = assessment.metadata_json?.client;
+            if (!clientName && assessment.project_id) {
+              try {
+                const project = await projectService.getProject(assessment.project_id);
+                clientName = project.client_organization || undefined;
+              } catch {
+                // Ignore if project fetch fails
+              }
+            }
             
             // Calculate category averages from scores and criteria
             const categoryScores: Record<string, number[]> = {};
@@ -139,7 +155,7 @@ export function useStudentOverview() {
               id: assessment.id.toString(),
               project: assessment.title,
               meta: assessment.group_name || undefined,
-              opdrachtgever: assessment.metadata_json?.client || undefined,
+              opdrachtgever: clientName,
               periode: assessment.published_at
                 ? new Date(assessment.published_at).toLocaleDateString("nl-NL", {
                     month: "short",
