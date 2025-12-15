@@ -229,12 +229,10 @@ def get_project_overview_list(
     # Search filter
     if search_query:
         search_pattern = f"%{search_query}%"
-        query = query.filter(
-            or_(
-                ProjectAssessment.title.ilike(search_pattern),
-                Project.name.ilike(search_pattern),
-            )
-        )
+        filters = [ProjectAssessment.title.ilike(search_pattern)]
+        # Only add Project.name filter if it's not null
+        filters.append(and_(Project.name.isnot(None), Project.name.ilike(search_pattern)))
+        query = query.filter(or_(*filters))
     
     # Execute query
     results = query.all()

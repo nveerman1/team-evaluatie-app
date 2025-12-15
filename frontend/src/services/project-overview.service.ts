@@ -1,7 +1,49 @@
 import api from "@/lib/api";
 
 /* =========================================
-   TYPES
+   BACKEND RESPONSE TYPES
+   ========================================= */
+
+interface ProjectOverviewItemBackend {
+  project_id: number | null;
+  assessment_id: number;
+  project_name: string;
+  course_name: string | null;
+  client_name: string | null;
+  period_label: string;
+  year: number;
+  num_teams: number;
+  average_score_overall: number | null;
+  average_scores_by_category: Record<string, number>;
+  status: "active" | "completed";
+}
+
+interface ProjectOverviewListResponseBackend {
+  items: ProjectOverviewItemBackend[];
+  total: number;
+}
+
+interface CategoryTrendDataPointBackend {
+  project_label: string;
+  scores: Record<string, number>;
+}
+
+interface ProjectTrendsResponseBackend {
+  trends: CategoryTrendDataPointBackend[];
+}
+
+interface AiSummaryBackend {
+  sterke_punten: string[];
+  verbeter_punten: string[];
+  algemene_trend: string;
+}
+
+interface ProjectAiSummaryResponseBackend {
+  summary: AiSummaryBackend | null;
+}
+
+/* =========================================
+   FRONTEND TYPES
    ========================================= */
 
 export interface ProjectOverviewItem {
@@ -74,11 +116,11 @@ export const projectOverviewService = {
       ? `/project-overview/projects?${queryString}`
       : "/project-overview/projects";
 
-    const { data } = await api.get<ProjectOverviewListResponse>(url);
+    const { data } = await api.get<ProjectOverviewListResponseBackend>(url);
     
     // Transform snake_case to camelCase for frontend
     return {
-      items: data.items.map((item: any) => ({
+      items: data.items.map((item) => ({
         projectId: item.project_id,
         assessmentId: item.assessment_id,
         projectName: item.project_name,
@@ -112,11 +154,11 @@ export const projectOverviewService = {
       ? `/project-overview/trends?${queryString}`
       : "/project-overview/trends";
 
-    const { data } = await api.get<ProjectTrendsResponse>(url);
+    const { data } = await api.get<ProjectTrendsResponseBackend>(url);
     
     // Transform snake_case to camelCase
     return {
-      trends: data.trends.map((trend: any) => ({
+      trends: data.trends.map((trend) => ({
         projectLabel: trend.project_label,
         scores: trend.scores,
       })),
@@ -140,7 +182,7 @@ export const projectOverviewService = {
       ? `/project-overview/ai-summary?${queryString}`
       : "/project-overview/ai-summary";
 
-    const { data } = await api.get<ProjectAiSummaryResponse>(url);
+    const { data } = await api.get<ProjectAiSummaryResponseBackend>(url);
     
     // Transform snake_case to camelCase
     if (data.summary) {
