@@ -248,7 +248,7 @@ def get_project_overview_list(
             query = query.filter(ProjectAssessment.status == "draft")
     
     # School year filter - use Project dates if available
-    if school_year:
+    if school_year and school_year != "Alle schooljaren":
         try:
             start_year = int(school_year.split("-")[0])
             # School year typically runs from August to July
@@ -258,15 +258,33 @@ def get_project_overview_list(
             # Filter by Project start_date if available, otherwise fall back to assessment dates
             query = query.filter(
                 or_(
-                    # Projects with start_date in the school year
+                    # Case 1: Projects with start_date in the school year
                     and_(
+                        Project.id.isnot(None),
                         Project.start_date.isnot(None),
                         Project.start_date >= school_year_start,
                         Project.start_date <= school_year_end
                     ),
-                    # Projects without start_date - use assessment published_at
+                    # Case 2: Projects exist but no start_date - use assessment published_at
                     and_(
+                        Project.id.isnot(None),
                         Project.start_date.is_(None),
+                        or_(
+                            and_(
+                                ProjectAssessment.published_at.isnot(None),
+                                ProjectAssessment.published_at >= datetime(start_year, 8, 1),
+                                ProjectAssessment.published_at <= datetime(start_year + 1, 7, 31, 23, 59, 59)
+                            ),
+                            and_(
+                                ProjectAssessment.published_at.is_(None),
+                                ProjectAssessment.created_at >= datetime(start_year, 8, 1),
+                                ProjectAssessment.created_at <= datetime(start_year + 1, 7, 31, 23, 59, 59)
+                            )
+                        )
+                    ),
+                    # Case 3: No Project at all - use assessment published_at or created_at
+                    and_(
+                        Project.id.is_(None),
                         or_(
                             and_(
                                 ProjectAssessment.published_at.isnot(None),

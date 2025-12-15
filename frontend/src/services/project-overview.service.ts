@@ -105,10 +105,12 @@ export const projectOverviewService = {
   ): Promise<ProjectOverviewListResponse> {
     const params = new URLSearchParams();
 
-    if (filters?.schoolYear) params.set("school_year", filters.schoolYear);
+    if (filters?.schoolYear && filters.schoolYear !== "Alle schooljaren") {
+      params.set("school_year", filters.schoolYear);
+    }
     if (filters?.courseId && filters.courseId !== "") params.set("course_id", filters.courseId);
-    if (filters?.period) params.set("period", filters.period);
-    if (filters?.statusFilter) params.set("status_filter", filters.statusFilter);
+    if (filters?.period && filters.period !== "Alle periodes") params.set("period", filters.period);
+    if (filters?.statusFilter && filters.statusFilter !== "all") params.set("status_filter", filters.statusFilter);
     if (filters?.searchQuery) params.set("search_query", filters.searchQuery);
 
     const queryString = params.toString();
@@ -145,9 +147,11 @@ export const projectOverviewService = {
   ): Promise<ProjectTrendsResponse> {
     const params = new URLSearchParams();
 
-    if (filters?.schoolYear) params.set("school_year", filters.schoolYear);
+    if (filters?.schoolYear && filters.schoolYear !== "Alle schooljaren") {
+      params.set("school_year", filters.schoolYear);
+    }
     if (filters?.courseId && filters.courseId !== "") params.set("course_id", filters.courseId);
-    if (filters?.period) params.set("period", filters.period);
+    if (filters?.period && filters.period !== "Alle periodes") params.set("period", filters.period);
 
     const queryString = params.toString();
     const url = queryString

@@ -62,7 +62,7 @@ type SortOrder = "asc" | "desc";
 
 const PERIODS = ["Alle periodes", "P1", "P2", "P3", "P4"];
 
-const SCHOOL_YEARS = ["2024-2025", "2023-2024"];
+const SCHOOL_YEARS = ["Alle schooljaren", "2024-2025", "2023-2024", "2022-2023"];
 
 // Default color palette for categories - will be used for any categories
 const CATEGORY_COLORS: Record<string, string> = {
