@@ -22,14 +22,14 @@ def upgrade() -> None:
     # Add project_team_id column to project_notes table
     op.add_column('project_notes', sa.Column('project_team_id', sa.Integer(), nullable=True))
     
-    # Add foreign key constraint
+    # Add foreign key constraint with SET NULL to preserve historical notes
     op.create_foreign_key(
         'fk_project_notes_project_team_id',
         'project_notes',
         'project_teams',
         ['project_team_id'],
         ['id'],
-        ondelete='CASCADE'
+        ondelete='SET NULL'
     )
     
     # Add index for project_team_id

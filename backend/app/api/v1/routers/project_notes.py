@@ -333,11 +333,13 @@ async def get_context(
             member_ids = [m.id for m in team_members]
 
             # Get the actual ProjectTeam.id if this is a project context
-            team_id = (
-                team_number_to_id_map.get(team_num, team_num)
-                if context.project_id
-                else team_num
-            )
+            if context.project_id:
+                team_id = team_number_to_id_map.get(team_num)
+                if team_id is None:
+                    # Skip teams without a ProjectTeam record
+                    continue
+            else:
+                team_id = team_num
 
             teams.append(
                 TeamInfo(
@@ -560,12 +562,18 @@ async def create_note(
         )
 
     # Validate note type requirements
-    # For team notes: either team_id (legacy) or project_team_id (preferred) is required
-    if data.note_type == "team" and not data.team_id and not data.project_team_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="team_id or project_team_id is required for team notes",
-        )
+    # For team notes: either team_id (legacy) or project_team_id (preferred) is required, but not both
+    if data.note_type == "team":
+        if data.team_id and data.project_team_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot specify both team_id and project_team_id",
+            )
+        if not data.team_id and not data.project_team_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="team_id or project_team_id is required for team notes",
+            )
     if data.note_type == "student" and not data.student_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

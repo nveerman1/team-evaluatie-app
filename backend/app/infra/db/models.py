@@ -1607,7 +1607,7 @@ class ProjectNote(Base):
     )
     # Project team reference (new - preferred for project-based notes)
     project_team_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("project_teams.id", ondelete="CASCADE"),
+        ForeignKey("project_teams.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )
