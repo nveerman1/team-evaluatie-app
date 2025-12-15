@@ -66,6 +66,10 @@ def serialize_note(note: ProjectNote, db: Session) -> dict:
     if note.team_id:
         team = db.query(Group).filter(Group.id == note.team_id).first()
         note_dict["team_name"] = team.name if team else None
+    elif note.note_metadata and note.note_metadata.get("team_number"):
+        # For project-based teams without Group FK, use team_number from metadata
+        team_num = note.note_metadata.get("team_number")
+        note_dict["team_name"] = f"Team {team_num}"
     else:
         note_dict["team_name"] = None
 
@@ -541,10 +545,11 @@ async def create_note(
         )
 
     # Validate note type requirements
-    if data.note_type == "team" and not data.team_id:
+    # For team notes: either team_id (Group FK) or team_number in metadata is required
+    if data.note_type == "team" and not data.team_id and not data.metadata.get("team_number"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="team_id is required for team notes",
+            detail="team_id or team_number in metadata is required for team notes",
         )
     if data.note_type == "student" and not data.student_id:
         raise HTTPException(
