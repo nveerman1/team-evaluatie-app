@@ -76,6 +76,12 @@ const CATEGORY_COLORS: Record<string, string> = {
   presentatie: "#6366f1", // indigo
 };
 
+// Fallback colors for unknown categories
+const FALLBACK_COLORS = [
+  "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", 
+  "#ec4899", "#14b8a6", "#f97316", "#6366f1"
+];
+
 /* =========================================
    HOOK: useProjectOverviewData
    ========================================= */
@@ -523,9 +529,8 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
     if (CATEGORY_COLORS[category]) {
       return CATEGORY_COLORS[category];
     }
-    // Fallback colors for unknown categories
-    const fallbackColors = ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316", "#6366f1"];
-    return fallbackColors[index % fallbackColors.length];
+    // Use fallback colors for unknown categories
+    return FALLBACK_COLORS[index % FALLBACK_COLORS.length];
   };
 
   const chartData = useMemo(() => {

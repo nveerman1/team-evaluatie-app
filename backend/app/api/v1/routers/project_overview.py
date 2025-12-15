@@ -144,8 +144,18 @@ def _calculate_category_averages(
 def _get_period_label(project: Optional[Project], fallback_date: Optional[datetime] = None) -> str:
     """
     Generate period label from project dates (e.g., P1 2024-2025)
-    Dutch school year typically runs: P1=Aug-Oct, P2=Nov-Jan, P3=Feb-Apr, P4=May-Jul
+    Dutch school year periods:
+    - P1: August - October
+    - P2: November - January
+    - P3: February - April
+    - P4: May - July
     """
+    # Month boundaries for each period
+    P1_START, P1_END = 8, 10      # August - October
+    P2_START_FALL, P2_END_WINTER = 11, 1  # November - January (spans year boundary)
+    P3_START, P3_END = 2, 4       # February - April
+    P4_START, P4_END = 5, 7       # May - July
+    
     # Use project start_date if available, otherwise use fallback
     date_to_use = None
     if project and project.start_date:
@@ -160,20 +170,22 @@ def _get_period_label(project: Optional[Project], fallback_date: Optional[dateti
     month = date_to_use.month
     year = date_to_use.year
     
-    # Determine which period and school year
-    if month >= 8:  # August onwards
-        period = "P1" if month <= 10 else "P2"
+    # Determine which period and school year start
+    if P1_START <= month <= P1_END:  # August - October
+        period = "P1"
         school_year_start = year
-    else:  # Before August
-        if month <= 1:
-            period = "P2"
-            school_year_start = year - 1
-        elif month <= 4:
-            period = "P3"
-            school_year_start = year - 1
-        else:  # May-July
-            period = "P4"
-            school_year_start = year - 1
+    elif month >= P2_START_FALL:  # November - December
+        period = "P2"
+        school_year_start = year
+    elif month <= P2_END_WINTER:  # January
+        period = "P2"
+        school_year_start = year - 1
+    elif P3_START <= month <= P3_END:  # February - April
+        period = "P3"
+        school_year_start = year - 1
+    else:  # P4_START <= month <= P4_END (May - July)
+        period = "P4"
+        school_year_start = year - 1
     
     return f"{period} {school_year_start}-{school_year_start + 1}"
 
