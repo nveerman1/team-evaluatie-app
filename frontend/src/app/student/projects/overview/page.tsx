@@ -8,31 +8,34 @@ import Link from "next/link";
 import { ProjectLineChart } from "./components/ProjectLineChart";
 import { ProjectRadarChart } from "./components/ProjectRadarChart";
 import type { ProjectAssessmentListItem } from "@/dtos/project-assessment.dto";
+import { studentStyles } from "@/styles/student-dashboard.styles";
 
 // Page Header component matching other student pages
 const PageHeader = () => {
   return (
-    <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">
-            Projectoverzicht
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Overzicht van jouw projectbeoordelingen, cijfers en ontwikkeling.
-          </p>
+    <div className={studentStyles.header.container}>
+      <header className={studentStyles.header.wrapper}>
+        <div className={studentStyles.header.flexContainer}>
+          <div className={studentStyles.header.titleSection}>
+            <h1 className={studentStyles.header.title}>
+              Projectoverzicht
+            </h1>
+            <p className={studentStyles.header.subtitle}>
+              Overzicht van jouw projectbeoordelingen, cijfers en ontwikkeling.
+            </p>
+          </div>
+          <div className="flex gap-2 sm:self-start">
+            <Link
+              href="/student#projecten"
+              className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+            >
+              <span className="mr-2">←</span>
+              Terug
+            </Link>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Link
-            href="/student#projecten"
-            className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-          >
-            <span className="mr-2">←</span>
-            Terug
-          </Link>
-        </div>
-      </div>
-    </header>
+      </header>
+    </div>
   );
 };
 
@@ -160,9 +163,9 @@ export default function ProjectOverviewPage() {
 
   if (loading || detailsLoading) {
     return (
-      <main className="min-h-screen bg-slate-100/80">
+      <main className={studentStyles.layout.pageContainer}>
         <PageHeader />
-        <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className={studentStyles.layout.contentWrapper}>
           <Loading />
         </div>
       </main>
@@ -171,9 +174,9 @@ export default function ProjectOverviewPage() {
 
   if (error || detailsError) {
     return (
-      <main className="min-h-screen bg-slate-100/80">
+      <main className={studentStyles.layout.pageContainer}>
         <PageHeader />
-        <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className={studentStyles.layout.contentWrapper}>
           <ErrorMessage message={error || detailsError || "An error occurred"} />
         </div>
       </main>
@@ -183,21 +186,21 @@ export default function ProjectOverviewPage() {
   // Empty state
   if (!projectAssessments || projectAssessments.length === 0) {
     return (
-      <main className="min-h-screen bg-slate-100/80">
+      <main className={studentStyles.layout.pageContainer}>
         <PageHeader />
-        <div className="mx-auto max-w-6xl px-4 py-8">
-          <div className="rounded-xl bg-white border border-gray-300 shadow-sm p-8 text-center">
-            <div className="text-6xl mb-4">📊</div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+        <div className={studentStyles.layout.contentWrapper}>
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+            <div className="mb-4 text-6xl">📊</div>
+            <h2 className={studentStyles.typography.sectionTitle + " mb-2"}>
               Nog geen projectbeoordelingen
             </h2>
-            <p className="text-gray-600 mb-6">
+            <p className={studentStyles.typography.infoText + " mb-6"}>
               Zodra je eerste project is beoordeeld, zie je hier jouw cijfers en
               ontwikkeling.
             </p>
             <Link
               href="/student#projecten"
-              className="inline-block rounded-lg bg-slate-900 text-white px-4 py-2 hover:bg-slate-800 transition-colors"
+              className={studentStyles.buttons.primary + " inline-block px-4 py-2 text-white"}
             >
               Ga terug naar dashboard
             </Link>
@@ -208,7 +211,7 @@ export default function ProjectOverviewPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100/80 text-slate-900">
+    <main className={studentStyles.layout.pageContainer}>
       <PageHeader />
       
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pb-10 pt-8">

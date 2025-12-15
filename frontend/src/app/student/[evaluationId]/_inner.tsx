@@ -15,6 +15,7 @@ import {
 } from "@/components/student";
 import { Loading, ErrorMessage } from "@/components";
 import { studentService } from "@/services";
+import { studentStyles } from "@/styles/student-dashboard.styles";
 
 export default function StudentWizardInner() {
   const evaluationIdNum = useNumericEvalId();
@@ -133,22 +134,22 @@ export default function StudentWizardInner() {
   const peerCriteria = criteria;
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className={studentStyles.layout.pageContainer}>
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
-        <header className="px-6 py-6 max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+      <div className={studentStyles.header.container}>
+        <header className={studentStyles.header.wrapper}>
+          <div className="mb-4 flex items-center justify-between">
+            <div className={studentStyles.header.titleSection}>
+              <h1 className={studentStyles.header.title}>
                 Evaluatie Invullen
               </h1>
-              <p className="text-gray-600 mt-1 text-sm">
+              <p className={studentStyles.header.subtitle}>
                 Evaluatie #{evaluationId}
               </p>
             </div>
             <button
               onClick={() => router.push("/student")}
-              className="px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+              className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
             >
               Terug
             </button>
@@ -163,18 +164,18 @@ export default function StudentWizardInner() {
       </div>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-6 py-6">
-        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
+      <main className={studentStyles.layout.contentWrapper}>
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         {/* Step 1: Self Evaluation */}
         {step === 1 && (
           <>
-            <h2 className="text-2xl font-semibold mb-6">
+            <h2 className={studentStyles.typography.sectionTitle + " mb-6"}>
               Stap 1: Zelfbeoordeling
             </h2>
             {!selfAlloc && (
-              <div className="text-center py-8">
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
-                  <p className="text-yellow-800 mb-4">
+              <div className="py-8 text-center">
+                <div className="mx-auto max-w-md rounded-xl border border-amber-200 bg-amber-50 p-6">
+                  <p className="mb-4 text-amber-800">
                     Je zelfbeoordeling wordt klaargezet. Probeer het zo opnieuw.
                   </p>
                   <button
@@ -188,7 +189,7 @@ export default function StudentWizardInner() {
                           .finally(() => setLoadingAlloc(false));
                       }
                     }}
-                    className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                    className={studentStyles.buttons.primary + " px-4 py-2 text-white"}
                   >
                     Opnieuw proberen
                   </button>
@@ -209,12 +210,12 @@ export default function StudentWizardInner() {
         {/* Step 2: Peer Reviews */}
         {step === 2 && (
           <>
-            <h2 className="text-2xl font-semibold mb-6">
+            <h2 className={studentStyles.typography.sectionTitle + " mb-6"}>
               Stap 2: Peer-reviews
             </h2>
             {!selfCompleted && (
-              <div className="bg-yellow-50 p-4 rounded-lg mb-6">
-                <p className="text-sm text-yellow-800">
+              <div className="mb-6 rounded-xl bg-amber-50 p-4">
+                <p className="text-sm text-amber-800">
                   ⚠️ Voltooi eerst je zelfbeoordeling voordat je peers kunt
                   beoordelen.
                 </p>

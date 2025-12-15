@@ -10,6 +10,7 @@ import type {
   CompetencyGoalCreate,
 } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
+import { studentStyles } from "@/styles/student-dashboard.styles";
 
 export default function GoalPage() {
   const router = useRouter();
@@ -107,26 +108,28 @@ export default function GoalPage() {
   if (!window) return <ErrorMessage message="Window not found" />;
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className={studentStyles.layout.pageContainer}>
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
-        <header className="px-6 py-6 max-w-6xl mx-auto">
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
-            Leerdoel Instellen
-          </h1>
-          <p className="text-gray-600 mt-1 text-sm">
-            Stel een persoonlijk leerdoel in voor {window.title}
-          </p>
+      <div className={studentStyles.header.container}>
+        <header className={studentStyles.header.wrapper}>
+          <div className={studentStyles.header.titleSection}>
+            <h1 className={studentStyles.header.title}>
+              Leerdoel Instellen
+            </h1>
+            <p className={studentStyles.header.subtitle}>
+              Stel een persoonlijk leerdoel in voor {window.title}
+            </p>
+          </div>
         </header>
       </div>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-6 py-6 space-y-6">
+      <main className={studentStyles.layout.contentWrapper + " space-y-6"}>
 
         {/* Existing Goals List */}
         {existingGoals.length > 0 && (
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 className={studentStyles.typography.sectionTitle}>
               Mijn Leerdoelen ({existingGoals.length})
             </h2>
             {existingGoals.map((goal) => {
@@ -134,19 +137,19 @@ export default function GoalPage() {
               return (
                 <div
                   key={goal.id}
-                  className="p-5 border border-gray-200/80 shadow-sm rounded-xl bg-white space-y-3"
+                  className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       {competency && (
-                        <div className="text-sm text-purple-600 font-medium mb-1">
+                        <div className="mb-1 text-sm font-medium text-indigo-600">
                           {competency.name}
                         </div>
                       )}
-                      <p className="text-gray-900 font-medium">{goal.goal_text}</p>
+                      <p className={studentStyles.typography.cardTitle}>{goal.goal_text}</p>
                       {goal.success_criteria && (
                         <div className="mt-2">
-                          <p className="text-sm text-gray-600">
+                          <p className={studentStyles.typography.infoText}>
                             <span className="font-medium">Succescriterium:</span>{" "}
                             {goal.success_criteria}
                           </p>
@@ -154,12 +157,12 @@ export default function GoalPage() {
                       )}
                     </div>
                     <span
-                      className={`px-3 py-1 text-xs font-medium rounded-full ${
+                      className={`rounded-full px-3 py-1 text-xs font-medium ${
                         goal.status === "achieved"
-                          ? "bg-green-100 text-green-700"
+                          ? studentStyles.badges.completedGoal
                           : goal.status === "not_achieved"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-blue-100 text-blue-700"
+                          ? "bg-rose-50 text-rose-700 border border-rose-100"
+                          : studentStyles.badges.activeGoal
                       }`}
                     >
                       {goal.status === "achieved"
@@ -170,7 +173,7 @@ export default function GoalPage() {
                     </span>
                   </div>
                   {goal.submitted_at && (
-                    <p className="text-xs text-gray-500">
+                    <p className={studentStyles.typography.metaTextSmall}>
                       Aangemaakt op:{" "}
                       {new Date(goal.submitted_at).toLocaleDateString("nl-NL")}
                     </p>
@@ -183,14 +186,14 @@ export default function GoalPage() {
 
         {/* New Goal Form */}
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          <h2 className={studentStyles.typography.sectionTitle + " mb-4"}>
             {existingGoals.length > 0 ? "Nieuw Leerdoel Toevoegen" : "Leerdoel Aanmaken"}
           </h2>
           <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="p-6 border border-gray-200/80 shadow-sm rounded-xl bg-white space-y-4">
+          <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           {/* Competency Selection */}
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="mb-2 block text-sm font-medium text-slate-700">
               Gerelateerde Competentie (optioneel)
             </label>
             <select
@@ -203,7 +206,7 @@ export default function GoalPage() {
                     : undefined,
                 })
               }
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="">Geen specifieke competentie</option>
               {competencies.map((comp) => (
@@ -212,15 +215,15 @@ export default function GoalPage() {
                 </option>
               ))}
             </select>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className={studentStyles.typography.infoTextSmall + " mt-1"}>
               Selecteer een competentie waarop je je wilt verbeteren
             </p>
           </div>
 
           {/* Goal Text */}
           <div>
-            <label className="block text-sm font-medium mb-2">
-              Leerdoel <span className="text-red-600">*</span>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Leerdoel <span className="text-rose-600">*</span>
             </label>
             <textarea
               value={formData.goal_text}
@@ -229,14 +232,14 @@ export default function GoalPage() {
               }
               placeholder="Wat wil je leren of verbeteren? Bijv. 'Ik wil beter leren samenwerken door actief naar anderen te luisteren'"
               rows={4}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               required
             />
           </div>
 
           {/* Success Criteria */}
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="mb-2 block text-sm font-medium text-slate-700">
               Succescriterium (optioneel)
             </label>
             <textarea
@@ -246,16 +249,16 @@ export default function GoalPage() {
               }
               placeholder="Hoe weet je dat je je doel hebt bereikt? Bijv. 'Ik heb in elke vergadering minimaal 3 keer actief input gegeven op ideeën van anderen'"
               rows={3}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 
           {/* Tips */}
-          <div className="p-4 bg-purple-50 rounded-lg">
-            <h3 className="text-sm font-semibold mb-2">
+          <div className="rounded-xl bg-indigo-50 p-4">
+            <h3 className="mb-2 text-sm font-semibold text-slate-900">
               💡 Tips voor een goed leerdoel:
             </h3>
-            <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
+            <ul className="list-inside list-disc space-y-1 text-sm text-slate-700">
               <li>Maak het specifiek en meetbaar</li>
               <li>Zorg dat het realistisch en haalbaar is</li>
               <li>Koppel het aan concrete acties</li>
@@ -266,13 +269,13 @@ export default function GoalPage() {
 
           {/* Messages */}
           {successMessage && (
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-700">
               {successMessage}
             </div>
           )}
 
           {error && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-700">
               {error}
             </div>
           )}
@@ -282,14 +285,14 @@ export default function GoalPage() {
             <button
               type="button"
               onClick={() => router.push("/student")}
-              className="px-6 py-2 border rounded-lg hover:bg-gray-50"
+              className={studentStyles.buttons.secondary + " border px-6 py-2"}
             >
               Annuleren
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+              className={studentStyles.buttons.primary + " px-6 py-2 text-white disabled:opacity-50"}
             >
               {submitting ? "Opslaan..." : "Leerdoel Opslaan"}
             </button>

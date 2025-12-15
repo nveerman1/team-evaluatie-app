@@ -19,6 +19,7 @@ import {
   getTeamContributionFactor,
   getTeamContributionLabel,
 } from "@/components/student/peer-results/helpers";
+import { studentStyles } from "@/styles/student-dashboard.styles";
 
 export default function OverzichtPage() {
   const params = useParams();
@@ -214,23 +215,23 @@ export default function OverzichtPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className={studentStyles.layout.pageContainer}>
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
-        <header className="px-6 py-6 max-w-6xl mx-auto">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
+      <div className={studentStyles.header.container}>
+        <header className={studentStyles.header.wrapper}>
+          <div className={studentStyles.header.flexContainer}>
+            <div className={studentStyles.header.titleSection}>
+              <h1 className={studentStyles.header.title}>
                 Evaluatie Overzicht
               </h1>
-              <p className="text-gray-600 mt-1 text-sm">
+              <p className={studentStyles.header.subtitle}>
                 Hier zie je een overzicht van je scores en een samenvatting van de
                 ontvangen peer-feedback.
               </p>
             </div>
             <button
               onClick={() => router.push("/student")}
-              className="px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+              className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 sm:self-start"
             >
               Terug
             </button>
@@ -240,7 +241,7 @@ export default function OverzichtPage() {
 
       {/* Main Content - Single Card matching EvaluationCard style */}
       <main className="mx-auto max-w-6xl px-6 py-6">
-        <article className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm">
+        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           {/* Card header */}
           <div className="flex items-start justify-between gap-4">
             <div>

@@ -10,6 +10,7 @@ import {
   OMZAOverview,
 } from "@/components/student/peer-results";
 import { usePeerFeedbackResults } from "@/hooks/usePeerFeedbackResults";
+import { studentStyles } from "@/styles/student-dashboard.styles";
 
 // --- Main Page
 export default function PeerFeedbackResultsPage() {
@@ -46,7 +47,7 @@ export default function PeerFeedbackResultsPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-100">
+    <main className={studentStyles.layout.pageContainer}>
       <PageHeader onRefresh={handleRefresh} onExportAll={handleExportAll} />
 
       <Filters items={items} onFilter={(next) => setFilters(next)} />
@@ -55,12 +56,12 @@ export default function PeerFeedbackResultsPage() {
       {!loading && !error && items.length > 0 && <OMZAOverview items={items} />}
 
       {/* Cards Section */}
-      <section className="mx-auto max-w-6xl px-6 py-6 space-y-4">
+      <section className="mx-auto max-w-6xl space-y-4 px-6 py-6">
         {/* Loading state */}
         {loading && (
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-sm text-slate-600">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
             <div className="flex items-center gap-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+              <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-indigo-600"></div>
               Resultaten laden...
             </div>
           </div>
@@ -68,12 +69,12 @@ export default function PeerFeedbackResultsPage() {
 
         {/* Error state */}
         {error && (
-          <div className="bg-red-50 rounded-xl border border-red-200 shadow-sm p-6 text-sm text-red-700">
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700 shadow-sm">
             <p className="font-medium">Er is iets misgegaan</p>
             <p>{error}</p>
             <button
               onClick={handleRefresh}
-              className="mt-2 text-red-600 underline hover:text-red-800"
+              className="mt-2 text-rose-600 underline hover:text-rose-800"
             >
               Opnieuw proberen
             </button>
@@ -87,7 +88,7 @@ export default function PeerFeedbackResultsPage() {
               <EvaluationCard key={ev.id} data={ev} onOpen={openDetails} />
             ))}
             {filteredItems.length === 0 && (
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-sm text-slate-600">
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
                 Geen resultaten voor deze filters.
               </div>
             )}
