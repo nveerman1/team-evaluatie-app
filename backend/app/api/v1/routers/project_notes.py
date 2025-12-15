@@ -290,7 +290,7 @@ async def get_context(
                 )
                 .all()
             )
-            
+
             for team in project_teams:
                 members = (
                     db.query(ProjectTeamMember)
@@ -305,7 +305,7 @@ async def get_context(
         # If no project_id, use user.team_number
         teams_dict = {}
         students_without_team = []
-        
+
         for student in all_students:
             if context.project_id:
                 team_num = user_team_map.get(student.id, None)
@@ -345,7 +345,7 @@ async def get_context(
                         team_name=f"Team {team_num}",
                     )
                 )
-        
+
         # Add students without teams
         for student in students_without_team:
             students.append(
@@ -546,7 +546,11 @@ async def create_note(
 
     # Validate note type requirements
     # For team notes: either team_id (Group FK) or team_number in metadata is required
-    if data.note_type == "team" and not data.team_id and not data.metadata.get("team_number"):
+    if (
+        data.note_type == "team"
+        and not data.team_id
+        and not data.metadata.get("team_number")
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="team_id or team_number in metadata is required for team notes",
@@ -759,15 +763,15 @@ async def close_project_notes_context(
 ):
     """
     Close a project notes context and mark it as archived
-    
+
     Sets status to 'closed' and records closed_at timestamp.
     This action is idempotent - calling it multiple times has the same effect.
     Once closed, the project_team members become read-only.
     """
     from datetime import datetime, timezone as tz
-    
+
     require_role(current_user, ["teacher", "admin"])
-    
+
     # Get context
     context = (
         db.query(ProjectNotesContext)
@@ -777,18 +781,17 @@ async def close_project_notes_context(
         )
         .first()
     )
-    
+
     if not context:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Context not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Context not found"
         )
-    
+
     # Update status and closed_at if not already closed
     if context.status != "closed":
         context.status = "closed"
         context.closed_at = datetime.now(tz.utc)
-        
+
         # Log action
         log_update(
             db=db,
@@ -797,10 +800,10 @@ async def close_project_notes_context(
             entity_id=context_id,
             details={"action": "close", "closed_at": context.closed_at.isoformat()},
         )
-    
+
     db.commit()
     db.refresh(context)
-    
+
     # Format output
     return ProjectNotesContextOut(
         id=context.id,
