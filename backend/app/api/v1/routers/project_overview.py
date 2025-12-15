@@ -232,7 +232,7 @@ def get_project_overview_list(
         query = query.filter(
             or_(
                 ProjectAssessment.title.ilike(search_pattern),
-                Project.name.ilike(search_pattern) if Project.name else False,
+                Project.name.ilike(search_pattern),
             )
         )
     
@@ -293,6 +293,36 @@ def get_project_overview_list(
     )
 
 
+def _parse_period_for_sorting(period_label: str) -> tuple:
+    """
+    Parse period label (e.g., 'Q1 2025') to a sortable tuple (year, quarter).
+    Returns (9999, 9) for unparseable strings to sort them last.
+    """
+    try:
+        parts = period_label.split()
+        if len(parts) >= 2:
+            quarter_str = parts[0]  # e.g., "Q1"
+            year_str = parts[1]     # e.g., "2025"
+            
+            # Extract quarter number
+            if quarter_str.startswith("Q") and quarter_str[1:].isdigit():
+                quarter = int(quarter_str[1:])
+            else:
+                return (9999, 9)
+            
+            # Extract year
+            if year_str.isdigit():
+                year = int(year_str)
+            else:
+                return (9999, 9)
+            
+            return (year, quarter)
+    except (ValueError, IndexError):
+        pass
+    
+    return (9999, 9)
+
+
 @router.get("/trends", response_model=ProjectTrendsResponse)
 def get_project_trends(
     school_year: Optional[str] = Query(None),
@@ -324,8 +354,8 @@ def get_project_trends(
                 scores=item.average_scores_by_category
             ))
     
-    # Sort by period label chronologically
-    trends.sort(key=lambda x: x.project_label)
+    # Sort by period label chronologically using helper function
+    trends.sort(key=lambda x: _parse_period_for_sorting(x.project_label))
     
     return ProjectTrendsResponse(trends=trends)
 

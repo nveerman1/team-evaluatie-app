@@ -883,7 +883,7 @@ function AiSummarySection({ filters }: AiSummarySectionProps) {
         <div className="bg-amber-50 rounded-lg p-4">
           <h4 className="text-sm font-semibold text-amber-800 mb-2">Verbeterpunten</h4>
           <ul className="list-disc list-inside text-sm text-amber-700 space-y-1">
-            {aiSummary.verbeterpunten.map((punt, idx) => (
+            {aiSummary.verbeterPunten.map((punt, idx) => (
               <li key={idx}>{punt}</li>
             ))}
           </ul>
