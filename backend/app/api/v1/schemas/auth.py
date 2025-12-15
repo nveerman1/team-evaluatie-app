@@ -13,3 +13,20 @@ class UserRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class UserInfo(BaseModel):
+    """User information returned after authentication"""
+    id: int
+    email: str
+    name: str
+    role: str
+    school_id: int
+    class_name: Optional[str] = None
+
+
+class AzureAuthResponse(BaseModel):
+    """Response from Azure AD authentication callback"""
+    access_token: str
+    token_type: str
+    user: UserInfo

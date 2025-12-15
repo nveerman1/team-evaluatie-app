@@ -14,6 +14,7 @@ boto3
 pydantic[email]
 email-validator
 requests
+msal>=1.31.0
 ruff
 black
 mypy
