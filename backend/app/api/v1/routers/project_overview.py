@@ -252,8 +252,25 @@ def get_project_overview_list(
         try:
             start_year = int(school_year.split("-")[0])
             # School year typically runs from August to July
-            school_year_start = datetime(start_year, 8, 1).date()
-            school_year_end = datetime(start_year + 1, 7, 31).date()
+            school_year_start_date = datetime(start_year, 8, 1).date()
+            school_year_end_date = datetime(start_year + 1, 7, 31).date()
+            school_year_start_datetime = datetime(start_year, 8, 1)
+            school_year_end_datetime = datetime(start_year + 1, 7, 31, 23, 59, 59)
+            
+            # Helper: check if assessment dates fall within school year
+            def assessment_in_school_year():
+                return or_(
+                    and_(
+                        ProjectAssessment.published_at.isnot(None),
+                        ProjectAssessment.published_at >= school_year_start_datetime,
+                        ProjectAssessment.published_at <= school_year_end_datetime
+                    ),
+                    and_(
+                        ProjectAssessment.published_at.is_(None),
+                        ProjectAssessment.created_at >= school_year_start_datetime,
+                        ProjectAssessment.created_at <= school_year_end_datetime
+                    )
+                )
             
             # Filter by Project start_date if available, otherwise fall back to assessment dates
             query = query.filter(
@@ -262,41 +279,19 @@ def get_project_overview_list(
                     and_(
                         Project.id.isnot(None),
                         Project.start_date.isnot(None),
-                        Project.start_date >= school_year_start,
-                        Project.start_date <= school_year_end
+                        Project.start_date >= school_year_start_date,
+                        Project.start_date <= school_year_end_date
                     ),
-                    # Case 2: Projects exist but no start_date - use assessment published_at
+                    # Case 2: Projects exist but no start_date - use assessment dates
                     and_(
                         Project.id.isnot(None),
                         Project.start_date.is_(None),
-                        or_(
-                            and_(
-                                ProjectAssessment.published_at.isnot(None),
-                                ProjectAssessment.published_at >= datetime(start_year, 8, 1),
-                                ProjectAssessment.published_at <= datetime(start_year + 1, 7, 31, 23, 59, 59)
-                            ),
-                            and_(
-                                ProjectAssessment.published_at.is_(None),
-                                ProjectAssessment.created_at >= datetime(start_year, 8, 1),
-                                ProjectAssessment.created_at <= datetime(start_year + 1, 7, 31, 23, 59, 59)
-                            )
-                        )
+                        assessment_in_school_year()
                     ),
-                    # Case 3: No Project at all - use assessment published_at or created_at
+                    # Case 3: No Project at all - use assessment dates
                     and_(
                         Project.id.is_(None),
-                        or_(
-                            and_(
-                                ProjectAssessment.published_at.isnot(None),
-                                ProjectAssessment.published_at >= datetime(start_year, 8, 1),
-                                ProjectAssessment.published_at <= datetime(start_year + 1, 7, 31, 23, 59, 59)
-                            ),
-                            and_(
-                                ProjectAssessment.published_at.is_(None),
-                                ProjectAssessment.created_at >= datetime(start_year, 8, 1),
-                                ProjectAssessment.created_at <= datetime(start_year + 1, 7, 31, 23, 59, 59)
-                            )
-                        )
+                        assessment_in_school_year()
                     )
                 )
             )
