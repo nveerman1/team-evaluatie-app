@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+pydantic-settings
+python-multipart
+sqlalchemy
+psycopg2-binary
+alembic
+passlib[argon2]
+pyjwt
+cryptography
+redis
+rq
+boto3
+pydantic[email]
+email-validator
+requests
+msal>=1.31.0

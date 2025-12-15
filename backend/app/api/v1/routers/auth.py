@@ -10,7 +10,6 @@ from app.api.v1.schemas.auth import UserRead, AzureAuthResponse
 from app.infra.db.models import User, School
 from app.core.azure_ad import azure_ad_authenticator
 from app.core.security import create_access_token
-from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -32,10 +31,10 @@ def azure_login(
 ):
     """
     Initiate Azure AD OAuth authentication flow.
-    
+
     Redirects user to Microsoft login page.
     After successful authentication, user will be redirected back to /auth/azure/callback.
-    
+
     Args:
         school_id: School ID to associate the user with after authentication
     """
@@ -43,16 +42,16 @@ def azure_login(
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Azure AD authentication is not configured. Please set AZURE_AD_CLIENT_ID, "
-                   "AZURE_AD_TENANT_ID, and AZURE_AD_CLIENT_SECRET environment variables."
+            "AZURE_AD_TENANT_ID, and AZURE_AD_CLIENT_SECRET environment variables.",
         )
-    
+
     # Generate state for CSRF protection, include school_id
     state = f"{school_id}:{secrets.token_urlsafe(32)}"
-    
+
     result = azure_ad_authenticator.get_authorization_url(state=state)
-    
+
     logger.info(f"Initiating Azure AD login for school_id={school_id}")
-    
+
     return RedirectResponse(url=result["auth_url"])
 
 
@@ -64,23 +63,23 @@ def azure_callback(
 ):
     """
     Handle Azure AD OAuth callback.
-    
+
     This endpoint:
     1. Exchanges authorization code for access token
     2. Retrieves user profile from Microsoft Graph API
     3. Validates user email domain (if configured)
     4. Creates or updates user in database
     5. Issues JWT token for application authentication
-    
+
     Returns:
         JWT access token and user information
     """
     if not azure_ad_authenticator.enabled:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Azure AD authentication is not configured"
+            detail="Azure AD authentication is not configured",
         )
-    
+
     # Extract school_id from state
     try:
         school_id_str, _ = state.split(":", 1)
@@ -88,46 +87,43 @@ def azure_callback(
     except (ValueError, AttributeError):
         logger.error(f"Invalid state parameter: {state}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid state parameter"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid state parameter"
         )
-    
+
     # Verify school exists
     school = db.query(School).filter(School.id == school_id).first()
     if not school:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"School with id {school_id} not found"
+            detail=f"School with id {school_id} not found",
         )
-    
+
     # Exchange code for token
     token_response = azure_ad_authenticator.acquire_token_by_auth_code(code)
     access_token = token_response.get("access_token")
-    
+
     if not access_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Failed to obtain access token"
+            detail="Failed to obtain access token",
         )
-    
+
     # Get user profile
     profile = azure_ad_authenticator.get_user_profile(access_token)
-    
+
     # Provision or update user
     user = azure_ad_authenticator.provision_or_update_user(db, profile, school_id)
-    
+
     # Create JWT token with role claim
     jwt_token = create_access_token(
-        sub=user.email,
-        role=user.role,
-        school_id=user.school_id
+        sub=user.email, role=user.role, school_id=user.school_id
     )
-    
+
     logger.info(
         f"Azure AD authentication successful for user {user.email}, "
         f"school_id={school_id}, role={user.role}"
     )
-    
+
     return {
         "access_token": jwt_token,
         "token_type": "bearer",
@@ -138,5 +134,5 @@ def azure_callback(
             "role": user.role,
             "school_id": user.school_id,
             "class_name": user.class_name,
-        }
+        },
     }

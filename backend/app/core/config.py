@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "CHANGE_ME"  # overschrijven via env
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     JWT_ALGORITHM: str = "HS256"
-    
+
     # Azure AD OAuth Configuration
     AZURE_AD_CLIENT_ID: str = ""
     AZURE_AD_TENANT_ID: str = ""
@@ -47,27 +47,29 @@ class Settings(BaseSettings):
             # Voorbeeld: "http://localhost:3000,https://example.com"
             return [item.strip() for item in v.split(",") if item.strip()]
         return v
-    
+
     @field_validator("AZURE_AD_SCOPES", mode="before")
     @classmethod
     def split_scopes(cls, v):
         if isinstance(v, str):
             return [item.strip() for item in v.split(",") if item.strip()]
         return v
-    
+
     @field_validator("AZURE_AD_ALLOWED_DOMAINS", mode="before")
     @classmethod
     def split_domains(cls, v):
         if isinstance(v, str):
             return [item.strip() for item in v.split(",") if item.strip()]
         return v
-    
+
     @field_validator("AZURE_AD_AUTHORITY", mode="before")
     @classmethod
     def set_authority(cls, v, info):
         # If authority is not set, construct it from tenant_id
         if not v and info.data.get("AZURE_AD_TENANT_ID"):
-            return f"https://login.microsoftonline.com/{info.data['AZURE_AD_TENANT_ID']}"
+            return (
+                f"https://login.microsoftonline.com/{info.data['AZURE_AD_TENANT_ID']}"
+            )
         return v
 
     # Ollama instellingen
