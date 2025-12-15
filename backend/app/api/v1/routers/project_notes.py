@@ -549,7 +549,7 @@ async def create_note(
     if (
         data.note_type == "team"
         and not data.team_id
-        and not data.metadata.get("team_number")
+        and not (data.metadata and data.metadata.get("team_number"))
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

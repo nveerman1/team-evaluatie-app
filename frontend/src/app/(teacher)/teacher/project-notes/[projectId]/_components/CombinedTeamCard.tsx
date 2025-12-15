@@ -123,7 +123,8 @@ export function CombinedTeamCard({
       
       await projectNotesService.createNote(contextId, {
         note_type: isStudentNote ? "student" : "team",
-        // team_id is null for project-based teams (we use team_number in metadata instead)
+        // For project-based teams, team_id is null (we use team_number in metadata instead)
+        // For student notes, team_id is also null
         team_id: null,
         student_id: isStudentNote ? selectedStudentId : null,
         text: note,
@@ -134,7 +135,7 @@ export function CombinedTeamCard({
         is_portfolio_evidence: false,
         metadata: { 
           omza_tags: omzaTags,
-          // Store team_number for project-based teams
+          // Store team_number for team notes in project-based contexts
           ...(isStudentNote ? {} : { team_number: team.id })
         },
       });
