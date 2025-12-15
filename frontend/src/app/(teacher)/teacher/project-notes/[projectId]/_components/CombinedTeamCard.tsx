@@ -8,6 +8,7 @@ import { projectNotesService } from "@/services";
 
 interface CombinedTeamCardProps {
   contextId: number;
+  hasProjectId: boolean;  // Whether the context is linked to a project
   team: TeamInfo;
   students: StudentInfo[];
   notes: ProjectNote[];
@@ -48,6 +49,7 @@ const OMZA_CATEGORIES = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"
 
 export function CombinedTeamCard({
   contextId,
+  hasProjectId,
   team,
   students,
   notes,
@@ -123,10 +125,11 @@ export function CombinedTeamCard({
       
       await projectNotesService.createNote(contextId, {
         note_type: isStudentNote ? "student" : "team",
-        // For team notes in project contexts, use project_team_id (team.id is now ProjectTeam.id)
+        // For project contexts, use project_team_id (team.id is ProjectTeam.id)
+        // For non-project contexts, use team_id (team.id is team_number)
         // For student notes, both are null
-        team_id: null,  // Legacy field - not used
-        project_team_id: isStudentNote ? null : team.id,
+        team_id: !isStudentNote && !hasProjectId ? team.id : null,
+        project_team_id: !isStudentNote && hasProjectId ? team.id : null,
         student_id: isStudentNote ? selectedStudentId : null,
         text: note,
         tags: [],
