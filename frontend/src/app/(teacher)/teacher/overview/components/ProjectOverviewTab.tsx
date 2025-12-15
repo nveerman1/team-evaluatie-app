@@ -8,11 +8,7 @@ import {
   ChevronUp,
   X,
   TrendingUp,
-  Brain,
-  BarChart3,
   FolderOpen,
-  Award,
-  MessageSquare,
   ExternalLink,
 } from "lucide-react";
 import { Line } from "react-chartjs-2";
@@ -30,8 +26,9 @@ import { projectOverviewService } from "@/services/project-overview.service";
 import type {
   ProjectOverviewItem,
   CategoryTrendDataPoint,
-  AiSummary,
 } from "@/services/project-overview.service";
+import { courseService } from "@/services/course.service";
+import type { CourseLite } from "@/dtos/course.dto";
 
 // Register Chart.js components
 ChartJS.register(
@@ -63,29 +60,20 @@ type SortOrder = "asc" | "desc";
    CONSTANTS
    ========================================= */
 
-const COURSES = [
-  { id: "", name: "Alle vakken" },
-  { id: "1", name: "Informatica" },
-  { id: "2", name: "Economie" },
-  { id: "3", name: "Wiskunde" },
-];
-
-const PERIODS = ["Alle periodes", "Q1", "Q2", "Q3", "Q4"];
+const PERIODS = ["Alle periodes", "P1", "P2", "P3", "P4"];
 
 const SCHOOL_YEARS = ["2024-2025", "2023-2024"];
 
+// Default color palette for categories - will be used for any categories
 const CATEGORY_COLORS: Record<string, string> = {
   projectproces: "#3b82f6", // blue
   eindresultaat: "#10b981", // green
   communicatie: "#f59e0b", // amber
   samenwerking: "#8b5cf6", // purple
-};
-
-const CATEGORY_LABELS: Record<string, string> = {
-  projectproces: "Projectproces",
-  eindresultaat: "Eindresultaat",
-  communicatie: "Communicatie",
-  samenwerking: "Samenwerking",
+  kwaliteit: "#ec4899", // pink
+  planning: "#14b8a6", // teal
+  documentatie: "#f97316", // orange
+  presentatie: "#6366f1", // indigo
 };
 
 /* =========================================
@@ -134,47 +122,9 @@ function useProjectOverviewData(filters: ProjectOverviewFilters) {
   return { projects, trendData, loading, error, refresh: fetchData };
 }
 
-function useAiSummaryData(filters: ProjectOverviewFilters) {
-  const [aiSummary, setAiSummary] = useState<AiSummary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchAiSummary = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // Call the real API endpoint
-      const response = await projectOverviewService.getAiSummary({
-        schoolYear: filters.schoolYear,
-        courseId: filters.courseId,
-        period: filters.period,
-      });
-      setAiSummary(response.summary);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Fout bij het laden van AI-samenvatting");
-    } finally {
-      setLoading(false);
-    }
-  }, [filters.courseId, filters.period, filters.schoolYear]);
-
-  useEffect(() => {
-    fetchAiSummary();
-  }, [fetchAiSummary]);
-
-  return { aiSummary, loading, error };
-}
-
 /* =========================================
    SKELETON COMPONENTS
    ========================================= */
-
-function KpiSkeleton() {
-  return (
-    <div className="animate-pulse">
-      <div className="h-24 bg-gray-200 rounded-xl"></div>
-    </div>
-  );
-}
 
 function TableSkeleton() {
   return (
@@ -192,128 +142,6 @@ function ChartSkeleton() {
   return (
     <div className="animate-pulse">
       <div className="h-64 bg-gray-200 rounded-lg"></div>
-    </div>
-  );
-}
-
-function TextSkeleton() {
-  return (
-    <div className="animate-pulse space-y-3">
-      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-      <div className="h-4 bg-gray-200 rounded w-full"></div>
-      <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-    </div>
-  );
-}
-
-/* =========================================
-   KPI CARDS COMPONENT
-   ========================================= */
-
-interface KpiCardsProps {
-  projects: ProjectOverviewItem[];
-  loading: boolean;
-}
-
-function KpiCards({ projects, loading }: KpiCardsProps) {
-  const kpis = useMemo(() => {
-    const completedProjects = projects.filter((p) => p.status === "completed");
-    const projectsWithScores = completedProjects.filter((p) => p.averageScoreOverall !== null);
-
-    // Calculate overall average
-    const avgOverall =
-      projectsWithScores.length > 0
-        ? projectsWithScores.reduce((sum, p) => sum + (p.averageScoreOverall || 0), 0) /
-          projectsWithScores.length
-        : null;
-
-    // Count completed assessments
-    const completedCount = completedProjects.length;
-
-    // Find most common improvement point (AI-derived) - mock for now
-    // TODO: This should come from AI analysis endpoint
-    const mostCommonImprovement = "Projectplanning";
-
-    // Find most assessed category
-    const categoryCounts: Record<string, number> = {};
-    projectsWithScores.forEach((p) => {
-      Object.keys(p.averageScoresByCategory).forEach((cat) => {
-        categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
-      });
-    });
-    const mostAssessedCategory = Object.entries(categoryCounts).sort(
-      ([, a], [, b]) => b - a
-    )[0]?.[0];
-
-    return {
-      avgOverall,
-      completedCount,
-      mostCommonImprovement,
-      mostAssessedCategory: mostAssessedCategory
-        ? CATEGORY_LABELS[mostAssessedCategory] || mostAssessedCategory
-        : "—",
-    };
-  }, [projects]);
-
-  if (loading) {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiSkeleton />
-        <KpiSkeleton />
-        <KpiSkeleton />
-        <KpiSkeleton />
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {/* Average Score Card */}
-      <div className="bg-slate-50 rounded-xl p-4 border border-gray-200">
-        <div className="flex items-center gap-2 mb-2">
-          <BarChart3 className="w-5 h-5 text-blue-600" />
-          <span className="text-sm text-gray-600">Gem. projectscores</span>
-        </div>
-        <div className="text-2xl font-bold text-gray-900">
-          {kpis.avgOverall !== null ? kpis.avgOverall.toFixed(1) : "—"}
-          <span className="text-lg font-normal text-gray-500"> / 10</span>
-        </div>
-        <p className="text-xs text-gray-500 mt-1">Gemiddelde over alle projecten</p>
-      </div>
-
-      {/* Completed Assessments Card */}
-      <div className="bg-slate-50 rounded-xl p-4 border border-gray-200">
-        <div className="flex items-center gap-2 mb-2">
-          <Award className="w-5 h-5 text-green-600" />
-          <span className="text-sm text-gray-600">Afgeronde beoordelingen</span>
-        </div>
-        <div className="text-2xl font-bold text-gray-900">{kpis.completedCount}</div>
-        <p className="text-xs text-gray-500 mt-1">Projectbeoordelingen afgerond</p>
-      </div>
-
-      {/* Most Common Improvement Card */}
-      <div className="bg-slate-50 rounded-xl p-4 border border-gray-200">
-        <div className="flex items-center gap-2 mb-2">
-          <Brain className="w-5 h-5 text-amber-600" />
-          <span className="text-sm text-gray-600">Verbeterpunt (AI)</span>
-        </div>
-        <div className="text-lg font-bold text-gray-900 truncate">
-          {kpis.mostCommonImprovement}
-        </div>
-        <p className="text-xs text-gray-500 mt-1">Meest voorkomend verbeterpunt</p>
-      </div>
-
-      {/* Most Assessed Category Card */}
-      <div className="bg-slate-50 rounded-xl p-4 border border-gray-200">
-        <div className="flex items-center gap-2 mb-2">
-          <FolderOpen className="w-5 h-5 text-purple-600" />
-          <span className="text-sm text-gray-600">Meest beoordeeld</span>
-        </div>
-        <div className="text-lg font-bold text-gray-900 truncate">
-          {kpis.mostAssessedCategory}
-        </div>
-        <p className="text-xs text-gray-500 mt-1">Meest beoordeelde categorie</p>
-      </div>
     </div>
   );
 }
@@ -681,24 +509,45 @@ interface CategoryTrendChartProps {
 function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
+  // Get all unique categories from trend data
+  const allCategories = useMemo(() => {
+    const categoriesSet = new Set<string>();
+    trendData.forEach((d) => {
+      Object.keys(d.scores).forEach((cat) => categoriesSet.add(cat));
+    });
+    return Array.from(categoriesSet);
+  }, [trendData]);
+
+  // Assign colors to categories dynamically
+  const getCategoryColor = (category: string, index: number) => {
+    if (CATEGORY_COLORS[category]) {
+      return CATEGORY_COLORS[category];
+    }
+    // Fallback colors for unknown categories
+    const fallbackColors = ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316", "#6366f1"];
+    return fallbackColors[index % fallbackColors.length];
+  };
+
   const chartData = useMemo(() => {
     const labels = trendData.map((d) => d.projectLabel);
-    const categories = Object.keys(CATEGORY_COLORS);
 
-    const datasets = categories
+    const datasets = allCategories
       .filter((cat) => selectedCategory === "all" || selectedCategory === cat)
-      .map((cat) => ({
-        label: CATEGORY_LABELS[cat] || cat,
-        data: trendData.map((d) => d.scores[cat] || null),
-        borderColor: CATEGORY_COLORS[cat],
-        backgroundColor: CATEGORY_COLORS[cat] + "40",
-        tension: 0.3,
-        pointRadius: 4,
-        pointHoverRadius: 6,
-      }));
+      .map((cat, index) => {
+        const color = getCategoryColor(cat, index);
+        return {
+          label: cat.charAt(0).toUpperCase() + cat.slice(1), // Capitalize first letter
+          data: trendData.map((d) => d.scores[cat] || null),
+          borderColor: color,
+          backgroundColor: color + "40",
+          tension: 0.3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+        };
+      });
 
     return { labels, datasets };
-  }, [trendData, selectedCategory]);
+  }, [trendData, selectedCategory, allCategories]);
 
   const chartOptions = {
     responsive: true,
@@ -790,17 +639,17 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
         >
           Alle categorieën
         </button>
-        {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+        {allCategories.map((category) => (
           <button
-            key={key}
-            onClick={() => setSelectedCategory(key)}
+            key={category}
+            onClick={() => setSelectedCategory(category)}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              selectedCategory === key
+              selectedCategory === category
                 ? "bg-gray-900 text-white"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            {label}
+            {category.charAt(0).toUpperCase() + category.slice(1)}
           </button>
         ))}
       </div>
@@ -832,77 +681,6 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
 }
 
 /* =========================================
-   AI SUMMARY SECTION COMPONENT
-   ========================================= */
-
-interface AiSummarySectionProps {
-  filters: ProjectOverviewFilters;
-}
-
-function AiSummarySection({ filters }: AiSummarySectionProps) {
-  const { aiSummary, loading, error } = useAiSummaryData(filters);
-
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-        <p className="text-sm">{error}</p>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return <TextSkeleton />;
-  }
-
-  if (!aiSummary) {
-    return (
-      <div className="bg-gray-50 rounded-lg p-6 text-center text-gray-500">
-        <Brain className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-        <p className="text-sm">Nog geen AI-samenvatting beschikbaar</p>
-        <p className="text-xs mt-1">
-          Zodra er voldoende feedback is verzameld, verschijnt hier een samenvatting.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Sterke punten */}
-        <div className="bg-green-50 rounded-lg p-4">
-          <h4 className="text-sm font-semibold text-green-800 mb-2">Sterke punten</h4>
-          <ul className="list-disc list-inside text-sm text-green-700 space-y-1">
-            {aiSummary.sterkePunten.map((punt, idx) => (
-              <li key={idx}>{punt}</li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Verbeterpunten */}
-        <div className="bg-amber-50 rounded-lg p-4">
-          <h4 className="text-sm font-semibold text-amber-800 mb-2">Verbeterpunten</h4>
-          <ul className="list-disc list-inside text-sm text-amber-700 space-y-1">
-            {aiSummary.verbeterPunten.map((punt, idx) => (
-              <li key={idx}>{punt}</li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
-      {/* Algemene trend */}
-      <div className="bg-purple-50 rounded-lg p-4">
-        <h4 className="text-sm font-semibold text-purple-800 mb-2 flex items-center gap-2">
-          <MessageSquare className="w-4 h-4" />
-          Algemene trend
-        </h4>
-        <p className="text-sm text-purple-700">{aiSummary.algemeneTrend}</p>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================
    MAIN COMPONENT: PROJECT OVERVIEW TAB
    ========================================= */
 
@@ -916,8 +694,25 @@ export default function ProjectOverviewTab() {
   });
 
   const [selectedProject, setSelectedProject] = useState<ProjectOverviewItem | null>(null);
+  const [courses, setCourses] = useState<CourseLite[]>([]);
+  const [coursesLoading, setCoursesLoading] = useState(true);
 
   const { projects, trendData, loading, error } = useProjectOverviewData(filters);
+
+  // Fetch courses on mount
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const coursesData = await courseService.listCourses({ is_active: true });
+        setCourses(coursesData.items || []);
+      } catch (e) {
+        console.error("Failed to fetch courses:", e);
+      } finally {
+        setCoursesLoading(false);
+      }
+    };
+    fetchCourses();
+  }, []);
 
   const handleFilterChange = <K extends keyof ProjectOverviewFilters>(
     key: K,
@@ -973,8 +768,10 @@ export default function ProjectOverviewTab() {
               className="px-3 py-2 border rounded-lg text-sm"
               value={filters.courseId}
               onChange={(e) => handleFilterChange("courseId", e.target.value)}
+              disabled={coursesLoading}
             >
-              {COURSES.map((course) => (
+              <option value="">Alle vakken</option>
+              {courses.map((course) => (
                 <option key={course.id} value={course.id}>
                   {course.name}
                 </option>
@@ -999,9 +796,6 @@ export default function ProjectOverviewTab() {
           </div>
         </div>
       </div>
-
-      {/* KPI Cards */}
-      <KpiCards projects={projects} loading={loading} />
 
       {/* Project Table */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
@@ -1030,15 +824,6 @@ export default function ProjectOverviewTab() {
           Gemiddelde scores per categorie over meerdere projecten
         </p>
         <CategoryTrendChart trendData={trendData} loading={loading} />
-      </div>
-
-      {/* AI Summary Section */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Brain className="w-5 h-5 text-purple-600" />
-          AI-samenvatting van feedback
-        </h3>
-        <AiSummarySection filters={filters} />
       </div>
 
       {/* Project Detail Drawer */}

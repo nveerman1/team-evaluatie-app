@@ -141,25 +141,56 @@ def _calculate_category_averages(
     return category_averages
 
 
-def _get_period_label(published_at: Optional[datetime]) -> str:
+def _get_period_label(project: Optional[Project], fallback_date: Optional[datetime] = None) -> str:
     """
-    Generate period label from published date (e.g., Q1 2025)
+    Generate period label from project dates (e.g., P1 2024-2025)
+    Dutch school year typically runs: P1=Aug-Oct, P2=Nov-Jan, P3=Feb-Apr, P4=May-Jul
     """
-    if not published_at:
+    # Use project start_date if available, otherwise use fallback
+    date_to_use = None
+    if project and project.start_date:
+        date_to_use = project.start_date
+    elif fallback_date:
+        date_to_use = fallback_date
+    
+    if not date_to_use:
         return "Onbekend"
     
-    # Determine quarter based on month
-    month = published_at.month
-    if month <= 3:
-        quarter = "Q1"
-    elif month <= 6:
-        quarter = "Q2"
-    elif month <= 9:
-        quarter = "Q3"
-    else:
-        quarter = "Q4"
+    # Determine period based on month
+    month = date_to_use.month
+    year = date_to_use.year
     
-    return f"{quarter} {published_at.year}"
+    # Determine which period and school year
+    if month >= 8:  # August onwards
+        period = "P1" if month <= 10 else "P2"
+        school_year_start = year
+    else:  # Before August
+        if month <= 1:
+            period = "P2"
+            school_year_start = year - 1
+        elif month <= 4:
+            period = "P3"
+            school_year_start = year - 1
+        else:  # May-July
+            period = "P4"
+            school_year_start = year - 1
+    
+    return f"{period} {school_year_start}-{school_year_start + 1}"
+
+
+def _determine_school_year_from_date(date: Optional[datetime]) -> str:
+    """
+    Determine school year string from a date (e.g., 2024-2025)
+    School year starts in August
+    """
+    if not date:
+        return f"{datetime.now().year}-{datetime.now().year + 1}"
+    
+    year = date.year
+    if date.month >= 8:
+        return f"{year}-{year + 1}"
+    else:
+        return f"{year - 1}-{year}"
 
 
 @router.get("/projects", response_model=ProjectOverviewListResponse)
@@ -190,36 +221,52 @@ def get_project_overview_list(
     ).outerjoin(
         Project, ProjectAssessment.project_id == Project.id
     ).filter(
-        ProjectAssessment.school_id == school_id
+        ProjectAssessment.school_id == school_id,
+        # Only show published assessments by default
+        ProjectAssessment.status == "published"
     )
     
     # Apply filters
     if course_id:
         query = query.filter(Group.course_id == course_id)
     
-    if status_filter and status_filter != "all":
-        if status_filter == "completed":
-            query = query.filter(ProjectAssessment.status == "published")
-        elif status_filter == "active":
+    # Override status filter if explicitly requested
+    if status_filter and status_filter != "all" and status_filter != "completed":
+        if status_filter == "active":
             query = query.filter(ProjectAssessment.status == "draft")
     
-    # School year filter
+    # School year filter - use Project dates if available
     if school_year:
         try:
             start_year = int(school_year.split("-")[0])
             # School year typically runs from August to July
-            start_date = datetime(start_year, 8, 1)
-            end_date = datetime(start_year + 1, 7, 31, 23, 59, 59)
+            school_year_start = datetime(start_year, 8, 1).date()
+            school_year_end = datetime(start_year + 1, 7, 31).date()
+            
+            # Filter by Project start_date if available, otherwise fall back to assessment dates
             query = query.filter(
                 or_(
+                    # Projects with start_date in the school year
                     and_(
-                        ProjectAssessment.published_at >= start_date,
-                        ProjectAssessment.published_at <= end_date
+                        Project.start_date.isnot(None),
+                        Project.start_date >= school_year_start,
+                        Project.start_date <= school_year_end
                     ),
+                    # Projects without start_date - use assessment published_at
                     and_(
-                        ProjectAssessment.published_at.is_(None),
-                        ProjectAssessment.created_at >= start_date,
-                        ProjectAssessment.created_at <= end_date
+                        Project.start_date.is_(None),
+                        or_(
+                            and_(
+                                ProjectAssessment.published_at.isnot(None),
+                                ProjectAssessment.published_at >= datetime(start_year, 8, 1),
+                                ProjectAssessment.published_at <= datetime(start_year + 1, 7, 31, 23, 59, 59)
+                            ),
+                            and_(
+                                ProjectAssessment.published_at.is_(None),
+                                ProjectAssessment.created_at >= datetime(start_year, 8, 1),
+                                ProjectAssessment.created_at <= datetime(start_year + 1, 7, 31, 23, 59, 59)
+                            )
+                        )
                     )
                 )
             )
@@ -251,8 +298,8 @@ def get_project_overview_list(
         avg_score = _calculate_project_average_score(db, assessment.id, assessment.rubric_id)
         category_scores = _calculate_category_averages(db, assessment.id, assessment.rubric_id)
         
-        # Get period label
-        period_label = _get_period_label(assessment.published_at or assessment.created_at)
+        # Get period label using Project dates if available
+        period_label = _get_period_label(project, assessment.published_at or assessment.created_at)
         
         # Apply period filter
         if period and period != "Alle periodes":
@@ -264,9 +311,12 @@ def get_project_overview_list(
             ProjectAssessmentScore.assessment_id == assessment.id
         ).scalar() or 1
         
-        # Determine year
-        date_for_year = assessment.published_at or assessment.created_at
-        year = date_for_year.year if date_for_year else datetime.now().year
+        # Determine year from period_label or project dates
+        if project and project.start_date:
+            year = project.start_date.year
+        else:
+            date_for_year = assessment.published_at or assessment.created_at
+            year = date_for_year.year if date_for_year else datetime.now().year
         
         # Determine status
         status = "completed" if assessment.status == "published" else "active"
@@ -293,36 +343,39 @@ def get_project_overview_list(
 
 def _parse_period_for_sorting(period_label: str) -> tuple:
     """
-    Parse period label (e.g., 'Q1 2025') to a sortable tuple (year, quarter).
-    Returns (SORT_LAST_YEAR, SORT_LAST_QUARTER) for unparseable strings to sort them last.
+    Parse period label (e.g., 'P1 2024-2025' or 'Q1 2025') to a sortable tuple (year, period).
+    Returns (SORT_LAST_YEAR, SORT_LAST_PERIOD) for unparseable strings to sort them last.
     """
     # Constants for sorting unparseable periods last
     SORT_LAST_YEAR = 9999
-    SORT_LAST_QUARTER = 9
+    SORT_LAST_PERIOD = 9
     
     try:
         parts = period_label.split()
         if len(parts) >= 2:
-            quarter_str = parts[0]  # e.g., "Q1"
-            year_str = parts[1]     # e.g., "2025"
+            period_str = parts[0]  # e.g., "P1" or "Q1"
+            year_str = parts[1]     # e.g., "2024-2025" or "2025"
             
-            # Extract quarter number
-            if quarter_str.startswith("Q") and quarter_str[1:].isdigit():
-                quarter = int(quarter_str[1:])
+            # Extract period number (works for both P1-P4 and Q1-Q4)
+            if (period_str.startswith("P") or period_str.startswith("Q")) and period_str[1:].isdigit():
+                period = int(period_str[1:])
             else:
-                return (SORT_LAST_YEAR, SORT_LAST_QUARTER)
+                return (SORT_LAST_YEAR, SORT_LAST_PERIOD)
             
-            # Extract year
-            if year_str.isdigit():
+            # Extract year (handle both "2024-2025" and "2025" formats)
+            if "-" in year_str:
+                # Extract start year from school year format
+                year = int(year_str.split("-")[0])
+            elif year_str.isdigit():
                 year = int(year_str)
             else:
-                return (SORT_LAST_YEAR, SORT_LAST_QUARTER)
+                return (SORT_LAST_YEAR, SORT_LAST_PERIOD)
             
-            return (year, quarter)
+            return (year, period)
     except (ValueError, IndexError):
         pass
     
-    return (SORT_LAST_YEAR, SORT_LAST_QUARTER)
+    return (SORT_LAST_YEAR, SORT_LAST_PERIOD)
 
 
 @router.get("/trends", response_model=ProjectTrendsResponse)
