@@ -26,6 +26,12 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import { projectOverviewService } from "@/services/project-overview.service";
+import type {
+  ProjectOverviewItem,
+  CategoryTrendDataPoint,
+  AiSummary,
+} from "@/services/project-overview.service";
 
 // Register Chart.js components
 ChartJS.register(
@@ -42,30 +48,6 @@ ChartJS.register(
    TYPES
    ========================================= */
 
-interface ProjectOverviewItem {
-  projectId: number;
-  projectName: string;
-  courseName: string;
-  clientName: string;
-  periodLabel: string;
-  year: number;
-  numTeams: number;
-  averageScoreOverall: number | null;
-  averageScoresByCategory: Record<string, number>;
-  status: "active" | "completed";
-}
-
-interface CategoryTrendData {
-  projectLabel: string;
-  scores: Record<string, number>;
-}
-
-interface AiSummary {
-  sterkePunten: string[];
-  verbeterpunten: string[];
-  algemeneTrend: string;
-}
-
 interface ProjectOverviewFilters {
   schoolYear: string;
   courseId: string;
@@ -78,125 +60,8 @@ type SortField = "projectName" | "periodLabel" | "averageScoreOverall";
 type SortOrder = "asc" | "desc";
 
 /* =========================================
-   MOCK DATA
+   CONSTANTS
    ========================================= */
-
-const MOCK_PROJECTS: ProjectOverviewItem[] = [
-  {
-    projectId: 1,
-    projectName: "Webshop Project",
-    courseName: "Informatica",
-    clientName: "TechStore BV",
-    periodLabel: "Q1 2025",
-    year: 2025,
-    numTeams: 5,
-    averageScoreOverall: 7.2,
-    averageScoresByCategory: {
-      projectproces: 7.5,
-      eindresultaat: 7.0,
-      communicatie: 7.1,
-      samenwerking: 7.4,
-    },
-    status: "completed",
-  },
-  {
-    projectId: 2,
-    projectName: "App Ontwikkeling",
-    courseName: "Informatica",
-    clientName: "MobileFirst",
-    periodLabel: "Q2 2025",
-    year: 2025,
-    numTeams: 4,
-    averageScoreOverall: 6.8,
-    averageScoresByCategory: {
-      projectproces: 6.5,
-      eindresultaat: 7.2,
-      communicatie: 6.8,
-      samenwerking: 6.7,
-    },
-    status: "active",
-  },
-  {
-    projectId: 3,
-    projectName: "Database Ontwerp",
-    courseName: "Informatica",
-    clientName: "DataCorp",
-    periodLabel: "Q1 2025",
-    year: 2025,
-    numTeams: 6,
-    averageScoreOverall: 7.8,
-    averageScoresByCategory: {
-      projectproces: 8.0,
-      eindresultaat: 7.5,
-      communicatie: 7.8,
-      samenwerking: 8.0,
-    },
-    status: "completed",
-  },
-  {
-    projectId: 4,
-    projectName: "Marketing Campagne",
-    courseName: "Economie",
-    clientName: "BrandBoost",
-    periodLabel: "Q4 2024",
-    year: 2024,
-    numTeams: 3,
-    averageScoreOverall: 6.5,
-    averageScoresByCategory: {
-      projectproces: 6.2,
-      eindresultaat: 6.8,
-      communicatie: 6.5,
-      samenwerking: 6.5,
-    },
-    status: "completed",
-  },
-  {
-    projectId: 5,
-    projectName: "Website Redesign",
-    courseName: "Informatica",
-    clientName: "WebAgency",
-    periodLabel: "Q2 2025",
-    year: 2025,
-    numTeams: 4,
-    averageScoreOverall: null,
-    averageScoresByCategory: {},
-    status: "active",
-  },
-];
-
-const MOCK_TREND_DATA: CategoryTrendData[] = [
-  {
-    projectLabel: "Q4 2024",
-    scores: { projectproces: 6.2, eindresultaat: 6.8, communicatie: 6.5, samenwerking: 6.5 },
-  },
-  {
-    projectLabel: "Q1 2025 - DB",
-    scores: { projectproces: 8.0, eindresultaat: 7.5, communicatie: 7.8, samenwerking: 8.0 },
-  },
-  {
-    projectLabel: "Q1 2025 - Web",
-    scores: { projectproces: 7.5, eindresultaat: 7.0, communicatie: 7.1, samenwerking: 7.4 },
-  },
-  {
-    projectLabel: "Q2 2025",
-    scores: { projectproces: 6.5, eindresultaat: 7.2, communicatie: 6.8, samenwerking: 6.7 },
-  },
-];
-
-const MOCK_AI_SUMMARY: AiSummary = {
-  sterkePunten: [
-    "Goede samenwerking binnen teams",
-    "Hoge kwaliteit eindresultaten in technische projecten",
-    "Effectieve communicatie met opdrachtgevers",
-  ],
-  verbeterpunten: [
-    "Projectplanning kan strakker",
-    "Documentatie vaak onvolledig",
-    "Meer aandacht voor tussentijdse evaluaties",
-  ],
-  algemeneTrend:
-    "Over het algemeen laten projecten een positieve trend zien, met name op het gebied van samenwerking en eindresultaat. Er is ruimte voor verbetering in het projectproces, met specifieke aandacht voor planning en documentatie.",
-};
 
 const COURSES = [
   { id: "", name: "Alle vakken" },
@@ -229,7 +94,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 function useProjectOverviewData(filters: ProjectOverviewFilters) {
   const [projects, setProjects] = useState<ProjectOverviewItem[]>([]);
-  const [trendData, setTrendData] = useState<CategoryTrendData[]>([]);
+  const [trendData, setTrendData] = useState<CategoryTrendDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -237,51 +102,24 @@ function useProjectOverviewData(filters: ProjectOverviewFilters) {
     setLoading(true);
     setError(null);
     try {
-      // TODO: Replace with actual API calls
-      // GET /api/teacher/overview/projects
-      // GET /api/teacher/overview/projects/trends
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Call the real API endpoints
+      const [projectsResponse, trendsResponse] = await Promise.all([
+        projectOverviewService.getProjects({
+          schoolYear: filters.schoolYear,
+          courseId: filters.courseId,
+          period: filters.period,
+          statusFilter: filters.statusFilter,
+          searchQuery: filters.searchQuery,
+        }),
+        projectOverviewService.getTrends({
+          schoolYear: filters.schoolYear,
+          courseId: filters.courseId,
+          period: filters.period,
+        }),
+      ]);
 
-      let filteredProjects = [...MOCK_PROJECTS];
-
-      // Apply filters
-      if (filters.courseId) {
-        const courseName = COURSES.find((c) => c.id === filters.courseId)?.name;
-        if (courseName) {
-          filteredProjects = filteredProjects.filter((p) => p.courseName === courseName);
-        }
-      }
-
-      if (filters.period && filters.period !== "Alle periodes") {
-        filteredProjects = filteredProjects.filter((p) =>
-          p.periodLabel.includes(filters.period)
-        );
-      }
-
-      if (filters.schoolYear) {
-        const [startYear] = filters.schoolYear.split("-").map(Number);
-        filteredProjects = filteredProjects.filter(
-          (p) => p.year === startYear || p.year === startYear + 1
-        );
-      }
-
-      if (filters.statusFilter && filters.statusFilter !== "all") {
-        filteredProjects = filteredProjects.filter(
-          (p) => p.status === filters.statusFilter
-        );
-      }
-
-      if (filters.searchQuery) {
-        const query = filters.searchQuery.toLowerCase();
-        filteredProjects = filteredProjects.filter(
-          (p) =>
-            p.projectName.toLowerCase().includes(query) ||
-            p.clientName.toLowerCase().includes(query)
-        );
-      }
-
-      setProjects(filteredProjects);
-      setTrendData(MOCK_TREND_DATA);
+      setProjects(projectsResponse.items);
+      setTrendData(trendsResponse.trends);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Fout bij het laden van projectgegevens");
     } finally {
@@ -305,21 +143,23 @@ function useAiSummaryData(filters: ProjectOverviewFilters) {
     setLoading(true);
     setError(null);
     try {
-      // TODO: Replace with actual API call
-      // GET /api/teacher/overview/projects/ai-summary
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      setAiSummary(MOCK_AI_SUMMARY);
+      // Call the real API endpoint
+      const response = await projectOverviewService.getAiSummary({
+        schoolYear: filters.schoolYear,
+        courseId: filters.courseId,
+        period: filters.period,
+      });
+      setAiSummary(response.summary);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Fout bij het laden van AI-samenvatting");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filters.courseId, filters.period, filters.schoolYear]);
 
   useEffect(() => {
     fetchAiSummary();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.courseId, filters.period, filters.schoolYear]);
+  }, [fetchAiSummary]);
 
   return { aiSummary, loading, error };
 }
@@ -834,7 +674,7 @@ function ProjectTable({
    ========================================= */
 
 interface CategoryTrendChartProps {
-  trendData: CategoryTrendData[];
+  trendData: CategoryTrendDataPoint[];
   loading: boolean;
 }
 
