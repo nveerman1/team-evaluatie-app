@@ -49,6 +49,7 @@ def serialize_note(note: ProjectNote, db: Session) -> dict:
         "context_id": note.context_id,
         "note_type": note.note_type,
         "team_id": note.team_id,
+        "project_team_id": note.project_team_id,
         "student_id": note.student_id,
         "text": note.text,
         "tags": note.tags,
@@ -62,14 +63,18 @@ def serialize_note(note: ProjectNote, db: Session) -> dict:
         "updated_at": note.updated_at,
     }
 
-    # Add joined data
-    if note.team_id:
+    # Add joined data - prefer project_team over legacy team
+    if note.project_team_id:
+        project_team = (
+            db.query(ProjectTeam).filter(ProjectTeam.id == note.project_team_id).first()
+        )
+        if project_team:
+            note_dict["team_name"] = f"Team {project_team.team_number}"
+        else:
+            note_dict["team_name"] = None
+    elif note.team_id:
         team = db.query(Group).filter(Group.id == note.team_id).first()
         note_dict["team_name"] = team.name if team else None
-    elif note.note_metadata and note.note_metadata.get("team_number"):
-        # For project-based teams without Group FK, use team_number from metadata
-        team_num = note.note_metadata.get("team_number")
-        note_dict["team_name"] = f"Team {team_num}"
     else:
         note_dict["team_name"] = None
 
@@ -281,6 +286,7 @@ async def get_context(
 
         # Build user_id -> project team_number mapping if context has a project
         user_team_map: dict[int, int] = {}
+        team_number_to_id_map: dict[int, int] = {}  # Map team_number to ProjectTeam.id
         if context.project_id:
             project_teams = (
                 db.query(ProjectTeam)
@@ -292,6 +298,8 @@ async def get_context(
             )
 
             for team in project_teams:
+                if team.team_number is not None:
+                    team_number_to_id_map[team.team_number] = team.id
                 members = (
                     db.query(ProjectTeamMember)
                     .filter(ProjectTeamMember.project_team_id == team.id)
@@ -324,9 +332,16 @@ async def get_context(
             member_names = [m.name for m in team_members]
             member_ids = [m.id for m in team_members]
 
+            # Get the actual ProjectTeam.id if this is a project context
+            team_id = (
+                team_number_to_id_map.get(team_num, team_num)
+                if context.project_id
+                else team_num
+            )
+
             teams.append(
                 TeamInfo(
-                    id=team_num,  # Use team_number as ID
+                    id=team_id,  # Use ProjectTeam.id for project contexts, team_number otherwise
                     name=f"Team {team_num}",
                     team_number=team_num,
                     member_count=len(member_names),
@@ -545,15 +560,11 @@ async def create_note(
         )
 
     # Validate note type requirements
-    # For team notes: either team_id (Group FK) or team_number in metadata is required
-    if (
-        data.note_type == "team"
-        and not data.team_id
-        and not (data.metadata and data.metadata.get("team_number"))
-    ):
+    # For team notes: either team_id (legacy) or project_team_id (preferred) is required
+    if data.note_type == "team" and not data.team_id and not data.project_team_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="team_id or team_number in metadata is required for team notes",
+            detail="team_id or project_team_id is required for team notes",
         )
     if data.note_type == "student" and not data.student_id:
         raise HTTPException(
@@ -565,6 +576,7 @@ async def create_note(
         context_id=context_id,
         note_type=data.note_type,
         team_id=data.team_id,
+        project_team_id=data.project_team_id,
         student_id=data.student_id,
         text=data.text,
         tags=data.tags,

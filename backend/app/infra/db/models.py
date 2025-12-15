@@ -285,7 +285,9 @@ class Subproject(Base):
     title: Mapped[str] = mapped_column(String(200), nullable=False)
 
     # Team info
-    team_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, index=True)
+    team_number: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True, index=True
+    )
 
     # Relationships
     school: Mapped["School"] = relationship()
@@ -321,9 +323,11 @@ class ProjectTeam(Base):
 
     # Snapshot of team name at time of creation
     display_name_at_time: Mapped[str] = mapped_column(String(200), nullable=False)
-    
+
     # Team number for this project (project-specific)
-    team_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, index=True)
+    team_number: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True, index=True
+    )
 
     # Version for handling team composition changes
     version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
@@ -478,7 +482,7 @@ class Evaluation(Base):
     status: Mapped[str] = mapped_column(
         String(30), default="draft"
     )  # draft|open|closed
-    
+
     # Timestamp when evaluation was closed
     closed_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
 
@@ -669,14 +673,14 @@ class ProjectAssessment(Base):
     group_id: Mapped[int] = mapped_column(
         ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    
+
     # Link to frozen project team roster
     project_team_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("project_teams.id", ondelete="RESTRICT"),
         nullable=True,
         index=True,
     )
-    
+
     rubric_id: Mapped[int] = mapped_column(
         ForeignKey("rubrics.id", ondelete="RESTRICT"), nullable=False
     )
@@ -692,9 +696,11 @@ class ProjectAssessment(Base):
     version: Mapped[Optional[str]] = mapped_column(
         String(50)
     )  # e.g., "tussentijds", "eind"
-    status: Mapped[str] = mapped_column(String(30), default="draft")  # draft|open|closed|published
+    status: Mapped[str] = mapped_column(
+        String(30), default="draft"
+    )  # draft|open|closed|published
     published_at: Mapped[Optional[datetime]] = mapped_column()
-    
+
     # Timestamp when assessment was closed
     closed_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
 
@@ -727,7 +733,7 @@ class ProjectAssessment(Base):
 class ProjectAssessmentScore(Base):
     """
     Scores for project assessment criteria.
-    
+
     A score can be either:
     - A team score: when student_id is NULL (applies to all team members)
     - An individual student override: when student_id is set (overrides team score for that student)
@@ -839,20 +845,20 @@ class CompetencyCategory(Base):
 class Competency(Base):
     """
     Competency definition (e.g., Samenwerken, Communiceren, etc.)
-    
+
     Two-tier architecture:
     1. Central (template) competencies: is_template=True, managed by admin via /admin/templates
        - subject_id IS NOT NULL (linked to subject/sectie)
        - teacher_id IS NULL
        - Can be linked to rubric criteria
        - Read-only for teachers in /teacher/competencies-beheer
-    
+
     2. Teacher-specific competencies: is_template=False, managed by teacher via /teacher/competencies-beheer
        - teacher_id IS NOT NULL (owned by specific teacher)
        - course_id optional (for course-specific competencies)
        - Cannot be linked to central rubric templates
        - Visible/editable only by the owning teacher
-       
+
     3. Shared competencies: Teacher-specific with course_id set
        - Visible to all teachers assigned to that course (read-only)
     """
@@ -868,31 +874,31 @@ class Competency(Base):
         nullable=True,
         index=True,
     )
-    
+
     # Subject linkage for central/template competencies
     subject_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("subjects.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )
-    
+
     # Teacher linkage for teacher-specific competencies
     teacher_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
     )
-    
+
     # Course linkage for teacher-specific competencies (optional - enables sharing)
     course_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("courses.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )
-    
+
     # Type indicator: True = central/template (admin managed), False = teacher-specific
     is_template: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    
+
     # Phase: "onderbouw" | "bovenbouw" (like learning objectives)
     phase: Mapped[Optional[str]] = mapped_column(String(20), nullable=True, index=True)
 
@@ -923,12 +929,17 @@ class Competency(Base):
     rubric_levels: Mapped[List["CompetencyRubricLevel"]] = relationship(
         back_populates="competency",
         order_by="CompetencyRubricLevel.level",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
     )
 
     __table_args__ = (
         # Unique per school + name + teacher (allows same name for different teachers or central vs teacher)
-        UniqueConstraint("school_id", "name", "teacher_id", name="uq_competency_name_per_school_teacher"),
+        UniqueConstraint(
+            "school_id",
+            "name",
+            "teacher_id",
+            name="uq_competency_name_per_school_teacher",
+        ),
         Index("ix_competency_school", "school_id"),
         Index("ix_competency_category_id", "category_id"),
         Index("ix_competency_subject", "subject_id"),
@@ -1331,14 +1342,14 @@ class LearningObjective(Base):
     """
     Learning objectives / eindtermen that can be linked to rubric criteria
     to track student progress per learning goal.
-    
+
     Two-tier architecture:
     1. Central (template) objectives: is_template=True, managed by admin via /admin/templates
        - subject_id IS NOT NULL (linked to subject/sectie)
        - teacher_id IS NULL
        - Can be linked to rubric criteria
        - Read-only for teachers in /teacher/learning-objectives
-    
+
     2. Teacher-specific objectives: is_template=False, managed by teacher via /teacher/learning-objectives
        - teacher_id IS NOT NULL (owned by specific teacher)
        - course_id optional (for course-specific objectives)
@@ -1350,28 +1361,28 @@ class LearningObjective(Base):
 
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
-    
+
     # Subject linkage for central/template learning objectives
     subject_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("subjects.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )
-    
+
     # Teacher linkage for teacher-specific learning objectives
     teacher_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
     )
-    
+
     # Course linkage for teacher-specific learning objectives (optional)
     course_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("courses.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )
-    
+
     # Type indicator: True = central/template (admin managed), False = teacher-specific
     is_template: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
@@ -1518,7 +1529,7 @@ class ProjectNotesContext(Base):
         ForeignKey("evaluations.id", ondelete="SET NULL"),
         index=True,
     )
-    
+
     # Link to frozen project team roster
     project_team_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("project_teams.id", ondelete="RESTRICT"),
@@ -1540,13 +1551,13 @@ class ProjectNotesContext(Base):
         onupdate=datetime.utcnow,
         nullable=False,
     )
-    
+
     # Status and closing
     status: Mapped[str] = mapped_column(
         String(30), default="draft", nullable=False
     )  # draft|open|closed
     closed_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
-    
+
     settings: Mapped[dict] = mapped_column(JSONB, default=dict)
 
     # Relationships
@@ -1589,8 +1600,15 @@ class ProjectNote(Base):
         nullable=False,
     )  # "project" | "team" | "student"
 
+    # Legacy team reference (deprecated - use project_team_id instead)
     team_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("groups.id", ondelete="CASCADE"),
+        index=True,
+    )
+    # Project team reference (new - preferred for project-based notes)
+    project_team_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("project_teams.id", ondelete="CASCADE"),
+        nullable=True,
         index=True,
     )
     student_id: Mapped[Optional[int]] = mapped_column(
@@ -1633,7 +1651,8 @@ class ProjectNote(Base):
 
     # Relationships
     context: Mapped["ProjectNotesContext"] = relationship(back_populates="notes")
-    team: Mapped[Optional["Group"]] = relationship()
+    team: Mapped[Optional["Group"]] = relationship()  # Legacy
+    project_team: Mapped[Optional["ProjectTeam"]] = relationship()  # New - preferred
     student: Mapped[Optional["User"]] = relationship(foreign_keys=[student_id])
     learning_objective: Mapped[Optional["LearningObjective"]] = relationship()
     creator: Mapped["User"] = relationship(foreign_keys=[created_by])
@@ -1641,6 +1660,7 @@ class ProjectNote(Base):
     __table_args__ = (
         Index("ix_project_note_context_type", "context_id", "note_type"),
         Index("ix_project_note_team", "team_id"),
+        Index("ix_project_note_project_team", "project_team_id"),
         Index("ix_project_note_student", "student_id"),
         Index("ix_project_note_created_at", "created_at"),
         Index("ix_project_note_omza", "omza_category"),
@@ -1672,7 +1692,9 @@ class Client(Base):
     level: Mapped[Optional[str]] = mapped_column(
         String(50)
     )  # e.g., "Bovenbouw", "Onderbouw"
-    sector: Mapped[Optional[str]] = mapped_column(String(100))  # e.g., "Vastgoed", "Zorg"
+    sector: Mapped[Optional[str]] = mapped_column(
+        String(100)
+    )  # e.g., "Vastgoed", "Zorg"
     tags: Mapped[list[str]] = mapped_column(
         ARRAY(String), default=list
     )  # e.g., ["Duurzaamheid", "Innovatie"]
@@ -1791,7 +1813,7 @@ class PeerEvaluationCriterionTemplate(Base):
     # Content
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
-    
+
     # Target level: onderbouw or bovenbouw
     target_level: Mapped[Optional[str]] = mapped_column(
         String(20), nullable=True, index=True
@@ -1803,9 +1825,7 @@ class PeerEvaluationCriterionTemplate(Base):
     )  # {"1": "description", "2": "description", ...}
 
     # Learning objectives - stored as JSON array of IDs
-    learning_objective_ids: Mapped[list] = mapped_column(
-        JSON, default=list
-    )
+    learning_objective_ids: Mapped[list] = mapped_column(JSON, default=list)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
@@ -1862,9 +1882,7 @@ class ProjectAssessmentCriterionTemplate(Base):
     )  # {"1": "description", "2": "description", ...}
 
     # Learning objectives - stored as JSON array of IDs
-    learning_objective_ids: Mapped[list] = mapped_column(
-        JSON, default=list
-    )
+    learning_objective_ids: Mapped[list] = mapped_column(JSON, default=list)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
@@ -2009,8 +2027,8 @@ class CompetencyTemplate(Base):
     # Relationships
     school: Mapped["School"] = relationship()
     subject: Mapped[Optional["Subject"]] = relationship()
-    level_descriptors: Mapped[list["CompetencyLevelDescriptorTemplate"]] = (
-        relationship(back_populates="competency_template", cascade="all, delete-orphan")
+    level_descriptors: Mapped[list["CompetencyLevelDescriptorTemplate"]] = relationship(
+        back_populates="competency_template", cascade="all, delete-orphan"
     )
     reflection_questions: Mapped[list["CompetencyReflectionQuestionTemplate"]] = (
         relationship(back_populates="competency_template", cascade="all, delete-orphan")
@@ -2104,9 +2122,7 @@ class CompetencyReflectionQuestionTemplate(Base):
     )
 
     __table_args__ = (
-        Index(
-            "ix_competency_reflection_template_competency", "competency_template_id"
-        ),
+        Index("ix_competency_reflection_template_competency", "competency_template_id"),
     )
 
 
@@ -2353,7 +2369,9 @@ class ProjectTeamExternal(Base):
         ForeignKey("projects.id", ondelete="CASCADE"), nullable=True, index=True
     )
     assessment_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("project_assessments.id", ondelete="CASCADE"), nullable=True, index=True
+        ForeignKey("project_assessments.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
     )
 
     # Team number within the group (identifies specific team, not just the course group)

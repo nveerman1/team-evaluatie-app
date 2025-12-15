@@ -89,7 +89,8 @@ class ProjectNoteCreate(BaseModel):
     """Schema for creating a new note."""
 
     note_type: str = Field(..., pattern="^(project|team|student)$")
-    team_id: Optional[int] = None  # Required if note_type == "team"
+    team_id: Optional[int] = None  # Legacy - for backwards compatibility
+    project_team_id: Optional[int] = None  # New - preferred for project-based teams
     student_id: Optional[int] = None  # Required if note_type == "student"
     text: str = Field(..., min_length=1)
     tags: List[str] = Field(default_factory=list)
@@ -120,7 +121,8 @@ class ProjectNoteOut(BaseModel):
     id: int
     context_id: int
     note_type: str
-    team_id: Optional[int]
+    team_id: Optional[int]  # Legacy
+    project_team_id: Optional[int]  # New - preferred
     team_name: Optional[str] = None  # Joined
     student_id: Optional[int]
     student_name: Optional[str] = None  # Joined

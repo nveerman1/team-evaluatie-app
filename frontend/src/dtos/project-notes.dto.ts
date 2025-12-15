@@ -60,7 +60,8 @@ export interface ProjectNotesContextDetail extends ProjectNotesContext {
 
 export interface ProjectNoteCreate {
   note_type: "project" | "team" | "student";
-  team_id?: number | null;
+  team_id?: number | null;  // Legacy - for backwards compatibility
+  project_team_id?: number | null;  // New - preferred for project-based teams
   student_id?: number | null;
   text: string;
   tags?: string[];
@@ -85,7 +86,8 @@ export interface ProjectNote {
   id: number;
   context_id: number;
   note_type: "project" | "team" | "student";
-  team_id?: number | null;
+  team_id?: number | null;  // Legacy
+  project_team_id?: number | null;  // New - preferred
   team_name?: string | null;
   student_id?: number | null;
   student_name?: string | null;
