@@ -106,7 +106,7 @@ export const projectOverviewService = {
     const params = new URLSearchParams();
 
     if (filters?.schoolYear) params.set("school_year", filters.schoolYear);
-    if (filters?.courseId) params.set("course_id", filters.courseId);
+    if (filters?.courseId && filters.courseId !== "") params.set("course_id", filters.courseId);
     if (filters?.period) params.set("period", filters.period);
     if (filters?.statusFilter) params.set("status_filter", filters.statusFilter);
     if (filters?.searchQuery) params.set("search_query", filters.searchQuery);
@@ -146,7 +146,7 @@ export const projectOverviewService = {
     const params = new URLSearchParams();
 
     if (filters?.schoolYear) params.set("school_year", filters.schoolYear);
-    if (filters?.courseId) params.set("course_id", filters.courseId);
+    if (filters?.courseId && filters.courseId !== "") params.set("course_id", filters.courseId);
     if (filters?.period) params.set("period", filters.period);
 
     const queryString = params.toString();
@@ -174,7 +174,7 @@ export const projectOverviewService = {
     const params = new URLSearchParams();
 
     if (filters?.schoolYear) params.set("school_year", filters.schoolYear);
-    if (filters?.courseId) params.set("course_id", filters.courseId);
+    if (filters?.courseId && filters.courseId !== "") params.set("course_id", filters.courseId);
     if (filters?.period) params.set("period", filters.period);
 
     const queryString = params.toString();
