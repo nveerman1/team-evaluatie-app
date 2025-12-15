@@ -170,7 +170,17 @@ class AzureADAuthenticator:
             # No domain restrictions
             return True
 
-        domain = email.split("@")[-1].lower() if "@" in email else ""
+        # Extract domain from email - handle malformed emails
+        if "@" not in email:
+            logger.warning(f"Invalid email format (no @): {email}")
+            return False
+
+        parts = email.split("@")
+        if len(parts) != 2 or not parts[0] or not parts[1]:
+            logger.warning(f"Invalid email format: {email}")
+            return False
+
+        domain = parts[1].lower()
         is_allowed = domain in [d.lower() for d in settings.AZURE_AD_ALLOWED_DOMAINS]
 
         if not is_allowed:

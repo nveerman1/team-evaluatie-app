@@ -12,6 +12,7 @@ export default function Home() {
     if (e) setEmail(e);
     
     // Check if we're in production mode
+    // When in production, show warning and disable dev-login
     const isProd = process.env.NODE_ENV === "production";
     setShowDevWarning(isProd);
   }, []);

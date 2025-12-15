@@ -6,12 +6,22 @@ Een multi-tenant webapplicatie voor peer evaluaties, projectbeoordelingen en com
 
 ## Features
 
+### Authentication & Security
+- **Multi-method Authentication**:
+  - **Azure AD (Office 365)**: Production authentication using Microsoft OAuth
+  - **Dev-login**: Development-only authentication (automatically disabled in production)
+- **Role-Based Access Control (RBAC)**: Admin, teacher and student rollen met granulaire toegangscontrole
+- **JWT with Claims**: Tokens include role and school_id for efficient authorization
+- **School-scoped Access**: All data isolated per school (multi-tenant)
+- **Audit logging**: Alle muterende acties worden gelogd voor compliance
+
+See [AZURE_AD_SETUP.md](AZURE_AD_SETUP.md) for detailed authentication configuration.
+
 ### Multi-Tenant & Multi-Course Architecture
 - **Multi-school support**: Volledig gescheiden data per school
 - **Multiple courses**: Ondersteuning voor O&O, XPLR, Biologie, Nederlands, Engels, etc.
 - **Teacher-course mapping**: Docenten worden expliciet gekoppeld aan vakken
-- **Role-Based Access Control (RBAC)**: Admin, teacher en student rollen met granulaire toegangscontrole
-- **Audit logging**: Alle muterende acties worden gelogd voor compliance
+- **School-scoped data**: All queries automatically scoped to user's school
 
 ### Evaluation Types
 - **Peer Evaluation**: Wederzijdse beoordelingen tussen studenten
@@ -145,13 +155,20 @@ See [docs/FEEDBACK_SUMMARY.md](docs/FEEDBACK_SUMMARY.md) for detailed setup inst
 
 ### Demo Credentials
 
+**Development Mode Only (NODE_ENV=development):**
+
 After running the seed script:
 - **Admin**: admin@demo.school / demo123
 - **Teacher**: teacher1@school1.demo / demo123
 - **Student**: student.4a.1@school1.demo / demo123
 
+**Production Mode (NODE_ENV=production):**
+
+Use Azure AD (Office 365) authentication. See [AZURE_AD_SETUP.md](AZURE_AD_SETUP.md) for configuration.
+
 ## Documentation
 
+- [Azure AD Setup](AZURE_AD_SETUP.md) - Office 365 authentication configuration
 - [Architecture](docs/architecture.md) - Multi-tenant architecture, data model, RBAC
 - [Migration Notes](MIGRATION_NOTES.md) - Database migration guide
 - [Feedback Summary](docs/FEEDBACK_SUMMARY.md) - AI feedback configuration
