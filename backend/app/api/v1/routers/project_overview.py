@@ -294,8 +294,12 @@ def get_project_overview_list(
 def _parse_period_for_sorting(period_label: str) -> tuple:
     """
     Parse period label (e.g., 'Q1 2025') to a sortable tuple (year, quarter).
-    Returns (9999, 9) for unparseable strings to sort them last.
+    Returns (SORT_LAST_YEAR, SORT_LAST_QUARTER) for unparseable strings to sort them last.
     """
+    # Constants for sorting unparseable periods last
+    SORT_LAST_YEAR = 9999
+    SORT_LAST_QUARTER = 9
+    
     try:
         parts = period_label.split()
         if len(parts) >= 2:
@@ -306,19 +310,19 @@ def _parse_period_for_sorting(period_label: str) -> tuple:
             if quarter_str.startswith("Q") and quarter_str[1:].isdigit():
                 quarter = int(quarter_str[1:])
             else:
-                return (9999, 9)
+                return (SORT_LAST_YEAR, SORT_LAST_QUARTER)
             
             # Extract year
             if year_str.isdigit():
                 year = int(year_str)
             else:
-                return (9999, 9)
+                return (SORT_LAST_YEAR, SORT_LAST_QUARTER)
             
             return (year, quarter)
     except (ValueError, IndexError):
         pass
     
-    return (9999, 9)
+    return (SORT_LAST_YEAR, SORT_LAST_QUARTER)
 
 
 @router.get("/trends", response_model=ProjectTrendsResponse)
