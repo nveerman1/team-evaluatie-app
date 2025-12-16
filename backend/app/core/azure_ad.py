@@ -89,6 +89,13 @@ class AzureADAuthenticator:
         """
         Exchange authorization code for access token.
 
+        MSAL automatically validates:
+        - Token signature using public keys from Azure AD
+        - Issuer (iss claim) matches the expected tenant
+        - Audience (aud claim) matches the client_id
+        - Token expiration (exp claim)
+        - Nonce if provided during authorization
+
         Args:
             code: Authorization code from OAuth callback
 
@@ -96,7 +103,7 @@ class AzureADAuthenticator:
             Token response containing access_token, id_token, etc.
 
         Raises:
-            HTTPException: If token exchange fails
+            HTTPException: If token exchange fails or validation fails
         """
         if not self.enabled:
             raise HTTPException(
@@ -118,8 +125,26 @@ class AzureADAuthenticator:
                     detail=f"Authentication failed: {result.get('error_description', 'Unknown error')}",
                 )
 
+            # Verify we received an id_token (contains tenant/issuer/audience validation)
+            if "id_token_claims" not in result:
+                logger.error("No id_token received from Azure AD")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token response from Azure AD",
+                )
+
+            # Log successful validation for audit
+            id_claims = result.get("id_token_claims", {})
+            logger.info(
+                f"Token validated: tenant={id_claims.get('tid')}, "
+                f"issuer={id_claims.get('iss')}, "
+                f"audience={id_claims.get('aud')}"
+            )
+
             return result
 
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Error acquiring token: {str(e)}")
             raise HTTPException(

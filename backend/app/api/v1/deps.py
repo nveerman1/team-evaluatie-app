@@ -30,12 +30,17 @@ async def get_current_user(
 
     In production, this will raise an error and Azure AD authentication
     should be used instead via /auth/azure endpoints.
+
+    SECURITY: This check prevents dev-login bypass in production builds.
+    The NODE_ENV value is validated at application startup.
     """
-    # Check if dev-login is allowed
+    # CRITICAL: Block dev-login in production - validate NODE_ENV
     if settings.NODE_ENV != "development":
+        # Explicitly ignore any X-User-Email header in production
         logger.warning(
             "Dev-login attempted in non-development environment. "
-            f"NODE_ENV={settings.NODE_ENV}. Use Azure AD authentication instead."
+            f"NODE_ENV={settings.NODE_ENV}. Use Azure AD authentication instead. "
+            f"Header value ignored for security."
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

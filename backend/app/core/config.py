@@ -72,6 +72,22 @@ class Settings(BaseSettings):
             )
         return v
 
+    @field_validator("NODE_ENV", mode="after")
+    @classmethod
+    def validate_node_env(cls, v):
+        """Validate NODE_ENV is one of the allowed values"""
+        allowed = ["development", "production", "test"]
+        if v not in allowed:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"Invalid NODE_ENV='{v}'. Must be one of {allowed}. "
+                f"Defaulting to 'production' for safety."
+            )
+            return "production"
+        return v
+
     # Ollama instellingen
     OLLAMA_BASE_URL: AnyUrl = "http://localhost:11434"
     OLLAMA_MODEL: str = "llama3.1"

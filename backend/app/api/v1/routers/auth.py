@@ -65,11 +65,13 @@ def azure_callback(
     Handle Azure AD OAuth callback.
 
     This endpoint:
-    1. Exchanges authorization code for access token
-    2. Retrieves user profile from Microsoft Graph API
-    3. Validates user email domain (if configured)
-    4. Creates or updates user in database
-    5. Issues JWT token for application authentication
+    1. Validates state parameter and extracts school_id
+    2. Verifies school exists in database (server-side validation)
+    3. Exchanges authorization code for access token (MSAL validates signature, issuer, audience, tenant)
+    4. Retrieves user profile from Microsoft Graph API
+    5. Validates user email domain (if configured)
+    6. Creates or updates user in database
+    7. Issues JWT token for application authentication
 
     Returns:
         JWT access token and user information
@@ -90,15 +92,18 @@ def azure_callback(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid state parameter"
         )
 
-    # Verify school exists
+    # SERVER-SIDE VALIDATION: Verify school exists and is valid
     school = db.query(School).filter(School.id == school_id).first()
     if not school:
+        logger.warning(f"Login attempt with invalid school_id={school_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"School with id {school_id} not found",
         )
 
-    # Exchange code for token
+    logger.info(f"School validation passed: id={school_id}, name={school.name}")
+
+    # Exchange code for token (MSAL validates signature, issuer, audience, tenant)
     token_response = azure_ad_authenticator.acquire_token_by_auth_code(code)
     access_token = token_response.get("access_token")
 
@@ -111,7 +116,7 @@ def azure_callback(
     # Get user profile
     profile = azure_ad_authenticator.get_user_profile(access_token)
 
-    # Provision or update user
+    # Provision or update user (includes domain validation)
     user = azure_ad_authenticator.provision_or_update_user(db, profile, school_id)
 
     # Create JWT token with role claim
