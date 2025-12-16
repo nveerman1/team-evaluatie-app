@@ -615,13 +615,17 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
 
     const insightsList = [];
     if (highest) {
+      // Capitalize first letter of category name
+      const categoryName = highest[0].charAt(0).toUpperCase() + highest[0].slice(1);
       insightsList.push(
-        `Hoogste gemiddelde categorie: ${CATEGORY_LABELS[highest[0]] || highest[0]} (${highest[1].toFixed(1)})`
+        `Hoogste gemiddelde categorie: ${categoryName} (${highest[1].toFixed(1)})`
       );
     }
     if (lowest && lowest[0] !== highest?.[0]) {
+      // Capitalize first letter of category name
+      const categoryName = lowest[0].charAt(0).toUpperCase() + lowest[0].slice(1);
       insightsList.push(
-        `Laagste gemiddelde categorie: ${CATEGORY_LABELS[lowest[0]] || lowest[0]} (${lowest[1].toFixed(1)})`
+        `Laagste gemiddelde categorie: ${categoryName} (${lowest[1].toFixed(1)})`
       );
     }
     // TODO: Add more sophisticated insights from backend/AI
