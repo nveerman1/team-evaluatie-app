@@ -456,7 +456,7 @@ function ProjectTable({
             <tbody className="divide-y divide-gray-200 bg-white">
               {sortedProjects.map((project) => (
                 <tr
-                  key={project.projectId}
+                  key={project.assessmentId}
                   className="hover:bg-gray-50 cursor-pointer"
                   onClick={() => onSelectProject(project)}
                 >
