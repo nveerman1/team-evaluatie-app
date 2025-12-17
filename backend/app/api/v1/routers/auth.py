@@ -135,11 +135,11 @@ def azure_callback(
     # Use environment variable with fallback
     frontend_url = settings.FRONTEND_URL
     if user.role == "teacher":
-        redirect_path = "/teacher/dashboard"
+        redirect_path = "/teacher"
     elif user.role == "student":
-        redirect_path = "/student/dashboard"
+        redirect_path = "/student"
     else:
-        redirect_path = "/dashboard"
+        redirect_path = "/"
     
     redirect_url = f"{frontend_url}{redirect_path}"
 
