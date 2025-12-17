@@ -78,7 +78,7 @@ def _course_name_subquery(db: Session, school_id: int):
         )
         .join(Team, Team.id == TM.group_id)
         .join(Course, Course.id == Team.course_id)
-        .filter(TM.school_id == school_id, Course.school_id == school_id)
+        .filter(TM.school_id == school_id, Course.school_id == school_id, TM.active.is_(True))
         .group_by(TM.user_id)
         .subquery()
     )
@@ -117,7 +117,7 @@ def _set_user_course_membership(
     Zorgt dat user actief gekoppeld is aan group van course_name.
     - Als course_name leeg/None is: doe niets aan membership.
     - Als al gekoppeld aan juiste group: niets doen.
-    - Anders: bestaande actieve memberships deactiveren en nieuwe toevoegen.
+    - Anders: bestaande actieve memberships deactiveren en nieuwe toevoegen (of bestaande reactiveren).
     """
     if not course_name:
         return
@@ -144,9 +144,26 @@ def _set_user_course_membership(
         m.active = False
         db.add(m)
 
-    # add nieuw
-    new_m = TM(school_id=school_id, group_id=team.id, user_id=user_id, active=True)
-    db.add(new_m)
+    # check of er al een (inactieve) membership bestaat voor deze group
+    existing = (
+        db.query(TM)
+        .filter(
+            TM.school_id == school_id,
+            TM.user_id == user_id,
+            TM.group_id == team.id
+        )
+        .first()
+    )
+    
+    if existing:
+        # reactivate bestaande membership
+        existing.active = True
+        db.add(existing)
+    else:
+        # add nieuwe membership
+        new_m = TM(school_id=school_id, group_id=team.id, user_id=user_id, active=True)
+        db.add(new_m)
+
 
 
 # ---------- routes ----------
@@ -182,6 +199,8 @@ def list_admin_students(
             getattr(User, "class_name", literal(None)).label("class_name"),
             getattr(User, "team_number", literal(None)).label("team_number"),
             getattr(User, "archived", literal(False)).label("archived"),
+            getattr(User, "auth_provider", literal("local")).label("auth_provider"),
+            getattr(User, "password_hash", literal(None)).label("password_hash"),
             csub.c.course_name.label("course_name"),
         )
         .outerjoin(csub, csub.c.user_id == User.id)
@@ -197,6 +216,10 @@ def list_admin_students(
 
     out = []
     for r in rows:
+        # Determine if user has logged in
+        # User has logged in if they have a password_hash (local) or auth_provider is not 'local'
+        has_logged_in = bool(r.password_hash) or (r.auth_provider and r.auth_provider != "local")
+        
         out.append(
             {
                 "id": r.id,
@@ -206,6 +229,7 @@ def list_admin_students(
                 "course_name": r.course_name,
                 "team_number": r.team_number,
                 "status": "inactive" if r.archived else "active",
+                "has_logged_in": has_logged_in,
             }
         )
     return out
