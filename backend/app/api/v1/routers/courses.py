@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.api.v1.deps import get_db, get_current_user
-from app.infra.db.models import Course, User, TeacherCourse, Group, GroupMember
+from app.infra.db.models import Course, User, TeacherCourse, Group, GroupMember, AcademicYear
 from app.api.v1.schemas.courses import (
     CourseCreate,
     CourseUpdate,
@@ -94,7 +94,7 @@ def list_courses(
     offset = (page - 1) * per_page
     courses = query.order_by(Course.name).offset(offset).limit(per_page).all()
 
-    # Enrich courses with teacher names
+    # Enrich courses with teacher names and academic year labels
     course_outputs = []
     for course in courses:
         course_dict = CourseOut.model_validate(course).model_dump()
@@ -110,6 +110,15 @@ def list_courses(
             .all()
         )
         course_dict["teacher_names"] = [t[0] for t in teachers]
+        
+        # Get academic year label if course has academic_year_id
+        if course.academic_year_id:
+            academic_year = db.query(AcademicYear).filter(
+                AcademicYear.id == course.academic_year_id
+            ).first()
+            if academic_year:
+                course_dict["academic_year_label"] = academic_year.label
+        
         course_outputs.append(CourseOut(**course_dict))
 
     return CourseListOut(

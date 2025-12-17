@@ -270,34 +270,87 @@ class AcademicYearTransitionService:
         
         # Clone courses
         for source_course in source_courses:
-            new_course = Course(
-                school_id=school_id,
-                subject_id=source_course.subject_id,
-                academic_year_id=target_year_id,
-                name=source_course.name,
-                # Set code to None to avoid unique constraint violations (uq_course_code_per_school)
-                # Course codes are school-wide unique, not year-specific. The admin can set codes
-                # manually after transition if needed.
-                code=None,
-                period=source_course.period,
-                level=source_course.level,
-                description=source_course.description,
-                is_active=source_course.is_active,
-            )
+            # Due to the uq_course_name_period constraint (school_id, name, period) which does NOT
+            # include academic_year_id, we need to handle existing courses carefully.
+            # This constraint makes course names globally unique across all years for a school.
             
-            db.add(new_course)
-            # Performance note: Using flush() in a loop is acceptable here since this is
-            # an infrequent admin operation (once per year) and we need the new course IDs
-            # immediately to build the mapping for enrollments.
-            db.flush()  # Get the new course ID
+            # First, check if ANY course with this name+period exists (regardless of academic year)
+            existing_course_any_year = db.query(Course).filter(
+                Course.school_id == school_id,
+                Course.name == source_course.name,
+                Course.period == source_course.period,
+            ).first()
             
-            old_to_new_course_map[source_course.id] = new_course.id
-            courses_created += 1
-            
-            logger.info(
-                f"Created course '{new_course.name}' (ID: {new_course.id}) "
-                f"from course ID {source_course.id}"
-            )
+            if existing_course_any_year:
+                # Course with this name+period already exists
+                
+                # If it has no academic_year_id (legacy data), assign it to source year
+                if existing_course_any_year.academic_year_id is None:
+                    existing_course_any_year.academic_year_id = source_year_id
+                    db.flush()
+                    logger.info(
+                        f"Updated legacy course '{existing_course_any_year.name}' (ID: {existing_course_any_year.id}) "
+                        f"to academic year {source_year_id}"
+                    )
+                
+                # Now check which year it belongs to
+                if existing_course_any_year.academic_year_id == target_year_id:
+                    # It's already in the target year, reuse it
+                    old_to_new_course_map[source_course.id] = existing_course_any_year.id
+                    logger.info(
+                        f"Reusing existing course '{existing_course_any_year.name}' (ID: {existing_course_any_year.id}) "
+                        f"in target year for source course ID {source_course.id}"
+                    )
+                elif existing_course_any_year.academic_year_id == source_year_id:
+                    # It's the source course itself, we need to create a copy but can't due to constraint
+                    # The constraint prevents us from having the same name+period in different years
+                    # We need to skip this course or modify the name
+                    # For now, skip copying this course and log a warning
+                    logger.warning(
+                        f"Cannot copy course '{source_course.name}' (period: {source_course.period}) "
+                        f"due to unique constraint. Skipping course copy for ID {source_course.id}. "
+                        f"Consider updating the database constraint to include academic_year_id."
+                    )
+                    # Don't add to mapping - enrollments for this course won't be copied
+                else:
+                    # It belongs to a different year (not source, not target)
+                    # Can't create a new one due to constraint
+                    logger.warning(
+                        f"Course '{source_course.name}' (period: {source_course.period}) already exists "
+                        f"in academic year {existing_course_any_year.academic_year_id}. "
+                        f"Cannot copy to target year {target_year_id} due to unique constraint. "
+                        f"Skipping course ID {source_course.id}."
+                    )
+            else:
+                # No course with this name+period exists, safe to create
+                new_course = Course(
+                    school_id=school_id,
+                    subject_id=source_course.subject_id,
+                    academic_year_id=target_year_id,
+                    name=source_course.name,
+                    # Set code to None to avoid unique constraint violations (uq_course_code_per_school)
+                    # Course codes are school-wide unique, not year-specific. The admin can set codes
+                    # manually after transition if needed.
+                    code=None,
+                    period=source_course.period,
+                    level=source_course.level,
+                    description=source_course.description,
+                    is_active=source_course.is_active,
+                )
+                
+                db.add(new_course)
+                # Performance note: Using flush() in a loop is acceptable here since this is
+                # an infrequent admin operation (once per year) and we need the new course IDs
+                # immediately to build the mapping for enrollments.
+                db.flush()  # Get the new course ID
+                
+                old_to_new_course_map[source_course.id] = new_course.id
+                courses_created += 1
+                
+                logger.info(
+                    f"Created course '{new_course.name}' (ID: {new_course.id}) "
+                    f"from course ID {source_course.id}"
+                )
         
         # Get students who have membership in target year
         target_student_ids = db.query(StudentClassMembership.student_id).filter(

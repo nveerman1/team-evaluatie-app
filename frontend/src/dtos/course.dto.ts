@@ -17,6 +17,7 @@ export type Course = {
   created_at: string;
   updated_at: string;
   teacher_names?: string[];
+  academic_year_label?: string;
 };
 
 export type CourseCreate = {

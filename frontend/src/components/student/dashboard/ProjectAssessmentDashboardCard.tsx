@@ -14,7 +14,7 @@ export function ProjectAssessmentDashboardCard({
   assessment 
 }: ProjectAssessmentDashboardCardProps) {
   const isPublished = assessment.status === "published";
-  const grade = assessment.final_grade || assessment.suggested_grade;
+  const grade = (assessment.metadata_json as any)?.final_grade || (assessment.metadata_json as any)?.suggested_grade;
   
   return (
     <Card className="rounded-2xl border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">

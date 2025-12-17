@@ -17,3 +17,4 @@ export * from "./peer-feedback-results.dto";
 export * from "./client.dto";
 export * from "./omza.dto";
 export * from "./competency-monitor.dto";
+export * from "./academic-year.dto";
