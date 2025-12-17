@@ -317,11 +317,6 @@ class AcademicYearTransitionService:
                     f"Created course '{new_course.name}' (ID: {new_course.id}) "
                     f"from course ID {source_course.id}"
                 )
-            
-            logger.info(
-                f"Created course '{new_course.name}' (ID: {new_course.id}) "
-                f"from course ID {source_course.id}"
-            )
         
         # Get students who have membership in target year
         target_student_ids = db.query(StudentClassMembership.student_id).filter(
