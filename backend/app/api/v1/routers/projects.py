@@ -691,7 +691,8 @@ def delete_project(
     request: Request = None,
 ):
     """
-    Delete (archive) a project
+    Delete a project and all related data (evaluations, assessments, notes, etc.)
+    This is a hard delete with cascading deletion of related records.
     """
     require_role(user, ["admin", "teacher"])
 
@@ -715,11 +716,7 @@ def delete_project(
             detail="You don't have access to this project",
         )
 
-    # Soft delete by marking as archived
-    project.status = "archived"
-    db.commit()
-
-    # Audit log
+    # Audit log before deletion
     log_action(
         db=db,
         user=user,
@@ -729,6 +726,11 @@ def delete_project(
         details={"title": project.title},
         request=request,
     )
+
+    # Hard delete - cascade will handle related records
+    # This will delete: evaluations, project_assessments, subprojects, project_notes, etc.
+    db.delete(project)
+    db.commit()
 
     return None
 

@@ -100,10 +100,24 @@ function DeleteConfirmModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
         <h3 className="text-lg font-semibold text-gray-900 mb-2">Project verwijderen</h3>
-        <p className="text-gray-600 text-sm mb-4">
-          Weet je zeker dat je het project &quot;{projectTitle}&quot; wilt verwijderen? 
-          Dit kan niet ongedaan worden gemaakt.
+        <p className="text-gray-600 text-sm mb-2">
+          Weet je zeker dat je het project &quot;{projectTitle}&quot; wilt verwijderen?
         </p>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+          <p className="text-yellow-800 text-xs font-medium mb-1">⚠️ Let op:</p>
+          <p className="text-yellow-700 text-xs">
+            Dit verwijdert ook alle gekoppelde gegevens:
+          </p>
+          <ul className="text-yellow-700 text-xs list-disc list-inside mt-1 space-y-0.5">
+            <li>Peerevaluaties</li>
+            <li>Projectbeoordelingen</li>
+            <li>Deelprojecten</li>
+            <li>Aantekeningen</li>
+          </ul>
+          <p className="text-yellow-800 text-xs font-medium mt-2">
+            Dit kan niet ongedaan worden gemaakt.
+          </p>
+        </div>
         <div className="flex gap-3 justify-end">
           <button
             onClick={onCancel}
