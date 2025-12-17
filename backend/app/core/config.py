@@ -1,7 +1,7 @@
 # app/core/config.py
 from typing import List
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import AnyUrl, field_validator
+from pydantic import AnyUrl, field_validator, Field
 
 
 class Settings(BaseSettings):
@@ -22,8 +22,13 @@ class Settings(BaseSettings):
     AZURE_AD_CLIENT_SECRET: str = ""
     AZURE_AD_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/azure/callback"
     AZURE_AD_AUTHORITY: str = ""  # Will be constructed from tenant_id if empty
-    AZURE_AD_SCOPES: List[str] = ["User.Read"]
-    AZURE_AD_ALLOWED_DOMAINS: List[str] = []  # e.g., ["school.nl", "example.edu"]
+    # Store as strings to avoid JSON parsing issues
+    azure_ad_scopes_str: str = Field(
+        default="User.Read", validation_alias="AZURE_AD_SCOPES"
+    )
+    azure_ad_allowed_domains_str: str = Field(
+        default="", validation_alias="AZURE_AD_ALLOWED_DOMAINS"
+    )
 
     # Infra
     DATABASE_URL: str = "postgresql+psycopg2://app:app@localhost:5432/tea"
@@ -36,8 +41,31 @@ class Settings(BaseSettings):
 
     # pydantic-settings v2 configuratie
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        populate_by_name=True,  # Allow field name or alias
     )
+
+    # Computed properties that return lists
+    @property
+    def AZURE_AD_SCOPES(self) -> List[str]:
+        """Parse AZURE_AD_SCOPES from comma-separated string to list"""
+        if not self.azure_ad_scopes_str or self.azure_ad_scopes_str.strip() == "":
+            return ["User.Read"]
+        return [s.strip() for s in self.azure_ad_scopes_str.split(",") if s.strip()]
+
+    @property
+    def AZURE_AD_ALLOWED_DOMAINS(self) -> List[str]:
+        """Parse AZURE_AD_ALLOWED_DOMAINS from comma-separated string to list"""
+        if (
+            not self.azure_ad_allowed_domains_str
+            or self.azure_ad_allowed_domains_str.strip() == ""
+        ):
+            return []
+        return [
+            d.strip() for d in self.azure_ad_allowed_domains_str.split(",") if d.strip()
+        ]
 
     # Handige parsing: sta toe dat CORS_ORIGINS als komma-gescheiden string in env staat
     @field_validator("CORS_ORIGINS", mode="before")
@@ -45,20 +73,6 @@ class Settings(BaseSettings):
     def split_cors(cls, v):
         if isinstance(v, str):
             # Voorbeeld: "http://localhost:3000,https://example.com"
-            return [item.strip() for item in v.split(",") if item.strip()]
-        return v
-
-    @field_validator("AZURE_AD_SCOPES", mode="before")
-    @classmethod
-    def split_scopes(cls, v):
-        if isinstance(v, str):
-            return [item.strip() for item in v.split(",") if item.strip()]
-        return v
-
-    @field_validator("AZURE_AD_ALLOWED_DOMAINS", mode="before")
-    @classmethod
-    def split_domains(cls, v):
-        if isinstance(v, str):
             return [item.strip() for item in v.split(",") if item.strip()]
         return v
 
