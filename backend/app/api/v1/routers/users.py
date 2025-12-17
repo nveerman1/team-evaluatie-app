@@ -4,6 +4,7 @@ Users API endpoints
 
 from __future__ import annotations
 from typing import Optional, List
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -12,6 +13,7 @@ from app.infra.db.models import User
 from app.api.v1.schemas.users import UserOut, UserUpdateRole
 from app.core.rbac import require_role
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/users", tags=["users"])
 
 
@@ -109,9 +111,6 @@ def update_user_role(
     db.refresh(target_user)
 
     # Log the change
-    import logging
-
-    logger = logging.getLogger(__name__)
     logger.info(
         f"Admin {current_user.email} changed user {target_user.email} "
         f"role from {old_role} to {role_update.role}"
