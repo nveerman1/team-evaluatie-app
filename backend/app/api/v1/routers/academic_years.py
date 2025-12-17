@@ -6,6 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+import logging
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import User, AcademicYear
@@ -14,8 +15,12 @@ from app.api.v1.schemas.academic_years import (
     AcademicYearUpdate,
     AcademicYearOut,
     AcademicYearListOut,
+    AcademicYearTransitionRequest,
+    AcademicYearTransitionResult,
 )
+from app.infra.services.academic_year_transition import AcademicYearTransitionService
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin/academic-years", tags=["admin-academic-years"])
 
 
@@ -172,3 +177,79 @@ def delete_academic_year(
     db.commit()
     
     return {"status": "deleted", "id": academic_year_id}
+
+
+@router.post("/{source_year_id}/transition", response_model=AcademicYearTransitionResult)
+def transition_academic_year(
+    source_year_id: int,
+    data: AcademicYearTransitionRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Transition students and classes to a new academic year
+    
+    This endpoint performs a bulk year transition:
+    1. Validates source and target academic years
+    2. Creates new classes in the target year based on the class mapping
+    3. Copies student class memberships to the new classes
+    4. Optionally copies courses and course enrollments
+    
+    All operations are performed in a single transaction.
+    If any error occurs, the entire transition is rolled back.
+    
+    Historical data (old memberships, enrollments, projects, teams) remains intact.
+    
+    # TODO: Frontend wizard integration
+    # This endpoint is designed to be used with a frontend wizard that:
+    # - Lists available academic years
+    # - Shows classes from the source year
+    # - Allows mapping each source class to a target class name
+    # - Provides option to copy course enrollments
+    # - Shows preview of what will be created
+    # - Displays results after transition
+    """
+    
+    # Require admin role
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin role required")
+    
+    school_id = current_user.school_id
+    
+    try:
+        # Execute transition within a transaction
+        result = AcademicYearTransitionService.execute_transition(
+            db=db,
+            school_id=school_id,
+            source_year_id=source_year_id,
+            target_year_id=data.target_academic_year_id,
+            class_mapping=data.class_mapping,
+            copy_course_enrollments=data.copy_course_enrollments,
+        )
+        
+        # Commit the transaction
+        db.commit()
+        
+        logger.info(
+            f"Academic year transition completed successfully: "
+            f"source={source_year_id}, target={data.target_academic_year_id}, "
+            f"school={school_id}, result={result}"
+        )
+        
+        return AcademicYearTransitionResult(**result)
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions (validation errors)
+        db.rollback()
+        raise
+    except Exception as e:
+        # Rollback on any unexpected error
+        db.rollback()
+        logger.error(
+            f"Academic year transition failed: {e}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Transition failed: {str(e)}",
+        )
