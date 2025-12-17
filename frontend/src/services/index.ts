@@ -1,4 +1,5 @@
 // Re-export all services for convenient imports
+export * from "./auth.service";
 export * from "./evaluation.service";
 export * from "./rubric.service";
 export * from "./allocation.service";

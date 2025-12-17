@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { authService } from "@/services/auth.service";
 
 export default function Home() {
   const [email, setEmail] = useState("");
@@ -23,8 +24,7 @@ export default function Home() {
     // For Azure AD login, redirect to backend OAuth endpoint
     // Default to school_id=1 for demo, in production this should be selected
     const schoolId = 1;
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || "http://localhost:8000/api/v1";
-    window.location.href = `${backendUrl}/auth/azure?school_id=${schoolId}`;
+    authService.redirectToAzureLogin(schoolId);
   };
 
   return (
