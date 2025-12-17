@@ -31,6 +31,20 @@ const AcademicYearsManagement = forwardRef((props, ref) => {
     handleTransition: () => setShowTransitionWizard(true),
   }));
 
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && showCreateForm) {
+        handleCancel();
+      }
+    };
+    
+    if (showCreateForm) {
+      document.addEventListener("keydown", handleEscape);
+      return () => document.removeEventListener("keydown", handleEscape);
+    }
+  }, [showCreateForm]);
+
   const loadAcademicYears = async () => {
     setLoading(true);
     setError(null);
@@ -81,9 +95,14 @@ const AcademicYearsManagement = forwardRef((props, ref) => {
     <div className="space-y-6">
       {/* Create Form Modal */}
       {showCreateForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="create-year-title"
+        >
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-            <h3 className="mb-4 text-xl font-bold text-gray-900">
+            <h3 id="create-year-title" className="mb-4 text-xl font-bold text-gray-900">
               Nieuw Academisch Jaar
             </h3>
 
