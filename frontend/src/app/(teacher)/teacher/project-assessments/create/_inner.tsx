@@ -35,13 +35,13 @@ export default function CreateProjectAssessmentInner() {
 
   // Filter projects based on selected course
   const filteredProjects = useMemo(() => {
-    if (!courseId || courseId === "") return [];
+    if (typeof courseId !== "number") return [];
     return projects.filter(p => p.course_id === Number(courseId));
   }, [projects, courseId]);
 
   // Filter groups based on selected course
   const filteredGroups = useMemo(() => {
-    if (!courseId || courseId === "") return [];
+    if (typeof courseId !== "number") return [];
     return groups.filter(g => g.course_id === Number(courseId));
   }, [groups, courseId]);
 

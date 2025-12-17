@@ -64,7 +64,7 @@ export default function CreateEvaluationPageInner() {
 
   // Filter projects based on selected course
   const filteredProjects = useMemo(() => {
-    if (!courseId || courseId === "") return [];
+    if (!courseId || typeof courseId !== "number") return [];
     return projects.filter(p => p.course_id === Number(courseId));
   }, [projects, courseId]);
 
@@ -87,7 +87,7 @@ export default function CreateEvaluationPageInner() {
         if (!preRubricId && list.length === 1) setRubricId(list[0].id);
         
         setProjects(projRes.items || []);
-      } catch (e: unknown) {
+      } catch (e: any) {
         setError(
           e?.response?.data?.detail || e?.message || "Kon data niet laden",
         );
@@ -124,8 +124,8 @@ export default function CreateEvaluationPageInner() {
     setInfo(null);
 
     if (!title.trim()) return setError("Vul een titel in.");
-    if (!courseId || courseId === "") return setError("Kies een course.");
-    if (!projectId || projectId === "") return setError("Kies een project.");
+    if (typeof courseId !== "number") return setError("Kies een course.");
+    if (typeof projectId !== "number") return setError("Kies een project.");
     if (rubricId === "" || rubricId == null)
       return setError("Kies een rubric.");
 

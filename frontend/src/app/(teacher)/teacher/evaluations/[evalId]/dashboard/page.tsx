@@ -81,11 +81,12 @@ export default function EvaluationDashboardPage() {
     if (!evalIdNum) return;
     
     const controller = new AbortController();
+    const currentEvalId = evalIdNum; // Capture the value to ensure type safety
     
     async function loadTeams() {
       try {
         const context = await evaluationService.getEvaluationTeams(
-          evalIdNum,
+          currentEvalId,
           controller.signal
         );
         setTeamContext(context);
