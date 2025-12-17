@@ -152,6 +152,9 @@ class AcademicYearTransitionService:
             )
             
             db.add(new_class)
+            # Performance note: Using flush() in a loop is acceptable here since this is
+            # an infrequent admin operation (once per year) and we need the new class IDs
+            # immediately to build the old-to-new mapping for student memberships.
             db.flush()  # Get the new class ID
             
             old_to_new_class_map[source_class.id] = new_class.id
@@ -272,7 +275,10 @@ class AcademicYearTransitionService:
                 subject_id=source_course.subject_id,
                 academic_year_id=target_year_id,
                 name=source_course.name,
-                code=None,  # Don't copy code to avoid unique constraint violations
+                # Set code to None to avoid unique constraint violations (uq_course_code_per_school)
+                # Course codes are school-wide unique, not year-specific. The admin can set codes
+                # manually after transition if needed.
+                code=None,
                 period=source_course.period,
                 level=source_course.level,
                 description=source_course.description,
@@ -280,6 +286,9 @@ class AcademicYearTransitionService:
             )
             
             db.add(new_course)
+            # Performance note: Using flush() in a loop is acceptable here since this is
+            # an infrequent admin operation (once per year) and we need the new course IDs
+            # immediately to build the mapping for enrollments.
             db.flush()  # Get the new course ID
             
             old_to_new_course_map[source_course.id] = new_course.id
