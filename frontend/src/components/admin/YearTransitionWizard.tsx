@@ -368,6 +368,9 @@ export default function YearTransitionWizard({
               <Button variant="secondary" onClick={() => setStep(2)}>
                 Terug
               </Button>
+              <Button variant="secondary" onClick={handleClose}>
+                Annuleren
+              </Button>
               <Button
                 onClick={() => {
                   if (validateClassMapping()) {
@@ -413,6 +416,9 @@ export default function YearTransitionWizard({
             <div className="flex justify-end gap-2 mt-6">
               <Button variant="secondary" onClick={() => setStep(3)}>
                 Terug
+              </Button>
+              <Button variant="secondary" onClick={handleClose}>
+                Annuleren
               </Button>
               <Button onClick={() => setStep(5)}>Volgende</Button>
             </div>
@@ -496,6 +502,9 @@ export default function YearTransitionWizard({
             <div className="flex justify-end gap-2 mt-6">
               <Button variant="secondary" onClick={() => setStep(4)}>
                 Terug
+              </Button>
+              <Button variant="secondary" onClick={handleClose}>
+                Annuleren
               </Button>
               <Button
                 onClick={executeTransition}

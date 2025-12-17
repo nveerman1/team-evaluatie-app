@@ -270,29 +270,53 @@ class AcademicYearTransitionService:
         
         # Clone courses
         for source_course in source_courses:
-            new_course = Course(
-                school_id=school_id,
-                subject_id=source_course.subject_id,
-                academic_year_id=target_year_id,
-                name=source_course.name,
-                # Set code to None to avoid unique constraint violations (uq_course_code_per_school)
-                # Course codes are school-wide unique, not year-specific. The admin can set codes
-                # manually after transition if needed.
-                code=None,
-                period=source_course.period,
-                level=source_course.level,
-                description=source_course.description,
-                is_active=source_course.is_active,
-            )
+            # Check if a course with the same name and period already exists in the target year
+            # Due to the uq_course_name_period constraint (school_id, name, period), 
+            # we need to check for existing courses to avoid duplicates
+            existing_course = db.query(Course).filter(
+                Course.school_id == school_id,
+                Course.name == source_course.name,
+                Course.period == source_course.period,
+                Course.academic_year_id == target_year_id,
+            ).first()
             
-            db.add(new_course)
-            # Performance note: Using flush() in a loop is acceptable here since this is
-            # an infrequent admin operation (once per year) and we need the new course IDs
-            # immediately to build the mapping for enrollments.
-            db.flush()  # Get the new course ID
-            
-            old_to_new_course_map[source_course.id] = new_course.id
-            courses_created += 1
+            if existing_course:
+                # Reuse existing course instead of creating a duplicate
+                old_to_new_course_map[source_course.id] = existing_course.id
+                logger.info(
+                    f"Reusing existing course '{existing_course.name}' (ID: {existing_course.id}) "
+                    f"for source course ID {source_course.id}"
+                )
+            else:
+                # Create new course
+                new_course = Course(
+                    school_id=school_id,
+                    subject_id=source_course.subject_id,
+                    academic_year_id=target_year_id,
+                    name=source_course.name,
+                    # Set code to None to avoid unique constraint violations (uq_course_code_per_school)
+                    # Course codes are school-wide unique, not year-specific. The admin can set codes
+                    # manually after transition if needed.
+                    code=None,
+                    period=source_course.period,
+                    level=source_course.level,
+                    description=source_course.description,
+                    is_active=source_course.is_active,
+                )
+                
+                db.add(new_course)
+                # Performance note: Using flush() in a loop is acceptable here since this is
+                # an infrequent admin operation (once per year) and we need the new course IDs
+                # immediately to build the mapping for enrollments.
+                db.flush()  # Get the new course ID
+                
+                old_to_new_course_map[source_course.id] = new_course.id
+                courses_created += 1
+                
+                logger.info(
+                    f"Created course '{new_course.name}' (ID: {new_course.id}) "
+                    f"from course ID {source_course.id}"
+                )
             
             logger.info(
                 f"Created course '{new_course.name}' (ID: {new_course.id}) "
