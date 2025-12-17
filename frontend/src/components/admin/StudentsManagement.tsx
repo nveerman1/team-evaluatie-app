@@ -13,6 +13,7 @@ import LinkStudentToCourseModal from "@/components/admin/LinkStudentToCourseModa
 const StudentsManagement = forwardRef((props, ref) => {
   // State
   const [students, setStudents] = useState<AdminStudent[]>([]);
+  const [allStudentsForKPIs, setAllStudentsForKPIs] = useState<AdminStudent[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("active");
@@ -38,6 +39,7 @@ const StudentsManagement = forwardRef((props, ref) => {
   // Load students when filters change
   useEffect(() => {
     loadStudents();
+    loadKPIData();
   }, [debouncedSearch, statusFilter, courseFilter, onlyUnlinked, currentPage]);
 
   const loadCourses = async () => {
@@ -53,19 +55,42 @@ const StudentsManagement = forwardRef((props, ref) => {
     }
   };
 
+  const loadKPIData = async () => {
+    // Load all active students for KPI calculation
+    try {
+      const response = await adminStudentService.listStudents({
+        status_filter: "active",
+        page: 1,
+        limit: 1000, // Get a large batch for KPI calculation
+      });
+      setAllStudentsForKPIs(response.students);
+    } catch (err) {
+      console.error("Failed to load KPI data:", err);
+    }
+  };
+
   const loadStudents = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await adminStudentService.listStudents({
+      // Build filter params - handle "only unlinked" by not specifying a course filter
+      const params: any = {
         q: debouncedSearch || undefined,
         status_filter: statusFilter === "all" ? undefined : (statusFilter as "active" | "inactive"),
-        course: courseFilter || undefined,
         page: currentPage,
         limit: 25,
         sort: "name",
         dir: "asc",
-      });
+      };
+      
+      // If "only unlinked" is checked, we need to filter for students without courses
+      // Since the API doesn't have a direct "unlinked" filter, we'll filter on frontend
+      // but load all students to get accurate KPI counts
+      if (!onlyUnlinked && courseFilter) {
+        params.course = courseFilter;
+      }
+      
+      const response = await adminStudentService.listStudents(params);
       
       let filteredStudents = response.students;
       
@@ -129,9 +154,9 @@ const StudentsManagement = forwardRef((props, ref) => {
     handleExportCSV: handleExportCSV,
   }));
 
-  // Calculate KPIs
+  // Calculate KPIs from all students data
   const totalCount = totalStudents;
-  const unlinkedCount = students.filter(s => !s.course_name).length;
+  const unlinkedCount = allStudentsForKPIs.filter(s => !s.course_name).length;
   const notLoggedInCount = 0; // TODO: This requires last_login_at field from backend
 
   const totalPages = Math.ceil(totalStudents / 25);

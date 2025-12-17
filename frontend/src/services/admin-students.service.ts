@@ -50,8 +50,10 @@ export const adminStudentService = {
   async listStudents(params: AdminStudentListParams = {}): Promise<AdminStudentListResponse> {
     const response = await api.get<AdminStudent[]>("/admin/students", { params });
     
-    // Extract total count from X-Total-Count header
-    const totalCount = response.headers?.["x-total-count"];
+    // Extract total count from X-Total-Count header (case-insensitive)
+    const totalCount = 
+      response.headers?.["x-total-count"] || 
+      response.headers?.["X-Total-Count"];
     const total = totalCount ? parseInt(totalCount, 10) : response.data.length;
     
     return {
