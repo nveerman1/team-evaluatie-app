@@ -3,7 +3,7 @@ Schemas for AcademicYear API
 """
 
 from __future__ import annotations
-from typing import Optional, List
+from typing import Optional, List, Dict
 from datetime import date, datetime
 from pydantic import BaseModel, Field
 
@@ -49,3 +49,29 @@ class AcademicYearListOut(BaseModel):
     total: int
     page: int
     per_page: int
+
+
+class AcademicYearTransitionRequest(BaseModel):
+    """Schema for academic year transition request"""
+
+    target_academic_year_id: int = Field(
+        ..., description="Target academic year ID to transition to"
+    )
+    class_mapping: Dict[str, str] = Field(
+        ...,
+        description="Mapping of source class names to target class names (e.g., {'G2a': 'G3a'})",
+    )
+    copy_course_enrollments: bool = Field(
+        default=False,
+        description="Whether to copy course enrollments to the new academic year",
+    )
+
+
+class AcademicYearTransitionResult(BaseModel):
+    """Schema for academic year transition result"""
+
+    classes_created: int = Field(..., description="Number of classes created")
+    students_moved: int = Field(..., description="Number of students moved")
+    courses_created: int = Field(..., description="Number of courses created")
+    enrollments_copied: int = Field(..., description="Number of enrollments copied")
+    skipped_students: int = Field(..., description="Number of students skipped")
