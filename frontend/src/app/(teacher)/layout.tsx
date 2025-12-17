@@ -54,6 +54,7 @@ export default function TeacherLayout({
                 </div>
                 <div className="space-y-1">
                   <NavItem href="/teacher/admin/schoolbeheer" label="Schoolbeheer" />
+                  <NavItem href="/teacher/admin/year-transition" label="Jaartransitie" />
                   <NavItem href="/teacher/learning-objectives" label="Leerdoelen" />
                   <NavItem href="/teacher/rubrics" label="Rubrics" />
                   <NavItem href="/teacher/admin/templates" label="Templates" />
