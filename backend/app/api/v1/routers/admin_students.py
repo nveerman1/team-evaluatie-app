@@ -78,7 +78,7 @@ def _course_name_subquery(db: Session, school_id: int):
         )
         .join(Team, Team.id == TM.group_id)
         .join(Course, Course.id == Team.course_id)
-        .filter(TM.school_id == school_id, Course.school_id == school_id)
+        .filter(TM.school_id == school_id, Course.school_id == school_id, TM.active.is_(True))
         .group_by(TM.user_id)
         .subquery()
     )

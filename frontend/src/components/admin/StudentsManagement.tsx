@@ -9,7 +9,7 @@ import {
 import { Course } from "@/dtos/course.dto";
 import { courseService } from "@/services/course.service";
 import LinkStudentToCourseModal from "@/components/admin/LinkStudentToCourseModal";
-import CSVImportModal from "@/components/teacher/CSVImportModal";
+import StudentCSVImportModal from "@/components/admin/StudentCSVImportModal";
 
 const StudentsManagement = forwardRef((props, ref) => {
   // State
@@ -125,11 +125,17 @@ const StudentsManagement = forwardRef((props, ref) => {
   const handleLinkToCourse = async (courseName: string) => {
     if (!selectedStudent) return;
     
-    await adminStudentService.updateStudent(selectedStudent.id, {
-      course_name: courseName,
-    });
-    
-    await loadStudents();
+    try {
+      await adminStudentService.updateStudent(selectedStudent.id, {
+        course_name: courseName,
+      });
+      
+      // Reload both students and KPI data
+      await Promise.all([loadStudents(), loadKPIData()]);
+    } catch (err) {
+      console.error("Failed to link student to course:", err);
+      throw err; // Re-throw so modal can handle it
+    }
   };
 
   const handleToggleStatus = async (student: AdminStudent) => {
@@ -537,7 +543,7 @@ const StudentsManagement = forwardRef((props, ref) => {
       )}
 
       {/* Import CSV modal */}
-      <CSVImportModal
+      <StudentCSVImportModal
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
         onImport={handleImportCSV}
