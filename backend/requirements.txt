@@ -15,9 +15,3 @@ pydantic[email]
 email-validator
 requests
 msal>=1.31.0
-ruff
-black
-mypy
-pytest
-bandit
-pip-audit

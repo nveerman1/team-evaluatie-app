@@ -22,14 +22,34 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def create_access_token(sub: str) -> str:
+def create_access_token(
+    sub: str, role: Optional[str] = None, school_id: Optional[int] = None
+) -> str:
     """
-    Maak een access token met timezone-aware exp.
+    Maak een access token met timezone-aware exp en optionele claims.
+
+    Args:
+        sub: Subject (usually user email or user_id)
+        role: User role (student, teacher, admin)
+        school_id: School ID for multi-tenant support
+
+    Returns:
+        Encoded JWT token
     """
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
-    payload: Dict[str, object] = {"sub": sub, "exp": expire}
+    payload: Dict[str, object] = {
+        "sub": sub,
+        "exp": expire,
+    }
+
+    # Add optional claims
+    if role:
+        payload["role"] = role
+    if school_id:
+        payload["school_id"] = school_id
+
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
