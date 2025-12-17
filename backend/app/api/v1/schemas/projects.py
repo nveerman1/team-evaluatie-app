@@ -19,6 +19,7 @@ class ProjectBase(BaseModel):
     slug: Optional[str] = Field(None, max_length=100)
     description: Optional[str] = None
     class_name: Optional[str] = Field(None, max_length=50)
+    period: Optional[str] = Field(None, max_length=10, description="Period: P1, P2, P3, or P4")
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     status: str = Field(default="concept", max_length=30)
@@ -38,6 +39,7 @@ class ProjectUpdate(BaseModel):
     slug: Optional[str] = Field(None, max_length=100)
     description: Optional[str] = None
     class_name: Optional[str] = Field(None, max_length=50)
+    period: Optional[str] = Field(None, max_length=10)
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     status: Optional[str] = Field(None, max_length=30)
@@ -62,6 +64,7 @@ class ProjectListItem(BaseModel):
     title: str
     course_id: Optional[int]
     class_name: Optional[str]
+    period: Optional[str]
     start_date: Optional[date]
     end_date: Optional[date]
     status: str
