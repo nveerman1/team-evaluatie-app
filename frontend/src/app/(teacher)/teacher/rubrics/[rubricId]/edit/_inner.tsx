@@ -335,6 +335,7 @@ export default function EditRubricPageInner() {
           category: ci.category ?? null,
           order: ci.order ?? i + 1,
           descriptors: { ...EMPTY_DESC, ...(ci.descriptors || {}) },
+          learning_objective_ids: ci.learning_objective_ids || [],
         })),
       );
       setInfo("Opgeslagen ✔");

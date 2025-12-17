@@ -492,6 +492,21 @@ def batch_upsert_criteria(
     if not rubric:
         raise HTTPException(status_code=404, detail="Rubric not found")
 
+    # Collect IDs from payload to determine which criteria to keep
+    payload_ids = {item.id for item in payload.items if item.id is not None}
+    
+    # Delete criteria that are not in the payload (i.e., were removed in the frontend)
+    existing_criteria = db.query(RubricCriterion).filter(
+        RubricCriterion.school_id == user.school_id,
+        RubricCriterion.rubric_id == rubric_id,
+    ).all()
+    
+    for existing in existing_criteria:
+        if existing.id not in payload_ids:
+            db.delete(existing)
+    
+    db.flush()  # Flush deletes before processing upserts
+
     out: List[RubricCriterion] = []
 
     for item in payload.items:
