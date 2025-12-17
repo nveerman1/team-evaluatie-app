@@ -22,7 +22,7 @@ def upgrade() -> None:
     # Add is_archived and archived_at columns to academic_years table
     op.add_column(
         "academic_years",
-        sa.Column("is_archived", sa.Boolean(), nullable=False, server_default=sa.text("false")),
+        sa.Column("is_archived", sa.Boolean(), nullable=False, server_default=sa.false()),
     )
     op.add_column(
         "academic_years",

@@ -134,12 +134,13 @@ const AcademicYearsManagement = forwardRef((props, ref) => {
     }
 
     setSubmitting(true);
+    setError(null);
     try {
       await academicYearService.archiveAcademicYear(archiveDialog.yearId);
       setArchiveDialog({ isOpen: false, yearId: null, yearLabel: "", confirmed: false });
       loadAcademicYears();
     } catch (err: any) {
-      alert(
+      setError(
         err?.response?.data?.detail ||
           "Kon academisch jaar niet archiveren. Probeer het opnieuw."
       );
@@ -259,6 +260,12 @@ const AcademicYearsManagement = forwardRef((props, ref) => {
               Academisch jaar archiveren
             </h3>
 
+            {error && (
+              <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">
+                {error}
+              </div>
+            )}
+
             <p className="mb-4 text-sm text-gray-700">
               Dit schooljaar <strong>{archiveDialog.yearLabel}</strong> wordt alleen-lezen. 
               Historische gegevens blijven behouden, maar er kunnen geen wijzigingen meer worden aangebracht.
@@ -281,7 +288,10 @@ const AcademicYearsManagement = forwardRef((props, ref) => {
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => setArchiveDialog({ isOpen: false, yearId: null, yearLabel: "", confirmed: false })}
+                onClick={() => {
+                  setArchiveDialog({ isOpen: false, yearId: null, yearLabel: "", confirmed: false });
+                  setError(null);
+                }}
                 disabled={submitting}
               >
                 Annuleren

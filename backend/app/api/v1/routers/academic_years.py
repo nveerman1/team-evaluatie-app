@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import User, AcademicYear
@@ -292,7 +292,7 @@ def archive_academic_year(
     
     # Archive the year
     academic_year.is_archived = True
-    academic_year.archived_at = datetime.utcnow()
+    academic_year.archived_at = datetime.now(timezone.utc)
     
     db.commit()
     db.refresh(academic_year)
