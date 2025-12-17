@@ -10,12 +10,69 @@ import csv
 from io import StringIO, TextIOWrapper
 
 from app.api.v1.deps import get_db, get_current_user
-from app.infra.db.models import User
+from app.infra.db.models import (
+    User, 
+    StudentClassMembership, 
+    Class, 
+    AcademicYear,
+    CourseEnrollment,
+    Course,
+    Subject,
+)
 
 router = APIRouter(prefix="/admin/students", tags=["admin-students"])
 
 SortKey = Literal["name", "class_name", "team_number", "course_name"]
 Dir = Literal["asc", "desc"]
+
+
+def _enrich_student_with_class_and_courses(db: Session, student_id: int, school_id: int) -> Dict[str, Any]:
+    """
+    Enrich student data with class info and course enrollments.
+    Returns dict with 'class_info' and 'course_enrollments'.
+    """
+    result = {
+        "class_info": None,
+        "course_enrollments": [],
+    }
+    
+    # Get student's class membership (most recent academic year)
+    membership = (
+        db.query(StudentClassMembership)
+        .join(Class, StudentClassMembership.class_id == Class.id)
+        .join(AcademicYear, StudentClassMembership.academic_year_id == AcademicYear.id)
+        .filter(StudentClassMembership.student_id == student_id)
+        .order_by(AcademicYear.start_date.desc())
+        .first()
+    )
+    
+    if membership:
+        class_obj = membership.class_
+        academic_year = membership.academic_year
+        result["class_info"] = f"{class_obj.name} ({academic_year.label})"
+    
+    # Get student's course enrollments
+    enrollments = (
+        db.query(CourseEnrollment)
+        .join(Course, CourseEnrollment.course_id == Course.id)
+        .outerjoin(Subject, Course.subject_id == Subject.id)
+        .filter(
+            CourseEnrollment.student_id == student_id,
+            CourseEnrollment.active.is_(True),
+            Course.school_id == school_id,
+        )
+        .all()
+    )
+    
+    for enrollment in enrollments:
+        course = enrollment.course
+        result["course_enrollments"].append({
+            "course_id": course.id,
+            "course_name": course.name,
+            "subject_code": course.subject.code if course.subject else None,
+        })
+    
+    return result
 
 
 # ---------- helpers ----------
@@ -220,6 +277,9 @@ def list_admin_students(
         # User has logged in if they have a password_hash (local) or auth_provider is not 'local'
         has_logged_in = bool(r.password_hash) or (r.auth_provider and r.auth_provider != "local")
         
+        # Enrich with class and course info
+        enrichment = _enrich_student_with_class_and_courses(db, r.id, current_user.school_id)
+        
         out.append(
             {
                 "id": r.id,
@@ -230,6 +290,9 @@ def list_admin_students(
                 "team_number": r.team_number,
                 "status": "inactive" if r.archived else "active",
                 "has_logged_in": has_logged_in,
+                # New fields
+                "class_info": enrichment["class_info"],
+                "course_enrollments": enrichment["course_enrollments"],
             }
         )
     return out

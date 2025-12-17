@@ -1,5 +1,13 @@
-from typing import Optional, Literal
+from typing import Optional, Literal, List
 from pydantic import BaseModel, EmailStr
+
+
+class CourseEnrollmentInfo(BaseModel):
+    """Info about a student's course enrollment"""
+    
+    course_id: int
+    course_name: str
+    subject_code: Optional[str] = None
 
 
 class AdminStudentCreate(BaseModel):
@@ -28,3 +36,6 @@ class AdminStudentOut(BaseModel):
     course_name: Optional[str] = None
     team_number: Optional[int] = None
     status: Literal["active", "inactive"]
+    # New fields for enhanced display
+    class_info: Optional[str] = None  # e.g., "G2a (2025-2026)"
+    course_enrollments: List[CourseEnrollmentInfo] = []  # List of enrolled courses

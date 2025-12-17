@@ -121,6 +121,7 @@ def list_projects(
             title=p.title,
             course_id=p.course_id,
             class_name=p.class_name,
+            period=p.period,
             start_date=p.start_date,
             end_date=p.end_date,
             status=p.status,

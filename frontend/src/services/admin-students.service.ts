@@ -9,6 +9,13 @@ export type AdminStudent = {
   team_number?: number;
   status: "active" | "inactive";
   has_logged_in?: boolean;
+  // New fields
+  class_info?: string; // e.g., "G2a (2025-2026)"
+  course_enrollments?: Array<{
+    course_id: number;
+    course_name: string;
+    subject_code?: string;
+  }>;
 };
 
 export type AdminStudentListParams = {

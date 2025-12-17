@@ -17,9 +17,10 @@ class CourseBase(BaseModel):
     level: Optional[str] = Field(
         None, max_length=50, description="e.g., 'onderbouw', 'bovenbouw'"
     )
-    year: Optional[int] = Field(None, ge=2020, le=2100)
+    year: Optional[int] = Field(None, ge=2020, le=2100, description="Deprecated: use academic_year_id")
     description: Optional[str] = None
     subject_id: Optional[int] = Field(None, description="Optional FK to Subject")
+    academic_year_id: Optional[int] = Field(None, description="FK to AcademicYear")
 
 
 class CourseCreate(CourseBase):
@@ -38,6 +39,7 @@ class CourseUpdate(BaseModel):
     year: Optional[int] = Field(None, ge=2020, le=2100)
     description: Optional[str] = None
     subject_id: Optional[int] = None
+    academic_year_id: Optional[int] = None
     is_active: Optional[bool] = None
 
 
@@ -50,6 +52,7 @@ class CourseOut(CourseBase):
     created_at: datetime
     updated_at: datetime
     teacher_names: Optional[List[str]] = None
+    academic_year_label: Optional[str] = None  # Populated via join
 
     class Config:
         from_attributes = True
