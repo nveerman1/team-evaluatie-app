@@ -7,6 +7,7 @@ import { Tabs } from "@/components/Tabs";
 import SectionsManagement from "@/components/admin/SectionsManagement";
 import CoursesManagement from "@/components/admin/CoursesManagement";
 import TeachersManagement from "@/components/admin/TeachersManagement";
+import StudentsManagement from "@/components/admin/StudentsManagement";
 
 export default function SchoolbeheerPageInner() {
   const { isAdmin, loading } = useAuth();
@@ -21,6 +22,7 @@ export default function SchoolbeheerPageInner() {
   const sectiesRef = useRef<any>(null);
   const vakkenRef = useRef<any>(null);
   const docentenRef = useRef<any>(null);
+  const leerlingenRef = useRef<any>(null);
 
   // Redirect non-admins
   useEffect(() => {
@@ -65,6 +67,11 @@ export default function SchoolbeheerPageInner() {
       id: "docenten",
       label: "Docenten",
       content: <TeachersManagement ref={docentenRef} />,
+    },
+    {
+      id: "leerlingen",
+      label: "Leerlingen",
+      content: <StudentsManagement ref={leerlingenRef} />,
     },
   ];
 
@@ -112,6 +119,15 @@ export default function SchoolbeheerPageInner() {
             </button>
           </div>
         );
+      case "leerlingen":
+        return (
+          <button
+            onClick={() => leerlingenRef.current?.handleExportCSV?.()}
+            className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Exporteer CSV
+          </button>
+        );
       default:
         return null;
     }
@@ -127,7 +143,7 @@ export default function SchoolbeheerPageInner() {
               Schoolbeheer
             </h1>
             <p className="text-gray-600 mt-1 text-sm">
-              Beheer secties, vakken en docenten van jouw school
+              Beheer secties, vakken, docenten en leerlingen van jouw school
             </p>
           </div>
           <div className="flex gap-3">

@@ -241,7 +241,7 @@ const CoursesManagement = forwardRef((props, ref) => {
                         href={`/teacher/class-teams?course_id=${course.id}`}
                         className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
                       >
-                        Beheren
+                        Klas- & Teambeheer
                       </a>
                       <a
                         href={`/teacher/courses/${course.id}`}
