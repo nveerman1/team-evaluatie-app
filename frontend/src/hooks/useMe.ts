@@ -28,11 +28,12 @@ export function useMe() {
           setUser(userData);
           setError(null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (!isMounted) return;
 
         // Handle authentication errors (401/403)
-        if (err.status === 401 || err.status === 403) {
+        const error = err as any; // Type assertion for error handling
+        if (error.status === 401 || error.status === 403) {
           console.warn("Authentication failed, redirecting to login");
           // Redirect to login page
           router.push("/");
