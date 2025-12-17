@@ -90,6 +90,7 @@ export default function YearTransitionWizard({
       const nextYear = parseInt(year) + 1;
       return `${prefix}${nextYear}${suffix}`;
     }
+    // Fallback: just return the original name if pattern doesn't match
     return name;
   };
 
@@ -154,11 +155,12 @@ export default function YearTransitionWizard({
       setResult(result);
       setStep(6);
     } catch (err: any) {
-      setError(
-        err?.response?.data?.detail ||
-          "Transitie mislukt. Probeer het opnieuw."
-      );
-      console.error(err);
+      const errorDetail = err?.response?.data?.detail;
+      const errorMessage = errorDetail 
+        ? `Transitie mislukt: ${errorDetail}` 
+        : "Transitie mislukt. Probeer het opnieuw of neem contact op met support.";
+      setError(errorMessage);
+      console.error("Transition failed:", err);
     } finally {
       setLoading(false);
     }
@@ -182,16 +184,35 @@ export default function YearTransitionWizard({
     handleClose();
   };
 
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen && step !== 6) {
+        handleClose();
+      }
+    };
+    
+    if (isOpen) {
+      document.addEventListener("keydown", handleEscape);
+      return () => document.removeEventListener("keydown", handleEscape);
+    }
+  }, [isOpen, step]);
+
   if (!isOpen) return null;
 
   const totalSteps = 6;
   const progressPercent = (step / totalSteps) * 100;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
+      role="dialog"
+      aria-labelledby="wizard-title"
+      aria-modal="true"
+    >
       <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          <h2 id="wizard-title" className="text-2xl font-bold text-gray-900 mb-2">
             Academisch Jaar Transitie
           </h2>
           <Progress value={progressPercent} className="h-2" />

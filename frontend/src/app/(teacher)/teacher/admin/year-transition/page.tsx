@@ -19,6 +19,8 @@ export default function YearTransitionPage() {
     );
   }
 
+  // Client-side admin check for UX
+  // Note: Backend API endpoints also validate admin permissions for security
   if (!isAdmin) {
     router.push("/teacher");
     return null;
