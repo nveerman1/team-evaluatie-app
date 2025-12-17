@@ -144,7 +144,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("course_id", sa.Integer(), nullable=False),
         sa.Column("student_id", sa.Integer(), nullable=False),
-        sa.Column("active", sa.Boolean(), nullable=False, server_default="true"),
+        sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -308,7 +308,7 @@ def upgrade() -> None:
         FROM group_members gm
         JOIN groups g ON g.id = gm.group_id
         WHERE g.course_id IS NOT NULL
-          AND gm.active = true
+          AND gm.active IS true
         ON CONFLICT (course_id, student_id) DO NOTHING
     """))
 

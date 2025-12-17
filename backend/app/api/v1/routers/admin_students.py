@@ -58,7 +58,7 @@ def _enrich_student_with_class_and_courses(db: Session, student_id: int, school_
         .outerjoin(Subject, Course.subject_id == Subject.id)
         .filter(
             CourseEnrollment.student_id == student_id,
-            CourseEnrollment.active == True,
+            CourseEnrollment.active.is_(True),
             Course.school_id == school_id,
         )
         .all()
