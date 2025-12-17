@@ -226,7 +226,12 @@ const CoursesManagement = forwardRef((props, ref) => {
                       )}
 
                       <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-500">
-                        {course.year && <span>📚 Jaar: {course.year}</span>}
+                        {course.academic_year_label && (
+                          <span>📅 Schooljaar: {course.academic_year_label}</span>
+                        )}
+                        {course.year && !course.academic_year_label && (
+                          <span>📚 Jaar: {course.year}</span>
+                        )}
                         {course.teacher_names && course.teacher_names.length > 0 && (
                           <span>👥 Docenten: {course.teacher_names.join(", ")}</span>
                         )}
