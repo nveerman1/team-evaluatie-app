@@ -19,6 +19,12 @@ export interface AcademicYearListResponse {
   per_page: number;
 }
 
+export interface AcademicYearCreate {
+  label: string;
+  start_date: string; // YYYY-MM-DD
+  end_date: string; // YYYY-MM-DD
+}
+
 export interface ClassMapping {
   [sourceClassName: string]: string; // target class name
 }

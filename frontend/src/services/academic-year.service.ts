@@ -2,6 +2,7 @@ import api from "@/lib/api";
 import {
   AcademicYear,
   AcademicYearListResponse,
+  AcademicYearCreate,
   TransitionRequest,
   TransitionResult,
   ClassListResponse,
@@ -27,6 +28,14 @@ export const academicYearService = {
    */
   async getAcademicYear(id: number): Promise<AcademicYear> {
     const response = await api.get<AcademicYear>(`/admin/academic-years/${id}`);
+    return response.data;
+  },
+
+  /**
+   * Create a new academic year
+   */
+  async createAcademicYear(data: AcademicYearCreate): Promise<AcademicYear> {
+    const response = await api.post<AcademicYear>("/admin/academic-years", data);
     return response.data;
   },
 

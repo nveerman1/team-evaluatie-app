@@ -8,6 +8,7 @@ import SectionsManagement from "@/components/admin/SectionsManagement";
 import CoursesManagement from "@/components/admin/CoursesManagement";
 import TeachersManagement from "@/components/admin/TeachersManagement";
 import StudentsManagement from "@/components/admin/StudentsManagement";
+import AcademicYearsManagement from "@/components/admin/AcademicYearsManagement";
 
 export default function SchoolbeheerPageInner() {
   const { isAdmin, loading } = useAuth();
@@ -23,6 +24,7 @@ export default function SchoolbeheerPageInner() {
   const vakkenRef = useRef<any>(null);
   const docentenRef = useRef<any>(null);
   const leerlingenRef = useRef<any>(null);
+  const jarenRef = useRef<any>(null);
 
   // Redirect non-admins
   useEffect(() => {
@@ -72,6 +74,11 @@ export default function SchoolbeheerPageInner() {
       id: "leerlingen",
       label: "Leerlingen",
       content: <StudentsManagement ref={leerlingenRef} />,
+    },
+    {
+      id: "jaren",
+      label: "Academische Jaren",
+      content: <AcademicYearsManagement ref={jarenRef} />,
     },
   ];
 
@@ -136,6 +143,23 @@ export default function SchoolbeheerPageInner() {
             </button>
           </div>
         );
+      case "jaren":
+        return (
+          <div className="flex gap-3">
+            <button
+              onClick={() => jarenRef.current?.handleTransition?.()}
+              className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Jaartransitie
+            </button>
+            <button
+              onClick={() => jarenRef.current?.handleCreate?.()}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+            >
+              + Nieuw Academisch Jaar
+            </button>
+          </div>
+        );
       default:
         return null;
     }
@@ -151,7 +175,7 @@ export default function SchoolbeheerPageInner() {
               Schoolbeheer
             </h1>
             <p className="text-gray-600 mt-1 text-sm">
-              Beheer secties, vakken, docenten en leerlingen van jouw school
+              Beheer secties, vakken, docenten, leerlingen en academische jaren van jouw school
             </p>
           </div>
           <div className="flex gap-3">
