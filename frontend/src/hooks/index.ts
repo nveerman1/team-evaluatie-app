@@ -11,6 +11,8 @@ export * from "./useStudentProjectAssessments";
 export * from "./useStudentProjectDetails";
 export * from "./useCurrentUser";
 export * from "./useAuth";
+export * from "./useMe";
+export * from "./useLogout";
 export * from "./useClients";
 export * from "./useDebounce";
 export * from "./student/useStudentGrowth";

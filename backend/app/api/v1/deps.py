@@ -1,12 +1,17 @@
 from __future__ import annotations
-from fastapi import Header, HTTPException, status, Depends
+from fastapi import Header, HTTPException, status, Depends, Cookie, Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from app.infra.db.session import SessionLocal
 from app.infra.db.models import User
 from app.core.config import settings
+from app.core.security import decode_access_token
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Optional bearer token scheme (for backwards compatibility)
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def get_db():
@@ -17,50 +22,114 @@ def get_db():
         db.close()
 
 
-# Simpele dev-auth: header X-User-Email (ONLY in development mode)
 async def get_current_user(
+    request: Request,
     db: Session = Depends(get_db),
     x_user_email: str | None = Header(default=None, alias="X-User-Email"),
+    access_token_cookie: str | None = Cookie(default=None, alias="access_token"),
+    bearer_token: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ) -> User:
     """
-    Dev-login authentication dependency.
-
-    This method uses X-User-Email header for authentication and is ONLY
-    allowed in development mode (NODE_ENV=development).
-
-    In production, this will raise an error and Azure AD authentication
-    should be used instead via /auth/azure endpoints.
-
-    SECURITY: This check prevents dev-login bypass in production builds.
-    The NODE_ENV value is validated at application startup.
+    Authentication dependency supporting multiple methods:
+    
+    1. Development mode (NODE_ENV=development):
+       - X-User-Email header for quick testing
+    
+    2. Production mode:
+       - HttpOnly cookie (access_token) - preferred method
+       - Bearer token in Authorization header - fallback for API clients
+    
+    Security:
+    - Dev-login is blocked in production
+    - JWT tokens are validated and decoded
+    - User must not be archived (archived=False)
+    - School ID must match the token claim
     """
-    # CRITICAL: Block dev-login in production - validate NODE_ENV
-    if settings.NODE_ENV != "development":
-        # Explicitly ignore any X-User-Email header in production
+    
+    # DEVELOPMENT: Allow X-User-Email header ONLY in development mode
+    if settings.NODE_ENV == "development" and x_user_email:
         logger.warning(
-            "Dev-login attempted in non-development environment. "
-            f"NODE_ENV={settings.NODE_ENV}. Use Azure AD authentication instead. "
-            f"Header value ignored for security."
+            f"Dev-login used for user: {x_user_email}. "
+            "This authentication method should only be used in local development."
         )
+        user = db.query(User).filter(User.email == x_user_email).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, 
+                detail="Unknown user"
+            )
+        return user
+    
+    # PRODUCTION: Use cookie or bearer token
+    token = None
+    
+    # Priority 1: Cookie-based authentication (preferred)
+    if access_token_cookie:
+        token = access_token_cookie
+        logger.debug("Authentication via HttpOnly cookie")
+    
+    # Priority 2: Bearer token (fallback for API clients)
+    elif bearer_token:
+        token = bearer_token.credentials
+        logger.debug("Authentication via Bearer token")
+    
+    # No valid authentication method found
+    if not token:
+        # Block dev-login attempts in production
+        if settings.NODE_ENV != "development" and x_user_email:
+            logger.warning(
+                "Dev-login attempted in non-development environment. "
+                f"NODE_ENV={settings.NODE_ENV}. Use Azure AD authentication instead."
+            )
+        
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Dev-login is only available in development mode. Please use Azure AD authentication.",
+            detail="Not authenticated. Please log in.",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-
-    if not x_user_email:
+    
+    # Decode and validate JWT
+    payload = decode_access_token(token)
+    if not payload:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="X-User-Email required"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-
-    # Log dev-login usage for monitoring
-    logger.warning(
-        f"Dev-login used for user: {x_user_email}. "
-        "This authentication method should only be used in local development."
-    )
-
-    user = db.query(User).filter(User.email == x_user_email).first()
+    
+    # Extract user email from token
+    email = payload.get("sub")
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload",
+        )
+    
+    # Get user from database
+    user = db.query(User).filter(User.email == email).first()
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Unknown user"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
         )
+    
+    # Validate user is not archived
+    if user.archived:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is archived",
+        )
+    
+    # Validate school_id matches token claim (if present in token)
+    token_school_id = payload.get("school_id")
+    if token_school_id is not None and user.school_id != token_school_id:
+        logger.warning(
+            f"School ID mismatch for user {user.email}: "
+            f"token={token_school_id}, user={user.school_id}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="School ID mismatch",
+        )
+    
     return user

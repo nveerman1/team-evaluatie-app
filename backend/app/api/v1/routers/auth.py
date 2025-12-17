@@ -1,15 +1,16 @@
 from __future__ import annotations
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 import secrets
 import logging
 
 from app.api.v1.deps import get_current_user, get_db
-from app.api.v1.schemas.auth import UserRead, AzureAuthResponse
+from app.api.v1.schemas.auth import UserRead
 from app.infra.db.models import User, School
 from app.core.azure_ad import azure_ad_authenticator
 from app.core.security import create_access_token
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ def azure_login(
     return RedirectResponse(url=result["auth_url"])
 
 
-@router.get("/azure/callback", response_model=AzureAuthResponse)
+@router.get("/azure/callback")
 def azure_callback(
     code: str = Query(..., description="Authorization code from Azure AD"),
     state: str = Query(..., description="State parameter for CSRF protection"),
@@ -71,10 +72,11 @@ def azure_callback(
     4. Retrieves user profile from Microsoft Graph API
     5. Validates user email domain (if configured)
     6. Creates or updates user in database
-    7. Issues JWT token for application authentication
+    7. Sets JWT token as HttpOnly cookie
+    8. Redirects to frontend dashboard
 
     Returns:
-        JWT access token and user information
+        Redirect to frontend dashboard with authentication cookie set
     """
     if not azure_ad_authenticator.enabled:
         raise HTTPException(
@@ -129,15 +131,63 @@ def azure_callback(
         f"school_id={school_id}, role={user.role}"
     )
 
-    return {
-        "access_token": jwt_token,
-        "token_type": "bearer",
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role,
-            "school_id": user.school_id,
-            "class_name": user.class_name,
-        },
-    }
+    # Determine redirect URL based on user role
+    # Use environment variable with fallback
+    frontend_url = settings.FRONTEND_URL
+    if user.role == "teacher":
+        redirect_path = "/teacher"
+    elif user.role == "student":
+        redirect_path = "/student"
+    else:
+        redirect_path = "/"
+    
+    redirect_url = f"{frontend_url}{redirect_path}"
+
+    # Create response with redirect
+    response = RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
+    
+    # Set HttpOnly cookie with JWT token
+    response.set_cookie(
+        key="access_token",
+        value=jwt_token,
+        httponly=True,
+        secure=settings.COOKIE_SECURE,  # True in production
+        samesite=settings.COOKIE_SAMESITE,  # "Lax" allows OAuth redirects
+        max_age=settings.COOKIE_MAX_AGE,  # 7 days
+        path="/",
+        domain=settings.COOKIE_DOMAIN if settings.COOKIE_DOMAIN else None,
+    )
+    
+    logger.info(f"Authentication cookie set for user {user.email}, redirecting to {redirect_url}")
+    
+    return response
+
+
+@router.post("/logout")
+def logout(response: Response):
+    """
+    Logout the current user by clearing the authentication cookie.
+    
+    This endpoint:
+    1. Clears the access_token cookie by setting it to expire
+    2. Returns a success message
+    
+    Returns:
+        Success message confirming logout
+    """
+    # Clear the cookie by setting it to expire in the past
+    response.set_cookie(
+        key="access_token",
+        value="",
+        httponly=True,
+        secure=settings.COOKIE_SECURE,
+        samesite=settings.COOKIE_SAMESITE,
+        max_age=0,  # Expire immediately
+        expires=0,  # Also set expires to epoch
+        path="/",
+        domain=settings.COOKIE_DOMAIN if settings.COOKIE_DOMAIN else None,
+    )
+    
+    logger.info("User logged out, cookie cleared")
+    
+    return {"message": "Successfully logged out"}

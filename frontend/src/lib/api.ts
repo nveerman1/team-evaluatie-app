@@ -25,7 +25,7 @@ export class ApiAuthError extends Error {
 }
 
 // Base URL: gebruik env als die is gezet, anders fallback
-const baseURL =
+export const baseURL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ||
   "http://localhost:8000/api/v1";
 
