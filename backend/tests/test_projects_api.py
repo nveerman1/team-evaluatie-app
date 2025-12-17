@@ -175,8 +175,8 @@ class TestProjectsEndpoints:
                     
                     db.commit.assert_called()
 
-    def test_delete_project_archives_it(self):
-        """Test that deleting a project archives it (soft delete)"""
+    def test_delete_project_hard_deletes_it(self):
+        """Test that deleting a project performs a hard delete"""
         db = Mock()
         user = Mock(spec=User)
         user.school_id = 1
@@ -198,8 +198,8 @@ class TestProjectsEndpoints:
                 with patch("app.api.v1.routers.projects.log_action"):
                     delete_project(project_id=1, db=db, user=user)
                     
-                    # Verify status was changed to archived
-                    assert mock_project.status == "archived"
+                    # Verify project was hard deleted (db.delete called)
+                    db.delete.assert_called_once_with(mock_project)
                     db.commit.assert_called()
 
 
