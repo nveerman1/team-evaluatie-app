@@ -73,19 +73,25 @@ const StudentsManagement = forwardRef((props, ref) => {
     setIsLoading(true);
     setError(null);
     try {
-      // Build filter params - handle "only unlinked" by not specifying a course filter
+      // Build filter params - only include defined values
       const params: any = {
-        q: debouncedSearch || undefined,
-        status_filter: statusFilter === "all" ? undefined : (statusFilter as "active" | "inactive"),
         page: currentPage,
         limit: 25,
         sort: "name",
         dir: "asc",
       };
       
-      // If "only unlinked" is checked, we need to filter for students without courses
-      // Since the API doesn't have a direct "unlinked" filter, we'll filter on frontend
-      // but load all students to get accurate KPI counts
+      // Only add optional filters if they have values
+      if (debouncedSearch) {
+        params.q = debouncedSearch;
+      }
+      
+      if (statusFilter && statusFilter !== "all") {
+        params.status_filter = statusFilter;
+      }
+      
+      // If "only unlinked" is checked, we filter on frontend
+      // Otherwise, add course filter if specified
       if (!onlyUnlinked && courseFilter) {
         params.course = courseFilter;
       }
@@ -138,11 +144,21 @@ const StudentsManagement = forwardRef((props, ref) => {
 
   const handleExportCSV = async () => {
     try {
-      const blob = await adminStudentService.exportCSV({
-        q: debouncedSearch || undefined,
-        status_filter: statusFilter === "all" ? undefined : (statusFilter as "active" | "inactive"),
-        course: courseFilter || undefined,
-      });
+      const params: any = {};
+      
+      if (debouncedSearch) {
+        params.q = debouncedSearch;
+      }
+      
+      if (statusFilter && statusFilter !== "all") {
+        params.status_filter = statusFilter;
+      }
+      
+      if (courseFilter) {
+        params.course = courseFilter;
+      }
+      
+      const blob = await adminStudentService.exportCSV(params);
       adminStudentService.downloadCSV(blob);
     } catch (err) {
       console.error("Failed to export CSV:", err);

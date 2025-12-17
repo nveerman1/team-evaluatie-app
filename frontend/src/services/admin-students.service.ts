@@ -48,7 +48,12 @@ export const adminStudentService = {
    * List students with filtering and pagination
    */
   async listStudents(params: AdminStudentListParams = {}): Promise<AdminStudentListResponse> {
-    const response = await api.get<AdminStudent[]>("/admin/students", { params });
+    // Filter out undefined values to avoid sending them as query parameters
+    const cleanParams = Object.fromEntries(
+      Object.entries(params).filter(([_, value]) => value !== undefined)
+    );
+    
+    const response = await api.get<AdminStudent[]>("/admin/students", { params: cleanParams });
     
     // Extract total count from X-Total-Count header (case-insensitive)
     const totalCount = 
@@ -89,8 +94,13 @@ export const adminStudentService = {
    * Export students as CSV
    */
   async exportCSV(params: AdminStudentListParams = {}): Promise<Blob> {
+    // Filter out undefined values to avoid sending them as query parameters
+    const cleanParams = Object.fromEntries(
+      Object.entries(params).filter(([_, value]) => value !== undefined)
+    );
+    
     const response = await api.get("/admin/students/export.csv", {
-      params,
+      params: cleanParams,
       responseType: "blob",
     });
     return response.data;
