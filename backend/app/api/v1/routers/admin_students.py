@@ -182,6 +182,8 @@ def list_admin_students(
             getattr(User, "class_name", literal(None)).label("class_name"),
             getattr(User, "team_number", literal(None)).label("team_number"),
             getattr(User, "archived", literal(False)).label("archived"),
+            getattr(User, "auth_provider", literal("local")).label("auth_provider"),
+            getattr(User, "password_hash", literal(None)).label("password_hash"),
             csub.c.course_name.label("course_name"),
         )
         .outerjoin(csub, csub.c.user_id == User.id)
