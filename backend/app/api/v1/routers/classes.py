@@ -17,6 +17,7 @@ from app.api.v1.schemas.classes import (
     ClassWithStudentCount,
     BulkClassCreate,
 )
+from app.infra.services.archive_guards import require_year_not_archived
 
 router = APIRouter(prefix="/admin/classes", tags=["admin-classes"])
 
@@ -91,6 +92,9 @@ def create_class(
     if not academic_year:
         raise HTTPException(status_code=404, detail="Academic year not found")
     
+    # Check if academic year is archived
+    require_year_not_archived(db, data.academic_year_id)
+    
     # Check if class with same name already exists for this academic year
     existing = db.query(Class).filter(
         Class.school_id == school_id,
@@ -144,6 +148,9 @@ def bulk_create_classes(
     
     if not academic_year:
         raise HTTPException(status_code=404, detail="Academic year not found")
+    
+    # Check if academic year is archived
+    require_year_not_archived(db, data.academic_year_id)
     
     created_classes = []
     
@@ -227,6 +234,9 @@ def update_class(
     if not cls:
         raise HTTPException(status_code=404, detail="Class not found")
     
+    # Check if academic year is archived
+    require_year_not_archived(db, cls.academic_year_id)
+    
     # Update fields
     update_data = data.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -261,6 +271,9 @@ def delete_class(
     
     if not cls:
         raise HTTPException(status_code=404, detail="Class not found")
+    
+    # Check if academic year is archived
+    require_year_not_archived(db, cls.academic_year_id)
     
     # Note: Cascade delete will handle related memberships
     db.delete(cls)

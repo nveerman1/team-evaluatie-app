@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 import logging
+from datetime import datetime
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import User, AcademicYear
@@ -252,3 +253,53 @@ def transition_academic_year(
             status_code=500,
             detail=f"Transition failed: {str(e)}",
         )
+
+
+@router.post("/{academic_year_id}/archive", response_model=AcademicYearOut)
+def archive_academic_year(
+    academic_year_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Archive an academic year - makes it read-only
+    
+    Once archived, no mutations (POST/PATCH/DELETE) are allowed on:
+    - Classes in this year
+    - Courses in this year
+    - Course enrollments
+    - Projects (via courses)
+    - Evaluations (via projects)
+    
+    Read operations (GET) remain allowed.
+    Archiving cannot be undone.
+    """
+    
+    # Require admin role
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin role required")
+    
+    academic_year = db.query(AcademicYear).filter(
+        AcademicYear.id == academic_year_id,
+        AcademicYear.school_id == current_user.school_id,
+    ).first()
+    
+    if not academic_year:
+        raise HTTPException(status_code=404, detail="Academic year not found")
+    
+    if academic_year.is_archived:
+        raise HTTPException(status_code=400, detail="Academic year is already archived")
+    
+    # Archive the year
+    academic_year.is_archived = True
+    academic_year.archived_at = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(academic_year)
+    
+    logger.info(
+        f"Academic year archived: id={academic_year_id}, "
+        f"label={academic_year.label}, school={current_user.school_id}"
+    )
+    
+    return AcademicYearOut.model_validate(academic_year)

@@ -51,6 +51,7 @@ from app.core.rbac import (
     get_accessible_course_ids,
 )
 from app.core.audit import log_action
+from app.infra.services.archive_guards import require_course_year_not_archived, require_project_year_not_archived
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -463,6 +464,8 @@ def create_project(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You don't have access to this course",
             )
+        # Check if course's year is archived
+        require_course_year_not_archived(db, payload.course_id)
 
     # Create project
     project = Project(
@@ -653,6 +656,9 @@ def update_project(
             detail="You don't have access to this project",
         )
 
+    # Check if project's year is archived
+    require_project_year_not_archived(db, project_id)
+
     # Validate new course access if changing course
     if payload.course_id is not None and payload.course_id != project.course_id:
         if not can_access_course(db, user, payload.course_id):
@@ -660,6 +666,9 @@ def update_project(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You don't have access to the new course",
             )
+        # Check if new course's year is archived
+        if payload.course_id:
+            require_course_year_not_archived(db, payload.course_id)
 
     # Update fields
     update_data = payload.model_dump(exclude_unset=True)
@@ -715,6 +724,9 @@ def delete_project(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have access to this project",
         )
+    
+    # Check if project's year is archived
+    require_project_year_not_archived(db, project_id)
 
     # Audit log before deletion
     log_action(

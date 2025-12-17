@@ -23,6 +23,7 @@ from app.api.v1.schemas.courses import (
 )
 from app.core.rbac import require_role, scope_query_by_school, require_course_access
 from app.core.audit import log_create, log_update, log_delete
+from app.infra.services.archive_guards import require_year_not_archived, require_course_year_not_archived
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 
@@ -143,6 +144,10 @@ def create_course(
     """
     require_role(user, ["admin", "teacher"])
 
+    # Check if academic year is archived
+    if payload.academic_year_id:
+        require_year_not_archived(db, payload.academic_year_id)
+
     # Check for duplicate code
     if payload.code:
         existing = (
@@ -168,6 +173,8 @@ def create_course(
         level=payload.level,
         year=payload.year,
         description=payload.description,
+        subject_id=payload.subject_id,
+        academic_year_id=payload.academic_year_id,
         is_active=True,
     )
 
@@ -265,8 +272,15 @@ def update_course(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
+    # Check if course's current year is archived
+    require_course_year_not_archived(db, course_id)
+
     # Update fields
     update_data = payload.model_dump(exclude_unset=True)
+
+    # If updating academic_year_id, check if new year is archived
+    if "academic_year_id" in update_data and update_data["academic_year_id"]:
+        require_year_not_archived(db, update_data["academic_year_id"])
 
     # Check for duplicate code if changing it
     if "code" in update_data and update_data["code"] != course.code:
@@ -328,6 +342,9 @@ def delete_course(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
+
+    # Check if course's year is archived
+    require_course_year_not_archived(db, course_id)
 
     course.is_active = False
 
