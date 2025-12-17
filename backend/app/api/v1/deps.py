@@ -42,7 +42,7 @@ async def get_current_user(
     Security:
     - Dev-login is blocked in production
     - JWT tokens are validated and decoded
-    - User must be active (is_active=True)
+    - User must not be archived (archived=False)
     - School ID must match the token claim
     """
     
@@ -113,11 +113,11 @@ async def get_current_user(
             detail="User not found",
         )
     
-    # Validate user is active
-    if not user.is_active:
+    # Validate user is not archived
+    if user.archived:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is inactive",
+            detail="User account is archived",
         )
     
     # Validate school_id matches token claim (if present in token)
