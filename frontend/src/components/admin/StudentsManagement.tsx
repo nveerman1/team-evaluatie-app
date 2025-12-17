@@ -58,12 +58,12 @@ const StudentsManagement = forwardRef((props, ref) => {
   };
 
   const loadKPIData = async () => {
-    // Load all active students for KPI calculation
+    // Load all students (not just active) for KPI calculation
+    // Note: backend limit is max 200, so we need to fetch in batches or increase limit
     try {
       const response = await adminStudentService.listStudents({
-        status_filter: "active",
         page: 1,
-        limit: 1000, // Get a large batch for KPI calculation
+        limit: 200, // Backend max is 200
       });
       setAllStudentsForKPIs(response.students);
     } catch (err) {
@@ -424,10 +424,10 @@ const StudentsManagement = forwardRef((props, ref) => {
                           Klas
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
+                          Koppelingen
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Koppelingen
+                          Status
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Laatste login
@@ -453,9 +453,6 @@ const StudentsManagement = forwardRef((props, ref) => {
                               {student.class_name || "—"}
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {getStatusBadge(student)}
-                          </td>
                           <td className="px-6 py-4">
                             {student.course_name ? (
                               <div className="flex flex-wrap gap-1">
@@ -466,6 +463,9 @@ const StudentsManagement = forwardRef((props, ref) => {
                             ) : (
                               <span className="text-sm text-gray-400">—</span>
                             )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {getStatusBadge(student)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-500">—</div>
