@@ -117,7 +117,7 @@ def _set_user_course_membership(
     Zorgt dat user actief gekoppeld is aan group van course_name.
     - Als course_name leeg/None is: doe niets aan membership.
     - Als al gekoppeld aan juiste group: niets doen.
-    - Anders: bestaande actieve memberships deactiveren en nieuwe toevoegen.
+    - Anders: bestaande actieve memberships deactiveren en nieuwe toevoegen (of bestaande reactiveren).
     """
     if not course_name:
         return
@@ -144,9 +144,26 @@ def _set_user_course_membership(
         m.active = False
         db.add(m)
 
-    # add nieuw
-    new_m = TM(school_id=school_id, group_id=team.id, user_id=user_id, active=True)
-    db.add(new_m)
+    # check of er al een (inactieve) membership bestaat voor deze group
+    existing = (
+        db.query(TM)
+        .filter(
+            TM.school_id == school_id,
+            TM.user_id == user_id,
+            TM.group_id == team.id
+        )
+        .first()
+    )
+    
+    if existing:
+        # reactivate bestaande membership
+        existing.active = True
+        db.add(existing)
+    else:
+        # add nieuwe membership
+        new_m = TM(school_id=school_id, group_id=team.id, user_id=user_id, active=True)
+        db.add(new_m)
+
 
 
 # ---------- routes ----------
