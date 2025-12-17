@@ -126,9 +126,12 @@ const StudentsManagement = forwardRef((props, ref) => {
     if (!selectedStudent) return;
     
     try {
-      await adminStudentService.updateStudent(selectedStudent.id, {
+      const updatedStudent = await adminStudentService.updateStudent(selectedStudent.id, {
         course_name: courseName,
       });
+      
+      // Update the selected student with the fresh data from the server
+      setSelectedStudent(updatedStudent);
       
       // Reload both students and KPI data
       await Promise.all([loadStudents(), loadKPIData()]);
