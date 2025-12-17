@@ -1,4 +1,4 @@
-import api from "@/lib/api";
+import api, { baseURL } from "@/lib/api";
 import { User } from "@/dtos/user.dto";
 
 export const authService = {
@@ -21,7 +21,6 @@ export const authService = {
    * Redirect to Azure AD login
    */
   redirectToAzureLogin(schoolId: number): void {
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || "http://localhost:8000/api/v1";
-    window.location.href = `${backendUrl}/auth/azure?school_id=${schoolId}`;
+    window.location.href = `${baseURL}/auth/azure?school_id=${schoolId}`;
   },
 };
