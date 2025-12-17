@@ -36,8 +36,15 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
-    # Cookies
-    SECURE_COOKIES: bool = False
+    # Frontend & Backend URLs
+    FRONTEND_URL: str = "http://localhost:3000"
+    BACKEND_URL: str = "http://localhost:8000"
+
+    # Cookie settings
+    COOKIE_SECURE: bool = False  # Set to True in production
+    COOKIE_DOMAIN: str = ""  # e.g., ".technasiummbh.nl" in production
+    COOKIE_SAMESITE: str = "Lax"  # Allow OAuth redirects
+    COOKIE_MAX_AGE: int = 604800  # 7 days in seconds
 
     # pydantic-settings v2 configuratie
     model_config = SettingsConfigDict(
