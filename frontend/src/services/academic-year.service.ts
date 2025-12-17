@@ -71,4 +71,14 @@ export const academicYearService = {
     );
     return response.data;
   },
+
+  /**
+   * Archive an academic year (make it read-only)
+   */
+  async archiveAcademicYear(id: number): Promise<AcademicYear> {
+    const response = await api.post<AcademicYear>(
+      `/admin/academic-years/${id}/archive`
+    );
+    return response.data;
+  },
 };
