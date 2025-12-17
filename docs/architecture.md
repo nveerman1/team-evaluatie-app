@@ -21,17 +21,33 @@ The application uses a hierarchical organizational structure:
 
 ```
 School
-  └── Subject (optional organizational layer)
-       └── Course
-            └── Group/Team
-                 └── Students
+  └── AcademicYear (e.g., "2025-2026")
+       ├── Class (e.g., "G2a", "G3b")
+       │    └── StudentClassMembership
+       │         └── Students
+       └── Subject (optional organizational layer)
+            └── Course
+                 ├── CourseEnrollment (student enrollment)
+                 │    └── Students
+                 └── Project
+                      ├── Subproject (optional deelprojecten)
+                      └── ProjectTeam
+                           └── ProjectTeamMember
+                                └── Students
 ```
 
 - **School**: Top-level tenant (e.g., a specific school)
+- **AcademicYear**: School year period (e.g., "2025-2026")
+- **Class**: Fixed class within a school year (e.g., "G2a")
+- **StudentClassMembership**: Links students to their class for a specific year
 - **Subject**: Optional grouping by subject area (e.g., "Biologie", "Talen")
-- **Course**: Specific course offering (e.g., "O&O Periode 1 2024")
-- **Group/Team**: Student groups within a course
-- **Students**: Individual learners assigned to groups
+- **Course**: Specific course offering linked to an academic year
+- **CourseEnrollment**: Links students to courses they are enrolled in
+- **Project**: Project within a course
+- **Subproject**: Optional sub-tasks/sections within a main project (deelprojecten)
+- **ProjectTeam**: Immutable team roster snapshot for a project
+- **ProjectTeamMember**: Individual student membership in a project team
+- **Group/Team**: Legacy mutable student groups (being phased out)
 
 ### Subjects (Secties)
 
@@ -43,13 +59,33 @@ Each school can organize courses into **Subjects** (NL: secties):
 - Subjects are optional - courses can exist without being linked to a subject
 - Useful for organizing templates, rubrics, and navigation flows
 
+### Academic Years (Schooljaren)
+
+Each school can have multiple **Academic Years**:
+
+- Represents a school year period (e.g., "2025-2026")
+- Has start and end dates
+- Contains Classes and Courses
+- Enables year-over-year transitions and historical tracking
+
+### Classes (Klassen)
+
+Each academic year can have multiple **Classes**:
+
+- Represents a fixed class within a school year (e.g., "G2a", "G3b")
+- Students are linked to classes via StudentClassMembership
+- One student can only be in one class per academic year
+- Enables bulk operations like year transitions
+
 ### Courses
 
 Each school can have multiple **Courses** (vakken):
 
 - Examples: O&O, XPLR, Biologie, Nederlands, Engels
+- Courses are linked to an AcademicYear via `academic_year_id`
 - Courses can optionally be linked to a Subject via `subject_id`
-- Courses have properties: code, period, level (onderbouw/bovenbouw), year
+- Students enroll in courses via CourseEnrollment
+- Courses have properties: code, period, level (onderbouw/bovenbouw)
 - Courses can be active or inactive (soft delete)
 
 ### Teacher-Course Assignment
@@ -73,85 +109,122 @@ Teachers are explicitly assigned to courses via the **TeacherCourse** junction t
 │ name        │  │
 └─────────────┘  │
                  │
-        ┌────────┴────────┬───────────────┬──────────────┬──────────────┬──────────────┐
-        │                 │               │              │              │              │
-        ▼                 ▼               ▼              ▼              ▼              ▼
+      ┌──────────┴────────┬───────────────┬──────────────┬──────────────┬──────────────┐
+      │                   │               │              │              │              │
+      ▼                   ▼               ▼              ▼              ▼              ▼
 ┌─────────────┐   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-│    User     │   │   Subject   │ │   Rubric    │ │  AuditLog   │ │   Client    │ │   Project   │
-│─────────────│   │─────────────│ │─────────────│ │─────────────│ │─────────────│ │─────────────│
-│ id          │   │ id          │ │ id          │ │ id          │ │ id          │ │ id          │
-│ school_id   │   │ school_id   │ │ school_id   │ │ school_id   │ │ school_id   │ │ school_id   │
-│ email       │   │ name        │ │ title       │ │ user_id     │ │ organization│ │ course_id   │
-│ name        │   │ code        │ │ scope       │ │ action      │ │ contact_name│ │ title       │
-│ role        │   │ color       │ │ target_level│ │ entity_type │ │ email       │ │ status      │
-│ class_name  │   │ icon        │ └─────────────┘ │ entity_id   │ │ phone       │ └─────────────┘
-│ team_number*│   │ is_active   │                 │ details     │ │ level       │        │
-│ archived    │   └─────────────┘                 │ created_at  │ │ sector      │        │
-└─────────────┘          │                        └─────────────┘ │ tags        │        │
-      │                  │                                         │ active      │        │
-      │                  ▼                                         └─────────────┘        │
-      │          ┌─────────────┐                                          │               │
-      │          │   Course    │                                  ┌───────┴────────┐      │
-      │          │─────────────│                                  │                │      │
-      │          │ id          │                                  ▼                ▼      │
-      │          │ school_id   │                          ┌─────────────┐   ┌─────────────┐
-      │          │ subject_id  │◄── Optional link         │ ClientLog   │   │ClientProject│
-      │          │ name        │                          │─────────────│   │    Link     │
-      │          │ code        │                          │ id          │   │─────────────│
-      │          │ level       │                          │ client_id   │   │ id          │
-      │          │ year        │                          │ author_id   │   │ client_id   │
-      │          │ is_active   │                          │ log_type    │   │ project_id  │◄─┐
-      │          └─────────────┘                          │ text        │   │ role        │  │
-      │                 │                                 │ created_at  │   │ start_date  │  │
-      │         ┌───────┴────────┐                        └─────────────┘   │ end_date    │  │
-      │         │                │                                          └─────────────┘  │
-      │         ▼                ▼                                                           │
-      │  ┌─────────────┐  ┌─────────────┐                                                   │
-      │  │TeacherCourse│  │   Group     │ (Legacy - mutable)                                │
-      │  │─────────────│  │─────────────│                                                   │
-      └─►│ teacher_id  │  │ id          │                                                   │
-         │ course_id   │  │ school_id   │                                                   │
-         │ role        │  │ course_id   │                                                   │
-         │ is_active   │  │ name        │                                                   │
-         └─────────────┘  │ team_number │                                                   │
-                          └─────────────┘                                                   │
-                                 │                                                           │
-                                 ▼                                                           │
-                          ┌─────────────┐                                                   │
-                          │GroupMember  │ (Legacy - mutable)                                │
-                          │─────────────│                                                   │
-                          │ group_id    │                                                   │
-                          │ user_id     │                                                   │
-                          │ active      │                                                   │
-                          └─────────────┘                                                   │
-                                                                                            │
-                          ┌─────────────┐                                                   │
-                          │ProjectTeam  │ (New - immutable snapshots) ◄────────────────────┘
-                          │─────────────│
-                          │ id          │
-                          │ school_id   │
-                          │ project_id  │
-                          │ team_id     │ (optional legacy link)
-                          │ display_name│
-                          │ team_number │
-                          │ version     │
-                          │ is_locked   │
-                          │ created_at  │
-                          └─────────────┘
-                                 │
-                                 ▼
-                          ┌─────────────┐
-                          │ProjectTeam  │
-                          │   Member    │
-                          │─────────────│
-                          │ id          │
-                          │ school_id   │
-                          │ project     │
-                          │   _team_id  │
-                          │ user_id     │
-                          │ role        │
-                          │ created_at  │
-                          └─────────────┘
+│    User     │   │AcademicYear │ │   Subject   │ │  AuditLog   │ │   Client    │ │ External    │
+│─────────────│   │─────────────│ │─────────────│ │─────────────│ │─────────────│ │ Evaluator   │
+│ id          │   │ id          │ │ id          │ │ id          │ │ id          │ │─────────────│
+│ school_id   │   │ school_id   │ │ school_id   │ │ school_id   │ │ school_id   │ │ id          │
+│ email       │   │ label       │ │ name        │ │ user_id     │ │ organization│ │ school_id   │
+│ name        │   │ start_date  │ │ code        │ │ action      │ │ contact_name│ │ name        │
+│ role        │   │ end_date    │ │ color       │ │ entity_type │ │ email       │ │ email       │
+│ class_name  │   └─────────────┘ │ icon        │ │ entity_id   │ │ phone       │ │ organisation│
+│ team_number*│          │        │ is_active   │ │ details     │ │ level       │ └─────────────┘
+│ archived    │          │        └─────────────┘ │ created_at  │ │ sector      │        │
+└─────────────┘          │               │        └─────────────┘ │ tags        │        │
+      │                  │               │                         │ active      │        │
+      │         ┌────────┴────────┐      │                         └─────────────┘        │
+      │         │                 │      │                                │               │
+      │         ▼                 ▼      │                        ┌───────┴────────┐      │
+      │  ┌─────────────┐   ┌─────────────┐                       │                │      │
+      │  │   Class     │   │   Course    │◄── Optional link      ▼                ▼      │
+      │  │─────────────│   │─────────────│                ┌─────────────┐   ┌─────────────┐
+      │  │ id          │   │ id          │                │ ClientLog   │   │ClientProject│
+      │  │ school_id   │   │ school_id   │                │─────────────│   │    Link     │
+      │  │ academic_yr │   │ subject_id  │                │ id          │   │─────────────│
+      │  │   _id       │   │ academic_yr │                │ client_id   │   │ id          │
+      │  │ name        │   │   _id       │                │ author_id   │   │ client_id   │
+      │  └─────────────┘   │ name        │                │ log_type    │   │ project_id  │
+      │         │          │ code        │                │ text        │   │ role        │
+      │         │          │ level       │                │ created_at  │   │ start_date  │
+      │         │          │ is_active   │                └─────────────┘   │ end_date    │
+      │         │          └─────────────┘                                  └─────────────┘
+      │         │                 │                                                 │
+      │         ▼                 │                                                 │
+      │  ┌─────────────┐          │                                                 │
+      │  │  Student    │          ├──────────────┬──────────────┐                  │
+      │  │   Class     │          │              │              │                  │
+      │  │ Membership  │          ▼              ▼              ▼                  │
+      └─►│─────────────│   ┌─────────────┐┌─────────────┐┌─────────────┐          │
+         │ id          │   │TeacherCourse││   Course    ││   Rubric    │          │
+         │ student_id  │   │─────────────││ Enrollment  ││─────────────│          │
+         │ class_id    │   │ teacher_id  ││─────────────││ id          │          │
+         │ academic_yr │   │ course_id   ││ course_id   ││ school_id   │          │
+         │   _id       │   │ role        ││ student_id  ││ title       │          │
+         └─────────────┘   │ is_active   ││ active      ││ scope       │          │
+                           └─────────────┘└─────────────┘│ target_level│          │
+                                  │                       └─────────────┘          │
+                                  │                              │                 │
+                                  ▼                              │                 │
+                           ┌─────────────┐                       │                 │
+                           │   Group     │ (Legacy - mutable)    │                 │
+                           │─────────────│                       │                 │
+                           │ id          │                       │                 │
+                           │ school_id   │                       │                 │
+                           │ course_id   │                       │                 │
+                           │ name        │                       │                 │
+                           │ team_number │                       │                 │
+                           └─────────────┘                       │                 │
+                                  │                              │                 │
+                           ┌──────┴────────┐                     │                 │
+                           │               │                     │                 │
+                           ▼               ▼                     │                 │
+                    ┌─────────────┐ ┌─────────────┐             │                 │
+                    │GroupMember  │ │ProjectTeam  │             │                 │
+                    │─────────────│ │  External   │◄────────────┘                 │
+                    │ group_id    │ │─────────────│                               │
+                    │ user_id     │ │ id          │                               │
+                    │ active      │ │ group_id    │                               │
+                    └─────────────┘ │ external_   │                               │
+                                    │   evaluator │                               │
+                                    │   _id       │                               │
+                                    │ project_id  │                               │
+                                    │ invitation  │                               │
+                                    │   _token    │                               │
+                                    │ status      │                               │
+                                    └─────────────┘                               │
+                                                                                  │
+                           ┌─────────────┐                                        │
+                           │   Project   │◄───────────────────────────────────────┘
+                           │─────────────│
+                           │ id          │
+                           │ school_id   │
+                           │ course_id   │
+                           │ title       │
+                           │ status      │
+                           └─────────────┘
+                                  │
+                         ┌────────┴────────┐
+                         │                 │
+                         ▼                 ▼
+                  ┌─────────────┐   ┌─────────────┐
+                  │ Subproject  │   │ProjectTeam  │ (New - immutable snapshots)
+                  │─────────────│   │─────────────│
+                  │ id          │   │ id          │
+                  │ school_id   │   │ school_id   │
+                  │ project_id  │   │ project_id  │
+                  │ client_id   │   │ team_id     │ (optional legacy link)
+                  │ title       │   │ display_name│
+                  │ team_number │   │ team_number │
+                  └─────────────┘   │ version     │
+                                    │ created_at  │
+                                    └─────────────┘
+                                           │
+                                           ▼
+                                    ┌─────────────┐
+                                    │ProjectTeam  │
+                                    │   Member    │
+                                    │─────────────│
+                                    │ id          │
+                                    │ school_id   │
+                                    │ project     │
+                                    │   _team_id  │
+                                    │ user_id     │
+                                    │ role        │
+                                    │ created_at  │
+                                    └─────────────┘
 
 * team_number in User table is DEPRECATED - use ProjectTeam instead
 
@@ -161,6 +234,7 @@ Teachers are explicitly assigned to courses via the **TeacherCourse** junction t
 │ id          │
 │ school_id   │
 │ course_id   │
+│ project_id  │
 │ rubric_id   │
 │ title       │
 │ eval_type   │◄── "peer" | "project" | "competency"
@@ -179,6 +253,138 @@ Teachers are explicitly assigned to courses via the **TeacherCourse** junction t
 │ reviewee_id │ │ score       │
 │ is_self     │ │ comment     │
 └─────────────┘ └─────────────┘
+
+┌────────────────────────────────────────────────────────────┐
+│               Learning Objectives & Templates              │
+├────────────────────────────────────────────────────────────┤
+│                                                            │
+│  ┌─────────────┐         ┌─────────────────────────┐      │
+│  │  Learning   │         │RubricCriterion          │      │
+│  │ Objective   │◄────────│  LearningObjective      │      │
+│  │─────────────│         │─────────────────────────│      │
+│  │ id          │         │ criterion_id            │      │
+│  │ school_id   │         │ learning_objective_id   │      │
+│  │ subject_id  │         └─────────────────────────┘      │
+│  │ teacher_id  │                                          │
+│  │ is_template │                                          │
+│  │ domain      │                                          │
+│  │ title       │                                          │
+│  │ description │                                          │
+│  │ phase       │                                          │
+│  └─────────────┘                                          │
+│                                                            │
+│  ┌──────────────────────────────┐                         │
+│  │ PeerEvaluationCriterion      │                         │
+│  │        Template              │                         │
+│  │──────────────────────────────│                         │
+│  │ id, school_id, subject_id    │                         │
+│  │ omza_category                │                         │
+│  │ title, description           │                         │
+│  │ target_level                 │                         │
+│  │ level_descriptors (JSON)     │                         │
+│  │ learning_objective_ids       │                         │
+│  └──────────────────────────────┘                         │
+│                                                            │
+│  ┌──────────────────────────────┐                         │
+│  │ ProjectAssessmentCriterion   │                         │
+│  │        Template              │                         │
+│  │──────────────────────────────│                         │
+│  │ id, school_id, subject_id    │                         │
+│  │ category                     │                         │
+│  │ title, description           │                         │
+│  │ weight                       │                         │
+│  │ level_descriptors (JSON)     │                         │
+│  │ learning_objective_ids       │                         │
+│  └──────────────────────────────┘                         │
+│                                                            │
+│  ┌──────────────────────────────┐                         │
+│  │ ProjectRubricTemplate        │                         │
+│  │──────────────────────────────│                         │
+│  │ id, school_id, subject_id    │                         │
+│  │ name, level                  │                         │
+│  │──────────────────────────────│                         │
+│  │    └─► ProjectRubric         │                         │
+│  │         CriterionTemplate    │                         │
+│  └──────────────────────────────┘                         │
+│                                                            │
+│  ┌──────────────────────────────┐                         │
+│  │ CompetencyTemplate           │                         │
+│  │──────────────────────────────│                         │
+│  │ id, school_id, subject_id    │                         │
+│  │ name, description, domain    │                         │
+│  │ level, order                 │                         │
+│  │──────────────────────────────│                         │
+│  │    └─► Competency            │                         │
+│  │         LevelDescriptor      │                         │
+│  │         Template             │                         │
+│  │    └─► Competency            │                         │
+│  │         ReflectionQuestion   │                         │
+│  │         Template             │                         │
+│  └──────────────────────────────┘                         │
+│                                                            │
+│  ┌──────────────────────────────┐                         │
+│  │ MailTemplate                 │                         │
+│  │──────────────────────────────│                         │
+│  │ id, school_id, subject_id    │                         │
+│  │ name, type                   │                         │
+│  │ subject, body                │                         │
+│  │ variables_allowed (JSON)     │                         │
+│  └──────────────────────────────┘                         │
+│                                                            │
+│  ┌──────────────────────────────┐                         │
+│  │ StandardRemark               │                         │
+│  │──────────────────────────────│                         │
+│  │ id, school_id, subject_id    │                         │
+│  │ type, category               │                         │
+│  │ text, order                  │                         │
+│  └──────────────────────────────┘                         │
+│                                                            │
+│  ┌──────────────────────────────┐                         │
+│  │ TemplateTag                  │                         │
+│  │──────────────────────────────│                         │
+│  │ id, school_id, name, color   │                         │
+│  │──────────────────────────────│                         │
+│  │    └─► TemplateTagLink       │                         │
+│  │         (links to templates) │                         │
+│  └──────────────────────────────┘                         │
+└────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────┐
+│                    Project Notes System                    │
+├────────────────────────────────────────────────────────────┤
+│                                                            │
+│  ┌─────────────────────┐                                  │
+│  │ProjectNotesContext  │                                  │
+│  │─────────────────────│                                  │
+│  │ id, school_id       │                                  │
+│  │ title, description  │                                  │
+│  │ project_id          │                                  │
+│  │ course_id           │                                  │
+│  │ class_name          │                                  │
+│  │ evaluation_id       │                                  │
+│  │ project_team_id     │                                  │
+│  │ status              │                                  │
+│  │ created_by          │                                  │
+│  │ created_at          │                                  │
+│  └─────────────────────┘                                  │
+│           │                                                │
+│           ▼                                                │
+│  ┌─────────────────────┐                                  │
+│  │   ProjectNote       │                                  │
+│  │─────────────────────│                                  │
+│  │ id, context_id      │                                  │
+│  │ note_type           │ ("project"|"team"|"student")    │
+│  │ team_id             │                                  │
+│  │ student_id          │                                  │
+│  │ text, tags          │                                  │
+│  │ omza_category       │                                  │
+│  │ learning_objective  │                                  │
+│  │   _id               │                                  │
+│  │ is_competency       │                                  │
+│  │   _evidence         │                                  │
+│  │ created_by          │                                  │
+│  └─────────────────────┘                                  │
+└────────────────────────────────────────────────────────────┘
 ```
 
 ## Key Tables
@@ -224,7 +430,51 @@ Teachers are explicitly assigned to courses via the **TeacherCourse** junction t
 - **Unique constraints**: 
   - `(school_id, name, period)`
   - `(school_id, code)`
-- **Index**: `subject_id`
+- **Index**: `subject_id`, `academic_year_id`
+
+### AcademicYear
+- `id`: Primary key
+- `school_id`: Foreign key to School
+- `label`: Academic year label (e.g., "2025-2026")
+- `start_date`: Year start date
+- `end_date`: Year end date
+- **Unique constraint**: `(school_id, label)`
+- **Index**: `school_id`
+- **Purpose**: Organizes classes and courses by school year, enables year transitions
+
+### Class
+- `id`: Primary key
+- `school_id`: Foreign key to School
+- `academic_year_id`: Foreign key to AcademicYear
+- `name`: Class name (e.g., "G2a", "G3b")
+- **Unique constraint**: `(school_id, academic_year_id, name)`
+- **Indexes**: 
+  - `school_id`
+  - `academic_year_id`
+- **Purpose**: Represents fixed classes within a school year
+
+### StudentClassMembership
+- `id`: Primary key
+- `student_id`: Foreign key to User
+- `class_id`: Foreign key to Class
+- `academic_year_id`: Foreign key to AcademicYear (redundant for performance)
+- **Unique constraint**: `(student_id, academic_year_id)` - ensures one student per class per year
+- **Indexes**: 
+  - `student_id`
+  - `class_id`
+  - `academic_year_id`
+- **Purpose**: Links students to their class for a specific academic year
+
+### CourseEnrollment
+- `id`: Primary key
+- `course_id`: Foreign key to Course
+- `student_id`: Foreign key to User
+- `active`: Active status flag
+- **Unique constraint**: `(course_id, student_id)`
+- **Indexes**: 
+  - `course_id`
+  - `student_id`
+- **Purpose**: Links students to courses they are enrolled in
 
 ### TeacherCourse
 - `id`: Primary key
@@ -342,6 +592,281 @@ Teachers are explicitly assigned to courses via the **TeacherCourse** junction t
 - `user_id`: Foreign key to User
 - `active`: Active status flag
 - **Note**: This table represents legacy mutable group membership - new code should use ProjectTeamMember instead
+
+### Subproject
+- `id`: Primary key
+- `school_id`: Foreign key to School
+- `project_id`: Foreign key to Project
+- `client_id`: Foreign key to Client (optional)
+- `title`: Subproject title
+- `team_number`: Team number (optional)
+- **Indexes**: 
+  - `school_id`
+  - `project_id`
+  - `client_id`
+  - `(project_id, team_number)`
+- **Purpose**: Sub-tasks/sections within a main project (deelprojecten), used for bovenbouw choice projects
+
+### LearningObjective
+- `id`: Primary key
+- `school_id`: Foreign key to School
+- `subject_id`: Foreign key to Subject (for central/template objectives, nullable)
+- `teacher_id`: Foreign key to User (for teacher-specific objectives, nullable)
+- `course_id`: Foreign key to Course (optional, nullable)
+- `is_template`: Boolean (true for central admin-managed, false for teacher-specific)
+- `domain`: Domain code (e.g., "A", "B", "C", "D - Ontwerpen", "E")
+- `title`: Learning objective title
+- `description`: Detailed description
+- `order`: Order/number
+- `phase`: "onderbouw" | "bovenbouw"
+- `metadata_json`: Additional metadata (JSON)
+- **Indexes**: 
+  - `school_id`
+  - `subject_id`
+  - `teacher_id`
+  - `course_id`
+  - `(school_id, is_template)`
+  - `(school_id, domain)`
+  - `(school_id, phase)`
+- **Purpose**: Eindtermen/learning objectives that can be linked to rubric criteria to track student progress
+
+### RubricCriterionLearningObjective
+- `id`: Primary key
+- `school_id`: Foreign key to School
+- `criterion_id`: Foreign key to RubricCriterion
+- `learning_objective_id`: Foreign key to LearningObjective
+- **Unique constraint**: `(criterion_id, learning_objective_id)`
+- **Indexes**: 
+  - `criterion_id`
+  - `learning_objective_id`
+- **Purpose**: Many-to-many association linking rubric criteria to learning objectives
+
+### ProjectNotesContext
+- `id`: Primary key
+- `school_id`: Foreign key to School
+- `title`: Context title
+- `description`: Context description
+- `project_id`: Foreign key to Project (optional)
+- `course_id`: Foreign key to Course (optional)
+- `class_name`: Class name (optional)
+- `evaluation_id`: Foreign key to Evaluation (optional)
+- `project_team_id`: Foreign key to ProjectTeam (frozen roster link)
+- `created_by`: Foreign key to User
+- `created_at`: Timestamp
+- `updated_at`: Timestamp
+- `status`: "draft" | "open" | "closed"
+- `closed_at`: Timestamp when closed (nullable)
+- `settings`: JSON settings
+- **Indexes**: 
+  - `(school_id, course_id)`
+  - `created_by`
+  - `project_team_id`
+  - `status`
+- **Purpose**: Container for all notes related to a specific project
+
+### ProjectNote
+- `id`: Primary key
+- `context_id`: Foreign key to ProjectNotesContext
+- `note_type`: "project" | "team" | "student"
+- `team_id`: Foreign key to Group (optional)
+- `student_id`: Foreign key to User (optional)
+- `text`: Note content
+- `tags`: Array of tags
+- `omza_category`: OMZA category (optional)
+- `learning_objective_id`: Foreign key to LearningObjective (optional)
+- `is_competency_evidence`: Boolean flag
+- `is_portfolio_evidence`: Boolean flag
+- `metadata`: JSON metadata
+- `created_by`: Foreign key to User
+- `created_at`: Timestamp
+- `updated_at`: Timestamp
+- **Indexes**: 
+  - `(context_id, note_type)`
+  - `team_id`
+  - `student_id`
+  - `created_at`
+  - `omza_category`
+- **Purpose**: Individual notes/observations within a project context
+
+### ExternalEvaluator
+- `id`: Primary key
+- `school_id`: Foreign key to School
+- `name`: Evaluator name
+- `email`: Evaluator email
+- `organisation`: Organization name (optional)
+- `created_at`: Timestamp
+- `updated_at`: Timestamp
+- **Indexes**: 
+  - `(school_id, email)`
+  - `email`
+- **Purpose**: External evaluators (opdrachtgevers) for project assessments
+
+### ProjectTeamExternal
+- `id`: Primary key
+- `school_id`: Foreign key to School
+- `group_id`: Foreign key to Group
+- `external_evaluator_id`: Foreign key to ExternalEvaluator
+- `project_id`: Foreign key to Project (optional)
+- `assessment_id`: Foreign key to ProjectAssessment (optional)
+- `team_number`: Team number (optional)
+- `invitation_token`: Unique 128-char token for access
+- `token_expires_at`: Token expiration date (optional)
+- `status`: "NOT_INVITED" | "INVITED" | "IN_PROGRESS" | "SUBMITTED"
+- `created_at`: Timestamp
+- `updated_at`: Timestamp
+- `invited_at`: Timestamp (optional)
+- `submitted_at`: Timestamp (optional)
+- **Indexes**: 
+  - `group_id`
+  - `external_evaluator_id`
+  - `project_id`
+  - `assessment_id`
+  - `invitation_token`
+- **Purpose**: Links teams to external evaluators with invitation tokens for external assessments
+
+## Template System
+
+The application includes a comprehensive template system for managing reusable content across rubrics, competencies, emails, and remarks.
+
+### PeerEvaluationCriterionTemplate
+- `id`: Primary key
+- `school_id`: Foreign key to School
+- `subject_id`: Foreign key to Subject
+- `omza_category`: "Organiseren" | "Meedoen" | "Zelfvertrouwen" | "Autonomie"
+- `title`: Criterion title
+- `description`: Detailed description
+- `target_level`: "onderbouw" | "bovenbouw" | NULL (for both)
+- `level_descriptors`: JSON object with keys "1" to "5"
+- `learning_objective_ids`: JSON array of learning objective IDs
+- `created_at`: Timestamp
+- `updated_at`: Timestamp
+- **Indexes**: 
+  - `school_id`
+  - `subject_id`
+  - `omza_category`
+  - `target_level`
+- **Purpose**: Template criteria for peer evaluations based on OMZA framework
+
+### ProjectAssessmentCriterionTemplate
+- `id`: Primary key
+- `school_id`: Foreign key to School
+- `subject_id`: Foreign key to Subject
+- `category`: "projectproces" | "eindresultaat" | "communicatie"
+- `title`: Criterion title
+- `description`: Detailed description
+- `weight`: Criterion weight (default 1.0)
+- `level_descriptors`: JSON object with level descriptions
+- `learning_objective_ids`: JSON array of learning objective IDs
+- `created_at`: Timestamp
+- `updated_at`: Timestamp
+- **Indexes**: 
+  - `school_id`
+  - `subject_id`
+  - `category`
+- **Purpose**: Template criteria for project assessments
+
+### ProjectRubricTemplate
+- `id`: Primary key
+- `school_id`: Foreign key to School
+- `subject_id`: Foreign key to Subject
+- `name`: Rubric template name
+- `level`: "onderbouw" | "havo_bovenbouw" | "vwo_bovenbouw" | "speciaal"
+- `created_at`: Timestamp
+- `updated_at`: Timestamp
+- **Indexes**: 
+  - `school_id`
+  - `subject_id`
+  - `level`
+- **Purpose**: Template for project rubrics with associated criteria
+
+### ProjectRubricCriterionTemplate
+- `id`: Primary key
+- `school_id`: Foreign key to School
+- `rubric_template_id`: Foreign key to ProjectRubricTemplate
+- `category`: Criterion category
+- `title`: Criterion title
+- `description`: Description
+- `weight`: Criterion weight
+- `level_descriptors`: JSON level descriptions
+- `created_at`: Timestamp
+- `updated_at`: Timestamp
+- **Indexes**: 
+  - `rubric_template_id`
+  - `category`
+- **Purpose**: Individual criteria within a project rubric template
+
+### CompetencyTemplate
+- `id`: Primary key
+- `school_id`: Foreign key to School
+- `subject_id`: Foreign key to Subject
+- `name`: Competency name
+- `description`: Description
+- `domain`: Domain code
+- `level`: Educational level
+- `order`: Order number
+- `created_at`: Timestamp
+- `updated_at`: Timestamp
+- **Indexes**: 
+  - `school_id`
+  - `subject_id`
+- **Purpose**: Template for competencies with level descriptors and reflection questions
+
+### MailTemplate
+- `id`: Primary key
+- `school_id`: Foreign key to School
+- `subject_id`: Foreign key to Subject (optional)
+- `name`: Template name
+- `type`: "start_opdrachtgever" | "tussenpresentatie" | "eindpresentatie" | "bedankmail" | "herinnering"
+- `subject`: Email subject
+- `body`: Email body (text/markdown)
+- `variables_allowed`: JSON object of allowed variables
+- `is_active`: Active flag
+- `created_at`: Timestamp
+- `updated_at`: Timestamp
+- **Indexes**: 
+  - `school_id`
+  - `subject_id`
+  - `type`
+  - `is_active`
+- **Purpose**: Email templates with variable substitution for client communication
+
+### StandardRemark
+- `id`: Primary key
+- `school_id`: Foreign key to School
+- `subject_id`: Foreign key to Subject (optional)
+- `type`: "peer" | "project" | "competency" | "project_feedback" | "omza"
+- `category`: "positief" | "aandachtspunt" | "aanbeveling"
+- `text`: Remark text
+- `order`: Order for sorting
+- `created_at`: Timestamp
+- `updated_at`: Timestamp
+- **Indexes**: 
+  - `school_id`
+  - `subject_id`
+  - `type`
+  - `category`
+- **Purpose**: Standard remarks library for quick feedback
+
+### TemplateTag
+- `id`: Primary key
+- `school_id`: Foreign key to School
+- `name`: Tag name
+- `color`: Tag color
+- `created_at`: Timestamp
+- `updated_at`: Timestamp
+- **Indexes**: 
+  - `school_id`
+- **Purpose**: Tags for categorizing templates
+
+### TemplateTagLink
+- `id`: Primary key
+- `tag_id`: Foreign key to TemplateTag
+- `template_type`: Template type (e.g., "peer_criterion", "project_criterion")
+- `template_id`: Template entity ID
+- **Indexes**: 
+  - `tag_id`
+  - `(template_type, template_id)`
+- **Purpose**: Links tags to various template entities
 
 ## Clients (Opdrachtgevers) Module
 
@@ -580,6 +1105,177 @@ Result: Evaluation ready with full allocation matrix
 - `docs/PROJECT_TEAM_ROSTERS_IMPLEMENTATION.md` - Detailed implementation guide
 - `docs/PROJECT_TEAM_ROSTERS_ADR.md` - Architecture decision record
 
+## External Project Assessment (Opdrachtgever-beoordeling)
+
+The application supports external project assessments where external evaluators (opdrachtgevers) can assess student projects without requiring login credentials.
+
+### Architecture
+
+**Two Scenarios Supported:**
+1. **Bovenbouw**: Each team has its own external evaluator
+2. **Onderbouw**: One external evaluator assesses all teams in a project
+
+### Key Components
+
+**ExternalEvaluator Table:**
+- Stores information about external evaluators
+- Fields: name, email, organisation
+- Scoped by school_id
+
+**ProjectTeamExternal Table:**
+- Links teams (groups) to external evaluators
+- Contains unique invitation tokens for secure access
+- Tracks assessment status: NOT_INVITED → INVITED → IN_PROGRESS → SUBMITTED
+- Optional token expiration date
+
+**ProjectAssessment Extensions:**
+- `external_evaluator_id`: Links to external evaluator
+- `role`: TEACHER | EXTERNAL (who created the assessment)
+- `is_advisory`: Boolean flag (true for external assessments)
+
+**RubricCriterion Extension:**
+- `visible_to_external`: Boolean flag to control criterion visibility
+
+### Workflow
+
+1. Teacher creates external assessment and assigns external evaluators to teams
+2. System generates unique invitation tokens for each team-evaluator link
+3. External evaluators receive invitation links with embedded tokens
+4. External evaluators access assessment interface via token (no login required)
+5. Assessments are submitted and marked as SUBMITTED
+6. Teachers can view external assessment results
+
+### API Endpoints
+
+**Public Endpoints (No Authentication Required):**
+- `GET /api/v1/external-assessments/{token}` - Resolve token and get teams to assess
+- `GET /api/v1/external-assessments/{token}/teams/{team_id}` - Get rubric and scores
+- `POST /api/v1/external-assessments/{token}/teams/{team_id}/submit` - Submit assessment
+
+**See Also:**
+- `EXTERNAL_ASSESSMENT_IMPLEMENTATION.md` - Detailed implementation guide
+
+## Academic Year Management and Transitions
+
+The application provides comprehensive academic year management with support for bulk year-to-year transitions.
+
+### Architecture
+
+**AcademicYear Table:**
+- Represents school year periods (e.g., "2025-2026")
+- Contains start and end dates
+- Scoped by school_id
+
+**Class Table:**
+- Fixed classes within a school year (e.g., "G2a", "G3b")
+- Linked to academic_year_id
+- Unique constraint: (school_id, academic_year_id, name)
+
+**StudentClassMembership Table:**
+- Links students to classes for specific academic years
+- Unique constraint: (student_id, academic_year_id) - ensures one class per year
+- Enables historical tracking of student class assignments
+
+**Course Updates:**
+- Courses linked to academic_year_id (replacing deprecated year field)
+- Courses can be cloned to new academic years during transitions
+
+### Year Transition Features
+
+**Validation:**
+- Verifies source and target academic years exist and are different
+- Ensures all classes in mapping exist in source year
+- Checks that target classes don't already exist
+
+**Class Cloning:**
+- Maps source class names to target class names (e.g., "G2a" → "G3a")
+- Supports partial mapping (only specified classes are cloned)
+- Creates new Class records in target academic year
+
+**Student Membership Migration:**
+- Copies student class memberships to target year
+- Respects unique constraint (one student per class per year)
+- Skips students who already have memberships in target year
+- Only migrates students from mapped classes
+
+**Course and Enrollment Migration (Optional):**
+- Can optionally clone courses to new academic year
+- Maintains subject associations
+- Only copies enrollments for students in target year
+- Skips duplicate enrollments
+
+### Workflow
+
+1. Admin selects source and target academic years
+2. Admin specifies class mapping (e.g., {"G2a": "G3a", "G2b": "G3b"})
+3. System validates the transition request
+4. System executes transition in a single database transaction:
+   - Creates new classes in target year
+   - Migrates student class memberships
+   - Optionally clones courses and enrollments
+5. System returns detailed statistics (classes created, students moved, etc.)
+
+### API Endpoints
+
+**Academic Year Management:**
+- `POST /api/v1/admin/academic-years/{source_year_id}/transition` - Execute year transition
+- Requires admin role
+- Full transaction management with rollback on error
+
+**See Also:**
+- `BULK_YEAR_TRANSITION_IMPLEMENTATION.md` - Detailed implementation guide
+
+## Learning Objectives (Eindtermen)
+
+The application provides comprehensive learning objective management with a two-tier architecture.
+
+### Architecture
+
+**Two-Tier System:**
+
+1. **Central (Template) Objectives:**
+   - `is_template=True`
+   - Managed by admins via `/admin/templates`
+   - Linked to subject/sectie (`subject_id IS NOT NULL`)
+   - No teacher ownership (`teacher_id IS NULL`)
+   - Can be linked to rubric criteria
+   - Read-only for teachers
+
+2. **Teacher-Specific Objectives:**
+   - `is_template=False`
+   - Managed by teachers via `/teacher/learning-objectives`
+   - Owned by specific teacher (`teacher_id IS NOT NULL`)
+   - Optional course linkage (`course_id`)
+   - Cannot be linked to central rubric templates
+   - Only visible/editable by owning teacher
+
+### Key Features
+
+**Domain Organization:**
+- Learning objectives organized by domain (e.g., "A", "B", "C", "D - Ontwerpen", "E")
+- Phase classification: "onderbouw" or "bovenbouw"
+- Ordering/numbering support
+
+**Rubric Integration:**
+- Central objectives can be linked to rubric criteria via RubricCriterionLearningObjective
+- Many-to-many relationship enables tracking student progress per learning goal
+- Supports coverage tracking across evaluations
+
+**Project Notes Integration:**
+- Project notes can reference learning objectives
+- Enables evidence collection for learning objective achievement
+- Supports competency and portfolio evidence flags
+
+### Purpose
+
+- Track student progress against learning goals
+- Enable coverage analysis across evaluations
+- Support teacher planning and assessment design
+- Facilitate reporting on learning objective achievement
+
+**See Also:**
+- `docs/LEARNING_OBJECTIVES_ARCHITECTURE.md` - Detailed architecture guide
+
 ## Role-Based Access Control (RBAC)
 
 ### Roles
@@ -719,6 +1415,105 @@ Audit logs include:
 **Template Variables:**
 - `{contactpersoon}`, `{schooljaar}`, `{project_naam}`, `{datum}`, `{tijd}`, `{locatie}`, `{klas_naam}`, `{docent_naam}`, `{school_naam}`
 
+### Academic Years API (`/api/v1/admin/academic-years`)
+
+- `GET /academic-years` - List academic years for school
+- `POST /academic-years` - Create a new academic year
+- `GET /academic-years/{id}` - Get academic year details
+- `PATCH /academic-years/{id}` - Update academic year
+- `DELETE /academic-years/{id}` - Delete academic year
+- `POST /academic-years/{source_year_id}/transition` - Execute year transition
+  - Body: `{"target_academic_year_id": int, "class_mapping": {...}, "copy_course_enrollments": bool}`
+  - Returns: Statistics about classes created, students moved, courses/enrollments copied
+
+### Classes API (`/api/v1/admin/classes`)
+
+- `GET /classes` - List classes (with pagination and filters)
+  - Query params: `academic_year_id`, `page`, `per_page`
+- `POST /classes` - Create a new class
+- `GET /classes/{id}` - Get class details with student memberships
+- `PATCH /classes/{id}` - Update class
+- `DELETE /classes/{id}` - Delete class
+- `GET /classes/{id}/students` - Get students in class
+- `POST /classes/{id}/students` - Add students to class
+- `DELETE /classes/{id}/students/{student_id}` - Remove student from class
+
+### Learning Objectives API (`/api/v1/learning-objectives`)
+
+**Teacher Endpoints:**
+- `GET /learning-objectives` - List learning objectives (central + teacher's own)
+  - Query params: `is_template`, `subject_id`, `course_id`, `domain`, `phase`
+- `POST /learning-objectives` - Create teacher-specific objective
+- `GET /learning-objectives/{id}` - Get objective details
+- `PATCH /learning-objectives/{id}` - Update teacher's own objective
+- `DELETE /learning-objectives/{id}` - Delete teacher's own objective
+
+**Admin Template Endpoints:**
+- `GET /admin/templates/learning-objectives` - List central objectives
+- `POST /admin/templates/learning-objectives` - Create central objective
+- `PATCH /admin/templates/learning-objectives/{id}` - Update central objective
+- `DELETE /admin/templates/learning-objectives/{id}` - Delete central objective
+
+### External Assessment API (`/api/v1/external-assessments`)
+
+**Public Endpoints (No Authentication):**
+- `GET /external-assessments/{token}` - Resolve token and get teams to assess
+- `GET /external-assessments/{token}/teams/{team_id}` - Get rubric and existing scores
+- `POST /external-assessments/{token}/teams/{team_id}/submit` - Submit assessment
+
+**Teacher Endpoints:**
+- `POST /external-assessments/invitations` - Create invitation tokens for external evaluators
+- `GET /external-assessments/invitations/{project_id}` - Get all invitations for a project
+- `POST /external-assessments/invitations/{id}/resend` - Resend invitation email
+- `PATCH /external-assessments/invitations/{id}` - Update invitation status
+
+### Project Notes API (`/api/v1/project-notes`)
+
+- `GET /contexts` - List project note contexts
+  - Query params: `course_id`, `project_id`, `status`
+- `POST /contexts` - Create a new note context
+- `GET /contexts/{id}` - Get context with all notes
+- `PATCH /contexts/{id}` - Update context
+- `DELETE /contexts/{id}` - Delete context
+- `POST /contexts/{id}/close` - Close context (freeze)
+- `GET /contexts/{id}/notes` - List notes in context
+- `POST /contexts/{id}/notes` - Create a note
+- `GET /notes/{id}` - Get note details
+- `PATCH /notes/{id}` - Update note
+- `DELETE /notes/{id}` - Delete note
+
+### Template Management API (`/api/v1/admin/templates`)
+
+**Peer Evaluation Criterion Templates:**
+- `GET /peer-criterion-templates` - List templates
+- `POST /peer-criterion-templates` - Create template
+- `GET /peer-criterion-templates/{id}` - Get template
+- `PATCH /peer-criterion-templates/{id}` - Update template
+- `DELETE /peer-criterion-templates/{id}` - Delete template
+
+**Project Rubric Templates:**
+- `GET /project-rubric-templates` - List templates
+- `POST /project-rubric-templates` - Create template
+- `GET /project-rubric-templates/{id}` - Get template with criteria
+- `PATCH /project-rubric-templates/{id}` - Update template
+- `DELETE /project-rubric-templates/{id}` - Delete template
+
+**Mail Templates:**
+- `GET /mail-templates` - List templates
+- `POST /mail-templates` - Create template
+- `GET /mail-templates/{id}` - Get template
+- `PATCH /mail-templates/{id}` - Update template
+- `DELETE /mail-templates/{id}` - Delete template
+- `POST /mail-templates/{id}/render` - Render template with variables
+
+**Standard Remarks:**
+- `GET /standard-remarks` - List remarks
+  - Query params: `type`, `category`, `subject_id`
+- `POST /standard-remarks` - Create remark
+- `PATCH /standard-remarks/{id}` - Update remark
+- `DELETE /standard-remarks/{id}` - Delete remark
+- `POST /standard-remarks/reorder` - Update remark ordering
+
 ### Somtoday Integration (`/api/v1/integrations/somtoday`)
 
 **Note**: These endpoints are placeholders for future implementation
@@ -759,15 +1554,25 @@ See `MIGRATION_NOTES.md` for detailed migration instructions.
 - ✅ CSV export functionality
 - ✅ Real-time search with debouncing
 - ✅ Subject management UI for admins/teachers
+- ✅ Academic year management with year transitions
+- ✅ Class management and student class memberships
+- ✅ Course enrollment system
+- ✅ External project assessment (opdrachtgever-beoordeling)
+- ✅ Learning objectives (eindtermen) with two-tier architecture
+- ✅ Project notes system with OMZA and learning objective linkage
+- ✅ Subprojects (deelprojecten) for choice projects
+- ✅ Comprehensive template system (peer, project, competency, mail, remarks)
+- ✅ Template tagging and categorization
 
 ### Phase 2 (Current/Planned)
 - Analytics dashboards per course and school
-- Learning objective coverage tracking
+- Learning objective coverage tracking and reporting
 - Grade export/import (CSV, Excel)
-- Bulk student management
-- Custom rubric templates per course
+- Bulk student management improvements
 - Email notifications integration (SMTP)
-- Email sending UI with template selection
+- Email sending UI with template selection from MailTemplate
+- External evaluator invitation management UI
+- Template library UI for browsing and applying templates
 
 ### Phase 3 (Future)
 - Full Somtoday integration
@@ -776,3 +1581,5 @@ See `MIGRATION_NOTES.md` for detailed migration instructions.
 - Mobile app support
 - API rate limiting and caching
 - Automated backups and data retention policies
+- Competency portfolio system
+- Advanced learning objective analytics
