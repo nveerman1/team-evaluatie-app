@@ -3,9 +3,8 @@ Service layer for Academic Year Transition
 Handles bulk year transition with class and student membership copying
 """
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
 from fastapi import HTTPException, status
 import logging
 
