@@ -121,12 +121,20 @@ export default function SchoolbeheerPageInner() {
         );
       case "leerlingen":
         return (
-          <button
-            onClick={() => leerlingenRef.current?.handleExportCSV?.()}
-            className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Exporteer CSV
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => leerlingenRef.current?.handleImportCSV?.()}
+              className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Importeer CSV
+            </button>
+            <button
+              onClick={() => leerlingenRef.current?.handleExportCSV?.()}
+              className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Exporteer CSV
+            </button>
+          </div>
         );
       default:
         return null;

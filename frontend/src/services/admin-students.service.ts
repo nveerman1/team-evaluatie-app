@@ -8,6 +8,7 @@ export type AdminStudent = {
   course_name?: string;
   team_number?: number;
   status: "active" | "inactive";
+  has_logged_in?: boolean;
 };
 
 export type AdminStudentListParams = {
@@ -48,9 +49,11 @@ export const adminStudentService = {
    * List students with filtering and pagination
    */
   async listStudents(params: AdminStudentListParams = {}): Promise<AdminStudentListResponse> {
-    // Filter out undefined values to avoid sending them as query parameters
+    // Filter out undefined, null, and empty string values to avoid sending them as query parameters
     const cleanParams = Object.fromEntries(
-      Object.entries(params).filter(([_, value]) => value !== undefined)
+      Object.entries(params).filter(([_, value]) => 
+        value !== undefined && value !== null && value !== ""
+      )
     );
     
     const response = await api.get<AdminStudent[]>("/admin/students", { params: cleanParams });
@@ -94,9 +97,11 @@ export const adminStudentService = {
    * Export students as CSV
    */
   async exportCSV(params: AdminStudentListParams = {}): Promise<Blob> {
-    // Filter out undefined values to avoid sending them as query parameters
+    // Filter out undefined, null, and empty string values to avoid sending them as query parameters
     const cleanParams = Object.fromEntries(
-      Object.entries(params).filter(([_, value]) => value !== undefined)
+      Object.entries(params).filter(([_, value]) => 
+        value !== undefined && value !== null && value !== ""
+      )
     );
     
     const response = await api.get("/admin/students/export.csv", {

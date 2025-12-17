@@ -9,6 +9,7 @@ import {
 import { Course } from "@/dtos/course.dto";
 import { courseService } from "@/services/course.service";
 import LinkStudentToCourseModal from "@/components/admin/LinkStudentToCourseModal";
+import CSVImportModal from "@/components/teacher/CSVImportModal";
 
 const StudentsManagement = forwardRef((props, ref) => {
   // State
@@ -26,6 +27,7 @@ const StudentsManagement = forwardRef((props, ref) => {
 
   // Modal states
   const [showLinkModal, setShowLinkModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<AdminStudent | null>(null);
 
   // Debounce search to avoid too many API calls
@@ -165,20 +167,31 @@ const StudentsManagement = forwardRef((props, ref) => {
     }
   };
 
+  const handleImportCSV = async (file: File) => {
+    return await adminStudentService.importCSV(file);
+  };
+
+  const handleImportSuccess = async () => {
+    await loadStudents();
+    await loadKPIData();
+  };
+
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
     handleExportCSV: handleExportCSV,
+    handleImportCSV: () => setShowImportModal(true),
   }));
 
   // Calculate KPIs from all students data
   const totalCount = totalStudents;
-  const unlinkedCount = allStudentsForKPIs.filter(s => !s.course_name).length;
-  const notLoggedInCount = 0; // TODO: This requires last_login_at field from backend
+  const unlinkedCount = allStudentsForKPIs.filter(s => s.has_logged_in && !s.course_name).length;
+  const notLoggedInCount = allStudentsForKPIs.filter(s => !s.has_logged_in).length;
 
   const totalPages = Math.ceil(totalStudents / 25);
 
   // Helper function to get status badge
   const getStatusBadge = (student: AdminStudent) => {
+    // 🔴 Inactief - manually deactivated
     if (student.status === "inactive") {
       return (
         <span className="inline-flex rounded-full border border-gray-200 bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
@@ -187,8 +200,16 @@ const StudentsManagement = forwardRef((props, ref) => {
       );
     }
     
-    // TODO: Add logic for "Nog niet ingelogd" when last_login_at field is available
+    // ⚪ Nog niet ingelogd - imported but not logged in yet
+    if (!student.has_logged_in) {
+      return (
+        <span className="inline-flex rounded-full border border-blue-200 bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+          Nog niet ingelogd
+        </span>
+      );
+    }
     
+    // 🟠 Ongekoppeld - logged in but no course
     if (!student.course_name) {
       return (
         <span className="inline-flex rounded-full border border-yellow-200 bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
@@ -197,6 +218,7 @@ const StudentsManagement = forwardRef((props, ref) => {
       );
     }
     
+    // 🟢 Actief - logged in and has course
     return (
       <span className="inline-flex rounded-full border border-green-100 bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
         Actief
@@ -399,6 +421,9 @@ const StudentsManagement = forwardRef((props, ref) => {
                           Email
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Klas
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Status
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -419,14 +444,14 @@ const StudentsManagement = forwardRef((props, ref) => {
                             <div className="text-sm font-medium text-gray-900">
                               {student.name}
                             </div>
-                            {student.class_name && (
-                              <div className="text-sm text-gray-500">
-                                Klas: {student.class_name}
-                              </div>
-                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-900">{student.email}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {student.class_name || "—"}
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             {getStatusBadge(student)}
@@ -510,6 +535,14 @@ const StudentsManagement = forwardRef((props, ref) => {
           onLink={handleLinkToCourse}
         />
       )}
+
+      {/* Import CSV modal */}
+      <CSVImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImport={handleImportCSV}
+        onSuccess={handleImportSuccess}
+      />
     </>
   );
 });

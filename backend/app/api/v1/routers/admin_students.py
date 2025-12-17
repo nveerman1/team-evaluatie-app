@@ -197,6 +197,10 @@ def list_admin_students(
 
     out = []
     for r in rows:
+        # Determine if user has logged in
+        # User has logged in if they have a password_hash (local) or auth_provider is not 'local'
+        has_logged_in = bool(r.password_hash) or (r.auth_provider and r.auth_provider != "local")
+        
         out.append(
             {
                 "id": r.id,
@@ -206,6 +210,7 @@ def list_admin_students(
                 "course_name": r.course_name,
                 "team_number": r.team_number,
                 "status": "inactive" if r.archived else "active",
+                "has_logged_in": has_logged_in,
             }
         )
     return out
