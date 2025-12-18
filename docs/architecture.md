@@ -1165,6 +1165,10 @@ The application provides comprehensive academic year management with support for
 - Represents school year periods (e.g., "2025-2026")
 - Contains start and end dates
 - Scoped by school_id
+- Archive fields:
+  - `is_archived` (boolean): Marks year as read-only (default: false)
+  - `archived_at` (datetime): Timestamp when year was archived
+- Archived years prevent mutations but allow read access for historical data
 
 **Class Table:**
 - Fixed classes within a school year (e.g., "G2a", "G3b")

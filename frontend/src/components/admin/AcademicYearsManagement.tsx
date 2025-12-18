@@ -343,7 +343,7 @@ const AcademicYearsManagement = forwardRef((props, ref) => {
         ) : (
           <div className="grid gap-3">
             {academicYears.map((year) => (
-              <Card key={year.id} className="p-4">
+              <Card key={year.id} className="p-4 border-gray-200/80">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div>
