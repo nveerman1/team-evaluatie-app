@@ -14,12 +14,14 @@ import { Progress } from "@/components/ui/progress";
 
 interface YearTransitionWizardProps {
   isOpen: boolean;
+  prefilledSourceYearId?: number | null;
   onClose: () => void;
   onSuccess: () => void;
 }
 
 export default function YearTransitionWizard({
   isOpen,
+  prefilledSourceYearId,
   onClose,
   onSuccess,
 }: YearTransitionWizardProps) {
@@ -36,12 +38,24 @@ export default function YearTransitionWizard({
   const [copyCourseEnrollments, setCopyCourseEnrollments] = useState(true);
   const [result, setResult] = useState<TransitionResult | null>(null);
 
-  // Load academic years on mount
+  // Load academic years on mount and handle prefilled source year
   useEffect(() => {
     if (isOpen) {
       loadAcademicYears();
     }
   }, [isOpen]);
+
+  // Handle prefilled source year
+  useEffect(() => {
+    if (isOpen && prefilledSourceYearId && academicYears.length > 0) {
+      const year = academicYears.find(y => y.id === prefilledSourceYearId);
+      if (year) {
+        setSourceYear(year);
+        loadSourceClasses(year.id);
+        setStep(2); // Skip to step 2 (target year selection)
+      }
+    }
+  }, [isOpen, prefilledSourceYearId, academicYears]);
 
   const loadAcademicYears = async () => {
     setLoading(true);
@@ -219,6 +233,13 @@ export default function YearTransitionWizard({
           <p className="text-sm text-gray-600 mt-2">
             Stap {step} van {totalSteps}
           </p>
+          
+          {/* Context Row showing source and target years */}
+          <div className="mt-3 p-3 bg-blue-50 rounded-md">
+            <p className="text-sm font-medium text-blue-900">
+              Bronjaar: {sourceYear?.label || "—"} → Doeljaar: {targetYear?.label || "—"}
+            </p>
+          </div>
         </div>
 
         {error && (

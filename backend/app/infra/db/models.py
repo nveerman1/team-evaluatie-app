@@ -117,6 +117,10 @@ class AcademicYear(Base):
     label: Mapped[str] = mapped_column(String(50), nullable=False)  # e.g., "2025-2026"
     start_date: Mapped[datetime] = mapped_column(Date, nullable=False)
     end_date: Mapped[datetime] = mapped_column(Date, nullable=False)
+    
+    # Archive status
+    is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    archived_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
 
     # Relationships
     school: Mapped["School"] = relationship()

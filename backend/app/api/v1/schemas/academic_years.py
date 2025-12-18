@@ -35,6 +35,8 @@ class AcademicYearOut(AcademicYearBase):
 
     id: int
     school_id: int
+    is_archived: bool = False
+    archived_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 

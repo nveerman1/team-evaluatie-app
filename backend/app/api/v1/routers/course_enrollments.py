@@ -16,6 +16,7 @@ from app.api.v1.schemas.course_enrollments import (
     BulkEnrollmentCreate,
     BulkEnrollmentDelete,
 )
+from app.infra.services.archive_guards import require_course_year_not_archived
 
 router = APIRouter(prefix="/admin/course-enrollments", tags=["admin-course-enrollments"])
 
@@ -91,6 +92,9 @@ def create_course_enrollment(
     
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
+    
+    # Check if course's year is archived
+    require_course_year_not_archived(db, data.course_id)
     
     # Verify student exists and belongs to school
     student = db.query(User).filter(
@@ -232,6 +236,9 @@ def delete_course_enrollment(
     if not enrollment:
         raise HTTPException(status_code=404, detail="Enrollment not found")
     
+    # Check if course's year is archived
+    require_course_year_not_archived(db, enrollment.course_id)
+    
     db.delete(enrollment)
     db.commit()
     
@@ -260,6 +267,9 @@ def bulk_delete_enrollments(
     
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
+    
+    # Check if course's year is archived
+    require_course_year_not_archived(db, data.course_id)
     
     deleted_count = 0
     
