@@ -1,7 +1,7 @@
 """add archive fields to academic years
 
 Revision ID: ay_20251217_01
-Revises: subp_20251203_01
+Revises: eb7ab5c90a35
 Create Date: 2025-12-17
 
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = "ay_20251217_01"
-down_revision: Union[str, None] = "subp_20251203_01"
+down_revision: Union[str, None] = "eb7ab5c90a35"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
