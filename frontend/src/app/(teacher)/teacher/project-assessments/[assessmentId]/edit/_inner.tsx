@@ -10,6 +10,7 @@ import {
   ProjectAssessmentTeamOverview,
 } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
+import { SplitViewWrapper } from "@/components/submissions/SplitViewWrapper";
 
 /**
  * Types & helpers
@@ -585,7 +586,7 @@ export default function EditProjectAssessmentInner() {
   });
 
   return (
-    <>
+    <SplitViewWrapper assessmentId={assessmentId} teamNumber={teamNumber}>
       {/* Team kaart */}
       <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-1">
@@ -761,6 +762,6 @@ export default function EditProjectAssessmentInner() {
             </div>
           </div>
         </section>
-    </>
+    </SplitViewWrapper>
   );
 }

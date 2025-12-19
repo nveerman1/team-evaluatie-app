@@ -2652,3 +2652,43 @@ class SubmissionEvent(Base):
         Index("ix_submission_events_created", "created_at"),
         Index("ix_submission_events_school", "school_id"),
     )
+
+
+class Notification(Base):
+    """
+    Notifications for users about important events
+    Used for submission status changes and other updates
+    """
+
+    __tablename__ = "notifications"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = tenant_fk()
+
+    recipient_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # Notification type and content
+    type: Mapped[str] = mapped_column(String(50), nullable=False)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    body: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    link: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+
+    # Read status
+    read_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        default=datetime.utcnow, nullable=False
+    )
+
+    # Relationships
+    recipient: Mapped["User"] = relationship()
+
+    __table_args__ = (
+        Index("ix_notifications_recipient", "recipient_user_id", "read_at"),
+        Index("ix_notifications_school", "school_id"),
+        Index("ix_notifications_created", "created_at"),
+    )

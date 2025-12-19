@@ -14,6 +14,7 @@ from app.infra.db.models import (
     ProjectTeam,
     ProjectTeamMember,
     User,
+    Notification,
 )
 from app.api.v1.schemas.submissions import (
     SubmissionCreate,
@@ -45,6 +46,47 @@ def log_submission_event(
         payload=payload or {},
     )
     db.add(event)
+    db.flush()
+
+
+def create_status_notification(
+    db: Session,
+    submission: AssignmentSubmission,
+    old_status: str,
+    new_status: str,
+):
+    """Create notification for all team members when status changes"""
+    
+    # Get team members
+    members = db.query(ProjectTeamMember).filter(
+        ProjectTeamMember.project_team_id == submission.project_team_id
+    ).all()
+    
+    # Map status to message
+    messages = {
+        "ok": ("✅ Inlevering akkoord", "De docent heeft je inlevering goedgekeurd."),
+        "access_requested": ("🔒 Toegang vereist", "De docent kan je document niet openen. Pas de deelrechten aan."),
+        "broken": ("🔗 Link werkt niet", "De ingeleverde link werkt niet. Lever opnieuw in."),
+        "submitted": ("📄 Inlevering ontvangen", "Je inlevering is ontvangen en wordt beoordeeld."),
+    }
+    
+    if new_status not in messages:
+        return
+    
+    title, body = messages[new_status]
+    
+    # Create notification for each member
+    for member in members:
+        notification = Notification(
+            school_id=submission.school_id,
+            recipient_user_id=member.user_id,
+            type="submission_status_changed",
+            title=title,
+            body=body,
+            link=f"/student/project-assessments/{submission.project_assessment_id}/submissions"
+        )
+        db.add(notification)
+    
     db.flush()
 
 
@@ -248,6 +290,9 @@ def update_submission_status(
         "status_changed",
         payload={"old_status": old_status, "new_status": payload.status},
     )
+    
+    # Create notification for team members
+    create_status_notification(db, submission, old_status, payload.status)
     
     db.commit()
     db.refresh(submission)

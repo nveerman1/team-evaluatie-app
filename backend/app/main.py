@@ -41,6 +41,7 @@ from app.api.v1.routers import academic_years as academic_years_router
 from app.api.v1.routers import classes as classes_router
 from app.api.v1.routers import course_enrollments as course_enrollments_router
 from app.api.v1.routers import submissions as submissions_router
+from app.api.v1.routers import notifications as notifications_router
 from app.integrations.somtoday import router as somtoday_router
 
 
@@ -101,5 +102,6 @@ api_v1.include_router(academic_years_router.router)
 api_v1.include_router(classes_router.router)
 api_v1.include_router(course_enrollments_router.router)
 api_v1.include_router(submissions_router.router)
+api_v1.include_router(notifications_router.router)
 api_v1.include_router(somtoday_router.router)
 app.include_router(api_v1)
