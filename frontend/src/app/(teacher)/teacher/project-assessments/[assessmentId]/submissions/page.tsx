@@ -18,15 +18,29 @@ export default function TeacherSubmissionsPage() {
   const [submissions, setSubmissions] = useState<SubmissionWithTeamInfo[]>([]);
   const [filteredSubmissions, setFilteredSubmissions] = useState<SubmissionWithTeamInfo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   // Filter states
   const [missingOnly, setMissingOnly] = useState(false);
   const [actionRequiredOnly, setActionRequiredOnly] = useState(false);
   const [docType, setDocType] = useState<string | null>(null);
 
+  // Check authentication before making API calls
   useEffect(() => {
-    loadSubmissions();
-  }, [assessmentId]);
+    const email = localStorage.getItem('x_user_email') || sessionStorage.getItem('x_user_email');
+    if (!email) {
+      console.error('No user email found in storage - redirecting to login');
+      router.push('/');
+      return;
+    }
+    setIsAuthenticated(true);
+  }, [router]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadSubmissions();
+    }
+  }, [assessmentId, isAuthenticated]);
 
   useEffect(() => {
     applyFilters();
@@ -98,7 +112,7 @@ export default function TeacherSubmissionsPage() {
     router.push(`/teacher/project-assessments/${assessmentId}/edit?team=${teamId}`);
   };
 
-  if (loading) {
+  if (!isAuthenticated || loading) {
     return <Loading />;
   }
 
