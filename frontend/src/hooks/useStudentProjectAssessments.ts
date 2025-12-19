@@ -46,7 +46,7 @@ export function useStudentProjectAssessments() {
       const data = await projectAssessmentService.getProjectAssessments(
         undefined,
         undefined,
-        "published"
+        undefined // Remove status filter - show all assessments for student's teams
       );
       setAssessments(data.items || []);
     } catch (e: unknown) {

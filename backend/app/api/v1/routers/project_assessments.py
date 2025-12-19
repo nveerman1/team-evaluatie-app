@@ -155,19 +155,28 @@ def list_project_assessments(
         # Teachers and admins see all assessments they created
         stmt = stmt.where(ProjectAssessment.teacher_id == user.id)
     else:
-        # Students only see published assessments for their groups
-        stmt = stmt.where(ProjectAssessment.status == "published")
-        # Get student's groups
-        student_groups = db.query(GroupMember.group_id).filter(
-            GroupMember.user_id == user.id,
-            GroupMember.school_id == user.school_id,
-            GroupMember.active == True,
+        # Students see all assessments for teams they are part of (regardless of status)
+        # Get student's project teams
+        student_teams = db.query(ProjectTeamMember.project_team_id).filter(
+            ProjectTeamMember.user_id == user.id,
         ).all()
-        group_ids = [g[0] for g in student_groups]
-        if group_ids:
-            stmt = stmt.where(ProjectAssessment.group_id.in_(group_ids))
+        team_ids = [t[0] for t in student_teams]
+        
+        if team_ids:
+            # Get project_ids for these teams
+            projects = db.query(ProjectTeam.project_id).filter(
+                ProjectTeam.id.in_(team_ids),
+                ProjectTeam.school_id == user.school_id,
+            ).all()
+            project_ids = [p[0] for p in projects if p[0] is not None]
+            
+            if project_ids:
+                stmt = stmt.where(ProjectAssessment.project_id.in_(project_ids))
+            else:
+                # No projects found, return empty
+                return ProjectAssessmentListResponse(items=[], page=page, limit=limit, total=0)
         else:
-            # No groups, return empty
+            # No teams, return empty
             return ProjectAssessmentListResponse(items=[], page=page, limit=limit, total=0)
     
     if group_id:
