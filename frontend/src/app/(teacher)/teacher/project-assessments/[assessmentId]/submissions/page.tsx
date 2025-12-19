@@ -18,38 +18,18 @@ export default function TeacherSubmissionsPage() {
   const [submissions, setSubmissions] = useState<SubmissionWithTeamInfo[]>([]);
   const [filteredSubmissions, setFilteredSubmissions] = useState<SubmissionWithTeamInfo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Filter states
   const [missingOnly, setMissingOnly] = useState(false);
   const [actionRequiredOnly, setActionRequiredOnly] = useState(false);
   const [docType, setDocType] = useState<string | null>(null);
 
-  // Check authentication before making API calls
   useEffect(() => {
-    // Small delay to ensure localStorage is fully ready
-    const checkAuth = async () => {
-      // Wait a bit for storage to be ready
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      const email = localStorage.getItem('x_user_email') || sessionStorage.getItem('x_user_email');
-      if (!email) {
-        console.error('No user email found in storage - redirecting to login');
-        router.push('/');
-        return;
-      }
-      console.log('[Auth Check] User email found, proceeding to load data');
-      setIsAuthenticated(true);
-    };
-    
-    checkAuth();
-  }, [router]);
-
-  useEffect(() => {
-    if (isAuthenticated && assessmentId) {
+    if (assessmentId) {
       loadSubmissions();
     }
-  }, [assessmentId, isAuthenticated]);
+  }, [assessmentId]);
 
   useEffect(() => {
     applyFilters();
@@ -57,30 +37,27 @@ export default function TeacherSubmissionsPage() {
 
   const loadSubmissions = async () => {
     setLoading(true);
+    setError(null);
     try {
-      // Double-check auth before making the call
-      const email = localStorage.getItem('x_user_email') || sessionStorage.getItem('x_user_email');
-      if (!email) {
-        console.error('[loadSubmissions] No email found - cannot make API call');
-        router.push('/');
-        return;
-      }
-      
       const data = await submissionService.getSubmissionsForAssessment(assessmentId);
       setSubmissions(data.items);
     } catch (err: any) {
       console.error('Failed to load submissions:', err);
       
-      // If it's an auth error, redirect to login
-      if (err.name === 'ApiAuthError' || err.status === 401 || err.status === 403) {
-        console.error('[loadSubmissions] Authentication failed - redirecting to login');
-        localStorage.removeItem('x_user_email');
-        sessionStorage.removeItem('x_user_email');
-        router.push('/');
-        return;
+      // Handle different error types
+      if (err.name === 'ApiAuthError') {
+        if (err.status === 403) {
+          // Permission error - user is authenticated but doesn't own this assessment
+          setError('Je hebt geen toegang tot deze inleveringen. Je moet de eigenaar van deze projectbeoordeling zijn.');
+        } else if (err.status === 401) {
+          // Authentication error - not logged in
+          setError('Je bent niet ingelogd. Log opnieuw in.');
+        }
+      } else {
+        setError('Kon inleveringen niet laden. Probeer het opnieuw.');
       }
       
-      toast.error('Kon inleveringen niet laden');
+      toast.error(error || 'Kon inleveringen niet laden');
     } finally {
       setLoading(false);
     }
@@ -139,8 +116,29 @@ export default function TeacherSubmissionsPage() {
     router.push(`/teacher/project-assessments/${assessmentId}/edit?team=${teamId}`);
   };
 
-  if (!isAuthenticated || loading) {
+  if (loading) {
     return <Loading />;
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Fout bij laden van inleveringen</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-red-600">{error}</p>
+            <button
+              onClick={() => router.back()}
+              className="mt-4 px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded"
+            >
+              Terug
+            </button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   const stats = {
