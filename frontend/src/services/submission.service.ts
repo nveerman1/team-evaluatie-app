@@ -59,8 +59,8 @@ export const submissionService = {
     if (missingOnly) params.set("missing_only", "true");
     const queryString = params.toString();
     const url = queryString
-      ? `/api/v1/submissions/assessments/${assessmentId}/submissions?${queryString}`
-      : `/api/v1/submissions/assessments/${assessmentId}/submissions`;
+      ? `/api/v1/submissions/assessments/${assessmentId}?${queryString}`
+      : `/api/v1/submissions/assessments/${assessmentId}`;
     const response = await api.get<SubmissionListResponse>(url);
     return response.data;
   },

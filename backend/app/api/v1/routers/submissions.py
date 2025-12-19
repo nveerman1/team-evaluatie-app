@@ -302,7 +302,7 @@ def update_submission_status(
 
 # ---------- List submissions for assessment (teacher view) ----------
 
-@router.get("/assessments/{assessment_id}/submissions", response_model=SubmissionListResponse)
+@router.get("/assessments/{assessment_id}", response_model=SubmissionListResponse)
 def list_submissions_for_assessment(
     assessment_id: int,
     doc_type: Optional[str] = Query(None),
