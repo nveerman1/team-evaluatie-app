@@ -1,7 +1,9 @@
 # Submission Feature Implementation - Completion Summary
 
 ## Overview
-Successfully implemented a complete link-based submission feature for the team evaluation app, following the specifications in SUBMISSION_FEATURE_FEEDBACK.md, SUBMISSION_FEATURE_OVERVIEW.md, SUBMISSION_FEATURE_SUMMARY.md, and SUBMISSION_FEATURE_README.md.
+Successfully implemented a **complete** link-based submission feature for the team evaluation app, following the specifications in SUBMISSION_FEATURE_FEEDBACK.md, SUBMISSION_FEATURE_OVERVIEW.md, SUBMISSION_FEATURE_SUMMARY.md, and SUBMISSION_FEATURE_README.md.
+
+**ALL 5 SPRINTS COMPLETED** ✅
 
 ## What Was Implemented
 
@@ -86,6 +88,62 @@ Successfully implemented a complete link-based submission feature for the team e
 - Filtering and sorting
 - Direct navigation to rubric grading page
 
+### ✅ Sprint 4: Split View Nakijkmodus (COMPLETED)
+**Components**
+- `DocumentPane.tsx` - Document viewer with:
+  - Doc type toggle (report/slides)
+  - Status display
+  - "Open in tab" button
+  - Collapsible sidebar
+- `SplitViewWrapper.tsx` - Resizable split layout with:
+  - Draggable divider
+  - Width constraints (20-70%)
+  - localStorage persistence
+
+**Integration**
+- Modified teacher edit page (`_inner.tsx`) to wrap content in SplitViewWrapper
+- Loads submissions for current team automatically
+- Updates when team changes
+
+**Features**
+- Side-by-side grading: rubric on left, document on right
+- Resizable panes with mouse drag
+- Width preference saved to localStorage
+- Document preview with status feedback
+- Collapse/expand document pane
+
+### ✅ Sprint 5: Notifications & Polish (COMPLETED)
+**Backend**
+- `notif_20251219_01` migration for notifications table
+- `Notification` model with proper relationships
+- `notifications.py` router with endpoints:
+  - `GET /notifications` - list notifications
+  - `PATCH /{id}/read` - mark as read
+  - `POST /mark-all-read` - mark all as read
+- Automatic notification creation on status changes
+- Status-specific messages (ok, access_requested, broken, submitted)
+
+**Frontend**
+- `NotificationBadge.tsx` - Bell icon with unread count badge
+  - Real-time polling (30 second intervals)
+  - Popover with notifications list
+- `NotificationsList.tsx` - Notification dropdown with:
+  - Unread indicator (blue dot)
+  - Deep links to submissions
+  - Mark as read on click
+  - Mark all as read button
+  - Relative timestamps
+- `notification.dto.ts` - TypeScript types
+- `notification.service.ts` - API integration
+
+**Features**
+- Real-time notification delivery (30s polling)
+- Unread count badge on notification icon
+- Deep links navigate to relevant submission page
+- Automatic mark as read when clicked
+- Bulk mark all as read
+- Status-specific notification messages
+
 ## Code Quality Improvements
 Based on code review feedback, the following improvements were made:
 
@@ -95,18 +153,16 @@ Based on code review feedback, the following improvements were made:
 4. **Maintainability**: Extracted magic numbers to constants
 5. **Validation**: Aligned client-side and server-side validation logic
 
-## What Was NOT Implemented (Optional Enhancements)
+## All Sprints Completed ✅
 
-### Sprint 4: Split View Nakijkmodus
-- Document pane component for side-by-side viewing
-- Not critical for v1 - teachers can click links to open in new tab
-- Can be added in future iteration
+All 5 sprints from the original plan have been fully implemented:
+- ✅ Sprint 1: Backend Infrastructure
+- ✅ Sprint 2: Student UI
+- ✅ Sprint 3: Teacher UI
+- ✅ Sprint 4: Split View Grading
+- ✅ Sprint 5: Notifications System
 
-### Sprint 5: Notifications & Polish
-- Notification system for status changes
-- While useful, not critical for v1
-- Students can check submission page manually
-- Can be added in future iteration
+Features mentioned as "v2/v3" (Graph API integration, automatic link checking, AI suggestions) remain future enhancements outside the current scope.
 
 ## Security Checklist ✅
 - [x] Multi-tenant isolation on all queries
