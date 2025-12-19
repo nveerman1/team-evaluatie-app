@@ -958,7 +958,7 @@ def wizard_create_project(
                         group_id=group.id,
                         school_id=user.school_id,
                     )
-                    db.flush()
+                    db.flush()  # Flush to get project_team.id and assessment.id for linking
                     
                     # Create ProjectAssessment linked to project and project_team
                     assessment = ProjectAssessment(
