@@ -52,6 +52,7 @@ from app.core.rbac import (
 )
 from app.core.audit import log_action
 from app.infra.services.archive_guards import require_course_year_not_archived, require_project_year_not_archived
+from app.infra.services.project_team_service import ProjectTeamService
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -931,16 +932,40 @@ def wizard_create_project(
             else:
                 # Create one ProjectAssessment per group
                 for group in groups:
+                    # Create ProjectTeam for this group to preserve team roster
+                    project_team = ProjectTeamService.create_project_team(
+                        db=db,
+                        project_id=project.id,
+                        school_id=user.school_id,
+                        team_id=group.id,
+                        team_name=group.name,
+                    )
+                    
+                    # Copy group.team_number to project_team.team_number
+                    if group.team_number is not None:
+                        project_team.team_number = group.team_number
+                    
+                    # Copy members from group to project team
+                    ProjectTeamService.copy_members_from_group(
+                        db=db,
+                        project_team_id=project_team.id,
+                        group_id=group.id,
+                        school_id=user.school_id,
+                    )
+                    db.flush()
+                    
+                    # Create ProjectAssessment linked to project and project_team
                     assessment = ProjectAssessment(
                         school_id=user.school_id,
+                        project_id=project.id,  # Set project_id on the model
                         group_id=group.id,
+                        project_team_id=project_team.id,  # Link to project team
                         teacher_id=user.id,
                         rubric_id=pa_config.rubric_id,
                         title=f"{project.title} – {group.name}",
                         version=pa_config.version,
                         status="draft",
                         metadata_json={
-                            "project_id": project.id,
                             "deadline": pa_config.deadline.isoformat() if pa_config.deadline else None,
                         }
                     )
@@ -952,8 +977,10 @@ def wizard_create_project(
                         data={
                             "id": assessment.id,
                             "title": assessment.title,
+                            "project_id": assessment.project_id,
                             "group_id": assessment.group_id,
                             "group_name": group.name,
+                            "project_team_id": assessment.project_team_id,
                             "rubric_id": assessment.rubric_id,
                             "version": assessment.version,
                             "status": assessment.status,
