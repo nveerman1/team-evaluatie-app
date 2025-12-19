@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func, and_
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, get_current_user
+from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import (
     AssignmentSubmission,
     SubmissionEvent,
