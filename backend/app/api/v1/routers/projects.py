@@ -931,6 +931,12 @@ def wizard_create_project(
                 )
             else:
                 # Create one ProjectAssessment per group
+                # For each group, we create a ProjectTeam to freeze the team roster at this point in time.
+                # This ensures that project assessments reference the correct team composition,
+                # even if group membership changes later. The ProjectTeam preserves:
+                # - Team roster (members) at the time of project creation
+                # - Team number from the group for proper team identification
+                # - Historical record of team composition for this specific project
                 for group in groups:
                     # Create ProjectTeam for this group to preserve team roster
                     project_team = ProjectTeamService.create_project_team(
