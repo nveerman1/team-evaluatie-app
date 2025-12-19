@@ -29,7 +29,7 @@ export default function NewProjectWizardPage() {
   const [title, setTitle] = useState("");
   const [niveau, setNiveau] = useState("");
   const [courseId, setCourseId] = useState<number | "">("");
-  const [className, setClassName] = useState("");
+  const [period, setPeriod] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [description, setDescription] = useState("");
@@ -217,7 +217,7 @@ export default function NewProjectWizardPage() {
         project: {
           title: title.trim(),
           course_id: courseId || undefined,
-          class_name: className.trim() || undefined,
+          period: period || undefined,
           start_date: startDate || undefined,
           end_date: endDate || undefined,
           description: description.trim() || undefined,
@@ -463,14 +463,18 @@ export default function NewProjectWizardPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Klas</label>
-              <input
-                type="text"
-                value={className}
-                onChange={(e) => setClassName(e.target.value)}
-                placeholder="Bijv. GA2, AH3"
+              <label className="block text-sm font-medium mb-1">Periode</label>
+              <select
+                value={period}
+                onChange={(e) => setPeriod(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-              />
+              >
+                <option value="">Selecteer een periode...</option>
+                <option value="P1">P1</option>
+                <option value="P2">P2</option>
+                <option value="P3">P3</option>
+                <option value="P4">P4</option>
+              </select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -853,10 +857,10 @@ export default function NewProjectWizardPage() {
                       <dd>{courses.find((c) => c.id === courseId)?.name}</dd>
                     </div>
                   )}
-                  {className && (
+                  {period && (
                     <div className="flex">
-                      <dt className="w-32 text-gray-600">Klas:</dt>
-                      <dd>{className}</dd>
+                      <dt className="w-32 text-gray-600">Periode:</dt>
+                      <dd>{period}</dd>
                     </div>
                   )}
                   {startDate && (
