@@ -9,8 +9,13 @@ from typing import Tuple
 
 ALLOWED_HOSTS = [
     "sharepoint.com",
-    "onedrive.com",
-    "office.com",  # For embedded viewer links
+    "1drv.ms",  # OneDrive short URLs
+]
+
+# Specific Microsoft Office 365 domains
+ALLOWED_OFFICE_DOMAINS = [
+    "officeapps.live.com",  # Office web apps
+    "view.officeapps.live.com",  # Office document viewer
 ]
 
 
@@ -51,8 +56,15 @@ def validate_sharepoint_url(url: str) -> Tuple[bool, str]:
     
     # Must end with allowed host
     hostname_lower = hostname.lower()
+    
+    # Check against general allowed hosts
     for allowed in ALLOWED_HOSTS:
         if hostname_lower.endswith(allowed):
             return True, ""
     
-    return False, f"Only SharePoint/OneDrive URLs are allowed (e.g., *.sharepoint.com, *.onedrive.com)"
+    # Check against specific Office domains
+    for allowed in ALLOWED_OFFICE_DOMAINS:
+        if hostname_lower == allowed:
+            return True, ""
+    
+    return False, f"Only SharePoint/OneDrive URLs are allowed (e.g., *.sharepoint.com, 1drv.ms)"

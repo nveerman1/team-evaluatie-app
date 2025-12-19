@@ -27,7 +27,7 @@ export const submissionService = {
    * Clear a submission (remove URL and set status to missing)
    */
   async clearSubmission(submissionId: number): Promise<void> {
-    await api.delete(`/submissions/submissions/${submissionId}`);
+    await api.delete(`/submissions/${submissionId}`);
   },
 
   /**
@@ -38,7 +38,7 @@ export const submissionService = {
     data: SubmissionStatusUpdate
   ): Promise<SubmissionOut> {
     const response = await api.patch<SubmissionOut>(
-      `/submissions/submissions/${submissionId}/status`,
+      `/submissions/${submissionId}/status`,
       data
     );
     return response.data;

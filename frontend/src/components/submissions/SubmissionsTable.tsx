@@ -21,6 +21,8 @@ import { StatusBadge } from './StatusBadge';
 import { SubmissionWithTeamInfo } from '@/dtos/submission.dto';
 import { ExternalLink } from 'lucide-react';
 
+const MAX_DISPLAYED_MEMBERS = 2;
+
 interface SubmissionsTableProps {
   submissions: SubmissionWithTeamInfo[];
   onStatusChange: (submissionId: number, status: string) => Promise<void>;
@@ -67,8 +69,8 @@ export function SubmissionsTable({
               </TableCell>
               <TableCell>
                 <div className="text-sm">
-                  {item.members.slice(0, 2).map((m) => m.name).join(', ')}
-                  {item.members.length > 2 && ` +${item.members.length - 2}`}
+                  {item.members.slice(0, MAX_DISPLAYED_MEMBERS).map((m) => m.name).join(', ')}
+                  {item.members.length > MAX_DISPLAYED_MEMBERS && ` +${item.members.length - MAX_DISPLAYED_MEMBERS}`}
                 </div>
               </TableCell>
               <TableCell>

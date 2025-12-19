@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func, and_
@@ -133,8 +133,8 @@ def submit_link(
     submission.url = payload.url.strip()
     submission.status = "submitted"
     submission.submitted_by_user_id = current_user.id
-    submission.submitted_at = datetime.now(timezone.utc)
-    submission.updated_at = datetime.now(timezone.utc)
+    submission.submitted_at = datetime.utcnow()
+    submission.updated_at = datetime.utcnow()
     
     # Log event
     log_submission_event(db, submission, current_user.id, "submitted")
@@ -147,7 +147,7 @@ def submit_link(
 
 # ---------- Clear submission ----------
 
-@router.delete("/submissions/{submission_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{submission_id}", status_code=status.HTTP_204_NO_CONTENT)
 def clear_submission(
     submission_id: int,
     db: Session = Depends(get_db),
@@ -186,7 +186,7 @@ def clear_submission(
     # Clear submission
     submission.url = None
     submission.status = "missing"
-    submission.updated_at = datetime.now(timezone.utc)
+    submission.updated_at = datetime.utcnow()
     log_submission_event(db, submission, current_user.id, "cleared")
     
     db.commit()
@@ -194,7 +194,7 @@ def clear_submission(
 
 # ---------- Update submission status (teacher only) ----------
 
-@router.patch("/submissions/{submission_id}/status", response_model=SubmissionOut)
+@router.patch("/{submission_id}/status", response_model=SubmissionOut)
 def update_submission_status(
     submission_id: int,
     payload: SubmissionStatusUpdate,
@@ -237,8 +237,8 @@ def update_submission_status(
     old_status = submission.status
     submission.status = payload.status
     submission.last_checked_by_user_id = current_user.id
-    submission.last_checked_at = datetime.now(timezone.utc)
-    submission.updated_at = datetime.now(timezone.utc)
+    submission.last_checked_at = datetime.utcnow()
+    submission.updated_at = datetime.utcnow()
     
     # Log event
     log_submission_event(

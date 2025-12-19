@@ -57,14 +57,29 @@ export function SubmissionCard({
       return;
     }
 
-    // Client-side validation
+    // Client-side validation matching backend logic
     if (!url.startsWith('https://')) {
       toast.error('Alleen HTTPS URLs zijn toegestaan');
       return;
     }
 
-    if (!url.includes('sharepoint.com') && !url.includes('onedrive.com') && !url.includes('office.com')) {
-      toast.error('Alleen SharePoint/OneDrive links zijn toegestaan');
+    try {
+      const urlObj = new URL(url);
+      const hostname = urlObj.hostname.toLowerCase();
+      
+      const allowedHosts = ['sharepoint.com', '1drv.ms'];
+      const allowedOfficeDomains = ['officeapps.live.com', 'view.officeapps.live.com'];
+      
+      const isAllowed = 
+        allowedHosts.some(host => hostname.endsWith(host)) ||
+        allowedOfficeDomains.some(domain => hostname === domain);
+      
+      if (!isAllowed) {
+        toast.error('Alleen SharePoint/OneDrive links zijn toegestaan');
+        return;
+      }
+    } catch (e) {
+      toast.error('Ongeldige URL');
       return;
     }
 
