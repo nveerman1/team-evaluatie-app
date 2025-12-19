@@ -45,6 +45,8 @@ interface ProjectWithLevel extends RunningProjectItem {
   course_level?: string;
   course_id?: number;
   description?: string;
+  period?: string;
+  academic_year_label?: string;
   // Evaluation counts from project details
   evaluation_counts?: Record<string, number>;
   note_count?: number;
@@ -892,10 +894,14 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
   const [searchQuery, setSearchQuery] = useState("");
   const [courseFilter, setCourseFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [academicYearFilter, setAcademicYearFilter] = useState("");
+  const [periodFilter, setPeriodFilter] = useState("");
   const [selectedProjects, setSelectedProjects] = useState<number[]>([]);
   const [expandedProjects, setExpandedProjects] = useState<number[]>([]);
   const [emailTemplate, setEmailTemplate] = useState("");
   const [availableCourses, setAvailableCourses] = useState<string[]>([]);
+  const [availableAcademicYears, setAvailableAcademicYears] = useState<string[]>([]);
+  const [availablePeriods, setAvailablePeriods] = useState<string[]>([]);
   
   // Mail templates from API
   const [mailTemplates, setMailTemplates] = useState<MailTemplateDto[]>([]);
@@ -957,6 +963,8 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
             course_id: item.course_id,
             course_level: course?.level,
             class_name: item.class_name,
+            period: item.period,
+            academic_year_label: course?.academic_year_label,
             start_date: item.start_date,
             end_date: item.end_date,
             student_names: [],
@@ -1009,6 +1017,22 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
             .filter((name): name is string => !!name)
         )).sort();
         setAvailableCourses(uniqueCourses);
+        
+        // Extract unique academic years for filter dropdown
+        const uniqueAcademicYears = Array.from(new Set(
+          enrichedProjects
+            .map(p => p.academic_year_label)
+            .filter((label): label is string => !!label)
+        )).sort();
+        setAvailableAcademicYears(uniqueAcademicYears);
+        
+        // Extract unique periods for filter dropdown
+        const uniquePeriods = Array.from(new Set(
+          enrichedProjects
+            .map(p => p.period)
+            .filter((period): period is string => !!period)
+        )).sort();
+        setAvailablePeriods(uniquePeriods);
       } catch (err) {
         console.error("Failed to fetch projects:", err);
         setError("Kon projecten niet laden");
@@ -1060,7 +1084,13 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
     // Status filter
     const matchesStatus = statusFilter === "" || project.project_status === statusFilter;
     
-    return matchesSearch && matchesCourse && matchesStatus;
+    // Academic year filter
+    const matchesAcademicYear = academicYearFilter === "" || project.academic_year_label === academicYearFilter;
+    
+    // Period filter
+    const matchesPeriod = periodFilter === "" || project.period === periodFilter;
+    
+    return matchesSearch && matchesCourse && matchesStatus && matchesAcademicYear && matchesPeriod;
   });
 
   const toggleProjectSelection = (projectId: number) => {
@@ -1091,6 +1121,8 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
     setSearchQuery("");
     setCourseFilter("");
     setStatusFilter("");
+    setAcademicYearFilter("");
+    setPeriodFilter("");
   };
 
   const handleSendBulkEmail = () => {
@@ -1269,40 +1301,91 @@ function TabContent({ levelFilter }: { levelFilter: "onderbouw" | "bovenbouw" })
       />
     
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
-        <input
-          type="text"
-          placeholder="Zoek op titel, vak, opdrachtgever..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="px-3 py-2 rounded-lg border w-64 text-sm"
-        />
-        <select
-          value={courseFilter}
-          onChange={(e) => setCourseFilter(e.target.value)}
-          className="px-3 py-2 rounded-lg border text-sm"
-        >
-          <option value="">Alle vakken</option>
-          {availableCourses.map(course => (
-            <option key={course} value={course}>{course}</option>
-          ))}
-        </select>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 rounded-lg border text-sm"
-        >
-          <option value="">Alle statussen</option>
-          <option value="concept">Concept</option>
-          <option value="active">Actief</option>
-          <option value="completed">Afgerond</option>
-        </select>
-        <button
-          onClick={resetFilters}
-          className="px-3 py-2 text-sm rounded-lg border hover:bg-gray-50 ml-auto"
-        >
-          Reset
-        </button>
+      <div className="mb-6 rounded-xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          {/* Left side: search + dropdowns */}
+          <div className="flex flex-wrap gap-3 items-center flex-1">
+            {/* Search field */}
+            <div className="relative flex-1 min-w-[200px] max-w-md">
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              <input
+                type="text"
+                placeholder="Zoek op titel, vak, opdrachtgever…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 bg-white px-9 py-2 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+
+            {/* Course dropdown */}
+            <select
+              value={courseFilter}
+              onChange={(e) => setCourseFilter(e.target.value)}
+              className="flex flex-1 items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 min-w-[140px]"
+            >
+              <option value="">Alle vakken</option>
+              {availableCourses.map(course => (
+                <option key={course} value={course}>{course}</option>
+              ))}
+            </select>
+
+            {/* Academic year dropdown */}
+            <select
+              value={academicYearFilter}
+              onChange={(e) => setAcademicYearFilter(e.target.value)}
+              className="flex flex-1 items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 min-w-[140px]"
+            >
+              <option value="">Alle schooljaren</option>
+              {availableAcademicYears.map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+
+            {/* Period dropdown */}
+            <select
+              value={periodFilter}
+              onChange={(e) => setPeriodFilter(e.target.value)}
+              className="flex flex-1 items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 min-w-[140px]"
+            >
+              <option value="">Alle periodes</option>
+              {availablePeriods.map(period => (
+                <option key={period} value={period}>{period}</option>
+              ))}
+            </select>
+
+            {/* Status dropdown */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="flex flex-1 items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 min-w-[140px]"
+            >
+              <option value="">Alle statussen</option>
+              <option value="concept">Concept</option>
+              <option value="active">Actief</option>
+              <option value="completed">Afgerond</option>
+            </select>
+
+            {/* Reset button */}
+            <button
+              onClick={resetFilters}
+              className="px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 shadow-sm"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Legend */}

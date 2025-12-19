@@ -23,6 +23,7 @@ export type ProjectListItem = {
   title: string;
   course_id?: number;
   class_name?: string;
+  period?: string;
   start_date?: string;
   end_date?: string;
   status: string;
@@ -42,6 +43,7 @@ export type ProjectCreate = {
   slug?: string;
   description?: string;
   class_name?: string;
+  period?: string;
   start_date?: string;
   end_date?: string;
   status?: string;
@@ -53,6 +55,7 @@ export type ProjectUpdate = {
   slug?: string;
   description?: string;
   class_name?: string;
+  period?: string;
   start_date?: string;
   end_date?: string;
   status?: string;
