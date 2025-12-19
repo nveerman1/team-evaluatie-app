@@ -12,6 +12,10 @@ import { Loading } from "@/components";
 import { MultiSelect } from "@/components/form/MultiSelect";
 import { SearchableMultiSelect } from "@/components/form/SearchableMultiSelect";
 
+// Period options constant
+const PERIOD_OPTIONS = ['P1', 'P2', 'P3', 'P4'] as const;
+type Period = typeof PERIOD_OPTIONS[number];
+
 export default function NewProjectWizardPage() {
   const router = useRouter();
   const { courses } = useCourses();
@@ -29,7 +33,7 @@ export default function NewProjectWizardPage() {
   const [title, setTitle] = useState("");
   const [niveau, setNiveau] = useState("");
   const [courseId, setCourseId] = useState<number | "">("");
-  const [className, setClassName] = useState("");
+  const [period, setPeriod] = useState<Period | "">("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [description, setDescription] = useState("");
@@ -217,7 +221,7 @@ export default function NewProjectWizardPage() {
         project: {
           title: title.trim(),
           course_id: courseId || undefined,
-          class_name: className.trim() || undefined,
+          period: period || undefined,
           start_date: startDate || undefined,
           end_date: endDate || undefined,
           description: description.trim() || undefined,
@@ -463,14 +467,17 @@ export default function NewProjectWizardPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Klas</label>
-              <input
-                type="text"
-                value={className}
-                onChange={(e) => setClassName(e.target.value)}
-                placeholder="Bijv. GA2, AH3"
+              <label className="block text-sm font-medium mb-1">Periode</label>
+              <select
+                value={period}
+                onChange={(e) => setPeriod(e.target.value as Period | "")}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-              />
+              >
+                <option value="">Selecteer een periode...</option>
+                {PERIOD_OPTIONS.map(p => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -853,10 +860,10 @@ export default function NewProjectWizardPage() {
                       <dd>{courses.find((c) => c.id === courseId)?.name}</dd>
                     </div>
                   )}
-                  {className && (
+                  {period && (
                     <div className="flex">
-                      <dt className="w-32 text-gray-600">Klas:</dt>
-                      <dd>{className}</dd>
+                      <dt className="w-32 text-gray-600">Periode:</dt>
+                      <dd>{period}</dd>
                     </div>
                   )}
                   {startDate && (
