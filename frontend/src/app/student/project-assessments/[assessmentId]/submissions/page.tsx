@@ -7,6 +7,9 @@ import { SubmissionOut, SubmissionCreate } from '@/dtos/submission.dto';
 import { SubmissionCard } from '@/components/submissions/SubmissionCard';
 import { Loading } from '@/components';
 import { toast } from '@/lib/toast';
+import { Card, CardContent } from '@/components/ui/card';
+import { Upload, FileText, Presentation } from 'lucide-react';
+import { studentStyles } from '@/styles/student-dashboard.styles';
 
 export default function StudentSubmissionsPage() {
   const params = useParams();
@@ -60,49 +63,85 @@ export default function StudentSubmissionsPage() {
   };
 
   if (loading) {
-    return <Loading />;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 p-6">
+        <Loading />
+      </div>
+    );
   }
 
   const reportSubmission = submissions.find((s) => s.doc_type === 'report');
   const slidesSubmission = submissions.find((s) => s.doc_type === 'slides');
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Inleveren</h1>
-        <p className="text-muted-foreground mt-2">
-          Upload je documenten naar SharePoint en deel de links hier.
-          Alleen HTTPS links naar SharePoint/OneDrive zijn toegestaan.
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 p-6">
+      <div className="mx-auto max-w-4xl space-y-6">
+        {/* Header */}
+        <div className="space-y-2">
+          <h1 className={studentStyles.typography.pageTitle}>
+            <Upload className="inline-block mr-3 h-8 w-8 text-slate-700" />
+            Inleveren
+          </h1>
+          <p className={studentStyles.typography.pageSubtitle}>
+            Upload je documenten naar SharePoint en deel de links hier.
+            Alleen HTTPS links naar SharePoint/OneDrive zijn toegestaan.
+          </p>
+        </div>
 
-      <div className="space-y-6">
-        <SubmissionCard
-          docType="report"
-          label="Verslag"
-          submission={reportSubmission}
-          onSubmit={handleSubmit}
-          onClear={handleClear}
-        />
+        {/* Info Card */}
+        <Card className="rounded-2xl border-slate-200 bg-gradient-to-br from-blue-50 to-indigo-50/50 shadow-sm">
+          <CardContent className="p-5">
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-blue-100 p-2">
+                <Upload className="h-5 w-5 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-slate-900 mb-2">Tips voor inleveren</h3>
+                <ul className="space-y-1.5 text-sm text-slate-700">
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-500 mt-0.5">•</span>
+                    <span>Upload je bestanden eerst naar SharePoint of OneDrive</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-500 mt-0.5">•</span>
+                    <span>Klik met de rechtermuisknop op het bestand en kies "Delen"</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-500 mt-0.5">•</span>
+                    <span>Zorg dat iedereen met de link het bestand kan bekijken</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-500 mt-0.5">•</span>
+                    <span>Kopieer de link en plak deze hier</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-500 mt-0.5">•</span>
+                    <span>Controleer na het inleveren of de link werkt door erop te klikken</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        <SubmissionCard
-          docType="slides"
-          label="Presentatie"
-          submission={slidesSubmission}
-          onSubmit={handleSubmit}
-          onClear={handleClear}
-        />
-      </div>
+        {/* Submission Cards */}
+        <div className="space-y-4">
+          <SubmissionCard
+            docType="report"
+            label="Verslag"
+            submission={reportSubmission}
+            onSubmit={handleSubmit}
+            onClear={handleClear}
+          />
 
-      <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <h3 className="font-semibold text-blue-900 mb-2">Tips voor inleveren:</h3>
-        <ul className="list-disc list-inside space-y-1 text-sm text-blue-800">
-          <li>Upload je bestanden eerst naar SharePoint of OneDrive</li>
-          <li>Klik met de rechtermuisknop op het bestand en kies "Delen"</li>
-          <li>Zorg dat iedereen met de link het bestand kan bekijken</li>
-          <li>Kopieer de link en plak deze hier</li>
-          <li>Controleer na het inleveren of de link werkt door erop te klikken</li>
-        </ul>
+          <SubmissionCard
+            docType="slides"
+            label="Presentatie"
+            submission={slidesSubmission}
+            onSubmit={handleSubmit}
+            onClear={handleClear}
+          />
+        </div>
       </div>
     </div>
   );

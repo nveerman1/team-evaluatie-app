@@ -256,16 +256,18 @@ export default function StudentDashboard() {
                   <Loading />
                 ) : projectError ? (
                   <ErrorMessage message={projectError} />
-                ) : filteredProjectAssessments.length === 0 ? (
+                ) : filteredProjectAssessments.filter(a => a.project_id != null).length === 0 ? (
                   <div className="p-8 rounded-xl shadow-sm bg-slate-50 text-center">
                     <p className="text-slate-500">
                       {searchQuery ? "Geen projecten gevonden met deze zoekopdracht." : "Nog geen projecten beschikbaar om in te leveren."}
                     </p>
                   </div>
                 ) : (
-                  filteredProjectAssessments.map((assessment) => (
-                    <SubmissionDashboardCard key={assessment.id} assessment={assessment} />
-                  ))
+                  filteredProjectAssessments
+                    .filter(assessment => assessment.project_id != null)
+                    .map((assessment) => (
+                      <SubmissionDashboardCard key={assessment.id} assessment={assessment} />
+                    ))
                 )}
               </div>
             </TabsContent>

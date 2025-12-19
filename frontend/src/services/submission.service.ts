@@ -17,7 +17,7 @@ export const submissionService = {
     data: SubmissionCreate
   ): Promise<SubmissionOut> {
     const response = await api.post<SubmissionOut>(
-      `/submissions/assessments/${assessmentId}/teams/${teamId}`,
+      `/api/v1/submissions/assessments/${assessmentId}/teams/${teamId}`,
       data
     );
     return response.data;
@@ -27,7 +27,7 @@ export const submissionService = {
    * Clear a submission (remove URL and set status to missing)
    */
   async clearSubmission(submissionId: number): Promise<void> {
-    await api.delete(`/submissions/${submissionId}`);
+    await api.delete(`/api/v1/submissions/${submissionId}`);
   },
 
   /**
@@ -38,7 +38,7 @@ export const submissionService = {
     data: SubmissionStatusUpdate
   ): Promise<SubmissionOut> {
     const response = await api.patch<SubmissionOut>(
-      `/submissions/${submissionId}/status`,
+      `/api/v1/submissions/${submissionId}/status`,
       data
     );
     return response.data;
@@ -59,8 +59,8 @@ export const submissionService = {
     if (missingOnly) params.set("missing_only", "true");
     const queryString = params.toString();
     const url = queryString
-      ? `/submissions/assessments/${assessmentId}/submissions?${queryString}`
-      : `/submissions/assessments/${assessmentId}/submissions`;
+      ? `/api/v1/submissions/assessments/${assessmentId}/submissions?${queryString}`
+      : `/api/v1/submissions/assessments/${assessmentId}/submissions`;
     const response = await api.get<SubmissionListResponse>(url);
     return response.data;
   },
@@ -70,7 +70,7 @@ export const submissionService = {
    */
   async getMyTeamSubmissions(assessmentId: number): Promise<SubmissionOut[]> {
     const response = await api.get<SubmissionOut[]>(
-      `/submissions/assessments/${assessmentId}/my-team`
+      `/api/v1/submissions/assessments/${assessmentId}/my-team`
     );
     return response.data;
   },
