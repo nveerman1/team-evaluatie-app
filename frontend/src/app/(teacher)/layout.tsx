@@ -1,6 +1,23 @@
 "use client";
 import { useAuth } from "@/hooks/useAuth";
 import { NavItem } from "@/components/admin/NavItem";
+import {
+  LayoutDashboard,
+  Calendar,
+  FileText,
+  Layers,
+  CheckSquare,
+  Users,
+  BarChart3,
+  FileEdit,
+  Building2,
+  School,
+  Target,
+  ClipboardList,
+  FileStack,
+  BookOpen,
+  UsersRound,
+} from "lucide-react";
 
 export default function TeacherLayout({
   children,
@@ -25,9 +42,9 @@ export default function TeacherLayout({
                 Algemeen
               </div>
               <div className="space-y-1">
-                <NavItem href="/teacher" label="Dashboard" />
-                <NavItem href="/teacher/calendar" label="Kalender" />
-                <NavItem href="/teacher/overview" label="Overzicht" />
+                <NavItem href="/teacher" label="Dashboard" icon={LayoutDashboard} />
+                <NavItem href="/teacher/calendar" label="Kalender" icon={Calendar} />
+                <NavItem href="/teacher/overview" label="Overzicht" icon={FileText} />
               </div>
             </div>
 
@@ -37,12 +54,12 @@ export default function TeacherLayout({
                 Projecttools
               </div>
               <div className="space-y-1">
-                <NavItem href="/teacher/projects" label="Projecten" />
-                <NavItem href="/teacher/project-assessments" label="Projectbeoordeling" />
-                <NavItem href="/teacher/evaluations" label="Peerevaluaties" />
-                <NavItem href="/teacher/competencies" label="Competentiemonitor" />
-                <NavItem href="/teacher/project-notes" label="Projectaantekeningen" />
-                <NavItem href="/teacher/clients" label="Opdrachtgevers" />
+                <NavItem href="/teacher/projects" label="Projecten" icon={Layers} />
+                <NavItem href="/teacher/project-assessments" label="Projectbeoordeling" icon={CheckSquare} />
+                <NavItem href="/teacher/evaluations" label="Peerevaluaties" icon={Users} />
+                <NavItem href="/teacher/competencies" label="Competentiemonitor" icon={BarChart3} />
+                <NavItem href="/teacher/project-notes" label="Projectaantekeningen" icon={FileEdit} />
+                <NavItem href="/teacher/clients" label="Opdrachtgevers" icon={Building2} />
               </div>
             </div>
 
@@ -53,10 +70,10 @@ export default function TeacherLayout({
                   Beheer
                 </div>
                 <div className="space-y-1">
-                  <NavItem href="/teacher/admin/schoolbeheer" label="Schoolbeheer" />
-                  <NavItem href="/teacher/learning-objectives" label="Leerdoelen" />
-                  <NavItem href="/teacher/rubrics" label="Rubrics" />
-                  <NavItem href="/teacher/admin/templates" label="Templates" />
+                  <NavItem href="/teacher/admin/schoolbeheer" label="Schoolbeheer" icon={School} />
+                  <NavItem href="/teacher/learning-objectives" label="Leerdoelen" icon={Target} />
+                  <NavItem href="/teacher/rubrics" label="Rubrics" icon={ClipboardList} />
+                  <NavItem href="/teacher/admin/templates" label="Templates" icon={FileStack} />
                 </div>
               </div>
             )}
@@ -68,10 +85,10 @@ export default function TeacherLayout({
                   Beheer
                 </div>
                 <div className="space-y-1">
-                  <NavItem href="/teacher/courses" label="Vakken beheren" />
-                  <NavItem href="/teacher/class-teams" label="Klas- & Teambeheer" />
-                  <NavItem href="/teacher/learning-objectives" label="Leerdoelen" />
-                  <NavItem href="/teacher/rubrics" label="Rubrics" />
+                  <NavItem href="/teacher/courses" label="Vakken beheren" icon={BookOpen} />
+                  <NavItem href="/teacher/class-teams" label="Klas- & Teambeheer" icon={UsersRound} />
+                  <NavItem href="/teacher/learning-objectives" label="Leerdoelen" icon={Target} />
+                  <NavItem href="/teacher/rubrics" label="Rubrics" icon={ClipboardList} />
                 </div>
               </div>
             )}
