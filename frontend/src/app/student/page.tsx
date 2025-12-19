@@ -9,9 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, ClipboardCheck, Target, Trophy, BarChart3, Sparkles } from "lucide-react";
+import { Search, ClipboardCheck, Target, Trophy, BarChart3, Sparkles, Upload } from "lucide-react";
 import { EvaluationDashboardCard } from "@/components/student/dashboard/EvaluationDashboardCard";
 import { ProjectAssessmentDashboardCard } from "@/components/student/dashboard/ProjectAssessmentDashboardCard";
+import { SubmissionDashboardCard } from "@/components/student/dashboard/SubmissionDashboardCard";
 import { OverviewTab } from "@/components/student/dashboard/OverviewTab";
 import { CompetencyScanDashboardTab } from "@/components/student/dashboard/CompetencyScanDashboardTab";
 import Link from "next/link";
@@ -126,6 +127,12 @@ export default function StudentDashboard() {
                   <Trophy className="mr-2 h-4 w-4" /> Projectbeoordelingen
                 </TabsTrigger>
                 <TabsTrigger
+                  value="inleveren"
+                  className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
+                >
+                  <Upload className="mr-2 h-4 w-4" /> Inleveren
+                </TabsTrigger>
+                <TabsTrigger
                   value="overzicht"
                   className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
                 >
@@ -225,6 +232,39 @@ export default function StudentDashboard() {
                 ) : (
                   filteredProjectAssessments.map((assessment) => (
                     <ProjectAssessmentDashboardCard key={assessment.id} assessment={assessment} />
+                  ))
+                )}
+              </div>
+            </TabsContent>
+
+            {/* INLEVEREN */}
+            <TabsContent value="inleveren" className="mt-6 space-y-4">
+              <Card className="rounded-2xl border-slate-200 bg-slate-50">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-2">
+                    <Upload className="h-4 w-4 text-slate-600" />
+                    <p className="text-sm font-semibold text-slate-900">Inleveringen</p>
+                  </div>
+                  <p className="text-sm text-slate-600 mt-1">
+                    Lever hier je documenten in voor projectbeoordelingen. Upload bestanden naar SharePoint en deel de links.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <div className="grid gap-4">
+                {projectLoading ? (
+                  <Loading />
+                ) : projectError ? (
+                  <ErrorMessage message={projectError} />
+                ) : filteredProjectAssessments.length === 0 ? (
+                  <div className="p-8 rounded-xl shadow-sm bg-slate-50 text-center">
+                    <p className="text-slate-500">
+                      {searchQuery ? "Geen projecten gevonden met deze zoekopdracht." : "Nog geen projecten beschikbaar om in te leveren."}
+                    </p>
+                  </div>
+                ) : (
+                  filteredProjectAssessments.map((assessment) => (
+                    <SubmissionDashboardCard key={assessment.id} assessment={assessment} />
                   ))
                 )}
               </div>

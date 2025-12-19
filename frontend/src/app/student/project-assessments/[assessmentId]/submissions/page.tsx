@@ -7,7 +7,6 @@ import { SubmissionOut, SubmissionCreate } from '@/dtos/submission.dto';
 import { SubmissionCard } from '@/components/submissions/SubmissionCard';
 import { Loading } from '@/components';
 import { toast } from '@/lib/toast';
-import { StudentProjectAssessmentTabs } from '@/components/student/project-assessments/StudentProjectAssessmentTabs';
 
 export default function StudentSubmissionsPage() {
   const params = useParams();
@@ -69,9 +68,6 @@ export default function StudentSubmissionsPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      {/* Tabs Navigation */}
-      <StudentProjectAssessmentTabs assessmentId={assessmentId.toString()} />
-      
       <div>
         <h1 className="text-3xl font-bold">Inleveren</h1>
         <p className="text-muted-foreground mt-2">
