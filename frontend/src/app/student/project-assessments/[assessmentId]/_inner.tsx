@@ -6,6 +6,7 @@ import { projectAssessmentService } from "@/services";
 import { ProjectAssessmentDetailOut } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
 import { studentStyles } from "@/styles/student-dashboard.styles";
+import { StudentProjectAssessmentTabs } from "@/components/student/project-assessments/StudentProjectAssessmentTabs";
 
 // Component for rendering a single rubric criterion with matrix view
 function RubricMatrixRow({
@@ -191,6 +192,9 @@ export default function StudentProjectAssessmentInner() {
               ← Terug
             </button>
           </div>
+          
+          {/* Tabs Navigation */}
+          <StudentProjectAssessmentTabs assessmentId={assessmentId.toString()} />
         </header>
       </div>
 
