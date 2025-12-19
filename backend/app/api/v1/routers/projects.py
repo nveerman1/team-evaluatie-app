@@ -52,6 +52,7 @@ from app.core.rbac import (
 )
 from app.core.audit import log_action
 from app.infra.services.archive_guards import require_course_year_not_archived, require_project_year_not_archived
+from app.infra.services.project_team_service import ProjectTeamService
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -541,12 +542,12 @@ def get_project(
     )
     evaluation_counts = {eval_type: count for eval_type, count in eval_counts}
 
-    # Count project assessments linked to this project (via metadata_json['project_id'])
+    # Count project assessments linked to this project (via project_id field)
     project_assessment_count = (
         db.query(func.count(ProjectAssessment.id))
         .filter(
             ProjectAssessment.school_id == user.school_id,
-            cast(ProjectAssessment.metadata_json.op('->>') ('project_id'), Integer) == project_id,
+            ProjectAssessment.project_id == project_id,
         )
         .scalar()
         or 0
@@ -930,17 +931,47 @@ def wizard_create_project(
                 )
             else:
                 # Create one ProjectAssessment per group
+                # For each group, we create a ProjectTeam to freeze the team roster at this point in time.
+                # This ensures that project assessments reference the correct team composition,
+                # even if group membership changes later. The ProjectTeam preserves:
+                # - Team roster (members) at the time of project creation
+                # - Team number from the group for proper team identification
+                # - Historical record of team composition for this specific project
                 for group in groups:
+                    # Create ProjectTeam for this group to preserve team roster
+                    project_team = ProjectTeamService.create_project_team(
+                        db=db,
+                        project_id=project.id,
+                        school_id=user.school_id,
+                        team_id=group.id,
+                        team_name=group.name,
+                    )
+                    
+                    # Copy group.team_number to project_team.team_number
+                    if group.team_number is not None:
+                        project_team.team_number = group.team_number
+                    
+                    # Copy members from group to project team
+                    ProjectTeamService.copy_members_from_group(
+                        db=db,
+                        project_team_id=project_team.id,
+                        group_id=group.id,
+                        school_id=user.school_id,
+                    )
+                    db.flush()  # Flush to get project_team.id and assessment.id for linking
+                    
+                    # Create ProjectAssessment linked to project and project_team
                     assessment = ProjectAssessment(
                         school_id=user.school_id,
+                        project_id=project.id,  # Set project_id on the model
                         group_id=group.id,
+                        project_team_id=project_team.id,  # Link to project team
                         teacher_id=user.id,
                         rubric_id=pa_config.rubric_id,
                         title=f"{project.title} – {group.name}",
                         version=pa_config.version,
                         status="draft",
                         metadata_json={
-                            "project_id": project.id,
                             "deadline": pa_config.deadline.isoformat() if pa_config.deadline else None,
                         }
                     )
@@ -952,8 +983,10 @@ def wizard_create_project(
                         data={
                             "id": assessment.id,
                             "title": assessment.title,
+                            "project_id": assessment.project_id,
                             "group_id": assessment.group_id,
                             "group_name": group.name,
+                            "project_team_id": assessment.project_team_id,
                             "rubric_id": assessment.rubric_id,
                             "version": assessment.version,
                             "status": assessment.status,
