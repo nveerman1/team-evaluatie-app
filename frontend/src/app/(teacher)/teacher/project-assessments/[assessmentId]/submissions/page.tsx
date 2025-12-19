@@ -7,7 +7,7 @@ import { SubmissionWithTeamInfo, SubmissionStatusUpdate } from '@/dtos/submissio
 import { SubmissionsTable } from '@/components/submissions/SubmissionsTable';
 import { SubmissionFilters } from '@/components/submissions/SubmissionFilters';
 import { Loading } from '@/components';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function TeacherSubmissionsPage() {

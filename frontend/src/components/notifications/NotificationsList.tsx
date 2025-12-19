@@ -6,11 +6,22 @@ import { notificationService } from '@/services/notification.service';
 import { NotificationOut } from '@/dtos/notification.dto';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { formatDistanceToNow } from 'date-fns';
-import { nl } from 'date-fns/locale';
 
 interface NotificationsListProps {
   onNotificationRead?: () => void;
+}
+
+// Simple relative time function
+function getRelativeTime(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  
+  if (seconds < 60) return 'zojuist';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} minuten geleden`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} uur geleden`;
+  if (seconds < 2592000) return `${Math.floor(seconds / 86400)} dagen geleden`;
+  return date.toLocaleDateString('nl-NL');
 }
 
 export function NotificationsList({ onNotificationRead }: NotificationsListProps) {
@@ -116,10 +127,7 @@ export function NotificationsList({ onNotificationRead }: NotificationsListProps
                   <p className="text-sm text-muted-foreground mt-1">{notification.body}</p>
                 )}
                 <p className="text-xs text-muted-foreground mt-2">
-                  {formatDistanceToNow(new Date(notification.created_at), {
-                    addSuffix: true,
-                    locale: nl,
-                  })}
+                  {getRelativeTime(notification.created_at)}
                 </p>
               </div>
             </div>

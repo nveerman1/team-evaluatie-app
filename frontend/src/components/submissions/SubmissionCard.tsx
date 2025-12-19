@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { StatusBadge } from './StatusBadge';
 import { SubmissionOut } from '@/dtos/submission.dto';
 import { ExternalLink, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 interface SubmissionCardProps {
   docType: 'report' | 'slides' | 'attachment';

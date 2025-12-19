@@ -6,7 +6,7 @@ import { submissionService } from '@/services/submission.service';
 import { SubmissionOut, SubmissionCreate } from '@/dtos/submission.dto';
 import { SubmissionCard } from '@/components/submissions/SubmissionCard';
 import { Loading } from '@/components';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 export default function StudentSubmissionsPage() {
   const params = useParams();
