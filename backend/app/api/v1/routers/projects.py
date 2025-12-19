@@ -542,12 +542,12 @@ def get_project(
     )
     evaluation_counts = {eval_type: count for eval_type, count in eval_counts}
 
-    # Count project assessments linked to this project (via metadata_json['project_id'])
+    # Count project assessments linked to this project (via project_id field)
     project_assessment_count = (
         db.query(func.count(ProjectAssessment.id))
         .filter(
             ProjectAssessment.school_id == user.school_id,
-            cast(ProjectAssessment.metadata_json.op('->>') ('project_id'), Integer) == project_id,
+            ProjectAssessment.project_id == project_id,
         )
         .scalar()
         or 0
