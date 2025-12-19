@@ -12,6 +12,10 @@ import { Loading } from "@/components";
 import { MultiSelect } from "@/components/form/MultiSelect";
 import { SearchableMultiSelect } from "@/components/form/SearchableMultiSelect";
 
+// Period options constant
+const PERIOD_OPTIONS = ['P1', 'P2', 'P3', 'P4'] as const;
+type Period = typeof PERIOD_OPTIONS[number];
+
 export default function NewProjectWizardPage() {
   const router = useRouter();
   const { courses } = useCourses();
@@ -29,7 +33,7 @@ export default function NewProjectWizardPage() {
   const [title, setTitle] = useState("");
   const [niveau, setNiveau] = useState("");
   const [courseId, setCourseId] = useState<number | "">("");
-  const [period, setPeriod] = useState("");
+  const [period, setPeriod] = useState<Period | "">("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [description, setDescription] = useState("");
@@ -466,14 +470,13 @@ export default function NewProjectWizardPage() {
               <label className="block text-sm font-medium mb-1">Periode</label>
               <select
                 value={period}
-                onChange={(e) => setPeriod(e.target.value)}
+                onChange={(e) => setPeriod(e.target.value as Period | "")}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg"
               >
                 <option value="">Selecteer een periode...</option>
-                <option value="P1">P1</option>
-                <option value="P2">P2</option>
-                <option value="P3">P3</option>
-                <option value="P4">P4</option>
+                {PERIOD_OPTIONS.map(p => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
               </select>
             </div>
 
