@@ -27,17 +27,26 @@ export default function TeacherSubmissionsPage() {
 
   // Check authentication before making API calls
   useEffect(() => {
-    const email = localStorage.getItem('x_user_email') || sessionStorage.getItem('x_user_email');
-    if (!email) {
-      console.error('No user email found in storage - redirecting to login');
-      router.push('/');
-      return;
-    }
-    setIsAuthenticated(true);
+    // Small delay to ensure localStorage is fully ready
+    const checkAuth = async () => {
+      // Wait a bit for storage to be ready
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const email = localStorage.getItem('x_user_email') || sessionStorage.getItem('x_user_email');
+      if (!email) {
+        console.error('No user email found in storage - redirecting to login');
+        router.push('/');
+        return;
+      }
+      console.log('[Auth Check] User email found, proceeding to load data');
+      setIsAuthenticated(true);
+    };
+    
+    checkAuth();
   }, [router]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && assessmentId) {
       loadSubmissions();
     }
   }, [assessmentId, isAuthenticated]);
@@ -49,10 +58,28 @@ export default function TeacherSubmissionsPage() {
   const loadSubmissions = async () => {
     setLoading(true);
     try {
+      // Double-check auth before making the call
+      const email = localStorage.getItem('x_user_email') || sessionStorage.getItem('x_user_email');
+      if (!email) {
+        console.error('[loadSubmissions] No email found - cannot make API call');
+        router.push('/');
+        return;
+      }
+      
       const data = await submissionService.getSubmissionsForAssessment(assessmentId);
       setSubmissions(data.items);
     } catch (err: any) {
       console.error('Failed to load submissions:', err);
+      
+      // If it's an auth error, redirect to login
+      if (err.name === 'ApiAuthError' || err.status === 401 || err.status === 403) {
+        console.error('[loadSubmissions] Authentication failed - redirecting to login');
+        localStorage.removeItem('x_user_email');
+        sessionStorage.removeItem('x_user_email');
+        router.push('/');
+        return;
+      }
+      
       toast.error('Kon inleveringen niet laden');
     } finally {
       setLoading(false);
