@@ -327,7 +327,11 @@ def list_submissions_for_assessment(
             detail="Assessment niet gevonden"
         )
     
+    # DEBUG: Log ownership check details
+    print(f"[DEBUG submissions] assessment_id={assessment_id}, assessment.teacher_id={assessment.teacher_id}, current_user.id={current_user.id}, current_user.email={current_user.email}, current_user.role={current_user.role}")
+    
     if assessment.teacher_id != current_user.id and current_user.role != "admin":
+        print(f"[DEBUG submissions] 403: teacher_id mismatch - assessment.teacher_id={assessment.teacher_id} != current_user.id={current_user.id}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Geen toegang tot deze inleveringen"
