@@ -18,6 +18,19 @@ import {
   BookOpen,
   UsersRound,
 } from "lucide-react";
+import { createContext, useContext, useState } from "react";
+
+type LayoutContextType = {
+  sidebarCollapsed: boolean;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+};
+
+const LayoutContext = createContext<LayoutContextType>({
+  sidebarCollapsed: false,
+  setSidebarCollapsed: () => {},
+});
+
+export const useTeacherLayout = () => useContext(LayoutContext);
 
 export default function TeacherLayout({
   children,
@@ -25,11 +38,13 @@ export default function TeacherLayout({
   children: React.ReactNode;
 }) {
   const { isAdmin } = useAuth();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-slate-700 border-r border-slate-600 text-slate-100">
+    <LayoutContext.Provider value={{ sidebarCollapsed, setSidebarCollapsed }}>
+      <div className="min-h-screen bg-gray-100 flex">
+        {/* Sidebar */}
+        <aside className={`bg-slate-700 border-r border-slate-600 text-slate-100 transition-all duration-300 shrink-0 ${sidebarCollapsed ? 'w-0 overflow-hidden' : 'w-64'}`}>
         <div className="p-4">
           <h1 className="text-xl font-bold mb-6 text-white">
             {isAdmin ? "Admin" : "Teacher"}
@@ -99,5 +114,6 @@ export default function TeacherLayout({
       {/* Main content */}
       <main className="flex-1">{children}</main>
     </div>
+    </LayoutContext.Provider>
   );
 }

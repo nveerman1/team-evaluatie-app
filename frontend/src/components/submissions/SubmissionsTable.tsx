@@ -123,7 +123,7 @@ export function SubmissionsTable({
               <TableCell>
                 {onOpenRubric && (
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     onClick={() => onOpenRubric(item.submission.project_team_id)}
                   >
