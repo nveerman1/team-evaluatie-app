@@ -750,7 +750,7 @@ export default function EditProjectAssessmentInner() {
       {/* Split view */}
       <div 
         className="grid gap-6" 
-        style={docOpen && docMode === "dock" ? { gridTemplateColumns: '1fr 1fr' } : undefined}
+        style={docOpen && docMode === "dock" ? { gridTemplateColumns: `${docWidth}px 1fr` } : undefined}
       >
         {/* Document pane */}
         {docOpen && (
