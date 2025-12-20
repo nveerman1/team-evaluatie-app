@@ -8,7 +8,7 @@
  * @param domain The domain to match against
  * @returns true if hostname is domain or a valid subdomain of domain
  */
-function isHostnameOrSubdomain(hostname: string, domain: string): boolean {
+export function isHostnameOrSubdomain(hostname: string, domain: string): boolean {
   if (hostname === domain) return true;
   // Check if it ends with .domain and has a dot before it (preventing evil-domain.com matches)
   return hostname.endsWith('.' + domain);
@@ -28,23 +28,16 @@ export function isTrustedMicrosoftUrl(url: string | null | undefined): boolean {
     
     // Allowlist of trusted Microsoft domains
     const trustedDomains = [
-      '.sharepoint.com',
-      '.sharepoint-df.com',
+      'sharepoint.com',
+      'sharepoint-df.com',
       'onedrive.live.com',
-      '.1drv.ms',
-      '.office.com',
-      '.officeapps.live.com',
-      '.microsoft.com',
+      '1drv.ms',
+      'office.com',
+      'officeapps.live.com',
+      'microsoft.com',
     ];
     
-    return trustedDomains.some(domain => {
-      if (domain.startsWith('.')) {
-        // Wildcard subdomain match
-        return hostname.endsWith(domain) || hostname === domain.slice(1);
-      }
-      // Exact match
-      return hostname === domain;
-    });
+    return trustedDomains.some(domain => isHostnameOrSubdomain(hostname, domain));
   } catch (e) {
     // Invalid URL
     return false;

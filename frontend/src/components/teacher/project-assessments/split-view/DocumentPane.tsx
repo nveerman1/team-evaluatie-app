@@ -1,15 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { isTrustedMicrosoftUrl, getFileHint, getViewerUrl } from '@/lib/document-viewer-utils';
-
-/**
- * Helper to check if hostname is exact match or valid subdomain
- */
-function isHostnameOrSubdomain(hostname: string, domain: string): boolean {
-  if (hostname === domain) return true;
-  return hostname.endsWith('.' + domain);
-}
+import { isTrustedMicrosoftUrl, getFileHint, getViewerUrl, isHostnameOrSubdomain } from '@/lib/document-viewer-utils';
 
 interface DocumentPaneProps {
   docWidth: number;
@@ -264,7 +256,7 @@ export function DocumentPane({
                                 const officeUrl = isOfficeUrl
                                   ? currentDocUrl 
                                   : `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(currentDocUrl)}`;
-                                window.open(officeUrl, '_blank');
+                                window.open(officeUrl, '_blank', 'noopener,noreferrer');
                               } catch (e) {
                                 // Invalid URL, do nothing
                                 console.error('Invalid URL for Office Online viewer:', e);
