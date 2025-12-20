@@ -82,14 +82,26 @@ export default function StudentSubmissionsPage() {
       {/* Header with dark background */}
       <div className={studentStyles.header.container}>
         <div className={studentStyles.header.wrapper}>
-          <div className="space-y-1">
-            <h1 className={studentStyles.header.title}>
-              <Upload className="inline-block mr-3 h-7 w-7" />
-              Inleveren
-            </h1>
-            <p className={studentStyles.header.subtitle}>
-              Upload je documenten naar SharePoint en deel de links hier
-            </p>
+          <div className={studentStyles.header.flexContainer}>
+            <div className={studentStyles.header.titleSection}>
+              <h1 className={studentStyles.header.title}>
+                <Upload className="inline-block mr-3 h-7 w-7" />
+                Inleveren
+              </h1>
+              <p className={studentStyles.header.subtitle}>
+                Upload je documenten naar SharePoint en deel de links hier
+              </p>
+            </div>
+            <div className="flex gap-2 sm:self-start">
+              <Button 
+                variant="ghost" 
+                onClick={() => router.back()}
+                className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Terug
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -97,17 +109,6 @@ export default function StudentSubmissionsPage() {
       {/* Content */}
       <div className={studentStyles.layout.contentWrapper}>
         <div className="space-y-6">
-          {/* Back button */}
-          <div>
-            <Button 
-              variant="ghost" 
-              onClick={() => router.back()}
-              className={studentStyles.buttons.ghost}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Terug
-            </Button>
-          </div>
 
           {/* Info Card */}
           <Card className={studentStyles.cards.infoCard.container}>

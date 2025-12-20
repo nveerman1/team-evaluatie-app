@@ -114,7 +114,7 @@ export function SubmissionCard({
   const hasChanged = url !== (submission?.url || '');
 
   return (
-    <Card>
+    <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex-1">
