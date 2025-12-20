@@ -109,7 +109,7 @@ export function SubmissionsTable({
                 {hasUrl ? (
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="secondary"
                     className="h-8 gap-1"
                     onClick={() => window.open(item.submission.url || '', '_blank')}
                   >
@@ -128,7 +128,7 @@ export function SubmissionsTable({
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       className="h-8 w-full justify-between gap-2"
                     >
@@ -178,7 +178,7 @@ export function SubmissionsTable({
               {/* Actie */}
               <div className="col-span-1 flex justify-end">
                 {isMissing ? (
-                  <Button size="sm" variant="outline" className="h-8">
+                  <Button size="sm" variant="secondary" className="h-8">
                     Herinner
                   </Button>
                 ) : (
