@@ -153,72 +153,57 @@ export default function TeacherSubmissionsPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Inleveringen</h1>
-        <p className="text-muted-foreground mt-2">
-          Bekijk en beoordeel de ingeleverde documenten van teams.
-        </p>
-      </div>
-
-      {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      {/* KPI cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Totaal</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Totaal</p>
+            <p className="text-2xl font-bold">{stats.total}</p>
           </CardContent>
         </Card>
         
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Ontbrekend</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{stats.missing}</div>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Ontbrekend</p>
+            <p className="text-2xl font-bold text-red-600">{stats.missing}</p>
           </CardContent>
         </Card>
         
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Ingeleverd</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.submitted}</div>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Ingeleverd</p>
+            <p className="text-2xl font-bold text-blue-600">{stats.submitted}</p>
           </CardContent>
         </Card>
         
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Akkoord</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.ok}</div>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Akkoord</p>
+            <p className="text-2xl font-bold text-green-600">{stats.ok}</p>
           </CardContent>
         </Card>
         
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Actie vereist</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.actionRequired}</div>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Actie vereist</p>
+            <p className="text-2xl font-bold text-orange-600">{stats.actionRequired}</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg border">
-        <SubmissionFilters
-          missingOnly={missingOnly}
-          setMissingOnly={setMissingOnly}
-          actionRequiredOnly={actionRequiredOnly}
-          setActionRequiredOnly={setActionRequiredOnly}
-          docType={docType}
-          setDocType={setDocType}
-        />
-      </div>
+      <Card>
+        <CardContent className="p-4">
+          <SubmissionFilters
+            missingOnly={missingOnly}
+            setMissingOnly={setMissingOnly}
+            actionRequiredOnly={actionRequiredOnly}
+            setActionRequiredOnly={setActionRequiredOnly}
+            docType={docType}
+            setDocType={setDocType}
+          />
+        </CardContent>
+      </Card>
 
       {/* Submissions Table */}
       <SubmissionsTable
