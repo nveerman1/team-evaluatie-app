@@ -392,7 +392,7 @@ export default function EditProjectAssessmentInner() {
   
   // Focus mode = docOpen && docMode === "dock"
   const focusMode = docOpen && docMode === "dock";
-  const maxDocWidth = focusMode ? 720 : 560;
+  const maxDocWidth = focusMode ? 1500 : 560;
 
   // Autosave timer
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
