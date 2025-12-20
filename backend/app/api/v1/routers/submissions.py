@@ -430,9 +430,9 @@ def get_my_team_submissions(
             detail="Deze beoordeling is niet gekoppeld aan een project"
         )
     
-    # Find user's team membership
+    # Find user's team membership - use same logic as project_assessments.py list endpoint
     team_member = db.query(ProjectTeamMember).join(
-        ProjectTeam
+        ProjectTeam, ProjectTeam.id == ProjectTeamMember.project_team_id
     ).filter(
         ProjectTeam.project_id == assessment.project_id,
         ProjectTeamMember.user_id == current_user.id,
