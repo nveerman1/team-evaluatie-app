@@ -34,10 +34,13 @@ export default function StudentSubmissionsPage() {
       // Get team ID from response
       if (data.team_id) {
         setTeamId(data.team_id);
+      } else {
+        toast.error('Je zit niet in een team voor dit project');
       }
     } catch (err: any) {
       console.error('Failed to load submissions:', err);
-      toast.error('Kon inleveringen niet laden');
+      const message = err.response?.data?.detail || err.message || 'Kon inleveringen niet laden';
+      toast.error(message);
     } finally {
       setLoading(false);
     }

@@ -423,6 +423,13 @@ def get_my_team_submissions(
             detail="Assessment niet gevonden"
         )
     
+    # Check if assessment has a project
+    if not assessment.project_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Deze beoordeling is niet gekoppeld aan een project"
+        )
+    
     # Find user's team membership
     team_member = db.query(ProjectTeamMember).join(
         ProjectTeam
@@ -434,7 +441,10 @@ def get_my_team_submissions(
     
     if not team_member:
         # User is not in any team for this assessment
-        return MyTeamSubmissionsResponse(team_id=None, submissions=[])
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Je zit niet in een team voor dit project. Neem contact op met je docent."
+        )
     
     # Get submissions for this team
     submissions = db.query(AssignmentSubmission).filter(
