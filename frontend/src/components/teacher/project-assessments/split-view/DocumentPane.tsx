@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
 interface DocumentPaneProps {
   docWidth: number;
   maxDocWidth: number;
-  focusMode: boolean;
   docType: 'Verslag' | 'Presentatie';
   linkHealth: 'Onbekend' | 'OK' | 'Toegang gevraagd' | 'Kapotte link';
   currentDocUrl?: string | null;
@@ -23,7 +22,6 @@ interface DocumentPaneProps {
 export function DocumentPane({
   docWidth,
   maxDocWidth,
-  focusMode,
   docType,
   linkHealth,
   currentDocUrl,

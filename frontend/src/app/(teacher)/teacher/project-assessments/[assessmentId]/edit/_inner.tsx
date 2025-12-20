@@ -749,7 +749,6 @@ export default function EditProjectAssessmentInner() {
           <DocumentPane
             docWidth={docWidth}
             maxDocWidth={maxDocWidth}
-            focusMode={focusMode}
             docType={docType}
             linkHealth={linkHealth}
             currentDocUrl={currentDocUrl}
