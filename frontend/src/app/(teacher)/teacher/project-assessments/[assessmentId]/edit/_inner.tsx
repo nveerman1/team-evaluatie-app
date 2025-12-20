@@ -679,26 +679,24 @@ export default function EditProjectAssessmentInner() {
   });
 
   return (
-    <div className={`transition-all duration-300 ${focusMode ? 'max-w-none' : 'max-w-6xl mx-auto'}`}>
+    <div className={`transition-all duration-300 ${focusMode ? 'max-w-none' : 'max-w-6xl mx-auto px-6'}`}>
       {/* Team Bar */}
-      <div className={focusMode ? '' : 'px-6'}>
-        <TeamBar
-          teamNumber={teamNumber!}
-          teamIndex={currentTeamIndex}
-          totalTeams={teamsData?.teams.length || 0}
-          members={currentTeam.members}
-          averageScore={averageScore}
-          docOpen={docOpen}
-          onShowDocument={() => setDocOpen(true)}
-          onPrevTeam={() => prevTeamNumber && navigateToTeam(prevTeamNumber)}
-          onNextTeam={() => nextTeamNumber && navigateToTeam(nextTeamNumber)}
-          hasPrevTeam={hasPrevTeam}
-          hasNextTeam={hasNextTeam}
-        />
-      </div>
+      <TeamBar
+        teamNumber={teamNumber!}
+        teamIndex={currentTeamIndex}
+        totalTeams={teamsData?.teams.length || 0}
+        members={currentTeam.members}
+        averageScore={averageScore}
+        docOpen={docOpen}
+        onShowDocument={() => setDocOpen(true)}
+        onPrevTeam={() => prevTeamNumber && navigateToTeam(prevTeamNumber)}
+        onNextTeam={() => nextTeamNumber && navigateToTeam(nextTeamNumber)}
+        hasPrevTeam={hasPrevTeam}
+        hasNextTeam={hasNextTeam}
+      />
 
       {/* Sticky save bar */}
-      <div className={`sticky top-0 z-20 bg-slate-100 py-2 mt-6 ${focusMode ? 'px-6' : 'px-6'}`}>
+      <div className={`sticky top-0 z-20 bg-slate-100 py-2 mt-6 ${focusMode ? '' : '-mx-6 px-6'}`}>
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2 text-slate-500">
             <span className="flex h-2 w-2 rounded-full bg-emerald-500" />
@@ -731,12 +729,12 @@ export default function EditProjectAssessmentInner() {
       </div>
 
       {successMsg && (
-        <div className={`mt-4 p-3 rounded-xl bg-emerald-50 text-emerald-700 flex items-center gap-2 border border-emerald-100 ${focusMode ? 'mx-6' : ''}`}>
+        <div className="mt-4 p-3 rounded-xl bg-emerald-50 text-emerald-700 flex items-center gap-2 border border-emerald-100">
           ✅ {successMsg}
         </div>
       )}
       {error && (
-        <div className={`mt-4 p-3 rounded-xl bg-red-50 text-red-700 border border-red-100 ${focusMode ? 'mx-6' : ''}`}>
+        <div className="mt-4 p-3 rounded-xl bg-red-50 text-red-700 border border-red-100">
           {error}
         </div>
       )}
