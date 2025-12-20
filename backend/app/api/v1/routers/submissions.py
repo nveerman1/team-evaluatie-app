@@ -179,6 +179,9 @@ def submit_link(
     submission.submitted_at = datetime.utcnow()
     submission.updated_at = datetime.utcnow()
     
+    # Flush to get submission.id before logging event
+    db.flush()
+    
     # Log event
     log_submission_event(db, submission, current_user.id, "submitted")
     
