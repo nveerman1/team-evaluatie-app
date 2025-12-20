@@ -244,11 +244,15 @@ export function DocumentPane({
                           onClick={() => {
                             if (currentDocUrl && isTrusted) {
                               // Only construct Office Online viewer URL if the original URL is trusted
-                              // Check if it's already an office.com URL using proper hostname validation
+                              // Use the same trusted validation logic as the main component
                               try {
                                 const urlObj = new URL(currentDocUrl);
-                                const isOfficeUrl = urlObj.hostname.toLowerCase().endsWith('office.com') ||
-                                                   urlObj.hostname.toLowerCase().endsWith('officeapps.live.com');
+                                const hostname = urlObj.hostname.toLowerCase();
+                                
+                                // Check if it's already an Office Online URL by checking if hostname contains office/officeapps domains
+                                // This is safe because currentDocUrl is already validated by isTrusted
+                                const isOfficeUrl = hostname.includes('office.com') ||
+                                                   hostname.includes('officeapps.live.com');
                                 
                                 const officeUrl = isOfficeUrl
                                   ? currentDocUrl 

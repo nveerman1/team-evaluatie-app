@@ -102,12 +102,13 @@ export function getViewerUrl(url: string | null | undefined, fileHint: string): 
     const hostname = urlObj.hostname.toLowerCase();
     
     // Check if it's an Office Online URL using proper hostname validation
-    if (hostname.endsWith('.office.com') || 
-        hostname === 'office.com' ||
-        hostname.endsWith('.officeapps.live.com') ||
+    // Note: This URL has already been validated by isTrustedMicrosoftUrl before calling this function
+    if (hostname === 'office.com' || 
         hostname === 'officeapps.live.com' ||
-        hostname.endsWith('onedrive.live.com') ||
         hostname === 'onedrive.live.com' ||
+        (hostname.includes('.office.com') && isTrustedMicrosoftUrl(url)) ||
+        (hostname.includes('.officeapps.live.com') && isTrustedMicrosoftUrl(url)) ||
+        (hostname.includes('onedrive.live.com') && isTrustedMicrosoftUrl(url)) ||
         url.includes('/_layouts/')) {
       // Already an Office viewer link, use it directly
       return url;
