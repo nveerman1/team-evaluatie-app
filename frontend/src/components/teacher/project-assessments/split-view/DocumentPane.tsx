@@ -41,7 +41,7 @@ export function DocumentPane({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const watchdogTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Reset iframe blocked state when document URL or type changes
+  // Reset iframe blocked state when document URL changes
   useEffect(() => {
     setIframeBlocked(false);
     
@@ -64,7 +64,7 @@ export function DocumentPane({
         clearTimeout(watchdogTimerRef.current);
       }
     };
-  }, [currentDocUrl, docType, hasLink]);
+  }, [currentDocUrl, hasLink]);
 
   // Determine if URL is trusted
   const isTrusted = isTrustedMicrosoftUrl(currentDocUrl);
@@ -210,6 +210,7 @@ export function DocumentPane({
                 ref={iframeRef}
                 src={viewerUrl || ''}
                 className="w-full h-full"
+                sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-downloads"
                 allow="clipboard-read; clipboard-write"
                 referrerPolicy="no-referrer-when-downgrade"
                 onLoad={handleIframeLoad}
@@ -243,10 +244,20 @@ export function DocumentPane({
                           onClick={() => {
                             if (currentDocUrl && isTrusted) {
                               // Only construct Office Online viewer URL if the original URL is trusted
-                              const officeUrl = currentDocUrl.includes('office.com') 
-                                ? currentDocUrl 
-                                : `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(currentDocUrl)}`;
-                              window.open(officeUrl, '_blank');
+                              // Check if it's already an office.com URL using proper hostname validation
+                              try {
+                                const urlObj = new URL(currentDocUrl);
+                                const isOfficeUrl = urlObj.hostname.toLowerCase().endsWith('office.com') ||
+                                                   urlObj.hostname.toLowerCase().endsWith('officeapps.live.com');
+                                
+                                const officeUrl = isOfficeUrl
+                                  ? currentDocUrl 
+                                  : `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(currentDocUrl)}`;
+                                window.open(officeUrl, '_blank');
+                              } catch (e) {
+                                // Invalid URL, do nothing
+                                console.error('Invalid URL for Office Online viewer:', e);
+                              }
                             }
                           }}
                           className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
