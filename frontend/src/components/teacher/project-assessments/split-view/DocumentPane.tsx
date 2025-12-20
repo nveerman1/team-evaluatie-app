@@ -98,7 +98,8 @@ export function DocumentPane({
             onClick={onToggleDocMenu}
             aria-label="Paneelinstellingen"
           >
-            ⚙︎
+            <span aria-hidden="true">⚙</span>
+            <span className="sr-only">Instellingen</span>
           </button>
 
           <button

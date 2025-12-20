@@ -395,7 +395,7 @@ export default function EditProjectAssessmentInner() {
 
   // Set document panel width when opening
   useEffect(() => {
-    if (docOpen && docMode === "dock" && docWidth === 0) {
+    if (docOpen && docMode === "dock" && docWidth === 0 && typeof window !== 'undefined') {
       setDocWidth(Math.floor(window.innerWidth * 0.5));
     }
   }, [docOpen, docMode, docWidth]);
