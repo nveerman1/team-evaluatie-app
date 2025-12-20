@@ -115,7 +115,7 @@ function RubricLevelsRow({
   const [newQuick, setNewQuick] = useState("");
 
   return (
-    <div className="grid grid-cols-[minmax(0,3fr)_minmax(260px,2fr)] gap-4 items-stretch">
+    <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(260px,2fr)] gap-4 items-stretch">
       {/* Niveaus */}
       <div className="flex flex-col gap-2">
         <div className="grid grid-cols-5 gap-2">
@@ -742,7 +742,7 @@ export default function EditProjectAssessmentInner() {
       {/* Split view */}
       <div 
         className="mt-6 grid gap-6" 
-        style={docOpen && docMode === "dock" ? { gridTemplateColumns: `${docWidth}px 1fr` } : undefined}
+        style={docOpen && docMode === "dock" ? { gridTemplateColumns: '1fr 1fr' } : undefined}
       >
         {/* Document pane */}
         {docOpen && (
@@ -772,11 +772,7 @@ export default function EditProjectAssessmentInner() {
         )}
 
         {/* Rubric pane */}
-        <RubricPane
-          teamName={`Team ${teamNumber}`}
-          teamMembers={currentTeam.members.map(m => m.name).join(', ')}
-          focusMode={focusMode}
-        >
+        <RubricPane>
           {/* Rubric Section */}
           <div className="space-y-5">
             <div className="flex flex-col gap-4">
