@@ -3,6 +3,18 @@
  */
 
 /**
+ * Check if a hostname is an exact match or valid subdomain of a domain
+ * @param hostname The hostname to check (should be lowercase)
+ * @param domain The domain to match against
+ * @returns true if hostname is domain or a valid subdomain of domain
+ */
+function isHostnameOrSubdomain(hostname: string, domain: string): boolean {
+  if (hostname === domain) return true;
+  // Check if it ends with .domain and has a dot before it (preventing evil-domain.com matches)
+  return hostname.endsWith('.' + domain);
+}
+
+/**
  * Check if a URL belongs to a trusted Microsoft domain for document viewing
  * @param url The URL to validate
  * @returns true if the URL is from a trusted Microsoft domain
@@ -102,13 +114,10 @@ export function getViewerUrl(url: string | null | undefined, fileHint: string): 
     const hostname = urlObj.hostname.toLowerCase();
     
     // Check if it's an Office Online URL using proper hostname validation
-    // Note: This URL has already been validated by isTrustedMicrosoftUrl before calling this function
-    if (hostname === 'office.com' || 
-        hostname === 'officeapps.live.com' ||
-        hostname === 'onedrive.live.com' ||
-        (hostname.includes('.office.com') && isTrustedMicrosoftUrl(url)) ||
-        (hostname.includes('.officeapps.live.com') && isTrustedMicrosoftUrl(url)) ||
-        (hostname.includes('onedrive.live.com') && isTrustedMicrosoftUrl(url)) ||
+    // Note: This URL should already be validated by isTrustedMicrosoftUrl before calling this function
+    if (isHostnameOrSubdomain(hostname, 'office.com') || 
+        isHostnameOrSubdomain(hostname, 'officeapps.live.com') ||
+        isHostnameOrSubdomain(hostname, 'onedrive.live.com') ||
         url.includes('/_layouts/')) {
       // Already an Office viewer link, use it directly
       return url;

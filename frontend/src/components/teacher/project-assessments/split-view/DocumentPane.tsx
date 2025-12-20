@@ -3,6 +3,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { isTrustedMicrosoftUrl, getFileHint, getViewerUrl } from '@/lib/document-viewer-utils';
 
+/**
+ * Helper to check if hostname is exact match or valid subdomain
+ */
+function isHostnameOrSubdomain(hostname: string, domain: string): boolean {
+  if (hostname === domain) return true;
+  return hostname.endsWith('.' + domain);
+}
+
 interface DocumentPaneProps {
   docWidth: number;
   maxDocWidth: number;
@@ -244,15 +252,14 @@ export function DocumentPane({
                           onClick={() => {
                             if (currentDocUrl && isTrusted) {
                               // Only construct Office Online viewer URL if the original URL is trusted
-                              // Use the same trusted validation logic as the main component
+                              // Check if it's already an office.com URL using proper hostname validation
                               try {
                                 const urlObj = new URL(currentDocUrl);
                                 const hostname = urlObj.hostname.toLowerCase();
                                 
-                                // Check if it's already an Office Online URL by checking if hostname contains office/officeapps domains
-                                // This is safe because currentDocUrl is already validated by isTrusted
-                                const isOfficeUrl = hostname.includes('office.com') ||
-                                                   hostname.includes('officeapps.live.com');
+                                // Safe to use includes/endsWith here because currentDocUrl is already validated by isTrusted
+                                const isOfficeUrl = isHostnameOrSubdomain(hostname, 'office.com') ||
+                                                   isHostnameOrSubdomain(hostname, 'officeapps.live.com');
                                 
                                 const officeUrl = isOfficeUrl
                                   ? currentDocUrl 
