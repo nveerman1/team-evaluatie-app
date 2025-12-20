@@ -24,7 +24,7 @@ export function SubmissionFilters({
   return (
     <div className="flex flex-wrap gap-2">
       <Button
-        variant={missingOnly ? 'default' : 'outline'}
+        variant={missingOnly ? 'default' : 'secondary'}
         size="sm"
         onClick={() => setMissingOnly(!missingOnly)}
       >
@@ -33,7 +33,7 @@ export function SubmissionFilters({
       </Button>
       
       <Button
-        variant={actionRequiredOnly ? 'default' : 'outline'}
+        variant={actionRequiredOnly ? 'default' : 'secondary'}
         size="sm"
         onClick={() => setActionRequiredOnly(!actionRequiredOnly)}
       >
@@ -44,21 +44,21 @@ export function SubmissionFilters({
       <div className="flex gap-2 items-center">
         <span className="text-sm text-muted-foreground">Document type:</span>
         <Button
-          variant={docType === null ? 'default' : 'outline'}
+          variant={docType === null ? 'default' : 'secondary'}
           size="sm"
           onClick={() => setDocType(null)}
         >
           Alle
         </Button>
         <Button
-          variant={docType === 'report' ? 'default' : 'outline'}
+          variant={docType === 'report' ? 'default' : 'secondary'}
           size="sm"
           onClick={() => setDocType('report')}
         >
           Verslag
         </Button>
         <Button
-          variant={docType === 'slides' ? 'default' : 'outline'}
+          variant={docType === 'slides' ? 'default' : 'secondary'}
           size="sm"
           onClick={() => setDocType('slides')}
         >

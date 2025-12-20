@@ -60,7 +60,7 @@ export function DocumentPane({ submissions, teamId, assessmentId, onClose }: Doc
       {/* Document type toggle */}
       <div className="flex gap-2 p-4 border-b border-gray-200">
         <Button
-          variant={selectedDocType === 'report' ? 'default' : 'outline'}
+          variant={selectedDocType === 'report' ? 'default' : 'secondary'}
           size="sm"
           onClick={() => setSelectedDocType('report')}
           className="flex items-center gap-2"
@@ -69,7 +69,7 @@ export function DocumentPane({ submissions, teamId, assessmentId, onClose }: Doc
           Verslag
         </Button>
         <Button
-          variant={selectedDocType === 'slides' ? 'default' : 'outline'}
+          variant={selectedDocType === 'slides' ? 'default' : 'secondary'}
           size="sm"
           onClick={() => setSelectedDocType('slides')}
           className="flex items-center gap-2"
@@ -93,7 +93,7 @@ export function DocumentPane({ submissions, teamId, assessmentId, onClose }: Doc
                 )}
               </div>
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={() => window.open(currentSubmission.url || '', '_blank')}
               >

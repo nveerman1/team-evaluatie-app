@@ -1,16 +1,18 @@
 "use client";
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { ApiAuthError } from "@/lib/api";
-import { projectAssessmentService } from "@/services";
+import { projectAssessmentService, submissionService } from "@/services";
 import {
   ProjectAssessmentDetailOut,
   ProjectAssessmentScoreCreate,
   ProjectAssessmentTeamOverview,
 } from "@/dtos";
+import { SubmissionOut } from "@/dtos/submission.dto";
 import { Loading, ErrorMessage } from "@/components";
-import { SplitViewWrapper } from "@/components/submissions/SplitViewWrapper";
+import { TeamBar, DocumentPane, RubricPane } from "@/components/teacher/project-assessments/split-view";
+import { useTeacherLayout } from "@/app/(teacher)/layout";
 
 /**
  * Types & helpers
@@ -372,8 +374,37 @@ export default function EditProjectAssessmentInner() {
     Record<number, string[]>
   >({});
 
+  // Split view state
+  const [docOpen, setDocOpen] = useState(false);
+  const [docMode] = useState<"dock" | "overlay">("dock");
+  const [docWidth, setDocWidth] = useState(0);
+  const [docType, setDocType] = useState<"Verslag" | "Presentatie">("Verslag");
+  const [linkHealth, setLinkHealth] = useState<"Onbekend" | "OK" | "Toegang gevraagd" | "Kapotte link">("Onbekend");
+  const [docMenuOpen, setDocMenuOpen] = useState(false);
+  const [submissions, setSubmissions] = useState<SubmissionOut[]>([]);
+  
+  // Layout context for sidebar collapse
+  const { setSidebarCollapsed } = useTeacherLayout();
+  
+  // Focus mode = docOpen && docMode === "dock"
+  const focusMode = docOpen && docMode === "dock";
+  const maxDocWidth = focusMode ? 720 : 560;
+
   // Autosave timer
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Set document panel width when opening
+  useEffect(() => {
+    if (docOpen && docMode === "dock" && docWidth === 0) {
+      setDocWidth(Math.floor(window.innerWidth * 0.5));
+    }
+  }, [docOpen, docMode, docWidth]);
+
+  // Update sidebar collapse based on focus mode
+  useEffect(() => {
+    setSidebarCollapsed(focusMode);
+    return () => setSidebarCollapsed(false); // Cleanup
+  }, [focusMode, setSidebarCollapsed]);
 
   // Load teams overview
   useEffect(() => {
@@ -398,6 +429,24 @@ export default function EditProjectAssessmentInner() {
     }
     loadTeams();
   }, [assessmentId, teamNumber, router]);
+
+  // Load submissions for the current team
+  useEffect(() => {
+    if (teamNumber === undefined) return;
+    
+    async function loadSubmissions() {
+      try {
+        const data = await submissionService.getSubmissionsForAssessment(assessmentId);
+        const teamSubmissions = data.items
+          .filter(item => item.team_number === teamNumber)
+          .map(item => item.submission);
+        setSubmissions(teamSubmissions);
+      } catch (err) {
+        console.error('Failed to load submissions:', err);
+      }
+    }
+    loadSubmissions();
+  }, [assessmentId, teamNumber]);
 
   // Load assessment data for specific team
   useEffect(() => {
@@ -563,6 +612,50 @@ export default function EditProjectAssessmentInner() {
     (t) => t.team_number === teamNumber,
   );
 
+  // Calculate average score (must be before early returns due to hooks rules)
+  const averageScore = useMemo(() => {
+    if (!data) return "—";
+    const vals = data.criteria.map((c) => scores[c.id]?.score ?? 0).filter((n) => n > 0);
+    if (!vals.length) return "—";
+    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    return avg.toFixed(1);
+  }, [data, scores]);
+
+  // Get current document based on docType (must be before early returns due to hooks rules)
+  const reportSubmission = submissions.find((s) => s.doc_type === 'report');
+  const slidesSubmission = submissions.find((s) => s.doc_type === 'slides');
+  const currentSubmission = docType === 'Verslag' ? reportSubmission : slidesSubmission;
+  const currentDocUrl = currentSubmission?.url || null;
+  const currentDocUpdatedAt = currentSubmission?.updated_at 
+    ? new Date(currentSubmission.updated_at).toLocaleString('nl-NL', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    : '—';
+  const hasLink = Boolean(currentDocUrl);
+
+  // Handler for link health change
+  const handleLinkHealthChange = useCallback(async (newHealth: typeof linkHealth) => {
+    setLinkHealth(newHealth);
+    if (!currentSubmission) return;
+    
+    try {
+      // Map to submission status
+      let status: SubmissionOut['status'] = 'submitted';
+      if (newHealth === 'OK') status = 'ok';
+      else if (newHealth === 'Toegang gevraagd') status = 'access_requested';
+      else if (newHealth === 'Kapotte link') status = 'broken';
+      
+      await submissionService.updateStatus(currentSubmission.id, { status });
+      // TODO: Trigger student notification
+    } catch (err) {
+      console.error('Failed to update link status:', err);
+    }
+  }, [currentSubmission]);
+
   if (loading) return <Loading />;
   if (error && !data) return <ErrorMessage message={error} />;
   if (!data || !currentTeam)
@@ -586,182 +679,206 @@ export default function EditProjectAssessmentInner() {
   });
 
   return (
-    <SplitViewWrapper assessmentId={assessmentId} teamNumber={teamNumber}>
-      {/* Team kaart */}
-      <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
-        <div className="space-y-1">
-          <p className="text-sm font-semibold text-slate-900">
-            Team {teamNumber}
-          </p>
-          <p className="text-xs text-slate-500">
-            {currentTeamIndex + 1} van {teamsData?.teams.length || 0}
-          </p>
-          <p className="text-xs text-slate-600">
-            <span className="font-medium">Teamleden: </span>
-            {currentTeam.members.map((m) => m.name).join(", ")}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => prevTeamNumber && navigateToTeam(prevTeamNumber)}
-            disabled={!hasPrevTeam}
-            className="rounded-full border border-slate-200 px-4 py-1.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+    <div className={`p-6 transition-all duration-300 ${focusMode ? 'max-w-none' : 'max-w-6xl'} mx-auto`}>
+      {/* Team Bar */}
+      <TeamBar
+        teamNumber={teamNumber!}
+        teamIndex={currentTeamIndex}
+        totalTeams={teamsData?.teams.length || 0}
+        members={currentTeam.members}
+        averageScore={averageScore}
+        docOpen={docOpen}
+        onShowDocument={() => setDocOpen(true)}
+        onPrevTeam={() => prevTeamNumber && navigateToTeam(prevTeamNumber)}
+        onNextTeam={() => nextTeamNumber && navigateToTeam(nextTeamNumber)}
+        hasPrevTeam={hasPrevTeam}
+        hasNextTeam={hasNextTeam}
+      />
+
+      {/* Sticky save bar */}
+      <div className="sticky top-0 z-20 -mx-6 bg-slate-100 px-6 py-2 mt-6">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2 text-slate-500">
+            <span className="flex h-2 w-2 rounded-full bg-emerald-500" />
+            <span>
+              {autoSaving
+                ? "Wijzigingen worden opgeslagen..."
+                : "Alle wijzigingen opgeslagen"}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() =>
+                router.push(
+                  `/teacher/project-assessments/${assessmentId}/overview`,
+                )
+              }
+              className="rounded-full border border-slate-300 px-3 py-1 text-xs text-slate-600 hover:bg-slate-50"
             >
-              ← Vorig team
+              Terug naar overzicht
             </button>
             <button
-              onClick={() => nextTeamNumber && navigateToTeam(nextTeamNumber)}
-              disabled={!hasNextTeam}
-              className="rounded-full border border-slate-200 px-4 py-1.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={handleSaveScores}
+              disabled={saving}
+              className="rounded-full bg-slate-900 px-4 py-1 text-xs font-medium text-white shadow hover:bg-black disabled:opacity-60"
             >
-              Volgend team →
+              Wijzigingen opslaan
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Sticky save bar – zelfde grijs als achtergrond, geen rand */}
-        <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 bg-slate-100 px-4 sm:px-6 py-2">
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div className="flex items-center gap-2 text-slate-500">
-              <span className="flex h-2 w-2 rounded-full bg-emerald-500" />
-              <span>
-                {autoSaving
-                  ? "Wijzigingen worden opgeslagen..."
-                  : "Alle wijzigingen opgeslagen"}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() =>
-                  router.push(
-                    `/teacher/project-assessments/${assessmentId}/overview`,
-                  )
-                }
-                className="rounded-full border border-slate-300 px-3 py-1 text-xs text-slate-600 hover:bg-slate-50"
-              >
-                Terug naar overzicht
-              </button>
-              <button
-                onClick={handleSaveScores}
-                disabled={saving}
-                className="rounded-full bg-slate-900 px-4 py-1 text-xs font-medium text-white shadow hover:bg-black disabled:opacity-60"
-              >
-                Wijzigingen opslaan
-              </button>
-            </div>
-          </div>
+      {successMsg && (
+        <div className="mt-4 p-3 rounded-xl bg-emerald-50 text-emerald-700 flex items-center gap-2 border border-emerald-100">
+          ✅ {successMsg}
         </div>
+      )}
+      {error && (
+        <div className="mt-4 p-3 rounded-xl bg-red-50 text-red-700 border border-red-100">
+          {error}
+        </div>
+      )}
 
-        {successMsg && (
-          <div className="p-3 rounded-xl bg-emerald-50 text-emerald-700 flex items-center gap-2 border border-emerald-100">
-            ✅ {successMsg}
-          </div>
+      {/* Split view */}
+      <div 
+        className="mt-6 grid gap-6" 
+        style={docOpen && docMode === "dock" ? { gridTemplateColumns: `${docWidth}px 1fr` } : undefined}
+      >
+        {/* Document pane */}
+        {docOpen && (
+          <DocumentPane
+            docWidth={docWidth}
+            maxDocWidth={maxDocWidth}
+            focusMode={focusMode}
+            docType={docType}
+            linkHealth={linkHealth}
+            currentDocUrl={currentDocUrl}
+            currentDocUpdatedAt={currentDocUpdatedAt}
+            hasLink={hasLink}
+            docMenuOpen={docMenuOpen}
+            onDocWidthChange={setDocWidth}
+            onDocTypeChange={setDocType}
+            onLinkHealthChange={handleLinkHealthChange}
+            onToggleDocMenu={() => setDocMenuOpen(!docMenuOpen)}
+            onClose={() => {
+              setDocMenuOpen(false);
+              setDocOpen(false);
+            }}
+            onOpenInTab={() => {
+              if (currentDocUrl) {
+                window.open(currentDocUrl, '_blank');
+              }
+            }}
+          />
         )}
-        {error && (
-          <div className="p-3 rounded-xl bg-red-50 text-red-700 border border-red-100">
-            {error}
-          </div>
-        )}
 
-        {/* Rubric Section (zonder extra titel) */}
-        <section className="space-y-5">
-          <div className="flex flex-col gap-4">
-            {categoryGroups.map((group) => (
-              <CategoryCard
-                key={group.name}
-                categoryName={group.name}
-                criteria={group.criteria}
-                scaleMin={scaleMin}
-                scaleMax={scaleMax}
-                scores={scores}
-                onScoreChange={(criterionId, newScore) =>
-                  setScores((prev) => ({
-                    ...prev,
-                    [criterionId]: {
-                      score: newScore,
-                      comment: prev[criterionId]?.comment ?? "",
-                    },
-                  }))
-                }
-                onCommentChange={(criterionId, newComment) =>
-                  setScores((prev) => ({
-                    ...prev,
-                    [criterionId]: {
-                      score: prev[criterionId]?.score ?? scaleMin,
-                      comment: newComment,
-                    },
-                  }))
-                }
-                quickCommentsByCriterion={quickCommentsByCriterion}
-                onAddQuickComment={(criterionId, text) =>
-                  setQuickCommentsByCriterion((prev) => ({
-                    ...prev,
-                    [criterionId]: [...(prev[criterionId] || []), text],
-                  }))
-                }
-                onDeleteQuickComment={(criterionId, text) =>
-                  setQuickCommentsByCriterion((prev) => ({
-                    ...prev,
-                    [criterionId]: (prev[criterionId] || []).filter((qc) => qc !== text),
-                  }))
-                }
-              />
-            ))}
-          </div>
-
-          {/* Algemene opmerking */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-sm">
-            <h3 className="text-sm font-semibold text-slate-900">
-              Algemene opmerking
-            </h3>
-            <textarea
-              className="w-full border border-slate-200 rounded-xl px-3 py-3 min-h-28 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 text-sm bg-slate-50"
-              placeholder="Algemene feedback over het project..."
-              value={generalComment}
-              onChange={(e) => setGeneralComment(e.target.value)}
-            />
-          </div>
-
-          {/* Onderste actieknoppen */}
-          <div className="flex items-center justify-between pt-4 border-t bg-white/80 rounded-2xl p-5">
-            <div className="text-sm text-slate-600">
-              {autoSaving ? (
-                <span className="text-emerald-700">💾 Opslaan...</span>
-              ) : (
-                <span>✅ Alle wijzigingen opgeslagen</span>
-              )}
+        {/* Rubric pane */}
+        <RubricPane
+          teamName={`Team ${teamNumber}`}
+          teamMembers={currentTeam.members.map(m => m.name).join(', ')}
+          focusMode={focusMode}
+        >
+          {/* Rubric Section */}
+          <div className="space-y-5">
+            <div className="flex flex-col gap-4">
+              {categoryGroups.map((group) => (
+                <CategoryCard
+                  key={group.name}
+                  categoryName={group.name}
+                  criteria={group.criteria}
+                  scaleMin={scaleMin}
+                  scaleMax={scaleMax}
+                  scores={scores}
+                  onScoreChange={(criterionId, newScore) =>
+                    setScores((prev) => ({
+                      ...prev,
+                      [criterionId]: {
+                        score: newScore,
+                        comment: prev[criterionId]?.comment ?? "",
+                      },
+                    }))
+                  }
+                  onCommentChange={(criterionId, newComment) =>
+                    setScores((prev) => ({
+                      ...prev,
+                      [criterionId]: {
+                        score: prev[criterionId]?.score ?? scaleMin,
+                        comment: newComment,
+                      },
+                    }))
+                  }
+                  quickCommentsByCriterion={quickCommentsByCriterion}
+                  onAddQuickComment={(criterionId, text) =>
+                    setQuickCommentsByCriterion((prev) => ({
+                      ...prev,
+                      [criterionId]: [...(prev[criterionId] || []), text],
+                    }))
+                  }
+                  onDeleteQuickComment={(criterionId, text) =>
+                    setQuickCommentsByCriterion((prev) => ({
+                      ...prev,
+                      [criterionId]: (prev[criterionId] || []).filter((qc) => qc !== text),
+                    }))
+                  }
+                />
+              ))}
             </div>
-            <div className="flex gap-3">
-              {status === "draft" && (
-                <>
+
+            {/* Algemene opmerking */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-sm">
+              <h3 className="text-sm font-semibold text-slate-900">
+                Algemene opmerking
+              </h3>
+              <textarea
+                className="w-full border border-slate-200 rounded-xl px-3 py-3 min-h-28 focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 text-sm bg-slate-50"
+                placeholder="Algemene feedback over het project..."
+                value={generalComment}
+                onChange={(e) => setGeneralComment(e.target.value)}
+              />
+            </div>
+
+            {/* Onderste actieknoppen */}
+            <div className="flex items-center justify-between pt-4 border-t bg-white/80 rounded-2xl p-5">
+              <div className="text-sm text-slate-600">
+                {autoSaving ? (
+                  <span className="text-emerald-700">💾 Opslaan...</span>
+                ) : (
+                  <span>✅ Alle wijzigingen opgeslagen</span>
+                )}
+              </div>
+              <div className="flex gap-3">
+                {status === "draft" && (
+                  <>
+                    <button
+                      onClick={handleSaveScores}
+                      disabled={saving}
+                      className="px-5 py-2.5 rounded-xl bg-slate-900 text-white hover:bg-black disabled:opacity-60 text-sm"
+                    >
+                      💾 Opslaan als concept
+                    </button>
+                    <button
+                      onClick={handlePublish}
+                      disabled={saving}
+                      className="px-5 py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 text-sm"
+                    >
+                      ✅ Publiceren voor studenten
+                    </button>
+                  </>
+                )}
+                {status === "published" && (
                   <button
                     onClick={handleSaveScores}
                     disabled={saving}
                     className="px-5 py-2.5 rounded-xl bg-slate-900 text-white hover:bg-black disabled:opacity-60 text-sm"
                   >
-                    💾 Opslaan als concept
+                    💾 Wijzigingen opslaan
                   </button>
-                  <button
-                    onClick={handlePublish}
-                    disabled={saving}
-                    className="px-5 py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 text-sm"
-                  >
-                    ✅ Publiceren voor studenten
-                  </button>
-                </>
-              )}
-              {status === "published" && (
-                <button
-                  onClick={handleSaveScores}
-                  disabled={saving}
-                  className="px-5 py-2.5 rounded-xl bg-slate-900 text-white hover:bg-black disabled:opacity-60 text-sm"
-                >
-                  💾 Wijzigingen opslaan
-                </button>
-              )}
+                )}
+              </div>
             </div>
           </div>
-        </section>
-    </SplitViewWrapper>
+        </RubricPane>
+      </div>
+    </div>
   );
 }

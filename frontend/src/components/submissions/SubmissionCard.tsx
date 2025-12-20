@@ -138,7 +138,7 @@ export function SubmissionCard({
           <Button
             onClick={handleSubmit}
             disabled={disabled || loading || !url || !hasChanged}
-            variant={hasChanged ? 'default' : 'outline'}
+            variant={hasChanged ? 'default' : 'secondary'}
           >
             {loading ? 'Bezig...' : hasChanged ? 'Inleveren' : 'Ingeleverd'}
           </Button>
