@@ -241,8 +241,8 @@ export function DocumentPane({
                       {fileHint !== 'pdf' && (
                         <button
                           onClick={() => {
-                            if (currentDocUrl) {
-                              // Try to construct an Office Online viewer URL
+                            if (currentDocUrl && isTrusted) {
+                              // Only construct Office Online viewer URL if the original URL is trusted
                               const officeUrl = currentDocUrl.includes('office.com') 
                                 ? currentDocUrl 
                                 : `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(currentDocUrl)}`;

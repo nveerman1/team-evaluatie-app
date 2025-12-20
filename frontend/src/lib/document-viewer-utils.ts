@@ -48,22 +48,30 @@ export function getFileHint(url: string | null | undefined): "pdf" | "doc" | "pp
   if (!url) return "unknown";
   
   try {
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname.toLowerCase();
     const urlLower = url.toLowerCase();
     
-    // Check for PDF
-    if (urlLower.includes('.pdf') || urlLower.includes('pdf')) {
+    // Check for PDF - look for .pdf extension specifically
+    if (pathname.endsWith('.pdf') || /\.pdf(\?|#|$)/.test(urlLower)) {
       return "pdf";
     }
     
-    // Check for Word documents
-    if (urlLower.includes('.doc') || urlLower.includes('.docx') || 
-        urlLower.includes('word') || urlLower.includes('/w/')) {
+    // Check for Word documents - specific patterns
+    if (pathname.endsWith('.doc') || pathname.endsWith('.docx') || 
+        /\.docx?(\?|#|$)/.test(urlLower) ||
+        urlLower.includes('word.office.com') ||
+        urlObj.hostname.includes('word.office.com') ||
+        /\/w\/[^/]*$/.test(pathname)) { // Office Online word path pattern
       return "doc";
     }
     
-    // Check for PowerPoint presentations
-    if (urlLower.includes('.ppt') || urlLower.includes('.pptx') || 
-        urlLower.includes('powerpoint') || urlLower.includes('/p/')) {
+    // Check for PowerPoint presentations - specific patterns
+    if (pathname.endsWith('.ppt') || pathname.endsWith('.pptx') || 
+        /\.pptx?(\?|#|$)/.test(urlLower) ||
+        urlLower.includes('powerpoint.office.com') ||
+        urlObj.hostname.includes('powerpoint.office.com') ||
+        /\/p\/[^/]*$/.test(pathname)) { // Office Online PowerPoint path pattern
       return "ppt";
     }
     
