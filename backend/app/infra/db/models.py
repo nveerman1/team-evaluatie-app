@@ -2686,6 +2686,9 @@ class Notification(Base):
     created_at: Mapped[datetime] = mapped_column(
         default=datetime.utcnow, nullable=False
     )
+    updated_at: Mapped[datetime] = mapped_column(
+        default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
 
     # Relationships
     recipient: Mapped["User"] = relationship()
