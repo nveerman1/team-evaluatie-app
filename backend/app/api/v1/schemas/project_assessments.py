@@ -54,6 +54,8 @@ class ProjectAssessmentListItem(ProjectAssessmentOut):
     scores_count: int = 0
     total_criteria: int = 0
     updated_at: Optional[datetime] = None
+    team_number: Optional[int] = None
+    project_end_date: Optional[str] = None
 
 
 class ProjectAssessmentListResponse(BaseModel):

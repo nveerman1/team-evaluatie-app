@@ -78,8 +78,10 @@ instance.interceptors.response.use(
     const status = err?.response?.status;
 
     if (status === 401 || status === 403) {
-      const friendlyMessage =
-        "Geen toegang of sessie verlopen. Log opnieuw in.";
+      // Different messages for 401 vs 403
+      const friendlyMessage = status === 401
+        ? "Sessie verlopen. Log opnieuw in."
+        : "Geen toegang tot deze resource.";
       const originalMessage =
         (err.response?.data as any)?.detail || err.message || "Auth error";
 

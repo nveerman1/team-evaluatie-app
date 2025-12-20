@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const tabs = [
   { id: "overview", label: "Overzicht", href: (id: string) => `/teacher/project-assessments/${id}/overview` },
   { id: "edit", label: "Rubric invullen", href: (id: string) => `/teacher/project-assessments/${id}/edit` },
+  { id: "submissions", label: "Inleveringen", href: (id: string) => `/teacher/project-assessments/${id}/submissions` },
   { id: "scores", label: "Scores", href: (id: string) => `/teacher/project-assessments/${id}/scores` },
   { id: "reflections", label: "Reflecties", href: (id: string) => `/teacher/project-assessments/${id}/reflections` },
   { id: "external", label: "Externe beoordeling", href: (id: string) => `/teacher/project-assessments/${id}/external` },
