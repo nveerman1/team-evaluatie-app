@@ -20,6 +20,7 @@ from app.infra.db.models import (
     Course,
     ProjectTeam,
     ProjectTeamMember,
+    Project,
 )
 from app.api.v1.schemas.project_assessments import (
     ProjectAssessmentCreate,
@@ -247,21 +248,58 @@ def list_project_assessments(
         ).scalar()
         criteria_counts[r.id] = count or 0
     
+    # For students, get their team_number and project end_date
+    team_number_map = {}
+    project_end_date_map = {}
+    if user.role == "student":
+        for r in rows:
+            if r.project_id:
+                # Find student's team for this project
+                project_team_member = db.query(ProjectTeamMember).join(
+                    ProjectTeam, ProjectTeam.id == ProjectTeamMember.project_team_id
+                ).filter(
+                    ProjectTeam.project_id == r.project_id,
+                    ProjectTeam.school_id == user.school_id,
+                    ProjectTeamMember.user_id == user.id,
+                ).first()
+                
+                if project_team_member:
+                    team = db.query(ProjectTeam).filter(
+                        ProjectTeam.id == project_team_member.project_team_id
+                    ).first()
+                    if team and team.team_number:
+                        team_number_map[r.id] = team.team_number
+                
+                # Get project end_date
+                project = db.query(Project).filter(
+                    Project.id == r.project_id,
+                    Project.school_id == user.school_id,
+                ).first()
+                if project and project.end_date:
+                    project_end_date_map[r.id] = project.end_date.isoformat()
+    
     items = []
     for r in rows:
         group_name, course_id_val = group_map.get(r.group_id, (None, None))
         course_name = course_map.get(course_id_val) if course_id_val else None
         
-        items.append(ProjectAssessmentListItem(
+        item_dict = {
             **_to_out_assessment(r).model_dump(),
-            group_name=group_name,
-            teacher_name=teacher_map.get(r.teacher_id),
-            course_name=course_name,
-            course_id=course_id_val,
-            scores_count=score_counts.get(r.id, 0),
-            total_criteria=criteria_counts.get(r.id, 0),
-            updated_at=r.published_at if r.status == "published" else None,
-        ))
+            "group_name": group_name,
+            "teacher_name": teacher_map.get(r.teacher_id),
+            "course_name": course_name,
+            "course_id": course_id_val,
+            "scores_count": score_counts.get(r.id, 0),
+            "total_criteria": criteria_counts.get(r.id, 0),
+            "updated_at": r.published_at if r.status == "published" else None,
+        }
+        
+        # Add team_number and project_end_date for students
+        if user.role == "student":
+            item_dict["team_number"] = team_number_map.get(r.id)
+            item_dict["project_end_date"] = project_end_date_map.get(r.id)
+        
+        items.append(ProjectAssessmentListItem(**item_dict))
     
     return ProjectAssessmentListResponse(items=items, page=page, limit=limit, total=total)
 

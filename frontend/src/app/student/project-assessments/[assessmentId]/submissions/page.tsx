@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { submissionService } from '@/services/submission.service';
 import { SubmissionOut, SubmissionCreate } from '@/dtos/submission.dto';
@@ -8,11 +8,13 @@ import { SubmissionCard } from '@/components/submissions/SubmissionCard';
 import { Loading } from '@/components';
 import { toast } from '@/lib/toast';
 import { Card, CardContent } from '@/components/ui/card';
-import { Upload, FileText, Presentation } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Upload, ArrowLeft, Info } from 'lucide-react';
 import { studentStyles } from '@/styles/student-dashboard.styles';
 
 export default function StudentSubmissionsPage() {
   const params = useParams();
+  const router = useRouter();
   const assessmentId = parseInt(params.assessmentId as string);
   
   const [submissions, setSubmissions] = useState<SubmissionOut[]>([]);
@@ -64,8 +66,10 @@ export default function StudentSubmissionsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 p-6">
-        <Loading />
+      <div className={studentStyles.layout.pageContainer}>
+        <div className={studentStyles.layout.contentWrapper}>
+          <Loading />
+        </div>
       </div>
     );
   }
@@ -74,73 +78,88 @@ export default function StudentSubmissionsPage() {
   const slidesSubmission = submissions.find((s) => s.doc_type === 'slides');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 p-6">
-      <div className="mx-auto max-w-4xl space-y-6">
-        {/* Header */}
-        <div className="space-y-2">
-          <h1 className={studentStyles.typography.pageTitle}>
-            <Upload className="inline-block mr-3 h-8 w-8 text-slate-700" />
-            Inleveren
-          </h1>
-          <p className={studentStyles.typography.pageSubtitle}>
-            Upload je documenten naar SharePoint en deel de links hier.
-            Alleen HTTPS links naar SharePoint/OneDrive zijn toegestaan.
-          </p>
+    <div className={studentStyles.layout.pageContainer}>
+      {/* Header with dark background */}
+      <div className={studentStyles.header.container}>
+        <div className={studentStyles.header.wrapper}>
+          <div className="space-y-1">
+            <h1 className={studentStyles.header.title}>
+              <Upload className="inline-block mr-3 h-7 w-7" />
+              Inleveren
+            </h1>
+            <p className={studentStyles.header.subtitle}>
+              Upload je documenten naar SharePoint en deel de links hier
+            </p>
+          </div>
         </div>
+      </div>
 
-        {/* Info Card */}
-        <Card className="rounded-2xl border-slate-200 bg-gradient-to-br from-blue-50 to-indigo-50/50 shadow-sm">
-          <CardContent className="p-5">
-            <div className="flex items-start gap-3">
-              <div className="rounded-full bg-blue-100 p-2">
-                <Upload className="h-5 w-5 text-blue-600" />
+      {/* Content */}
+      <div className={studentStyles.layout.contentWrapper}>
+        <div className="space-y-6">
+          {/* Back button */}
+          <div>
+            <Button 
+              variant="ghost" 
+              onClick={() => router.back()}
+              className={studentStyles.buttons.ghost}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Terug
+            </Button>
+          </div>
+
+          {/* Info Card */}
+          <Card className={studentStyles.cards.infoCard.container}>
+            <CardContent className={studentStyles.cards.infoCard.content}>
+              <div className={studentStyles.cards.infoCard.flexContainer}>
+                <div className={studentStyles.cards.infoCard.leftSection}>
+                  <div className={studentStyles.cards.infoCard.titleRow}>
+                    <Info className={studentStyles.cards.infoCard.icon} />
+                    <p className={studentStyles.cards.infoCard.title}>
+                      Tips voor inleveren
+                    </p>
+                  </div>
+                  <div className="mt-2 space-y-1.5">
+                    <p className={studentStyles.typography.infoText}>
+                      • Upload je bestanden eerst naar SharePoint of OneDrive
+                    </p>
+                    <p className={studentStyles.typography.infoText}>
+                      • Klik met de rechtermuisknop op het bestand en kies "Delen"
+                    </p>
+                    <p className={studentStyles.typography.infoText}>
+                      • Zorg dat iedereen met de link het bestand kan bekijken
+                    </p>
+                    <p className={studentStyles.typography.infoText}>
+                      • Kopieer de link en plak deze hieronder
+                    </p>
+                    <p className={studentStyles.typography.infoText}>
+                      • Controleer na het inleveren of de link werkt door erop te klikken
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-slate-900 mb-2">Tips voor inleveren</h3>
-                <ul className="space-y-1.5 text-sm text-slate-700">
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-500 mt-0.5">•</span>
-                    <span>Upload je bestanden eerst naar SharePoint of OneDrive</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-500 mt-0.5">•</span>
-                    <span>Klik met de rechtermuisknop op het bestand en kies "Delen"</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-500 mt-0.5">•</span>
-                    <span>Zorg dat iedereen met de link het bestand kan bekijken</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-500 mt-0.5">•</span>
-                    <span>Kopieer de link en plak deze hier</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-500 mt-0.5">•</span>
-                    <span>Controleer na het inleveren of de link werkt door erop te klikken</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Submission Cards */}
-        <div className="space-y-4">
-          <SubmissionCard
-            docType="report"
-            label="Verslag"
-            submission={reportSubmission}
-            onSubmit={handleSubmit}
-            onClear={handleClear}
-          />
+          {/* Submission Cards */}
+          <div className="space-y-4">
+            <SubmissionCard
+              docType="report"
+              label="Verslag"
+              submission={reportSubmission}
+              onSubmit={handleSubmit}
+              onClear={handleClear}
+            />
 
-          <SubmissionCard
-            docType="slides"
-            label="Presentatie"
-            submission={slidesSubmission}
-            onSubmit={handleSubmit}
-            onClear={handleClear}
-          />
+            <SubmissionCard
+              docType="slides"
+              label="Presentatie"
+              submission={slidesSubmission}
+              onSubmit={handleSubmit}
+              onClear={handleClear}
+            />
+          </div>
         </div>
       </div>
     </div>

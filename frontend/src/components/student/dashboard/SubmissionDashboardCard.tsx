@@ -2,13 +2,16 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronRight, Upload, CheckCircle, AlertCircle } from "lucide-react";
+import { ChevronRight, Upload, CheckCircle, AlertCircle, Calendar } from "lucide-react";
 import { ProjectAssessmentListItem } from "@/dtos";
 import { studentStyles } from "@/styles/student-dashboard.styles";
 import Link from "next/link";
 
 type SubmissionDashboardCardProps = {
-  assessment: ProjectAssessmentListItem;
+  assessment: ProjectAssessmentListItem & {
+    team_number?: number | null;
+    project_end_date?: string | null;
+  };
 };
 
 export function SubmissionDashboardCard({ 
@@ -17,6 +20,23 @@ export function SubmissionDashboardCard({
   // For now, we don't have submission status in the assessment data
   // This will be enhanced when we fetch actual submission data
   const hasSubmitted = false; // Placeholder
+  
+  // Format deadline date
+  const formatDeadline = (dateStr: string | null | undefined) => {
+    if (!dateStr) return null;
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('nl-NL', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      });
+    } catch {
+      return null;
+    }
+  };
+
+  const deadline = formatDeadline(assessment.project_end_date);
   
   return (
     <Card className={studentStyles.cards.listCard.container}>
@@ -40,8 +60,14 @@ export function SubmissionDashboardCard({
               )}
             </div>
             <div className={studentStyles.typography.infoText}>
-              Team: {assessment.group_name || "Onbekend"}
+              Team: {assessment.team_number ? `Team ${assessment.team_number}` : (assessment.group_name || "Onbekend")}
             </div>
+            {deadline && (
+              <div className="flex items-center gap-1.5 text-sm text-slate-600">
+                <Calendar className="h-4 w-4" />
+                <span>Deadline: {deadline}</span>
+              </div>
+            )}
             <div className={studentStyles.typography.metaTextSmall}>
               Docent: {assessment.teacher_name || "Onbekend"}
             </div>
