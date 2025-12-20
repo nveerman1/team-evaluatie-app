@@ -13,6 +13,7 @@ import { SubmissionOut } from "@/dtos/submission.dto";
 import { Loading, ErrorMessage } from "@/components";
 import { TeamBar, DocumentPane, RubricPane } from "@/components/teacher/project-assessments/split-view";
 import { useTeacherLayout } from "@/app/(teacher)/layout";
+import { useFocusMode } from "../layout";
 
 /**
  * Types & helpers
@@ -115,10 +116,10 @@ function RubricLevelsRow({
   const [newQuick, setNewQuick] = useState("");
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(260px,2fr)] gap-4 items-stretch">
+    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(260px,2fr)] gap-4 items-stretch">
       {/* Niveaus */}
       <div className="flex flex-col gap-2">
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2 min-w-0">
           {levels.map((level) => {
             const isSelected = value === level;
             const descriptor = getDescriptorForLevel(
@@ -132,14 +133,14 @@ function RubricLevelsRow({
                 key={level}
                 type="button"
                 onClick={() => onChange(level)}
-                className={`group flex flex-col items-center justify-start rounded-xl border px-3 py-2 text-center text-xs transition-all hover:border-emerald-500 hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-1 ${
+                className={`group flex flex-col items-center justify-start rounded-xl border px-3 py-2 text-center text-xs transition-all hover:border-emerald-500 hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-1 min-w-0 overflow-hidden ${
                   isSelected
                     ? "border-emerald-600 bg-emerald-50 shadow-[0_0_0_1px_rgba(16,185,129,0.5)]"
                     : "border-slate-200 bg-white"
                 }`}
               >
                 <span
-                  className={`mb-1 flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold group-hover:border-emerald-500 group-hover:text-emerald-700 ${
+                  className={`mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm font-semibold group-hover:border-emerald-500 group-hover:text-emerald-700 ${
                     isSelected
                       ? "border-emerald-600 bg-emerald-600 text-white"
                       : "border-slate-300 text-slate-700 bg-slate-50"
@@ -148,7 +149,7 @@ function RubricLevelsRow({
                   {level}
                 </span>
                 {descriptor && (
-                  <span className="text-[11px] leading-snug text-slate-600">
+                  <span className="text-[11px] leading-snug text-slate-600 break-words overflow-hidden">
                     {descriptor}
                   </span>
                 )}
@@ -386,6 +387,9 @@ export default function EditProjectAssessmentInner() {
   // Layout context for sidebar collapse
   const { setSidebarCollapsed } = useTeacherLayout();
   
+  // Layout context for parent container width
+  const { setFocusMode: setLayoutFocusMode } = useFocusMode();
+  
   // Focus mode = docOpen && docMode === "dock"
   const focusMode = docOpen && docMode === "dock";
   const maxDocWidth = focusMode ? 720 : 560;
@@ -400,11 +404,15 @@ export default function EditProjectAssessmentInner() {
     }
   }, [docOpen, docMode, docWidth]);
 
-  // Update sidebar collapse based on focus mode
+  // Update sidebar collapse and layout width based on focus mode
   useEffect(() => {
     setSidebarCollapsed(focusMode);
-    return () => setSidebarCollapsed(false); // Cleanup
-  }, [focusMode, setSidebarCollapsed]);
+    setLayoutFocusMode(focusMode);
+    return () => {
+      setSidebarCollapsed(false);
+      setLayoutFocusMode(false);
+    };
+  }, [focusMode, setSidebarCollapsed, setLayoutFocusMode]);
 
   // Load teams overview
   useEffect(() => {
@@ -679,7 +687,7 @@ export default function EditProjectAssessmentInner() {
   });
 
   return (
-    <div className={`transition-all duration-300 ${focusMode ? 'max-w-none' : 'max-w-6xl mx-auto px-6'}`}>
+    <div className="space-y-6">
       {/* Team Bar */}
       <TeamBar
         teamNumber={teamNumber!}
@@ -696,7 +704,7 @@ export default function EditProjectAssessmentInner() {
       />
 
       {/* Sticky save bar */}
-      <div className={`sticky top-0 z-20 bg-slate-100 py-2 mt-6 ${focusMode ? '' : '-mx-6 px-6'}`}>
+      <div className="sticky top-0 z-20 bg-slate-100 py-2 -mx-4 sm:-mx-6 px-4 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2 text-slate-500">
             <span className="flex h-2 w-2 rounded-full bg-emerald-500" />
@@ -729,19 +737,19 @@ export default function EditProjectAssessmentInner() {
       </div>
 
       {successMsg && (
-        <div className="mt-4 p-3 rounded-xl bg-emerald-50 text-emerald-700 flex items-center gap-2 border border-emerald-100">
+        <div className="p-3 rounded-xl bg-emerald-50 text-emerald-700 flex items-center gap-2 border border-emerald-100">
           ✅ {successMsg}
         </div>
       )}
       {error && (
-        <div className="mt-4 p-3 rounded-xl bg-red-50 text-red-700 border border-red-100">
+        <div className="p-3 rounded-xl bg-red-50 text-red-700 border border-red-100">
           {error}
         </div>
       )}
 
       {/* Split view */}
       <div 
-        className="mt-6 grid gap-6" 
+        className="grid gap-6" 
         style={docOpen && docMode === "dock" ? { gridTemplateColumns: '1fr 1fr' } : undefined}
       >
         {/* Document pane */}
