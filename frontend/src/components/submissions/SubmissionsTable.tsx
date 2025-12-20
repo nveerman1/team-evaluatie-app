@@ -46,6 +46,12 @@ const statusConfig = {
     icon: LinkIcon,
     color: 'text-red-600',
   },
+} as const;
+
+type SubmissionStatus = keyof typeof statusConfig;
+
+const isValidStatus = (status: string): status is SubmissionStatus => {
+  return status in statusConfig;
 };
 
 export function SubmissionsTable({
@@ -83,7 +89,10 @@ export function SubmissionsTable({
         {/* Rows */}
         {submissions.map((item) => {
           const status = item.submission.status;
-          const StatusIcon = statusConfig[status]?.icon || Circle;
+          const validStatus = isValidStatus(status) ? status : 'missing';
+          const StatusIcon = statusConfig[validStatus].icon;
+          const statusColor = statusConfig[validStatus].color;
+          const statusLabel = statusConfig[validStatus].label;
           const hasUrl = !!item.submission.url;
           const isMissing = status === 'missing';
 
@@ -133,8 +142,8 @@ export function SubmissionsTable({
                       className="h-8 w-full justify-between gap-2"
                     >
                       <span className="flex items-center gap-1.5">
-                        <StatusIcon className={`h-3.5 w-3.5 ${statusConfig[status]?.color || 'text-gray-500'}`} />
-                        <span className="text-xs">{statusConfig[status]?.label || 'Onbekend'}</span>
+                        <StatusIcon className={`h-3.5 w-3.5 ${statusColor}`} />
+                        <span className="text-xs">{statusLabel}</span>
                       </span>
                       <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                     </Button>
@@ -178,7 +187,13 @@ export function SubmissionsTable({
               {/* Actie */}
               <div className="col-span-1 flex justify-end">
                 {isMissing ? (
-                  <Button size="sm" variant="secondary" className="h-8">
+                  <Button 
+                    size="sm" 
+                    variant="secondary" 
+                    className="h-8"
+                    disabled
+                    title="Herinnering sturen (nog niet geïmplementeerd)"
+                  >
                     Herinner
                   </Button>
                 ) : (
