@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { isTrustedMicrosoftUrl, getFileHint, getViewerUrl } from '@/lib/document-viewer-utils';
 
 interface DocumentPaneProps {
   docWidth: number;
@@ -35,6 +36,56 @@ export function DocumentPane({
   onClose,
   onOpenInTab,
 }: DocumentPaneProps) {
+  // State for iframe blocking detection
+  const [iframeBlocked, setIframeBlocked] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const watchdogTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Reset iframe blocked state when document URL or type changes
+  useEffect(() => {
+    setIframeBlocked(false);
+    
+    // Clear any existing watchdog timer
+    if (watchdogTimerRef.current) {
+      clearTimeout(watchdogTimerRef.current);
+    }
+    
+    // Set up a watchdog timer to detect if iframe doesn't load
+    if (hasLink && currentDocUrl) {
+      watchdogTimerRef.current = setTimeout(() => {
+        // If iframe hasn't loaded after timeout, mark as potentially blocked
+        // This will be overridden if onLoad fires
+        setIframeBlocked(true);
+      }, 3500); // 3.5 seconds timeout
+    }
+    
+    return () => {
+      if (watchdogTimerRef.current) {
+        clearTimeout(watchdogTimerRef.current);
+      }
+    };
+  }, [currentDocUrl, docType, hasLink]);
+
+  // Determine if URL is trusted
+  const isTrusted = isTrustedMicrosoftUrl(currentDocUrl);
+  const fileHint = getFileHint(currentDocUrl);
+  const viewerUrl = getViewerUrl(currentDocUrl, fileHint);
+
+  // Handle iframe load success
+  const handleIframeLoad = () => {
+    if (watchdogTimerRef.current) {
+      clearTimeout(watchdogTimerRef.current);
+    }
+    setIframeBlocked(false);
+  };
+
+  // Handle iframe load error
+  const handleIframeError = () => {
+    if (watchdogTimerRef.current) {
+      clearTimeout(watchdogTimerRef.current);
+    }
+    setIframeBlocked(true);
+  };
   return (
     <section className="rounded-2xl border border-slate-200 bg-white shadow-sm flex flex-col h-[calc(100vh-130px)] overflow-hidden">
       {/* Header */}
@@ -131,17 +182,87 @@ export function DocumentPane({
 
       {/* Viewer */}
       <div className="flex-1 min-h-0 bg-slate-50 p-3">
-        <div className="h-full rounded-2xl border border-slate-200 bg-white overflow-hidden">
-          <div className="h-full flex items-center justify-center px-6 text-center text-xs text-slate-500">
-            {hasLink ? (
-              <div className="space-y-2">
-                <p>Hier zou een iframe / embedded viewer staan.</p>
-                <p className="text-slate-400">{currentDocUrl}</p>
+        <div className="h-full rounded-2xl border border-slate-200 bg-white overflow-hidden relative">
+          {!hasLink ? (
+            <div className="h-full flex items-center justify-center px-6 text-center text-xs text-slate-500">
+              Geen link ingeleverd.
+            </div>
+          ) : !isTrusted ? (
+            <div className="h-full flex items-center justify-center px-6 text-center">
+              <div className="space-y-3 max-w-md">
+                <div className="text-2xl">⚠️</div>
+                <p className="text-sm font-medium text-slate-700">Onbekende link</p>
+                <p className="text-xs text-slate-500">
+                  Deze link is niet van een vertrouwd Microsoft-domein.
+                </p>
+                <button
+                  onClick={onOpenInTab}
+                  className="mt-3 rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 shadow-sm"
+                >
+                  Open in nieuw tabblad
+                </button>
               </div>
-            ) : (
-              'Geen link ingeleverd.'
-            )}
-          </div>
+            </div>
+          ) : (
+            <>
+              {/* Iframe viewer */}
+              <iframe
+                ref={iframeRef}
+                src={viewerUrl || ''}
+                className="w-full h-full"
+                allow="clipboard-read; clipboard-write"
+                referrerPolicy="no-referrer-when-downgrade"
+                onLoad={handleIframeLoad}
+                onError={handleIframeError}
+                title="Document viewer"
+              />
+              
+              {/* Fallback overlay when iframe is blocked */}
+              {iframeBlocked && (
+                <div className="absolute inset-0 bg-white flex items-center justify-center px-6 text-center">
+                  <div className="space-y-4 max-w-md">
+                    <div className="text-3xl">🔒</div>
+                    <div>
+                      <p className="text-sm font-medium text-slate-700 mb-1">
+                        Inline weergave geblokkeerd
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Microsoft SharePoint/OneDrive blokkeert vaak het embedden van documenten. 
+                        Gebruik de knop hieronder om het document in een nieuw tabblad te openen.
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2 items-center">
+                      <button
+                        onClick={onOpenInTab}
+                        className="rounded-lg border border-emerald-600 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 shadow-sm"
+                      >
+                        📄 Open in nieuw tabblad
+                      </button>
+                      {fileHint !== 'pdf' && (
+                        <button
+                          onClick={() => {
+                            if (currentDocUrl) {
+                              // Try to construct an Office Online viewer URL
+                              const officeUrl = currentDocUrl.includes('office.com') 
+                                ? currentDocUrl 
+                                : `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(currentDocUrl)}`;
+                              window.open(officeUrl, '_blank');
+                            }
+                          }}
+                          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                        >
+                          Open in Office Online
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-2">
+                      {currentDocUrl}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
     </section>
