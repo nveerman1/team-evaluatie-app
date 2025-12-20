@@ -21,6 +21,7 @@ export function isTrustedMicrosoftUrl(url: string | null | undefined): boolean {
       'onedrive.live.com',
       '.1drv.ms',
       '.office.com',
+      '.officeapps.live.com',
       '.microsoft.com',
     ];
     
