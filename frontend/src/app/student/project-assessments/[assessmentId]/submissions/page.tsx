@@ -29,11 +29,11 @@ export default function StudentSubmissionsPage() {
     setLoading(true);
     try {
       const data = await submissionService.getMyTeamSubmissions(assessmentId);
-      setSubmissions(data);
+      setSubmissions(data.submissions);
       
-      // Get team ID from first submission if available
-      if (data.length > 0 && data[0].project_team_id) {
-        setTeamId(data[0].project_team_id);
+      // Get team ID from response
+      if (data.team_id) {
+        setTeamId(data.team_id);
       }
     } catch (err: any) {
       console.error('Failed to load submissions:', err);

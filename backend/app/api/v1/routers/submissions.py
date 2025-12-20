@@ -24,6 +24,7 @@ from app.api.v1.schemas.submissions import (
     SubmissionWithTeamInfo,
     SubmissionListResponse,
     SubmissionEventOut,
+    MyTeamSubmissionsResponse,
 )
 from app.api.v1.utils.url_validation import validate_sharepoint_url
 
@@ -396,7 +397,10 @@ def list_submissions_for_assessment(
 
 # ---------- Get submissions for student's team ----------
 
-@router.get("/assessments/{assessment_id}/my-team", response_model=List[SubmissionOut])
+@router.get(
+    "/assessments/{assessment_id}/my-team",
+    response_model=MyTeamSubmissionsResponse
+)
 def get_my_team_submissions(
     assessment_id: int,
     db: Session = Depends(get_db),
@@ -405,6 +409,7 @@ def get_my_team_submissions(
     """
     Get submissions for the current user's team in an assessment.
     Students can only see their own team's submissions.
+    Returns team_id even when there are no submissions yet.
     """
     # Find which team the user is in for this assessment
     assessment = db.query(ProjectAssessment).filter(
@@ -429,7 +434,7 @@ def get_my_team_submissions(
     
     if not team_member:
         # User is not in any team for this assessment
-        return []
+        return MyTeamSubmissionsResponse(team_id=None, submissions=[])
     
     # Get submissions for this team
     submissions = db.query(AssignmentSubmission).filter(
@@ -438,4 +443,7 @@ def get_my_team_submissions(
         AssignmentSubmission.school_id == current_user.school_id,
     ).all()
     
-    return [SubmissionOut.model_validate(s) for s in submissions]
+    return MyTeamSubmissionsResponse(
+        team_id=team_member.project_team_id,
+        submissions=[SubmissionOut.model_validate(s) for s in submissions]
+    )

@@ -101,3 +101,9 @@ class SubmissionEventsResponse(BaseModel):
     """Schema for list of submission events"""
     items: List[SubmissionEventOut]
     total: int
+
+
+class MyTeamSubmissionsResponse(BaseModel):
+    """Schema for my team submissions response"""
+    team_id: Optional[int] = None
+    submissions: List[SubmissionOut] = Field(default_factory=list)

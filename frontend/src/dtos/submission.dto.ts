@@ -59,3 +59,8 @@ export type SubmissionEventsResponse = {
   items: SubmissionEventOut[];
   total: number;
 };
+
+export type MyTeamSubmissionsResponse = {
+  team_id: number | null;
+  submissions: SubmissionOut[];
+};

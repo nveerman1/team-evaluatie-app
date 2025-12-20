@@ -4,6 +4,7 @@ import {
   SubmissionCreate,
   SubmissionStatusUpdate,
   SubmissionListResponse,
+  MyTeamSubmissionsResponse,
 } from "@/dtos/submission.dto";
 
 export const submissionService = {
@@ -68,8 +69,8 @@ export const submissionService = {
   /**
    * Get submissions for current user's team (student view)
    */
-  async getMyTeamSubmissions(assessmentId: number): Promise<SubmissionOut[]> {
-    const response = await api.get<SubmissionOut[]>(
+  async getMyTeamSubmissions(assessmentId: number): Promise<MyTeamSubmissionsResponse> {
+    const response = await api.get<MyTeamSubmissionsResponse>(
       `/submissions/assessments/${assessmentId}/my-team`
     );
     return response.data;
