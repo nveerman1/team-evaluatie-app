@@ -60,8 +60,8 @@ export function getFileHint(url: string | null | undefined): "pdf" | "doc" | "pp
     // Check for Word documents - specific patterns
     if (pathname.endsWith('.doc') || pathname.endsWith('.docx') || 
         /\.docx?(\?|#|$)/.test(urlLower) ||
-        urlLower.includes('word.office.com') ||
-        urlObj.hostname.includes('word.office.com') ||
+        urlObj.hostname.toLowerCase() === 'word.office.com' ||
+        urlObj.hostname.toLowerCase().endsWith('.word.office.com') ||
         /\/w\/[^/]*$/.test(pathname)) { // Office Online word path pattern
       return "doc";
     }
@@ -69,8 +69,8 @@ export function getFileHint(url: string | null | undefined): "pdf" | "doc" | "pp
     // Check for PowerPoint presentations - specific patterns
     if (pathname.endsWith('.ppt') || pathname.endsWith('.pptx') || 
         /\.pptx?(\?|#|$)/.test(urlLower) ||
-        urlLower.includes('powerpoint.office.com') ||
-        urlObj.hostname.includes('powerpoint.office.com') ||
+        urlObj.hostname.toLowerCase() === 'powerpoint.office.com' ||
+        urlObj.hostname.toLowerCase().endsWith('.powerpoint.office.com') ||
         /\/p\/[^/]*$/.test(pathname)) { // Office Online PowerPoint path pattern
       return "ppt";
     }
@@ -97,11 +97,23 @@ export function getViewerUrl(url: string | null | undefined, fileHint: string): 
   }
   
   // For Office documents, check if it's already an Office Online link
-  const urlLower = url.toLowerCase();
-  if (urlLower.includes('/_layouts/') || 
-      urlLower.includes('.office.com') ||
-      urlLower.includes('onedrive.live.com')) {
-    // Already an Office viewer link, use it directly
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.toLowerCase();
+    
+    // Check if it's an Office Online URL using proper hostname validation
+    if (hostname.endsWith('.office.com') || 
+        hostname === 'office.com' ||
+        hostname.endsWith('.officeapps.live.com') ||
+        hostname === 'officeapps.live.com' ||
+        hostname.endsWith('onedrive.live.com') ||
+        hostname === 'onedrive.live.com' ||
+        url.includes('/_layouts/')) {
+      // Already an Office viewer link, use it directly
+      return url;
+    }
+  } catch (e) {
+    // Invalid URL, return as-is
     return url;
   }
   
