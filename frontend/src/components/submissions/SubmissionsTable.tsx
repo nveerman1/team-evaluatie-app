@@ -110,10 +110,10 @@ export function SubmissionsTable({
           Team
           <SortIcon className="h-3.5 w-3.5" />
         </button>
-        <div className="col-span-3">Leden</div>
+        <div className="col-span-4">Leden</div>
         <div className="col-span-2">Document</div>
         <div className="col-span-2">Status</div>
-        <div className="col-span-3">Ingeleverd op</div>
+        <div className="col-span-2">Ingeleverd op</div>
         <div className="col-span-1 text-right">Actie</div>
       </div>
 
@@ -139,7 +139,7 @@ export function SubmissionsTable({
             </div>
 
             {/* Teamleden */}
-            <div className="col-span-3 text-sm text-gray-600">
+            <div className="col-span-4 text-sm text-gray-600">
               {item.members.map((m) => m.name).join(", ")}
             </div>
 
@@ -204,7 +204,7 @@ export function SubmissionsTable({
             </div>
 
             {/* Ingeleverd op */}
-            <div className="col-span-3 text-sm text-gray-600">
+            <div className="col-span-2 text-sm text-gray-600">
               {item.submission.submitted_at
                 ? new Date(item.submission.submitted_at).toLocaleDateString('nl-NL', {
                     day: '2-digit',

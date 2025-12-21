@@ -78,8 +78,11 @@ export default function TeacherSubmissionsPage() {
       );
     }
 
+    // Only filter by doc_type if there's an actual submission (not missing)
     if (docType) {
-      filtered = filtered.filter((item) => item.submission.doc_type === docType);
+      filtered = filtered.filter((item) => 
+        item.submission.status === 'missing' || item.submission.doc_type === docType
+      );
     }
 
     setFilteredSubmissions(filtered);
