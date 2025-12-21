@@ -105,7 +105,7 @@ export function SubmissionsTable({
       <div className="grid grid-cols-12 gap-3 border-b bg-gray-50 px-5 py-3 text-xs font-semibold text-gray-500 tracking-wide">
         <button 
           onClick={toggleSort}
-          className="col-span-2 flex items-center gap-1 hover:text-gray-900 transition-colors text-left"
+          className="col-span-1 flex items-center gap-1 hover:text-gray-900 transition-colors text-left"
         >
           Team
           <SortIcon className="h-3.5 w-3.5" />
@@ -113,7 +113,7 @@ export function SubmissionsTable({
         <div className="col-span-3">Leden</div>
         <div className="col-span-2">Document</div>
         <div className="col-span-2">Status</div>
-        <div className="col-span-2">Ingeleverd op</div>
+        <div className="col-span-3">Ingeleverd op</div>
         <div className="col-span-1 text-right">Actie</div>
       </div>
 
@@ -134,7 +134,7 @@ export function SubmissionsTable({
             className={`grid grid-cols-12 items-center gap-3 px-5 py-3 hover:bg-gray-50 ${!isLastItem ? 'border-b border-gray-100' : ''}`}
           >
             {/* Team */}
-            <div className="col-span-2 font-medium text-sm">
+            <div className="col-span-1 font-medium text-sm">
               Team {item.team_number}
             </div>
 
@@ -158,7 +158,7 @@ export function SubmissionsTable({
                   {item.submission.doc_type === 'attachment' && 'Open bijlage'}
                 </Button>
               ) : (
-                <span className="text-sm text-muted-foreground">—</span>
+                <span className="text-sm text-gray-600">-</span>
               )}
             </div>
 
@@ -204,7 +204,7 @@ export function SubmissionsTable({
             </div>
 
             {/* Ingeleverd op */}
-            <div className="col-span-2 text-sm text-gray-600">
+            <div className="col-span-3 text-sm text-gray-600">
               {item.submission.submitted_at
                 ? new Date(item.submission.submitted_at).toLocaleDateString('nl-NL', {
                     day: '2-digit',
@@ -231,7 +231,7 @@ export function SubmissionsTable({
                   <Button
                     size="sm"
                     className="h-8"
-                    onClick={() => onOpenRubric(item.submission.project_team_id)}
+                    onClick={() => onOpenRubric(item.team_number || 0)}
                   >
                     Nakijken
                   </Button>
