@@ -11,8 +11,6 @@ import {
 import { SubmissionWithTeamInfo } from '@/dtos/submission.dto';
 import { ExternalLink, ChevronDown, Circle, CheckCircle, Lock, LinkIcon, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 
-const MAX_DISPLAYED_MEMBERS = 2;
-
 interface SubmissionsTableProps {
   submissions: SubmissionWithTeamInfo[];
   onStatusChange: (submissionId: number, status: string) => Promise<void>;
@@ -104,23 +102,23 @@ export function SubmissionsTable({
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="grid grid-cols-12 gap-3 border-b bg-slate-50 px-4 py-3 text-xs font-medium text-muted-foreground">
+      <div className="grid grid-cols-12 gap-3 border-b bg-gray-50 px-5 py-3 text-xs font-semibold text-gray-500 tracking-wide">
         <button 
           onClick={toggleSort}
-          className="col-span-2 flex items-center gap-1 hover:text-foreground transition-colors text-left"
+          className="col-span-2 flex items-center gap-1 hover:text-gray-900 transition-colors text-left"
         >
           Team
           <SortIcon className="h-3.5 w-3.5" />
         </button>
-        <div className="col-span-3">Teamleden</div>
-        <div className="col-span-3">Document</div>
+        <div className="col-span-3">Leden</div>
+        <div className="col-span-2">Document</div>
         <div className="col-span-2">Status</div>
-        <div className="col-span-1 whitespace-nowrap">Ingeleverd op</div>
+        <div className="col-span-2">Ingeleverd op</div>
         <div className="col-span-1 text-right">Actie</div>
       </div>
 
       {/* Rows */}
-      {sortedSubmissions.map((item) => {
+      {sortedSubmissions.map((item, index) => {
         const status = item.submission.status;
         const validStatus = isValidStatus(status) ? status : 'missing';
         const StatusIcon = statusConfig[validStatus].icon;
@@ -128,26 +126,25 @@ export function SubmissionsTable({
         const statusLabel = statusConfig[validStatus].label;
         const hasUrl = !!item.submission.url;
         const isMissing = status === 'missing';
+        const isLastItem = index === sortedSubmissions.length - 1;
 
         return (
           <div
             key={item.submission.id}
-            className="grid grid-cols-12 items-center gap-3 border-b px-4 py-4 hover:bg-slate-50/60"
+            className={`grid grid-cols-12 items-center gap-3 px-5 py-3 hover:bg-gray-50 ${!isLastItem ? 'border-b border-gray-100' : ''}`}
           >
             {/* Team */}
-            <div className="col-span-2 font-medium">
-              {item.team_name}
-              {item.team_number && ` (Team ${item.team_number})`}
+            <div className="col-span-2 font-medium text-sm">
+              Team {item.team_number}
             </div>
 
             {/* Teamleden */}
-            <div className="col-span-3 text-xs text-muted-foreground">
-              {item.members.slice(0, MAX_DISPLAYED_MEMBERS).map((m) => m.name).join(' · ')}
-              {item.members.length > MAX_DISPLAYED_MEMBERS && ` · +${item.members.length - MAX_DISPLAYED_MEMBERS}`}
+            <div className="col-span-3 text-sm text-gray-600">
+              {item.members.map((m) => m.name).join(", ")}
             </div>
 
             {/* Document */}
-            <div className="col-span-3">
+            <div className="col-span-2">
               {hasUrl ? (
                 <Button
                   size="sm"
@@ -207,7 +204,7 @@ export function SubmissionsTable({
             </div>
 
             {/* Ingeleverd op */}
-            <div className="col-span-1 whitespace-nowrap text-sm text-muted-foreground">
+            <div className="col-span-2 text-sm text-gray-600">
               {item.submission.submitted_at
                 ? new Date(item.submission.submitted_at).toLocaleDateString('nl-NL', {
                     day: '2-digit',
