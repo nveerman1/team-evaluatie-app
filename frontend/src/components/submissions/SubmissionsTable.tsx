@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { SubmissionWithTeamInfo } from '@/dtos/submission.dto';
-import { ExternalLink, ChevronDown, Circle, CheckCircle, Lock, LinkIcon, AlertCircle } from 'lucide-react';
+import { ExternalLink, ChevronDown, Circle, CheckCircle, Lock, LinkIcon, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 
 const MAX_DISPLAYED_MEMBERS = 2;
 
@@ -58,9 +58,38 @@ export function SubmissionsTable({
   onStatusChange,
   onOpenRubric,
 }: SubmissionsTableProps) {
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | null>(null);
+
   const handleStatusChange = async (submissionId: number, status: string) => {
     await onStatusChange(submissionId, status);
   };
+
+  const toggleSort = () => {
+    if (sortOrder === null) {
+      setSortOrder('asc');
+    } else if (sortOrder === 'asc') {
+      setSortOrder('desc');
+    } else {
+      setSortOrder(null);
+    }
+  };
+
+  const sortedSubmissions = useMemo(() => {
+    if (sortOrder === null) {
+      return submissions;
+    }
+
+    return [...submissions].sort((a, b) => {
+      const aTeamNum = a.team_number ?? 0;
+      const bTeamNum = b.team_number ?? 0;
+      
+      if (sortOrder === 'asc') {
+        return aTeamNum - bTeamNum;
+      } else {
+        return bTeamNum - aTeamNum;
+      }
+    });
+  }, [submissions, sortOrder]);
 
   if (submissions.length === 0) {
     return (
@@ -70,11 +99,19 @@ export function SubmissionsTable({
     );
   }
 
+  const SortIcon = sortOrder === 'asc' ? ArrowUp : sortOrder === 'desc' ? ArrowDown : ArrowUpDown;
+
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
       {/* Header */}
       <div className="grid grid-cols-12 gap-3 border-b bg-slate-50 px-4 py-3 text-xs font-medium text-muted-foreground">
-        <div className="col-span-2">Team</div>
+        <button 
+          onClick={toggleSort}
+          className="col-span-2 flex items-center gap-1 hover:text-foreground transition-colors text-left"
+        >
+          Team
+          <SortIcon className="h-3.5 w-3.5" />
+        </button>
         <div className="col-span-3">Teamleden</div>
         <div className="col-span-3">Document</div>
         <div className="col-span-2">Status</div>
@@ -83,7 +120,7 @@ export function SubmissionsTable({
       </div>
 
       {/* Rows */}
-      {submissions.map((item) => {
+      {sortedSubmissions.map((item) => {
         const status = item.submission.status;
         const validStatus = isValidStatus(status) ? status : 'missing';
         const StatusIcon = statusConfig[validStatus].icon;
@@ -207,7 +244,6 @@ export function SubmissionsTable({
           </div>
         );
       })}
-    </div>
     </div>
   );
 }
