@@ -8,7 +8,6 @@ import { SubmissionsTable } from '@/components/submissions/SubmissionsTable';
 import { SubmissionFilters } from '@/components/submissions/SubmissionFilters';
 import { Loading } from '@/components';
 import { toast } from '@/lib/toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function TeacherSubmissionsPage() {
   const params = useParams();
@@ -123,20 +122,16 @@ export default function TeacherSubmissionsPage() {
   if (error) {
     return (
       <div className="container mx-auto py-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Fout bij laden van inleveringen</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-red-600">{error}</p>
-            <button
-              onClick={() => router.back()}
-              className="mt-4 px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded"
-            >
-              Terug
-            </button>
-          </CardContent>
-        </Card>
+        <div className="bg-white rounded-2xl shadow-sm p-6">
+          <h2 className="text-2xl font-semibold mb-4">Fout bij laden van inleveringen</h2>
+          <p className="text-red-600">{error}</p>
+          <button
+            onClick={() => router.back()}
+            className="mt-4 px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded"
+          >
+            Terug
+          </button>
+        </div>
       </div>
     );
   }
@@ -155,55 +150,43 @@ export default function TeacherSubmissionsPage() {
     <div className="container mx-auto py-6 space-y-6">
       {/* KPI cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Totaal</p>
-            <p className="text-2xl font-bold">{stats.total}</p>
-          </CardContent>
-        </Card>
+        <div className="bg-white rounded-2xl shadow-sm p-4">
+          <p className="text-xs text-muted-foreground">Totaal</p>
+          <p className="text-2xl font-bold">{stats.total}</p>
+        </div>
         
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Ontbrekend</p>
-            <p className="text-2xl font-bold text-red-600">{stats.missing}</p>
-          </CardContent>
-        </Card>
+        <div className="bg-white rounded-2xl shadow-sm p-4">
+          <p className="text-xs text-muted-foreground">Ontbrekend</p>
+          <p className="text-2xl font-bold text-red-600">{stats.missing}</p>
+        </div>
         
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Ingeleverd</p>
-            <p className="text-2xl font-bold text-blue-600">{stats.submitted}</p>
-          </CardContent>
-        </Card>
+        <div className="bg-white rounded-2xl shadow-sm p-4">
+          <p className="text-xs text-muted-foreground">Ingeleverd</p>
+          <p className="text-2xl font-bold text-blue-600">{stats.submitted}</p>
+        </div>
         
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Akkoord</p>
-            <p className="text-2xl font-bold text-green-600">{stats.ok}</p>
-          </CardContent>
-        </Card>
+        <div className="bg-white rounded-2xl shadow-sm p-4">
+          <p className="text-xs text-muted-foreground">Akkoord</p>
+          <p className="text-2xl font-bold text-green-600">{stats.ok}</p>
+        </div>
         
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Actie vereist</p>
-            <p className="text-2xl font-bold text-orange-600">{stats.actionRequired}</p>
-          </CardContent>
-        </Card>
+        <div className="bg-white rounded-2xl shadow-sm p-4">
+          <p className="text-xs text-muted-foreground">Actie vereist</p>
+          <p className="text-2xl font-bold text-orange-600">{stats.actionRequired}</p>
+        </div>
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <SubmissionFilters
-            missingOnly={missingOnly}
-            setMissingOnly={setMissingOnly}
-            actionRequiredOnly={actionRequiredOnly}
-            setActionRequiredOnly={setActionRequiredOnly}
-            docType={docType}
-            setDocType={setDocType}
-          />
-        </CardContent>
-      </Card>
+      <div className="bg-white rounded-2xl shadow-sm p-4">
+        <SubmissionFilters
+          missingOnly={missingOnly}
+          setMissingOnly={setMissingOnly}
+          actionRequiredOnly={actionRequiredOnly}
+          setActionRequiredOnly={setActionRequiredOnly}
+          docType={docType}
+          setDocType={setDocType}
+        />
+      </div>
 
       {/* Submissions Table */}
       <SubmissionsTable
