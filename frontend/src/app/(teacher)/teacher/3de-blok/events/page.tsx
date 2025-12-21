@@ -158,6 +158,36 @@ export default function AttendanceEventsPage() {
     }
   };
 
+  const handleExport = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (filters.class_name) params.append("class_name", filters.class_name);
+      if (filters.start_date) params.append("start_date", new Date(filters.start_date).toISOString());
+      if (filters.end_date) params.append("end_date", new Date(filters.end_date).toISOString());
+      
+      const response = await fetch(`/api/v1/attendance/export?${params.toString()}`, {
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        throw new Error("Export failed");
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `aanwezigheid_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error("Error exporting:", err);
+      alert("Fout bij exporteren");
+    }
+  };
+
   const totalPages = Math.ceil(total / perPage);
 
   if (loading && events.length === 0) {
@@ -188,7 +218,7 @@ export default function AttendanceEventsPage() {
               Verwijder geselecteerde ({selectedIds.size})
             </Button>
           )}
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
             Exporteren
           </Button>

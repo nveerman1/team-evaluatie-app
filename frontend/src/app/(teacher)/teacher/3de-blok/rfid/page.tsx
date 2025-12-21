@@ -42,11 +42,16 @@ export default function RFIDAdminPage() {
       setLoading(true);
       setError(null);
       
-      // In a real implementation, we'd have an endpoint that returns students with their cards
-      // For now, this is a placeholder structure
-      // TODO: Implement backend endpoint that returns students with cards
+      const response = await fetch("/api/v1/attendance/students", {
+        credentials: "include",
+      });
       
-      setStudents([]);
+      if (!response.ok) {
+        throw new Error("Failed to fetch students");
+      }
+      
+      const data = await response.json();
+      setStudents(data);
     } catch (err) {
       console.error("Error fetching students:", err);
       setError("Kon studenten niet ophalen");

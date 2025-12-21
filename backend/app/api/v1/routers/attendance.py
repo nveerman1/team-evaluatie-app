@@ -568,3 +568,240 @@ def get_current_presence(
         ))
     
     return result
+
+
+# ============ CSV Export ============
+
+@router.get("/export")
+def export_attendance(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    start_date: Optional[datetime] = Query(None),
+    end_date: Optional[datetime] = Query(None),
+    class_name: Optional[str] = Query(None),
+):
+    """
+    Export attendance events to CSV (teacher/admin only)
+    """
+    from fastapi.responses import StreamingResponse
+    import io
+    import csv
+    
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only teachers and admins can export data"
+        )
+    
+    # Build query
+    query = db.query(AttendanceEvent, User).join(User).filter(
+        User.school_id == current_user.school_id
+    )
+    
+    if start_date:
+        query = query.filter(AttendanceEvent.check_in >= start_date)
+    if end_date:
+        query = query.filter(AttendanceEvent.check_in <= end_date)
+    if class_name:
+        query = query.filter(User.class_name == class_name)
+    
+    events = query.order_by(AttendanceEvent.check_in.desc()).all()
+    
+    # Create CSV
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Header
+    writer.writerow([
+        'ID', 'Student', 'Email', 'Klas', 'Check-in', 'Check-out', 
+        'Duur (minuten)', 'Type', 'Locatie', 'Beschrijving', 
+        'Status', 'Bron', 'Aangemaakt op'
+    ])
+    
+    # Data rows
+    for event, user in events:
+        duration_minutes = None
+        if event.check_out and event.check_in:
+            duration_seconds = (event.check_out - event.check_in).total_seconds()
+            duration_minutes = int(duration_seconds / 60)
+        
+        event_type = "Extern werk" if event.is_external else "School"
+        
+        writer.writerow([
+            event.id,
+            user.name,
+            user.email,
+            user.class_name or '',
+            event.check_in.strftime('%Y-%m-%d %H:%M:%S'),
+            event.check_out.strftime('%Y-%m-%d %H:%M:%S') if event.check_out else '',
+            duration_minutes or '',
+            event_type,
+            event.location or '',
+            event.description or '',
+            event.approval_status or '',
+            event.source,
+            event.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        ])
+    
+    output.seek(0)
+    
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename=aanwezigheid_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        }
+    )
+
+
+# ============ Overview (All Students) ============
+
+@router.get("/overview")
+def get_attendance_overview(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    class_name: Optional[str] = Query(None),
+):
+    """
+    Get attendance overview for all students (teacher/admin only)
+    Returns totals per student
+    """
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only teachers and admins can view overview"
+        )
+    
+    # Get all students in school
+    query = db.query(User).filter(
+        User.school_id == current_user.school_id,
+        User.role == "student",
+        User.archived.is_(False)
+    )
+    
+    if class_name:
+        query = query.filter(User.class_name == class_name)
+    
+    students = query.all()
+    
+    result = []
+    for student in students:
+        # Calculate school hours
+        school_seconds = db.query(
+            func.sum(
+                func.extract('epoch', AttendanceEvent.check_out - AttendanceEvent.check_in)
+            )
+        ).filter(
+            AttendanceEvent.user_id == student.id,
+            AttendanceEvent.is_external == False,
+            AttendanceEvent.check_out.isnot(None)
+        ).scalar() or 0
+        
+        # Calculate external approved hours
+        external_approved_seconds = db.query(
+            func.sum(
+                func.extract('epoch', AttendanceEvent.check_out - AttendanceEvent.check_in)
+            )
+        ).filter(
+            AttendanceEvent.user_id == student.id,
+            AttendanceEvent.is_external == True,
+            AttendanceEvent.approval_status == "approved",
+            AttendanceEvent.check_out.isnot(None)
+        ).scalar() or 0
+        
+        # Calculate external pending hours
+        external_pending_seconds = db.query(
+            func.sum(
+                func.extract('epoch', AttendanceEvent.check_out - AttendanceEvent.check_in)
+            )
+        ).filter(
+            AttendanceEvent.user_id == student.id,
+            AttendanceEvent.is_external == True,
+            AttendanceEvent.approval_status == "pending",
+            AttendanceEvent.check_out.isnot(None)
+        ).scalar() or 0
+        
+        total_seconds = int(school_seconds) + int(external_approved_seconds)
+        lesson_blocks = round(total_seconds / (75 * 60), 1)
+        
+        result.append({
+            "user_id": student.id,
+            "user_name": student.name,
+            "user_email": student.email,
+            "class_name": student.class_name,
+            "total_school_seconds": int(school_seconds),
+            "total_external_approved_seconds": int(external_approved_seconds),
+            "total_external_pending_seconds": int(external_pending_seconds),
+            "lesson_blocks": lesson_blocks
+        })
+    
+    # Sort by lesson blocks descending
+    result.sort(key=lambda x: x["lesson_blocks"], reverse=True)
+    
+    return result
+
+
+# ============ Students List with RFID Cards ============
+
+@router.get("/students")
+def list_students_with_cards(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    search: Optional[str] = Query(None),
+):
+    """
+    Get list of students with their RFID cards (teacher/admin only)
+    For RFID admin panel
+    """
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only teachers and admins can view students"
+        )
+    
+    # Get students
+    query = db.query(User).filter(
+        User.school_id == current_user.school_id,
+        User.role == "student",
+        User.archived.is_(False)
+    )
+    
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            or_(
+                User.name.ilike(search_pattern),
+                User.email.ilike(search_pattern),
+                User.class_name.ilike(search_pattern)
+            )
+        )
+    
+    students = query.order_by(User.class_name, User.name).all()
+    
+    # Get RFID cards for all students
+    result = []
+    for student in students:
+        cards = db.query(RFIDCard).filter(
+            RFIDCard.user_id == student.id
+        ).order_by(RFIDCard.created_at.desc()).all()
+        
+        result.append({
+            "user_id": student.id,
+            "user_name": student.name,
+            "user_email": student.email,
+            "class_name": student.class_name,
+            "cards": [
+                {
+                    "id": card.id,
+                    "uid": card.uid,
+                    "label": card.label,
+                    "is_active": card.is_active,
+                    "created_at": card.created_at,
+                    "updated_at": card.updated_at,
+                    "created_by": card.created_by
+                }
+                for card in cards
+            ]
+        })
+    
+    return result
