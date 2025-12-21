@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { isTrustedMicrosoftUrl, getFileHint, getViewerUrl, isHostnameOrSubdomain } from '@/lib/document-viewer-utils';
+import { isTrustedMicrosoftUrl, getFileHint, getViewerUrl, isHostnameOrSubdomain, safeHostname, isBlockedIframeHost } from '@/lib/document-viewer-utils';
 
 interface DocumentPaneProps {
   docWidth: number;
@@ -41,22 +41,34 @@ export function DocumentPane({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const watchdogTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Determine if URL is trusted and can be embedded
+  const isTrusted = isTrustedMicrosoftUrl(currentDocUrl);
+  const fileHint = getFileHint(currentDocUrl);
+  const viewerUrl = getViewerUrl(currentDocUrl, fileHint);
+  const viewerHost = safeHostname(viewerUrl);
+  const shouldEmbed = Boolean(viewerUrl) && viewerHost && !isBlockedIframeHost(viewerHost);
+
   // Reset iframe blocked state when document URL changes
   useEffect(() => {
-    setIframeBlocked(false);
+    // If we know upfront that embedding won't work, set blocked immediately
+    if (hasLink && currentDocUrl && !shouldEmbed) {
+      setIframeBlocked(true);
+    } else {
+      setIframeBlocked(false);
+    }
     
     // Clear any existing watchdog timer
     if (watchdogTimerRef.current) {
       clearTimeout(watchdogTimerRef.current);
     }
     
-    // Set up a watchdog timer to detect if iframe doesn't load
-    if (hasLink && currentDocUrl) {
+    // Set up a watchdog timer to detect if iframe doesn't load (only if we're trying to embed)
+    if (hasLink && currentDocUrl && shouldEmbed) {
       watchdogTimerRef.current = setTimeout(() => {
         // If iframe hasn't loaded after timeout, mark as potentially blocked
         // This will be overridden if onLoad fires
         setIframeBlocked(true);
-      }, 3500); // 3.5 seconds timeout
+      }, 2000); // 2 seconds timeout
     }
     
     return () => {
@@ -64,12 +76,7 @@ export function DocumentPane({
         clearTimeout(watchdogTimerRef.current);
       }
     };
-  }, [currentDocUrl, hasLink]);
-
-  // Determine if URL is trusted
-  const isTrusted = isTrustedMicrosoftUrl(currentDocUrl);
-  const fileHint = getFileHint(currentDocUrl);
-  const viewerUrl = getViewerUrl(currentDocUrl, fileHint);
+  }, [currentDocUrl, hasLink, shouldEmbed]);
 
   // Handle iframe load success
   const handleIframeLoad = () => {
@@ -203,9 +210,36 @@ export function DocumentPane({
                 </button>
               </div>
             </div>
+          ) : !shouldEmbed ? (
+            // Show fallback immediately if we know embedding won't work
+            <div className="h-full flex items-center justify-center px-6 text-center">
+              <div className="space-y-4 max-w-md">
+                <div className="text-3xl">🔒</div>
+                <div>
+                  <p className="text-sm font-medium text-slate-700 mb-1">
+                    Inline weergave geblokkeerd
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Microsoft staat niet toe dat deze pagina in de app wordt weergegeven. 
+                    Open het document in een nieuw tabblad.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2 items-center">
+                  <button
+                    onClick={onOpenInTab}
+                    className="rounded-lg border border-emerald-600 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 shadow-sm"
+                  >
+                    📄 Open in nieuw tabblad
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-2">
+                  {currentDocUrl}
+                </p>
+              </div>
+            </div>
           ) : (
             <>
-              {/* Iframe viewer */}
+              {/* Iframe viewer - only render if shouldEmbed is true */}
               <iframe
                 ref={iframeRef}
                 src={viewerUrl || ''}
@@ -218,7 +252,7 @@ export function DocumentPane({
                 title="Document viewer"
               />
               
-              {/* Fallback overlay when iframe is blocked */}
+              {/* Fallback overlay when iframe is blocked after render */}
               {iframeBlocked && (
                 <div className="absolute inset-0 bg-white flex items-center justify-center px-6 text-center">
                   <div className="space-y-4 max-w-md">
@@ -228,8 +262,8 @@ export function DocumentPane({
                         Inline weergave geblokkeerd
                       </p>
                       <p className="text-xs text-slate-500">
-                        Microsoft SharePoint/OneDrive blokkeert vaak het embedden van documenten. 
-                        Gebruik de knop hieronder om het document in een nieuw tabblad te openen.
+                        Microsoft staat niet toe dat deze pagina in de app wordt weergegeven. 
+                        Open het document in een nieuw tabblad.
                       </p>
                     </div>
                     <div className="flex flex-col gap-2 items-center">
@@ -239,35 +273,6 @@ export function DocumentPane({
                       >
                         📄 Open in nieuw tabblad
                       </button>
-                      {fileHint !== 'pdf' && (
-                        <button
-                          onClick={() => {
-                            if (currentDocUrl && isTrusted) {
-                              // Only construct Office Online viewer URL if the original URL is trusted
-                              // Check if it's already an office.com URL using proper hostname validation
-                              try {
-                                const urlObj = new URL(currentDocUrl);
-                                const hostname = urlObj.hostname.toLowerCase();
-                                
-                                // Safe to use includes/endsWith here because currentDocUrl is already validated by isTrusted
-                                const isOfficeUrl = isHostnameOrSubdomain(hostname, 'office.com') ||
-                                                   isHostnameOrSubdomain(hostname, 'officeapps.live.com');
-                                
-                                const officeUrl = isOfficeUrl
-                                  ? currentDocUrl 
-                                  : `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(currentDocUrl)}`;
-                                window.open(officeUrl, '_blank', 'noopener,noreferrer');
-                              } catch (e) {
-                                // Invalid URL, do nothing
-                                console.error('Invalid URL for Office Online viewer:', e);
-                              }
-                            }
-                          }}
-                          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
-                        >
-                          Open in Office Online
-                        </button>
-                      )}
                     </div>
                     <p className="text-[10px] text-slate-400 mt-2">
                       {currentDocUrl}

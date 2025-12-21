@@ -15,6 +15,43 @@ export function isHostnameOrSubdomain(hostname: string, domain: string): boolean
 }
 
 /**
+ * Check if a hostname is known to block iframe embedding
+ * These hosts typically redirect to login or refuse iframe connections
+ * @param hostname The hostname to check (should be lowercase)
+ * @returns true if the hostname is known to block iframe embedding
+ */
+export function isBlockedIframeHost(hostname: string): boolean {
+  if (!hostname) return false;
+  
+  const blockedDomains = [
+    'login.microsoftonline.com',
+    'login.live.com',
+    'account.live.com',
+    'microsoftonline.com', // Blocks most iframe embeds
+    'msauth.net',
+    'msauthimages.net',
+  ];
+  
+  return blockedDomains.some(domain => isHostnameOrSubdomain(hostname, domain));
+}
+
+/**
+ * Safely extract hostname from a URL
+ * @param url The URL to parse
+ * @returns The hostname in lowercase, or null if invalid
+ */
+export function safeHostname(url: string | null | undefined): string | null {
+  if (!url) return null;
+  
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname.toLowerCase();
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
  * Check if a URL belongs to a trusted Microsoft domain for document viewing
  * @param url The URL to validate
  * @returns true if the URL is from a trusted Microsoft domain
@@ -89,12 +126,24 @@ export function getFileHint(url: string | null | undefined): "pdf" | "doc" | "pp
 /**
  * Generate a viewer URL for Office documents
  * For SharePoint/OneDrive links, try to use them directly
+ * Returns null if the URL would redirect to a blocked iframe host
  * @param url The original document URL
  * @param fileHint The type of file
- * @returns The URL to use in the iframe
+ * @returns The URL to use in the iframe, or null if embedding should not be attempted
  */
 export function getViewerUrl(url: string | null | undefined, fileHint: string): string | null {
   if (!url) return null;
+  
+  // Check if URL is trusted first
+  if (!isTrustedMicrosoftUrl(url)) {
+    return null;
+  }
+  
+  // Check if the URL itself points to a blocked host
+  const urlHostname = safeHostname(url);
+  if (urlHostname && isBlockedIframeHost(urlHostname)) {
+    return null;
+  }
   
   // For PDF, use the original URL directly
   if (fileHint === "pdf") {
@@ -113,11 +162,15 @@ export function getViewerUrl(url: string | null | undefined, fileHint: string): 
         isHostnameOrSubdomain(hostname, 'onedrive.live.com') ||
         url.includes('/_layouts/')) {
       // Already an Office viewer link, use it directly
+      // But make sure it doesn't point to a blocked host
+      if (isBlockedIframeHost(hostname)) {
+        return null;
+      }
       return url;
     }
   } catch (e) {
-    // Invalid URL, return as-is
-    return url;
+    // Invalid URL
+    return null;
   }
   
   // For other Office document links, use the original URL
