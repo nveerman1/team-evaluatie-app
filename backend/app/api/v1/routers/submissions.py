@@ -377,6 +377,10 @@ def list_submissions_for_assessment(
             ProjectTeamMember.project_team_id == team.id
         ).all()
         
+        # Skip teams without members or without a valid team number
+        if not members or not team.team_number:
+            continue
+        
         member_data = [
             {
                 "id": user.id,
