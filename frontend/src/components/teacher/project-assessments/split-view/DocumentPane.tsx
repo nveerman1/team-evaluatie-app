@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { isTrustedMicrosoftUrl, getFileHint, getViewerUrl, isHostnameOrSubdomain, safeHostname, isBlockedIframeHost } from '@/lib/document-viewer-utils';
+import { isTrustedMicrosoftUrl, getViewerUrl, shouldAttemptInlineEmbed, safeHostname } from '@/lib/document-viewer-utils';
 
 interface DocumentPaneProps {
   docWidth: number;
@@ -41,21 +41,15 @@ export function DocumentPane({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const watchdogTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Determine if URL is trusted and can be embedded
+  // Determine if inline embedding should be attempted
   const isTrusted = isTrustedMicrosoftUrl(currentDocUrl);
-  const fileHint = getFileHint(currentDocUrl);
-  const viewerUrl = getViewerUrl(currentDocUrl, fileHint);
-  const viewerHost = safeHostname(viewerUrl);
-  const shouldEmbed = Boolean(viewerUrl) && viewerHost && !isBlockedIframeHost(viewerHost);
+  const embedDecision = shouldAttemptInlineEmbed(currentDocUrl);
+  const viewerUrl = getViewerUrl(currentDocUrl);
 
   // Reset iframe blocked state when document URL changes
   useEffect(() => {
-    // If we know upfront that embedding won't work, set blocked immediately
-    if (hasLink && currentDocUrl && !shouldEmbed) {
-      setIframeBlocked(true);
-    } else {
-      setIframeBlocked(false);
-    }
+    // Clear blocked state when URL changes
+    setIframeBlocked(false);
     
     // Clear any existing watchdog timer
     if (watchdogTimerRef.current) {
@@ -63,10 +57,9 @@ export function DocumentPane({
     }
     
     // Set up a watchdog timer to detect if iframe doesn't load (only if we're trying to embed)
-    if (hasLink && currentDocUrl && shouldEmbed) {
+    if (hasLink && currentDocUrl && embedDecision.ok && viewerUrl) {
       watchdogTimerRef.current = setTimeout(() => {
-        // If iframe hasn't loaded after timeout, mark as potentially blocked
-        // This will be overridden if onLoad fires
+        // If iframe hasn't loaded after timeout, mark as blocked
         setIframeBlocked(true);
       }, 2000); // 2 seconds timeout
     }
@@ -76,7 +69,7 @@ export function DocumentPane({
         clearTimeout(watchdogTimerRef.current);
       }
     };
-  }, [currentDocUrl, hasLink, shouldEmbed]);
+  }, [currentDocUrl, hasLink, embedDecision.ok, viewerUrl]);
 
   // Handle iframe load success
   const handleIframeLoad = () => {
@@ -210,39 +203,12 @@ export function DocumentPane({
                 </button>
               </div>
             </div>
-          ) : !shouldEmbed ? (
-            // Show fallback immediately if we know embedding won't work
-            <div className="h-full flex items-center justify-center px-6 text-center">
-              <div className="space-y-4 max-w-md">
-                <div className="text-3xl">🔒</div>
-                <div>
-                  <p className="text-sm font-medium text-slate-700 mb-1">
-                    Inline weergave geblokkeerd
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    Microsoft staat niet toe dat deze pagina in de app wordt weergegeven. 
-                    Open het document in een nieuw tabblad.
-                  </p>
-                </div>
-                <div className="flex flex-col gap-2 items-center">
-                  <button
-                    onClick={onOpenInTab}
-                    className="rounded-lg border border-emerald-600 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 shadow-sm"
-                  >
-                    📄 Open in nieuw tabblad
-                  </button>
-                </div>
-                <p className="text-[10px] text-slate-400 mt-2">
-                  {currentDocUrl}
-                </p>
-              </div>
-            </div>
-          ) : (
+          ) : embedDecision.ok && viewerUrl ? (
             <>
-              {/* Iframe viewer - only render if shouldEmbed is true */}
+              {/* Iframe viewer - only render for direct PDF links */}
               <iframe
                 ref={iframeRef}
-                src={viewerUrl || ''}
+                src={viewerUrl}
                 className="w-full h-full"
                 sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-downloads"
                 allow="clipboard-read; clipboard-write"
@@ -256,13 +222,13 @@ export function DocumentPane({
               {iframeBlocked && (
                 <div className="absolute inset-0 bg-white flex items-center justify-center px-6 text-center">
                   <div className="space-y-4 max-w-md">
-                    <div className="text-3xl">🔒</div>
+                    <div className="text-3xl">📄</div>
                     <div>
                       <p className="text-sm font-medium text-slate-700 mb-1">
-                        Inline weergave geblokkeerd
+                        Open in tab nodig
                       </p>
                       <p className="text-xs text-slate-500">
-                        Microsoft staat niet toe dat deze pagina in de app wordt weergegeven. 
+                        Deze Microsoft-link kan niet veilig in de app worden getoond. 
                         Open het document in een nieuw tabblad.
                       </p>
                     </div>
@@ -281,6 +247,33 @@ export function DocumentPane({
                 </div>
               )}
             </>
+          ) : (
+            // Show fallback immediately for SharePoint/OneDrive/Office links
+            <div className="h-full flex items-center justify-center px-6 text-center">
+              <div className="space-y-4 max-w-md">
+                <div className="text-3xl">📄</div>
+                <div>
+                  <p className="text-sm font-medium text-slate-700 mb-1">
+                    Open in tab nodig
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Deze Microsoft-link kan niet veilig in de app worden getoond. 
+                    Open het document in een nieuw tabblad.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2 items-center">
+                  <button
+                    onClick={onOpenInTab}
+                    className="rounded-lg border border-emerald-600 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 shadow-sm"
+                  >
+                    📄 Open in nieuw tabblad
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-2">
+                  {currentDocUrl}
+                </p>
+              </div>
+            </div>
           )}
         </div>
       </div>

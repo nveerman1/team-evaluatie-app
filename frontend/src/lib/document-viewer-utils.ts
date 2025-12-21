@@ -124,56 +124,131 @@ export function getFileHint(url: string | null | undefined): "pdf" | "doc" | "pp
 }
 
 /**
- * Generate a viewer URL for Office documents
- * For SharePoint/OneDrive links, try to use them directly
- * Returns null if the URL would redirect to a blocked iframe host
- * @param url The original document URL
- * @param fileHint The type of file
- * @returns The URL to use in the iframe, or null if embedding should not be attempted
+ * Check if a URL is likely to redirect to login/auth pages
+ * These are typically SharePoint/OneDrive/Office web app links that require authentication
+ * @param url The URL to check
+ * @returns true if the URL is likely to redirect to login
  */
-export function getViewerUrl(url: string | null | undefined, fileHint: string): string | null {
-  if (!url) return null;
+export function isLikelyToRedirectToLogin(url: string | null | undefined): boolean {
+  if (!url) return false;
   
-  // Check if URL is trusted first
-  if (!isTrustedMicrosoftUrl(url)) {
-    return null;
-  }
-  
-  // Check if the URL itself points to a blocked host
-  const urlHostname = safeHostname(url);
-  if (urlHostname && isBlockedIframeHost(urlHostname)) {
-    return null;
-  }
-  
-  // For PDF, use the original URL directly
-  if (fileHint === "pdf") {
-    return url;
-  }
-  
-  // For Office documents, check if it's already an Office Online link
   try {
     const urlObj = new URL(url);
     const hostname = urlObj.hostname.toLowerCase();
+    const urlLower = url.toLowerCase();
     
-    // Check if it's an Office Online URL using proper hostname validation
-    // Note: This URL should already be validated by isTrustedMicrosoftUrl before calling this function
-    if (isHostnameOrSubdomain(hostname, 'office.com') || 
-        isHostnameOrSubdomain(hostname, 'officeapps.live.com') ||
+    // Check if hostname is a Microsoft web app domain
+    if (isHostnameOrSubdomain(hostname, 'sharepoint.com') ||
+        isHostnameOrSubdomain(hostname, '1drv.ms') ||
         isHostnameOrSubdomain(hostname, 'onedrive.live.com') ||
-        url.includes('/_layouts/')) {
-      // Already an Office viewer link, use it directly
-      // But make sure it doesn't point to a blocked host
-      if (isBlockedIframeHost(hostname)) {
-        return null;
-      }
-      return url;
+        isHostnameOrSubdomain(hostname, 'office.com')) {
+      
+      // Check for typical sharing/web app query parameters
+      const redirectIndicators = [
+        '?e=',
+        '?share=',
+        'guestaccess',
+        'sourcedoc',
+        'web=1',
+        'download=0',
+        ':b:/', // SharePoint file link pattern
+        '/_layouts/',
+      ];
+      
+      return redirectIndicators.some(indicator => urlLower.includes(indicator));
     }
+    
+    return false;
   } catch (e) {
-    // Invalid URL
-    return null;
+    return false;
+  }
+}
+
+/**
+ * Check if a URL is a direct PDF link (not a web app link)
+ * @param url The URL to check
+ * @returns true if the URL is a direct PDF link that can be embedded
+ */
+export function isDirectPdfUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.toLowerCase();
+    const pathname = urlObj.pathname.toLowerCase();
+    const urlLower = url.toLowerCase();
+    
+    // Must end with .pdf
+    if (!pathname.endsWith('.pdf')) {
+      return false;
+    }
+    
+    // If it's from SharePoint/OneDrive/1drv.ms, only allow if it has explicit download parameter
+    if (isHostnameOrSubdomain(hostname, 'sharepoint.com') ||
+        isHostnameOrSubdomain(hostname, 'onedrive.live.com') ||
+        isHostnameOrSubdomain(hostname, '1drv.ms')) {
+      // Only allow if it has download=1 or similar direct download indicator
+      return urlLower.includes('download=1') || urlLower.includes('?download=1');
+    }
+    
+    // For other domains, allow direct PDF links
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Determine if inline embedding should be attempted for a URL
+ * @param url The URL to check
+ * @returns Object with ok boolean and optional reason string
+ */
+export function shouldAttemptInlineEmbed(url: string | null | undefined): { ok: boolean; reason?: string } {
+  if (!url) {
+    return { ok: false, reason: 'no-url' };
   }
   
-  // For other Office document links, use the original URL
-  // SharePoint/OneDrive will handle the viewing, though may block embedding
-  return url;
+  // Check if URL is trusted
+  if (!isTrustedMicrosoftUrl(url)) {
+    return { ok: false, reason: 'untrusted' };
+  }
+  
+  // Check if hostname is blocked
+  const hostname = safeHostname(url);
+  if (hostname && isBlockedIframeHost(hostname)) {
+    return { ok: false, reason: 'blocked-host' };
+  }
+  
+  // Check if likely to redirect to login
+  if (isLikelyToRedirectToLogin(url)) {
+    return { ok: false, reason: 'microsoft-web-link' };
+  }
+  
+  // Check if it's a direct PDF URL
+  if (isDirectPdfUrl(url)) {
+    return { ok: true };
+  }
+  
+  // For all other cases (Office docs, etc.), don't attempt embedding
+  return { ok: false, reason: 'not-direct-pdf' };
+}
+
+/**
+ * Generate a viewer URL for Office documents
+ * For v1, only returns URL for direct PDF links that can be safely embedded
+ * @param url The original document URL
+ * @returns The URL to use in the iframe, or null if embedding should not be attempted
+ */
+export function getViewerUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  
+  const decision = shouldAttemptInlineEmbed(url);
+  
+  // Only return URL if we should attempt embedding (direct PDF)
+  if (decision.ok) {
+    return url;
+  }
+  
+  // For all other cases, return null (will show fallback)
+  return null;
 }
