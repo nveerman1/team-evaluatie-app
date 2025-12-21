@@ -367,7 +367,7 @@ def list_submissions_for_assessment(
     
     # Build result with all teams and all doc types
     result_items = []
-    doc_types = ["report", "slides", "attachment"]
+    doc_types = ["report", "slides"]
     
     for team in all_teams:
         # Get team members
