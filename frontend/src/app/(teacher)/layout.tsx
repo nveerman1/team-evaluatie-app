@@ -17,6 +17,7 @@ import {
   FileStack,
   BookOpen,
   UsersRound,
+  Clock,
 } from "lucide-react";
 import { createContext, useContext, useState } from "react";
 
@@ -75,6 +76,7 @@ export default function TeacherLayout({
                 <NavItem href="/teacher/competencies" label="Competentiemonitor" icon={BarChart3} />
                 <NavItem href="/teacher/project-notes" label="Projectaantekeningen" icon={FileEdit} />
                 <NavItem href="/teacher/clients" label="Opdrachtgevers" icon={Building2} />
+                <NavItem href="/teacher/3de-blok" label="3de Blok (RFID)" icon={Clock} />
               </div>
             </div>
 
