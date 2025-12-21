@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, Users, TrendingUp } from "lucide-react";
+import { Calendar, Clock, Users, TrendingUp, List, MapPin, ArrowRight } from "lucide-react";
 
 interface OpenSession {
   id: number;
@@ -106,6 +107,43 @@ export default function AttendanceDashboardPage() {
             </div>
           </Card>
         </div>
+      </div>
+
+      {/* Quick Links */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Link href="/teacher/3de-blok/events">
+          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-100 rounded-lg">
+                  <List className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">Alle gebeurtenissen</h3>
+                  <p className="text-sm text-gray-600">Bekijk, filter en beheer alle check-ins</p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-gray-400" />
+            </div>
+          </Card>
+        </Link>
+
+        <Link href="/teacher/3de-blok/extern">
+          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-purple-100 rounded-lg">
+                  <MapPin className="h-6 w-6 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">Extern werk</h3>
+                  <p className="text-sm text-gray-600">Goedkeuren of afwijzen van externe registraties</p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-gray-400" />
+            </div>
+          </Card>
+        </Link>
       </div>
 
       {error && (
