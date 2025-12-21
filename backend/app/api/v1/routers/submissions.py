@@ -318,6 +318,8 @@ def list_submissions_for_assessment(
     """
     List all submissions for an assessment (teacher view).
     Supports filtering by doc_type, status, and missing_only.
+    Automatically generates virtual "missing" submissions for teams without submission records.
+    Returns one row per team per doc_type (report, slides, attachment).
     """
     # Permission check
     assessment = db.query(ProjectAssessment).filter(
@@ -341,38 +343,43 @@ def list_submissions_for_assessment(
             detail="Geen toegang tot deze inleveringen"
         )
     
-    # Build query
-    query = db.query(AssignmentSubmission).filter(
+    # Check if assessment has a project
+    if not assessment.project_id:
+        return SubmissionListResponse(items=[], total=0)
+    
+    # Get all teams for this project
+    all_teams = db.query(ProjectTeam).filter(
+        ProjectTeam.project_id == assessment.project_id,
+        ProjectTeam.school_id == current_user.school_id,
+    ).all()
+    
+    # Get existing submissions
+    existing_submissions = db.query(AssignmentSubmission).filter(
         AssignmentSubmission.project_assessment_id == assessment_id,
         AssignmentSubmission.school_id == current_user.school_id,
-    )
+    ).all()
     
-    if doc_type:
-        query = query.filter(AssignmentSubmission.doc_type == doc_type)
+    # Create a map of (team_id, doc_type) to submission for multiple submissions per team
+    submission_map = {}
+    for sub in existing_submissions:
+        key = (sub.project_team_id, sub.doc_type)
+        submission_map[key] = sub
     
-    if status_filter:
-        query = query.filter(AssignmentSubmission.status == status_filter)
-    
-    if missing_only:
-        query = query.filter(AssignmentSubmission.status == "missing")
-    
-    submissions = query.all()
-    
-    # Enrich with team data
+    # Build result with all teams and all doc types
     result_items = []
-    for sub in submissions:
-        team = db.query(ProjectTeam).filter(
-            ProjectTeam.id == sub.project_team_id
-        ).first()
-        
-        if not team:
-            continue
-        
+    doc_types = ["report", "slides"]
+    
+    for team in all_teams:
+        # Get team members
         members = db.query(ProjectTeamMember, User).join(
             User, ProjectTeamMember.user_id == User.id
         ).filter(
             ProjectTeamMember.project_team_id == team.id
         ).all()
+        
+        # Skip teams without members or without a valid team number
+        if not members or not team.team_number:
+            continue
         
         member_data = [
             {
@@ -383,14 +390,51 @@ def list_submissions_for_assessment(
             for _, user in members
         ]
         
-        result_items.append(
-            SubmissionWithTeamInfo(
-                submission=SubmissionOut.model_validate(sub),
-                team_number=team.team_number,
-                team_name=team.display_name_at_time,
-                members=member_data,
+        # Create a submission entry for each doc_type
+        for dt in doc_types:
+            key = (team.id, dt)
+            
+            # Get existing submission or create virtual one
+            if key in submission_map:
+                submission = submission_map[key]
+            else:
+                # Create virtual "missing" submission on-the-fly
+                # Use negative ID based on team.id and doc_type to ensure uniqueness
+                virtual_id = -(team.id * 1000 + doc_types.index(dt))
+                submission = AssignmentSubmission(
+                    id=virtual_id,  # Unique virtual ID
+                    school_id=current_user.school_id,
+                    project_assessment_id=assessment_id,
+                    project_team_id=team.id,
+                    doc_type=dt,
+                    url=None,
+                    status="missing",
+                    submitted_at=None,
+                    submitted_by_user_id=None,
+                    last_checked_at=None,
+                    last_checked_by_user_id=None,
+                    created_at=datetime.utcnow(),
+                    updated_at=datetime.utcnow(),
+                )
+            
+            # Apply filters
+            if doc_type and submission.status != "missing" and submission.doc_type != doc_type:
+                continue
+            
+            if status_filter and submission.status != status_filter:
+                continue
+            
+            if missing_only and submission.status != "missing":
+                continue
+            
+            result_items.append(
+                SubmissionWithTeamInfo(
+                    submission=SubmissionOut.model_validate(submission),
+                    team_number=team.team_number,
+                    team_name=team.display_name_at_time,
+                    members=member_data,
+                )
             )
-        )
     
     return SubmissionListResponse(
         items=result_items,
