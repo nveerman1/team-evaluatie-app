@@ -209,24 +209,24 @@ export default function RFIDTab() {
             onClick={() => handleSort('name')}
             className="col-span-5 flex items-center gap-1 text-left hover:text-slate-900 transition-colors"
           >
-            <span>Leerling</span>
+            <span>LEERLING</span>
             {getSortIcon('name')}
           </button>
           <button
             onClick={() => handleSort('className')}
             className="col-span-2 flex items-center gap-1 text-left hover:text-slate-900 transition-colors"
           >
-            <span>Klas</span>
+            <span>KLAS</span>
             {getSortIcon('className')}
           </button>
           <button
             onClick={() => handleSort('cardCount')}
             className="col-span-2 flex items-center gap-1 text-left hover:text-slate-900 transition-colors"
           >
-            <span>Kaarten</span>
+            <span>KAARTEN</span>
             {getSortIcon('cardCount')}
           </button>
-          <div className="col-span-3 text-right">Acties</div>
+          <div className="col-span-3 text-right">ACTIES</div>
         </div>
 
         {/* Table body */}
