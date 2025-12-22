@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, Suspense } from "react";
 import { useStudentDashboard, useCurrentUser, useStudentOverview } from "@/hooks";
 import { useStudentProjectAssessments } from "@/hooks/useStudentProjectAssessments";
 import { usePeerFeedbackResults } from "@/hooks/usePeerFeedbackResults";
@@ -15,9 +15,11 @@ import { ProjectAssessmentDashboardCard } from "@/components/student/dashboard/P
 import { SubmissionDashboardCard } from "@/components/student/dashboard/SubmissionDashboardCard";
 import { OverviewTab } from "@/components/student/dashboard/OverviewTab";
 import { CompetencyScanDashboardTab } from "@/components/student/dashboard/CompetencyScanDashboardTab";
+import { AttendanceTab } from "@/components/student/dashboard/AttendanceTab";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
-export default function StudentDashboard() {
+function StudentDashboardContent() {
   const { dashboard, loading, error } = useStudentDashboard();
   const { user, loading: userLoading } = useCurrentUser();
   const {
@@ -27,10 +29,19 @@ export default function StudentDashboard() {
   } = useStudentProjectAssessments();
   const { items: peerResults } = usePeerFeedbackResults();
   const { data: overviewData, isLoading: overviewLoading } = useStudentOverview();
+  const searchParams = useSearchParams();
 
-  // Tab state
-  const [activeTab, setActiveTab] = useState<string>("evaluaties");
+  // Tab state - check URL query parameter
+  const tabFromUrl = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<string>(tabFromUrl || "evaluaties");
   const [searchQuery, setSearchQuery] = useState<string>("");
+
+  // Update active tab when URL changes
+  useMemo(() => {
+    if (tabFromUrl && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
 
   // Memoize open evaluations to avoid changing on every render
   const openEvaluations = useMemo(() => dashboard?.openEvaluations || [], [dashboard?.openEvaluations]);
@@ -103,24 +114,6 @@ export default function StudentDashboard() {
           </div>
         )}
 
-        {/* 3de Blok Quick Link */}
-        <Link href="/student/3de-blok">
-          <Card className="mb-6 p-4 hover:shadow-lg transition-shadow cursor-pointer border-2 border-blue-200 bg-blue-50">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-100 rounded-lg">
-                  <Clock className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg">3de Blok - Aanwezigheid</h3>
-                  <p className="text-sm text-gray-600">Bekijk je uren en registreer extern werk</p>
-                </div>
-              </div>
-              <span className="text-blue-600">→</span>
-            </div>
-          </Card>
-        </Link>
-
         {/* Tabs */}
         <div className="mt-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -155,6 +148,12 @@ export default function StudentDashboard() {
                   className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
                 >
                   <BarChart3 className="mr-2 h-4 w-4" /> Overzicht
+                </TabsTrigger>
+                <TabsTrigger
+                  value="attendance"
+                  className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
+                >
+                  <Clock className="mr-2 h-4 w-4" /> 3de Blok
                 </TabsTrigger>
               </TabsList>
 
@@ -304,9 +303,22 @@ export default function StudentDashboard() {
                 />
               )}
             </TabsContent>
+
+            {/* ATTENDANCE / 3DE BLOK */}
+            <TabsContent value="attendance" className="mt-6 space-y-4">
+              <AttendanceTab searchQuery={searchQuery} />
+            </TabsContent>
           </Tabs>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function StudentDashboard() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <StudentDashboardContent />
+    </Suspense>
   );
 }
