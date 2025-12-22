@@ -202,26 +202,26 @@ export default function RFIDTab() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border bg-background">
+      <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
         {/* Table header */}
-        <div className="grid grid-cols-12 border-b bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
+        <div className="grid grid-cols-12 border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600">
           <button
             onClick={() => handleSort('name')}
-            className="col-span-5 flex items-center gap-1 text-left hover:text-foreground transition-colors"
+            className="col-span-5 flex items-center gap-1 text-left hover:text-slate-900 transition-colors"
           >
             <span>Leerling</span>
             {getSortIcon('name')}
           </button>
           <button
             onClick={() => handleSort('className')}
-            className="col-span-2 flex items-center gap-1 text-left hover:text-foreground transition-colors"
+            className="col-span-2 flex items-center gap-1 text-left hover:text-slate-900 transition-colors"
           >
             <span>Klas</span>
             {getSortIcon('className')}
           </button>
           <button
             onClick={() => handleSort('cardCount')}
-            className="col-span-2 flex items-center gap-1 text-left hover:text-foreground transition-colors"
+            className="col-span-2 flex items-center gap-1 text-left hover:text-slate-900 transition-colors"
           >
             <span>Kaarten</span>
             {getSortIcon('cardCount')}
@@ -230,58 +230,55 @@ export default function RFIDTab() {
         </div>
 
         {/* Table body */}
-        <div className="divide-y">
+        <div className="divide-y divide-slate-200">
           {rows.map((row) => {
             const isOpen = openRowId === row.id;
-            const activeCards = row.cards.filter(c => c.is_active);
-            const primaryHint = activeCards.length > 0 ? activeCards[0].uid : (row.cards[0]?.uid ?? "—");
+            const primaryHint = getPrimaryCardHint(row.cards);
 
             return (
               <div key={row.id} className="group">
                 {/* Row */}
-                <button
-                  type="button"
+                <div
                   onClick={() => setOpenRowId(isOpen ? null : row.id)}
-                  className="grid w-full grid-cols-12 items-center px-3 py-2 text-left hover:bg-muted/30 focus:outline-none"
+                  className="grid w-full grid-cols-12 items-center px-3 py-2 cursor-pointer hover:bg-slate-50 transition-colors"
                 >
                   <div className="col-span-5 flex items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700">
                       {getInitials(row.name)}
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <div className="truncate text-sm font-medium">{row.name}</div>
+                        <div className="truncate text-sm font-medium text-slate-900">{row.name}</div>
                         {row.cards.length === 0 && (
-                          <Badge variant="outline" className="rounded-full text-[11px]">
+                          <Badge variant="outline" className="rounded-full text-[11px] border-slate-300 text-slate-600">
                             Geen kaart
                           </Badge>
                         )}
                       </div>
-                      <div className="truncate text-xs text-muted-foreground">{row.email}</div>
+                      <div className="truncate text-xs text-slate-500">{row.email}</div>
                     </div>
                   </div>
 
                   <div className="col-span-2">
                     {row.className ? (
-                      <Badge variant="secondary" className="rounded-full">{row.className}</Badge>
+                      <Badge variant="secondary" className="rounded-full bg-slate-100 text-slate-700">{row.className}</Badge>
                     ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
+                      <span className="text-xs text-slate-500">—</span>
                     )}
                   </div>
 
                   <div className="col-span-2">
-                    <div className="text-sm font-medium">{row.cards.length}</div>
-                    <div className="truncate text-xs text-muted-foreground">{primaryHint}</div>
+                    <div className="text-sm font-medium text-slate-900">{row.cards.length}</div>
+                    <div className="truncate text-xs text-slate-500">{primaryHint}</div>
                   </div>
 
-                  <div className="col-span-3 flex items-center justify-end gap-2">
+                  <div className="col-span-3 flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       className="h-8"
                       onClick={(e) => {
-                        e.preventDefault();
                         e.stopPropagation();
                         setAddDialogStudent(row);
                         setNewCardData({ uid: "", label: DEFAULT_CARD_LABEL });
@@ -290,30 +287,30 @@ export default function RFIDTab() {
                       <Plus className="mr-1.5 h-4 w-4" />
                       Kaart toevoegen
                     </Button>
-                    <div className="text-muted-foreground">
+                    <div className="text-slate-500">
                       {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </div>
                   </div>
-                </button>
+                </div>
 
                 {/* Expanded details */}
                 {isOpen && (
-                  <div className="bg-muted/10 px-3 py-3">
+                  <div className="bg-slate-50 px-3 py-3 border-t border-slate-200">
                     <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                      <div className="text-xs text-muted-foreground">
-                        Kaarten van <span className="font-medium text-foreground">{row.name}</span>
+                      <div className="text-xs text-slate-600">
+                        Kaarten van <span className="font-medium text-slate-900">{row.name}</span>
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-xs text-slate-500">
                         Tip: koppel meerdere kaarten (backup) en deactiveer i.p.v. verwijderen.
                       </div>
                     </div>
 
-                    <Separator className="my-3" />
+                    <Separator className="my-3 bg-slate-200" />
 
                     {row.cards.length === 0 ? (
-                      <div className="rounded-lg border bg-background p-3 text-sm">
-                        <div className="font-medium">Geen kaarten gekoppeld</div>
-                        <div className="text-xs text-muted-foreground">
+                      <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
+                        <div className="font-medium text-slate-900">Geen kaarten gekoppeld</div>
+                        <div className="text-xs text-slate-500">
                           Voeg een kaart toe om in-/uitchecken via RFID te activeren.
                         </div>
                       </div>
@@ -322,31 +319,31 @@ export default function RFIDTab() {
                         {row.cards.map((card) => (
                           <div
                             key={card.id}
-                            className="flex flex-col gap-2 rounded-lg border bg-background p-3 md:flex-row md:items-center md:justify-between"
+                            className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 md:flex-row md:items-center md:justify-between"
                           >
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
-                                <div className="font-mono text-sm font-semibold tracking-tight">{card.uid}</div>
+                                <div className="font-mono text-sm font-semibold tracking-tight text-slate-900">{card.uid}</div>
                                 {card.is_active ? (
-                                  <Badge className="gap-1 rounded-full px-2 py-0.5 text-[11px]">
+                                  <Badge className="gap-1 rounded-full px-2 py-0.5 text-[11px] bg-blue-600 text-white">
                                     <ShieldCheck className="h-3.5 w-3.5" />
                                     Actief
                                   </Badge>
                                 ) : (
-                                  <Badge variant="secondary" className="gap-1 rounded-full px-2 py-0.5 text-[11px]">
+                                  <Badge variant="secondary" className="gap-1 rounded-full px-2 py-0.5 text-[11px] bg-slate-100 text-slate-700">
                                     <ShieldX className="h-3.5 w-3.5" />
                                     Inactief
                                   </Badge>
                                 )}
                               </div>
-                              <div className="text-xs text-muted-foreground">{card.label || "—"}</div>
+                              <div className="text-xs text-slate-500">{card.label || "—"}</div>
                             </div>
 
                             <div className="flex items-center gap-2">
                               <Button 
                                 size="sm" 
                                 variant="secondary" 
-                                className="h-8"
+                                className="h-8 bg-slate-100 hover:bg-slate-200 text-slate-700"
                                 onClick={() => handleToggleActive(card.id, card.is_active)}
                               >
                                 {card.is_active ? "Deactiveren" : "Activeren"}
@@ -354,7 +351,7 @@ export default function RFIDTab() {
                               <Button 
                                 size="icon" 
                                 variant="outline" 
-                                className="h-8 w-8" 
+                                className="h-8 w-8 border-slate-300" 
                                 title="Verwijderen"
                                 onClick={() => handleDeleteCard(card.id)}
                               >
@@ -373,8 +370,8 @@ export default function RFIDTab() {
 
           {rows.length === 0 && (
             <div className="px-3 py-10 text-center">
-              <div className="text-sm font-medium">Geen resultaten</div>
-              <div className="text-xs text-muted-foreground">Pas je zoekterm aan of wis de filter.</div>
+              <div className="text-sm font-medium text-slate-900">Geen resultaten</div>
+              <div className="text-xs text-slate-500">Pas je zoekterm aan of wis de filter.</div>
               <div className="mt-3">
                 <Button variant="secondary" onClick={() => setSearchQuery("")} disabled={!searchQuery.trim()}>
                   Wissen
