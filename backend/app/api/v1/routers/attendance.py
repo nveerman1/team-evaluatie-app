@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, aliased
 from sqlalchemy import func, and_, or_
 
 from app.api.v1.deps import get_db, get_current_user
-from app.infra.db.models import User, RFIDCard, AttendanceEvent, AttendanceAggregate
+from app.infra.db.models import User, RFIDCard, AttendanceEvent, AttendanceAggregate, Project, CourseEnrollment, Course
 from app.api.v1.schemas.attendance import (
     RFIDScanRequest,
     RFIDScanResponse,
@@ -31,6 +31,22 @@ from app.core.rbac import require_role
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/attendance", tags=["attendance"])
+
+
+# ============ Helper Functions ============
+
+def apply_project_date_filter(query, project: Project):
+    """
+    Apply project date range filter to an attendance query.
+    Filters events where check_in falls within project start and end dates.
+    """
+    if project.start_date:
+        query = query.filter(AttendanceEvent.check_in >= project.start_date)
+    if project.end_date:
+        # Filter events before the start of the next day
+        next_day = project.end_date + timedelta(days=1)
+        query = query.filter(AttendanceEvent.check_in < next_day)
+    return query
 
 
 # ============ RFID Scan Endpoint ============
@@ -705,11 +721,14 @@ def export_attendance(
 def get_attendance_overview(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    class_name: Optional[str] = Query(None),
+    course_id: Optional[int] = Query(None),
+    project_id: Optional[int] = Query(None),
 ):
     """
     Get attendance overview for all students (teacher/admin only)
     Returns totals per student
+    When project_id is provided, only counts events within the project's date range
+    When course_id is provided, filters to students enrolled in that course
     """
     if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(
@@ -717,22 +736,47 @@ def get_attendance_overview(
             detail="Only teachers and admins can view overview"
         )
     
-    # Get all students in school
-    query = db.query(User).filter(
-        User.school_id == current_user.school_id,
-        User.role == "student",
-        User.archived.is_(False)
-    )
+    # If project_id is provided, get project details for date filtering
+    project = None
+    if project_id:
+        project = db.query(Project).filter(
+            Project.id == project_id,
+            Project.school_id == current_user.school_id
+        ).first()
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found"
+            )
     
-    if class_name:
-        query = query.filter(User.class_name == class_name)
+    # Get students based on course filter
+    if course_id:
+        # Get students enrolled in the specified course
+        student_ids = db.query(CourseEnrollment.student_id).filter(
+            CourseEnrollment.course_id == course_id,
+            CourseEnrollment.active == True
+        ).subquery()
+        
+        query = db.query(User).filter(
+            User.id.in_(student_ids),
+            User.school_id == current_user.school_id,
+            User.role == "student",
+            User.archived.is_(False)
+        )
+    else:
+        # Get all students in school
+        query = db.query(User).filter(
+            User.school_id == current_user.school_id,
+            User.role == "student",
+            User.archived.is_(False)
+        )
     
     students = query.all()
     
     result = []
     for student in students:
-        # Calculate school hours
-        school_seconds = db.query(
+        # Build base query for school hours with optional date filter
+        school_query = db.query(
             func.sum(
                 func.extract('epoch', AttendanceEvent.check_out - AttendanceEvent.check_in)
             )
@@ -740,10 +784,16 @@ def get_attendance_overview(
             AttendanceEvent.user_id == student.id,
             AttendanceEvent.is_external == False,
             AttendanceEvent.check_out.isnot(None)
-        ).scalar() or 0
+        )
         
-        # Calculate external approved hours
-        external_approved_seconds = db.query(
+        # Apply project date range filter if project is provided
+        if project:
+            school_query = apply_project_date_filter(school_query, project)
+        
+        school_seconds = school_query.scalar() or 0
+        
+        # Build base query for external approved hours with optional date filter
+        external_approved_query = db.query(
             func.sum(
                 func.extract('epoch', AttendanceEvent.check_out - AttendanceEvent.check_in)
             )
@@ -752,10 +802,16 @@ def get_attendance_overview(
             AttendanceEvent.is_external == True,
             AttendanceEvent.approval_status == "approved",
             AttendanceEvent.check_out.isnot(None)
-        ).scalar() or 0
+        )
         
-        # Calculate external pending hours
-        external_pending_seconds = db.query(
+        # Apply project date range filter if project is provided
+        if project:
+            external_approved_query = apply_project_date_filter(external_approved_query, project)
+        
+        external_approved_seconds = external_approved_query.scalar() or 0
+        
+        # Build base query for external pending hours with optional date filter
+        external_pending_query = db.query(
             func.sum(
                 func.extract('epoch', AttendanceEvent.check_out - AttendanceEvent.check_in)
             )
@@ -764,7 +820,13 @@ def get_attendance_overview(
             AttendanceEvent.is_external == True,
             AttendanceEvent.approval_status == "pending",
             AttendanceEvent.check_out.isnot(None)
-        ).scalar() or 0
+        )
+        
+        # Apply project date range filter if project is provided
+        if project:
+            external_pending_query = apply_project_date_filter(external_pending_query, project)
+        
+        external_pending_seconds = external_pending_query.scalar() or 0
         
         total_seconds = int(school_seconds) + int(external_approved_seconds)
         lesson_blocks = round(total_seconds / (75 * 60), 1)
@@ -850,3 +912,82 @@ def list_students_with_cards(
         })
     
     return result
+
+
+# ============ Courses and Projects for Filtering ============
+
+@router.get("/courses")
+def get_courses(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get active courses for the school (teacher/admin only)
+    Used for populating course dropdown in overview filter
+    """
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only teachers and admins can view courses"
+        )
+    
+    courses = db.query(Course).filter(
+        Course.school_id == current_user.school_id,
+        Course.is_active == True
+    ).order_by(Course.name).all()
+    
+    return [
+        {
+            "id": c.id,
+            "name": c.name,
+            "code": c.code,
+            "period": c.period,
+            "level": c.level,
+        }
+        for c in courses
+    ]
+
+
+@router.get("/projects-by-course")
+def get_projects_by_course(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    course_id: Optional[int] = Query(None),
+):
+    """
+    Get projects for dropdown (teacher/admin only)
+    Returns projects with various statuses including concept
+    """
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only teachers and admins can view projects"
+        )
+    
+    # Get projects including concept status
+    # We include "concept" because projects in development should be visible
+    query = db.query(Project).filter(
+        Project.school_id == current_user.school_id,
+        Project.status.in_(["concept", "active", "completed"])
+    )
+    
+    if course_id:
+        # Filter by course_id when provided
+        query = query.filter(Project.course_id == course_id)
+    
+    projects = query.order_by(Project.start_date.desc().nulls_last()).all()
+    
+    logger.info(f"Fetching projects for school {current_user.school_id}, course {course_id}: found {len(projects)} projects")
+    
+    return [
+        {
+            "id": p.id,
+            "title": p.title,
+            "class_name": p.class_name,
+            "course_id": p.course_id,
+            "start_date": p.start_date.isoformat() if p.start_date else None,
+            "end_date": p.end_date.isoformat() if p.end_date else None,
+            "status": p.status
+        }
+        for p in projects
+    ]
