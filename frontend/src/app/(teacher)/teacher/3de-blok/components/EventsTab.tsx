@@ -474,7 +474,11 @@ export default function EventsTab() {
                   type="datetime-local"
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
                   value={editCheckIn ? new Date(editCheckIn).toISOString().slice(0, 16) : ""}
-                  onChange={(e) => setEditCheckIn(new Date(e.target.value).toISOString())}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setEditCheckIn(new Date(e.target.value).toISOString());
+                    }
+                  }}
                 />
               </div>
               <div>
@@ -483,7 +487,13 @@ export default function EventsTab() {
                   type="datetime-local"
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
                   value={editCheckOut ? new Date(editCheckOut).toISOString().slice(0, 16) : ""}
-                  onChange={(e) => setEditCheckOut(e.target.value ? new Date(e.target.value).toISOString() : "")}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setEditCheckOut(new Date(e.target.value).toISOString());
+                    } else {
+                      setEditCheckOut("");
+                    }
+                  }}
                 />
               </div>
               <div className="flex gap-2 justify-end">
