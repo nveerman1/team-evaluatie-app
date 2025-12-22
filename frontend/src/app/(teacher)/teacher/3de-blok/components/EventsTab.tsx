@@ -47,9 +47,9 @@ function formatDuration(seconds: number | null): string {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   if (hours > 0) {
-    return \`\${hours}u \${minutes}m\`;
+    return `${hours}u ${minutes}m`;
   }
-  return \`\${minutes}m\`;
+  return `${minutes}m`;
 }
 
 export default function EventsTab() {
@@ -127,7 +127,7 @@ export default function EventsTab() {
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
     
-    if (!confirm(\`Weet je zeker dat je \${selectedIds.size} gebeurtenissen wilt verwijderen?\`)) {
+    if (!confirm(`Weet je zeker dat je \${selectedIds.size} gebeurtenissen wilt verwijderen?`)) {
       return;
     }
 
@@ -162,7 +162,7 @@ export default function EventsTab() {
       if (filters.start_date) params.append("start_date", new Date(filters.start_date).toISOString());
       if (filters.end_date) params.append("end_date", new Date(filters.end_date).toISOString());
       
-      const response = await fetch(\`/api/v1/attendance/export?\${params.toString()}\`, {
+      const response = await fetch(`/api/v1/attendance/export?\${params.toString()}`, {
         credentials: "include",
       });
       
@@ -174,7 +174,7 @@ export default function EventsTab() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = \`aanwezigheid_\${new Date().toISOString().split('T')[0]}.csv\`;
+      a.download = `aanwezigheid_\${new Date().toISOString().split('T')[0]}.csv`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);

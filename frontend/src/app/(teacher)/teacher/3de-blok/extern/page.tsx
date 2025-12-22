@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 export default function ExternRedirect() {
   const router = useRouter();
   
-  useEffect() => {
+  useEffect(() => {
     router.replace("/teacher/3de-blok");
   }, [router]);
   
