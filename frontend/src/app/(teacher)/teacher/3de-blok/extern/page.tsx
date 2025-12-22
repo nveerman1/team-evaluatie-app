@@ -132,66 +132,71 @@ export default function ExternalWorkPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Extern Werk - Beheer</h1>
-          <p className="text-gray-600 mt-1">
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">Extern Werk - Beheer</h1>
+          <p className="text-gray-600 mt-1 text-sm">
             Goedkeuren of afwijzen van externe werk registraties
           </p>
-        </div>
-        {selectedIds.size > 0 && (
+        </header>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      {selectedIds.size > 0 && (
+        <div className="flex justify-end">
           <Button onClick={handleBulkApprove} className="bg-green-600 hover:bg-green-700">
             <Check className="h-4 w-4 mr-2" />
             Goedkeuren geselecteerde ({selectedIds.size})
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-red-50 border border-gray-200/80 rounded-xl p-4">
           <p className="text-red-700">{error}</p>
         </div>
       )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-4">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
           <div className="flex items-center gap-3">
             <AlertCircle className="h-8 w-8 text-yellow-600" />
             <div>
               <p className="text-sm text-gray-600">In afwachting</p>
-              <p className="text-2xl font-bold">{pendingCount}</p>
+              <p className="text-2xl font-semibold">{pendingCount}</p>
             </div>
           </div>
-        </Card>
-        <Card className="p-4">
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
           <div className="flex items-center gap-3">
             <CheckCircle className="h-8 w-8 text-green-600" />
             <div>
               <p className="text-sm text-gray-600">Goedgekeurd</p>
-              <p className="text-2xl font-bold">
+              <p className="text-2xl font-semibold">
                 {events.filter(e => e.approval_status === "approved").length}
               </p>
             </div>
           </div>
-        </Card>
-        <Card className="p-4">
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
           <div className="flex items-center gap-3">
             <XCircle className="h-8 w-8 text-red-600" />
             <div>
               <p className="text-sm text-gray-600">Afgewezen</p>
-              <p className="text-2xl font-bold">
+              <p className="text-2xl font-semibold">
                 {events.filter(e => e.approval_status === "rejected").length}
               </p>
             </div>
           </div>
-        </Card>
+        </div>
       </div>
 
       {/* Filters */}
-      <Card className="p-4">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
         <div className="flex items-center gap-2 mb-4">
           <Filter className="h-5 w-5 text-gray-600" />
           <h2 className="text-lg font-semibold">Filters</h2>
@@ -215,19 +220,19 @@ export default function ExternalWorkPage() {
             className="max-w-xs"
           />
         </div>
-      </Card>
+      </div>
 
       {/* Events List */}
       <div className="space-y-4">
         {events.length === 0 ? (
-          <Card className="p-12 text-center">
+          <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-12 text-center">
             <MapPin className="h-16 w-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-600">Geen extern werk gevonden</h3>
             <p className="text-gray-500 mt-2">Er zijn geen registraties met de huidige filters</p>
-          </Card>
+          </div>
         ) : (
           events.map((event) => (
-            <Card key={event.id} className="p-4">
+            <div key={event.id} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-3">
@@ -315,10 +320,11 @@ export default function ExternalWorkPage() {
                   </div>
                 )}
               </div>
-            </Card>
+            </div>
           ))
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

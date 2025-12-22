@@ -84,33 +84,37 @@ export default function AttendanceDashboardPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">3de Blok - Aanwezigheid</h1>
-          <p className="text-gray-600 mt-1">Real-time overzicht van aanwezige studenten</p>
-        </div>
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">3de Blok - Aanwezigheid</h1>
+          <p className="text-gray-600 mt-1 text-sm">
+            Real-time overzicht van aanwezige studenten
+          </p>
+        </header>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      {/* Stats Card */}
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
         <div className="flex items-center gap-4">
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <Users className="h-8 w-8 text-green-600" />
-              <div>
-                <p className="text-sm text-gray-600">Nu aanwezig</p>
-                <p className="text-2xl font-bold">{openSessions.length}</p>
-              </div>
-            </div>
-          </Card>
+          <Users className="h-8 w-8 text-green-600" />
+          <div>
+            <p className="text-sm text-gray-600">Nu aanwezig</p>
+            <p className="text-2xl font-semibold">{openSessions.length}</p>
+          </div>
         </div>
       </div>
 
       {/* Quick Links */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Link href="/teacher/3de-blok/events">
-          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
+          <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-100 rounded-lg">
+                <div className="p-3 bg-blue-100 rounded-xl">
                   <List className="h-6 w-6 text-blue-600" />
                 </div>
                 <div>
@@ -120,14 +124,14 @@ export default function AttendanceDashboardPage() {
               </div>
               <ArrowRight className="h-5 w-5 text-gray-400" />
             </div>
-          </Card>
+          </div>
         </Link>
 
         <Link href="/teacher/3de-blok/extern">
-          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
+          <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-purple-100 rounded-lg">
+                <div className="p-3 bg-purple-100 rounded-xl">
                   <MapPin className="h-6 w-6 text-purple-600" />
                 </div>
                 <div>
@@ -137,14 +141,14 @@ export default function AttendanceDashboardPage() {
               </div>
               <ArrowRight className="h-5 w-5 text-gray-400" />
             </div>
-          </Card>
+          </div>
         </Link>
 
         <Link href="/teacher/3de-blok/rfid">
-          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
+          <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-green-100 rounded-lg">
+                <div className="p-3 bg-green-100 rounded-xl">
                   <CreditCard className="h-6 w-6 text-green-600" />
                 </div>
                 <div>
@@ -154,14 +158,14 @@ export default function AttendanceDashboardPage() {
               </div>
               <ArrowRight className="h-5 w-5 text-gray-400" />
             </div>
-          </Card>
+          </div>
         </Link>
 
         <Link href="/teacher/3de-blok/overzicht">
-          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
+          <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-orange-100 rounded-lg">
+                <div className="p-3 bg-orange-100 rounded-xl">
                   <BarChart3 className="h-6 w-6 text-orange-600" />
                 </div>
                 <div>
@@ -171,18 +175,18 @@ export default function AttendanceDashboardPage() {
               </div>
               <ArrowRight className="h-5 w-5 text-gray-400" />
             </div>
-          </Card>
+          </div>
         </Link>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-red-50 border border-gray-200/80 rounded-xl p-4">
           <p className="text-red-700">{error}</p>
         </div>
       )}
 
       {/* Search */}
-      <Card className="p-4">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
         <div className="flex items-center gap-4">
           <Input
             type="text"
@@ -195,21 +199,21 @@ export default function AttendanceDashboardPage() {
             Vernieuwen
           </Button>
         </div>
-      </Card>
+      </div>
 
       {/* Presence List */}
       {filteredSessions.length === 0 ? (
-        <Card className="p-12 text-center">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-12 text-center">
           <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-gray-600">Niemand aanwezig</h3>
           <p className="text-gray-500 mt-2">Er zijn momenteel geen studenten ingecheckt</p>
-        </Card>
+        </div>
       ) : (
         <div className="space-y-6">
           {Object.entries(groupedByClass)
             .sort(([a], [b]) => a.localeCompare(b))
             .map(([className, sessions]) => (
-              <Card key={className} className="p-4">
+              <div key={className} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-semibold flex items-center gap-2">
                     <Badge variant="outline" className="text-base">
@@ -225,7 +229,7 @@ export default function AttendanceDashboardPage() {
                   {sessions.map((session) => (
                     <div
                       key={session.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
                     >
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
@@ -259,10 +263,11 @@ export default function AttendanceDashboardPage() {
                     </div>
                   ))}
                 </div>
-              </Card>
+              </div>
             ))}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

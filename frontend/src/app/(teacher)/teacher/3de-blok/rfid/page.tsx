@@ -122,25 +122,30 @@ export default function RFIDAdminPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">RFID Kaarten Beheer</h1>
-        <p className="text-gray-600 mt-1">
-          Koppel en beheer RFID kaarten voor studenten
-        </p>
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">RFID Kaarten Beheer</h1>
+          <p className="text-gray-600 mt-1 text-sm">
+            Koppel en beheer RFID kaarten voor studenten
+          </p>
+        </header>
       </div>
 
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-red-50 border border-gray-200/80 rounded-xl p-4">
           <p className="text-red-700">{error}</p>
         </div>
       )}
 
       {/* Info Card */}
-      <Card className="p-6 bg-blue-50 border-blue-200">
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
         <div className="flex items-start gap-4">
-          <div className="p-3 bg-blue-100 rounded-lg">
+          <div className="p-3 bg-blue-100 rounded-xl">
             <CreditCard className="h-6 w-6 text-blue-600" />
           </div>
           <div>
@@ -153,10 +158,10 @@ export default function RFIDAdminPage() {
             </ul>
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* Search */}
-      <Card className="p-4">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
         <div className="flex items-center gap-4">
           <Search className="h-5 w-5 text-gray-400" />
           <Input
@@ -167,21 +172,21 @@ export default function RFIDAdminPage() {
             className="flex-1"
           />
         </div>
-      </Card>
+      </div>
 
       {/* Students List */}
       <div className="space-y-4">
         {filteredStudents.length === 0 ? (
-          <Card className="p-12 text-center">
+          <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-12 text-center">
             <User className="h-16 w-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-600">Geen studenten gevonden</h3>
             <p className="text-gray-500 mt-2">
               {searchTerm ? "Geen studenten met deze zoekopdracht" : "Er zijn nog geen studenten"}
             </p>
-          </Card>
+          </div>
         ) : (
           filteredStudents.map((student) => (
-            <Card key={student.user_id} className="p-4">
+            <div key={student.user_id} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
@@ -211,7 +216,7 @@ export default function RFIDAdminPage() {
 
               {/* Add Card Form */}
               {showAddForm === student.user_id && (
-                <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="mb-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
                   <h4 className="font-medium mb-3">Nieuwe RFID kaart toevoegen</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
@@ -270,7 +275,7 @@ export default function RFIDAdminPage() {
                   {student.cards.map((card) => (
                     <div
                       key={card.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded border"
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-200"
                     >
                       <div className="flex items-center gap-3">
                         <CreditCard className={`h-5 w-5 ${card.is_active ? 'text-green-600' : 'text-gray-400'}`} />
@@ -313,10 +318,11 @@ export default function RFIDAdminPage() {
                   ))}
                 </div>
               )}
-            </Card>
+            </div>
           ))
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

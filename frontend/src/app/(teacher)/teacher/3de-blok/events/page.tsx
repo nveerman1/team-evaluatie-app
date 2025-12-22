@@ -202,37 +202,41 @@ export default function AttendanceEventsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Aanwezigheid - Alle gebeurtenissen</h1>
-          <p className="text-gray-600 mt-1">
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">Aanwezigheid - Alle gebeurtenissen</h1>
+          <p className="text-gray-600 mt-1 text-sm">
             {total} {total === 1 ? "gebeurtenis" : "gebeurtenissen"} gevonden
           </p>
-        </div>
-        <div className="flex gap-2">
-          {selectedIds.size > 0 && (
-            <Button onClick={handleBulkDelete} variant="outline" className="text-red-600">
-              <Trash2 className="h-4 w-4 mr-2" />
-              Verwijder geselecteerde ({selectedIds.size})
-            </Button>
-          )}
-          <Button variant="outline" onClick={handleExport}>
-            <Download className="h-4 w-4 mr-2" />
-            Exporteren
+        </header>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      {/* Actions Bar */}
+      <div className="flex gap-2 justify-end">
+        {selectedIds.size > 0 && (
+          <Button onClick={handleBulkDelete} variant="outline" className="text-red-600">
+            <Trash2 className="h-4 w-4 mr-2" />
+            Verwijder geselecteerde ({selectedIds.size})
           </Button>
-        </div>
+        )}
+        <Button variant="outline" onClick={handleExport}>
+          <Download className="h-4 w-4 mr-2" />
+          Exporteren
+        </Button>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-red-50 border border-gray-200/80 rounded-xl p-4">
           <p className="text-red-700">{error}</p>
         </div>
       )}
 
       {/* Filters */}
-      <Card className="p-4">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
         <div className="flex items-center gap-2 mb-4">
           <Filter className="h-5 w-5 text-gray-600" />
           <h2 className="text-lg font-semibold">Filters</h2>
@@ -285,14 +289,14 @@ export default function AttendanceEventsPage() {
             <option value="rejected">Afgewezen</option>
           </select>
         </div>
-      </Card>
+      </div>
 
       {/* Events Table */}
-      <Card className="p-4">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b">
+              <tr className="border-b border-gray-200">
                 <th className="text-left p-3">
                   <button onClick={handleSelectAll}>
                     {selectedIds.size === events.length && events.length > 0 ? (
@@ -320,7 +324,7 @@ export default function AttendanceEventsPage() {
                 </tr>
               ) : (
                 events.map((event) => (
-                  <tr key={event.id} className="border-b hover:bg-gray-50">
+                  <tr key={event.id} className="border-b border-gray-200 hover:bg-gray-50">
                     <td className="p-3">
                       <button onClick={() => handleSelectOne(event.id)}>
                         {selectedIds.has(event.id) ? (
@@ -418,7 +422,7 @@ export default function AttendanceEventsPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4 pt-4 border-t">
+          <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
             <div className="text-sm text-gray-600">
               Pagina {page} van {totalPages}
             </div>
@@ -440,7 +444,8 @@ export default function AttendanceEventsPage() {
             </div>
           </div>
         )}
-      </Card>
-    </div>
+      </div>
+      </div>
+    </>
   );
 }

@@ -76,60 +76,65 @@ export default function OverviewPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Aanwezigheid - Overzicht</h1>
-        <p className="text-gray-600 mt-1">
-          Totalen per student
-        </p>
+    <>
+      {/* Page Header */}
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200/70">
+        <header className="px-6 py-6 max-w-6xl mx-auto">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">Aanwezigheid - Overzicht</h1>
+          <p className="text-gray-600 mt-1 text-sm">
+            Totalen per student
+          </p>
+        </header>
       </div>
 
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-red-50 border border-gray-200/80 rounded-xl p-4">
           <p className="text-red-700">{error}</p>
         </div>
       )}
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-4">
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
           <div className="flex items-center gap-3">
             <BarChart3 className="h-8 w-8 text-blue-600" />
             <div>
               <p className="text-sm text-gray-600">Totaal studenten</p>
-              <p className="text-2xl font-bold">{students.length}</p>
+              <p className="text-2xl font-semibold">{students.length}</p>
             </div>
           </div>
-        </Card>
-        <Card className="p-4">
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
           <div className="flex items-center gap-3">
             <TrendingUp className="h-8 w-8 text-green-600" />
             <div>
               <p className="text-sm text-gray-600">Gemiddeld lesblokken</p>
-              <p className="text-2xl font-bold">
+              <p className="text-2xl font-semibold">
                 {students.length > 0
                   ? (students.reduce((sum, s) => sum + s.lesson_blocks, 0) / students.length).toFixed(1)
                   : "0"}
               </p>
             </div>
           </div>
-        </Card>
-        <Card className="p-4">
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
           <div className="flex items-center gap-3">
             <Award className="h-8 w-8 text-purple-600" />
             <div>
               <p className="text-sm text-gray-600">Meeste lesblokken</p>
-              <p className="text-2xl font-bold">
+              <p className="text-2xl font-semibold">
                 {students.length > 0 ? students[0].lesson_blocks : "0"}
               </p>
             </div>
           </div>
-        </Card>
+        </div>
       </div>
 
       {/* Filters */}
-      <Card className="p-4">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
         <div className="flex gap-4">
           <div className="flex items-center gap-4 flex-1">
             <Search className="h-5 w-5 text-gray-400" />
@@ -154,14 +159,14 @@ export default function OverviewPage() {
             ))}
           </select>
         </div>
-      </Card>
+      </div>
 
       {/* Students Table */}
-      <Card className="p-4">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b">
+              <tr className="border-b border-gray-200">
                 <th className="text-left p-3">Rang</th>
                 <th className="text-left p-3">Student</th>
                 <th className="text-left p-3">Klas</th>
@@ -180,7 +185,7 @@ export default function OverviewPage() {
                 </tr>
               ) : (
                 filteredStudents.map((student, index) => (
-                  <tr key={student.user_id} className="border-b hover:bg-gray-50">
+                  <tr key={student.user_id} className="border-b border-gray-200 hover:bg-gray-50">
                     <td className="p-3">
                       <div className="flex items-center gap-2">
                         {index < 3 ? (
@@ -229,7 +234,8 @@ export default function OverviewPage() {
             </tbody>
           </table>
         </div>
-      </Card>
-    </div>
+      </div>
+      </div>
+    </>
   );
 }
