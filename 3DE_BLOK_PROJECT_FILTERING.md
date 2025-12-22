@@ -8,21 +8,23 @@ This document explains how attendance events (both external and school) are link
 
 ### Database Structure
 
-Projects are primarily linked to **courses** (via `course_id`), not directly to classes. Students are enrolled in courses through the `course_enrollments` table:
+Projects are directly linked to **courses** (via `course_id`). Students are enrolled in courses through the `course_enrollments` table:
 
 ```sql
-projects:
-  - id
-  - course_id (FK to courses)
-  - class_name (optional, for reference)
-  - start_date
-  - end_date
-  - status
-  
 courses:
   - id
   - name
+  - code (e.g., "O&O", "XPLR")
   - school_id
+  - is_active
+  
+projects:
+  - id
+  - course_id (FK to courses)
+  - title
+  - start_date
+  - end_date
+  - status
   
 course_enrollments:
   - student_id (FK to users)
@@ -51,19 +53,18 @@ The current implementation uses **date-based filtering** because:
 
 ### Filtering Logic
 
-When a user selects a class + project combination in the Overview tab:
+When a user selects a course + project combination in the Overview tab:
 
-1. **Class Filter**: Filters students by `class_name`
+1. **Course Filter**: Filters students by course enrollment
 2. **Project Dropdown Population**: 
-   - Finds all students in the selected class
-   - Looks up which courses those students are enrolled in
-   - Returns projects linked to those courses
+   - Shows projects where `project.course_id` matches the selected course
 3. **Project Filter**: Filters attendance events by date range:
    - Events with `check_in >= project.start_date`
-   - Events with `check_in < end_of_day(project.end_date)`
+   - Events with `check_in < start_of_next_day(project.end_date)`
 
 This means:
-- Only projects from courses that class members are enrolled in appear in the dropdown
+- Only projects from the selected course appear in the dropdown
+- Only students enrolled in that course are shown
 - All school attendance events that occurred during the project period are counted
 - All external work events that were started during the project period are counted
 - Events are counted regardless of whether they have an explicit `project_id` link
@@ -111,30 +112,39 @@ def apply_project_date_filter(query, project: Project):
 
 This helper function is used three times to filter school, external approved, and external pending attendance queries.
 
-#### 2. New `/api/v1/attendance/projects-by-class` Endpoint
+#### 2. New Endpoints for Course and Project Selection
 
 **Location**: `backend/app/api/v1/routers/attendance.py`
 
-New endpoint to fetch projects filtered by class through course enrollments:
-
+**Courses Endpoint:**
 ```python
-@router.get("/projects-by-class")
-def get_projects_by_class(
+@router.get("/courses")
+def get_courses(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    class_name: Optional[str] = Query(None),
+):
+```
+
+Returns all active courses in the school for populating the course dropdown.
+
+**Projects by Course Endpoint:**
+```python
+@router.get("/projects-by-course")
+def get_projects_by_course(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    course_id: Optional[int] = Query(None),
 ):
 ```
 
 How it works:
-1. Gets all students in the specified class
-2. Finds all courses those students are enrolled in (via `course_enrollments`)
-3. Returns projects linked to those courses (via `project.course_id`)
+1. Filters projects by `project.course_id` matching the selected course
+2. Returns only active and completed projects
+3. Orders by start_date (most recent first)
 
 Returns:
 - Projects with status `active` or `completed`
-- Filtered by courses that class students are enrolled in
-- Ordered by `start_date` (most recent first)
+- Filtered by `course_id` if provided
 - Includes: id, title, class_name, start_date, end_date, status
 
 ### Frontend Changes
@@ -144,55 +154,53 @@ Returns:
 **Location**: `frontend/src/app/(teacher)/teacher/3de-blok/components/OverzichtTab.tsx`
 
 Added:
-1. **Project Interface**:
+1. **Course Interface**:
 ```typescript
-interface Project {
+interface Course {
   id: number;
-  title: string;
-  class_name: string | null;
-  start_date: string | null;
-  end_date: string | null;
-  status: string;
+  name: string;
+  code: string | null;
+  period: string | null;
+  level: string | null;
 }
 ```
 
 2. **State Management**:
 ```typescript
-const [projects, setProjects] = useState<Project[]>([]);
-const [projectFilter, setProjectFilter] = useState("");
+const [courses, setCourses] = useState<Course[]>([]);
+const [courseFilter, setCourseFilter] = useState("");
 ```
 
 3. **Cascading Filter Logic**:
-   - When class is selected → fetch projects for that class
-   - When class is cleared → clear projects list and project filter
+   - Loads all courses on mount
+   - When course is selected → fetch projects for that course
+   - When course is cleared → clear projects list and project filter
    - When project is selected → include in overview API call
 
 4. **UI Updates**:
-   - Added third dropdown for project selection
-   - Dropdown is disabled when:
-     - No class is selected, OR
-     - No projects exist for the selected class
+   - Replaced class dropdown with course dropdown ("Alle vakken")
+   - Shows course name with code: "O&O (XPLR)"
+   - Dropdown is disabled when no course selected or no projects available
    - Uses `flex-wrap` to handle responsive layout
 
 ## User Experience Flow
 
 ### Step 1: Initial State
-- All students from all classes are shown
+- All students from all courses are shown
 - Total attendance across all time periods
 - Project dropdown is disabled
 
-### Step 2: Select Class
+### Step 2: Select Course
 ```
-User selects: "SDAIA-A"
+User selects: "O&O (XPLR)"
 ↓
 Backend queries:
-  1. Find students where class_name = "SDAIA-A"
-  2. Find course_enrollments for those students
-  3. Find projects linked to those courses
+  1. Find projects where course_id = selected course
+  2. Find students enrolled in that course
 ↓
-Project dropdown becomes enabled and populated with relevant projects
+Project dropdown becomes enabled and populated with course projects
 ↓
-Overview updates to show only SDAIA-A students
+Overview updates to show only students enrolled in that course
 ```
 
 ### Step 3: Select Project
@@ -200,10 +208,10 @@ Overview updates to show only SDAIA-A students
 User selects: "Keuzeopdracht - Periode 3"
 ↓
 Backend fetches attendance overview with:
-  - class_name = "SDAIA-A"
+  - course_id = selected course
   - project_id = 42
 ↓
-Overview shows SDAIA-A students with attendance filtered to project dates
+Overview shows course students with attendance filtered to project dates
 ```
 
 ### Result Display
@@ -277,7 +285,7 @@ Potential improvements:
 ### GET /api/v1/attendance/overview
 
 **Query Parameters**:
-- `class_name` (string, optional): Filter by class
+- `course_id` (integer, optional): Filter by course (students enrolled in that course)
 - `project_id` (integer, optional): Filter events by project date range
 
 **Response**:
@@ -296,10 +304,25 @@ Potential improvements:
 ]
 ```
 
-### GET /api/v1/attendance/projects-by-class
+### GET /api/v1/attendance/courses
+
+**Response**:
+```json
+[
+  {
+    "id": 1,
+    "name": "O&O",
+    "code": "XPLR",
+    "period": "P3",
+    "level": "bovenbouw"
+  }
+]
+```
+
+### GET /api/v1/attendance/projects-by-course
 
 **Query Parameters**:
-- `class_name` (string, optional): Filter projects by class
+- `course_id` (integer, optional): Filter projects by course
 
 **Response**:
 ```json
