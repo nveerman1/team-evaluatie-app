@@ -203,12 +203,17 @@ def list_attendance_events(
     offset = (page - 1) * per_page
     events = query.order_by(AttendanceEvent.check_in.desc()).offset(offset).limit(per_page).all()
     
-    # Convert to output schema and add duration
+    # Convert to output schema and add duration + user info
     events_out = []
     for event in events:
         event_dict = AttendanceEventOut.model_validate(event).model_dump()
         if event.check_out and event.check_in:
             event_dict["duration_seconds"] = int((event.check_out - event.check_in).total_seconds())
+        
+        # Add user info (joined in query, accessible via event.user)
+        event_dict["user_name"] = event.user.name if hasattr(event, 'user') and event.user else None
+        event_dict["user_class"] = event.user.class_name if hasattr(event, 'user') and event.user else None
+        
         events_out.append(AttendanceEventOut(**event_dict))
     
     return AttendanceEventListOut(

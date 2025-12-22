@@ -83,8 +83,10 @@ class AttendanceEventOut(AttendanceEventBase):
     updated_at: datetime
     created_by: Optional[int] = None
     
-    # Computed field
+    # Computed fields
     duration_seconds: Optional[int] = None
+    user_name: Optional[str] = None
+    user_class: Optional[str] = None
 
     class Config:
         from_attributes = True
