@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, aliased
@@ -79,7 +79,7 @@ def rfid_scan(
         
         if open_session:
             # Check-out: close the session
-            open_session.check_out = datetime.utcnow()
+            open_session.check_out = datetime.now(timezone.utc)
             db.commit()
             db.refresh(open_session)
             
@@ -105,7 +105,7 @@ def rfid_scan(
             # Check-in: create new session
             new_event = AttendanceEvent(
                 user_id=user.id,
-                check_in=datetime.utcnow(),
+                check_in=datetime.now(timezone.utc),
                 is_external=False,
                 source="rfid"
             )
@@ -259,7 +259,7 @@ def update_attendance_event(
     for field, value in update_data.items():
         setattr(event, field, value)
     
-    event.updated_at = datetime.utcnow()
+    event.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(event)
     
@@ -413,8 +413,8 @@ def approve_external_work(
     
     event.approval_status = "approved"
     event.approved_by = current_user.id
-    event.approved_at = datetime.utcnow()
-    event.updated_at = datetime.utcnow()
+    event.approved_at = datetime.now(timezone.utc)
+    event.updated_at = datetime.now(timezone.utc)
     
     db.commit()
     db.refresh(event)
@@ -454,8 +454,8 @@ def reject_external_work(
     
     event.approval_status = "rejected"
     event.approved_by = current_user.id
-    event.approved_at = datetime.utcnow()
-    event.updated_at = datetime.utcnow()
+    event.approved_at = datetime.now(timezone.utc)
+    event.updated_at = datetime.now(timezone.utc)
     
     # Store rejection reason in description if provided
     if rejection.reason:
@@ -502,8 +502,8 @@ def bulk_approve_external_work(
             {
                 "approval_status": "approved",
                 "approved_by": current_user.id,
-                "approved_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow()
+                "approved_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
             },
             synchronize_session=False
         )
@@ -597,7 +597,7 @@ def get_current_presence(
     
     result = []
     for event, user in open_sessions:
-        duration_seconds = int((datetime.utcnow() - event.check_in).total_seconds())
+        duration_seconds = int((datetime.now(timezone.utc) - event.check_in).total_seconds())
         result.append(OpenSession(
             id=event.id,
             user_id=user.id,
