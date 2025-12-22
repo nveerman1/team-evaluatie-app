@@ -11,6 +11,22 @@ This frontend follows a well-organized architecture with clear separation of con
 
 ## Getting Started
 
+### Prerequisites
+
+Make sure the FastAPI backend is running on `http://127.0.0.1:8000` before starting the frontend.
+
+```bash
+# Terminal 1: Start backend
+cd backend
+uvicorn app.main:app --reload
+
+# Terminal 2: Start frontend
+cd frontend
+npm run dev
+```
+
+### Development Server
+
 First, run the development server:
 
 ```bash
@@ -24,6 +40,12 @@ bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+### API Proxy Configuration
+
+In development, Next.js automatically proxies `/api/v1/*` requests to the FastAPI backend at `http://127.0.0.1:8000/api/v1/*`. This is configured in `next.config.ts` using the `rewrites()` function.
+
+In production, nginx or another reverse proxy should handle this routing.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
