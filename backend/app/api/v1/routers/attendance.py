@@ -1184,7 +1184,7 @@ def _parse_period(period: str) -> tuple[Optional[datetime], Optional[datetime]]:
 def get_stats_summary(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    period: str = Query("4w", regex="^(4w|8w|all)$"),
+    period: str = Query("4w", pattern=r"^(4w|8w|all)$"),
     course_id: Optional[int] = Query(None),
     project_id: Optional[int] = Query(None),
 ):
@@ -1292,7 +1292,7 @@ def get_stats_summary(
 def get_stats_weekly(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    period: str = Query("4w", regex="^(4w|8w|all)$"),
+    period: str = Query("4w", pattern=r"^(4w|8w|all)$"),
     course_id: Optional[int] = Query(None),
     project_id: Optional[int] = Query(None),
 ):
@@ -1379,7 +1379,7 @@ def get_stats_weekly(
 def get_stats_daily(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    period: str = Query("4w", regex="^(4w|8w|all)$"),
+    period: str = Query("4w", pattern=r"^(4w|8w|all)$"),
     course_id: Optional[int] = Query(None),
     project_id: Optional[int] = Query(None),
 ):
@@ -1444,7 +1444,7 @@ def get_stats_daily(
 def get_stats_heatmap(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    period: str = Query("4w", regex="^(4w|8w|all)$"),
+    period: str = Query("4w", pattern=r"^(4w|8w|all)$"),
     course_id: Optional[int] = Query(None),
     project_id: Optional[int] = Query(None),
 ):
@@ -1537,7 +1537,7 @@ def get_stats_heatmap(
 def get_stats_signals(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    period: str = Query("4w", regex="^(4w|8w|all)$"),
+    period: str = Query("4w", pattern=r"^(4w|8w|all)$"),
     course_id: Optional[int] = Query(None),
     project_id: Optional[int] = Query(None),
 ):
@@ -1779,10 +1779,10 @@ def get_stats_signals(
 def get_stats_top_bottom(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    period: str = Query("4w", regex="^(4w|8w|all)$"),
+    period: str = Query("4w", pattern=r"^(4w|8w|all)$"),
     course_id: Optional[int] = Query(None),
     project_id: Optional[int] = Query(None),
-    mode: str = Query("4w", regex="^(4w|scope)$"),
+    mode: str = Query("4w", pattern=r"^(4w|scope)$"),
 ):
     """
     Get top 5 and bottom 5 students by engagement (total blocks).

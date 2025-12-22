@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, TrendingUp, TrendingDown } from "lucide-react";
+import api from "@/lib/api";
 import {
   attendanceService,
   type Course,
@@ -69,12 +70,12 @@ export default function StatistiekenTab() {
 
   const fetchDropdownData = async () => {
     try {
-      const [coursesData, projectsData] = await Promise.all([
+      const [coursesData, projectsResponse] = await Promise.all([
         attendanceService.listCourses(),
-        fetch("/api/v1/projects?status=active,completed").then((r) => r.json()),
+        api.get("/projects", { params: { status: "active,completed" } }),
       ]);
       setCourses(coursesData);
-      setProjects(projectsData || []);
+      setProjects(projectsResponse.data || []);
     } catch (err) {
       console.error("Error fetching dropdown data:", err);
       toast.error("Kon filters niet laden");
