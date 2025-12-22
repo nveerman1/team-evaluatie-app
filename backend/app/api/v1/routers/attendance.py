@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, aliased
 from sqlalchemy import func, and_, or_
 
 from app.api.v1.deps import get_db, get_current_user
-from app.infra.db.models import User, RFIDCard, AttendanceEvent, AttendanceAggregate, Project, CourseEnrollment
+from app.infra.db.models import User, RFIDCard, AttendanceEvent, AttendanceAggregate, Project, CourseEnrollment, Course
 from app.api.v1.schemas.attendance import (
     RFIDScanRequest,
     RFIDScanResponse,
@@ -721,13 +721,14 @@ def export_attendance(
 def get_attendance_overview(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    class_name: Optional[str] = Query(None),
+    course_id: Optional[int] = Query(None),
     project_id: Optional[int] = Query(None),
 ):
     """
     Get attendance overview for all students (teacher/admin only)
     Returns totals per student
     When project_id is provided, only counts events within the project's date range
+    When course_id is provided, filters to students enrolled in that course
     """
     if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(
@@ -748,15 +749,27 @@ def get_attendance_overview(
                 detail="Project not found"
             )
     
-    # Get all students in school
-    query = db.query(User).filter(
-        User.school_id == current_user.school_id,
-        User.role == "student",
-        User.archived.is_(False)
-    )
-    
-    if class_name:
-        query = query.filter(User.class_name == class_name)
+    # Get students based on course filter
+    if course_id:
+        # Get students enrolled in the specified course
+        student_ids = db.query(CourseEnrollment.student_id).filter(
+            CourseEnrollment.course_id == course_id,
+            CourseEnrollment.active == True
+        ).subquery()
+        
+        query = db.query(User).filter(
+            User.id.in_(student_ids),
+            User.school_id == current_user.school_id,
+            User.role == "student",
+            User.archived.is_(False)
+        )
+    else:
+        # Get all students in school
+        query = db.query(User).filter(
+            User.school_id == current_user.school_id,
+            User.role == "student",
+            User.archived.is_(False)
+        )
     
     students = query.all()
     
@@ -901,17 +914,49 @@ def list_students_with_cards(
     return result
 
 
-# ============ Projects for Class ============
+# ============ Courses and Projects for Filtering ============
 
-@router.get("/projects-by-class")
-def get_projects_by_class(
+@router.get("/courses")
+def get_courses(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    class_name: Optional[str] = Query(None),
 ):
     """
-    Get projects for a specific class (teacher/admin only)
-    Returns projects linked to courses that students in the class are enrolled in
+    Get active courses for the school (teacher/admin only)
+    Used for populating course dropdown in overview filter
+    """
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only teachers and admins can view courses"
+        )
+    
+    courses = db.query(Course).filter(
+        Course.school_id == current_user.school_id,
+        Course.is_active == True
+    ).order_by(Course.name).all()
+    
+    return [
+        {
+            "id": c.id,
+            "name": c.name,
+            "code": c.code,
+            "period": c.period,
+            "level": c.level,
+        }
+        for c in courses
+    ]
+
+
+@router.get("/projects-by-course")
+def get_projects_by_course(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    course_id: Optional[int] = Query(None),
+):
+    """
+    Get projects for a specific course (teacher/admin only)
+    Returns projects linked to the specified course
     """
     if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(
@@ -925,23 +970,8 @@ def get_projects_by_class(
         Project.status.in_(["active", "completed"])
     )
     
-    if class_name:
-        # Get students in the specified class
-        students = db.query(User.id).filter(
-            User.school_id == current_user.school_id,
-            User.class_name == class_name,
-            User.role == "student",
-            User.archived.is_(False)
-        ).subquery()
-        
-        # Get course IDs that these students are enrolled in
-        course_ids = db.query(CourseEnrollment.course_id).filter(
-            CourseEnrollment.student_id.in_(students),
-            CourseEnrollment.active == True
-        ).distinct().subquery()
-        
-        # Filter projects by these course IDs
-        query = query.filter(Project.course_id.in_(course_ids))
+    if course_id:
+        query = query.filter(Project.course_id == course_id)
     
     projects = query.order_by(Project.start_date.desc().nulls_last()).all()
     

@@ -26,6 +26,14 @@ interface Project {
   status: string;
 }
 
+interface Course {
+  id: number;
+  name: string;
+  code: string | null;
+  period: string | null;
+  level: string | null;
+}
+
 function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -34,33 +42,49 @@ function formatDuration(seconds: number): string {
 
 export default function OverzichtTab() {
   const [students, setStudents] = useState<StudentOverview[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [classFilter, setClassFilter] = useState("");
+  const [courseFilter, setCourseFilter] = useState("");
   const [projectFilter, setProjectFilter] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    fetchOverview();
-  }, [classFilter, projectFilter]);
+    fetchCourses();
+  }, []);
 
   useEffect(() => {
-    // Fetch projects when class filter changes
-    if (classFilter) {
+    fetchOverview();
+  }, [courseFilter, projectFilter]);
+
+  useEffect(() => {
+    // Fetch projects when course filter changes
+    if (courseFilter) {
       fetchProjects();
     } else {
       setProjects([]);
       setProjectFilter("");
     }
-  }, [classFilter]);
+  }, [courseFilter]);
+
+  const fetchCourses = async () => {
+    try {
+      const response = await fetchWithErrorHandling(`/api/v1/attendance/courses`);
+      const data = await response.json();
+      setCourses(data);
+    } catch (err) {
+      console.error("Error fetching courses:", err);
+      setCourses([]);
+    }
+  };
 
   const fetchProjects = async () => {
     try {
       const params = new URLSearchParams();
-      if (classFilter) params.append("class_name", classFilter);
+      if (courseFilter) params.append("course_id", courseFilter);
       
-      const response = await fetchWithErrorHandling(`/api/v1/attendance/projects-by-class?${params.toString()}`);
+      const response = await fetchWithErrorHandling(`/api/v1/attendance/projects-by-course?${params.toString()}`);
       const data = await response.json();
       setProjects(data);
     } catch (err) {
@@ -76,7 +100,7 @@ export default function OverzichtTab() {
       setError(null);
       
       const params = new URLSearchParams();
-      if (classFilter) params.append("class_name", classFilter);
+      if (courseFilter) params.append("course_id", courseFilter);
       if (projectFilter) params.append("project_id", projectFilter);
       
       const response = await fetchWithErrorHandling(`/api/v1/attendance/overview?${params.toString()}`);
@@ -169,14 +193,14 @@ export default function OverzichtTab() {
             />
           </div>
           <select
-            className="px-3 py-2 border border-gray-300 rounded-md"
-            value={classFilter}
-            onChange={(e) => setClassFilter(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-md min-w-[200px]"
+            value={courseFilter}
+            onChange={(e) => setCourseFilter(e.target.value)}
           >
-            <option value="">Alle klassen</option>
-            {uniqueClasses.map((className) => (
-              <option key={className} value={className || ""}>
-                {className}
+            <option value="">Alle vakken</option>
+            {courses.map((course) => (
+              <option key={course.id} value={course.id}>
+                {course.name} {course.code ? `(${course.code})` : ''}
               </option>
             ))}
           </select>
@@ -184,7 +208,7 @@ export default function OverzichtTab() {
             className="px-3 py-2 border border-gray-300 rounded-md min-w-[200px]"
             value={projectFilter}
             onChange={(e) => setProjectFilter(e.target.value)}
-            disabled={!classFilter || projects.length === 0}
+            disabled={!courseFilter || projects.length === 0}
           >
             <option value="">Alle projecten</option>
             {projects.map((project) => {
