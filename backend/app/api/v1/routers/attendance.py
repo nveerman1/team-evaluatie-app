@@ -957,6 +957,7 @@ def get_projects_by_course(
     """
     Get projects for a specific course (teacher/admin only)
     Returns projects linked to the specified course
+    When course_id is provided, also includes projects without a course_id
     """
     if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(
@@ -971,7 +972,13 @@ def get_projects_by_course(
     )
     
     if course_id:
-        query = query.filter(Project.course_id == course_id)
+        # Include projects linked to this course OR projects without a course_id
+        query = query.filter(
+            or_(
+                Project.course_id == course_id,
+                Project.course_id.is_(None)
+            )
+        )
     
     projects = query.order_by(Project.start_date.desc().nulls_last()).all()
     
@@ -980,6 +987,7 @@ def get_projects_by_course(
             "id": p.id,
             "title": p.title,
             "class_name": p.class_name,
+            "course_id": p.course_id,
             "start_date": p.start_date.isoformat() if p.start_date else None,
             "end_date": p.end_date.isoformat() if p.end_date else None,
             "status": p.status

@@ -21,6 +21,7 @@ interface Project {
   id: number;
   title: string;
   class_name: string | null;
+  course_id: number | null;
   start_date: string | null;
   end_date: string | null;
   status: string;
@@ -87,6 +88,7 @@ export default function OverzichtTab() {
       const response = await fetchWithErrorHandling(`/api/v1/attendance/projects-by-course?${params.toString()}`);
       const data = await response.json();
       setProjects(data);
+      console.log(`Fetched ${data.length} projects for course ${courseFilter}`);
     } catch (err) {
       console.error("Error fetching projects:", err);
       // Don't set error state for projects, just log it
