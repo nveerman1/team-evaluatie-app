@@ -7,7 +7,13 @@ Creates:
 - Sample attendance events for testing
 
 Usage:
-    python scripts/seed_3de_blok.py
+    python scripts/seed_3de_blok.py [school_id]
+    
+    school_id: Optional. The ID of the school to add students to (default: 1)
+    
+Examples:
+    python scripts/seed_3de_blok.py        # Adds to school_id=1
+    python scripts/seed_3de_blok.py 2      # Adds to school_id=2
 """
 
 import sys
@@ -23,8 +29,12 @@ from app.infra.db.models import School, User, RFIDCard, AttendanceEvent
 from app.core.security import get_password_hash
 
 
-def seed_3de_blok():
-    """Seed 3de Blok test data"""
+def seed_3de_blok(target_school_id=1):
+    """Seed 3de Blok test data
+    
+    Args:
+        target_school_id: The school ID to add students to (default: 1)
+    """
     print("=" * 60)
     print("SEEDING 3DE BLOK TEST DATA")
     print("=" * 60)
@@ -32,28 +42,35 @@ def seed_3de_blok():
     db = SessionLocal()
     
     try:
-        # Get or create the demo school
-        school = db.query(School).filter(School.name.like("%Demo%")).first()
+        # Get the target school
+        school = db.query(School).filter(School.id == target_school_id).first()
         if not school:
-            school = School(name="Demo School")
-            db.add(school)
-            db.commit()
-            db.refresh(school)
-            print(f"✓ Created {school.name}")
-        else:
-            print(f"✓ Using existing school: {school.name}")
+            print(f"❌ Error: School with ID {target_school_id} not found!")
+            print("\nAvailable schools:")
+            schools = db.query(School).all()
+            if schools:
+                for s in schools:
+                    print(f"  - ID {s.id}: {s.name}")
+            else:
+                print("  No schools found in database.")
+            return
         
-        # Get or create admin user for created_by field
+        print(f"✓ Using school: {school.name} (ID: {school.id})")
+        
+        # Get an admin or teacher user for created_by field
+        # Try to find any admin or teacher in this school
         admin = db.query(User).filter(
             User.school_id == school.id,
-            User.role == "admin"
+            User.role.in_(["admin", "teacher"])
         ).first()
         
         if not admin:
+            print("⚠ Warning: No admin or teacher found in this school.")
+            print("  Creating admin user for attendance event tracking...")
             admin = User(
                 school_id=school.id,
-                email="admin@demo.school",
-                name="Demo Admin",
+                email=f"admin.3deblok@school{school.id}.local",
+                name="3de Blok Admin",
                 role="admin",
                 auth_provider="local",
                 password_hash=get_password_hash("demo123"),
@@ -61,7 +78,7 @@ def seed_3de_blok():
             db.add(admin)
             db.commit()
             db.refresh(admin)
-            print(f"✓ Created admin user")
+            print(f"✓ Created admin user: {admin.email}")
         
         # Define test students
         students_data = [
@@ -246,6 +263,7 @@ def seed_3de_blok():
         print("\n" + "=" * 60)
         print("3DE BLOK TEST DATA SEEDED SUCCESSFULLY")
         print("=" * 60)
+        print(f"\nSchool: {school.name} (ID: {school.id})")
         print(f"\nCreated/verified {len(students_data)} students:")
         for student in created_students:
             print(f"  - {student.name} ({student.email})")
@@ -267,4 +285,13 @@ def seed_3de_blok():
 
 
 if __name__ == "__main__":
-    seed_3de_blok()
+    # Get school_id from command line argument, default to 1
+    school_id = 1
+    if len(sys.argv) > 1:
+        try:
+            school_id = int(sys.argv[1])
+        except ValueError:
+            print(f"❌ Error: Invalid school_id '{sys.argv[1]}'. Must be an integer.")
+            sys.exit(1)
+    
+    seed_3de_blok(school_id)

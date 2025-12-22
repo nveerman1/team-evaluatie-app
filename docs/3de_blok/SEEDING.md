@@ -16,8 +16,25 @@ backend/scripts/seed_3de_blok.py
 
 ```bash
 cd backend
-python scripts/seed_3de_blok.py
+python scripts/seed_3de_blok.py [school_id]
 ```
+
+**Arguments:**
+- `school_id` (optional): The ID of the school to add students to. Defaults to 1 if not specified.
+
+**Examples:**
+```bash
+# Add students to school_id=1 (default)
+python scripts/seed_3de_blok.py
+
+# Add students to school_id=2
+python scripts/seed_3de_blok.py 2
+```
+
+**Important:** The script will:
+- Add students to the specified school
+- Show which school the students are being added to
+- List available schools if the specified school_id doesn't exist
 
 ### What Gets Created
 
