@@ -155,15 +155,11 @@ def list_attendance_events(
     per_page: int = Query(30, ge=1, le=100),
 ):
     """
-    List attendance events with filters (teacher/admin only)
-    """
-    # Require teacher or admin role
-    if current_user.role not in ["teacher", "admin"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only teachers and admins can access this endpoint"
-        )
+    List attendance events with filters
     
+    - Students: Can only view their own events
+    - Teachers/Admins: Can view all events in their school
+    """
     # Base query - scope to school via explicit user join
     query = db.query(AttendanceEvent).join(
         User, AttendanceEvent.user_id == User.id
@@ -171,11 +167,15 @@ def list_attendance_events(
         User.school_id == current_user.school_id
     )
     
-    # Apply filters
-    if user_id:
+    # Students can only see their own events
+    if current_user.role == "student":
+        query = query.filter(AttendanceEvent.user_id == current_user.id)
+    # Teachers/admins can filter by user_id if specified
+    elif user_id:
         query = query.filter(AttendanceEvent.user_id == user_id)
     
-    if class_name:
+    # Apply other filters (class_name only for teachers/admins)
+    if class_name and current_user.role in ["teacher", "admin"]:
         query = query.filter(User.class_name == class_name)
     
     if project_id:
