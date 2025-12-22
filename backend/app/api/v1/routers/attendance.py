@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, aliased
@@ -31,6 +31,22 @@ from app.core.rbac import require_role
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/attendance", tags=["attendance"])
+
+
+# ============ Helper Functions ============
+
+def apply_project_date_filter(query, project: Project):
+    """
+    Apply project date range filter to an attendance query.
+    Filters events where check_in falls within project start and end dates.
+    """
+    if project.start_date:
+        query = query.filter(AttendanceEvent.check_in >= project.start_date)
+    if project.end_date:
+        # Filter events before the start of the next day
+        next_day = project.end_date + timedelta(days=1)
+        query = query.filter(AttendanceEvent.check_in < next_day)
+    return query
 
 
 # ============ RFID Scan Endpoint ============
@@ -759,11 +775,7 @@ def get_attendance_overview(
         
         # Apply project date range filter if project is provided
         if project:
-            if project.start_date:
-                school_query = school_query.filter(AttendanceEvent.check_in >= project.start_date)
-            if project.end_date:
-                # Include the entire end date (up to end of day)
-                school_query = school_query.filter(AttendanceEvent.check_in < datetime.combine(project.end_date, datetime.max.time()))
+            school_query = apply_project_date_filter(school_query, project)
         
         school_seconds = school_query.scalar() or 0
         
@@ -781,10 +793,7 @@ def get_attendance_overview(
         
         # Apply project date range filter if project is provided
         if project:
-            if project.start_date:
-                external_approved_query = external_approved_query.filter(AttendanceEvent.check_in >= project.start_date)
-            if project.end_date:
-                external_approved_query = external_approved_query.filter(AttendanceEvent.check_in < datetime.combine(project.end_date, datetime.max.time()))
+            external_approved_query = apply_project_date_filter(external_approved_query, project)
         
         external_approved_seconds = external_approved_query.scalar() or 0
         
@@ -802,10 +811,7 @@ def get_attendance_overview(
         
         # Apply project date range filter if project is provided
         if project:
-            if project.start_date:
-                external_pending_query = external_pending_query.filter(AttendanceEvent.check_in >= project.start_date)
-            if project.end_date:
-                external_pending_query = external_pending_query.filter(AttendanceEvent.check_in < datetime.combine(project.end_date, datetime.max.time()))
+            external_pending_query = apply_project_date_filter(external_pending_query, project)
         
         external_pending_seconds = external_pending_query.scalar() or 0
         

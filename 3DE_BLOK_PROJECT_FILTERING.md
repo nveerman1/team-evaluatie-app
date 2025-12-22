@@ -84,18 +84,21 @@ The endpoint now:
 
 **Date Filtering Implementation**:
 ```python
-if project:
+def apply_project_date_filter(query, project: Project):
+    """
+    Apply project date range filter to an attendance query.
+    Filters events where check_in falls within project start and end dates.
+    """
     if project.start_date:
         query = query.filter(AttendanceEvent.check_in >= project.start_date)
     if project.end_date:
-        # Include the entire end date (up to end of day)
-        query = query.filter(
-            AttendanceEvent.check_in < datetime.combine(
-                project.end_date, 
-                datetime.max.time()
-            )
-        )
+        # Filter events before the start of the next day
+        next_day = project.end_date + timedelta(days=1)
+        query = query.filter(AttendanceEvent.check_in < next_day)
+    return query
 ```
+
+This helper function is used three times to filter school, external approved, and external pending attendance queries.
 
 #### 2. New `/api/v1/attendance/projects-by-class` Endpoint
 
@@ -226,13 +229,14 @@ If a student worked on multiple projects in the same class:
 
 ### Date Handling
 
-**Important**: The end date filter includes the entire end date:
+**Important**: The end date filter uses the start of the next day:
 ```python
-datetime.combine(project.end_date, datetime.max.time())
-# Example: 2025-01-31 → 2025-01-31 23:59:59.999999
+next_day = project.end_date + timedelta(days=1)
+query = query.filter(AttendanceEvent.check_in < next_day)
+# Example: 2025-01-31 → filter events before 2025-02-01 00:00:00
 ```
 
-This ensures events that occurred on the last day of the project are included.
+This ensures events that occurred on the last day of the project are included, while being more performant and clearer than using `datetime.max.time()`.
 
 ### Performance Considerations
 

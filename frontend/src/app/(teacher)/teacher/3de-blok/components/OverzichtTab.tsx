@@ -187,11 +187,18 @@ export default function OverzichtTab() {
             disabled={!classFilter || projects.length === 0}
           >
             <option value="">Alle projecten</option>
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.title}
-              </option>
-            ))}
+            {projects.map((project) => {
+              const dateRange = project.start_date && project.end_date
+                ? ` (${new Date(project.start_date).toLocaleDateString('nl-NL')} - ${new Date(project.end_date).toLocaleDateString('nl-NL')})`
+                : project.start_date
+                ? ` (vanaf ${new Date(project.start_date).toLocaleDateString('nl-NL')})`
+                : '';
+              return (
+                <option key={project.id} value={project.id}>
+                  {project.title}{dateRange}
+                </option>
+              );
+            })}
           </select>
         </div>
       </div>
