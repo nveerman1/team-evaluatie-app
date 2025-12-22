@@ -291,7 +291,7 @@ if __name__ == "__main__":
         try:
             school_id = int(sys.argv[1])
         except ValueError:
-            print(f"❌ Error: Invalid school_id '{sys.argv[1]}'. Must be an integer.")
+            print(f"❌ Error: Invalid school_id '{sys.argv[1]}'. Please provide a valid integer (e.g., 1, 2, 3).")
             sys.exit(1)
     
     seed_3de_blok(school_id)
