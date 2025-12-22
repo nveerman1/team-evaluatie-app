@@ -88,12 +88,7 @@ export default function OverzichtTab() {
       const response = await fetchWithErrorHandling(`/api/v1/attendance/projects-by-course?${params.toString()}`);
       const data = await response.json();
       setProjects(data);
-      console.log(`Fetched ${data.length} projects for course ${courseFilter}:`, data.map((p: Project) => ({
-        id: p.id,
-        title: p.title,
-        status: p.status,
-        course_id: p.course_id
-      })));
+      console.log(`Fetched ${data.length} projects for course ${courseFilter}`);
     } catch (err) {
       console.error("Error fetching projects:", err);
       // Don't set error state for projects, just log it
