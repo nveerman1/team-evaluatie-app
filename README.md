@@ -137,6 +137,9 @@ See [docs/FEEDBACK_SUMMARY.md](docs/FEEDBACK_SUMMARY.md) for detailed setup inst
    # Optional: Seed demo data
    python scripts/seed_demo_data.py
    
+   # Optional: Seed 3de Blok test data
+   python scripts/seed_3de_blok.py
+   
    # Start backend
    uvicorn app.main:app --reload
    ```
