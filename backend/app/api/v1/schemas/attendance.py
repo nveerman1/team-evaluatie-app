@@ -15,7 +15,7 @@ class RFIDCardBase(BaseModel):
 
 
 class RFIDCardCreate(RFIDCardBase):
-    user_id: int = Field(..., description="User ID to link card to")
+    pass
 
 
 class RFIDCardUpdate(BaseModel):
