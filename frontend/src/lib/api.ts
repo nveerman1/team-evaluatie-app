@@ -102,4 +102,82 @@ instance.interceptors.response.use(
   },
 );
 
+/**
+ * Helper for direct fetch() calls that need better error messages
+ * Use this for endpoints not yet migrated to axios
+ */
+export async function fetchWithErrorHandling(url: string, options?: RequestInit): Promise<Response> {
+  try {
+    // Get X-User-Email from storage (same as axios interceptor)
+    let xUserEmail: string | null = null;
+    if (typeof window !== 'undefined') {
+      xUserEmail = localStorage.getItem('x_user_email') || sessionStorage.getItem('x_user_email');
+    }
+
+    const headers: Record<string, string> = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      ...(options?.headers as Record<string, string> || {}),
+    };
+
+    // Add X-User-Email header if available (for dev-login)
+    if (xUserEmail) {
+      headers['X-User-Email'] = xUserEmail;
+    }
+
+    const response = await fetch(url, {
+      ...options,
+      credentials: options?.credentials || 'include',
+      headers,
+    });
+
+    if (!response.ok) {
+      let errorBody = '';
+      try {
+        const text = await response.text();
+        errorBody = text.substring(0, 2000); // Trim to 2k max
+        
+        // Try parsing as JSON for better error message
+        try {
+          const json = JSON.parse(text);
+          if (json.detail) {
+            errorBody = json.detail;
+          }
+        } catch {
+          // Not JSON, use text
+        }
+      } catch {
+        errorBody = 'Could not read response body';
+      }
+
+      const errorInfo = {
+        url,
+        status: response.status,
+        statusText: response.statusText,
+        body: errorBody,
+      };
+
+      // Log to console for debugging
+      console.error('[FETCH ERROR]', errorInfo);
+
+      // Throw error with details
+      throw new Error(
+        `HTTP ${response.status} ${response.statusText}: ${errorBody}\nURL: ${url}`
+      );
+    }
+
+    return response;
+  } catch (error) {
+    // Network error or thrown error from above
+    if (error instanceof Error && error.message.includes('HTTP')) {
+      // Already formatted, rethrow
+      throw error;
+    }
+    
+    // Network error
+    console.error('[NETWORK ERROR]', { url, error });
+    throw new Error(`Network error fetching ${url}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
 export default instance;

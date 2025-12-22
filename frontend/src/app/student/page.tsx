@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, ClipboardCheck, Target, Trophy, BarChart3, Sparkles, Upload } from "lucide-react";
+import { Search, ClipboardCheck, Target, Trophy, BarChart3, Sparkles, Upload, Clock } from "lucide-react";
 import { EvaluationDashboardCard } from "@/components/student/dashboard/EvaluationDashboardCard";
 import { ProjectAssessmentDashboardCard } from "@/components/student/dashboard/ProjectAssessmentDashboardCard";
 import { SubmissionDashboardCard } from "@/components/student/dashboard/SubmissionDashboardCard";
@@ -102,6 +102,24 @@ export default function StudentDashboard() {
             </div>
           </div>
         )}
+
+        {/* 3de Blok Quick Link */}
+        <Link href="/student/3de-blok">
+          <Card className="mb-6 p-4 hover:shadow-lg transition-shadow cursor-pointer border-2 border-blue-200 bg-blue-50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-100 rounded-lg">
+                  <Clock className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">3de Blok - Aanwezigheid</h3>
+                  <p className="text-sm text-gray-600">Bekijk je uren en registreer extern werk</p>
+                </div>
+              </div>
+              <span className="text-blue-600">→</span>
+            </div>
+          </Card>
+        </Link>
 
         {/* Tabs */}
         <div className="mt-6">
