@@ -255,7 +255,6 @@ export default function RFIDTab() {
                           </Badge>
                         )}
                       </div>
-                      <div className="truncate text-xs text-slate-500">{row.email}</div>
                     </div>
                   </div>
 
