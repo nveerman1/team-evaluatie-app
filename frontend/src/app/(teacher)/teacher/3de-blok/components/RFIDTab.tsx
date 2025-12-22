@@ -39,6 +39,8 @@ import {
   filterRows,
   sortRows,
   getInitials,
+  getPrimaryCardHint,
+  DEFAULT_CARD_LABEL,
 } from "./rfid-helpers";
 
 export default function RFIDTab() {
@@ -48,7 +50,7 @@ export default function RFIDTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [openRowId, setOpenRowId] = useState<number | null>(null);
   const [addDialogStudent, setAddDialogStudent] = useState<StudentRow | null>(null);
-  const [newCardData, setNewCardData] = useState({ uid: "", label: "Hoofdkaart" });
+  const [newCardData, setNewCardData] = useState({ uid: "", label: DEFAULT_CARD_LABEL });
   const [submitting, setSubmitting] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
@@ -88,7 +90,7 @@ export default function RFIDTab() {
       });
       
       setAddDialogStudent(null);
-      setNewCardData({ uid: "", label: "Hoofdkaart" });
+      setNewCardData({ uid: "", label: DEFAULT_CARD_LABEL });
       await fetchStudentsAndCards();
     } catch (err) {
       console.error("Error adding card:", err);
@@ -282,7 +284,7 @@ export default function RFIDTab() {
                         e.preventDefault();
                         e.stopPropagation();
                         setAddDialogStudent(row);
-                        setNewCardData({ uid: "", label: "Hoofdkaart" });
+                        setNewCardData({ uid: "", label: DEFAULT_CARD_LABEL });
                       }}
                     >
                       <Plus className="mr-1.5 h-4 w-4" />
@@ -399,11 +401,11 @@ export default function RFIDTab() {
               <Input
                 id="uid"
                 value={newCardData.uid}
-                onChange={(e) => setNewCardData({ ...newCardData, uid: e.target.value })}
+                onChange={(e) => setNewCardData({ ...newCardData, uid: e.target.value.toUpperCase() })}
                 placeholder="Bijv. ABC123DEF456"
               />
               <p className="text-xs text-muted-foreground">
-                Tip: scan met je device en plak de UID hier, of typ hem over van de kaart.
+                Tip: scan met je device en plak de UID hier, of typ hem over van de kaart. UID wordt automatisch in hoofdletters omgezet.
               </p>
             </div>
 

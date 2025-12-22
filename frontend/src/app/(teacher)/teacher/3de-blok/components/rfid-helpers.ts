@@ -95,3 +95,17 @@ export function getInitials(name: string): string {
     .map(part => part[0]?.toUpperCase() || '')
     .join("");
 }
+
+/**
+ * Get the primary card UID hint for display
+ * Prefers active cards, falls back to first card, or returns placeholder
+ */
+export function getPrimaryCardHint(cards: RFIDCard[]): string {
+  const activeCards = cards.filter(c => c.is_active);
+  return activeCards[0]?.uid || cards[0]?.uid || '—';
+}
+
+/**
+ * Default label for new RFID cards
+ */
+export const DEFAULT_CARD_LABEL = 'Hoofdkaart';
