@@ -2,7 +2,7 @@
 Seed script for 3de Blok RFID attendance module test data
 
 Creates:
-- 3 test students (Bram de Boer, Emma Smit, Finn Bakker)
+- 5 test students (Lars van Dijk, Sophie Jansen, Daan Visser, Lisa de Vries, Tim Mulder)
 - RFID cards for each student
 - Sample attendance events for testing
 
@@ -66,22 +66,34 @@ def seed_3de_blok():
         # Define test students
         students_data = [
             {
-                "name": "Bram de Boer",
-                "email": "bram.demo@example.com",
+                "name": "Lars van Dijk",
+                "email": "lars.vandijk@example.com",
                 "class_name": "V4A",
                 "rfid_uid": "RFID001",
             },
             {
-                "name": "Emma Smit",
-                "email": "emma.smit@example.com",
+                "name": "Sophie Jansen",
+                "email": "sophie.jansen@example.com",
                 "class_name": "V4A",
                 "rfid_uid": "RFID002",
             },
             {
-                "name": "Finn Bakker",
-                "email": "finn.bakker@example.com",
+                "name": "Daan Visser",
+                "email": "daan.visser@example.com",
                 "class_name": "V4A",
                 "rfid_uid": "RFID003",
+            },
+            {
+                "name": "Lisa de Vries",
+                "email": "lisa.devries@example.com",
+                "class_name": "V4A",
+                "rfid_uid": "RFID004",
+            },
+            {
+                "name": "Tim Mulder",
+                "email": "tim.mulder@example.com",
+                "class_name": "V4A",
+                "rfid_uid": "RFID005",
             },
         ]
         
@@ -144,10 +156,10 @@ def seed_3de_blok():
         # Create some sample attendance events
         now = datetime.now()
         
-        # Bram: School check-in (yesterday, 2 hours)
-        bram = created_students[0]
+        # Lars: School check-in (yesterday, 2 hours)
+        lars = created_students[0]
         event1 = AttendanceEvent(
-            user_id=bram.id,
+            user_id=lars.id,
             check_in=now - timedelta(days=1, hours=10),
             check_out=now - timedelta(days=1, hours=8),
             is_external=False,
@@ -155,12 +167,12 @@ def seed_3de_blok():
             created_by=admin.id,
         )
         db.add(event1)
-        print(f"✓ Created school attendance for {bram.name} (yesterday, 2h)")
+        print(f"✓ Created school attendance for {lars.name} (yesterday, 2h)")
         
-        # Emma: School check-in (today, still checked in)
-        emma = created_students[1]
+        # Sophie: School check-in (today, still checked in)
+        sophie = created_students[1]
         event2 = AttendanceEvent(
-            user_id=emma.id,
+            user_id=sophie.id,
             check_in=now - timedelta(hours=3),
             check_out=None,  # Still checked in
             is_external=False,
@@ -168,12 +180,12 @@ def seed_3de_blok():
             created_by=admin.id,
         )
         db.add(event2)
-        print(f"✓ Created school attendance for {emma.name} (currently checked in)")
+        print(f"✓ Created school attendance for {sophie.name} (currently checked in)")
         
-        # Finn: External work (pending approval)
-        finn = created_students[2]
+        # Daan: External work (pending approval)
+        daan = created_students[2]
         event3 = AttendanceEvent(
-            user_id=finn.id,
+            user_id=daan.id,
             check_in=now - timedelta(days=2, hours=8),
             check_out=now - timedelta(days=2, hours=4),
             is_external=True,
@@ -181,14 +193,14 @@ def seed_3de_blok():
             description="Werken aan 3de blok project documentatie",
             approval_status="pending",
             source="manual",
-            created_by=finn.id,
+            created_by=daan.id,
         )
         db.add(event3)
-        print(f"✓ Created external work for {finn.name} (pending approval)")
+        print(f"✓ Created external work for {daan.name} (pending approval)")
         
-        # Bram: External work (approved)
+        # Lars: External work (approved)
         event4 = AttendanceEvent(
-            user_id=bram.id,
+            user_id=lars.id,
             check_in=now - timedelta(days=3, hours=6),
             check_out=now - timedelta(days=3, hours=3),
             is_external=True,
@@ -198,10 +210,36 @@ def seed_3de_blok():
             approved_by=admin.id,
             approved_at=now - timedelta(days=2),
             source="manual",
-            created_by=bram.id,
+            created_by=lars.id,
         )
         db.add(event4)
-        print(f"✓ Created external work for {bram.name} (approved)")
+        print(f"✓ Created external work for {lars.name} (approved)")
+        
+        # Lisa: School check-in (yesterday, 3 hours)
+        lisa = created_students[3]
+        event5 = AttendanceEvent(
+            user_id=lisa.id,
+            check_in=now - timedelta(days=1, hours=12),
+            check_out=now - timedelta(days=1, hours=9),
+            is_external=False,
+            source="rfid",
+            created_by=admin.id,
+        )
+        db.add(event5)
+        print(f"✓ Created school attendance for {lisa.name} (yesterday, 3h)")
+        
+        # Tim: School check-in (today, still checked in)
+        tim = created_students[4]
+        event6 = AttendanceEvent(
+            user_id=tim.id,
+            check_in=now - timedelta(hours=2),
+            check_out=None,  # Still checked in
+            is_external=False,
+            source="rfid",
+            created_by=admin.id,
+        )
+        db.add(event6)
+        print(f"✓ Created school attendance for {tim.name} (currently checked in)")
         
         db.commit()
         
@@ -215,7 +253,7 @@ def seed_3de_blok():
         print(f"\nRFID UIDs assigned:")
         for i, student_data in enumerate(students_data):
             print(f"  - {created_students[i].name}: {student_data['rfid_uid']}")
-        print(f"\nSample attendance events created: 4")
+        print(f"\nSample attendance events created: 6")
         print("=" * 60)
         
     except Exception as e:

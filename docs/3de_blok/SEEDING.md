@@ -23,30 +23,36 @@ python scripts/seed_3de_blok.py
 
 The script creates the following test data:
 
-#### 1. Students (3)
+#### 1. Students (5)
 
-| Name           | Email                    | Class | Password |
-|----------------|--------------------------|-------|----------|
-| Bram de Boer   | bram.demo@example.com    | V4A   | demo123  |
-| Emma Smit      | emma.smit@example.com    | V4A   | demo123  |
-| Finn Bakker    | finn.bakker@example.com  | V4A   | demo123  |
+| Name           | Email                      | Class | Password |
+|----------------|----------------------------|-------|----------|
+| Lars van Dijk  | lars.vandijk@example.com   | V4A   | demo123  |
+| Sophie Jansen  | sophie.jansen@example.com  | V4A   | demo123  |
+| Daan Visser    | daan.visser@example.com    | V4A   | demo123  |
+| Lisa de Vries  | lisa.devries@example.com   | V4A   | demo123  |
+| Tim Mulder     | tim.mulder@example.com     | V4A   | demo123  |
 
 #### 2. RFID Cards
 
 Each student gets an RFID card assigned:
 
-- Bram de Boer: `RFID001`
-- Emma Smit: `RFID002`
-- Finn Bakker: `RFID003`
+- Lars van Dijk: `RFID001`
+- Sophie Jansen: `RFID002`
+- Daan Visser: `RFID003`
+- Lisa de Vries: `RFID004`
+- Tim Mulder: `RFID005`
 
 #### 3. Sample Attendance Events
 
 The script also creates sample attendance events for testing:
 
-1. **Bram de Boer** - School attendance (yesterday, 2 hours, checked out)
-2. **Emma Smit** - School attendance (currently checked in)
-3. **Finn Bakker** - External work (pending approval)
-4. **Bram de Boer** - External work (approved)
+1. **Lars van Dijk** - School attendance (yesterday, 2 hours, checked out)
+2. **Sophie Jansen** - School attendance (currently checked in)
+3. **Daan Visser** - External work (pending approval)
+4. **Lars van Dijk** - External work (approved)
+5. **Lisa de Vries** - School attendance (yesterday, 3 hours, checked out)
+6. **Tim Mulder** - School attendance (currently checked in)
 
 ## Testing the Module
 
