@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, Users, TrendingUp, List, MapPin, ArrowRight, CreditCard, BarChart3 } from "lucide-react";
+import { fetchWithErrorHandling } from "@/lib/api";
 
 interface OpenSession {
   id: number;
@@ -45,19 +46,13 @@ export default function AttendanceDashboardPage() {
   const fetchPresence = async () => {
     try {
       setError(null);
-      const response = await fetch("/api/v1/attendance/presence", {
-        credentials: "include",
-      });
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch presence data");
-      }
-      
+      const response = await fetchWithErrorHandling("/api/v1/attendance/presence");
       const data = await response.json();
       setOpenSessions(data);
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
       console.error("Error fetching presence:", err);
-      setError("Kon aanwezigheidsgegevens niet ophalen");
+      setError(`Kon aanwezigheidsgegevens niet ophalen: ${errorMessage}`);
     } finally {
       setLoading(false);
     }

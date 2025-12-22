@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BarChart3, Search, Award, TrendingUp } from "lucide-react";
+import { fetchWithErrorHandling } from "@/lib/api";
 
 interface StudentOverview {
   user_id: number;
@@ -43,19 +44,13 @@ export default function OverviewPage() {
       const params = new URLSearchParams();
       if (classFilter) params.append("class_name", classFilter);
       
-      const response = await fetch(`/api/v1/attendance/overview?${params.toString()}`, {
-        credentials: "include",
-      });
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch overview");
-      }
-      
+      const response = await fetchWithErrorHandling(`/api/v1/attendance/overview?${params.toString()}`);
       const data = await response.json();
       setStudents(data);
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
       console.error("Error fetching overview:", err);
-      setError("Kon overzicht niet ophalen");
+      setError(`Kon overzicht niet ophalen: ${errorMessage}`);
     } finally {
       setLoading(false);
     }

@@ -15,6 +15,7 @@ import {
   User
 } from "lucide-react";
 import { rfidService, type RFIDCard } from "@/services/attendance.service";
+import { fetchWithErrorHandling } from "@/lib/api";
 
 interface StudentWithCards {
   user_id: number;
@@ -42,19 +43,13 @@ export default function RFIDAdminPage() {
       setLoading(true);
       setError(null);
       
-      const response = await fetch("/api/v1/attendance/students", {
-        credentials: "include",
-      });
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch students");
-      }
-      
+      const response = await fetchWithErrorHandling("/api/v1/attendance/students");
       const data = await response.json();
       setStudents(data);
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
       console.error("Error fetching students:", err);
-      setError("Kon studenten niet ophalen");
+      setError(`Kon studenten niet ophalen: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
