@@ -17,6 +17,15 @@ interface StudentOverview {
   lesson_blocks: number;
 }
 
+interface Project {
+  id: number;
+  title: string;
+  class_name: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  status: string;
+}
+
 function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -25,14 +34,41 @@ function formatDuration(seconds: number): string {
 
 export default function OverzichtTab() {
   const [students, setStudents] = useState<StudentOverview[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [classFilter, setClassFilter] = useState("");
+  const [projectFilter, setProjectFilter] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     fetchOverview();
+  }, [classFilter, projectFilter]);
+
+  useEffect(() => {
+    // Fetch projects when class filter changes
+    if (classFilter) {
+      fetchProjects();
+    } else {
+      setProjects([]);
+      setProjectFilter("");
+    }
   }, [classFilter]);
+
+  const fetchProjects = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (classFilter) params.append("class_name", classFilter);
+      
+      const response = await fetchWithErrorHandling(`/api/v1/attendance/projects-by-class?${params.toString()}`);
+      const data = await response.json();
+      setProjects(data);
+    } catch (err) {
+      console.error("Error fetching projects:", err);
+      // Don't set error state for projects, just log it
+      setProjects([]);
+    }
+  };
 
   const fetchOverview = async () => {
     try {
@@ -41,6 +77,7 @@ export default function OverzichtTab() {
       
       const params = new URLSearchParams();
       if (classFilter) params.append("class_name", classFilter);
+      if (projectFilter) params.append("project_id", projectFilter);
       
       const response = await fetchWithErrorHandling(`/api/v1/attendance/overview?${params.toString()}`);
       const data = await response.json();
@@ -120,8 +157,8 @@ export default function OverzichtTab() {
 
       {/* Filters */}
       <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
-        <div className="flex gap-4">
-          <div className="flex items-center gap-4 flex-1">
+        <div className="flex gap-4 flex-wrap">
+          <div className="flex items-center gap-4 flex-1 min-w-[200px]">
             <Search className="h-5 w-5 text-gray-400" />
             <Input
               type="text"
@@ -140,6 +177,19 @@ export default function OverzichtTab() {
             {uniqueClasses.map((className) => (
               <option key={className} value={className || ""}>
                 {className}
+              </option>
+            ))}
+          </select>
+          <select
+            className="px-3 py-2 border border-gray-300 rounded-md min-w-[200px]"
+            value={projectFilter}
+            onChange={(e) => setProjectFilter(e.target.value)}
+            disabled={!classFilter || projects.length === 0}
+          >
+            <option value="">Alle projecten</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.title}
               </option>
             ))}
           </select>
