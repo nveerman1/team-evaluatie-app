@@ -955,9 +955,9 @@ def get_projects_by_course(
     course_id: Optional[int] = Query(None),
 ):
     """
-    Get projects for a specific course (teacher/admin only)
-    Returns projects linked to the specified course
-    When course_id is provided, also includes projects without a course_id
+    Get projects for dropdown (teacher/admin only)
+    Returns all active/completed projects for the school
+    The course_id parameter is kept for API compatibility but currently shows all projects
     """
     if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(
@@ -965,22 +965,19 @@ def get_projects_by_course(
             detail="Only teachers and admins can view projects"
         )
     
-    # Base query for projects
+    # Get all active and completed projects for the school
+    # We show all projects regardless of course_id because:
+    # 1. Projects may not have course_id set
+    # 2. Projects may be relevant to multiple courses
+    # 3. The student filtering by course happens in the overview endpoint
     query = db.query(Project).filter(
         Project.school_id == current_user.school_id,
         Project.status.in_(["active", "completed"])
     )
     
-    if course_id:
-        # Include projects linked to this course OR projects without a course_id
-        query = query.filter(
-            or_(
-                Project.course_id == course_id,
-                Project.course_id.is_(None)
-            )
-        )
-    
     projects = query.order_by(Project.start_date.desc().nulls_last()).all()
+    
+    logger.info(f"Fetching projects for school {current_user.school_id}: found {len(projects)} projects")
     
     return [
         {
