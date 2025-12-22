@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = '3deblok_20251221_01'
-down_revision: Union[str, None] = None  # Will be updated to latest migration
+down_revision: Union[str, None] = 'notif_20251220_01'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -112,7 +112,7 @@ def upgrade() -> None:
             u.class_name,
             ae.check_in,
             ae.project_id,
-            p.name AS project_name,
+            p.title AS project_name,
             EXTRACT(EPOCH FROM (NOW() - ae.check_in))::INTEGER AS duration_seconds
         FROM attendance_events ae
         JOIN users u ON ae.user_id = u.id
