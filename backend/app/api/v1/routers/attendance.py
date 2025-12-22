@@ -317,17 +317,28 @@ def bulk_delete_events(
             detail="Only teachers and admins can delete events"
         )
     
-    # Delete events that belong to users in the same school
-    deleted_count = db.query(AttendanceEvent).join(
+    # First, get the valid event IDs that belong to users in the same school
+    valid_event_ids = db.query(AttendanceEvent.id).join(
         User, AttendanceEvent.user_id == User.id
     ).filter(
         AttendanceEvent.id.in_(request.event_ids),
         User.school_id == current_user.school_id
-    ).delete(synchronize_session=False)
+    ).all()
     
-    db.commit()
+    # Extract the IDs from the result tuples
+    valid_ids = [event_id[0] for event_id in valid_event_ids]
     
-    logger.info(f"Bulk deleted {deleted_count} attendance events by user {current_user.id}")
+    # Now delete without join
+    if valid_ids:
+        deleted_count = db.query(AttendanceEvent).filter(
+            AttendanceEvent.id.in_(valid_ids)
+        ).delete(synchronize_session=False)
+        
+        db.commit()
+        
+        logger.info(f"Bulk deleted {deleted_count} attendance events by user {current_user.id}")
+    else:
+        logger.info(f"No valid events to delete for user {current_user.id}")
 
 
 # ============ External Work ============
@@ -471,26 +482,37 @@ def bulk_approve_external_work(
             detail="Only teachers and admins can approve external work"
         )
     
-    # Update events that belong to users in the same school
-    updated_count = db.query(AttendanceEvent).join(
+    # First, get the valid event IDs that belong to users in the same school
+    valid_event_ids = db.query(AttendanceEvent.id).join(
         User, AttendanceEvent.user_id == User.id
     ).filter(
         AttendanceEvent.id.in_(request.event_ids),
         AttendanceEvent.is_external == True,
         User.school_id == current_user.school_id
-    ).update(
-        {
-            "approval_status": "approved",
-            "approved_by": current_user.id,
-            "approved_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
-        },
-        synchronize_session=False
-    )
+    ).all()
     
-    db.commit()
+    # Extract the IDs from the result tuples
+    valid_ids = [event_id[0] for event_id in valid_event_ids]
     
-    logger.info(f"Bulk approved {updated_count} external work events by user {current_user.id}")
+    # Now update without join
+    if valid_ids:
+        updated_count = db.query(AttendanceEvent).filter(
+            AttendanceEvent.id.in_(valid_ids)
+        ).update(
+            {
+                "approval_status": "approved",
+                "approved_by": current_user.id,
+                "approved_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            },
+            synchronize_session=False
+        )
+        
+        db.commit()
+        
+        logger.info(f"Bulk approved {updated_count} external work events by user {current_user.id}")
+    else:
+        logger.info(f"No valid events to approve for user {current_user.id}")
 
 
 # ============ Student Endpoints ============

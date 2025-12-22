@@ -439,7 +439,7 @@ export default function ExternTab() {
           </Button>
         </div>
 
-        <div className="overflow-x-auto">
+        <div>
           <table className="w-full table-fixed">
             <thead className="bg-slate-50">
               <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
