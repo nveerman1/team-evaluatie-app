@@ -204,7 +204,7 @@ export default function RFIDTab() {
       {/* Table */}
       <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
         {/* Table header */}
-        <div className="grid grid-cols-12 border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600">
+        <div className="grid grid-cols-12 border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
           <button
             onClick={() => handleSort('name')}
             className="col-span-5 flex items-center gap-1 text-left hover:text-slate-900 transition-colors"
