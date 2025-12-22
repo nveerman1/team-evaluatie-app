@@ -1,37 +1,57 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { 
   CreditCard, 
   Plus, 
   Trash2, 
   Search,
-  CheckCircle,
-  XCircle,
-  User
+  ShieldCheck,
+  ShieldX,
+  ChevronDown,
+  ChevronUp,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Users
 } from "lucide-react";
-import { rfidService, type RFIDCard } from "@/services/attendance.service";
+import { rfidService } from "@/services/attendance.service";
 import { fetchWithErrorHandling } from "@/lib/api";
-
-interface StudentWithCards {
-  user_id: number;
-  user_name: string;
-  user_email: string;
-  class_name: string | null;
-  cards: RFIDCard[];
-}
+import {
+  type StudentWithCards,
+  type StudentRow,
+  type SortKey,
+  type SortDir,
+  buildStudentRows,
+  filterRows,
+  sortRows,
+  getInitials,
+} from "./rfid-helpers";
 
 export default function RFIDTab() {
   const [students, setStudents] = useState<StudentWithCards[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showAddForm, setShowAddForm] = useState<number | null>(null);
-  const [newCardData, setNewCardData] = useState({ uid: "", label: "" });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [openRowId, setOpenRowId] = useState<number | null>(null);
+  const [addDialogStudent, setAddDialogStudent] = useState<StudentRow | null>(null);
+  const [newCardData, setNewCardData] = useState({ uid: "", label: "Hoofdkaart" });
   const [submitting, setSubmitting] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>('name');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
 
   useEffect(() => {
     fetchStudentsAndCards();
@@ -54,23 +74,22 @@ export default function RFIDTab() {
     }
   };
 
-  const handleAddCard = async (userId: number) => {
-    if (!newCardData.uid.trim()) {
-      alert("Vul een RFID UID in");
+  const handleAddCard = async () => {
+    if (!addDialogStudent || !newCardData.uid.trim()) {
       return;
     }
 
     try {
       setSubmitting(true);
-      await rfidService.createCard(userId, {
-        uid: newCardData.uid,
+      await rfidService.createCard(addDialogStudent.id, {
+        uid: newCardData.uid.trim().toUpperCase(),
         label: newCardData.label || undefined,
         is_active: true,
       });
       
-      setShowAddForm(null);
-      setNewCardData({ uid: "", label: "" });
-      fetchStudentsAndCards();
+      setAddDialogStudent(null);
+      setNewCardData({ uid: "", label: "Hoofdkaart" });
+      await fetchStudentsAndCards();
     } catch (err) {
       console.error("Error adding card:", err);
       alert("Fout bij toevoegen kaart - mogelijk bestaat deze UID al");
@@ -82,7 +101,7 @@ export default function RFIDTab() {
   const handleToggleActive = async (cardId: number, currentStatus: boolean) => {
     try {
       await rfidService.updateCard(cardId, { is_active: !currentStatus });
-      fetchStudentsAndCards();
+      await fetchStudentsAndCards();
     } catch (err) {
       console.error("Error updating card:", err);
       alert("Fout bij bijwerken kaart");
@@ -96,18 +115,39 @@ export default function RFIDTab() {
 
     try {
       await rfidService.deleteCard(cardId);
-      fetchStudentsAndCards();
+      await fetchStudentsAndCards();
     } catch (err) {
       console.error("Error deleting card:", err);
       alert("Fout bij verwijderen kaart");
     }
   };
 
-  const filteredStudents = students.filter((student) =>
-    student.user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.user_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (student.class_name?.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
+
+  const getSortIcon = (key: SortKey) => {
+    if (sortKey !== key) {
+      return <ArrowUpDown className="h-3.5 w-3.5 ml-1 opacity-40" />;
+    }
+    return sortDir === 'asc' 
+      ? <ArrowUp className="h-3.5 w-3.5 ml-1" />
+      : <ArrowDown className="h-3.5 w-3.5 ml-1" />;
+  };
+
+  const rows = useMemo(() => {
+    const studentRows = buildStudentRows(students);
+    const filtered = filterRows(studentRows, searchQuery);
+    return sortRows(filtered, sortKey, sortDir);
+  }, [students, searchQuery, sortKey, sortDir]);
+
+  const totalCards = useMemo(() => students.reduce((acc, s) => acc + s.cards.length, 0), [students]);
+  const studentsWithoutCards = useMemo(() => students.filter(s => s.cards.length === 0).length, [students]);
 
   if (loading) {
     return (
@@ -122,193 +162,275 @@ export default function RFIDTab() {
 
   return (
     <div className="space-y-6">
-
       {error && (
         <div className="bg-red-50 border border-gray-200/80 rounded-xl p-4">
           <p className="text-red-700">{error}</p>
         </div>
       )}
 
-      {/* Info Card */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-        <div className="flex items-start gap-4">
-          <div className="p-3 bg-blue-100 rounded-xl">
-            <CreditCard className="h-6 w-6 text-blue-600" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-lg mb-2">Hoe werkt het?</h3>
-            <ul className="text-sm text-gray-700 space-y-1">
-              <li>• Koppel een RFID kaart aan een student door de UID in te voeren</li>
-              <li>• Een student kan meerdere kaarten hebben (backup kaart)</li>
-              <li>• Deactiveer een kaart zonder deze te verwijderen</li>
-              <li>• De UID staat op de RFID kaart of kan worden uitgelezen door de scanner</li>
-            </ul>
-          </div>
-        </div>
+      {/* Summary badges */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="secondary" className="gap-1 rounded-full">
+          <Users className="h-3.5 w-3.5" />
+          {students.length} leerlingen
+        </Badge>
+        <Badge variant="secondary" className="rounded-full">{totalCards} kaarten</Badge>
+        <Badge variant="secondary" className="rounded-full">{studentsWithoutCards} zonder kaart</Badge>
       </div>
 
-      {/* Search */}
-      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">
-        <div className="flex items-center gap-4">
-          <Search className="h-5 w-5 text-gray-400" />
+      {/* Search bar */}
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div className="relative w-full md:max-w-md">
+          <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            type="text"
-            placeholder="Zoek student op naam, email of klas..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Zoek op naam, email, klas of UID…"
+            className="pl-9"
           />
         </div>
+        <Button 
+          variant="secondary" 
+          className="h-9" 
+          onClick={() => setSearchQuery("")}
+          disabled={!searchQuery.trim()}
+        >
+          Wissen
+        </Button>
       </div>
 
-      {/* Students List */}
-      <div className="space-y-4">
-        {filteredStudents.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-12 text-center">
-            <User className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-600">Geen studenten gevonden</h3>
-            <p className="text-gray-500 mt-2">
-              {searchTerm ? "Geen studenten met deze zoekopdracht" : "Er zijn nog geen studenten"}
-            </p>
-          </div>
-        ) : (
-          filteredStudents.map((student) => (
-            <div key={student.user_id} className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-blue-700 font-semibold text-lg">
-                      {student.user_name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
-                    </span>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-lg">{student.user_name}</h3>
-                    <p className="text-sm text-gray-600">{student.user_email}</p>
-                    {student.class_name && (
-                      <Badge variant="outline" className="mt-1">
-                        {student.class_name}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                <Button
-                  onClick={() => setShowAddForm(student.user_id)}
-                  size="sm"
-                  variant="outline"
+      {/* Table */}
+      <div className="overflow-hidden rounded-xl border bg-background">
+        {/* Table header */}
+        <div className="grid grid-cols-12 border-b bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
+          <button
+            onClick={() => handleSort('name')}
+            className="col-span-5 flex items-center gap-1 text-left hover:text-foreground transition-colors"
+          >
+            <span>Leerling</span>
+            {getSortIcon('name')}
+          </button>
+          <button
+            onClick={() => handleSort('className')}
+            className="col-span-2 flex items-center gap-1 text-left hover:text-foreground transition-colors"
+          >
+            <span>Klas</span>
+            {getSortIcon('className')}
+          </button>
+          <button
+            onClick={() => handleSort('cardCount')}
+            className="col-span-2 flex items-center gap-1 text-left hover:text-foreground transition-colors"
+          >
+            <span>Kaarten</span>
+            {getSortIcon('cardCount')}
+          </button>
+          <div className="col-span-3 text-right">Acties</div>
+        </div>
+
+        {/* Table body */}
+        <div className="divide-y">
+          {rows.map((row) => {
+            const isOpen = openRowId === row.id;
+            const activeCards = row.cards.filter(c => c.is_active);
+            const primaryHint = activeCards.length > 0 ? activeCards[0].uid : (row.cards[0]?.uid ?? "—");
+
+            return (
+              <div key={row.id} className="group">
+                {/* Row */}
+                <button
+                  type="button"
+                  onClick={() => setOpenRowId(isOpen ? null : row.id)}
+                  className="grid w-full grid-cols-12 items-center px-3 py-2 text-left hover:bg-muted/30 focus:outline-none"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Kaart toevoegen
-                </Button>
-              </div>
-
-              {/* Add Card Form */}
-              {showAddForm === student.user_id && (
-                <div className="mb-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                  <h4 className="font-medium mb-3">Nieuwe RFID kaart toevoegen</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium mb-1">
-                        RFID UID *
-                      </label>
-                      <Input
-                        type="text"
-                        placeholder="Bijvoorbeeld: ABC123DEF456"
-                        value={newCardData.uid}
-                        onChange={(e) => setNewCardData({ ...newCardData, uid: e.target.value })}
-                      />
+                  <div className="col-span-5 flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold">
+                      {getInitials(row.name)}
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">
-                        Label (optioneel)
-                      </label>
-                      <Input
-                        type="text"
-                        placeholder="Bijvoorbeeld: Hoofdkaart"
-                        value={newCardData.label}
-                        onChange={(e) => setNewCardData({ ...newCardData, label: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mt-3">
-                    <Button
-                      onClick={() => handleAddCard(student.user_id)}
-                      disabled={submitting}
-                      size="sm"
-                    >
-                      {submitting ? "Toevoegen..." : "Toevoegen"}
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        setShowAddForm(null);
-                        setNewCardData({ uid: "", label: "" });
-                      }}
-                      variant="outline"
-                      size="sm"
-                      disabled={submitting}
-                    >
-                      Annuleren
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Cards List */}
-              {student.cards.length === 0 ? (
-                <div className="text-center py-4 text-gray-500 text-sm">
-                  Nog geen RFID kaarten gekoppeld
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {student.cards.map((card) => (
-                    <div
-                      key={card.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-200"
-                    >
-                      <div className="flex items-center gap-3">
-                        <CreditCard className={`h-5 w-5 ${card.is_active ? 'text-green-600' : 'text-gray-400'}`} />
-                        <div>
-                          <div className="font-mono font-medium">{card.uid}</div>
-                          {card.label && (
-                            <div className="text-sm text-gray-600">{card.label}</div>
-                          )}
-                        </div>
-                        {card.is_active ? (
-                          <Badge variant="default" className="bg-green-100 text-green-700">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Actief
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary">
-                            <XCircle className="h-3 w-3 mr-1" />
-                            Inactief
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <div className="truncate text-sm font-medium">{row.name}</div>
+                        {row.cards.length === 0 && (
+                          <Badge variant="outline" className="rounded-full text-[11px]">
+                            Geen kaart
                           </Badge>
                         )}
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => handleToggleActive(card.id, card.is_active)}
-                          variant="outline"
-                          size="sm"
-                        >
-                          {card.is_active ? "Deactiveren" : "Activeren"}
-                        </Button>
-                        <Button
-                          onClick={() => handleDeleteCard(card.id)}
-                          variant="outline"
-                          size="sm"
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      <div className="truncate text-xs text-muted-foreground">{row.email}</div>
+                    </div>
+                  </div>
+
+                  <div className="col-span-2">
+                    {row.className ? (
+                      <Badge variant="secondary" className="rounded-full">{row.className}</Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </div>
+
+                  <div className="col-span-2">
+                    <div className="text-sm font-medium">{row.cards.length}</div>
+                    <div className="truncate text-xs text-muted-foreground">{primaryHint}</div>
+                  </div>
+
+                  <div className="col-span-3 flex items-center justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setAddDialogStudent(row);
+                        setNewCardData({ uid: "", label: "Hoofdkaart" });
+                      }}
+                    >
+                      <Plus className="mr-1.5 h-4 w-4" />
+                      Kaart toevoegen
+                    </Button>
+                    <div className="text-muted-foreground">
+                      {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </div>
+                  </div>
+                </button>
+
+                {/* Expanded details */}
+                {isOpen && (
+                  <div className="bg-muted/10 px-3 py-3">
+                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                      <div className="text-xs text-muted-foreground">
+                        Kaarten van <span className="font-medium text-foreground">{row.name}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Tip: koppel meerdere kaarten (backup) en deactiveer i.p.v. verwijderen.
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
+
+                    <Separator className="my-3" />
+
+                    {row.cards.length === 0 ? (
+                      <div className="rounded-lg border bg-background p-3 text-sm">
+                        <div className="font-medium">Geen kaarten gekoppeld</div>
+                        <div className="text-xs text-muted-foreground">
+                          Voeg een kaart toe om in-/uitchecken via RFID te activeren.
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {row.cards.map((card) => (
+                          <div
+                            key={card.id}
+                            className="flex flex-col gap-2 rounded-lg border bg-background p-3 md:flex-row md:items-center md:justify-between"
+                          >
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <div className="font-mono text-sm font-semibold tracking-tight">{card.uid}</div>
+                                {card.is_active ? (
+                                  <Badge className="gap-1 rounded-full px-2 py-0.5 text-[11px]">
+                                    <ShieldCheck className="h-3.5 w-3.5" />
+                                    Actief
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="secondary" className="gap-1 rounded-full px-2 py-0.5 text-[11px]">
+                                    <ShieldX className="h-3.5 w-3.5" />
+                                    Inactief
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="text-xs text-muted-foreground">{card.label || "—"}</div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <Button 
+                                size="sm" 
+                                variant="secondary" 
+                                className="h-8"
+                                onClick={() => handleToggleActive(card.id, card.is_active)}
+                              >
+                                {card.is_active ? "Deactiveren" : "Activeren"}
+                              </Button>
+                              <Button 
+                                size="icon" 
+                                variant="outline" 
+                                className="h-8 w-8" 
+                                title="Verwijderen"
+                                onClick={() => handleDeleteCard(card.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {rows.length === 0 && (
+            <div className="px-3 py-10 text-center">
+              <div className="text-sm font-medium">Geen resultaten</div>
+              <div className="text-xs text-muted-foreground">Pas je zoekterm aan of wis de filter.</div>
+              <div className="mt-3">
+                <Button variant="secondary" onClick={() => setSearchQuery("")} disabled={!searchQuery.trim()}>
+                  Wissen
+                </Button>
+              </div>
             </div>
-          ))
-        )}
+          )}
+        </div>
       </div>
+
+      {/* Add card dialog */}
+      <Dialog open={!!addDialogStudent} onOpenChange={(v) => !v && setAddDialogStudent(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Kaart toevoegen</DialogTitle>
+            <DialogDescription>
+              Koppel een RFID UID aan <span className="font-medium text-foreground">{addDialogStudent?.name}</span>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="uid">UID</Label>
+              <Input
+                id="uid"
+                value={newCardData.uid}
+                onChange={(e) => setNewCardData({ ...newCardData, uid: e.target.value })}
+                placeholder="Bijv. ABC123DEF456"
+              />
+              <p className="text-xs text-muted-foreground">
+                Tip: scan met je device en plak de UID hier, of typ hem over van de kaart.
+              </p>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="label">Label</Label>
+              <Input
+                id="label"
+                value={newCardData.label}
+                onChange={(e) => setNewCardData({ ...newCardData, label: e.target.value })}
+                placeholder="Hoofdkaart / Backup kaart"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="secondary" onClick={() => setAddDialogStudent(null)} disabled={submitting}>
+              Annuleren
+            </Button>
+            <Button
+              onClick={handleAddCard}
+              disabled={!newCardData.uid.trim() || submitting}
+            >
+              {submitting ? "Opslaan..." : "Opslaan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
