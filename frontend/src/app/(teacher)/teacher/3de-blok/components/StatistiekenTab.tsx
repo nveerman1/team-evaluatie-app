@@ -64,6 +64,7 @@ export default function StatistiekenTab() {
 
   useEffect(() => {
     fetchStatistics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period, courseId, projectId, onlyLast4Weeks]);
 
   const fetchDropdownData = async () => {
@@ -333,7 +334,7 @@ export default function StatistiekenTab() {
                         return "";
                       },
                       label: (context) => {
-                        return `Totaal: ${context.parsed.y.toFixed(1)} blokken`;
+                        return `Totaal: ${(context.parsed.y ?? 0).toFixed(1)} blokken`;
                       },
                     },
                   },
