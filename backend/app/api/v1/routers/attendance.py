@@ -137,7 +137,7 @@ def rfid_scan(
         )
 
 
-# ============ Attendance Events (Teacher) ============
+# ============ Attendance Events ============
 
 @router.get("/events", response_model=AttendanceEventListOut)
 def list_attendance_events(
