@@ -8,27 +8,33 @@ This document explains how attendance events (both external and school) are link
 
 ### Database Structure
 
-The `attendance_events` table has an optional `project_id` foreign key that can link an event to a specific project:
+Projects are primarily linked to **courses** (via `course_id`), not directly to classes. Students are enrolled in courses through the `course_enrollments` table:
 
 ```sql
+projects:
+  - id
+  - course_id (FK to courses)
+  - class_name (optional, for reference)
+  - start_date
+  - end_date
+  - status
+  
+courses:
+  - id
+  - name
+  - school_id
+  
+course_enrollments:
+  - student_id (FK to users)
+  - course_id (FK to courses)
+  - active
+
 attendance_events:
   - user_id (FK to users)
   - project_id (FK to projects, nullable)
   - check_in (timestamp)
   - check_out (timestamp)
   - is_external (boolean)
-  - ...
-```
-
-The `projects` table contains:
-```sql
-projects:
-  - id
-  - class_name
-  - start_date
-  - end_date
-  - status
-  - ...
 ```
 
 ### Event-Project Association Methods
@@ -48,11 +54,16 @@ The current implementation uses **date-based filtering** because:
 When a user selects a class + project combination in the Overview tab:
 
 1. **Class Filter**: Filters students by `class_name`
-2. **Project Filter**: Filters attendance events by date range:
+2. **Project Dropdown Population**: 
+   - Finds all students in the selected class
+   - Looks up which courses those students are enrolled in
+   - Returns projects linked to those courses
+3. **Project Filter**: Filters attendance events by date range:
    - Events with `check_in >= project.start_date`
    - Events with `check_in < end_of_day(project.end_date)`
 
 This means:
+- Only projects from courses that class members are enrolled in appear in the dropdown
 - All school attendance events that occurred during the project period are counted
 - All external work events that were started during the project period are counted
 - Events are counted regardless of whether they have an explicit `project_id` link
@@ -104,7 +115,7 @@ This helper function is used three times to filter school, external approved, an
 
 **Location**: `backend/app/api/v1/routers/attendance.py`
 
-New endpoint to fetch projects filtered by class:
+New endpoint to fetch projects filtered by class through course enrollments:
 
 ```python
 @router.get("/projects-by-class")
@@ -115,9 +126,14 @@ def get_projects_by_class(
 ):
 ```
 
+How it works:
+1. Gets all students in the specified class
+2. Finds all courses those students are enrolled in (via `course_enrollments`)
+3. Returns projects linked to those courses (via `project.course_id`)
+
 Returns:
 - Projects with status `active` or `completed`
-- Filtered by `class_name` if provided
+- Filtered by courses that class students are enrolled in
 - Ordered by `start_date` (most recent first)
 - Includes: id, title, class_name, start_date, end_date, status
 
@@ -169,9 +185,12 @@ const [projectFilter, setProjectFilter] = useState("");
 ```
 User selects: "SDAIA-A"
 ↓
-Backend fetches projects where class_name = "SDAIA-A"
+Backend queries:
+  1. Find students where class_name = "SDAIA-A"
+  2. Find course_enrollments for those students
+  3. Find projects linked to those courses
 ↓
-Project dropdown becomes enabled and populated
+Project dropdown becomes enabled and populated with relevant projects
 ↓
 Overview updates to show only SDAIA-A students
 ```

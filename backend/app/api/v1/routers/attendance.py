@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, aliased
 from sqlalchemy import func, and_, or_
 
 from app.api.v1.deps import get_db, get_current_user
-from app.infra.db.models import User, RFIDCard, AttendanceEvent, AttendanceAggregate, Project
+from app.infra.db.models import User, RFIDCard, AttendanceEvent, AttendanceAggregate, Project, CourseEnrollment
 from app.api.v1.schemas.attendance import (
     RFIDScanRequest,
     RFIDScanResponse,
@@ -911,7 +911,7 @@ def get_projects_by_class(
 ):
     """
     Get projects for a specific class (teacher/admin only)
-    Used for populating project dropdown in overview filter
+    Returns projects linked to courses that students in the class are enrolled in
     """
     if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(
@@ -919,13 +919,29 @@ def get_projects_by_class(
             detail="Only teachers and admins can view projects"
         )
     
+    # Base query for projects
     query = db.query(Project).filter(
         Project.school_id == current_user.school_id,
         Project.status.in_(["active", "completed"])
     )
     
     if class_name:
-        query = query.filter(Project.class_name == class_name)
+        # Get students in the specified class
+        students = db.query(User.id).filter(
+            User.school_id == current_user.school_id,
+            User.class_name == class_name,
+            User.role == "student",
+            User.archived.is_(False)
+        ).subquery()
+        
+        # Get course IDs that these students are enrolled in
+        course_ids = db.query(CourseEnrollment.course_id).filter(
+            CourseEnrollment.student_id.in_(students),
+            CourseEnrollment.active == True
+        ).distinct().subquery()
+        
+        # Filter projects by these course IDs
+        query = query.filter(Project.course_id.in_(course_ids))
     
     projects = query.order_by(Project.start_date.desc().nulls_last()).all()
     
