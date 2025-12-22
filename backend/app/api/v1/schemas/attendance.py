@@ -212,3 +212,82 @@ class BulkDeleteRequest(BaseModel):
 class BulkApproveRequest(BaseModel):
     """Bulk approve external work"""
     event_ids: list[int] = Field(..., min_length=1, description="Event IDs to approve")
+
+
+# ============ Statistics Schemas ============
+
+class CourseOut(BaseModel):
+    """Course for dropdown filters"""
+    id: int
+    name: str
+    code: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class StatsSummary(BaseModel):
+    """Summary statistics for school vs external work"""
+    school_minutes: int
+    school_blocks: float
+    extern_approved_minutes: int
+    extern_approved_blocks: float
+    total_blocks: float
+    school_percentage: float
+    extern_percentage: float
+
+
+class WeeklyStats(BaseModel):
+    """Weekly attendance trend data"""
+    week_start: str  # ISO date format YYYY-MM-DD
+    total_blocks: float
+    school_blocks: float
+    extern_blocks: float
+
+
+class DailyStats(BaseModel):
+    """Daily unique student attendance"""
+    date: str  # ISO date format YYYY-MM-DD
+    unique_students: int
+
+
+class HeatmapCell(BaseModel):
+    """Single heatmap cell data"""
+    weekday: int  # 0=Monday, 4=Friday
+    hour: int  # 8-18
+    avg_students: float
+    label: str  # e.g., "ma 08:00"
+
+
+class HeatmapData(BaseModel):
+    """Heatmap response"""
+    cells: list[HeatmapCell]
+
+
+class StudentSignal(BaseModel):
+    """Student matching a signal/anomaly criteria"""
+    student_id: int
+    student_name: str
+    course: Optional[str] = None
+    value_text: str  # Human-readable value, e.g., "extern 6h / school 1 blok"
+
+
+class SignalsData(BaseModel):
+    """Signals/anomalies for attention"""
+    extern_low_school: list[StudentSignal]
+    many_pending: list[StudentSignal]
+    long_open: list[StudentSignal]
+
+
+class EngagementStudent(BaseModel):
+    """Student engagement ranking"""
+    student_id: int
+    student_name: str
+    course: Optional[str] = None
+    total_blocks: float
+
+
+class TopBottomData(BaseModel):
+    """Top and bottom engagement students"""
+    top: list[EngagementStudent]
+    bottom: list[EngagementStudent]
