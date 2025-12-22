@@ -119,7 +119,6 @@ function calculateDuration(start: string, end: string): string {
 export default function ExternTab() {
   const [events, setEvents] = useState<AttendanceEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   
   const [nameQuery, setNameQuery] = useState("");
   const [classQuery, setClassQuery] = useState("");
@@ -136,9 +135,8 @@ export default function ExternTab() {
   const fetchExternalWork = async () => {
     try {
       setLoading(true);
-      setError(null);
       
-      const params: any = {
+      const params: Record<string, boolean | number> = {
         is_external: true,
         per_page: 100,
       };
@@ -148,8 +146,7 @@ export default function ExternTab() {
     } catch (err) {
       console.error("Error fetching external work:", err);
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
-      setError(`Kon extern werk niet ophalen: ${errorMessage}`);
-      toast.error("Kon extern werk niet ophalen");
+      toast.error(`Kon extern werk niet ophalen: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -157,17 +154,21 @@ export default function ExternTab() {
 
   // Transform events to rows with user data
   const rows: ExternalWorkRow[] = useMemo(() => {
-    return events.map((event) => ({
-      id: event.id,
-      student_name: (event as any).user_name || `User #${event.user_id}`,
-      class_name: (event as any).user_class || "-",
-      location: event.location || "Onbekend",
-      description: event.description || "",
-      start: event.check_in,
-      end: event.check_out || event.check_in,
-      duration: event.check_out ? calculateDuration(event.check_in, event.check_out) : "-",
-      status: (event.approval_status as Status) || "pending",
-    }));
+    return events.map((event) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const eventWithUser = event as any;
+      return {
+        id: event.id,
+        student_name: eventWithUser.user_name || `User #${event.user_id}`,
+        class_name: eventWithUser.user_class || "-",
+        location: event.location || "Onbekend",
+        description: event.description || "",
+        start: event.check_in,
+        end: event.check_out || event.check_in,
+        duration: event.check_out ? calculateDuration(event.check_in, event.check_out) : "-",
+        status: (event.approval_status as Status) || "pending",
+      };
+    });
   }, [events]);
 
   const filtered = useMemo(() => {
@@ -350,7 +351,7 @@ export default function ExternTab() {
               <select
                 className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-slate-300 focus:ring-4 focus:ring-slate-100 md:w-44"
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
+                onChange={(e) => setStatusFilter(e.target.value as "all" | Status)}
               >
                 <option value="all">Alle</option>
                 <option value="pending">In afwachting</option>
