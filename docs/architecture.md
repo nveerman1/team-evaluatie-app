@@ -109,122 +109,157 @@ Teachers are explicitly assigned to courses via the **TeacherCourse** junction t
 │ name        │  │
 └─────────────┘  │
                  │
-      ┌──────────┴────────┬───────────────┬──────────────┬──────────────┬──────────────┐
-      │                   │               │              │              │              │
-      ▼                   ▼               ▼              ▼              ▼              ▼
-┌─────────────┐   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-│    User     │   │AcademicYear │ │   Subject   │ │  AuditLog   │ │   Client    │ │ External    │
-│─────────────│   │─────────────│ │─────────────│ │─────────────│ │─────────────│ │ Evaluator   │
-│ id          │   │ id          │ │ id          │ │ id          │ │ id          │ │─────────────│
-│ school_id   │   │ school_id   │ │ school_id   │ │ school_id   │ │ school_id   │ │ id          │
-│ email       │   │ label       │ │ name        │ │ user_id     │ │ organization│ │ school_id   │
-│ name        │   │ start_date  │ │ code        │ │ action      │ │ contact_name│ │ name        │
-│ role        │   │ end_date    │ │ color       │ │ entity_type │ │ email       │ │ email       │
-│ class_name  │   └─────────────┘ │ icon        │ │ entity_id   │ │ phone       │ │ organisation│
-│ team_number*│          │        │ is_active   │ │ details     │ │ level       │ └─────────────┘
-│ archived    │          │        └─────────────┘ │ created_at  │ │ sector      │        │
-└─────────────┘          │               │        └─────────────┘ │ tags        │        │
-      │                  │               │                         │ active      │        │
-      │         ┌────────┴────────┐      │                         └─────────────┘        │
-      │         │                 │      │                                │               │
-      │         ▼                 ▼      │                        ┌───────┴────────┐      │
-      │  ┌─────────────┐   ┌─────────────┐                       │                │      │
-      │  │   Class     │   │   Course    │◄── Optional link      ▼                ▼      │
-      │  │─────────────│   │─────────────│                ┌─────────────┐   ┌─────────────┐
-      │  │ id          │   │ id          │                │ ClientLog   │   │ClientProject│
-      │  │ school_id   │   │ school_id   │                │─────────────│   │    Link     │
-      │  │ academic_yr │   │ subject_id  │                │ id          │   │─────────────│
-      │  │   _id       │   │ academic_yr │                │ client_id   │   │ id          │
-      │  │ name        │   │   _id       │                │ author_id   │   │ client_id   │
-      │  └─────────────┘   │ name        │                │ log_type    │   │ project_id  │
-      │         │          │ code        │                │ text        │   │ role        │
-      │         │          │ level       │                │ created_at  │   │ start_date  │
-      │         │          │ is_active   │                └─────────────┘   │ end_date    │
-      │         │          └─────────────┘                                  └─────────────┘
-      │         │                 │                                                 │
-      │         ▼                 │                                                 │
-      │  ┌─────────────┐          │                                                 │
-      │  │  Student    │          ├──────────────┬──────────────┐                  │
-      │  │   Class     │          │              │              │                  │
-      │  │ Membership  │          ▼              ▼              ▼                  │
-      └─►│─────────────│   ┌─────────────┐┌─────────────┐┌─────────────┐          │
-         │ id          │   │TeacherCourse││   Course    ││   Rubric    │          │
-         │ student_id  │   │─────────────││ Enrollment  ││─────────────│          │
-         │ class_id    │   │ teacher_id  ││─────────────││ id          │          │
-         │ academic_yr │   │ course_id   ││ course_id   ││ school_id   │          │
-         │   _id       │   │ role        ││ student_id  ││ title       │          │
-         └─────────────┘   │ is_active   ││ active      ││ scope       │          │
-                           └─────────────┘└─────────────┘│ target_level│          │
-                                  │                       └─────────────┘          │
-                                  │                              │                 │
-                                  ▼                              │                 │
-                           ┌─────────────┐                       │                 │
-                           │   Group     │ (Legacy - mutable)    │                 │
-                           │─────────────│                       │                 │
-                           │ id          │                       │                 │
-                           │ school_id   │                       │                 │
-                           │ course_id   │                       │                 │
-                           │ name        │                       │                 │
-                           │ team_number │                       │                 │
-                           └─────────────┘                       │                 │
-                                  │                              │                 │
-                           ┌──────┴────────┐                     │                 │
-                           │               │                     │                 │
-                           ▼               ▼                     │                 │
-                    ┌─────────────┐ ┌─────────────┐             │                 │
-                    │GroupMember  │ │ProjectTeam  │             │                 │
-                    │─────────────│ │  External   │◄────────────┘                 │
-                    │ group_id    │ │─────────────│                               │
-                    │ user_id     │ │ id          │                               │
-                    │ active      │ │ group_id    │                               │
-                    └─────────────┘ │ external_   │                               │
-                                    │   evaluator │                               │
-                                    │   _id       │                               │
-                                    │ project_id  │                               │
-                                    │ invitation  │                               │
-                                    │   _token    │                               │
-                                    │ status      │                               │
-                                    └─────────────┘                               │
-                                                                                  │
-                           ┌─────────────┐                                        │
-                           │   Project   │◄───────────────────────────────────────┘
-                           │─────────────│
-                           │ id          │
-                           │ school_id   │
-                           │ course_id   │
-                           │ title       │
-                           │ status      │
-                           └─────────────┘
-                                  │
-                         ┌────────┴────────┐
-                         │                 │
-                         ▼                 ▼
-                  ┌─────────────┐   ┌─────────────┐
-                  │ Subproject  │   │ProjectTeam  │ (New - immutable snapshots)
-                  │─────────────│   │─────────────│
-                  │ id          │   │ id          │
-                  │ school_id   │   │ school_id   │
-                  │ project_id  │   │ project_id  │
-                  │ client_id   │   │ team_id     │ (optional legacy link)
-                  │ title       │   │ display_name│
-                  │ team_number │   │ team_number │
-                  └─────────────┘   │ version     │
-                                    │ created_at  │
-                                    └─────────────┘
-                                           │
-                                           ▼
-                                    ┌─────────────┐
-                                    │ProjectTeam  │
-                                    │   Member    │
-                                    │─────────────│
-                                    │ id          │
-                                    │ school_id   │
-                                    │ project     │
-                                    │   _team_id  │
-                                    │ user_id     │
-                                    │ role        │
-                                    │ created_at  │
-                                    └─────────────┘
+      ┌──────────┴────────┬───────────────┬──────────────┬──────────────┬──────────────┬──────────────┐
+      │                   │               │              │              │              │              │
+      ▼                   ▼               ▼              ▼              ▼              ▼              ▼
+┌─────────────┐   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│    User     │   │AcademicYear │ │   Subject   │ │  AuditLog   │ │   Client    │ │ External    │ │  RFIDCard   │
+│─────────────│   │─────────────│ │─────────────│ │─────────────│ │─────────────│ │ Evaluator   │ │─────────────│
+│ id          │   │ id          │ │ id          │ │ id          │ │ id          │ │─────────────│ │ id          │
+│ school_id   │   │ school_id   │ │ school_id   │ │ school_id   │ │ school_id   │ │ id          │ │ user_id     │
+│ email       │   │ label       │ │ name        │ │ user_id     │ │ organization│ │ school_id   │ │ uid         │
+│ name        │   │ start_date  │ │ code        │ │ action      │ │ contact_name│ │ name        │ │ label       │
+│ role        │   │ end_date    │ │ color       │ │ entity_type │ │ email       │ │ email       │ │ is_active   │
+│ class_name  │   └─────────────┘ │ icon        │ │ entity_id   │ │ phone       │ │ organisation│ │ created_at  │
+│ team_number*│          │        │ is_active   │ │ details     │ │ level       │ └─────────────┘ │ created_by  │
+│ archived    │          │        └─────────────┘ │ created_at  │ │ sector      │        │        └─────────────┘
+└─────────────┘          │               │        └─────────────┘ │ tags        │        │               │
+      │                  │               │                         │ active      │        │               │
+      │         ┌────────┴────────┐      │                         └─────────────┘        │               │
+      │         │                 │      │                                │               │               │
+      │         ▼                 ▼      │                        ┌───────┴────────┐      │               │
+      │  ┌─────────────┐   ┌─────────────┐                       │                │      │               │
+      │  │   Class     │   │   Course    │◄── Optional link      ▼                ▼      │               │
+      │  │─────────────│   │─────────────│                ┌─────────────┐   ┌─────────────┐             │
+      │  │ id          │   │ id          │                │ ClientLog   │   │ClientProject│             │
+      │  │ school_id   │   │ school_id   │                │─────────────│   │    Link     │             │
+      │  │ academic_yr │   │ subject_id  │                │ id          │   │─────────────│             │
+      │  │   _id       │   │ academic_yr │                │ client_id   │   │ id          │             │
+      │  │ name        │   │   _id       │                │ author_id   │   │ client_id   │             │
+      │  └─────────────┘   │ name        │                │ log_type    │   │ project_id  │             │
+      │         │          │ code        │                │ text        │   │ role        │             │
+      │         │          │ level       │                │ created_at  │   │ start_date  │             │
+      │         │          │ is_active   │                └─────────────┘   │ end_date    │             │
+      │         │          └─────────────┘                                  └─────────────┘             │
+      │         │                 │                                                 │                    │
+      │         ▼                 │                                                 │                    │
+      │  ┌─────────────┐          │                                                 │                    │
+      │  │  Student    │          ├──────────────┬──────────────┐                  │                    │
+      │  │   Class     │          │              │              │                  │                    │
+      │  │ Membership  │          ▼              ▼              ▼                  │                    │
+      └─►│─────────────│   ┌─────────────┐┌─────────────┐┌─────────────┐          │                    │
+         │ id          │   │TeacherCourse││   Course    ││   Rubric    │          │                    │
+         │ student_id  │   │─────────────││ Enrollment  ││─────────────│          │                    │
+         │ class_id    │   │ teacher_id  ││─────────────││ id          │          │                    │
+         │ academic_yr │   │ course_id   ││ course_id   ││ school_id   │          │                    │
+         │   _id       │   │ role        ││ student_id  ││ title       │          │                    │
+         └──────┬──────┘   │ is_active   ││ active      ││ scope       │          │                    │
+                │          └─────────────┘└─────────────┘│ target_level│          │                    │
+                │                 │                       └─────────────┘          │                    │
+                │                 │                              │                 │                    │
+                │                 ▼                              │                 │                    │
+                │          ┌─────────────┐                       │                 │                    │
+                │          │   Group     │ (Legacy - mutable)    │                 │                    │
+                │          │─────────────│                       │                 │                    │
+                │          │ id          │                       │                 │                    │
+                │          │ school_id   │                       │                 │                    │
+                │          │ course_id   │                       │                 │                    │
+                │          │ name        │                       │                 │                    │
+                │          │ team_number │                       │                 │                    │
+                │          └─────────────┘                       │                 │                    │
+                │                 │                              │                 │                    │
+                │          ┌──────┴────────┐                     │                 │                    │
+                │          │               │                     │                 │                    │
+                │          ▼               ▼                     │                 │                    │
+                │   ┌─────────────┐ ┌─────────────┐             │                 │                    │
+                │   │GroupMember  │ │ProjectTeam  │             │                 │                    │
+                │   │─────────────│ │  External   │◄────────────┘                 │                    │
+                │   │ group_id    │ │─────────────│                               │                    │
+                │   │ user_id     │ │ id          │                               │                    │
+                │   │ active      │ │ group_id    │                               │                    │
+                │   └─────────────┘ │ external_   │                               │                    │
+                │                   │   evaluator │                               │                    │
+                │                   │   _id       │                               │                    │
+                │                   │ project_id  │                               │                    │
+                │                   │ invitation  │                               │                    │
+                │                   │   _token    │                               │                    │
+                │                   │ status      │                               │                    │
+                │                   └─────────────┘                               │                    │
+                │                                                                  │                    │
+                │          ┌─────────────┐                                        │                    │
+                │          │   Project   │◄───────────────────────────────────────┘                    │
+                │          │─────────────│                                                             │
+                │          │ id          │                                                             │
+                │          │ school_id   │                                                             │
+                │          │ course_id   │                                                             │
+                │          │ title       │                                                             │
+                │          │ status      │                                                             │
+                │          └─────────────┘                                                             │
+                │                 │                                                                    │
+                │        ┌────────┴────────┐                                                           │
+                │        │                 │                                                           │
+                │        ▼                 ▼                                                           │
+                │ ┌─────────────┐   ┌─────────────┐                                                   │
+                │ │ Subproject  │   │ProjectTeam  │ (New - immutable snapshots)                       │
+                │ │─────────────│   │─────────────│                                                   │
+                │ │ id          │   │ id          │                                                   │
+                │ │ school_id   │   │ school_id   │                                                   │
+                │ │ project_id  │   │ project_id  │                                                   │
+                │ │ client_id   │   │ team_id     │ (optional legacy link)                            │
+                │ │ title       │   │ display_name│                                                   │
+                │ │ team_number │   │ team_number │                                                   │
+                │ └─────────────┘   │ version     │                                                   │
+                │                   │ created_at  │                                                   │
+                │                   └─────────────┘                                                   │
+                │                          │                                                           │
+                │                          ▼                                                           │
+                │                   ┌─────────────┐                                                   │
+                │                   │ProjectTeam  │                                                   │
+                │                   │   Member    │                                                   │
+                │                   │─────────────│                                                   │
+                │                   │ id          │                                                   │
+                │                   │ school_id   │                                                   │
+                │                   │ project     │                                                   │
+                │                   │   _team_id  │                                                   │
+                │                   │ user_id     │                                                   │
+                │                   │ role        │                                                   │
+                │                   │ created_at  │                                                   │
+                │                   └─────────────┘                                                   │
+                │                                                                                     │
+                └────────────────────────────────────────────────────────────────────────────────────┘
+                                   ▼
+                            ┌─────────────┐
+                            │ Attendance  │
+                            │   Event     │
+                            │─────────────│
+                            │ id          │
+                            │ user_id     │
+                            │ project_id  │
+                            │ check_in    │
+                            │ check_out   │
+                            │ is_external │
+                            │ location    │
+                            │ description │
+                            │ approval_   │
+                            │   status    │
+                            │ source      │
+                            │ created_at  │
+                            └─────────────┘
+                                   │
+                                   ▼
+                            ┌─────────────┐
+                            │ Attendance  │
+                            │ Aggregate   │
+                            │─────────────│
+                            │ user_id     │
+                            │ total_school│
+                            │   _seconds  │
+                            │ total_ext_  │
+                            │   approved  │
+                            │   _seconds  │
+                            │ lesson_     │
+                            │   blocks    │
+                            └─────────────┘
 
 * team_number in User table is DEPRECATED - use ProjectTeam instead
 
@@ -723,6 +758,78 @@ Teachers are explicitly assigned to courses via the **TeacherCourse** junction t
   - `assessment_id`
   - `invitation_token`
 - **Purpose**: Links teams to external evaluators with invitation tokens for external assessments
+
+### RFIDCard
+- `id`: Primary key
+- `user_id`: Foreign key to User
+- `uid`: RFID card unique identifier (UNIQUE)
+- `label`: Card label/description (e.g., "Primary Card", "Spare Card")
+- `is_active`: Active status flag
+- `created_at`: Timestamp
+- `updated_at`: Timestamp
+- `created_by`: Foreign key to User (who registered the card)
+- **Unique constraint**: `uid` (globally unique across all schools)
+- **Indexes**: 
+  - `user_id`
+  - `uid`
+  - `(user_id, is_active)`
+- **Purpose**: Links RFID cards to users for physical check-in/check-out via card readers
+
+### AttendanceEvent
+- `id`: Primary key
+- `user_id`: Foreign key to User
+- `project_id`: Foreign key to Project (optional - for project-specific attendance)
+- `check_in`: Check-in timestamp (TIMESTAMPTZ)
+- `check_out`: Check-out timestamp (TIMESTAMPTZ, nullable)
+- `is_external`: Boolean flag (true for external work, false for school attendance)
+- `location`: Location description (required for external work)
+- `description`: Work description (for external work)
+- `approval_status`: "pending" | "approved" | "rejected" (for external work)
+- `approved_by`: Foreign key to User (teacher who approved)
+- `approved_at`: Approval timestamp
+- `source`: "rfid" | "manual" | "import" | "api"
+- `created_at`: Timestamp
+- `updated_at`: Timestamp
+- `created_by`: Foreign key to User (optional)
+- **Constraints**:
+  - `check_out` must be after `check_in` when not NULL
+  - External work requires `location` and `approval_status`
+- **Indexes**: 
+  - `user_id`
+  - `project_id`
+  - `check_in`
+  - `(user_id, check_in DESC)` - for latest event queries
+  - Partial index on `(user_id, check_in)` WHERE `check_out IS NULL` - for open sessions
+  - Partial index on `(approval_status)` WHERE `is_external = true AND approval_status = 'pending'` - for pending approvals
+- **Purpose**: Unified table for both school attendance (RFID check-ins) and external work registrations with approval workflow
+
+### AttendanceAggregate
+- `id`: Primary key
+- `user_id`: Foreign key to User (UNIQUE)
+- `total_school_seconds`: Total seconds spent at school (from RFID check-ins)
+- `total_external_approved_seconds`: Total seconds of approved external work
+- `lesson_blocks`: Computed lesson blocks (total_seconds / 4500, where 4500s = 75min)
+- `last_recomputed_at`: Timestamp of last recomputation
+- **Unique constraint**: `user_id`
+- **Indexes**: 
+  - `user_id`
+- **Purpose**: Performance cache for pre-computed attendance totals, updated via database function `compute_user_attendance_totals(user_id)`
+
+### Database Views & Functions (3de Blok)
+
+**View: `open_sessions`**
+- Shows currently present students with live duration calculation
+- Filters: `check_out IS NULL`
+- Joins with `users` table for student information
+- Used by real-time presence dashboard
+
+**Function: `compute_user_attendance_totals(user_id INTEGER)`**
+- Calculates all attendance metrics for a specific user
+- Computes total school seconds (sum of completed check-ins)
+- Computes total approved external work seconds
+- Calculates lesson blocks (total_seconds / 4500)
+- Updates `attendance_aggregates` table
+- Called after attendance event changes or on-demand
 
 ## Template System
 
@@ -1229,6 +1336,193 @@ The application provides comprehensive academic year management with support for
 **See Also:**
 - `BULK_YEAR_TRANSITION_IMPLEMENTATION.md` - Detailed implementation guide
 
+## 3de Blok (RFID Attendance) Module
+
+The application includes a comprehensive RFID-based attendance tracking system for monitoring student presence at school and managing external work registrations.
+
+### Overview
+
+The 3de Blok module provides:
+- **Physical check-in/check-out** via RFID card readers (Raspberry Pi + RC522)
+- **Real-time presence dashboard** showing currently present students
+- **External work registration** with teacher approval workflow
+- **Attendance analytics** including lesson blocks calculation
+- **Historical attendance tracking** with comprehensive reporting
+
+### Architecture
+
+**Unified Event Model:**
+The system uses a single `attendance_events` table for both:
+1. **School Attendance**: Physical check-ins via RFID (`is_external=false`, `source='rfid'`)
+2. **External Work**: Student-registered hours outside school (`is_external=true`, requires approval)
+
+**Toggle Logic:**
+When an RFID card is scanned:
+- If student has an open session (`check_out IS NULL`) → close it (check-out)
+- Otherwise → open new session (check-in)
+
+**Lesson Blocks Calculation:**
+- 1 lesson block = 75 minutes (4500 seconds)
+- `lesson_blocks = total_seconds / 4500`
+- Total seconds = school attendance + approved external work
+
+### Key Features
+
+#### RFID Card Management
+- Multiple cards per user supported
+- Active/inactive status for lost or replaced cards
+- Unique UIDs across all schools
+- Card assignment tracking (who registered the card)
+
+#### School Attendance (RFID)
+- Raspberry Pi devices with RC522 RFID readers
+- Public API endpoint for hardware integration (`POST /api/v1/attendance/scan`)
+- Automatic toggle between check-in and check-out
+- Real-time presence view for teachers
+- Open session detection and auto-close (>24h)
+
+#### External Work Registration
+- Students register hours worked outside school
+- Required fields: location, description, start/end times
+- Optional project linkage
+- Approval workflow: pending → approved/rejected
+- Only approved hours count toward totals
+
+#### Attendance Analytics
+- Pre-computed aggregates for performance
+- Real-time calculation via database function
+- Total school hours, external approved hours, lesson blocks
+- Per-student and per-class breakdowns
+- Historical tracking and trend analysis
+
+### Data Flow
+
+**RFID Scan Flow:**
+```
+1. Student scans RFID card
+2. Raspberry Pi reads UID → POST /api/v1/attendance/scan
+3. Backend looks up user via rfid_cards.uid
+4. Check for open session (check_out IS NULL)
+5a. If open → UPDATE attendance_events SET check_out = NOW()
+5b. If closed → INSERT new attendance_event with check_in = NOW()
+6. Return action + user info to Raspberry Pi
+7. Display feedback (LED, screen, beep)
+```
+
+**External Work Approval Flow:**
+```
+1. Student registers external work → status = 'pending'
+2. Teacher views pending registrations
+3. Teacher approves or rejects with optional reason
+4. If approved → compute_user_attendance_totals() updates aggregates
+5. Student sees updated totals and status
+```
+
+### API Endpoints
+
+**RFID Hardware Integration:**
+- `POST /api/v1/attendance/scan` - RFID card scan (public endpoint, to be secured with API key)
+  - Input: `{"uid": "ABC123", "device_id": "rpi-workshop-1"}`
+  - Returns: `{status, action, user, event}`
+
+**Teacher Management:**
+- `GET /api/v1/attendance/events` - List attendance events with filters
+  - Filters: user_id, class_name, project_id, date range, is_external, approval_status
+  - Pagination: page, per_page (max 100)
+- `PATCH /api/v1/attendance/events/:id` - Edit event times
+- `DELETE /api/v1/attendance/events/:id` - Delete event
+- `POST /api/v1/attendance/events/bulk-delete` - Bulk delete events
+- `GET /api/v1/attendance/presence` - Get currently present students (real-time)
+- `GET /api/v1/attendance/export` - Export to CSV/PDF (planned)
+
+**External Work:**
+- `POST /api/v1/attendance/external` - Student registers external work
+- `PATCH /api/v1/attendance/external/:id/approve` - Teacher approves
+- `PATCH /api/v1/attendance/external/:id/reject` - Teacher rejects (with reason)
+- `POST /api/v1/attendance/external/bulk-approve` - Bulk approve
+
+**Student Dashboard:**
+- `GET /api/v1/attendance/me` - Get own attendance totals
+  - Returns: total_school_seconds, total_external_approved_seconds, total_external_pending_seconds, lesson_blocks
+
+**RFID Card Management:**
+- `GET /api/v1/rfid/:user_id` - List user's RFID cards
+- `POST /api/v1/rfid/:user_id` - Assign new RFID card
+- `PATCH /api/v1/rfid/:id` - Update card (e.g., deactivate)
+- `DELETE /api/v1/rfid/:id` - Delete card
+
+### Frontend Pages
+
+**Teacher Portal (`/teacher/3de-blok`):**
+- **Dashboard** - Overview with real-time presence
+- **Events** - Full attendance log with filtering and editing
+- **External Work** - Approve/reject external work registrations
+- **Students** - Manage students and RFID cards
+- **Stats** - Analytics and charts (planned)
+- **Overview** - Per-student totals (planned)
+
+**Student Portal (`/student/3de-blok`):**
+- **Dashboard** - Own attendance summary and totals
+- **Register External Work** - Submit external work hours (planned)
+
+### Security Considerations
+
+1. **School Scoping**: All attendance data scoped by school_id via user relationship
+2. **Role-Based Access**:
+   - RFID scan: Public (to be secured with API key or IP whitelist)
+   - Teacher endpoints: Teacher + Admin roles only
+   - Student endpoints: Own data only
+3. **Approval Workflow**: External work requires explicit teacher approval
+4. **Audit Trail**: All events include created_by, created_at, updated_at
+5. **Data Integrity**: Database constraints ensure check_out > check_in
+
+### Performance Optimizations
+
+1. **Indexes**:
+   - `rfid_cards.uid` - Fast UID lookup during scans
+   - `attendance_events(user_id, check_in DESC)` - Latest event queries
+   - Partial index on open sessions (WHERE check_out IS NULL)
+   - Partial index on pending approvals (WHERE is_external = true AND approval_status = 'pending')
+
+2. **Aggregates Cache**:
+   - `attendance_aggregates` table stores pre-computed totals
+   - Updated via `compute_user_attendance_totals()` function
+   - Reduces query load for dashboard displays
+
+3. **Database Views**:
+   - `open_sessions` view - Currently present students with live duration
+   - Pre-joins users table for efficient queries
+
+### Hardware Integration
+
+**Raspberry Pi Setup:**
+- RC522 RFID reader module (13.56 MHz)
+- Python script for card reading
+- HTTPS POST to `/api/v1/attendance/scan`
+- LED/display for user feedback
+- Audio beep for scan confirmation
+
+**Network Requirements:**
+- Raspberry Pi must have network access to backend API
+- CORS configured to allow Raspberry Pi IP addresses
+- Consider VPN or IP whitelist for production
+
+### Migration from Legacy System
+
+The 3de Blok module was previously a standalone Flask app with MariaDB. Migration involves:
+
+1. **User Matching**: Map legacy usernames to Team App user emails
+2. **RFID Cards**: Import UID assignments to `rfid_cards` table
+3. **Historical Logs**: Import to `attendance_events` with `source='import'`
+4. **External Work**: Import to `attendance_events` with `is_external=true`
+5. **Aggregates**: Recompute totals via `compute_user_attendance_totals()`
+
+**See Also:**
+- `docs/3de_blok/REBUILD_PLAN.md` - Detailed rebuild strategy
+- `docs/3de_blok/ARCHITECTURE_DIAGRAM.md` - System architecture diagrams
+- `docs/3de_blok/QUICK_START.md` - Quick start guide
+- `3DE_BLOK_IMPLEMENTATION_SUMMARY.md` - Implementation summary
+
 ## Learning Objectives (Eindtermen)
 
 The application provides comprehensive learning objective management with a two-tier architecture.
@@ -1530,6 +1824,45 @@ Audit logs include:
 - `POST /export/grades` - Export grades to Somtoday
 - `DELETE /disconnect` - Disconnect integration
 
+### 3de Blok Attendance API (`/api/v1/attendance`, `/api/v1/rfid`)
+
+**RFID Hardware Integration:**
+- `POST /attendance/scan` - RFID card scan endpoint for Raspberry Pi
+  - Body: `{"uid": "ABC123", "device_id": "rpi-workshop-1"}`
+  - Returns: `{status, action, user, event}`
+  - Public endpoint (to be secured with API key)
+
+**Teacher Management Endpoints:**
+- `GET /attendance/events` - List attendance events with filters
+  - Query params: `user_id`, `class_name`, `project_id`, `start_date`, `end_date`, `is_external`, `status_open`, `approval_status`, `page`, `per_page`
+- `PATCH /attendance/events/:id` - Edit event times
+- `DELETE /attendance/events/:id` - Delete single event
+- `POST /attendance/events/bulk-delete` - Bulk delete events
+  - Body: `{"event_ids": [1, 2, 3]}`
+- `GET /attendance/presence` - Get currently present students (real-time)
+- `GET /attendance/export` - Export attendance data to CSV/PDF (planned)
+
+**External Work Endpoints:**
+- `POST /attendance/external` - Student registers external work
+  - Body: `{check_in, check_out, location, description, project_id?}`
+- `PATCH /attendance/external/:id/approve` - Teacher approves external work
+- `PATCH /attendance/external/:id/reject` - Teacher rejects with reason
+  - Body: `{"reason": "..."}`
+- `POST /attendance/external/bulk-approve` - Bulk approve external work
+  - Body: `{"event_ids": [1, 2, 3]}`
+
+**Student Dashboard:**
+- `GET /attendance/me` - Get own attendance totals
+  - Returns: `{total_school_seconds, total_external_approved_seconds, total_external_pending_seconds, lesson_blocks}`
+
+**RFID Card Management:**
+- `GET /rfid/:user_id` - List user's RFID cards
+- `POST /rfid/:user_id` - Assign new RFID card to user
+  - Body: `{"uid": "ABC123", "label": "Primary Card"}`
+- `PATCH /rfid/:id` - Update card (e.g., deactivate)
+  - Body: `{"is_active": false}`
+- `DELETE /rfid/:id` - Delete RFID card
+
 ## Data Migration
 
 When upgrading existing installations:
@@ -1567,6 +1900,13 @@ See `MIGRATION_NOTES.md` for detailed migration instructions.
 - ✅ Subprojects (deelprojecten) for choice projects
 - ✅ Comprehensive template system (peer, project, competency, mail, remarks)
 - ✅ Template tagging and categorization
+- ✅ 3de Blok RFID attendance module (backend complete)
+  - ✅ RFID card management
+  - ✅ School attendance tracking via RFID readers
+  - ✅ External work registration with approval workflow
+  - ✅ Attendance aggregates and lesson blocks calculation
+  - ✅ Real-time presence dashboard
+  - ✅ Database schema with views and functions
 
 ### Phase 2 (Current/Planned)
 - Analytics dashboards per course and school
@@ -1577,6 +1917,12 @@ See `MIGRATION_NOTES.md` for detailed migration instructions.
 - Email sending UI with template selection from MailTemplate
 - External evaluator invitation management UI
 - Template library UI for browsing and applying templates
+- 3de Blok attendance frontend completion
+  - Full events table with editing capabilities
+  - External work approval UI
+  - Student dashboard with external work registration
+  - Stats page with charts and analytics
+  - CSV/PDF export for attendance reports
 
 ### Phase 3 (Future)
 - Full Somtoday integration
