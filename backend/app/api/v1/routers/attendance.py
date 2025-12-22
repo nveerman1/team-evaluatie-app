@@ -927,7 +927,7 @@ def get_projects_by_class(
     if class_name:
         query = query.filter(Project.class_name == class_name)
     
-    projects = query.order_by(Project.start_date.desc()).all()
+    projects = query.order_by(Project.start_date.desc().nulls_last()).all()
     
     return [
         {

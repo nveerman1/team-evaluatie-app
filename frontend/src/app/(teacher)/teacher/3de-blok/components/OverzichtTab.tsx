@@ -188,11 +188,24 @@ export default function OverzichtTab() {
           >
             <option value="">Alle projecten</option>
             {projects.map((project) => {
-              const dateRange = project.start_date && project.end_date
-                ? ` (${new Date(project.start_date).toLocaleDateString('nl-NL')} - ${new Date(project.end_date).toLocaleDateString('nl-NL')})`
-                : project.start_date
-                ? ` (vanaf ${new Date(project.start_date).toLocaleDateString('nl-NL')})`
-                : '';
+              let dateRange = '';
+              try {
+                if (project.start_date && project.end_date) {
+                  const startDate = new Date(project.start_date);
+                  const endDate = new Date(project.end_date);
+                  if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+                    dateRange = ` (${startDate.toLocaleDateString('nl-NL')} - ${endDate.toLocaleDateString('nl-NL')})`;
+                  }
+                } else if (project.start_date) {
+                  const startDate = new Date(project.start_date);
+                  if (!isNaN(startDate.getTime())) {
+                    dateRange = ` (vanaf ${startDate.toLocaleDateString('nl-NL')})`;
+                  }
+                }
+              } catch (error) {
+                // Ignore date parsing errors
+                console.warn('Error parsing project dates:', error);
+              }
               return (
                 <option key={project.id} value={project.id}>
                   {project.title}{dateRange}
