@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -492,8 +493,8 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
 
             <div className="grid gap-2">
               <label className="text-sm font-medium text-slate-900">Omschrijving</label>
-              <Input
-                className="h-10 rounded-2xl border-slate-200"
+              <Textarea
+                className="rounded-2xl border-slate-200 min-h-[100px]"
                 placeholder="Bijv. interview, bouwen, documenteren…"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
