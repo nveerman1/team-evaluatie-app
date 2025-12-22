@@ -108,14 +108,27 @@ instance.interceptors.response.use(
  */
 export async function fetchWithErrorHandling(url: string, options?: RequestInit): Promise<Response> {
   try {
+    // Get X-User-Email from storage (same as axios interceptor)
+    let xUserEmail: string | null = null;
+    if (typeof window !== 'undefined') {
+      xUserEmail = localStorage.getItem('x_user_email') || sessionStorage.getItem('x_user_email');
+    }
+
+    const headers: Record<string, string> = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      ...(options?.headers as Record<string, string> || {}),
+    };
+
+    // Add X-User-Email header if available (for dev-login)
+    if (xUserEmail) {
+      headers['X-User-Email'] = xUserEmail;
+    }
+
     const response = await fetch(url, {
       ...options,
       credentials: options?.credentials || 'include',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
+      headers,
     });
 
     if (!response.ok) {
