@@ -7,7 +7,7 @@ from typing import Optional
 from datetime import datetime, timedelta
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 from sqlalchemy import func, and_, or_
 
 from app.api.v1.deps import get_db, get_current_user
@@ -164,8 +164,10 @@ def list_attendance_events(
             detail="Only teachers and admins can access this endpoint"
         )
     
-    # Base query - scope to school via user join
-    query = db.query(AttendanceEvent).join(User).filter(
+    # Base query - scope to school via explicit user join
+    query = db.query(AttendanceEvent).join(
+        User, AttendanceEvent.user_id == User.id
+    ).filter(
         User.school_id == current_user.school_id
     )
     
@@ -194,8 +196,8 @@ def list_attendance_events(
     if approval_status:
         query = query.filter(AttendanceEvent.approval_status == approval_status)
     
-    # Get total count
-    total = query.count()
+    # Get total count using distinct on AttendanceEvent.id
+    total = query.with_entities(AttendanceEvent.id).distinct().count()
     
     # Pagination
     offset = (page - 1) * per_page
@@ -234,7 +236,9 @@ def update_attendance_event(
         )
     
     # Find event and verify school
-    event = db.query(AttendanceEvent).join(User).filter(
+    event = db.query(AttendanceEvent).join(
+        User, AttendanceEvent.user_id == User.id
+    ).filter(
         AttendanceEvent.id == event_id,
         User.school_id == current_user.school_id
     ).first()
@@ -276,7 +280,9 @@ def delete_attendance_event(
             detail="Only teachers and admins can delete events"
         )
     
-    event = db.query(AttendanceEvent).join(User).filter(
+    event = db.query(AttendanceEvent).join(
+        User, AttendanceEvent.user_id == User.id
+    ).filter(
         AttendanceEvent.id == event_id,
         User.school_id == current_user.school_id
     ).first()
@@ -307,7 +313,9 @@ def bulk_delete_events(
         )
     
     # Delete events that belong to users in the same school
-    deleted_count = db.query(AttendanceEvent).join(User).filter(
+    deleted_count = db.query(AttendanceEvent).join(
+        User, AttendanceEvent.user_id == User.id
+    ).filter(
         AttendanceEvent.id.in_(request.event_ids),
         User.school_id == current_user.school_id
     ).delete(synchronize_session=False)
@@ -373,7 +381,9 @@ def approve_external_work(
             detail="Only teachers and admins can approve external work"
         )
     
-    event = db.query(AttendanceEvent).join(User).filter(
+    event = db.query(AttendanceEvent).join(
+        User, AttendanceEvent.user_id == User.id
+    ).filter(
         AttendanceEvent.id == event_id,
         AttendanceEvent.is_external == True,
         User.school_id == current_user.school_id
@@ -412,7 +422,9 @@ def reject_external_work(
             detail="Only teachers and admins can reject external work"
         )
     
-    event = db.query(AttendanceEvent).join(User).filter(
+    event = db.query(AttendanceEvent).join(
+        User, AttendanceEvent.user_id == User.id
+    ).filter(
         AttendanceEvent.id == event_id,
         AttendanceEvent.is_external == True,
         User.school_id == current_user.school_id
@@ -455,7 +467,9 @@ def bulk_approve_external_work(
         )
     
     # Update events that belong to users in the same school
-    updated_count = db.query(AttendanceEvent).join(User).filter(
+    updated_count = db.query(AttendanceEvent).join(
+        User, AttendanceEvent.user_id == User.id
+    ).filter(
         AttendanceEvent.id.in_(request.event_ids),
         AttendanceEvent.is_external == True,
         User.school_id == current_user.school_id
@@ -546,7 +560,9 @@ def get_current_presence(
         )
     
     # Query open sessions for users in the same school
-    open_sessions = db.query(AttendanceEvent, User).join(User).filter(
+    open_sessions = db.query(AttendanceEvent, User).join(
+        User, AttendanceEvent.user_id == User.id
+    ).filter(
         User.school_id == current_user.school_id,
         AttendanceEvent.is_external == False,
         AttendanceEvent.check_out.is_(None)
@@ -594,7 +610,9 @@ def export_attendance(
         )
     
     # Build query
-    query = db.query(AttendanceEvent, User).join(User).filter(
+    query = db.query(AttendanceEvent, User).join(
+        User, AttendanceEvent.user_id == User.id
+    ).filter(
         User.school_id == current_user.school_id
     )
     

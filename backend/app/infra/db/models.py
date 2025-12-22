@@ -67,6 +67,25 @@ class User(Base):
     team_number: Mapped[Optional[int]] = mapped_column(nullable=True, index=True)
 
     school: Mapped["School"] = relationship(back_populates="users")
+    
+    # 3de Blok RFID Attendance relationships
+    attendance_events: Mapped[list["AttendanceEvent"]] = relationship(
+        "AttendanceEvent",
+        foreign_keys="AttendanceEvent.user_id",
+        back_populates="user"
+    )
+    approved_attendance_events: Mapped[list["AttendanceEvent"]] = relationship(
+        "AttendanceEvent",
+        foreign_keys="AttendanceEvent.approved_by",
+        back_populates="approver",
+        viewonly=True
+    )
+    created_attendance_events: Mapped[list["AttendanceEvent"]] = relationship(
+        "AttendanceEvent",
+        foreign_keys="AttendanceEvent.created_by",
+        back_populates="creator",
+        viewonly=True
+    )
 
     __table_args__ = (
         UniqueConstraint("school_id", "email", name="uq_user_email_per_school"),
@@ -2785,10 +2804,24 @@ class AttendanceEvent(Base):
     )
 
     # Relationships
-    user: Mapped["User"] = relationship(foreign_keys=[user_id])
+    user: Mapped["User"] = relationship(
+        "User", 
+        foreign_keys=[user_id],
+        back_populates="attendance_events"
+    )
     project: Mapped[Optional["Project"]] = relationship()
-    approver: Mapped[Optional["User"]] = relationship(foreign_keys=[approved_by])
-    creator: Mapped[Optional["User"]] = relationship(foreign_keys=[created_by])
+    approver: Mapped[Optional["User"]] = relationship(
+        "User",
+        foreign_keys=[approved_by],
+        back_populates="approved_attendance_events",
+        viewonly=True
+    )
+    creator: Mapped[Optional["User"]] = relationship(
+        "User",
+        foreign_keys=[created_by],
+        back_populates="created_attendance_events",
+        viewonly=True
+    )
 
     __table_args__ = (
         sa.CheckConstraint(
