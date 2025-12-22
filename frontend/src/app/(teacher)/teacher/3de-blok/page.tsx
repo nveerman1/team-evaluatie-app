@@ -2,11 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, Users, TrendingUp, List, MapPin, ArrowRight, CreditCard, BarChart3 } from "lucide-react";
+import { Clock, Users, TrendingUp, List, MapPin, ArrowRight, CreditCard, BarChart3 } from "lucide-react";
 import { fetchWithErrorHandling } from "@/lib/api";
 
 interface OpenSession {

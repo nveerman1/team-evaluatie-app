@@ -1,13 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Calendar, 
-  Clock, 
   Filter, 
   Trash2, 
   Edit, 
@@ -15,7 +12,7 @@ import {
   CheckSquare,
   Square,
   MapPin,
-  FileText
+  Clock
 } from "lucide-react";
 import { attendanceService, type AttendanceEvent } from "@/services/attendance.service";
 
