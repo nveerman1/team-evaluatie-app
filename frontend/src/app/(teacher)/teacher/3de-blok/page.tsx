@@ -13,7 +13,7 @@ export default function AttendanceDashboardPage() {
   const tabs = [
     { id: "overzicht", label: "Overzicht" },
     { id: "aanwezigheid", label: "Aanwezigheid" },
-    { id: "gebeurtenissen", label: "Alle gebeurtenissen" },
+    { id: "gebeurtenissen", label: "In-/Uitcheck log" },
     { id: "extern", label: "Extern werk" },
     { id: "rfid", label: "RFID Kaarten" },
   ];
