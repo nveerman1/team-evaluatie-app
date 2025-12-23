@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, date, timezone
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, aliased
-from sqlalchemy import func, and_, or_
+from sqlalchemy import func, and_, or_, case
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import (
@@ -1248,10 +1248,10 @@ def get_stats_summary(
     # Apply course filter
     if course_id:
         school_query = school_query.join(
-            CourseEnrollment, CourseEnrollment.user_id == User.id
+            CourseEnrollment, CourseEnrollment.student_id == User.id
         ).filter(CourseEnrollment.course_id == course_id)
         external_query = external_query.join(
-            CourseEnrollment, CourseEnrollment.user_id == User.id
+            CourseEnrollment, CourseEnrollment.student_id == User.id
         ).filter(CourseEnrollment.course_id == course_id)
 
     # Apply project filter
@@ -1314,14 +1314,14 @@ def get_stats_weekly(
         db.query(
             func.date_trunc("week", AttendanceEvent.check_in).label("week_start"),
             func.sum(
-                func.case(
+                case(
                     (AttendanceEvent.is_external == False, 
                      func.extract("epoch", AttendanceEvent.check_out - AttendanceEvent.check_in)),
                     else_=0
                 )
             ).label("school_seconds"),
             func.sum(
-                func.case(
+                case(
                     (and_(AttendanceEvent.is_external == True, AttendanceEvent.approval_status == "approved"),
                      func.extract("epoch", AttendanceEvent.check_out - AttendanceEvent.check_in)),
                     else_=0
@@ -1344,7 +1344,7 @@ def get_stats_weekly(
     # Apply course filter
     if course_id:
         query = query.join(
-            CourseEnrollment, CourseEnrollment.user_id == User.id
+            CourseEnrollment, CourseEnrollment.student_id == User.id
         ).filter(CourseEnrollment.course_id == course_id)
 
     # Apply project filter
@@ -1417,7 +1417,7 @@ def get_stats_daily(
     # Apply course filter
     if course_id:
         query = query.join(
-            CourseEnrollment, CourseEnrollment.user_id == User.id
+            CourseEnrollment, CourseEnrollment.student_id == User.id
         ).filter(CourseEnrollment.course_id == course_id)
 
     # Apply project filter
@@ -1498,7 +1498,7 @@ def get_stats_heatmap(
     # Apply course filter
     if course_id:
         query = query.join(
-            CourseEnrollment, CourseEnrollment.user_id == User.id
+            CourseEnrollment, CourseEnrollment.student_id == User.id
         ).filter(CourseEnrollment.course_id == course_id)
 
     # Apply project filter
@@ -1623,7 +1623,7 @@ def get_stats_signals(
     )
     
     if course_id:
-        query = query.join(CourseEnrollment, CourseEnrollment.user_id == User.id).filter(
+        query = query.join(CourseEnrollment, CourseEnrollment.student_id == User.id).filter(
             CourseEnrollment.course_id == course_id
         )
     
@@ -1640,7 +1640,7 @@ def get_stats_signals(
             user_course = (
                 db.query(Course.name)
                 .join(CourseEnrollment, CourseEnrollment.course_id == Course.id)
-                .filter(CourseEnrollment.user_id == row.id)
+                .filter(CourseEnrollment.student_id == row.id)
                 .first()
             )
             course_name = user_course[0] if user_course else None
@@ -1680,7 +1680,7 @@ def get_stats_signals(
         pending_query = pending_query.filter(AttendanceEvent.check_in <= end_date)
     if course_id:
         pending_query = pending_query.join(
-            CourseEnrollment, CourseEnrollment.user_id == User.id
+            CourseEnrollment, CourseEnrollment.student_id == User.id
         ).filter(CourseEnrollment.course_id == course_id)
     if project_id:
         pending_query = pending_query.filter(AttendanceEvent.project_id == project_id)
@@ -1696,7 +1696,7 @@ def get_stats_signals(
         user_course = (
             db.query(Course.name)
             .join(CourseEnrollment, CourseEnrollment.course_id == Course.id)
-            .filter(CourseEnrollment.user_id == row.id)
+            .filter(CourseEnrollment.student_id == row.id)
             .first()
         )
         course_name = user_course[0] if user_course else None
@@ -1736,7 +1736,7 @@ def get_stats_signals(
     
     if course_id:
         open_query = open_query.join(
-            CourseEnrollment, CourseEnrollment.user_id == User.id
+            CourseEnrollment, CourseEnrollment.student_id == User.id
         ).filter(CourseEnrollment.course_id == course_id)
     if project_id:
         open_query = open_query.filter(AttendanceEvent.project_id == project_id)
@@ -1748,7 +1748,7 @@ def get_stats_signals(
         user_course = (
             db.query(Course.name)
             .join(CourseEnrollment, CourseEnrollment.course_id == Course.id)
-            .filter(CourseEnrollment.user_id == row.id)
+            .filter(CourseEnrollment.student_id == row.id)
             .first()
         )
         course_name = user_course[0] if user_course else None
@@ -1834,7 +1834,7 @@ def get_stats_top_bottom(
     # Apply course filter
     if course_id:
         query = query.join(
-            CourseEnrollment, CourseEnrollment.user_id == User.id
+            CourseEnrollment, CourseEnrollment.student_id == User.id
         ).filter(CourseEnrollment.course_id == course_id)
 
     # Apply project filter
@@ -1855,7 +1855,7 @@ def get_stats_top_bottom(
         user_course = (
             db.query(Course.name)
             .join(CourseEnrollment, CourseEnrollment.course_id == Course.id)
-            .filter(CourseEnrollment.user_id == row.id)
+            .filter(CourseEnrollment.student_id == row.id)
             .first()
         )
         course_name = user_course[0] if user_course else None
