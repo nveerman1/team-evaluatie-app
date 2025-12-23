@@ -1248,10 +1248,10 @@ def get_stats_summary(
     # Apply course filter
     if course_id:
         school_query = school_query.join(
-            CourseEnrollment, CourseEnrollment.student_id == User.id
+            CourseEnrollment, CourseEnrollment.student_id == AttendanceEvent.user_id
         ).filter(CourseEnrollment.course_id == course_id)
         external_query = external_query.join(
-            CourseEnrollment, CourseEnrollment.student_id == User.id
+            CourseEnrollment, CourseEnrollment.student_id == AttendanceEvent.user_id
         ).filter(CourseEnrollment.course_id == course_id)
 
     # Apply project filter
@@ -1344,7 +1344,7 @@ def get_stats_weekly(
     # Apply course filter
     if course_id:
         query = query.join(
-            CourseEnrollment, CourseEnrollment.student_id == User.id
+            CourseEnrollment, CourseEnrollment.student_id == AttendanceEvent.user_id
         ).filter(CourseEnrollment.course_id == course_id)
 
     # Apply project filter
@@ -1417,7 +1417,7 @@ def get_stats_daily(
     # Apply course filter
     if course_id:
         query = query.join(
-            CourseEnrollment, CourseEnrollment.student_id == User.id
+            CourseEnrollment, CourseEnrollment.student_id == AttendanceEvent.user_id
         ).filter(CourseEnrollment.course_id == course_id)
 
     # Apply project filter
@@ -1498,7 +1498,7 @@ def get_stats_heatmap(
     # Apply course filter
     if course_id:
         query = query.join(
-            CourseEnrollment, CourseEnrollment.student_id == User.id
+            CourseEnrollment, CourseEnrollment.student_id == AttendanceEvent.user_id
         ).filter(CourseEnrollment.course_id == course_id)
 
     # Apply project filter
@@ -1623,7 +1623,7 @@ def get_stats_signals(
     )
     
     if course_id:
-        query = query.join(CourseEnrollment, CourseEnrollment.student_id == User.id).filter(
+        query = query.join(CourseEnrollment, CourseEnrollment.student_id == AttendanceEvent.user_id).filter(
             CourseEnrollment.course_id == course_id
         )
     
@@ -1680,7 +1680,7 @@ def get_stats_signals(
         pending_query = pending_query.filter(AttendanceEvent.check_in <= end_date)
     if course_id:
         pending_query = pending_query.join(
-            CourseEnrollment, CourseEnrollment.student_id == User.id
+            CourseEnrollment, CourseEnrollment.student_id == AttendanceEvent.user_id
         ).filter(CourseEnrollment.course_id == course_id)
     if project_id:
         pending_query = pending_query.filter(AttendanceEvent.project_id == project_id)
@@ -1736,7 +1736,7 @@ def get_stats_signals(
     
     if course_id:
         open_query = open_query.join(
-            CourseEnrollment, CourseEnrollment.student_id == User.id
+            CourseEnrollment, CourseEnrollment.student_id == AttendanceEvent.user_id
         ).filter(CourseEnrollment.course_id == course_id)
     if project_id:
         open_query = open_query.filter(AttendanceEvent.project_id == project_id)
@@ -1834,7 +1834,7 @@ def get_stats_top_bottom(
     # Apply course filter
     if course_id:
         query = query.join(
-            CourseEnrollment, CourseEnrollment.student_id == User.id
+            CourseEnrollment, CourseEnrollment.student_id == AttendanceEvent.user_id
         ).filter(CourseEnrollment.course_id == course_id)
 
     # Apply project filter
