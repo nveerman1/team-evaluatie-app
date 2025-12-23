@@ -4,6 +4,8 @@ import {
   OverviewFilters,
   OverviewMatrixResponse,
   MatrixFilters,
+  ProjectOverviewListResponse,
+  ProjectTrendResponse,
 } from "@/dtos/overview.dto";
 
 export const overviewService = {
@@ -93,6 +95,48 @@ export const overviewService = {
     const { data } = await api.get(
       `/overview/matrix/export.csv${params.size ? `?${params.toString()}` : ""}`,
       { responseType: "blob" }
+    );
+    return data;
+  },
+
+  /**
+   * Get project overview data
+   */
+  async getProjectOverview(filters?: {
+    schoolYear?: string;
+    courseId?: string;
+    period?: string;
+    statusFilter?: string;
+    searchQuery?: string;
+  }): Promise<ProjectOverviewListResponse> {
+    const params = new URLSearchParams();
+    
+    if (filters?.schoolYear) params.set("school_year", filters.schoolYear);
+    if (filters?.courseId) params.set("course_id", filters.courseId);
+    if (filters?.period) params.set("period", filters.period);
+    if (filters?.statusFilter) params.set("status_filter", filters.statusFilter);
+    if (filters?.searchQuery) params.set("search_query", filters.searchQuery);
+    
+    const { data } = await api.get<ProjectOverviewListResponse>(
+      `/overview/projects?${params.toString()}`
+    );
+    return data;
+  },
+
+  /**
+   * Get project trend data
+   */
+  async getProjectTrends(filters?: {
+    schoolYear?: string;
+    courseId?: string;
+  }): Promise<ProjectTrendResponse> {
+    const params = new URLSearchParams();
+    
+    if (filters?.schoolYear) params.set("school_year", filters.schoolYear);
+    if (filters?.courseId) params.set("course_id", filters.courseId);
+    
+    const { data } = await api.get<ProjectTrendResponse>(
+      `/overview/projects/trends?${params.toString()}`
     );
     return data;
   },

@@ -845,3 +845,294 @@ def export_matrix_csv(
             "Content-Disposition": f"attachment; filename=overzicht-matrix-{datetime.now().strftime('%Y%m%d')}.csv"
         }
     )
+
+
+# ==================== PROJECT OVERVIEW ENDPOINTS ====================
+
+@router.get("/projects")
+def get_project_overview(
+    school_year: Optional[str] = Query(None),  # e.g., "2024-2025"
+    course_id: Optional[int] = Query(None),
+    period: Optional[str] = Query(None),  # e.g., "Q1", "Q2"
+    status_filter: Optional[str] = Query(None),  # "all", "active", "completed"
+    search_query: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get project overview data for the teacher overview page
+    Returns aggregated project data with category scores
+    """
+    from app.api.v1.schemas.overview import ProjectOverviewListResponse, ProjectOverviewItem
+    
+    school_id = current_user.school_id
+    
+    # Query project assessments
+    query = db.query(
+        ProjectAssessment,
+        Group,
+        Course,
+    ).join(
+        Group, ProjectAssessment.group_id == Group.id
+    ).outerjoin(
+        Course, Group.course_id == Course.id
+    ).filter(
+        ProjectAssessment.school_id == school_id
+    )
+    
+    # Apply filters
+    if course_id:
+        query = query.filter(Group.course_id == course_id)
+    
+    if school_year:
+        # Parse school year like "2024-2025"
+        try:
+            start_year = int(school_year.split("-")[0])
+            query = query.filter(
+                or_(
+                    func.extract("year", ProjectAssessment.published_at) == start_year,
+                    func.extract("year", ProjectAssessment.published_at) == start_year + 1
+                )
+            )
+        except (ValueError, IndexError):
+            pass
+    
+    if status_filter and status_filter != "all":
+        if status_filter == "completed":
+            query = query.filter(ProjectAssessment.status == "published")
+        elif status_filter == "active":
+            query = query.filter(ProjectAssessment.status.in_(["draft", "open"]))
+    
+    if search_query:
+        search_pattern = f"%{search_query}%"
+        query = query.filter(
+            or_(
+                ProjectAssessment.title.ilike(search_pattern),
+                Group.name.ilike(search_pattern)
+            )
+        )
+    
+    # Get results
+    results = query.all()
+    
+    # Build project overview items
+    projects = []
+    for assessment, group, course in results:
+        # Get client name from group settings if available
+        client_name = None
+        if group.settings and isinstance(group.settings, dict):
+            client_name = group.settings.get("client_name")
+        
+        # Determine period label (e.g., "Q1 2025")
+        period_label = "Unknown"
+        year = datetime.now().year
+        if assessment.published_at:
+            year = assessment.published_at.year
+            month = assessment.published_at.month
+            if month <= 3:
+                period_label = f"Q1 {year}"
+            elif month <= 6:
+                period_label = f"Q2 {year}"
+            elif month <= 9:
+                period_label = f"Q3 {year}"
+            else:
+                period_label = f"Q4 {year}"
+        
+        # Apply period filter if specified
+        if period and period != "Alle periodes" and period not in period_label:
+            continue
+        
+        # Count teams in this project (groups with same project)
+        num_teams = db.query(Group).filter(
+            Group.course_id == group.course_id,
+            Group.name.like(f"%{assessment.title}%")  # Simple heuristic
+        ).count()
+        if num_teams == 0:
+            num_teams = 1
+        
+        # Calculate average score overall
+        rubric = db.query(Rubric).filter(Rubric.id == assessment.rubric_id).first()
+        if not rubric:
+            average_score_overall = None
+            average_scores_by_category = {}
+        else:
+            # Get all scores for this assessment
+            all_scores = db.query(ProjectAssessmentScore).filter(
+                ProjectAssessmentScore.assessment_id == assessment.id
+            ).all()
+            
+            if not all_scores:
+                average_score_overall = None
+                average_scores_by_category = {}
+            else:
+                # Get criteria with categories
+                criteria = db.query(RubricCriterion).filter(
+                    RubricCriterion.rubric_id == rubric.id
+                ).all()
+                
+                # Create score map
+                score_map = {s.criterion_id: s.score for s in all_scores}
+                
+                # Calculate weighted average overall
+                total_weighted_score = 0.0
+                total_weight = 0.0
+                for criterion in criteria:
+                    if criterion.id in score_map:
+                        total_weighted_score += score_map[criterion.id] * criterion.weight
+                        total_weight += criterion.weight
+                
+                if total_weight == 0:
+                    average_score_overall = None
+                else:
+                    avg_score = total_weighted_score / total_weight
+                    average_score_overall = _score_to_grade(avg_score, rubric.scale_min, rubric.scale_max)
+                
+                # Calculate average by category
+                category_scores = {}
+                category_weights = {}
+                
+                for criterion in criteria:
+                    if criterion.id in score_map and criterion.category:
+                        cat = criterion.category.lower()
+                        if cat not in category_scores:
+                            category_scores[cat] = 0.0
+                            category_weights[cat] = 0.0
+                        category_scores[cat] += score_map[criterion.id] * criterion.weight
+                        category_weights[cat] += criterion.weight
+                
+                average_scores_by_category = {}
+                for cat, total_score in category_scores.items():
+                    if category_weights[cat] > 0:
+                        avg = total_score / category_weights[cat]
+                        average_scores_by_category[cat] = round(_score_to_grade(avg, rubric.scale_min, rubric.scale_max), 1)
+        
+        # Determine status
+        status = "active" if assessment.status in ["draft", "open"] else "completed"
+        
+        projects.append(ProjectOverviewItem(
+            project_id=assessment.id,
+            project_name=assessment.title,
+            course_name=course.name if course else None,
+            client_name=client_name,
+            period_label=period_label,
+            year=year,
+            num_teams=num_teams,
+            average_score_overall=round(average_score_overall, 1) if average_score_overall else None,
+            average_scores_by_category=average_scores_by_category,
+            status=status
+        ))
+    
+    return ProjectOverviewListResponse(
+        projects=projects,
+        total=len(projects)
+    )
+
+
+@router.get("/projects/trends")
+def get_project_trends(
+    school_year: Optional[str] = Query(None),
+    course_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get trend data for project categories over time
+    """
+    from app.api.v1.schemas.overview import ProjectTrendResponse, CategoryTrendData
+    
+    school_id = current_user.school_id
+    
+    # Query project assessments with scores
+    query = db.query(
+        ProjectAssessment,
+        Group,
+    ).join(
+        Group, ProjectAssessment.group_id == Group.id
+    ).filter(
+        ProjectAssessment.school_id == school_id,
+        ProjectAssessment.status == "published"
+    ).order_by(ProjectAssessment.published_at.asc())
+    
+    # Apply filters
+    if course_id:
+        query = query.filter(Group.course_id == course_id)
+    
+    if school_year:
+        try:
+            start_year = int(school_year.split("-")[0])
+            query = query.filter(
+                or_(
+                    func.extract("year", ProjectAssessment.published_at) == start_year,
+                    func.extract("year", ProjectAssessment.published_at) == start_year + 1
+                )
+            )
+        except (ValueError, IndexError):
+            pass
+    
+    results = query.all()
+    
+    # Build trend data
+    trend_data = []
+    for assessment, group in results:
+        if not assessment.published_at:
+            continue
+        
+        # Get rubric
+        rubric = db.query(Rubric).filter(Rubric.id == assessment.rubric_id).first()
+        if not rubric:
+            continue
+        
+        # Get scores
+        all_scores = db.query(ProjectAssessmentScore).filter(
+            ProjectAssessmentScore.assessment_id == assessment.id
+        ).all()
+        
+        if not all_scores:
+            continue
+        
+        # Get criteria
+        criteria = db.query(RubricCriterion).filter(
+            RubricCriterion.rubric_id == rubric.id
+        ).all()
+        
+        score_map = {s.criterion_id: s.score for s in all_scores}
+        
+        # Calculate average by category
+        category_scores = {}
+        category_weights = {}
+        
+        for criterion in criteria:
+            if criterion.id in score_map and criterion.category:
+                cat = criterion.category.lower()
+                if cat not in category_scores:
+                    category_scores[cat] = 0.0
+                    category_weights[cat] = 0.0
+                category_scores[cat] += score_map[criterion.id] * criterion.weight
+                category_weights[cat] += criterion.weight
+        
+        scores = {}
+        for cat, total_score in category_scores.items():
+            if category_weights[cat] > 0:
+                avg = total_score / category_weights[cat]
+                scores[cat] = round(_score_to_grade(avg, rubric.scale_min, rubric.scale_max), 1)
+        
+        # Create label
+        month = assessment.published_at.month
+        year = assessment.published_at.year
+        if month <= 3:
+            quarter = "Q1"
+        elif month <= 6:
+            quarter = "Q2"
+        elif month <= 9:
+            quarter = "Q3"
+        else:
+            quarter = "Q4"
+        
+        project_label = f"{quarter} {year} - {assessment.title[:20]}"
+        
+        trend_data.append(CategoryTrendData(
+            project_label=project_label,
+            scores=scores
+        ))
+    
+    return ProjectTrendResponse(trend_data=trend_data)

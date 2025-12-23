@@ -24,6 +24,8 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import { overviewService } from "@/services/overview.service";
+import type { CategoryTrendData } from "@/dtos/overview.dto";
 
 // Register Chart.js components
 ChartJS.register(
@@ -53,11 +55,6 @@ interface ProjectOverviewItem {
   status: "active" | "completed";
 }
 
-interface CategoryTrendData {
-  projectLabel: string;
-  scores: Record<string, number>;
-}
-
 interface ProjectOverviewFilters {
   schoolYear: string;
   courseId: string;
@@ -70,106 +67,8 @@ type SortField = "projectName" | "periodLabel" | "averageScoreOverall";
 type SortOrder = "asc" | "desc";
 
 /* =========================================
-   MOCK DATA
+   MOCK DATA - for constants only
    ========================================= */
-
-const MOCK_PROJECTS: ProjectOverviewItem[] = [
-  {
-    projectId: 1,
-    projectName: "Webshop Project",
-    courseName: "Informatica",
-    clientName: "TechStore BV",
-    periodLabel: "Q1 2025",
-    year: 2025,
-    numTeams: 5,
-    averageScoreOverall: 7.2,
-    averageScoresByCategory: {
-      projectproces: 7.5,
-      eindresultaat: 7.0,
-      communicatie: 7.1,
-    },
-    status: "completed",
-  },
-  {
-    projectId: 2,
-    projectName: "App Ontwikkeling",
-    courseName: "Informatica",
-    clientName: "MobileFirst",
-    periodLabel: "Q2 2025",
-    year: 2025,
-    numTeams: 4,
-    averageScoreOverall: 6.8,
-    averageScoresByCategory: {
-      projectproces: 6.5,
-      eindresultaat: 7.2,
-      communicatie: 6.8,
-    },
-    status: "active",
-  },
-  {
-    projectId: 3,
-    projectName: "Database Ontwerp",
-    courseName: "Informatica",
-    clientName: "DataCorp",
-    periodLabel: "Q1 2025",
-    year: 2025,
-    numTeams: 6,
-    averageScoreOverall: 7.8,
-    averageScoresByCategory: {
-      projectproces: 8.0,
-      eindresultaat: 7.5,
-      communicatie: 7.8,
-    },
-    status: "completed",
-  },
-  {
-    projectId: 4,
-    projectName: "Marketing Campagne",
-    courseName: "Economie",
-    clientName: "BrandBoost",
-    periodLabel: "Q4 2024",
-    year: 2024,
-    numTeams: 3,
-    averageScoreOverall: 6.5,
-    averageScoresByCategory: {
-      projectproces: 6.2,
-      eindresultaat: 6.8,
-      communicatie: 6.5,
-    },
-    status: "completed",
-  },
-  {
-    projectId: 5,
-    projectName: "Website Redesign",
-    courseName: "Informatica",
-    clientName: "WebAgency",
-    periodLabel: "Q2 2025",
-    year: 2025,
-    numTeams: 4,
-    averageScoreOverall: null,
-    averageScoresByCategory: {},
-    status: "active",
-  },
-];
-
-const MOCK_TREND_DATA: CategoryTrendData[] = [
-  {
-    projectLabel: "Q4 2024",
-    scores: { projectproces: 6.2, eindresultaat: 6.8, communicatie: 6.5 },
-  },
-  {
-    projectLabel: "Q1 2025 - DB",
-    scores: { projectproces: 8.0, eindresultaat: 7.5, communicatie: 7.8 },
-  },
-  {
-    projectLabel: "Q1 2025 - Web",
-    scores: { projectproces: 7.5, eindresultaat: 7.0, communicatie: 7.1 },
-  },
-  {
-    projectLabel: "Q2 2025",
-    scores: { projectproces: 6.5, eindresultaat: 7.2, communicatie: 6.8 },
-  },
-];
 
 const COURSES = [
   { id: "", name: "Alle vakken" },
@@ -208,51 +107,37 @@ function useProjectOverviewData(filters: ProjectOverviewFilters) {
     setLoading(true);
     setError(null);
     try {
-      // TODO: Replace with actual API calls
-      // GET /api/teacher/overview/projects
-      // GET /api/teacher/overview/projects/trends
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Fetch projects from API
+      const projectsResponse = await overviewService.getProjectOverview({
+        schoolYear: filters.schoolYear,
+        courseId: filters.courseId,
+        period: filters.period,
+        statusFilter: filters.statusFilter,
+        searchQuery: filters.searchQuery,
+      });
 
-      let filteredProjects = [...MOCK_PROJECTS];
+      // Fetch trends from API
+      const trendsResponse = await overviewService.getProjectTrends({
+        schoolYear: filters.schoolYear,
+        courseId: filters.courseId,
+      });
 
-      // Apply filters
-      if (filters.courseId) {
-        const courseName = COURSES.find((c) => c.id === filters.courseId)?.name;
-        if (courseName) {
-          filteredProjects = filteredProjects.filter((p) => p.courseName === courseName);
-        }
-      }
+      // Map API response to component format
+      const mappedProjects: ProjectOverviewItem[] = projectsResponse.projects.map((p) => ({
+        projectId: p.project_id,
+        projectName: p.project_name,
+        courseName: p.course_name || "",
+        clientName: p.client_name || "",
+        periodLabel: p.period_label,
+        year: p.year,
+        numTeams: p.num_teams,
+        averageScoreOverall: p.average_score_overall,
+        averageScoresByCategory: p.average_scores_by_category,
+        status: p.status,
+      }));
 
-      if (filters.period && filters.period !== "Alle periodes") {
-        filteredProjects = filteredProjects.filter((p) =>
-          p.periodLabel.includes(filters.period)
-        );
-      }
-
-      if (filters.schoolYear) {
-        const [startYear] = filters.schoolYear.split("-").map(Number);
-        filteredProjects = filteredProjects.filter(
-          (p) => p.year === startYear || p.year === startYear + 1
-        );
-      }
-
-      if (filters.statusFilter && filters.statusFilter !== "all") {
-        filteredProjects = filteredProjects.filter(
-          (p) => p.status === filters.statusFilter
-        );
-      }
-
-      if (filters.searchQuery) {
-        const query = filters.searchQuery.toLowerCase();
-        filteredProjects = filteredProjects.filter(
-          (p) =>
-            p.projectName.toLowerCase().includes(query) ||
-            p.clientName.toLowerCase().includes(query)
-        );
-      }
-
-      setProjects(filteredProjects);
-      setTrendData(MOCK_TREND_DATA);
+      setProjects(mappedProjects);
+      setTrendData(trendsResponse.trend_data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Fout bij het laden van projectgegevens");
     } finally {
