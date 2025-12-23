@@ -276,8 +276,9 @@ def _get_peer_results(
     from app.infra.db.models import Score, RubricCriterion
 
     # Get evaluations where student was evaluated
-    evaluations = (
-        db.query(Evaluation)
+    # Use distinct on ID to avoid issues with JSON columns
+    evaluation_ids = (
+        db.query(Evaluation.id)
         .join(Allocation, Allocation.evaluation_id == Evaluation.id)
         .filter(
             Allocation.reviewee_id == user_id,
@@ -285,6 +286,17 @@ def _get_peer_results(
             Evaluation.status == "closed",
         )
         .distinct()
+        .all()
+    )
+    
+    # Fetch full evaluation objects if we have IDs
+    if not evaluation_ids:
+        return []
+    
+    evaluation_id_list = [e_id for (e_id,) in evaluation_ids]
+    evaluations = (
+        db.query(Evaluation)
+        .filter(Evaluation.id.in_(evaluation_id_list))
         .order_by(Evaluation.created_at.desc())
         .all()
     )
