@@ -75,7 +75,9 @@ export default function StatistiekenTab() {
         api.get("/projects", { params: { status: "active,completed" } }),
       ]);
       setCourses(coursesData);
-      setProjects(projectsResponse.data || []);
+      // ProjectListResponse has an 'items' field, not a direct array
+      const projectsData = projectsResponse.data?.items || projectsResponse.data || [];
+      setProjects(Array.isArray(projectsData) ? projectsData : []);
     } catch (err) {
       console.error("Error fetching dropdown data:", err);
       toast.error("Kon filters niet laden");
