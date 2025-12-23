@@ -246,15 +246,15 @@ export default function OverzichtTab() {
       <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left p-3">Rang</th>
-                <th className="text-left p-3">Student</th>
-                <th className="text-left p-3">Klas</th>
-                <th className="text-left p-3">School uren</th>
-                <th className="text-left p-3">Extern (goedgekeurd)</th>
-                <th className="text-left p-3">Extern (in afwachting)</th>
-                <th className="text-left p-3">Lesblokken</th>
+            <thead className="bg-slate-50">
+              <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <th className="px-5 py-3">Rang</th>
+                <th className="px-5 py-3">Student</th>
+                <th className="px-5 py-3">Klas</th>
+                <th className="px-5 py-3">School uren</th>
+                <th className="px-5 py-3">Extern (goedgekeurd)</th>
+                <th className="px-5 py-3">Extern (in afwachting)</th>
+                <th className="px-5 py-3">Lesblokken</th>
               </tr>
             </thead>
             <tbody>
@@ -267,7 +267,7 @@ export default function OverzichtTab() {
               ) : (
                 filteredStudents.map((student, index) => (
                   <tr key={student.user_id} className="border-b border-gray-200 hover:bg-gray-50">
-                    <td className="p-3">
+                    <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
                         {index < 3 ? (
                           <span className="text-2xl">
@@ -278,33 +278,33 @@ export default function OverzichtTab() {
                         )}
                       </div>
                     </td>
-                    <td className="p-3">
-                      <div className="font-medium">{student.user_name}</div>
-                      <div className="text-sm text-gray-600">{student.user_email}</div>
+                    <td className="px-5 py-4">
+                      <div className="text-sm font-bold text-slate-900">{student.user_name}</div>
+                      <div className="text-sm text-slate-600">{student.user_email}</div>
                     </td>
-                    <td className="p-3">
+                    <td className="px-5 py-4">
                       {student.class_name ? (
                         <Badge variant="outline">{student.class_name}</Badge>
                       ) : (
                         <span className="text-gray-400">-</span>
                       )}
                     </td>
-                    <td className="p-3">
-                      <span className="font-medium">
+                    <td className="px-5 py-4">
+                      <span className="text-sm text-slate-700">
                         {formatDuration(student.total_school_seconds)}
                       </span>
                     </td>
-                    <td className="p-3">
-                      <span className="font-medium text-green-600">
+                    <td className="px-5 py-4">
+                      <span className="text-sm text-green-600">
                         {formatDuration(student.total_external_approved_seconds)}
                       </span>
                     </td>
-                    <td className="p-3">
-                      <span className="font-medium text-yellow-600">
+                    <td className="px-5 py-4">
+                      <span className="text-sm text-yellow-600">
                         {formatDuration(student.total_external_pending_seconds)}
                       </span>
                     </td>
-                    <td className="p-3">
+                    <td className="px-5 py-4">
                       <Badge variant="default" className="text-lg px-3 py-1">
                         {student.lesson_blocks}
                       </Badge>
