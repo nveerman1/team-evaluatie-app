@@ -1623,7 +1623,7 @@ def get_stats_signals(
     )
     
     if course_id:
-        query = query.join(CourseEnrollment, CourseEnrollment.student_id == AttendanceEvent.user_id).filter(
+        query = query.join(CourseEnrollment, CourseEnrollment.student_id == User.id).filter(
             CourseEnrollment.course_id == course_id
         )
     
