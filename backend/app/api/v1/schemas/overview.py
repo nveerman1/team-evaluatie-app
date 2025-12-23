@@ -128,3 +128,44 @@ class OverviewMatrixResponse(BaseModel):
     
     # Metadata
     total_students: int = 0
+
+
+# ==================== Project Overview Schemas ====================
+
+class ProjectOverviewItem(BaseModel):
+    """
+    Single project in the teacher's project overview
+    """
+    project_id: int
+    project_name: str
+    course_name: Optional[str] = None
+    client_name: Optional[str] = None
+    period_label: str  # e.g., "Q1 2025"
+    year: int
+    num_teams: int
+    average_score_overall: Optional[float] = None
+    average_scores_by_category: dict[str, float] = {}  # category -> average score
+    status: str  # "active" | "completed"
+
+
+class ProjectOverviewListResponse(BaseModel):
+    """
+    List of projects for the overview page
+    """
+    projects: List[ProjectOverviewItem]
+    total: int
+
+
+class CategoryTrendData(BaseModel):
+    """
+    Trend data point for category scores across projects
+    """
+    project_label: str  # e.g., "Q1 2025 - Web"
+    scores: dict[str, float]  # category -> score
+
+
+class ProjectTrendResponse(BaseModel):
+    """
+    Trend data for project categories over time
+    """
+    trend_data: List[CategoryTrendData]

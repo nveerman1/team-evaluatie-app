@@ -8,11 +8,9 @@ import {
   ChevronUp,
   X,
   TrendingUp,
-  Brain,
   BarChart3,
   FolderOpen,
   Award,
-  MessageSquare,
   ExternalLink,
 } from "lucide-react";
 import { Line } from "react-chartjs-2";
@@ -26,6 +24,8 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import { overviewService } from "@/services/overview.service";
+import type { CategoryTrendData } from "@/dtos/overview.dto";
 
 // Register Chart.js components
 ChartJS.register(
@@ -55,17 +55,6 @@ interface ProjectOverviewItem {
   status: "active" | "completed";
 }
 
-interface CategoryTrendData {
-  projectLabel: string;
-  scores: Record<string, number>;
-}
-
-interface AiSummary {
-  sterkePunten: string[];
-  verbeterpunten: string[];
-  algemeneTrend: string;
-}
-
 interface ProjectOverviewFilters {
   schoolYear: string;
   courseId: string;
@@ -78,150 +67,28 @@ type SortField = "projectName" | "periodLabel" | "averageScoreOverall";
 type SortOrder = "asc" | "desc";
 
 /* =========================================
-   MOCK DATA
+   MOCK DATA - for constants only
    ========================================= */
 
-const MOCK_PROJECTS: ProjectOverviewItem[] = [
-  {
-    projectId: 1,
-    projectName: "Webshop Project",
-    courseName: "Informatica",
-    clientName: "TechStore BV",
-    periodLabel: "Q1 2025",
-    year: 2025,
-    numTeams: 5,
-    averageScoreOverall: 7.2,
-    averageScoresByCategory: {
-      projectproces: 7.5,
-      eindresultaat: 7.0,
-      communicatie: 7.1,
-      samenwerking: 7.4,
-    },
-    status: "completed",
-  },
-  {
-    projectId: 2,
-    projectName: "App Ontwikkeling",
-    courseName: "Informatica",
-    clientName: "MobileFirst",
-    periodLabel: "Q2 2025",
-    year: 2025,
-    numTeams: 4,
-    averageScoreOverall: 6.8,
-    averageScoresByCategory: {
-      projectproces: 6.5,
-      eindresultaat: 7.2,
-      communicatie: 6.8,
-      samenwerking: 6.7,
-    },
-    status: "active",
-  },
-  {
-    projectId: 3,
-    projectName: "Database Ontwerp",
-    courseName: "Informatica",
-    clientName: "DataCorp",
-    periodLabel: "Q1 2025",
-    year: 2025,
-    numTeams: 6,
-    averageScoreOverall: 7.8,
-    averageScoresByCategory: {
-      projectproces: 8.0,
-      eindresultaat: 7.5,
-      communicatie: 7.8,
-      samenwerking: 8.0,
-    },
-    status: "completed",
-  },
-  {
-    projectId: 4,
-    projectName: "Marketing Campagne",
-    courseName: "Economie",
-    clientName: "BrandBoost",
-    periodLabel: "Q4 2024",
-    year: 2024,
-    numTeams: 3,
-    averageScoreOverall: 6.5,
-    averageScoresByCategory: {
-      projectproces: 6.2,
-      eindresultaat: 6.8,
-      communicatie: 6.5,
-      samenwerking: 6.5,
-    },
-    status: "completed",
-  },
-  {
-    projectId: 5,
-    projectName: "Website Redesign",
-    courseName: "Informatica",
-    clientName: "WebAgency",
-    periodLabel: "Q2 2025",
-    year: 2025,
-    numTeams: 4,
-    averageScoreOverall: null,
-    averageScoresByCategory: {},
-    status: "active",
-  },
-];
-
-const MOCK_TREND_DATA: CategoryTrendData[] = [
-  {
-    projectLabel: "Q4 2024",
-    scores: { projectproces: 6.2, eindresultaat: 6.8, communicatie: 6.5, samenwerking: 6.5 },
-  },
-  {
-    projectLabel: "Q1 2025 - DB",
-    scores: { projectproces: 8.0, eindresultaat: 7.5, communicatie: 7.8, samenwerking: 8.0 },
-  },
-  {
-    projectLabel: "Q1 2025 - Web",
-    scores: { projectproces: 7.5, eindresultaat: 7.0, communicatie: 7.1, samenwerking: 7.4 },
-  },
-  {
-    projectLabel: "Q2 2025",
-    scores: { projectproces: 6.5, eindresultaat: 7.2, communicatie: 6.8, samenwerking: 6.7 },
-  },
-];
-
-const MOCK_AI_SUMMARY: AiSummary = {
-  sterkePunten: [
-    "Goede samenwerking binnen teams",
-    "Hoge kwaliteit eindresultaten in technische projecten",
-    "Effectieve communicatie met opdrachtgevers",
-  ],
-  verbeterpunten: [
-    "Projectplanning kan strakker",
-    "Documentatie vaak onvolledig",
-    "Meer aandacht voor tussentijdse evaluaties",
-  ],
-  algemeneTrend:
-    "Over het algemeen laten projecten een positieve trend zien, met name op het gebied van samenwerking en eindresultaat. Er is ruimte voor verbetering in het projectproces, met specifieke aandacht voor planning en documentatie.",
-};
-
 const COURSES = [
-  { id: "", name: "Alle vakken" },
-  { id: "1", name: "Informatica" },
-  { id: "2", name: "Economie" },
-  { id: "3", name: "Wiskunde" },
 ];
 
-const PERIODS = ["Alle periodes", "Q1", "Q2", "Q3", "Q4"];
-
-const SCHOOL_YEARS = ["2024-2025", "2023-2024"];
+const PERIODS = ["Alle periodes", "P1", "P2", "P3", "P4"];
 
 const CATEGORY_COLORS: Record<string, string> = {
   projectproces: "#3b82f6", // blue
   eindresultaat: "#10b981", // green
   communicatie: "#f59e0b", // amber
-  samenwerking: "#8b5cf6", // purple
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
   projectproces: "Projectproces",
   eindresultaat: "Eindresultaat",
   communicatie: "Communicatie",
-  samenwerking: "Samenwerking",
 };
+
+// Table configuration
+const TABLE_COLUMNS_COUNT = 11; // Total number of columns in the project table
 
 /* =========================================
    HOOK: useProjectOverviewData
@@ -237,51 +104,37 @@ function useProjectOverviewData(filters: ProjectOverviewFilters) {
     setLoading(true);
     setError(null);
     try {
-      // TODO: Replace with actual API calls
-      // GET /api/teacher/overview/projects
-      // GET /api/teacher/overview/projects/trends
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Fetch projects from API
+      const projectsResponse = await overviewService.getProjectOverview({
+        schoolYear: filters.schoolYear,
+        courseId: filters.courseId,
+        period: filters.period,
+        statusFilter: filters.statusFilter,
+        searchQuery: filters.searchQuery,
+      });
 
-      let filteredProjects = [...MOCK_PROJECTS];
+      // Fetch trends from API
+      const trendsResponse = await overviewService.getProjectTrends({
+        schoolYear: filters.schoolYear,
+        courseId: filters.courseId,
+      });
 
-      // Apply filters
-      if (filters.courseId) {
-        const courseName = COURSES.find((c) => c.id === filters.courseId)?.name;
-        if (courseName) {
-          filteredProjects = filteredProjects.filter((p) => p.courseName === courseName);
-        }
-      }
+      // Map API response to component format
+      const mappedProjects: ProjectOverviewItem[] = projectsResponse.projects.map((p) => ({
+        projectId: p.project_id,
+        projectName: p.project_name,
+        courseName: p.course_name || "",
+        clientName: p.client_name || "",
+        periodLabel: p.period_label,
+        year: p.year,
+        numTeams: p.num_teams,
+        averageScoreOverall: p.average_score_overall,
+        averageScoresByCategory: p.average_scores_by_category,
+        status: p.status,
+      }));
 
-      if (filters.period && filters.period !== "Alle periodes") {
-        filteredProjects = filteredProjects.filter((p) =>
-          p.periodLabel.includes(filters.period)
-        );
-      }
-
-      if (filters.schoolYear) {
-        const [startYear] = filters.schoolYear.split("-").map(Number);
-        filteredProjects = filteredProjects.filter(
-          (p) => p.year === startYear || p.year === startYear + 1
-        );
-      }
-
-      if (filters.statusFilter && filters.statusFilter !== "all") {
-        filteredProjects = filteredProjects.filter(
-          (p) => p.status === filters.statusFilter
-        );
-      }
-
-      if (filters.searchQuery) {
-        const query = filters.searchQuery.toLowerCase();
-        filteredProjects = filteredProjects.filter(
-          (p) =>
-            p.projectName.toLowerCase().includes(query) ||
-            p.clientName.toLowerCase().includes(query)
-        );
-      }
-
-      setProjects(filteredProjects);
-      setTrendData(MOCK_TREND_DATA);
+      setProjects(mappedProjects);
+      setTrendData(trendsResponse.trend_data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Fout bij het laden van projectgegevens");
     } finally {
@@ -294,34 +147,6 @@ function useProjectOverviewData(filters: ProjectOverviewFilters) {
   }, [fetchData]);
 
   return { projects, trendData, loading, error, refresh: fetchData };
-}
-
-function useAiSummaryData(filters: ProjectOverviewFilters) {
-  const [aiSummary, setAiSummary] = useState<AiSummary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchAiSummary = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // TODO: Replace with actual API call
-      // GET /api/teacher/overview/projects/ai-summary
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      setAiSummary(MOCK_AI_SUMMARY);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Fout bij het laden van AI-samenvatting");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchAiSummary();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.courseId, filters.period, filters.schoolYear]);
-
-  return { aiSummary, loading, error };
 }
 
 /* =========================================
@@ -390,10 +215,6 @@ function KpiCards({ projects, loading }: KpiCardsProps) {
     // Count completed assessments
     const completedCount = completedProjects.length;
 
-    // Find most common improvement point (AI-derived) - mock for now
-    // TODO: This should come from AI analysis endpoint
-    const mostCommonImprovement = "Projectplanning";
-
     // Find most assessed category
     const categoryCounts: Record<string, number> = {};
     projectsWithScores.forEach((p) => {
@@ -408,7 +229,6 @@ function KpiCards({ projects, loading }: KpiCardsProps) {
     return {
       avgOverall,
       completedCount,
-      mostCommonImprovement,
       mostAssessedCategory: mostAssessedCategory
         ? CATEGORY_LABELS[mostAssessedCategory] || mostAssessedCategory
         : "—",
@@ -417,8 +237,7 @@ function KpiCards({ projects, loading }: KpiCardsProps) {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiSkeleton />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <KpiSkeleton />
         <KpiSkeleton />
         <KpiSkeleton />
@@ -427,7 +246,7 @@ function KpiCards({ projects, loading }: KpiCardsProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {/* Average Score Card */}
       <div className="bg-slate-50 rounded-xl p-4 border border-gray-200">
         <div className="flex items-center gap-2 mb-2">
@@ -449,18 +268,6 @@ function KpiCards({ projects, loading }: KpiCardsProps) {
         </div>
         <div className="text-2xl font-bold text-gray-900">{kpis.completedCount}</div>
         <p className="text-xs text-gray-500 mt-1">Projectbeoordelingen afgerond</p>
-      </div>
-
-      {/* Most Common Improvement Card */}
-      <div className="bg-slate-50 rounded-xl p-4 border border-gray-200">
-        <div className="flex items-center gap-2 mb-2">
-          <Brain className="w-5 h-5 text-amber-600" />
-          <span className="text-sm text-gray-600">Verbeterpunt (AI)</span>
-        </div>
-        <div className="text-lg font-bold text-gray-900 truncate">
-          {kpis.mostCommonImprovement}
-        </div>
-        <p className="text-xs text-gray-500 mt-1">Meest voorkomend verbeterpunt</p>
       </div>
 
       {/* Most Assessed Category Card */}
@@ -586,22 +393,6 @@ function ProjectDetailDrawer({ project, onClose }: ProjectDetailDrawerProps) {
                 Nog geen beoordelingen beschikbaar
               </p>
             )}
-          </div>
-
-          {/* AI Summary for this project */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-              <Brain className="w-4 h-4 text-purple-600" />
-              AI-samenvatting
-            </h3>
-            {/* TODO: Fetch project-specific AI summary from backend */}
-            <div className="bg-purple-50 rounded-lg p-4 text-sm text-gray-700">
-              <p>
-                Dit project laat goede resultaten zien op het gebied van samenwerking.
-                Aandachtspunten zijn de planning en documentatie. Teams hebben effectief
-                gecommuniceerd met de opdrachtgever.
-              </p>
-            </div>
           </div>
 
           {/* Action Button */}
@@ -741,7 +532,7 @@ function ProjectTable({
         <TableSkeleton />
       ) : (
         <div className="overflow-x-auto border rounded-xl">
-          <table className="w-full min-w-[700px]">
+          <table className="w-full min-w-[900px]">
             <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
                 <th
@@ -764,6 +555,15 @@ function ProjectTable({
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   Teams
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-blue-700 uppercase tracking-wider">
+                  Projectproces
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-green-700 uppercase tracking-wider">
+                  Eindresultaat
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-amber-700 uppercase tracking-wider">
+                  Communicatie
                 </th>
                 <th
                   className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
@@ -796,6 +596,21 @@ function ProjectTable({
                     {project.numTeams}
                   </td>
                   <td className="px-4 py-3 text-sm text-center">
+                    <span className="font-medium text-blue-700">
+                      {project.averageScoresByCategory.projectproces?.toFixed(1) || "—"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-center">
+                    <span className="font-medium text-green-700">
+                      {project.averageScoresByCategory.eindresultaat?.toFixed(1) || "—"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-center">
+                    <span className="font-medium text-amber-700">
+                      {project.averageScoresByCategory.communicatie?.toFixed(1) || "—"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-center">
                     <span className="font-semibold text-gray-900">
                       {project.averageScoreOverall?.toFixed(1) || "—"}
                     </span>
@@ -816,7 +631,7 @@ function ProjectTable({
               ))}
               {sortedProjects.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={TABLE_COLUMNS_COUNT} className="px-4 py-8 text-center text-gray-500">
                     Geen projecten gevonden
                   </td>
                 </tr>
@@ -842,7 +657,7 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   const chartData = useMemo(() => {
-    const labels = trendData.map((d) => d.projectLabel);
+    const labels = trendData.map((d) => d.project_label);
     const categories = Object.keys(CATEGORY_COLORS);
 
     const datasets = categories
@@ -930,8 +745,6 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
         `Laagste gemiddelde categorie: ${CATEGORY_LABELS[lowest[0]] || lowest[0]} (${lowest[1].toFixed(1)})`
       );
     }
-    // TODO: Add more sophisticated insights from backend/AI
-    insightsList.push("Trend analyse: Scores tonen een lichte stijging over de afgelopen periodes");
 
     return insightsList;
   }, [trendData]);
@@ -980,83 +793,17 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
           <TrendingUp className="w-4 h-4 text-blue-600" />
           Inzichten
         </h4>
-        {/* TODO: Backend/AI could generate smarter insights */}
-        <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-          {insights.map((insight, idx) => (
-            <li key={idx}>{insight}</li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================
-   AI SUMMARY SECTION COMPONENT
-   ========================================= */
-
-interface AiSummarySectionProps {
-  filters: ProjectOverviewFilters;
-}
-
-function AiSummarySection({ filters }: AiSummarySectionProps) {
-  const { aiSummary, loading, error } = useAiSummaryData(filters);
-
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-        <p className="text-sm">{error}</p>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return <TextSkeleton />;
-  }
-
-  if (!aiSummary) {
-    return (
-      <div className="bg-gray-50 rounded-lg p-6 text-center text-gray-500">
-        <Brain className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-        <p className="text-sm">Nog geen AI-samenvatting beschikbaar</p>
-        <p className="text-xs mt-1">
-          Zodra er voldoende feedback is verzameld, verschijnt hier een samenvatting.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Sterke punten */}
-        <div className="bg-green-50 rounded-lg p-4">
-          <h4 className="text-sm font-semibold text-green-800 mb-2">Sterke punten</h4>
-          <ul className="list-disc list-inside text-sm text-green-700 space-y-1">
-            {aiSummary.sterkePunten.map((punt, idx) => (
-              <li key={idx}>{punt}</li>
+        {insights.length > 0 ? (
+          <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
+            {insights.map((insight, idx) => (
+              <li key={idx}>{insight}</li>
             ))}
           </ul>
-        </div>
-
-        {/* Verbeterpunten */}
-        <div className="bg-amber-50 rounded-lg p-4">
-          <h4 className="text-sm font-semibold text-amber-800 mb-2">Verbeterpunten</h4>
-          <ul className="list-disc list-inside text-sm text-amber-700 space-y-1">
-            {aiSummary.verbeterpunten.map((punt, idx) => (
-              <li key={idx}>{punt}</li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
-      {/* Algemene trend */}
-      <div className="bg-purple-50 rounded-lg p-4">
-        <h4 className="text-sm font-semibold text-purple-800 mb-2 flex items-center gap-2">
-          <MessageSquare className="w-4 h-4" />
-          Algemene trend
-        </h4>
-        <p className="text-sm text-purple-700">{aiSummary.algemeneTrend}</p>
+        ) : (
+          <p className="text-sm text-gray-500 italic">
+            Nog geen inzichten beschikbaar. Data wordt weergegeven zodra er beoordelingen zijn.
+          </p>
+        )}
       </div>
     </div>
   );
@@ -1068,7 +815,7 @@ function AiSummarySection({ filters }: AiSummarySectionProps) {
 
 export default function ProjectOverviewTab() {
   const [filters, setFilters] = useState<ProjectOverviewFilters>({
-    schoolYear: SCHOOL_YEARS[0],
+    schoolYear: "",
     courseId: "",
     period: PERIODS[0],
     searchQuery: "",
@@ -1076,8 +823,38 @@ export default function ProjectOverviewTab() {
   });
 
   const [selectedProject, setSelectedProject] = useState<ProjectOverviewItem | null>(null);
+  const [academicYears, setAcademicYears] = useState<Array<{label: string; id: number}>>([]);
+  const [courses, setCourses] = useState<Array<{id: number; name: string}>>([]);
 
   const { projects, trendData, loading, error } = useProjectOverviewData(filters);
+
+  // Fetch academic years and courses on mount
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const [years, coursesData] = await Promise.all([
+          overviewService.getAcademicYears(),
+          overviewService.getCourses(),
+        ]);
+        setAcademicYears(years);
+        setCourses(coursesData);
+        
+        // Set default school year to the first one if available
+        if (years.length > 0) {
+          setFilters(prev => {
+            if (!prev.schoolYear) {
+              return { ...prev, schoolYear: years[0].label };
+            }
+            return prev;
+          });
+        }
+      } catch (e) {
+        console.error("Failed to fetch options:", e);
+      }
+    };
+    fetchOptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
 
   const handleFilterChange = <K extends keyof ProjectOverviewFilters>(
     key: K,
@@ -1118,9 +895,9 @@ export default function ProjectOverviewTab() {
               value={filters.schoolYear}
               onChange={(e) => handleFilterChange("schoolYear", e.target.value)}
             >
-              {SCHOOL_YEARS.map((year) => (
-                <option key={year} value={year}>
-                  {year}
+              {academicYears.map((year) => (
+                <option key={year.id} value={year.label}>
+                  {year.label}
                 </option>
               ))}
             </select>
@@ -1134,7 +911,8 @@ export default function ProjectOverviewTab() {
               value={filters.courseId}
               onChange={(e) => handleFilterChange("courseId", e.target.value)}
             >
-              {COURSES.map((course) => (
+              <option value="">Alle vakken</option>
+              {courses.map((course) => (
                 <option key={course.id} value={course.id}>
                   {course.name}
                 </option>
@@ -1190,15 +968,6 @@ export default function ProjectOverviewTab() {
           Gemiddelde scores per categorie over meerdere projecten
         </p>
         <CategoryTrendChart trendData={trendData} loading={loading} />
-      </div>
-
-      {/* AI Summary Section */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Brain className="w-5 h-5 text-purple-600" />
-          AI-samenvatting van feedback
-        </h3>
-        <AiSummarySection filters={filters} />
       </div>
 
       {/* Project Detail Drawer */}

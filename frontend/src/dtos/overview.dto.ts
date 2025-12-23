@@ -105,3 +105,32 @@ export interface MatrixFilters {
   sort_by?: string;  // Column key to sort by
   sort_order?: "asc" | "desc";
 }
+
+// ==================== Project Overview Types ====================
+
+export interface ProjectOverviewItem {
+  project_id: number;
+  project_name: string;
+  course_name?: string | null;
+  client_name?: string | null;
+  period_label: string;
+  year: number;
+  num_teams: number;
+  average_score_overall?: number | null;
+  average_scores_by_category: Record<string, number>;
+  status: "active" | "completed";
+}
+
+export interface ProjectOverviewListResponse {
+  projects: ProjectOverviewItem[];
+  total: number;
+}
+
+export interface CategoryTrendData {
+  project_label: string;
+  scores: Record<string, number>;
+}
+
+export interface ProjectTrendResponse {
+  trend_data: CategoryTrendData[];
+}
