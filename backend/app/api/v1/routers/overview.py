@@ -895,7 +895,8 @@ def get_project_overview(
         Client, ClientProjectLink.client_id == Client.id
     ).filter(
         ProjectAssessment.school_id == school_id,
-        ProjectAssessment.is_advisory == False  # Exclude external assessments
+        ProjectAssessment.is_advisory == False,  # Exclude external assessments
+        ProjectAssessment.status.in_(["published", "closed"])  # Only show published or closed assessments
     )
     
     # Apply filters
@@ -1074,7 +1075,7 @@ def get_project_trends(
         Group, ProjectAssessment.group_id == Group.id
     ).filter(
         ProjectAssessment.school_id == school_id,
-        ProjectAssessment.status == "published",
+        ProjectAssessment.status.in_(["published", "closed"]),  # Include published and closed assessments
         ProjectAssessment.is_advisory == False  # Exclude external assessments
     ).order_by(ProjectAssessment.published_at.asc())
     

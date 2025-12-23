@@ -657,7 +657,7 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   const chartData = useMemo(() => {
-    const labels = trendData.map((d) => d.projectLabel);
+    const labels = trendData.map((d) => d.project_label);
     const categories = Object.keys(CATEGORY_COLORS);
 
     const datasets = categories
