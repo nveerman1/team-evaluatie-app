@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, date, timezone
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, aliased
-from sqlalchemy import func, and_, or_
+from sqlalchemy import func, and_, or_, case
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import (
@@ -34,6 +34,16 @@ from app.api.v1.schemas.attendance import (
     BulkApproveRequest,
     AttendanceTotals,
     OpenSession,
+    CourseOut,
+    StatsSummary,
+    WeeklyStats,
+    DailyStats,
+    HeatmapData,
+    HeatmapCell,
+    SignalsData,
+    StudentSignal,
+    TopBottomData,
+    EngagementStudent,
 )
 from app.core.rbac import require_role
 
@@ -900,7 +910,7 @@ def get_attendance_overview(
         if project:
             school_query = apply_project_date_filter(school_query, project)
 
-        school_seconds = school_query.scalar() or 0
+        school_seconds = float(school_query.scalar() or 0)
 
         # Build base query for external approved hours with optional date filter
         external_approved_query = db.query(
@@ -922,7 +932,7 @@ def get_attendance_overview(
                 external_approved_query, project
             )
 
-        external_approved_seconds = external_approved_query.scalar() or 0
+        external_approved_seconds = float(external_approved_query.scalar() or 0)
 
         # Build base query for external pending hours with optional date filter
         external_pending_query = db.query(
@@ -944,7 +954,7 @@ def get_attendance_overview(
                 external_pending_query, project
             )
 
-        external_pending_seconds = external_pending_query.scalar() or 0
+        external_pending_seconds = float(external_pending_query.scalar() or 0)
 
         total_seconds = int(school_seconds) + int(external_approved_seconds)
         lesson_blocks = round(total_seconds / (75 * 60), 1)
@@ -1122,3 +1132,751 @@ def get_projects_by_course(
         }
         for p in projects
     ]
+
+
+# ============ Statistics Endpoints ============
+
+
+@router.get("/courses", response_model=list[CourseOut])
+def list_courses_for_filters(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get list of courses for dropdown filters in statistics tab.
+    Only returns courses relevant to the current school.
+    """
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only teachers and admins can view statistics",
+        )
+
+    courses = (
+        db.query(Course)
+        .filter(Course.school_id == current_user.school_id)
+        .order_by(Course.name)
+        .all()
+    )
+
+    return courses
+
+
+def _parse_period(period: str) -> tuple[Optional[datetime], Optional[datetime]]:
+    """Parse period parameter to date range"""
+    now = datetime.now(timezone.utc)
+    
+    if period == "4w":
+        start_date = now - timedelta(weeks=4)
+        return start_date, now
+    elif period == "8w":
+        start_date = now - timedelta(weeks=8)
+        return start_date, now
+    elif period == "all":
+        return None, None
+    else:
+        # Default to 4 weeks
+        start_date = now - timedelta(weeks=4)
+        return start_date, now
+
+
+@router.get("/stats/summary", response_model=StatsSummary)
+def get_stats_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    period: str = Query("4w", pattern=r"^(4w|8w|all)$"),
+    course_id: Optional[int] = Query(None),
+    project_id: Optional[int] = Query(None),
+):
+    """
+    Get summary statistics: school vs external work breakdown.
+    Returns minutes and blocks for each category.
+    """
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only teachers and admins can view statistics",
+        )
+
+    start_date, end_date = _parse_period(period)
+
+    # Base query for school work
+    school_query = (
+        db.query(
+            func.coalesce(
+                func.sum(
+                    func.extract("epoch", AttendanceEvent.check_out - AttendanceEvent.check_in)
+                ),
+                0
+            )
+        )
+        .select_from(AttendanceEvent)
+        .join(User, AttendanceEvent.user_id == User.id)
+        .filter(
+            User.school_id == current_user.school_id,
+            AttendanceEvent.is_external == False,
+            AttendanceEvent.check_out.isnot(None),
+        )
+    )
+
+    # Base query for external work (approved only)
+    external_query = (
+        db.query(
+            func.coalesce(
+                func.sum(
+                    func.extract("epoch", AttendanceEvent.check_out - AttendanceEvent.check_in)
+                ),
+                0
+            )
+        )
+        .select_from(AttendanceEvent)
+        .join(User, AttendanceEvent.user_id == User.id)
+        .filter(
+            User.school_id == current_user.school_id,
+            AttendanceEvent.is_external == True,
+            AttendanceEvent.approval_status == "approved",
+            AttendanceEvent.check_out.isnot(None),
+        )
+    )
+
+    # Apply date filters
+    if start_date:
+        school_query = school_query.filter(AttendanceEvent.check_in >= start_date)
+        external_query = external_query.filter(AttendanceEvent.check_in >= start_date)
+    if end_date:
+        school_query = school_query.filter(AttendanceEvent.check_in <= end_date)
+        external_query = external_query.filter(AttendanceEvent.check_in <= end_date)
+
+    # Apply course filter
+    if course_id:
+        school_query = school_query.join(
+            CourseEnrollment, CourseEnrollment.student_id == AttendanceEvent.user_id
+        ).filter(CourseEnrollment.course_id == course_id)
+        external_query = external_query.join(
+            CourseEnrollment, CourseEnrollment.student_id == AttendanceEvent.user_id
+        ).filter(CourseEnrollment.course_id == course_id)
+
+    # Apply project filter
+    if project_id:
+        school_query = school_query.filter(AttendanceEvent.project_id == project_id)
+        external_query = external_query.filter(AttendanceEvent.project_id == project_id)
+
+    school_seconds = float(school_query.scalar() or 0)
+    external_seconds = float(external_query.scalar() or 0)
+
+    # Convert to minutes and blocks
+    school_minutes = int(school_seconds / 60)
+    extern_minutes = int(external_seconds / 60)
+    school_blocks = round(school_seconds / (75 * 60), 2)
+    extern_blocks = round(external_seconds / (75 * 60), 2)
+    total_blocks = school_blocks + extern_blocks
+
+    # Calculate percentages
+    if total_blocks > 0:
+        school_pct = round((school_blocks / total_blocks) * 100, 1)
+        extern_pct = round((extern_blocks / total_blocks) * 100, 1)
+    else:
+        school_pct = 0.0
+        extern_pct = 0.0
+
+    return StatsSummary(
+        school_minutes=school_minutes,
+        school_blocks=school_blocks,
+        extern_approved_minutes=extern_minutes,
+        extern_approved_blocks=extern_blocks,
+        total_blocks=total_blocks,
+        school_percentage=school_pct,
+        extern_percentage=extern_pct,
+    )
+
+
+@router.get("/stats/weekly", response_model=list[WeeklyStats])
+def get_stats_weekly(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    period: str = Query("4w", pattern=r"^(4w|8w|all)$"),
+    course_id: Optional[int] = Query(None),
+    project_id: Optional[int] = Query(None),
+):
+    """
+    Get weekly attendance trend data.
+    Returns total blocks per week (school + approved external).
+    """
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only teachers and admins can view statistics",
+        )
+
+    start_date, end_date = _parse_period(period)
+
+    # Query to get data grouped by week
+    # Using PostgreSQL date_trunc to group by week
+    query = (
+        db.query(
+            func.date_trunc("week", AttendanceEvent.check_in).label("week_start"),
+            func.sum(
+                case(
+                    (AttendanceEvent.is_external == False, 
+                     func.extract("epoch", AttendanceEvent.check_out - AttendanceEvent.check_in)),
+                    else_=0
+                )
+            ).label("school_seconds"),
+            func.sum(
+                case(
+                    (and_(AttendanceEvent.is_external == True, AttendanceEvent.approval_status == "approved"),
+                     func.extract("epoch", AttendanceEvent.check_out - AttendanceEvent.check_in)),
+                    else_=0
+                )
+            ).label("extern_seconds"),
+        )
+        .join(User, AttendanceEvent.user_id == User.id)
+        .filter(
+            User.school_id == current_user.school_id,
+            AttendanceEvent.check_out.isnot(None),
+        )
+    )
+
+    # Apply date filters
+    if start_date:
+        query = query.filter(AttendanceEvent.check_in >= start_date)
+    if end_date:
+        query = query.filter(AttendanceEvent.check_in <= end_date)
+
+    # Apply course filter
+    if course_id:
+        query = query.join(
+            CourseEnrollment, CourseEnrollment.student_id == AttendanceEvent.user_id
+        ).filter(CourseEnrollment.course_id == course_id)
+
+    # Apply project filter
+    if project_id:
+        query = query.filter(AttendanceEvent.project_id == project_id)
+
+    query = query.group_by("week_start").order_by("week_start")
+
+    results = query.all()
+
+    weekly_data = []
+    for row in results:
+        school_secs = float(row.school_seconds or 0)
+        extern_secs = float(row.extern_seconds or 0)
+        school_blocks = round(school_secs / (75 * 60), 2)
+        extern_blocks = round(extern_secs / (75 * 60), 2)
+        total_blocks = school_blocks + extern_blocks
+
+        weekly_data.append(
+            WeeklyStats(
+                week_start=row.week_start.date().isoformat(),
+                total_blocks=total_blocks,
+                school_blocks=school_blocks,
+                extern_blocks=extern_blocks,
+            )
+        )
+
+    return weekly_data
+
+
+@router.get("/stats/daily", response_model=list[DailyStats])
+def get_stats_daily(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    period: str = Query("4w", pattern=r"^(4w|8w|all)$"),
+    course_id: Optional[int] = Query(None),
+    project_id: Optional[int] = Query(None),
+):
+    """
+    Get daily unique student count.
+    Only counts school check-ins (not external).
+    """
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only teachers and admins can view statistics",
+        )
+
+    start_date, end_date = _parse_period(period)
+
+    # Query to count unique students per day
+    query = (
+        db.query(
+            func.date(AttendanceEvent.check_in).label("date"),
+            func.count(func.distinct(AttendanceEvent.user_id)).label("unique_students"),
+        )
+        .join(User, AttendanceEvent.user_id == User.id)
+        .filter(
+            User.school_id == current_user.school_id,
+            AttendanceEvent.is_external == False,
+        )
+    )
+
+    # Apply date filters
+    if start_date:
+        query = query.filter(AttendanceEvent.check_in >= start_date)
+    if end_date:
+        query = query.filter(AttendanceEvent.check_in <= end_date)
+
+    # Apply course filter
+    if course_id:
+        query = query.join(
+            CourseEnrollment, CourseEnrollment.student_id == AttendanceEvent.user_id
+        ).filter(CourseEnrollment.course_id == course_id)
+
+    # Apply project filter
+    if project_id:
+        query = query.filter(AttendanceEvent.project_id == project_id)
+
+    query = query.group_by("date").order_by("date")
+
+    results = query.all()
+
+    daily_data = []
+    for row in results:
+        daily_data.append(
+            DailyStats(
+                date=row.date.isoformat(),
+                unique_students=row.unique_students,
+            )
+        )
+
+    return daily_data
+
+
+@router.get("/stats/heatmap", response_model=HeatmapData)
+def get_stats_heatmap(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    period: str = Query("4w", pattern=r"^(4w|8w|all)$"),
+    course_id: Optional[int] = Query(None),
+    project_id: Optional[int] = Query(None),
+):
+    """
+    Get heatmap data: average unique students per hour per weekday.
+    Only uses school check-ins (not external).
+    Hours: 8-18, Weekdays: Monday-Friday (0-4).
+    """
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only teachers and admins can view statistics",
+        )
+
+    start_date, end_date = _parse_period(period)
+
+    # Query to get data for heatmap
+    # We need to find all unique students present during each hour/weekday combo
+    # This requires checking if check_in <= hour_start AND (check_out IS NULL OR check_out > hour_start)
+    
+    # For simplicity, we'll aggregate by extracting weekday and hour from check_in
+    # and count unique students, then average across the period
+    query = (
+        db.query(
+            func.extract("dow", AttendanceEvent.check_in).label("weekday"),  # 0=Sunday, 1=Monday, etc.
+            func.extract("hour", AttendanceEvent.check_in).label("hour"),
+            func.count(func.distinct(
+                func.concat(
+                    func.date(AttendanceEvent.check_in),
+                    "-",
+                    AttendanceEvent.user_id
+                )
+            )).label("student_hours"),
+            func.count(func.distinct(func.date(AttendanceEvent.check_in))).label("day_count"),
+        )
+        .join(User, AttendanceEvent.user_id == User.id)
+        .filter(
+            User.school_id == current_user.school_id,
+            AttendanceEvent.is_external == False,
+            func.extract("dow", AttendanceEvent.check_in).between(1, 5),  # Monday-Friday
+            func.extract("hour", AttendanceEvent.check_in).between(8, 18),
+        )
+    )
+
+    # Apply date filters
+    if start_date:
+        query = query.filter(AttendanceEvent.check_in >= start_date)
+    if end_date:
+        query = query.filter(AttendanceEvent.check_in <= end_date)
+
+    # Apply course filter
+    if course_id:
+        query = query.join(
+            CourseEnrollment, CourseEnrollment.student_id == AttendanceEvent.user_id
+        ).filter(CourseEnrollment.course_id == course_id)
+
+    # Apply project filter
+    if project_id:
+        query = query.filter(AttendanceEvent.project_id == project_id)
+
+    query = query.group_by("weekday", "hour")
+
+    results = query.all()
+
+    # Process results into heatmap cells
+    cells = []
+    weekday_labels = ["ma", "di", "wo", "do", "vr"]
+    
+    for row in results:
+        # Convert PostgreSQL dow (1=Monday, 5=Friday) to our 0-based index
+        weekday_idx = int(row.weekday) - 1  # 1->0, 2->1, etc.
+        hour = int(row.hour)
+        
+        # Calculate average students per occurrence of this weekday/hour
+        avg_students = round(float(row.student_hours) / max(float(row.day_count), 1), 1)
+        
+        cells.append(
+            HeatmapCell(
+                weekday=weekday_idx,
+                hour=hour,
+                avg_students=avg_students,
+                label=f"{weekday_labels[weekday_idx]} {hour:02d}:00",
+            )
+        )
+
+    return HeatmapData(cells=cells)
+
+
+@router.get("/stats/signals", response_model=SignalsData)
+def get_stats_signals(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    period: str = Query("4w", pattern=r"^(4w|8w|all)$"),
+    course_id: Optional[int] = Query(None),
+    project_id: Optional[int] = Query(None),
+):
+    """
+    Get signals/anomalies for students that need attention.
+    Returns three lists: extern_low_school, many_pending, long_open.
+    """
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only teachers and admins can view statistics",
+        )
+
+    start_date, end_date = _parse_period(period)
+
+    # Thresholds (constants)
+    MIN_EXTERN_HOURS = 4  # 4+ hours external
+    MAX_SCHOOL_BLOCKS = 2  # but <=2 blocks school
+    MIN_PENDING_COUNT = 3  # 3+ pending external registrations
+    LONG_OPEN_HOURS = 12  # Open session for 12+ hours
+
+    # Signal 1: High external, low school
+    extern_low_school = []
+    
+    # Build subquery for external minutes
+    extern_subq = (
+        db.query(
+            User.id.label("user_id"),
+            func.sum(
+                func.extract("epoch", AttendanceEvent.check_out - AttendanceEvent.check_in)
+            ).label("extern_seconds"),
+        )
+        .join(AttendanceEvent, AttendanceEvent.user_id == User.id)
+        .filter(
+            User.school_id == current_user.school_id,
+            AttendanceEvent.is_external == True,
+            AttendanceEvent.approval_status == "approved",
+            AttendanceEvent.check_out.isnot(None),
+        )
+    )
+    
+    # Build subquery for school minutes
+    school_subq = (
+        db.query(
+            User.id.label("user_id"),
+            func.sum(
+                func.extract("epoch", AttendanceEvent.check_out - AttendanceEvent.check_in)
+            ).label("school_seconds"),
+        )
+        .join(AttendanceEvent, AttendanceEvent.user_id == User.id)
+        .filter(
+            User.school_id == current_user.school_id,
+            AttendanceEvent.is_external == False,
+            AttendanceEvent.check_out.isnot(None),
+        )
+    )
+    
+    # Apply filters to subqueries
+    if start_date:
+        extern_subq = extern_subq.filter(AttendanceEvent.check_in >= start_date)
+        school_subq = school_subq.filter(AttendanceEvent.check_in >= start_date)
+    if end_date:
+        extern_subq = extern_subq.filter(AttendanceEvent.check_in <= end_date)
+        school_subq = school_subq.filter(AttendanceEvent.check_in <= end_date)
+    if project_id:
+        extern_subq = extern_subq.filter(AttendanceEvent.project_id == project_id)
+        school_subq = school_subq.filter(AttendanceEvent.project_id == project_id)
+    
+    extern_subq = extern_subq.group_by(User.id).subquery()
+    school_subq = school_subq.group_by(User.id).subquery()
+    
+    # Main query joining subqueries
+    query = (
+        db.query(
+            User.id,
+            User.name,
+            extern_subq.c.extern_seconds,
+            school_subq.c.school_seconds,
+        )
+        .outerjoin(extern_subq, User.id == extern_subq.c.user_id)
+        .outerjoin(school_subq, User.id == school_subq.c.user_id)
+        .filter(User.school_id == current_user.school_id)
+    )
+    
+    if course_id:
+        query = query.join(CourseEnrollment, CourseEnrollment.student_id == User.id).filter(
+            CourseEnrollment.course_id == course_id
+        )
+    
+    results = query.all()
+    
+    for row in results:
+        extern_secs = float(row.extern_seconds or 0)
+        school_secs = float(row.school_seconds or 0)
+        extern_hours = extern_secs / 3600
+        school_blocks = school_secs / (75 * 60)
+        
+        if extern_hours >= MIN_EXTERN_HOURS and school_blocks <= MAX_SCHOOL_BLOCKS:
+            # Get user's course
+            user_course = (
+                db.query(Course.name)
+                .join(CourseEnrollment, CourseEnrollment.course_id == Course.id)
+                .filter(CourseEnrollment.student_id == row.id)
+                .first()
+            )
+            course_name = user_course[0] if user_course else None
+            
+            extern_low_school.append(
+                StudentSignal(
+                    student_id=row.id,
+                    student_name=row.name,
+                    course=course_name,
+                    value_text=f"extern {extern_hours:.1f}u / school {school_blocks:.1f} blok",
+                )
+            )
+
+    # Limit to top 5
+    extern_low_school = extern_low_school[:5]
+
+    # Signal 2: Many pending external work registrations
+    many_pending = []
+    
+    pending_query = (
+        db.query(
+            User.id,
+            User.name,
+            func.count(AttendanceEvent.id).label("pending_count"),
+        )
+        .join(AttendanceEvent, AttendanceEvent.user_id == User.id)
+        .filter(
+            User.school_id == current_user.school_id,
+            AttendanceEvent.is_external == True,
+            AttendanceEvent.approval_status == "pending",
+        )
+    )
+    
+    if start_date:
+        pending_query = pending_query.filter(AttendanceEvent.check_in >= start_date)
+    if end_date:
+        pending_query = pending_query.filter(AttendanceEvent.check_in <= end_date)
+    if course_id:
+        pending_query = pending_query.join(
+            CourseEnrollment, CourseEnrollment.student_id == AttendanceEvent.user_id
+        ).filter(CourseEnrollment.course_id == course_id)
+    if project_id:
+        pending_query = pending_query.filter(AttendanceEvent.project_id == project_id)
+    
+    pending_query = pending_query.group_by(User.id, User.name).having(
+        func.count(AttendanceEvent.id) >= MIN_PENDING_COUNT
+    )
+    
+    pending_results = pending_query.all()
+    
+    for row in pending_results:
+        # Get user's course
+        user_course = (
+            db.query(Course.name)
+            .join(CourseEnrollment, CourseEnrollment.course_id == Course.id)
+            .filter(CourseEnrollment.student_id == row.id)
+            .first()
+        )
+        course_name = user_course[0] if user_course else None
+        
+        many_pending.append(
+            StudentSignal(
+                student_id=row.id,
+                student_name=row.name,
+                course=course_name,
+                value_text=f"pending {row.pending_count}",
+            )
+        )
+    
+    # Limit to top 5
+    many_pending = many_pending[:5]
+
+    # Signal 3: Long open check-ins
+    long_open = []
+    
+    now = datetime.now(timezone.utc)
+    threshold_time = now - timedelta(hours=LONG_OPEN_HOURS)
+    
+    open_query = (
+        db.query(
+            User.id,
+            User.name,
+            AttendanceEvent.check_in,
+        )
+        .join(AttendanceEvent, AttendanceEvent.user_id == User.id)
+        .filter(
+            User.school_id == current_user.school_id,
+            AttendanceEvent.is_external == False,
+            AttendanceEvent.check_out.is_(None),
+            AttendanceEvent.check_in <= threshold_time,
+        )
+    )
+    
+    if course_id:
+        open_query = open_query.join(
+            CourseEnrollment, CourseEnrollment.student_id == AttendanceEvent.user_id
+        ).filter(CourseEnrollment.course_id == course_id)
+    if project_id:
+        open_query = open_query.filter(AttendanceEvent.project_id == project_id)
+    
+    open_results = open_query.all()
+    
+    for row in open_results:
+        # Get user's course
+        user_course = (
+            db.query(Course.name)
+            .join(CourseEnrollment, CourseEnrollment.course_id == Course.id)
+            .filter(CourseEnrollment.student_id == row.id)
+            .first()
+        )
+        course_name = user_course[0] if user_course else None
+        
+        # Format check-in time
+        check_in_str = row.check_in.strftime("%d-%m %H:%M")
+        
+        long_open.append(
+            StudentSignal(
+                student_id=row.id,
+                student_name=row.name,
+                course=course_name,
+                value_text=f"open sinds {check_in_str}",
+            )
+        )
+    
+    # Limit to top 5
+    long_open = long_open[:5]
+
+    return SignalsData(
+        extern_low_school=extern_low_school,
+        many_pending=many_pending,
+        long_open=long_open,
+    )
+
+
+@router.get("/stats/top-bottom", response_model=TopBottomData)
+def get_stats_top_bottom(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    period: str = Query("4w", pattern=r"^(4w|8w|all)$"),
+    course_id: Optional[int] = Query(None),
+    project_id: Optional[int] = Query(None),
+    mode: str = Query("4w", pattern=r"^(4w|scope)$"),
+):
+    """
+    Get top 5 and bottom 5 students by engagement (total blocks).
+    Mode: '4w' always uses last 4 weeks, 'scope' uses the selected period.
+    """
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only teachers and admins can view statistics",
+        )
+
+    # Determine date range based on mode
+    if mode == "4w":
+        now = datetime.now(timezone.utc)
+        start_date = now - timedelta(weeks=4)
+        end_date = now
+    else:  # scope
+        start_date, end_date = _parse_period(period)
+
+    # Query to calculate total blocks per student
+    query = (
+        db.query(
+            User.id,
+            User.name,
+            func.sum(
+                func.extract("epoch", AttendanceEvent.check_out - AttendanceEvent.check_in)
+            ).label("total_seconds"),
+        )
+        .join(AttendanceEvent, AttendanceEvent.user_id == User.id)
+        .filter(
+            User.school_id == current_user.school_id,
+            AttendanceEvent.check_out.isnot(None),
+            or_(
+                AttendanceEvent.is_external == False,
+                and_(
+                    AttendanceEvent.is_external == True,
+                    AttendanceEvent.approval_status == "approved"
+                )
+            ),
+        )
+    )
+
+    # Apply date filters
+    if start_date:
+        query = query.filter(AttendanceEvent.check_in >= start_date)
+    if end_date:
+        query = query.filter(AttendanceEvent.check_in <= end_date)
+
+    # Apply course filter
+    if course_id:
+        query = query.join(
+            CourseEnrollment, CourseEnrollment.student_id == AttendanceEvent.user_id
+        ).filter(CourseEnrollment.course_id == course_id)
+
+    # Apply project filter
+    if project_id:
+        query = query.filter(AttendanceEvent.project_id == project_id)
+
+    query = query.group_by(User.id, User.name)
+
+    results = query.all()
+
+    # Convert to engagement students with blocks
+    engagement_list = []
+    for row in results:
+        total_secs = float(row.total_seconds or 0)
+        total_blocks = round(total_secs / (75 * 60), 2)
+        
+        # Get user's course
+        user_course = (
+            db.query(Course.name)
+            .join(CourseEnrollment, CourseEnrollment.course_id == Course.id)
+            .filter(CourseEnrollment.student_id == row.id)
+            .first()
+        )
+        course_name = user_course[0] if user_course else None
+        
+        engagement_list.append(
+            EngagementStudent(
+                student_id=row.id,
+                student_name=row.name,
+                course=course_name,
+                total_blocks=total_blocks,
+            )
+        )
+
+    # Sort by total_blocks
+    engagement_list.sort(key=lambda x: x.total_blocks, reverse=True)
+
+    # Get top 5 and bottom 5
+    top = engagement_list[:5]
+    bottom = engagement_list[-5:] if len(engagement_list) > 5 else []
+    bottom.reverse()  # Show lowest first
+
+    return TopBottomData(top=top, bottom=bottom)

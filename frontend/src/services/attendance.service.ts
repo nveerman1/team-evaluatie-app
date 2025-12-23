@@ -65,6 +65,72 @@ export interface RFIDCard {
   created_by: number | null;
 }
 
+// ========== Statistics Interfaces ==========
+
+export interface Course {
+  id: number;
+  name: string;
+  code: string | null;
+}
+
+export interface StatsSummary {
+  school_minutes: number;
+  school_blocks: number;
+  extern_approved_minutes: number;
+  extern_approved_blocks: number;
+  total_blocks: number;
+  school_percentage: number;
+  extern_percentage: number;
+}
+
+export interface WeeklyStats {
+  week_start: string;
+  total_blocks: number;
+  school_blocks: number;
+  extern_blocks: number;
+}
+
+export interface DailyStats {
+  date: string;
+  unique_students: number;
+}
+
+export interface HeatmapCell {
+  weekday: number;
+  hour: number;
+  avg_students: number;
+  label: string;
+}
+
+export interface HeatmapData {
+  cells: HeatmapCell[];
+}
+
+export interface StudentSignal {
+  student_id: number;
+  student_name: string;
+  course: string | null;
+  value_text: string;
+}
+
+export interface SignalsData {
+  extern_low_school: StudentSignal[];
+  many_pending: StudentSignal[];
+  long_open: StudentSignal[];
+}
+
+export interface EngagementStudent {
+  student_id: number;
+  student_name: string;
+  course: string | null;
+  total_blocks: number;
+}
+
+export interface TopBottomData {
+  top: EngagementStudent[];
+  bottom: EngagementStudent[];
+}
+
 export const attendanceService = {
   /**
    * Get list of attendance events with filters
@@ -151,6 +217,89 @@ export const attendanceService = {
    */
   async getMyAttendance(): Promise<AttendanceTotals> {
     const response = await api.get<AttendanceTotals>("/attendance/me");
+    return response.data;
+  },
+
+  // ========== Statistics Endpoints ==========
+
+  /**
+   * Get list of courses for filters
+   */
+  async listCourses(): Promise<Course[]> {
+    const response = await api.get<Course[]>("/attendance/courses");
+    return response.data;
+  },
+
+  /**
+   * Get summary statistics
+   */
+  async getStatsSummary(params: {
+    period: string;
+    course_id?: number;
+    project_id?: number;
+  }): Promise<StatsSummary> {
+    const response = await api.get<StatsSummary>("/attendance/stats/summary", { params });
+    return response.data;
+  },
+
+  /**
+   * Get weekly trend data
+   */
+  async getStatsWeekly(params: {
+    period: string;
+    course_id?: number;
+    project_id?: number;
+  }): Promise<WeeklyStats[]> {
+    const response = await api.get<WeeklyStats[]>("/attendance/stats/weekly", { params });
+    return response.data;
+  },
+
+  /**
+   * Get daily unique student data
+   */
+  async getStatsDaily(params: {
+    period: string;
+    course_id?: number;
+    project_id?: number;
+  }): Promise<DailyStats[]> {
+    const response = await api.get<DailyStats[]>("/attendance/stats/daily", { params });
+    return response.data;
+  },
+
+  /**
+   * Get heatmap data
+   */
+  async getStatsHeatmap(params: {
+    period: string;
+    course_id?: number;
+    project_id?: number;
+  }): Promise<HeatmapData> {
+    const response = await api.get<HeatmapData>("/attendance/stats/heatmap", { params });
+    return response.data;
+  },
+
+  /**
+   * Get signals/anomalies
+   */
+  async getStatsSignals(params: {
+    period: string;
+    course_id?: number;
+    project_id?: number;
+  }): Promise<SignalsData> {
+    const response = await api.get<SignalsData>("/attendance/stats/signals", { params });
+    return response.data;
+  },
+
+  /**
+   * Get top and bottom engagement
+   */
+  async getStatsTopBottom(params: {
+    period: string;
+    course_id?: number;
+    project_id?: number;
+    mode: string;
+  }): Promise<TopBottomData> {
+    const response = await api.get<TopBottomData>("/attendance/stats/top-bottom", { params });
     return response.data;
   },
 };

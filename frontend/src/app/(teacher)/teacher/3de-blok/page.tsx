@@ -6,6 +6,7 @@ import EventsTab from "./components/EventsTab";
 import ExternTab from "./components/ExternTab";
 import RFIDTab from "./components/RFIDTab";
 import AanwezigheidTab from "./components/AanwezigheidTab";
+import StatistiekenTab from "./components/StatistiekenTab";
 
 export default function AttendanceDashboardPage() {
   const [activeTab, setActiveTab] = useState("overzicht");
@@ -15,6 +16,7 @@ export default function AttendanceDashboardPage() {
     { id: "aanwezigheid", label: "Aanwezigheid" },
     { id: "gebeurtenissen", label: "In-/Uitcheck log" },
     { id: "extern", label: "Extern werk" },
+    { id: "statistieken", label: "Statistieken" },
     { id: "rfid", label: "RFID Kaarten" },
   ];
 
@@ -64,6 +66,8 @@ export default function AttendanceDashboardPage() {
         {activeTab === "gebeurtenissen" && <EventsTab />}
         
         {activeTab === "extern" && <ExternTab />}
+        
+        {activeTab === "statistieken" && <StatistiekenTab />}
         
         {activeTab === "rfid" && <RFIDTab />}
       </div>
