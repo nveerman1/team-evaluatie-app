@@ -393,7 +393,7 @@ export default function EventsTab() {
                     />
                   </td>
                   <td className="px-5 py-4 align-top">
-                    <div className="font-medium text-slate-900">{r.student_name}</div>
+                    <div className="text-sm font-bold text-slate-900">{r.student_name}</div>
                   </td>
                   <td className="px-5 py-4 align-top">
                     <span className="inline-flex rounded-lg bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
@@ -401,15 +401,15 @@ export default function EventsTab() {
                     </span>
                   </td>
                   <td className="px-5 py-4 align-top">
-                    <div className="text-xs text-slate-700">{formatDateTime(r.check_in)}</div>
+                    <div className="text-sm text-slate-700">{formatDateTime(r.check_in)}</div>
                   </td>
                   <td className="px-5 py-4 align-top">
-                    <div className="text-xs text-slate-700">
+                    <div className="text-sm text-slate-700">
                       {r.check_out ? formatDateTime(r.check_out) : <span className="text-slate-400">Nog open</span>}
                     </div>
                   </td>
                   <td className="px-5 py-4 align-top">
-                    <div className="text-xs font-semibold text-slate-900">{r.duration}</div>
+                    <div className="text-sm font-semibold text-slate-900">{r.duration}</div>
                   </td>
                   <td className="px-5 py-4 align-top">
                     <div className="flex items-center gap-1">
