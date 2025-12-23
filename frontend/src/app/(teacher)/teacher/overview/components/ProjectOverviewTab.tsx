@@ -71,15 +71,9 @@ type SortOrder = "asc" | "desc";
    ========================================= */
 
 const COURSES = [
-  { id: "", name: "Alle vakken" },
-  { id: "1", name: "Informatica" },
-  { id: "2", name: "Economie" },
-  { id: "3", name: "Wiskunde" },
 ];
 
-const PERIODS = ["Alle periodes", "Q1", "Q2", "Q3", "Q4"];
-
-const SCHOOL_YEARS = ["2024-2025", "2023-2024"];
+const PERIODS = ["Alle periodes", "P1", "P2", "P3", "P4"];
 
 const CATEGORY_COLORS: Record<string, string> = {
   projectproces: "#3b82f6", // blue
@@ -751,8 +745,6 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
         `Laagste gemiddelde categorie: ${CATEGORY_LABELS[lowest[0]] || lowest[0]} (${lowest[1].toFixed(1)})`
       );
     }
-    // TODO: Add more sophisticated insights from backend/AI
-    insightsList.push("Trend analyse: Scores tonen een lichte stijging over de afgelopen periodes");
 
     return insightsList;
   }, [trendData]);
@@ -801,12 +793,17 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
           <TrendingUp className="w-4 h-4 text-blue-600" />
           Inzichten
         </h4>
-        {/* TODO: Backend/AI could generate smarter insights */}
-        <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-          {insights.map((insight, idx) => (
-            <li key={idx}>{insight}</li>
-          ))}
-        </ul>
+        {insights.length > 0 ? (
+          <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
+            {insights.map((insight, idx) => (
+              <li key={idx}>{insight}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-gray-500 italic">
+            Nog geen inzichten beschikbaar. Data wordt weergegeven zodra er beoordelingen zijn.
+          </p>
+        )}
       </div>
     </div>
   );
@@ -818,7 +815,7 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
 
 export default function ProjectOverviewTab() {
   const [filters, setFilters] = useState<ProjectOverviewFilters>({
-    schoolYear: SCHOOL_YEARS[0],
+    schoolYear: "",
     courseId: "",
     period: PERIODS[0],
     searchQuery: "",
@@ -826,8 +823,38 @@ export default function ProjectOverviewTab() {
   });
 
   const [selectedProject, setSelectedProject] = useState<ProjectOverviewItem | null>(null);
+  const [academicYears, setAcademicYears] = useState<Array<{label: string; id: number}>>([]);
+  const [courses, setCourses] = useState<Array<{id: number; name: string}>>([]);
 
   const { projects, trendData, loading, error } = useProjectOverviewData(filters);
+
+  // Fetch academic years and courses on mount
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const [years, coursesData] = await Promise.all([
+          overviewService.getAcademicYears(),
+          overviewService.getCourses(),
+        ]);
+        setAcademicYears(years);
+        setCourses(coursesData);
+        
+        // Set default school year to the first one if available
+        if (years.length > 0) {
+          setFilters(prev => {
+            if (!prev.schoolYear) {
+              return { ...prev, schoolYear: years[0].label };
+            }
+            return prev;
+          });
+        }
+      } catch (e) {
+        console.error("Failed to fetch options:", e);
+      }
+    };
+    fetchOptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
 
   const handleFilterChange = <K extends keyof ProjectOverviewFilters>(
     key: K,
@@ -868,9 +895,9 @@ export default function ProjectOverviewTab() {
               value={filters.schoolYear}
               onChange={(e) => handleFilterChange("schoolYear", e.target.value)}
             >
-              {SCHOOL_YEARS.map((year) => (
-                <option key={year} value={year}>
-                  {year}
+              {academicYears.map((year) => (
+                <option key={year.id} value={year.label}>
+                  {year.label}
                 </option>
               ))}
             </select>
@@ -884,7 +911,8 @@ export default function ProjectOverviewTab() {
               value={filters.courseId}
               onChange={(e) => handleFilterChange("courseId", e.target.value)}
             >
-              {COURSES.map((course) => (
+              <option value="">Alle vakken</option>
+              {courses.map((course) => (
                 <option key={course.id} value={course.id}>
                   {course.name}
                 </option>

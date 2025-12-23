@@ -27,6 +27,7 @@ from app.infra.db.models import (
     Project,
     Client,
     ClientProjectLink,
+    AcademicYear,
 )
 from app.api.v1.schemas.overview import (
     OverviewItemOut,
@@ -893,7 +894,8 @@ def get_project_overview(
     ).outerjoin(
         Client, ClientProjectLink.client_id == Client.id
     ).filter(
-        ProjectAssessment.school_id == school_id
+        ProjectAssessment.school_id == school_id,
+        ProjectAssessment.is_advisory == False  # Exclude external assessments
     )
     
     # Apply filters
@@ -937,10 +939,16 @@ def get_project_overview(
         # Get client name from the joined Client object
         client_name = client.organization if client else None
         
-        # Determine period label (e.g., "Q1 2025")
+        # Get period from project (P1, P2, P3, P4) and year from assessment
         period_label = "Unknown"
         year = datetime.now().year
-        if assessment.published_at:
+        if project and project.period:
+            period_label = project.period  # e.g., "P1", "P2", "P3", "P4"
+            if assessment.published_at:
+                year = assessment.published_at.year
+                period_label = f"{project.period} {year}"  # e.g., "P1 2025"
+        elif assessment.published_at:
+            # Fallback: calculate from date if no project period
             year = assessment.published_at.year
             month = assessment.published_at.month
             if month <= 3:
@@ -953,8 +961,14 @@ def get_project_overview(
                 period_label = f"Q4 {year}"
         
         # Apply period filter if specified
-        if period and period != "Alle periodes" and period not in period_label:
-            continue
+        if period and period != "Alle periodes":
+            # Match against the period part (P1, P2, P3, P4)
+            if project and project.period != period:
+                continue
+            elif not project:
+                # For backwards compatibility, check if period is in label
+                if period not in period_label:
+                    continue
         
         # Count teams in this project by distinct team numbers in scores
         num_teams = db.query(func.count(func.distinct(ProjectAssessmentScore.team_number))).filter(
@@ -1060,7 +1074,8 @@ def get_project_trends(
         Group, ProjectAssessment.group_id == Group.id
     ).filter(
         ProjectAssessment.school_id == school_id,
-        ProjectAssessment.status == "published"
+        ProjectAssessment.status == "published",
+        ProjectAssessment.is_advisory == False  # Exclude external assessments
     ).order_by(ProjectAssessment.published_at.asc())
     
     # Apply filters
@@ -1146,3 +1161,38 @@ def get_project_trends(
         ))
     
     return ProjectTrendResponse(trend_data=trend_data)
+
+
+@router.get("/academic-years")
+def get_academic_years(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get all academic years for the current school
+    """
+    school_id = current_user.school_id
+    
+    academic_years = db.query(AcademicYear).filter(
+        AcademicYear.school_id == school_id,
+        AcademicYear.is_archived == False
+    ).order_by(AcademicYear.start_date.desc()).all()
+    
+    return [{"label": ay.label, "id": ay.id} for ay in academic_years]
+
+
+@router.get("/courses")
+def get_courses_for_overview(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get all courses for the current school
+    """
+    school_id = current_user.school_id
+    
+    courses = db.query(Course).filter(
+        Course.school_id == school_id
+    ).order_by(Course.name).all()
+    
+    return [{"id": c.id, "name": c.name} for c in courses]

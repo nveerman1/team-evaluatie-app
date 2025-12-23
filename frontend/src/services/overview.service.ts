@@ -140,4 +140,24 @@ export const overviewService = {
     );
     return data;
   },
+
+  /**
+   * Get academic years for the school
+   */
+  async getAcademicYears(): Promise<Array<{label: string; id: number}>> {
+    const { data } = await api.get<Array<{label: string; id: number}>>(
+      `/overview/academic-years`
+    );
+    return data;
+  },
+
+  /**
+   * Get courses for the school
+   */
+  async getCourses(): Promise<Array<{id: number; name: string}>> {
+    const { data } = await api.get<Array<{id: number; name: string}>>(
+      `/overview/courses`
+    );
+    return data;
+  },
 };
