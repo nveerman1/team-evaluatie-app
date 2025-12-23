@@ -37,6 +37,7 @@ from app.api.v1.routers import project_teams as project_teams_router
 from app.api.v1.routers import omza as omza_router
 from app.api.v1.routers import templates as templates_router
 from app.api.v1.routers import student_competency_growth as student_competency_growth_router
+from app.api.v1.routers import teacher_student_overview as teacher_student_overview_router
 from app.api.v1.routers import academic_years as academic_years_router
 from app.api.v1.routers import classes as classes_router
 from app.api.v1.routers import course_enrollments as course_enrollments_router
@@ -100,6 +101,7 @@ api_v1.include_router(project_teams_router.router)
 api_v1.include_router(omza_router.router)
 api_v1.include_router(templates_router.router)
 api_v1.include_router(student_competency_growth_router.router)
+api_v1.include_router(teacher_student_overview_router.router)
 api_v1.include_router(academic_years_router.router)
 api_v1.include_router(classes_router.router)
 api_v1.include_router(course_enrollments_router.router)
