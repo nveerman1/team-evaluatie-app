@@ -52,15 +52,9 @@ class TeacherOMZA(BaseModel):
 
 
 class PeerScore(BaseModel):
-    organiseren: float
-    meedoen: float
-    zelfvertrouwen: float
-    autonomie: float
-
-
-class PeerFeedback(BaseModel):
-    reviewer_name: str
-    scores: PeerScore
+    peerLabel: str
+    scores: Dict[str, float]  # OMZA scores as a dictionary
+    notes: Optional[str] = None
 
 
 class EvaluationResultForOverview(BaseModel):
@@ -68,7 +62,7 @@ class EvaluationResultForOverview(BaseModel):
     title: str
     status: str
     omzaAverages: List[OMZAAverage]
-    peers: List[PeerFeedback]
+    peers: List[PeerScore]
     teacherOmza: Optional[TeacherOMZA] = None
     teacherComments: Optional[str] = None
     teacherGradeComment: Optional[str] = None
@@ -357,10 +351,11 @@ def _get_peer_results(
                     peer_omza[key] = avg_score
                     omza_scores[key].append(avg_score)
 
+            # Create PeerScore with peerLabel and scores dict
             peers.append(
-                PeerFeedback(
-                    reviewer_name=reviewer.name,
-                    scores=PeerScore(**peer_omza),
+                PeerScore(
+                    peerLabel=reviewer.name,
+                    scores=peer_omza,
                 )
             )
 
