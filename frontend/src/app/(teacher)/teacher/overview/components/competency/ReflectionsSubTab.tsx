@@ -53,14 +53,27 @@ export function ReflectionsSubTab() {
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Klas</label>
+            <label className="block text-xs text-gray-600 mb-1">Academisch Jaar</label>
             <select
-              value={filters.className || ""}
-              onChange={(e) => setFilters({ ...filters, className: e.target.value || undefined })}
+              value={filters.academicYearId || ""}
+              onChange={(e) => setFilters({ ...filters, academicYearId: e.target.value ? Number(e.target.value) : undefined })}
               className="w-full px-3 py-2 text-sm border rounded-lg"
             >
-              <option value="">Alle klassen</option>
-              {filterOptions?.classes.map((c) => (
+              <option value="">Alle jaren</option>
+              {filterOptions?.academicYears.map((ay) => (
+                <option key={ay.id} value={ay.id}>{ay.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Vak</label>
+            <select
+              value={filters.courseId || ""}
+              onChange={(e) => setFilters({ ...filters, courseId: e.target.value ? Number(e.target.value) : undefined })}
+              className="w-full px-3 py-2 text-sm border rounded-lg"
+            >
+              <option value="">Alle vakken</option>
+              {filterOptions?.courses.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>

@@ -133,8 +133,8 @@ export interface CategoryDetailData {
 
 // Filter options
 export interface CompetencyOverviewFilters {
-  classId?: string;
-  className?: string;
+  academicYearId?: number;
+  courseId?: number;
   scanRange?: "last_3" | "last_5" | "last_year" | "all";
   categoryId?: number;
   status?: string;
@@ -143,7 +143,8 @@ export interface CompetencyOverviewFilters {
 
 // Available filter options from the backend
 export interface FilterOptions {
-  classes: { id: string; name: string }[];
+  academicYears: { id: number; label: string }[];
+  courses: { id: number; name: string }[];
   scans: { id: number; label: string; date: string }[];
   categories: { id: number; name: string }[];
 }
