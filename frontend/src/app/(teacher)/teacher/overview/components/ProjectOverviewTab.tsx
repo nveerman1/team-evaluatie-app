@@ -8,11 +8,9 @@ import {
   ChevronUp,
   X,
   TrendingUp,
-  Brain,
   BarChart3,
   FolderOpen,
   Award,
-  MessageSquare,
   ExternalLink,
 } from "lucide-react";
 import { Line } from "react-chartjs-2";
@@ -60,12 +58,6 @@ interface CategoryTrendData {
   scores: Record<string, number>;
 }
 
-interface AiSummary {
-  sterkePunten: string[];
-  verbeterpunten: string[];
-  algemeneTrend: string;
-}
-
 interface ProjectOverviewFilters {
   schoolYear: string;
   courseId: string;
@@ -95,7 +87,6 @@ const MOCK_PROJECTS: ProjectOverviewItem[] = [
       projectproces: 7.5,
       eindresultaat: 7.0,
       communicatie: 7.1,
-      samenwerking: 7.4,
     },
     status: "completed",
   },
@@ -112,7 +103,6 @@ const MOCK_PROJECTS: ProjectOverviewItem[] = [
       projectproces: 6.5,
       eindresultaat: 7.2,
       communicatie: 6.8,
-      samenwerking: 6.7,
     },
     status: "active",
   },
@@ -129,7 +119,6 @@ const MOCK_PROJECTS: ProjectOverviewItem[] = [
       projectproces: 8.0,
       eindresultaat: 7.5,
       communicatie: 7.8,
-      samenwerking: 8.0,
     },
     status: "completed",
   },
@@ -146,7 +135,6 @@ const MOCK_PROJECTS: ProjectOverviewItem[] = [
       projectproces: 6.2,
       eindresultaat: 6.8,
       communicatie: 6.5,
-      samenwerking: 6.5,
     },
     status: "completed",
   },
@@ -167,36 +155,21 @@ const MOCK_PROJECTS: ProjectOverviewItem[] = [
 const MOCK_TREND_DATA: CategoryTrendData[] = [
   {
     projectLabel: "Q4 2024",
-    scores: { projectproces: 6.2, eindresultaat: 6.8, communicatie: 6.5, samenwerking: 6.5 },
+    scores: { projectproces: 6.2, eindresultaat: 6.8, communicatie: 6.5 },
   },
   {
     projectLabel: "Q1 2025 - DB",
-    scores: { projectproces: 8.0, eindresultaat: 7.5, communicatie: 7.8, samenwerking: 8.0 },
+    scores: { projectproces: 8.0, eindresultaat: 7.5, communicatie: 7.8 },
   },
   {
     projectLabel: "Q1 2025 - Web",
-    scores: { projectproces: 7.5, eindresultaat: 7.0, communicatie: 7.1, samenwerking: 7.4 },
+    scores: { projectproces: 7.5, eindresultaat: 7.0, communicatie: 7.1 },
   },
   {
     projectLabel: "Q2 2025",
-    scores: { projectproces: 6.5, eindresultaat: 7.2, communicatie: 6.8, samenwerking: 6.7 },
+    scores: { projectproces: 6.5, eindresultaat: 7.2, communicatie: 6.8 },
   },
 ];
-
-const MOCK_AI_SUMMARY: AiSummary = {
-  sterkePunten: [
-    "Goede samenwerking binnen teams",
-    "Hoge kwaliteit eindresultaten in technische projecten",
-    "Effectieve communicatie met opdrachtgevers",
-  ],
-  verbeterpunten: [
-    "Projectplanning kan strakker",
-    "Documentatie vaak onvolledig",
-    "Meer aandacht voor tussentijdse evaluaties",
-  ],
-  algemeneTrend:
-    "Over het algemeen laten projecten een positieve trend zien, met name op het gebied van samenwerking en eindresultaat. Er is ruimte voor verbetering in het projectproces, met specifieke aandacht voor planning en documentatie.",
-};
 
 const COURSES = [
   { id: "", name: "Alle vakken" },
@@ -213,14 +186,12 @@ const CATEGORY_COLORS: Record<string, string> = {
   projectproces: "#3b82f6", // blue
   eindresultaat: "#10b981", // green
   communicatie: "#f59e0b", // amber
-  samenwerking: "#8b5cf6", // purple
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
   projectproces: "Projectproces",
   eindresultaat: "Eindresultaat",
   communicatie: "Communicatie",
-  samenwerking: "Samenwerking",
 };
 
 /* =========================================
@@ -296,34 +267,6 @@ function useProjectOverviewData(filters: ProjectOverviewFilters) {
   return { projects, trendData, loading, error, refresh: fetchData };
 }
 
-function useAiSummaryData(filters: ProjectOverviewFilters) {
-  const [aiSummary, setAiSummary] = useState<AiSummary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchAiSummary = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // TODO: Replace with actual API call
-      // GET /api/teacher/overview/projects/ai-summary
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      setAiSummary(MOCK_AI_SUMMARY);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Fout bij het laden van AI-samenvatting");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchAiSummary();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.courseId, filters.period, filters.schoolYear]);
-
-  return { aiSummary, loading, error };
-}
-
 /* =========================================
    SKELETON COMPONENTS
    ========================================= */
@@ -390,10 +333,6 @@ function KpiCards({ projects, loading }: KpiCardsProps) {
     // Count completed assessments
     const completedCount = completedProjects.length;
 
-    // Find most common improvement point (AI-derived) - mock for now
-    // TODO: This should come from AI analysis endpoint
-    const mostCommonImprovement = "Projectplanning";
-
     // Find most assessed category
     const categoryCounts: Record<string, number> = {};
     projectsWithScores.forEach((p) => {
@@ -408,7 +347,6 @@ function KpiCards({ projects, loading }: KpiCardsProps) {
     return {
       avgOverall,
       completedCount,
-      mostCommonImprovement,
       mostAssessedCategory: mostAssessedCategory
         ? CATEGORY_LABELS[mostAssessedCategory] || mostAssessedCategory
         : "—",
@@ -417,8 +355,7 @@ function KpiCards({ projects, loading }: KpiCardsProps) {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiSkeleton />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <KpiSkeleton />
         <KpiSkeleton />
         <KpiSkeleton />
@@ -427,7 +364,7 @@ function KpiCards({ projects, loading }: KpiCardsProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {/* Average Score Card */}
       <div className="bg-slate-50 rounded-xl p-4 border border-gray-200">
         <div className="flex items-center gap-2 mb-2">
@@ -449,18 +386,6 @@ function KpiCards({ projects, loading }: KpiCardsProps) {
         </div>
         <div className="text-2xl font-bold text-gray-900">{kpis.completedCount}</div>
         <p className="text-xs text-gray-500 mt-1">Projectbeoordelingen afgerond</p>
-      </div>
-
-      {/* Most Common Improvement Card */}
-      <div className="bg-slate-50 rounded-xl p-4 border border-gray-200">
-        <div className="flex items-center gap-2 mb-2">
-          <Brain className="w-5 h-5 text-amber-600" />
-          <span className="text-sm text-gray-600">Verbeterpunt (AI)</span>
-        </div>
-        <div className="text-lg font-bold text-gray-900 truncate">
-          {kpis.mostCommonImprovement}
-        </div>
-        <p className="text-xs text-gray-500 mt-1">Meest voorkomend verbeterpunt</p>
       </div>
 
       {/* Most Assessed Category Card */}
@@ -586,22 +511,6 @@ function ProjectDetailDrawer({ project, onClose }: ProjectDetailDrawerProps) {
                 Nog geen beoordelingen beschikbaar
               </p>
             )}
-          </div>
-
-          {/* AI Summary for this project */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-              <Brain className="w-4 h-4 text-purple-600" />
-              AI-samenvatting
-            </h3>
-            {/* TODO: Fetch project-specific AI summary from backend */}
-            <div className="bg-purple-50 rounded-lg p-4 text-sm text-gray-700">
-              <p>
-                Dit project laat goede resultaten zien op het gebied van samenwerking.
-                Aandachtspunten zijn de planning en documentatie. Teams hebben effectief
-                gecommuniceerd met de opdrachtgever.
-              </p>
-            </div>
           </div>
 
           {/* Action Button */}
@@ -741,7 +650,7 @@ function ProjectTable({
         <TableSkeleton />
       ) : (
         <div className="overflow-x-auto border rounded-xl">
-          <table className="w-full min-w-[700px]">
+          <table className="w-full min-w-[900px]">
             <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
                 <th
@@ -764,6 +673,15 @@ function ProjectTable({
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   Teams
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-blue-700 uppercase tracking-wider">
+                  Projectproces
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-green-700 uppercase tracking-wider">
+                  Eindresultaat
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-amber-700 uppercase tracking-wider">
+                  Communicatie
                 </th>
                 <th
                   className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
@@ -796,6 +714,21 @@ function ProjectTable({
                     {project.numTeams}
                   </td>
                   <td className="px-4 py-3 text-sm text-center">
+                    <span className="font-medium text-blue-700">
+                      {project.averageScoresByCategory.projectproces?.toFixed(1) || "—"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-center">
+                    <span className="font-medium text-green-700">
+                      {project.averageScoresByCategory.eindresultaat?.toFixed(1) || "—"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-center">
+                    <span className="font-medium text-amber-700">
+                      {project.averageScoresByCategory.communicatie?.toFixed(1) || "—"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-center">
                     <span className="font-semibold text-gray-900">
                       {project.averageScoreOverall?.toFixed(1) || "—"}
                     </span>
@@ -816,7 +749,7 @@ function ProjectTable({
               ))}
               {sortedProjects.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={11} className="px-4 py-8 text-center text-gray-500">
                     Geen projecten gevonden
                   </td>
                 </tr>
@@ -992,77 +925,6 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
 }
 
 /* =========================================
-   AI SUMMARY SECTION COMPONENT
-   ========================================= */
-
-interface AiSummarySectionProps {
-  filters: ProjectOverviewFilters;
-}
-
-function AiSummarySection({ filters }: AiSummarySectionProps) {
-  const { aiSummary, loading, error } = useAiSummaryData(filters);
-
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-        <p className="text-sm">{error}</p>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return <TextSkeleton />;
-  }
-
-  if (!aiSummary) {
-    return (
-      <div className="bg-gray-50 rounded-lg p-6 text-center text-gray-500">
-        <Brain className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-        <p className="text-sm">Nog geen AI-samenvatting beschikbaar</p>
-        <p className="text-xs mt-1">
-          Zodra er voldoende feedback is verzameld, verschijnt hier een samenvatting.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Sterke punten */}
-        <div className="bg-green-50 rounded-lg p-4">
-          <h4 className="text-sm font-semibold text-green-800 mb-2">Sterke punten</h4>
-          <ul className="list-disc list-inside text-sm text-green-700 space-y-1">
-            {aiSummary.sterkePunten.map((punt, idx) => (
-              <li key={idx}>{punt}</li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Verbeterpunten */}
-        <div className="bg-amber-50 rounded-lg p-4">
-          <h4 className="text-sm font-semibold text-amber-800 mb-2">Verbeterpunten</h4>
-          <ul className="list-disc list-inside text-sm text-amber-700 space-y-1">
-            {aiSummary.verbeterpunten.map((punt, idx) => (
-              <li key={idx}>{punt}</li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
-      {/* Algemene trend */}
-      <div className="bg-purple-50 rounded-lg p-4">
-        <h4 className="text-sm font-semibold text-purple-800 mb-2 flex items-center gap-2">
-          <MessageSquare className="w-4 h-4" />
-          Algemene trend
-        </h4>
-        <p className="text-sm text-purple-700">{aiSummary.algemeneTrend}</p>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================
    MAIN COMPONENT: PROJECT OVERVIEW TAB
    ========================================= */
 
@@ -1190,15 +1052,6 @@ export default function ProjectOverviewTab() {
           Gemiddelde scores per categorie over meerdere projecten
         </p>
         <CategoryTrendChart trendData={trendData} loading={loading} />
-      </div>
-
-      {/* AI Summary Section */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Brain className="w-5 h-5 text-purple-600" />
-          AI-samenvatting van feedback
-        </h3>
-        <AiSummarySection filters={filters} />
       </div>
 
       {/* Project Detail Drawer */}
