@@ -195,11 +195,14 @@ def _get_learning_goals(
                 if category:
                     related_categories.append(category.name)
 
+        # Map status: achieved -> afgerond, else -> actief
+        status = "afgerond" if goal.status == "achieved" else "actief"
+
         result.append(
             LearningGoal(
                 id=str(goal.id),
-                title=goal.title or "Leerdoel",
-                status="actief" if goal.status == "active" else "afgerond",
+                title=goal.goal_text or "Leerdoel",
+                status=status,
                 related=", ".join(related_categories) if related_categories else "",
                 since=goal.created_at.strftime("%d-%m-%Y") if goal.created_at else None,
             )
