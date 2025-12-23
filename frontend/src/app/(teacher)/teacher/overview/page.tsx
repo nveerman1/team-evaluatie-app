@@ -6,6 +6,7 @@ import LearningObjectivesOverviewTab from "./components/LearningObjectivesOvervi
 import PeerevaluatiesTab from "./components/PeerevaluatiesTab";
 import CompetenciesOverviewTab from "./components/CompetenciesOverviewTab";
 import ProjectOverviewTab from "./components/ProjectOverviewTab";
+import LeerlingOverzichtTab from "./components/LeerlingOverzichtTab";
 
 export default function OverviewPage() {
   const [activeTab, setActiveTab] = useState("totaal");
@@ -16,6 +17,7 @@ export default function OverviewPage() {
     { id: "peerevaluaties", label: "Peerevaluaties" },
     { id: "competenties", label: "Competenties" },
     { id: "leerdoelen", label: "Leerdoelen" },
+    { id: "leerlingoverzicht", label: "Leerlingoverzicht" },
   ];
 
   return (
@@ -67,6 +69,8 @@ export default function OverviewPage() {
         {activeTab === "competenties" && <CompetenciesOverviewTab />}
         
         {activeTab === "leerdoelen" && <LearningObjectivesOverviewTab />}
+        
+        {activeTab === "leerlingoverzicht" && <LeerlingOverzichtTab />}
         </div>
       </div>
     </>
