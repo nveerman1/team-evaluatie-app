@@ -25,7 +25,14 @@ from app.infra.db.models import (
     PublishedGrade,
     Allocation,
 )
-from app.api.v1.schemas.overview import OverviewItemOut, OverviewListResponse
+from app.api.v1.schemas.overview import (
+    OverviewItemOut,
+    OverviewListResponse,
+    ProjectOverviewListResponse,
+    ProjectTrendResponse,
+    ProjectOverviewItem,
+    CategoryTrendData,
+)
 
 router = APIRouter(prefix="/overview", tags=["overview"])
 
@@ -863,8 +870,6 @@ def get_project_overview(
     Get project overview data for the teacher overview page
     Returns aggregated project data with category scores
     """
-    from app.api.v1.schemas.overview import ProjectOverviewListResponse, ProjectOverviewItem
-    
     school_id = current_user.school_id
     
     # Query project assessments
@@ -1036,8 +1041,6 @@ def get_project_trends(
     """
     Get trend data for project categories over time
     """
-    from app.api.v1.schemas.overview import ProjectTrendResponse, CategoryTrendData
-    
     school_id = current_user.school_id
     
     # Query project assessments with scores
