@@ -24,6 +24,9 @@ from app.infra.db.models import (
     Grade,
     PublishedGrade,
     Allocation,
+    Project,
+    Client,
+    ClientProjectLink,
 )
 from app.api.v1.schemas.overview import (
     OverviewItemOut,
@@ -872,15 +875,23 @@ def get_project_overview(
     """
     school_id = current_user.school_id
     
-    # Query project assessments
+    # Query project assessments with optional project and client info
     query = db.query(
         ProjectAssessment,
         Group,
         Course,
+        Project,
+        Client,
     ).join(
         Group, ProjectAssessment.group_id == Group.id
     ).outerjoin(
         Course, Group.course_id == Course.id
+    ).outerjoin(
+        Project, ProjectAssessment.project_id == Project.id
+    ).outerjoin(
+        ClientProjectLink, ClientProjectLink.project_id == Project.id
+    ).outerjoin(
+        Client, ClientProjectLink.client_id == Client.id
     ).filter(
         ProjectAssessment.school_id == school_id
     )
@@ -922,11 +933,9 @@ def get_project_overview(
     
     # Build project overview items
     projects = []
-    for assessment, group, course in results:
-        # Get client name from group settings if available
-        client_name = None
-        if group.settings and isinstance(group.settings, dict):
-            client_name = group.settings.get("client_name")
+    for assessment, group, course, project, client in results:
+        # Get client name from the joined Client object
+        client_name = client.organization if client else None
         
         # Determine period label (e.g., "Q1 2025")
         period_label = "Unknown"
