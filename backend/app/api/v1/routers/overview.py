@@ -849,7 +849,7 @@ def export_matrix_csv(
 
 # ==================== PROJECT OVERVIEW ENDPOINTS ====================
 
-@router.get("/projects")
+@router.get("/projects", response_model=ProjectOverviewListResponse)
 def get_project_overview(
     school_year: Optional[str] = Query(None),  # e.g., "2024-2025"
     course_id: Optional[int] = Query(None),
@@ -942,13 +942,11 @@ def get_project_overview(
         if period and period != "Alle periodes" and period not in period_label:
             continue
         
-        # Count teams in this project (groups with same project)
-        num_teams = db.query(Group).filter(
-            Group.course_id == group.course_id,
-            Group.name.like(f"%{assessment.title}%")  # Simple heuristic
-        ).count()
-        if num_teams == 0:
-            num_teams = 1
+        # Count teams in this project by distinct team numbers in scores
+        num_teams = db.query(func.count(func.distinct(ProjectAssessmentScore.team_number))).filter(
+            ProjectAssessmentScore.assessment_id == assessment.id,
+            ProjectAssessmentScore.team_number.isnot(None)
+        ).scalar() or 1  # Default to 1 if no scores yet
         
         # Calculate average score overall
         rubric = db.query(Rubric).filter(Rubric.id == assessment.rubric_id).first()
@@ -1028,7 +1026,7 @@ def get_project_overview(
     )
 
 
-@router.get("/projects/trends")
+@router.get("/projects/trends", response_model=ProjectTrendResponse)
 def get_project_trends(
     school_year: Optional[str] = Query(None),
     course_id: Optional[int] = Query(None),

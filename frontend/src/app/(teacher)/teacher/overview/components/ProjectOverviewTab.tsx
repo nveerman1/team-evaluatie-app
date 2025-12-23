@@ -93,6 +93,9 @@ const CATEGORY_LABELS: Record<string, string> = {
   communicatie: "Communicatie",
 };
 
+// Table configuration
+const TABLE_COLUMNS_COUNT = 11; // Total number of columns in the project table
+
 /* =========================================
    HOOK: useProjectOverviewData
    ========================================= */
@@ -634,7 +637,7 @@ function ProjectTable({
               ))}
               {sortedProjects.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={TABLE_COLUMNS_COUNT} className="px-4 py-8 text-center text-gray-500">
                     Geen projecten gevonden
                   </td>
                 </tr>
