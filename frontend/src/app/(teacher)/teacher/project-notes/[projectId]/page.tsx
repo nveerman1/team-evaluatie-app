@@ -185,6 +185,7 @@ export default function ProjectNotesDetailPage({
             <CombinedTeamCard
               key={team.id}
               contextId={Number(projectId)}
+              hasProjectId={!!context.project_id}
               team={team}
               students={context.students.filter(s => s.team_id === team.id)}
               notes={getNotesForTeam(team)}

@@ -49,6 +49,7 @@ def serialize_note(note: ProjectNote, db: Session) -> dict:
         "context_id": note.context_id,
         "note_type": note.note_type,
         "team_id": note.team_id,
+        "project_team_id": note.project_team_id,
         "student_id": note.student_id,
         "text": note.text,
         "tags": note.tags,
@@ -62,8 +63,16 @@ def serialize_note(note: ProjectNote, db: Session) -> dict:
         "updated_at": note.updated_at,
     }
 
-    # Add joined data
-    if note.team_id:
+    # Add joined data - prefer project_team over legacy team
+    if note.project_team_id:
+        project_team = (
+            db.query(ProjectTeam).filter(ProjectTeam.id == note.project_team_id).first()
+        )
+        if project_team:
+            note_dict["team_name"] = f"Team {project_team.team_number}"
+        else:
+            note_dict["team_name"] = None
+    elif note.team_id:
         team = db.query(Group).filter(Group.id == note.team_id).first()
         note_dict["team_name"] = team.name if team else None
     else:
@@ -277,6 +286,7 @@ async def get_context(
 
         # Build user_id -> project team_number mapping if context has a project
         user_team_map: dict[int, int] = {}
+        team_number_to_id_map: dict[int, int] = {}  # Map team_number to ProjectTeam.id
         if context.project_id:
             project_teams = (
                 db.query(ProjectTeam)
@@ -286,8 +296,10 @@ async def get_context(
                 )
                 .all()
             )
-            
+
             for team in project_teams:
+                if team.team_number is not None:
+                    team_number_to_id_map[team.team_number] = team.id
                 members = (
                     db.query(ProjectTeamMember)
                     .filter(ProjectTeamMember.project_team_id == team.id)
@@ -301,7 +313,7 @@ async def get_context(
         # If no project_id, use user.team_number
         teams_dict = {}
         students_without_team = []
-        
+
         for student in all_students:
             if context.project_id:
                 team_num = user_team_map.get(student.id, None)
@@ -320,9 +332,18 @@ async def get_context(
             member_names = [m.name for m in team_members]
             member_ids = [m.id for m in team_members]
 
+            # Get the actual ProjectTeam.id if this is a project context
+            if context.project_id:
+                team_id = team_number_to_id_map.get(team_num)
+                if team_id is None:
+                    # Skip teams without a ProjectTeam record
+                    continue
+            else:
+                team_id = team_num
+
             teams.append(
                 TeamInfo(
-                    id=team_num,  # Use team_number as ID
+                    id=team_id,  # Use ProjectTeam.id for project contexts, team_number otherwise
                     name=f"Team {team_num}",
                     team_number=team_num,
                     member_count=len(member_names),
@@ -341,7 +362,7 @@ async def get_context(
                         team_name=f"Team {team_num}",
                     )
                 )
-        
+
         # Add students without teams
         for student in students_without_team:
             students.append(
@@ -541,11 +562,18 @@ async def create_note(
         )
 
     # Validate note type requirements
-    if data.note_type == "team" and not data.team_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="team_id is required for team notes",
-        )
+    # For team notes: either team_id (legacy) or project_team_id (preferred) is required, but not both
+    if data.note_type == "team":
+        if data.team_id and data.project_team_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot specify both team_id and project_team_id",
+            )
+        if not data.team_id and not data.project_team_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="team_id or project_team_id is required for team notes",
+            )
     if data.note_type == "student" and not data.student_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -556,6 +584,7 @@ async def create_note(
         context_id=context_id,
         note_type=data.note_type,
         team_id=data.team_id,
+        project_team_id=data.project_team_id,
         student_id=data.student_id,
         text=data.text,
         tags=data.tags,
@@ -754,15 +783,15 @@ async def close_project_notes_context(
 ):
     """
     Close a project notes context and mark it as archived
-    
+
     Sets status to 'closed' and records closed_at timestamp.
     This action is idempotent - calling it multiple times has the same effect.
     Once closed, the project_team members become read-only.
     """
     from datetime import datetime, timezone as tz
-    
+
     require_role(current_user, ["teacher", "admin"])
-    
+
     # Get context
     context = (
         db.query(ProjectNotesContext)
@@ -772,18 +801,17 @@ async def close_project_notes_context(
         )
         .first()
     )
-    
+
     if not context:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Context not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Context not found"
         )
-    
+
     # Update status and closed_at if not already closed
     if context.status != "closed":
         context.status = "closed"
         context.closed_at = datetime.now(tz.utc)
-        
+
         # Log action
         log_update(
             db=db,
@@ -792,10 +820,10 @@ async def close_project_notes_context(
             entity_id=context_id,
             details={"action": "close", "closed_at": context.closed_at.isoformat()},
         )
-    
+
     db.commit()
     db.refresh(context)
-    
+
     # Format output
     return ProjectNotesContextOut(
         id=context.id,
