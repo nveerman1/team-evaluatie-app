@@ -243,7 +243,7 @@ export default function OverzichtTab() {
       </div>
 
       {/* Students Table */}
-      <div className="overflow-hidden rounded-xl">
+      <div className="overflow-x-auto overflow-y-hidden rounded-xl">
         <table className="w-full bg-white">
           <thead className="bg-slate-50">
             <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -265,7 +265,7 @@ export default function OverzichtTab() {
               </tr>
             ) : (
               filteredStudents.map((student, index) => (
-                <tr key={student.user_id} className="bg-white border-b border-gray-200 hover:bg-gray-50">
+                <tr key={student.user_id} className="border-b border-gray-200 hover:bg-gray-50">
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2">
                       {index < 3 ? (
