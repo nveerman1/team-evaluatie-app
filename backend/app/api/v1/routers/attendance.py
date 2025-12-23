@@ -1210,6 +1210,7 @@ def get_stats_summary(
                 0
             )
         )
+        .select_from(AttendanceEvent)
         .join(User, AttendanceEvent.user_id == User.id)
         .filter(
             User.school_id == current_user.school_id,
@@ -1228,6 +1229,7 @@ def get_stats_summary(
                 0
             )
         )
+        .select_from(AttendanceEvent)
         .join(User, AttendanceEvent.user_id == User.id)
         .filter(
             User.school_id == current_user.school_id,
