@@ -274,8 +274,8 @@ export default function StatistiekenTab() {
         </div>
       </div>
 
-      {/* Charts Row 1: Donut + Weekly Trend */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {/* Charts Row: All 3 charts side by side */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Donut Chart */}
         <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
           <div className="mb-4">
@@ -355,50 +355,50 @@ export default function StatistiekenTab() {
             />
           </div>
         </div>
-      </div>
 
-      {/* Charts Row 2: Daily Bar Chart */}
-      <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-        <div className="mb-4">
-          <h3 className="text-sm font-semibold text-slate-900">Aantal aanwezigen per dag</h3>
-          <p className="text-xs text-slate-500">Unieke leerlingen met school check-in</p>
-        </div>
-        <div style={{ height: "250px" }}>
-          <Bar
-            data={dailyChartData}
-            options={{
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                legend: {
-                  display: false,
-                },
-                tooltip: {
-                  callbacks: {
-                    title: (items) => {
-                      const idx = items[0]?.dataIndex;
-                      if (idx !== undefined && daily[idx]) {
-                        return daily[idx].date;
-                      }
-                      return "";
-                    },
-                    label: (context) => {
-                      return `Aanwezigen: ${context.parsed.y}`;
+        {/* Daily Bar Chart */}
+        <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+          <div className="mb-4">
+            <h3 className="text-sm font-semibold text-slate-900">Aantal aanwezigen per dag</h3>
+            <p className="text-xs text-slate-500">Unieke leerlingen met school check-in</p>
+          </div>
+          <div style={{ height: "250px" }}>
+            <Bar
+              data={dailyChartData}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    display: false,
+                  },
+                  tooltip: {
+                    callbacks: {
+                      title: (items) => {
+                        const idx = items[0]?.dataIndex;
+                        if (idx !== undefined && daily[idx]) {
+                          return daily[idx].date;
+                        }
+                        return "";
+                      },
+                      label: (context) => {
+                        return `Aanwezigen: ${context.parsed.y}`;
+                      },
                     },
                   },
                 },
-              },
-              scales: {
-                y: {
-                  beginAtZero: true,
-                  title: {
-                    display: true,
-                    text: "Aantal leerlingen",
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    title: {
+                      display: true,
+                      text: "Aantal leerlingen",
+                    },
                   },
                 },
-              },
-            }}
-          />
+              }}
+            />
+          </div>
         </div>
       </div>
 
