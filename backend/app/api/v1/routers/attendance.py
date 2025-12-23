@@ -910,7 +910,7 @@ def get_attendance_overview(
         if project:
             school_query = apply_project_date_filter(school_query, project)
 
-        school_seconds = school_query.scalar() or 0
+        school_seconds = float(school_query.scalar() or 0)
 
         # Build base query for external approved hours with optional date filter
         external_approved_query = db.query(
@@ -932,7 +932,7 @@ def get_attendance_overview(
                 external_approved_query, project
             )
 
-        external_approved_seconds = external_approved_query.scalar() or 0
+        external_approved_seconds = float(external_approved_query.scalar() or 0)
 
         # Build base query for external pending hours with optional date filter
         external_pending_query = db.query(
@@ -954,7 +954,7 @@ def get_attendance_overview(
                 external_pending_query, project
             )
 
-        external_pending_seconds = external_pending_query.scalar() or 0
+        external_pending_seconds = float(external_pending_query.scalar() or 0)
 
         total_seconds = int(school_seconds) + int(external_approved_seconds)
         lesson_blocks = round(total_seconds / (75 * 60), 1)
@@ -1261,8 +1261,8 @@ def get_stats_summary(
         school_query = school_query.filter(AttendanceEvent.project_id == project_id)
         external_query = external_query.filter(AttendanceEvent.project_id == project_id)
 
-    school_seconds = school_query.scalar() or 0
-    external_seconds = external_query.scalar() or 0
+    school_seconds = float(school_query.scalar() or 0)
+    external_seconds = float(external_query.scalar() or 0)
 
     # Convert to minutes and blocks
     school_minutes = int(school_seconds / 60)
