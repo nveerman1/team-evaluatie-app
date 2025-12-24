@@ -169,3 +169,87 @@ class ProjectTrendResponse(BaseModel):
     Trend data for project categories over time
     """
     trend_data: List[CategoryTrendData]
+
+
+# ==================== Peer Evaluation Overview Schemas ====================
+
+class OmzaTrendDataPoint(BaseModel):
+    """
+    Single data point for OMZA trend chart
+    """
+    date: str  # e.g., "Sep 2024"
+    organiseren: float
+    meedoen: float
+    zelfvertrouwen: float
+    autonomie: float
+
+
+class OmzaCategoryScore(BaseModel):
+    """
+    Score for one OMZA category with trend indicator
+    """
+    current: float
+    trend: str  # "up" | "down" | "neutral"
+
+
+class StudentHeatmapRow(BaseModel):
+    """
+    One row in the student heatmap showing OMZA scores
+    """
+    student_id: int
+    student_name: str
+    class_name: Optional[str] = None
+    scores: dict[str, OmzaCategoryScore]  # category -> score data
+    self_vs_peer_diff: Optional[float] = None  # Self-assessment vs peer average difference
+
+
+class KpiStudent(BaseModel):
+    """
+    Student entry in KPI cards (top/bottom performers)
+    """
+    student_id: int
+    student_name: str
+    value: float  # Score or difference value
+
+
+class KpiData(BaseModel):
+    """
+    KPI data for dashboard cards
+    """
+    grootsteStijgers: List[KpiStudent] = []
+    grootsteDalers: List[KpiStudent] = []
+    structureelLaag: List[KpiStudent] = []
+    inconsistenties: List[KpiStudent] = []
+
+
+class PeerOverviewDashboardResponse(BaseModel):
+    """
+    Dashboard data for peer evaluations overview
+    """
+    trendData: List[OmzaTrendDataPoint]
+    heatmapData: List[StudentHeatmapRow]
+    kpiData: KpiData
+
+
+class FeedbackItem(BaseModel):
+    """
+    Individual feedback item from peer evaluations
+    """
+    id: str
+    student_id: int
+    student_name: str
+    project_name: str
+    date: datetime
+    category: str  # "organiseren" | "meedoen" | "zelfvertrouwen" | "autonomie"
+    sentiment: str  # "positief" | "kritiek" | "waarschuwing"
+    text: str
+    keywords: List[str] = []
+    is_risk_behavior: bool = False
+
+
+class FeedbackCollectionResponse(BaseModel):
+    """
+    Feedback collection data for peer evaluations
+    """
+    feedbackItems: List[FeedbackItem]
+    totalCount: int

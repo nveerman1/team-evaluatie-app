@@ -36,6 +36,14 @@ from app.api.v1.schemas.overview import (
     ProjectTrendResponse,
     ProjectOverviewItem,
     CategoryTrendData,
+    PeerOverviewDashboardResponse,
+    FeedbackCollectionResponse,
+    OmzaTrendDataPoint,
+    StudentHeatmapRow,
+    OmzaCategoryScore,
+    KpiData,
+    KpiStudent,
+    FeedbackItem,
 )
 
 router = APIRouter(prefix="/overview", tags=["overview"])
@@ -1198,3 +1206,138 @@ def get_courses_for_overview(
     ).order_by(Course.name).all()
     
     return [{"id": c.id, "name": c.name} for c in courses]
+
+
+@router.get("/peer-evaluations/dashboard", response_model=PeerOverviewDashboardResponse)
+def get_peer_evaluation_dashboard(
+    course_id: Optional[int] = Query(None),
+    project_id: Optional[int] = Query(None),
+    period: str = Query("6months"),  # "3months" | "6months" | "year"
+    student_name: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get dashboard data for peer evaluations overview including:
+    - OMZA trend data over time
+    - Student heatmap with current scores and trends
+    - KPI data (top performers, concerns, etc.)
+    
+    Filters:
+    - course_id: Filter by specific course (vak)
+    - project_id: Filter by specific project
+    - period: Time period for trends (3months, 6months, year)
+    - student_name: Filter by student name
+    """
+    from datetime import datetime, timedelta
+    from sqlalchemy import func, case
+    
+    school_id = current_user.school_id
+    
+    # Calculate date range based on period
+    end_date = datetime.now()
+    if period == "3months":
+        start_date = end_date - timedelta(days=90)
+    elif period == "year":
+        start_date = end_date - timedelta(days=365)
+    else:  # 6months (default)
+        start_date = end_date - timedelta(days=180)
+    
+    # Get evaluations matching filters
+    eval_query = db.query(Evaluation).filter(
+        Evaluation.school_id == school_id,
+        Evaluation.evaluation_type == "peer"  # Only peer evaluations
+    )
+    
+    if course_id:
+        eval_query = eval_query.filter(Evaluation.course_id == course_id)
+    if project_id:
+        eval_query = eval_query.filter(Evaluation.project_id == project_id)
+    
+    evaluations = eval_query.all()
+    evaluation_ids = [e.id for e in evaluations]
+    
+    if not evaluation_ids:
+        # Return empty data if no evaluations found
+        return PeerOverviewDashboardResponse(
+            trendData=[],
+            heatmapData=[],
+            kpiData=KpiData()
+        )
+    
+    # For now, return mock data structure
+    # TODO: Implement real data aggregation from Score table
+    # This would involve:
+    # 1. Query all scores for these evaluations
+    # 2. Group by student and category
+    # 3. Calculate averages and trends over time
+    # 4. Calculate self vs peer differences
+    # 5. Identify top/bottom performers
+    
+    return PeerOverviewDashboardResponse(
+        trendData=[],
+        heatmapData=[],
+        kpiData=KpiData()
+    )
+
+
+@router.get("/peer-evaluations/feedback", response_model=FeedbackCollectionResponse)
+def get_peer_evaluation_feedback(
+    course_id: Optional[int] = Query(None),
+    project_id: Optional[int] = Query(None),
+    category: Optional[str] = Query(None),  # OMZA category filter
+    sentiment: Optional[str] = Query(None),  # sentiment filter
+    search_text: Optional[str] = Query(None),
+    risk_only: bool = Query(False),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get feedback collection data from peer evaluations including:
+    - Individual feedback items with text
+    - Categories (OMZA)
+    - Sentiment analysis
+    - Risk behavior flags
+    
+    Filters:
+    - course_id: Filter by specific course
+    - project_id: Filter by specific project
+    - category: Filter by OMZA category
+    - sentiment: Filter by sentiment
+    - search_text: Search in feedback text
+    - risk_only: Show only risk behavior items
+    """
+    school_id = current_user.school_id
+    
+    # Get evaluations matching filters
+    eval_query = db.query(Evaluation).filter(
+        Evaluation.school_id == school_id,
+        Evaluation.evaluation_type == "peer"
+    )
+    
+    if course_id:
+        eval_query = eval_query.filter(Evaluation.course_id == course_id)
+    if project_id:
+        eval_query = eval_query.filter(Evaluation.project_id == project_id)
+    
+    evaluations = eval_query.all()
+    evaluation_ids = [e.id for e in evaluations]
+    
+    if not evaluation_ids:
+        return FeedbackCollectionResponse(
+            feedbackItems=[],
+            totalCount=0
+        )
+    
+    # For now, return mock data structure
+    # TODO: Implement real feedback aggregation
+    # This would involve:
+    # 1. Query Reflection table for written feedback
+    # 2. Extract and categorize feedback text
+    # 3. Apply filters
+    # 4. Return structured feedback items
+    
+    return FeedbackCollectionResponse(
+        feedbackItems=[],
+        totalCount=0
+    )
