@@ -147,6 +147,11 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
                     title={cat.name}
                   >
                     <span className="block truncate max-w-[80px]">{cat.name}</span>
+                    {cat.trendDelta !== null && (
+                      <span className={`block text-[10px] font-normal mt-0.5 ${getTrendColor(cat.trendDelta)}`}>
+                        {cat.trendDelta > 0 ? '+' : ''}{cat.trendDelta.toFixed(1)}
+                      </span>
+                    )}
                   </th>
                 ))}
               </tr>

@@ -8,7 +8,7 @@ export interface CompetencyCategorySummary {
   name: string;
   averageScore: number;
   previousAverageScore: number | null;
-  trendDelta: number | null;
+  trendDelta: number | null; // Delta vs previous scan for this category
   numStudentsUp: number;
   numStudentsDown: number;
   numStudentsSame: number;

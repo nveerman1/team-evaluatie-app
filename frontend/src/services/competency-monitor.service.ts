@@ -202,38 +202,32 @@ export const competencyMonitorService = {
     }
     
     // Calculate notable students from heatmap data
-    const notableStudents = [];
+    const notableStudents: {
+      studentId: number;
+      name: string;
+      className: string | null;
+      type: "strong_growth" | "decline" | "low_score";
+      trendDelta: number | null;
+      score: number | null;
+      categoryName: string | null;
+    }[] = [];
     
-    // Find students with low scores (average < 2.5 across all categories)
+    // Find students with low scores in specific categories (< 2.5)
     for (const row of heatmapRows) {
-      const scores = Object.values(row.scores).filter((s): s is number => s !== null);
-      if (scores.length > 0) {
-        const avgScore = scores.reduce((sum, s) => sum + s, 0) / scores.length;
-        
-        if (avgScore < 2.5) {
-          // Find the lowest category for this student
-          let lowestScore = Infinity;
-          let lowestCategoryName = null;
-          
-          Object.entries(row.scores).forEach(([catIdStr, score]) => {
-            if (score !== null && score < lowestScore) {
-              lowestScore = score;
-              const category = categorySummaries.find(c => c.id === Number(catIdStr));
-              lowestCategoryName = category?.name || null;
-            }
-          });
-          
+      Object.entries(row.scores).forEach(([catIdStr, score]) => {
+        if (score !== null && score < 2.5) {
+          const category = categorySummaries.find(c => c.id === Number(catIdStr));
           notableStudents.push({
             studentId: row.studentId,
             name: row.name,
             className: row.className,
             type: "low_score" as const,
-            score: avgScore,
+            score: score,
             trendDelta: null,
-            categoryName: lowestCategoryName,
+            categoryName: category?.name || null,
           });
         }
-      }
+      });
     }
     
     // Calculate trend data if there's a previous window
@@ -269,8 +263,40 @@ export const competencyMonitorService = {
           classTrendDelta = classAverageScore - previousAverage;
         }
         
-        // Build a map of student scores from previous window
+        // Calculate previous category averages from previous window
+        const previousCategoryAverages = new Map<number, number>();
+        for (const comp of previousCompetencies) {
+          if (!comp.category_id) continue;
+          
+          const scores = previousHeatmapData.rows
+            .map((row: { scores: Record<number, number | null> }) => row.scores[comp.id])
+            .filter((s): s is number => s !== null && !isNaN(s));
+          
+          if (scores.length > 0) {
+            const avg = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+            
+            if (previousCategoryAverages.has(comp.category_id)) {
+              const existing = previousCategoryAverages.get(comp.category_id)!;
+              previousCategoryAverages.set(comp.category_id, (existing + avg) / 2);
+            } else {
+              previousCategoryAverages.set(comp.category_id, avg);
+            }
+          }
+        }
+        
+        // Update category summaries with trendDelta
+        categorySummaries.forEach(cat => {
+          const previousAvg = previousCategoryAverages.get(cat.id);
+          if (previousAvg !== undefined) {
+            cat.previousAverageScore = previousAvg;
+            cat.trendDelta = cat.averageScore - previousAvg;
+          }
+        });
+        
+        // Build a map of student scores (overall and per category) from previous window
         const previousStudentScores = new Map<number, number>();
+        const previousStudentCategoryScores = new Map<number, Record<number, number>>();
+        
         for (const row of previousHeatmapData.rows) {
           const categoryScores: Record<number, number[]> = {};
           Object.entries(row.scores).forEach(([compIdStr, score]) => {
@@ -292,9 +318,19 @@ export const competencyMonitorService = {
             const avgScore = allScoresForStudent.reduce((sum, s) => sum + s, 0) / allScoresForStudent.length;
             previousStudentScores.set(row.user_id, avgScore);
           }
+          
+          // Calculate category averages for this student in previous window
+          const studentCatScores: Record<number, number> = {};
+          Object.entries(categoryScores).forEach(([catIdStr, scores]) => {
+            const catId = Number(catIdStr);
+            if (scores.length > 0) {
+              studentCatScores[catId] = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+            }
+          });
+          previousStudentCategoryScores.set(row.user_id, studentCatScores);
         }
         
-        // Compare current vs previous for each student
+        // Compare current vs previous for each student (overall and per category)
         for (const row of heatmapRows) {
           const currentScores = Object.values(row.scores).filter((s): s is number => s !== null);
           if (currentScores.length > 0) {
@@ -308,6 +344,48 @@ export const competencyMonitorService = {
               } else if (delta < -0.1) { // Threshold for decline
                 studentsDeclined++;
               }
+            }
+            
+            // Check for strong growth or decline in individual categories
+            const previousCatScores = previousStudentCategoryScores.get(row.studentId);
+            if (previousCatScores) {
+              Object.entries(row.scores).forEach(([catIdStr, currentScore]) => {
+                if (currentScore !== null) {
+                  const catId = Number(catIdStr);
+                  const previousScore = previousCatScores[catId];
+                  
+                  if (previousScore !== undefined) {
+                    const catDelta = currentScore - previousScore;
+                    const category = categorySummaries.find(c => c.id === catId);
+                    
+                    // Strong growth: delta > 0.5
+                    if (catDelta > 0.5) {
+                      notableStudents.push({
+                        studentId: row.studentId,
+                        name: row.name,
+                        className: row.className,
+                        type: "strong_growth" as const,
+                        score: currentScore,
+                        trendDelta: catDelta,
+                        categoryName: category?.name || null,
+                      });
+                    }
+                    
+                    // Decline: delta < -0.5
+                    if (catDelta < -0.5) {
+                      notableStudents.push({
+                        studentId: row.studentId,
+                        name: row.name,
+                        className: row.className,
+                        type: "decline" as const,
+                        score: currentScore,
+                        trendDelta: catDelta,
+                        categoryName: category?.name || null,
+                      });
+                    }
+                  }
+                }
+              });
             }
           }
         }
