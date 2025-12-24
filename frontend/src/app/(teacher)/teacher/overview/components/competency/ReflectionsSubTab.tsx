@@ -1,20 +1,42 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useCompetencyReflections, useCompetencyFilterOptions } from "@/hooks/useCompetencyOverview";
+import { useState, useEffect } from "react";
+import { useCompetencyReflections } from "@/hooks/useCompetencyOverview";
 import { Loading, ErrorMessage } from "@/components";
 import type { CompetencyOverviewFilters } from "@/dtos/competency-monitor.dto";
 
-export function ReflectionsSubTab() {
-  const [filters, setFilters] = useState<CompetencyOverviewFilters>({});
+interface ReflectionsSubTabProps {
+  filters: CompetencyOverviewFilters;
+}
+
+export function ReflectionsSubTab({ filters }: ReflectionsSubTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedReflections, setExpandedReflections] = useState<Set<number>>(new Set());
   
-  // Memoize filters to prevent infinite re-renders
-  const memoizedFilters = useMemo(() => ({ ...filters, searchQuery }), [filters, searchQuery]);
+  const { data: reflections, loading, error } = useCompetencyReflections(filters);
+
+  // Client-side filtering for search (to avoid refetch on every keystroke)
+  const [filteredReflections, setFilteredReflections] = useState(reflections || []);
   
-  const { data: filterOptions, loading: filterLoading } = useCompetencyFilterOptions();
-  const { data: reflections, loading, error } = useCompetencyReflections(memoizedFilters);
+  useEffect(() => {
+    if (!reflections) {
+      setFilteredReflections([]);
+      return;
+    }
+    
+    if (!searchQuery.trim()) {
+      setFilteredReflections(reflections);
+      return;
+    }
+    
+    const query = searchQuery.toLowerCase();
+    const filtered = reflections.filter((reflection) => 
+      reflection.reflectionText.toLowerCase().includes(query) ||
+      reflection.studentName.toLowerCase().includes(query) ||
+      (reflection.className && reflection.className.toLowerCase().includes(query))
+    );
+    setFilteredReflections(filtered);
+  }, [reflections, searchQuery]);
 
   const toggleExpand = (reflectionId: number) => {
     const newExpanded = new Set(expandedReflections);
@@ -34,69 +56,28 @@ export function ReflectionsSubTab() {
     });
   };
 
-  if (filterLoading || loading) return <Loading />;
+  if (loading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
 
   return (
     <div className="space-y-6">
-      {/* Filter Bar */}
+      {/* Search Bar */}
       <div className="bg-gray-50 rounded-xl p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">🔍 Zoeken</label>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Zoek in reflecties..."
-              className="w-full px-3 py-2 text-sm border rounded-lg"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Klas</label>
-            <select
-              value={filters.className || ""}
-              onChange={(e) => setFilters({ ...filters, className: e.target.value || undefined })}
-              className="w-full px-3 py-2 text-sm border rounded-lg"
-            >
-              <option value="">Alle klassen</option>
-              {filterOptions?.classes.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Categorie</label>
-            <select
-              value={filters.categoryId || ""}
-              onChange={(e) => setFilters({ ...filters, categoryId: e.target.value ? Number(e.target.value) : undefined })}
-              className="w-full px-3 py-2 text-sm border rounded-lg"
-            >
-              <option value="">Alle categorieën</option>
-              {filterOptions?.categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Scan</label>
-            <select
-              value={filters.scanRange || ""}
-              onChange={(e) => setFilters({ ...filters, scanRange: e.target.value as CompetencyOverviewFilters["scanRange"] || undefined })}
-              className="w-full px-3 py-2 text-sm border rounded-lg"
-            >
-              <option value="">Alle scans</option>
-              {filterOptions?.scans.map((s) => (
-                <option key={s.id} value={s.id.toString()}>{s.label}</option>
-              ))}
-            </select>
-          </div>
+        <div>
+          <label className="block text-xs text-gray-600 mb-1">🔍 Zoeken</label>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Zoek in reflecties of leerlingnaam..."
+            className="w-full px-3 py-2 text-sm border rounded-lg"
+          />
         </div>
       </div>
 
       {/* Reflections Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        {reflections.length > 0 ? (
+        {filteredReflections.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50">
@@ -110,7 +91,7 @@ export function ReflectionsSubTab() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {reflections.map((reflection) => {
+                {filteredReflections.map((reflection) => {
                   const isExpanded = expandedReflections.has(reflection.id);
                   const text = reflection.reflectionText;
                   const shouldTruncate = text.length > 150;

@@ -8,7 +8,7 @@ export interface CompetencyCategorySummary {
   name: string;
   averageScore: number;
   previousAverageScore: number | null;
-  trendDelta: number | null;
+  trendDelta: number | null; // Delta vs previous scan for this category
   numStudentsUp: number;
   numStudentsDown: number;
   numStudentsSame: number;
@@ -25,6 +25,11 @@ export interface ScanSummary {
     averageScore: number;
   }[];
   overallAverage: number;
+  median: number;
+  p10: number;
+  p25: number;
+  p75: number;
+  p90: number;
 }
 
 // Student summary for the students tab
@@ -95,6 +100,7 @@ export interface HeatmapStudentRow {
   name: string;
   className: string | null;
   scores: Record<number, number | null>; // categoryId -> score
+  scoreDeltas: Record<number, number | null>; // categoryId -> delta vs previous scan
 }
 
 // Main overview data response
@@ -133,8 +139,8 @@ export interface CategoryDetailData {
 
 // Filter options
 export interface CompetencyOverviewFilters {
-  classId?: string;
-  className?: string;
+  academicYearId?: number;
+  courseId?: number;
   scanRange?: "last_3" | "last_5" | "last_year" | "all";
   categoryId?: number;
   status?: string;
@@ -143,7 +149,8 @@ export interface CompetencyOverviewFilters {
 
 // Available filter options from the backend
 export interface FilterOptions {
-  classes: { id: string; name: string }[];
+  academicYears: { id: number; label: string }[];
+  courses: { id: number; name: string }[];
   scans: { id: number; label: string; date: string }[];
   categories: { id: number; name: string }[];
 }

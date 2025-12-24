@@ -1,28 +1,52 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useCompetencyOverview, useCompetencyFilterOptions } from "@/hooks/useCompetencyOverview";
+import { useCompetencyOverview } from "@/hooks/useCompetencyOverview";
 import { Loading, ErrorMessage } from "@/components";
 import { CompetencyRadarChart, CATEGORY_COLORS } from "@/components/student/competency/CompetencyRadarChart";
+import { SpreadChartCompact } from "@/components/teacher/competency/SpreadChartCompact";
 import type { CompetencyOverviewFilters } from "@/dtos/competency-monitor.dto";
 
-export function OverviewSubTab() {
-  const [filters, setFilters] = useState<CompetencyOverviewFilters>({
-    scanRange: "last_3",
-  });
-  
-  const { data: filterOptions } = useCompetencyFilterOptions();
+interface OverviewSubTabProps {
+  filters: CompetencyOverviewFilters;
+}
+
+export function OverviewSubTab({ filters }: OverviewSubTabProps) {
   const { data, loading, error } = useCompetencyOverview(filters);
+  const [chartMode, setChartMode] = useState<"average" | "spread" | "growth">("average");
+  const [selectedScanId, setSelectedScanId] = useState<number | null>(null);
 
   // Prepare radar chart data
   const radarData = useMemo(() => {
     if (!data?.categorySummaries) return [];
-    return data.categorySummaries.map((cat) => ({
-      name: cat.name,
-      value: cat.averageScore,
-    }));
+    return data.categorySummaries
+      .filter((cat) => cat.averageScore != null && !isNaN(cat.averageScore))
+      .map((cat) => ({
+        name: cat.name,
+        value: cat.averageScore,
+      }));
   }, [data]);
+
+  // Select the latest scan by default
+  const selectedScan = useMemo(() => {
+    if (!data?.scans || data.scans.length === 0) return null;
+    if (selectedScanId !== null) {
+      return data.scans.find(s => s.scanId === selectedScanId) || data.scans[0];
+    }
+    return data.scans[0];
+  }, [data, selectedScanId]);
+
+  // Calculate spread status
+  const getSpreadStatus = (scan: typeof selectedScan) => {
+    if (!scan) return null;
+    const spread = scan.p90 - scan.p10;
+    if (spread > 2.5) return { label: "Groot", color: "text-orange-600" };
+    if (spread > 1.5) return { label: "Aandacht", color: "text-yellow-600" };
+    return { label: "Homogeen", color: "text-green-600" };
+  };
+
+  const spreadStatus = getSpreadStatus(selectedScan);
 
   if (loading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
@@ -48,64 +72,32 @@ export function OverviewSubTab() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Filter Bar */}
-      <div className="bg-gray-50 rounded-xl p-4">
-        <div className="flex flex-wrap gap-4 items-center">
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Klas</label>
-            <select
-              value={filters.className || ""}
-              onChange={(e) => setFilters({ ...filters, className: e.target.value || undefined })}
-              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
-            >
-              <option value="">Alle klassen</option>
-              {filterOptions?.classes.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Periode</label>
-            <select
-              value={filters.scanRange || "last_3"}
-              onChange={(e) => setFilters({ ...filters, scanRange: e.target.value as CompetencyOverviewFilters["scanRange"] })}
-              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
-            >
-              <option value="last_3">Laatste 3 scans</option>
-              <option value="last_5">Laatste 5 scans</option>
-              <option value="last_year">Dit schooljaar</option>
-              <option value="all">Alles</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
+    <div className="space-y-6 text-slate-900">
       {/* KPI Cards */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs text-slate-500">Gemiddelde score</p>
-          <p className="mt-1 text-3xl font-bold text-slate-900">
+          <p className="text-xs font-medium text-slate-500">Gemiddelde score</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-900 tabular-nums">
             {data.classAverageScore?.toFixed(1) || "–"}
           </p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs text-slate-500">Trend vs vorige scan</p>
+          <p className="text-xs font-medium text-slate-500">Trend vs vorige scan</p>
           <div className="mt-1 flex items-center gap-2">
-            <span className={`text-3xl font-bold ${getTrendColor(data.classTrendDelta)}`}>
+            <span className={`text-2xl font-semibold tabular-nums ${getTrendColor(data.classTrendDelta)}`}>
               {data.classTrendDelta !== null ? (data.classTrendDelta > 0 ? "+" : "") + data.classTrendDelta.toFixed(1) : "–"}
             </span>
-            <span className="text-2xl">{getTrendArrow(data.classTrendDelta)}</span>
+            <span className="text-xl">{getTrendArrow(data.classTrendDelta)}</span>
           </div>
         </div>
         <div className="rounded-2xl border border-green-200 bg-green-50 p-4 shadow-sm">
-          <p className="text-xs text-green-600">Vooruitgang</p>
-          <p className="mt-1 text-3xl font-bold text-green-700">{data.studentsImproved}</p>
+          <p className="text-xs font-medium text-green-600">Vooruitgang</p>
+          <p className="mt-1 text-2xl font-semibold text-green-700 tabular-nums">{data.studentsImproved}</p>
           <p className="text-xs text-green-600 mt-1">leerlingen</p>
         </div>
         <div className="rounded-2xl border border-red-200 bg-red-50 p-4 shadow-sm">
-          <p className="text-xs text-red-600">Achteruitgang</p>
-          <p className="mt-1 text-3xl font-bold text-red-700">{data.studentsDeclined}</p>
+          <p className="text-xs font-medium text-red-600">Achteruitgang</p>
+          <p className="mt-1 text-2xl font-semibold text-red-700 tabular-nums">{data.studentsDeclined}</p>
           <p className="text-xs text-red-600 mt-1">leerlingen</p>
         </div>
       </section>
@@ -114,7 +106,8 @@ export function OverviewSubTab() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Radar Chart */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">Klasprofiel per categorie</h3>
+          <h3 className="text-base font-semibold text-slate-900 leading-6">Klasprofiel per categorie</h3>
+          <p className="text-sm text-slate-600 mb-4">Gemiddelde scores van de laatste scan</p>
           <div className="flex justify-center">
             <CompetencyRadarChart items={radarData} size={280} maxValue={5} />
           </div>
@@ -127,44 +120,156 @@ export function OverviewSubTab() {
                   style={{ backgroundColor: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }}
                 />
                 <span className="text-slate-600 truncate">{cat.name}</span>
-                <span className="font-medium text-slate-900">{cat.averageScore.toFixed(1)}</span>
+                <span className="font-semibold text-slate-900 tabular-nums">{cat.averageScore.toFixed(1)}</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Line Chart - Simple representation */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">Ontwikkeling over tijd</h3>
-          <div className="space-y-4">
-            {data.scans.map((scan) => (
-              <div key={scan.scanId} className="flex items-center gap-4">
-                <div className="w-32 text-sm text-slate-500 truncate">{scan.label}</div>
-                <div className="flex-1 h-4 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-blue-500 rounded-full transition-all"
-                    style={{ width: `${(scan.overallAverage / 5) * 100}%` }}
-                  />
-                </div>
-                <div className="w-12 text-right font-medium text-slate-900">{scan.overallAverage.toFixed(1)}</div>
-              </div>
-            ))}
+        {/* Spread Chart - Compact visualization */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="flex items-start justify-between mb-2">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900 leading-6">Ontwikkeling over tijd</h3>
+              <p className="text-sm text-slate-600">Gemiddelde + spreiding per scan</p>
+            </div>
+            {/* Segmented control for mode */}
+            <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50">
+              <button
+                onClick={() => setChartMode("average")}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                  chartMode === "average"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Gemiddelde
+              </button>
+              <button
+                onClick={() => setChartMode("spread")}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                  chartMode === "spread"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Spreiding
+              </button>
+            </div>
           </div>
-          <p className="text-xs text-slate-500 mt-4">Gemiddelde score per scan (schaal 1-5)</p>
+
+          {/* Chart */}
+          <div className="mt-4 mb-4">
+            {data.scans.length > 0 ? (
+              <SpreadChartCompact scans={data.scans} mode={chartMode} />
+            ) : (
+              <div className="h-[180px] flex items-center justify-center text-sm text-slate-400">
+                Geen scan data beschikbaar
+              </div>
+            )}
+          </div>
+
+          {/* Legend */}
+          <div className="flex items-center gap-4 text-xs text-slate-600 mb-4 pb-4 border-b border-slate-200">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+              <span>Gemiddelde</span>
+            </div>
+            {chartMode === "spread" && (
+              <>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-2 bg-blue-500 opacity-15"></div>
+                  <span>P25–P75</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-2 bg-blue-500 opacity-10"></div>
+                  <span>P10–P90</span>
+                </div>
+              </>
+            )}
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-0.5 bg-slate-400 border-t-2 border-dashed border-slate-400"></div>
+              <span>Mediaan</span>
+            </div>
+          </div>
+
+          {/* Selected scan details */}
+          <div className="mt-4 rounded-lg border border-slate-200 p-3">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium">Geselecteerde scan</div>
+              <div className="flex items-center gap-2">
+                <select
+                  className="text-xs border rounded-md px-2 py-1"
+                  value={selectedScan?.scanId || ""}
+                  onChange={(e) => setSelectedScanId(Number(e.target.value))}
+                >
+                  {data.scans.map((scan) => (
+                    <option key={scan.scanId} value={scan.scanId}>
+                      {scan.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {selectedScan && (
+              <>
+                <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-slate-500">Gem.</div>
+                    <div className="font-medium text-slate-900 tabular-nums">
+                      {selectedScan.overallAverage.toFixed(2)}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-slate-500">Mediaan</div>
+                    <div className="font-medium text-slate-900 tabular-nums">
+                      {selectedScan.median.toFixed(2)}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-slate-500">P10–P90</div>
+                    <div className="font-medium text-slate-900 tabular-nums">
+                      {selectedScan.p10.toFixed(1)}–{selectedScan.p90.toFixed(1)}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-slate-500">P25–P75</div>
+                    <div className="font-medium text-slate-900 tabular-nums">
+                      {selectedScan.p25.toFixed(1)}–{selectedScan.p75.toFixed(1)}
+                    </div>
+                  </div>
+                </div>
+
+                {spreadStatus && (
+                  <div className="mt-2 text-xs text-slate-600">
+                    Spreiding: <span className={`font-medium ${
+                      spreadStatus.label === "Groot" ? "text-red-700" :
+                      spreadStatus.label === "Aandacht" ? "text-orange-700" :
+                      "text-green-700"
+                    }`}>{spreadStatus.label}</span>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Heatmap */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
-          <h3 className="text-lg font-semibold text-slate-900">Klasoverzicht per categorie</h3>
-          <p className="text-sm text-slate-500">Klik op een leerling voor meer details</p>
+          <h3 className="text-base font-semibold text-slate-900 leading-6">Klasoverzicht per categorie</h3>
+          <p className="text-sm text-slate-600">Gemiddelde scores per leerling van de laatste scan - Klik op een leerling voor meer details</p>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50">
               <tr>
-                <th className="sticky left-0 z-20 bg-slate-50 px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[180px]">
+                <th className="sticky left-0 z-20 bg-slate-50 px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[140px]">
                   Leerling
                 </th>
                 <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
@@ -177,6 +282,11 @@ export function OverviewSubTab() {
                     title={cat.name}
                   >
                     <span className="block truncate max-w-[80px]">{cat.name}</span>
+                    {cat.trendDelta !== null && (
+                      <span className={`block text-[10px] font-medium mt-0.5 tabular-nums ${getTrendColor(cat.trendDelta)}`}>
+                        {cat.trendDelta > 0 ? '+' : ''}{cat.trendDelta.toFixed(1)}
+                      </span>
+                    )}
                   </th>
                 ))}
               </tr>
@@ -184,7 +294,7 @@ export function OverviewSubTab() {
             <tbody className="divide-y divide-slate-100">
               {data.heatmapRows.map((row) => (
                 <tr key={row.studentId} className="bg-white hover:bg-slate-50">
-                  <td className="sticky left-0 z-10 bg-white px-4 py-2 text-sm text-slate-800 font-medium border-r border-slate-100">
+                  <td className="sticky left-0 z-10 bg-white px-4 py-2 text-sm text-slate-900 font-medium border-r border-slate-100">
                     <Link
                       href={`/teacher/competencies/student/${row.studentId}`}
                       className="text-blue-600 hover:text-blue-800 hover:underline"
@@ -197,12 +307,20 @@ export function OverviewSubTab() {
                   </td>
                   {data.categorySummaries.map((cat) => {
                     const score = row.scores[cat.id];
+                    const delta = row.scoreDeltas[cat.id];
                     return (
-                      <td key={cat.id} className="px-3 py-2 text-center">
+                      <td key={cat.id} className="px-3 py-2 text-left">
                         {score !== null && score !== undefined ? (
-                          <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold ${getScoreColor(score)}`}>
-                            {score.toFixed(1)}
-                          </span>
+                          <div className="flex items-center gap-1">
+                            <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(score)}`}>
+                              {score.toFixed(1)}
+                            </span>
+                            {delta !== null && delta !== undefined && delta !== 0 && (
+                              <span className={`text-[10px] font-medium tabular-nums ${delta > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {delta > 0 ? '+' : ''}{delta.toFixed(1)}
+                              </span>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-slate-300">–</span>
                         )}
@@ -218,7 +336,7 @@ export function OverviewSubTab() {
 
       {/* Notable Students */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4">Opvallende leerlingen</h3>
+        <h3 className="text-base font-semibold text-slate-900 leading-6 mb-4">Opvallende leerlingen</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Strong Growth */}
           <div className="bg-green-50 rounded-xl p-4 border border-green-200">
@@ -226,20 +344,25 @@ export function OverviewSubTab() {
               <span className="text-lg">📈</span> Sterke groei
             </h4>
             <div className="space-y-2">
-              {data.notableStudents.filter((s) => s.type === "strong_growth").map((student) => (
+              {data.notableStudents.filter((s) => s.type === "strong_growth").map((student, index) => (
                 <Link
-                  key={student.studentId}
+                  key={`strong-growth-${student.studentId}-${student.categoryName || index}`}
                   href={`/teacher/competencies/student/${student.studentId}`}
                   className="flex items-center justify-between p-2 bg-white rounded-lg hover:shadow-sm transition-shadow"
                 >
-                  <span className="text-sm text-slate-700">{student.name}</span>
-                  <span className="text-sm font-semibold text-green-600">
+                  <div className="flex-1">
+                    <span className="text-sm text-slate-900">{student.name}</span>
+                    {student.categoryName && (
+                      <span className="block text-xs text-slate-600">{student.categoryName}</span>
+                    )}
+                  </div>
+                  <span className="text-sm font-semibold text-green-600 tabular-nums">
                     +{student.trendDelta?.toFixed(1)}
                   </span>
                 </Link>
               ))}
               {data.notableStudents.filter((s) => s.type === "strong_growth").length === 0 && (
-                <p className="text-sm text-green-600">Geen leerlingen met sterke groei</p>
+                <p className="text-sm text-green-700">Geen leerlingen met sterke groei</p>
               )}
             </div>
           </div>
@@ -250,20 +373,25 @@ export function OverviewSubTab() {
               <span className="text-lg">📉</span> Achteruitgang
             </h4>
             <div className="space-y-2">
-              {data.notableStudents.filter((s) => s.type === "decline").map((student) => (
+              {data.notableStudents.filter((s) => s.type === "decline").map((student, index) => (
                 <Link
-                  key={student.studentId}
+                  key={`decline-${student.studentId}-${student.categoryName || index}`}
                   href={`/teacher/competencies/student/${student.studentId}`}
                   className="flex items-center justify-between p-2 bg-white rounded-lg hover:shadow-sm transition-shadow"
                 >
-                  <span className="text-sm text-slate-700">{student.name}</span>
-                  <span className="text-sm font-semibold text-red-600">
+                  <div className="flex-1">
+                    <span className="text-sm text-slate-900">{student.name}</span>
+                    {student.categoryName && (
+                      <span className="block text-xs text-slate-600">{student.categoryName}</span>
+                    )}
+                  </div>
+                  <span className="text-sm font-semibold text-red-600 tabular-nums">
                     {student.trendDelta?.toFixed(1)}
                   </span>
                 </Link>
               ))}
               {data.notableStudents.filter((s) => s.type === "decline").length === 0 && (
-                <p className="text-sm text-red-600">Geen leerlingen met achteruitgang</p>
+                <p className="text-sm text-red-700">Geen leerlingen met achteruitgang</p>
               )}
             </div>
           </div>
@@ -274,25 +402,25 @@ export function OverviewSubTab() {
               <span className="text-lg">⚠️</span> Lage scores
             </h4>
             <div className="space-y-2">
-              {data.notableStudents.filter((s) => s.type === "low_score").map((student) => (
+              {data.notableStudents.filter((s) => s.type === "low_score").map((student, index) => (
                 <Link
-                  key={student.studentId}
+                  key={`low-score-${student.studentId}-${student.categoryName || index}`}
                   href={`/teacher/competencies/student/${student.studentId}`}
                   className="flex items-center justify-between p-2 bg-white rounded-lg hover:shadow-sm transition-shadow"
                 >
                   <div className="flex-1">
-                    <span className="text-sm text-slate-700">{student.name}</span>
+                    <span className="text-sm text-slate-900">{student.name}</span>
                     {student.categoryName && (
-                      <span className="block text-xs text-slate-500">{student.categoryName}</span>
+                      <span className="block text-xs text-slate-600">{student.categoryName}</span>
                     )}
                   </div>
-                  <span className="text-sm font-semibold text-orange-600">
+                  <span className="text-sm font-semibold text-orange-600 tabular-nums">
                     {student.score?.toFixed(1)}
                   </span>
                 </Link>
               ))}
               {data.notableStudents.filter((s) => s.type === "low_score").length === 0 && (
-                <p className="text-sm text-orange-600">Geen leerlingen met lage scores</p>
+                <p className="text-sm text-orange-700">Geen leerlingen met lage scores</p>
               )}
             </div>
           </div>
@@ -303,15 +431,15 @@ export function OverviewSubTab() {
       <div className="flex flex-wrap items-center gap-6 p-4 border border-slate-200 rounded-2xl bg-white shadow-sm">
         <span className="text-sm font-medium text-slate-700">Legenda:</span>
         <div className="flex items-center gap-2">
-          <span className="px-2.5 py-1 bg-green-100 text-green-700 rounded-md text-sm font-medium">≥ 4.0</span>
+          <span className="px-2.5 py-1 bg-green-100 text-green-700 rounded-md text-sm font-medium tabular-nums">≥ 4.0</span>
           <span className="text-sm text-slate-600">Goed</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-md text-sm font-medium">3.0 - 3.9</span>
+          <span className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-md text-sm font-medium tabular-nums">3.0 - 3.9</span>
           <span className="text-sm text-slate-600">Voldoende</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="px-2.5 py-1 bg-orange-100 text-orange-700 rounded-md text-sm font-medium">&lt; 3.0</span>
+          <span className="px-2.5 py-1 bg-orange-100 text-orange-700 rounded-md text-sm font-medium tabular-nums">&lt; 3.0</span>
           <span className="text-sm text-slate-600">Aandacht</span>
         </div>
       </div>
