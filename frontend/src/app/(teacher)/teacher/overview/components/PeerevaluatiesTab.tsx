@@ -1,20 +1,16 @@
 "use client";
 
-import { useState, Suspense } from "react";
-import { 
-  ArrowUp, 
-  ArrowDown, 
-  AlertTriangle, 
+import { useState, Suspense, useEffect } from "react";
+import {
+  ArrowUp,
+  ArrowDown,
+  AlertTriangle,
   TrendingUp,
   Search,
   Filter,
   MessageSquare,
-  Brain,
   Users,
   LayoutDashboard,
-  ChevronDown,
-  ChevronRight,
-  ExternalLink
 } from "lucide-react";
 import { Line } from "react-chartjs-2";
 import {
@@ -29,8 +25,6 @@ import {
 } from "chart.js";
 import { usePeerOverview, type PeerOverviewFilters } from "@/hooks/usePeerOverview";
 import { useFeedbackData, type FeedbackFilters } from "@/hooks/useFeedbackData";
-import { useAiInsights } from "@/hooks/useAiInsights";
-import { usePeerCompare, type PeerCompareFilters } from "@/hooks/usePeerCompare";
 
 // Register Chart.js components
 ChartJS.register(
@@ -225,6 +219,9 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
                     <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase">
                       A
                     </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
+                      Self vs Peer
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -283,6 +280,19 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
                           </span>
                           {getTrendIcon(student.scores.autonomie.trend)}
                         </div>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`text-sm font-medium ${
+                          (student.self_vs_peer_diff || 0) > 0.3
+                            ? "text-red-600"
+                            : (student.self_vs_peer_diff || 0) < -0.3
+                            ? "text-amber-600"
+                            : "text-gray-600"
+                        }`}>
+                          {student.self_vs_peer_diff !== undefined
+                            ? ((student.self_vs_peer_diff || 0) > 0 ? "+" : "") + student.self_vs_peer_diff.toFixed(1)
+                            : "—"}
+                        </span>
                       </td>
                     </tr>
                   ))}
@@ -657,501 +667,6 @@ function FeedbackTab() {
           </div>
         </div>
       </div>
-
-      {/* AI-geclusterde thema's */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Brain className="w-5 h-5 text-violet-600" />
-          AI-geclusterde thema&apos;s
-        </h3>
-        <Suspense fallback={<TableSkeleton />}>
-          {loading ? (
-            <TableSkeleton />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {data?.aiClusters.map((cluster) => (
-                <div
-                  key={cluster.id}
-                  className="border rounded-lg p-4 hover:bg-gray-50"
-                >
-                  <h4 className="font-semibold text-gray-900">{cluster.title}</h4>
-                  <p className="text-sm text-gray-600 mb-3">
-                    {cluster.count} opmerkingen
-                  </p>
-                  <button className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
-                    <ExternalLink className="w-4 h-4" />
-                    Toon betrokken leerlingen
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </Suspense>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================
-   TAB 3: REFLECTIES & AI-INZICHTEN
-   ========================================= */
-
-function AiInsightsTab() {
-  const { data, loading, error } = useAiInsights();
-  const [expandedStudents, setExpandedStudents] = useState<Set<number>>(new Set());
-
-  const toggleStudent = (studentId: number) => {
-    setExpandedStudents((prev) => {
-      const next = new Set(prev);
-      if (next.has(studentId)) {
-        next.delete(studentId);
-      } else {
-        next.add(studentId);
-      }
-      return next;
-    });
-  };
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "organiseren":
-        return "border-blue-500";
-      case "meedoen":
-        return "border-green-500";
-      case "zelfvertrouwen":
-        return "border-amber-500";
-      case "autonomie":
-        return "border-violet-500";
-      default:
-        return "border-gray-500";
-    }
-  };
-
-  if (error) {
-    return (
-      <div className="text-red-500 p-4 bg-red-50 rounded-lg">
-        Fout bij laden: {error}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Section 1: AI Samenvatting per leerling */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Brain className="w-5 h-5 text-violet-600" />
-          AI Samenvatting per leerling
-        </h3>
-        <Suspense fallback={<TableSkeleton />}>
-          {loading ? (
-            <TableSkeleton />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[800px]">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
-                      Naam
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
-                      Sterk in…
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
-                      Ontwikkelt in…
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
-                      Aandachtspunt
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
-                      Suggestie
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
-                      Detail
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {data?.studentSummaries.map((student) => (
-                    <tr key={student.student_id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900">
-                          {student.student_name}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {student.class_name}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {student.sterk_in.length > 0 ? (
-                          <ul className="list-disc list-inside">
-                            {student.sterk_in.map((item, idx) => (
-                              <li key={idx}>{item}</li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <span className="text-gray-400">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {student.ontwikkelt_in.length > 0 ? (
-                          <ul className="list-disc list-inside">
-                            {student.ontwikkelt_in.map((item, idx) => (
-                              <li key={idx}>{item}</li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <span className="text-gray-400">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {student.aandachtspunt || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {student.suggestie || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <button className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 mx-auto">
-                          <ExternalLink className="w-4 h-4" />
-                          Bekijk
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Suspense>
-      </div>
-
-      {/* Section 2: Reflecties tijdlijn */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <MessageSquare className="w-5 h-5 text-blue-600" />
-          Reflecties tijdlijn
-        </h3>
-        <Suspense fallback={<TableSkeleton />}>
-          {loading ? (
-            <TableSkeleton />
-          ) : (
-            <div className="space-y-2">
-              {data?.studentReflections.map((student) => (
-                <div
-                  key={student.student_id}
-                  className="border rounded-lg overflow-hidden"
-                >
-                  <button
-                    onClick={() => toggleStudent(student.student_id)}
-                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50"
-                  >
-                    <div className="flex items-center gap-3">
-                      {expandedStudents.has(student.student_id) ? (
-                        <ChevronDown className="w-5 h-5 text-gray-500" />
-                      ) : (
-                        <ChevronRight className="w-5 h-5 text-gray-500" />
-                      )}
-                      <span className="font-medium text-gray-900">
-                        {student.student_name}
-                      </span>
-                      <span className="text-sm text-gray-500">
-                        ({student.reflections.length} reflecties)
-                      </span>
-                    </div>
-                  </button>
-                  {expandedStudents.has(student.student_id) && (
-                    <div className="px-4 pb-4 pl-12">
-                      <div className="border-l-2 border-gray-200 pl-4 space-y-4">
-                        {student.reflections.map((reflection) => (
-                          <div
-                            key={reflection.id}
-                            className={`relative pl-4 border-l-2 -ml-4 ${getCategoryColor(
-                              reflection.category
-                            )}`}
-                          >
-                            <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                              <span>
-                                {new Date(reflection.date).toLocaleDateString(
-                                  "nl-NL"
-                                )}
-                              </span>
-                              <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100">
-                                {reflection.category}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-800">
-                              {reflection.note}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </Suspense>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================
-   TAB 4: VERGELIJK LEERLINGEN
-   ========================================= */
-
-function CompareTab() {
-  const [filters, setFilters] = useState<PeerCompareFilters>({});
-  const { data, loading, error } = usePeerCompare(filters);
-
-  const getScoreColor = (score: number | null) => {
-    if (score === null) return "bg-gray-100 text-gray-400";
-    if (score >= 4) return "bg-green-100 text-green-800";
-    if (score >= 3) return "bg-yellow-100 text-yellow-800";
-    if (score >= 2) return "bg-orange-100 text-orange-800";
-    return "bg-red-100 text-red-800";
-  };
-
-  if (error) {
-    return (
-      <div className="text-red-500 p-4 bg-red-50 rounded-lg">
-        Fout bij laden: {error}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-        <div className="flex flex-wrap items-center gap-4">
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Klas</label>
-            <select
-              className="px-3 py-2 border rounded-lg text-sm"
-              value={filters.classId || ""}
-              onChange={(e) =>
-                setFilters({ ...filters, classId: e.target.value || undefined })
-              }
-            >
-              <option value="">Alle klassen</option>
-              <option value="4A">4A</option>
-              <option value="4B">4B</option>
-            </select>
-          </div>
-          <button
-            onClick={() => setFilters({})}
-            className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-50"
-          >
-            Filters wissen
-          </button>
-        </div>
-      </div>
-
-      {/* Comparison Table */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Users className="w-5 h-5 text-blue-600" />
-          Vergelijking leerlingen
-        </h3>
-        <Suspense fallback={<TableSkeleton />}>
-          {loading ? (
-            <TableSkeleton />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[800px]">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
-                      Leerling
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
-                      Klas
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-blue-700 uppercase">
-                      O
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-green-700 uppercase">
-                      M
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-amber-700 uppercase">
-                      Z
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase">
-                      A
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
-                      Self vs Peer
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {/* Averages row */}
-                  {data?.averages && (
-                    <tr className="bg-gray-100 font-medium">
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        Gemiddelde
-                      </td>
-                      <td className="px-4 py-3 text-center text-sm text-gray-600">
-                        —
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span
-                          className={`inline-block px-3 py-1 rounded ${getScoreColor(
-                            data.averages.organiseren
-                          )}`}
-                        >
-                          {data.averages.organiseren?.toFixed(1) || "—"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span
-                          className={`inline-block px-3 py-1 rounded ${getScoreColor(
-                            data.averages.meedoen
-                          )}`}
-                        >
-                          {data.averages.meedoen?.toFixed(1) || "—"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span
-                          className={`inline-block px-3 py-1 rounded ${getScoreColor(
-                            data.averages.zelfvertrouwen
-                          )}`}
-                        >
-                          {data.averages.zelfvertrouwen?.toFixed(1) || "—"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span
-                          className={`inline-block px-3 py-1 rounded ${getScoreColor(
-                            data.averages.autonomie
-                          )}`}
-                        >
-                          {data.averages.autonomie?.toFixed(1) || "—"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">—</td>
-                    </tr>
-                  )}
-                  {/* Student rows */}
-                  {data?.students.map((student) => {
-                    // Calculate self vs peer difference
-                    const selfAvg =
-                      ((student.self_scores.organiseren || 0) +
-                        (student.self_scores.meedoen || 0) +
-                        (student.self_scores.zelfvertrouwen || 0) +
-                        (student.self_scores.autonomie || 0)) /
-                      4;
-                    const peerAvg =
-                      ((student.peer_scores.organiseren || 0) +
-                        (student.peer_scores.meedoen || 0) +
-                        (student.peer_scores.zelfvertrouwen || 0) +
-                        (student.peer_scores.autonomie || 0)) /
-                      4;
-                    const diff = selfAvg - peerAvg;
-
-                    return (
-                      <tr key={student.student_id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3">
-                          <span className="font-medium text-gray-900">
-                            {student.student_name}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm text-gray-600">
-                          {student.class_name}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span
-                            className={`inline-block px-3 py-1 rounded ${getScoreColor(
-                              student.scores.organiseren
-                            )}`}
-                          >
-                            {student.scores.organiseren?.toFixed(1) || "—"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span
-                            className={`inline-block px-3 py-1 rounded ${getScoreColor(
-                              student.scores.meedoen
-                            )}`}
-                          >
-                            {student.scores.meedoen?.toFixed(1) || "—"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span
-                            className={`inline-block px-3 py-1 rounded ${getScoreColor(
-                              student.scores.zelfvertrouwen
-                            )}`}
-                          >
-                            {student.scores.zelfvertrouwen?.toFixed(1) || "—"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span
-                            className={`inline-block px-3 py-1 rounded ${getScoreColor(
-                              student.scores.autonomie
-                            )}`}
-                          >
-                            {student.scores.autonomie?.toFixed(1) || "—"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span
-                            className={`inline-flex items-center gap-1 text-sm ${
-                              diff > 0.3
-                                ? "text-red-600"
-                                : diff < -0.3
-                                ? "text-amber-600"
-                                : "text-gray-600"
-                            }`}
-                          >
-                            {diff > 0 ? (
-                              <ArrowUp className="w-4 h-4" />
-                            ) : diff < 0 ? (
-                              <ArrowDown className="w-4 h-4" />
-                            ) : null}
-                            {diff > 0 ? "+" : ""}
-                            {diff.toFixed(1)}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Suspense>
-      </div>
-
-      {/* Legend */}
-      <div className="p-4 bg-gray-50 rounded-lg text-sm">
-        <h4 className="font-medium mb-2">Legenda:</h4>
-        <div className="flex flex-wrap gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-6 bg-green-100 rounded"></div>
-            <span>Goed (≥4.0)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-6 bg-yellow-100 rounded"></div>
-            <span>Voldoende (3.0-3.9)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-6 bg-orange-100 rounded"></div>
-            <span>Matig (2.0-2.9)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-6 bg-red-100 rounded"></div>
-            <span>Onvoldoende ({"<"}2.0)</span>
-          </div>
-        </div>
-        <p className="mt-2 text-gray-600">
-          <strong>Self vs Peer:</strong> Positief = zelfbeoordeling hoger dan peers, Negatief = zelfbeoordeling lager
-        </p>
-      </div>
     </div>
   );
 }
@@ -1165,12 +680,57 @@ export default function PeerevaluatiesTab() {
   const [filters, setFilters] = useState<PeerOverviewFilters>({
     period: "6months",
   });
+  const [courses, setCourses] = useState<Array<{id: number; name: string}>>([]);
+  const [projects, setProjects] = useState<Array<{id: number; title: string}>>([]);
+  const [loadingCourses, setLoadingCourses] = useState(false);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+
+  // Fetch active courses on mount
+  useEffect(() => {
+    const fetchCourses = async () => {
+      setLoadingCourses(true);
+      try {
+        const response = await fetch("/api/v1/overview/courses");
+        if (response.ok) {
+          const data = await response.json();
+          setCourses(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch courses:", error);
+      } finally {
+        setLoadingCourses(false);
+      }
+    };
+    fetchCourses();
+  }, []);
+
+  // Fetch projects when course changes
+  useEffect(() => {
+    if (!filters.courseId) {
+      setProjects([]);
+      return;
+    }
+    
+    const fetchProjects = async () => {
+      setLoadingProjects(true);
+      try {
+        const response = await fetch(`/api/v1/projects?course_id=${filters.courseId}&per_page=100`);
+        if (response.ok) {
+          const data = await response.json();
+          setProjects(data.items || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch projects:", error);
+      } finally {
+        setLoadingProjects(false);
+      }
+    };
+    fetchProjects();
+  }, [filters.courseId]);
 
   const subTabs = [
     { id: "dashboard", label: "Dashboard & Trends", icon: LayoutDashboard },
     { id: "feedback", label: "Feedbackverzameling", icon: MessageSquare },
-    { id: "ai", label: "Reflecties & AI-inzichten", icon: Brain },
-    { id: "compare", label: "Vergelijk leerlingen", icon: Users },
   ];
 
   return (
@@ -1188,19 +748,23 @@ export default function PeerevaluatiesTab() {
       {/* Filter Bar */}
       <div className="bg-gray-50 rounded-xl p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Class dropdown */}
+          {/* Course dropdown */}
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Selecteer klas</label>
+            <label className="block text-xs text-gray-600 mb-1">Selecteer vak</label>
             <select
               className="w-full px-3 py-2 border rounded-lg text-sm"
-              value={filters.classId || ""}
+              value={filters.courseId || ""}
               onChange={(e) =>
-                setFilters({ ...filters, classId: e.target.value || undefined })
+                setFilters({ ...filters, courseId: e.target.value ? parseInt(e.target.value) : undefined, projectId: undefined })
               }
+              disabled={loadingCourses}
             >
-              <option value="">Alle klassen</option>
-              <option value="4A">4A</option>
-              <option value="4B">4B</option>
+              <option value="">Alle vakken</option>
+              {courses.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -1213,12 +777,16 @@ export default function PeerevaluatiesTab() {
               className="w-full px-3 py-2 border rounded-lg text-sm"
               value={filters.projectId || ""}
               onChange={(e) =>
-                setFilters({ ...filters, projectId: e.target.value || undefined })
+                setFilters({ ...filters, projectId: e.target.value ? parseInt(e.target.value) : undefined })
               }
+              disabled={!filters.courseId || loadingProjects}
             >
               <option value="">Alle projecten</option>
-              <option value="webshop">Webshop Project</option>
-              <option value="app">App Ontwikkeling</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.title}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -1291,8 +859,6 @@ export default function PeerevaluatiesTab() {
       <div>
         {activeSubTab === "dashboard" && <DashboardTab filters={filters} />}
         {activeSubTab === "feedback" && <FeedbackTab />}
-        {activeSubTab === "ai" && <AiInsightsTab />}
-        {activeSubTab === "compare" && <CompareTab />}
       </div>
     </div>
   );

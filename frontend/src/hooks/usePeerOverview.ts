@@ -21,6 +21,7 @@ export type StudentHeatmapRow = {
     zelfvertrouwen: { current: number; trend: "up" | "down" | "neutral" };
     autonomie: { current: number; trend: "up" | "down" | "neutral" };
   };
+  self_vs_peer_diff?: number;
 };
 
 export type KpiStudent = {
@@ -37,10 +38,11 @@ export type KpiData = {
 };
 
 export type PeerOverviewFilters = {
-  classId?: string;
-  projectId?: string;
+  courseId?: number;
+  projectId?: number;
   period?: "3months" | "6months" | "year";
   studentName?: string;
+  evaluationIds?: number[];
 };
 
 export type PeerOverviewData = {
@@ -69,6 +71,7 @@ function generateMockData(): PeerOverviewData {
         zelfvertrouwen: { current: 3.5, trend: "up" },
         autonomie: { current: 3.2, trend: "down" },
       },
+      self_vs_peer_diff: 0.4,
     },
     {
       student_id: 2,
@@ -80,6 +83,7 @@ function generateMockData(): PeerOverviewData {
         zelfvertrouwen: { current: 4.0, trend: "up" },
         autonomie: { current: 3.8, trend: "neutral" },
       },
+      self_vs_peer_diff: -0.2,
     },
     {
       student_id: 3,
@@ -91,6 +95,7 @@ function generateMockData(): PeerOverviewData {
         zelfvertrouwen: { current: 2.5, trend: "down" },
         autonomie: { current: 2.9, trend: "neutral" },
       },
+      self_vs_peer_diff: 0.8,
     },
     {
       student_id: 4,
@@ -102,6 +107,7 @@ function generateMockData(): PeerOverviewData {
         zelfvertrouwen: { current: 3.7, trend: "neutral" },
         autonomie: { current: 4.0, trend: "up" },
       },
+      self_vs_peer_diff: -0.1,
     },
     {
       student_id: 5,
@@ -113,6 +119,7 @@ function generateMockData(): PeerOverviewData {
         zelfvertrouwen: { current: 3.3, trend: "up" },
         autonomie: { current: 3.0, trend: "neutral" },
       },
+      self_vs_peer_diff: 0.5,
     },
   ];
 
@@ -160,9 +167,9 @@ export function usePeerOverview(filters?: PeerOverviewFilters) {
           s.student_name.toLowerCase().includes(query)
         );
       }
-      if (filters?.classId) {
+      if (filters?.courseId) {
         filteredData.heatmapData = filteredData.heatmapData.filter(
-          (s) => s.class_name === filters.classId
+          (s) => true // Will be properly filtered when connected to real API
         );
       }
       
@@ -172,7 +179,7 @@ export function usePeerOverview(filters?: PeerOverviewFilters) {
     } finally {
       setLoading(false);
     }
-  }, [filters?.studentName, filters?.classId]);
+  }, [filters?.studentName, filters?.courseId]);
 
   useEffect(() => {
     fetchData();

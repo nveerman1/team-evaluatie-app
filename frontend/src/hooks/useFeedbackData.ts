@@ -33,7 +33,6 @@ export type FeedbackFilters = {
 
 export type FeedbackData = {
   feedbackItems: FeedbackItem[];
-  aiClusters: AiCluster[];
   totalCount: number;
 };
 
@@ -114,30 +113,8 @@ function generateMockFeedbackData(): FeedbackData {
     },
   ];
 
-  const aiClusters: AiCluster[] = [
-    {
-      id: "cluster1",
-      title: "Planningsproblemen",
-      count: 4,
-      student_ids: [3, 5],
-    },
-    {
-      id: "cluster2",
-      title: "Goede samenwerking",
-      count: 6,
-      student_ids: [1, 2, 4],
-    },
-    {
-      id: "cluster3",
-      title: "Zelfvertrouwen issues",
-      count: 2,
-      student_ids: [3],
-    },
-  ];
-
   return {
     feedbackItems,
-    aiClusters,
     totalCount: feedbackItems.length,
   };
 }
@@ -179,7 +156,6 @@ export function useFeedbackData(filters?: FeedbackFilters) {
       }
       
       setData({
-        ...mockData,
         feedbackItems: filteredItems,
         totalCount: filteredItems.length,
       });
