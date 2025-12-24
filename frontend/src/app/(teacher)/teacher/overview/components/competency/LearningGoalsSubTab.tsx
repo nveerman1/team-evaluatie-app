@@ -92,7 +92,6 @@ export function LearningGoalsSubTab() {
               ))}
             </select>
           </div>
-          </div>
           <div>
             <label className="block text-xs text-gray-600 mb-1">Categorie</label>
             <select
