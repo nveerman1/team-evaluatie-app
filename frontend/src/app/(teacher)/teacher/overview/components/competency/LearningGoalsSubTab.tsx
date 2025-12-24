@@ -1,19 +1,21 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useCompetencyLearningGoals, useCompetencyFilterOptions } from "@/hooks/useCompetencyOverview";
+import { useCompetencyLearningGoals } from "@/hooks/useCompetencyOverview";
 import { Loading, ErrorMessage } from "@/components";
 import type { CompetencyOverviewFilters } from "@/dtos/competency-monitor.dto";
 
-export function LearningGoalsSubTab() {
-  const [filters, setFilters] = useState<CompetencyOverviewFilters>({});
+interface LearningGoalsSubTabProps {
+  filters: CompetencyOverviewFilters;
+}
+
+export function LearningGoalsSubTab({ filters }: LearningGoalsSubTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedGoals, setExpandedGoals] = useState<Set<number>>(new Set());
   
   // Memoize filters to prevent infinite re-renders
   const memoizedFilters = useMemo(() => ({ ...filters, searchQuery }), [filters, searchQuery]);
   
-  const { data: filterOptions, loading: filterLoading } = useCompetencyFilterOptions();
   const { data: learningGoals, loading, error } = useCompetencyLearningGoals(memoizedFilters);
 
   const toggleExpand = (goalId: number) => {
@@ -48,76 +50,22 @@ export function LearningGoalsSubTab() {
     });
   };
 
-  if (filterLoading || loading) return <Loading />;
+  if (loading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
 
   return (
     <div className="space-y-6">
-      {/* Filter Bar */}
+      {/* Search Bar */}
       <div className="bg-gray-50 rounded-xl p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">🔍 Zoeken</label>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Zoek in leerdoelen..."
-              className="w-full px-3 py-2 text-sm border rounded-lg"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Academisch Jaar</label>
-            <select
-              value={filters.academicYearId || ""}
-              onChange={(e) => setFilters({ ...filters, academicYearId: e.target.value ? Number(e.target.value) : undefined })}
-              className="w-full px-3 py-2 text-sm border rounded-lg"
-            >
-              <option value="">Alle jaren</option>
-              {filterOptions?.academicYears.map((ay) => (
-                <option key={ay.id} value={ay.id}>{ay.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Vak</label>
-            <select
-              value={filters.courseId || ""}
-              onChange={(e) => setFilters({ ...filters, courseId: e.target.value ? Number(e.target.value) : undefined })}
-              className="w-full px-3 py-2 text-sm border rounded-lg"
-            >
-              <option value="">Alle vakken</option>
-              {filterOptions?.courses.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Categorie</label>
-            <select
-              value={filters.categoryId || ""}
-              onChange={(e) => setFilters({ ...filters, categoryId: e.target.value ? Number(e.target.value) : undefined })}
-              className="w-full px-3 py-2 text-sm border rounded-lg"
-            >
-              <option value="">Alle categorieën</option>
-              {filterOptions?.categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Status</label>
-            <select
-              value={filters.status || ""}
-              onChange={(e) => setFilters({ ...filters, status: e.target.value || undefined })}
-              className="w-full px-3 py-2 text-sm border rounded-lg"
-            >
-              <option value="">Alle statussen</option>
-              <option value="in_progress">Lopend</option>
-              <option value="achieved">Behaald</option>
-              <option value="not_achieved">Niet behaald</option>
-            </select>
-          </div>
+        <div>
+          <label className="block text-xs text-gray-600 mb-1">🔍 Zoeken</label>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Zoek in leerdoelen..."
+            className="w-full px-3 py-2 text-sm border rounded-lg"
+          />
         </div>
       </div>
 

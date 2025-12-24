@@ -1,18 +1,18 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { useCompetencyFilterOptions, useCompetencyOverview } from "@/hooks/useCompetencyOverview";
+import { useCompetencyOverview } from "@/hooks/useCompetencyOverview";
 import { Loading, ErrorMessage } from "@/components";
 import type { CompetencyOverviewFilters } from "@/dtos/competency-monitor.dto";
 
-export function CategoriesSubTab() {
-  const [filters, setFilters] = useState<CompetencyOverviewFilters>({});
-  
-  const { data: filterOptions, loading: filterLoading } = useCompetencyFilterOptions();
+interface CategoriesSubTabProps {
+  filters: CompetencyOverviewFilters;
+}
+
+export function CategoriesSubTab({ filters }: CategoriesSubTabProps) {
   const { data: overviewData, loading: overviewLoading } = useCompetencyOverview(filters);
 
-  if (filterLoading || overviewLoading) return <Loading />;
+  if (overviewLoading) return <Loading />;
   if (!overviewData) return <ErrorMessage message="Geen data beschikbaar" />;
 
   const categories = overviewData.categorySummaries;
@@ -31,39 +31,6 @@ export function CategoriesSubTab() {
 
   return (
     <div className="space-y-6">
-      {/* Filter Bar */}
-      <div className="bg-gray-50 rounded-xl p-4">
-        <div className="flex flex-wrap gap-4 items-end">
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Academisch Jaar</label>
-            <select
-              value={filters.academicYearId || ""}
-              onChange={(e) => setFilters({ ...filters, academicYearId: e.target.value ? Number(e.target.value) : undefined })}
-              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
-            >
-              <option value="">Alle jaren</option>
-              {filterOptions?.academicYears.map((ay) => (
-                <option key={ay.id} value={ay.id}>{ay.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Vak</label>
-            <select
-              value={filters.courseId || ""}
-              onChange={(e) => setFilters({ ...filters, courseId: e.target.value ? Number(e.target.value) : undefined })}
-              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
-            >
-              <option value="">Alle vakken</option>
-              {filterOptions?.courses.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Display all categories */}
       {categories.length > 0 ? (
         <div className="space-y-8">
           {categories.map((category) => (

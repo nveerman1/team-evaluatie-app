@@ -1188,12 +1188,13 @@ def get_courses_for_overview(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Get all courses for the current school
+    Get all active courses for the current school
     """
     school_id = current_user.school_id
     
     courses = db.query(Course).filter(
-        Course.school_id == school_id
+        Course.school_id == school_id,
+        Course.is_active == True
     ).order_by(Course.name).all()
     
     return [{"id": c.id, "name": c.name} for c in courses]

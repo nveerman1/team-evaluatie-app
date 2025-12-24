@@ -1,18 +1,17 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
-import { useCompetencyOverview, useCompetencyFilterOptions } from "@/hooks/useCompetencyOverview";
+import { useCompetencyOverview } from "@/hooks/useCompetencyOverview";
 import { Loading, ErrorMessage } from "@/components";
 import { CompetencyRadarChart, CATEGORY_COLORS } from "@/components/student/competency/CompetencyRadarChart";
 import type { CompetencyOverviewFilters } from "@/dtos/competency-monitor.dto";
 
-export function OverviewSubTab() {
-  const [filters, setFilters] = useState<CompetencyOverviewFilters>({
-    scanRange: "last_3",
-  });
-  
-  const { data: filterOptions } = useCompetencyFilterOptions();
+interface OverviewSubTabProps {
+  filters: CompetencyOverviewFilters;
+}
+
+export function OverviewSubTab({ filters }: OverviewSubTabProps) {
   const { data, loading, error } = useCompetencyOverview(filters);
 
   // Prepare radar chart data
@@ -51,51 +50,6 @@ export function OverviewSubTab() {
 
   return (
     <div className="space-y-6">
-      {/* Filter Bar */}
-      <div className="bg-gray-50 rounded-xl p-4">
-        <div className="flex flex-wrap gap-4 items-center">
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Academisch Jaar</label>
-            <select
-              value={filters.academicYearId || ""}
-              onChange={(e) => setFilters({ ...filters, academicYearId: e.target.value ? Number(e.target.value) : undefined })}
-              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
-            >
-              <option value="">Alle jaren</option>
-              {filterOptions?.academicYears.map((ay) => (
-                <option key={ay.id} value={ay.id}>{ay.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Vak</label>
-            <select
-              value={filters.courseId || ""}
-              onChange={(e) => setFilters({ ...filters, courseId: e.target.value ? Number(e.target.value) : undefined })}
-              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
-            >
-              <option value="">Alle vakken</option>
-              {filterOptions?.courses.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Periode</label>
-            <select
-              value={filters.scanRange || "last_3"}
-              onChange={(e) => setFilters({ ...filters, scanRange: e.target.value as CompetencyOverviewFilters["scanRange"] })}
-              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
-            >
-              <option value="last_3">Laatste 3 scans</option>
-              <option value="last_5">Laatste 5 scans</option>
-              <option value="last_year">Dit schooljaar</option>
-              <option value="all">Alles</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
       {/* KPI Cards */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -129,7 +83,8 @@ export function OverviewSubTab() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Radar Chart */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">Klasprofiel per categorie</h3>
+          <h3 className="text-lg font-semibold text-slate-900">Klasprofiel per categorie</h3>
+          <p className="text-sm text-slate-500 mb-4">Gemiddelde scores van de laatste scan</p>
           <div className="flex justify-center">
             <CompetencyRadarChart items={radarData} size={280} maxValue={5} />
           </div>
@@ -173,7 +128,7 @@ export function OverviewSubTab() {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
           <h3 className="text-lg font-semibold text-slate-900">Klasoverzicht per categorie</h3>
-          <p className="text-sm text-slate-500">Klik op een leerling voor meer details</p>
+          <p className="text-sm text-slate-500">Gemiddelde scores per leerling van de laatste scan - Klik op een leerling voor meer details</p>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-sm">

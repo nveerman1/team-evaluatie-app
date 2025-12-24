@@ -1,25 +1,75 @@
 "use client";
 
 import { useState } from "react";
+import { useCompetencyFilterOptions } from "@/hooks/useCompetencyOverview";
+import type { CompetencyOverviewFilters } from "@/dtos/competency-monitor.dto";
 import { OverviewSubTab } from "./competency/OverviewSubTab";
 import { CategoriesSubTab } from "./competency/CategoriesSubTab";
-import { StudentsSubTab } from "./competency/StudentsSubTab";
 import { LearningGoalsSubTab } from "./competency/LearningGoalsSubTab";
 import { ReflectionsSubTab } from "./competency/ReflectionsSubTab";
 
 const competencySubTabs = [
   { id: "overzicht", label: "Overzicht" },
   { id: "categorieen", label: "Categorieën" },
-  { id: "leerlingen", label: "Leerlingen" },
   { id: "leerdoelen", label: "Leerdoelen" },
   { id: "reflecties", label: "Reflecties" },
 ];
 
 export default function CompetenciesOverviewTab() {
   const [activeSubTab, setActiveSubTab] = useState("overzicht");
+  const [filters, setFilters] = useState<CompetencyOverviewFilters>({
+    scanRange: "last_3",
+  });
+  
+  const { data: filterOptions } = useCompetencyFilterOptions();
 
   return (
     <div className="space-y-6">
+      {/* Global Filter Bar */}
+      <div className="bg-gray-50 rounded-xl p-4">
+        <div className="flex flex-wrap gap-4 items-center">
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Academisch Jaar</label>
+            <select
+              value={filters.academicYearId || ""}
+              onChange={(e) => setFilters({ ...filters, academicYearId: e.target.value ? Number(e.target.value) : undefined })}
+              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
+            >
+              <option value="">Alle jaren</option>
+              {filterOptions?.academicYears.map((ay) => (
+                <option key={ay.id} value={ay.id}>{ay.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Vak</label>
+            <select
+              value={filters.courseId || ""}
+              onChange={(e) => setFilters({ ...filters, courseId: e.target.value ? Number(e.target.value) : undefined })}
+              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
+            >
+              <option value="">Alle vakken</option>
+              {filterOptions?.courses.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Periode</label>
+            <select
+              value={filters.scanRange || "last_3"}
+              onChange={(e) => setFilters({ ...filters, scanRange: e.target.value as CompetencyOverviewFilters["scanRange"] })}
+              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
+            >
+              <option value="last_3">Laatste 3 scans</option>
+              <option value="last_5">Laatste 5 scans</option>
+              <option value="last_year">Dit schooljaar</option>
+              <option value="all">Alles</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       {/* Sub-tabs Navigation */}
       <div className="border-b border-gray-200">
         <nav className="flex gap-4 flex-wrap" aria-label="Competentie sub-tabs">
@@ -45,11 +95,10 @@ export default function CompetenciesOverviewTab() {
 
       {/* Sub-tab Content */}
       <div>
-        {activeSubTab === "overzicht" && <OverviewSubTab />}
-        {activeSubTab === "categorieen" && <CategoriesSubTab />}
-        {activeSubTab === "leerlingen" && <StudentsSubTab />}
-        {activeSubTab === "leerdoelen" && <LearningGoalsSubTab />}
-        {activeSubTab === "reflecties" && <ReflectionsSubTab />}
+        {activeSubTab === "overzicht" && <OverviewSubTab filters={filters} />}
+        {activeSubTab === "categorieen" && <CategoriesSubTab filters={filters} />}
+        {activeSubTab === "leerdoelen" && <LearningGoalsSubTab filters={filters} />}
+        {activeSubTab === "reflecties" && <ReflectionsSubTab filters={filters} />}
       </div>
     </div>
   );
