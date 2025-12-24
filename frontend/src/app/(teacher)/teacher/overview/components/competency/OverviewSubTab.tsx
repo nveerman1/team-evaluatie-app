@@ -309,9 +309,9 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
                     const score = row.scores[cat.id];
                     const delta = row.scoreDeltas[cat.id];
                     return (
-                      <td key={cat.id} className="px-3 py-2 text-center">
+                      <td key={cat.id} className="px-3 py-2 text-left">
                         {score !== null && score !== undefined ? (
-                          <div className="inline-flex items-center gap-1">
+                          <div className="flex items-center gap-1">
                             <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(score)}`}>
                               {score.toFixed(1)}
                             </span>
