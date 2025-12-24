@@ -48,23 +48,60 @@ export const competencyMonitorService = {
       };
     }
     
-    // Use the latest window
+    // Use the latest window for main data
     const latestWindow = windows[0];
     
-    // Get heatmap data
+    // Get heatmap data for the latest window
     const heatmapResponse = await api.get(`/competencies/windows/${latestWindow.id}/heatmap`);
     const heatmapData = heatmapResponse.data;
     
-    // Transform heatmap rows
-    const heatmapRows = heatmapData.rows.map((row: { user_id: number; user_name: string; scores: Record<number, number | null> }) => ({
-      studentId: row.user_id,
-      name: row.user_name,
-      className: null,
-      scores: row.scores,
-    }));
-    
     // Get categories from competencies in heatmap
     const competencies = heatmapData.competencies || [];
+    
+    // Build a map of competency ID to category ID
+    const competencyToCategoryMap = new Map<number, number>();
+    competencies.forEach((comp: { id: number; category_id: number }) => {
+      if (comp.category_id) {
+        competencyToCategoryMap.set(comp.id, comp.category_id);
+      }
+    });
+    
+    // Transform heatmap rows and aggregate scores by category
+    const heatmapRows = heatmapData.rows.map((row: { user_id: number; user_name: string; scores: Record<number, number | null> }) => {
+      // Transform competency scores to category scores
+      const categoryScores: Record<number, number[]> = {};
+      
+      Object.entries(row.scores).forEach(([compIdStr, score]) => {
+        if (score !== null && !isNaN(score)) {
+          const compId = Number(compIdStr);
+          const categoryId = competencyToCategoryMap.get(compId);
+          if (categoryId) {
+            if (!categoryScores[categoryId]) {
+              categoryScores[categoryId] = [];
+            }
+            categoryScores[categoryId].push(score);
+          }
+        }
+      });
+      
+      // Calculate average score per category for this student
+      const avgCategoryScores: Record<number, number | null> = {};
+      Object.entries(categoryScores).forEach(([catIdStr, scores]) => {
+        const catId = Number(catIdStr);
+        avgCategoryScores[catId] = scores.length > 0
+          ? scores.reduce((sum, s) => sum + s, 0) / scores.length
+          : null;
+      });
+      
+      return {
+        studentId: row.user_id,
+        name: row.user_name,
+        className: null,
+        scores: avgCategoryScores,
+      };
+    });
+    
+    // Build category summaries from heatmap data
     const categoryMap = new Map<number, {
       id: number;
       name: string;
@@ -76,13 +113,12 @@ export const competencyMonitorService = {
       numStudentsSame: number;
     }>();
     
-    // Build category summaries from heatmap data
     competencies.forEach((comp: { id: number; category_name: string; category_id: number }) => {
       if (!comp.category_id) return;
       
-      // Calculate average score for this competency
-      const scores = heatmapRows
-        .map(row => row.scores[comp.id])
+      // Calculate average score for this competency across all students
+      const scores = heatmapData.rows
+        .map((row: { scores: Record<number, number | null> }) => row.scores[comp.id])
         .filter((s): s is number => s !== null && !isNaN(s));
       
       const averageScore = scores.length > 0
@@ -95,11 +131,13 @@ export const competencyMonitorService = {
       if (categoryMap.has(comp.category_id)) {
         const existing = categoryMap.get(comp.category_id)!;
         // Update with average of all competencies in this category
-        const newAverage = (existing.averageScore + averageScore) / 2;
+        const count = existing.numStudentsUp + 1; // Track how many competencies we've added
+        const newAverage = (existing.averageScore * existing.numStudentsUp + averageScore) / count;
         if (!isNaN(newAverage)) {
           categoryMap.set(comp.category_id, {
             ...existing,
             averageScore: newAverage,
+            numStudentsUp: count,
           });
         }
       } else {
@@ -109,14 +147,19 @@ export const competencyMonitorService = {
           averageScore,
           previousAverageScore: null,
           trendDelta: null,
-          numStudentsUp: 0,
+          numStudentsUp: 1, // Track competency count temporarily
           numStudentsDown: 0,
           numStudentsSame: 0,
         });
       }
     });
     
-    const categorySummaries = Array.from(categoryMap.values());
+    const categorySummaries = Array.from(categoryMap.values()).map(cat => ({
+      ...cat,
+      numStudentsUp: 0, // Reset to 0 as we don't have historical data
+      numStudentsDown: 0,
+      numStudentsSame: 0,
+    }));
     
     // Calculate overall statistics
     const allScores = heatmapRows.flatMap((row) => Object.values(row.scores).filter((s): s is number => s !== null));
@@ -124,18 +167,74 @@ export const competencyMonitorService = {
       ? allScores.reduce((sum, s) => sum + s, 0) / allScores.length 
       : null;
     
-    // Build scans data - for now just use the current window
-    const scans = [{
-      scanId: latestWindow.id,
-      label: latestWindow.title,
-      date: latestWindow.start_date,
-      overallAverage: classAverageScore || 0,
-      categoryAverages: categorySummaries.map(cat => ({
-        categoryId: cat.id,
-        categoryName: cat.name,
-        averageScore: cat.averageScore,
-      })),
-    }];
+    // Build scans data - fetch multiple windows based on scanRange filter
+    const scans = [];
+    const scanLimit = filters?.scanRange === "last_5" ? 5 : filters?.scanRange === "all" ? windows.length : 3;
+    const windowsToFetch = windows.slice(0, Math.min(scanLimit, windows.length));
+    
+    for (const window of windowsToFetch) {
+      try {
+        const windowHeatmapResponse = await api.get(`/competencies/windows/${window.id}/heatmap`);
+        const windowHeatmapData = windowHeatmapResponse.data;
+        
+        // Calculate overall average for this scan
+        const windowScores = windowHeatmapData.rows.flatMap((row: { scores: Record<number, number | null> }) => 
+          Object.values(row.scores).filter((s): s is number => s !== null && !isNaN(s))
+        );
+        const windowAverage = windowScores.length > 0
+          ? windowScores.reduce((sum: number, s: number) => sum + s, 0) / windowScores.length
+          : 0;
+        
+        scans.push({
+          scanId: window.id,
+          label: window.title,
+          date: window.start_date,
+          overallAverage: windowAverage,
+          categoryAverages: categorySummaries.map(cat => ({
+            categoryId: cat.id,
+            categoryName: cat.name,
+            averageScore: cat.averageScore,
+          })),
+        });
+      } catch (error) {
+        console.error(`Failed to fetch heatmap for window ${window.id}:`, error);
+      }
+    }
+    
+    // Calculate notable students from heatmap data
+    const notableStudents = [];
+    
+    // Find students with low scores (average < 2.5 across all categories)
+    for (const row of heatmapRows) {
+      const scores = Object.values(row.scores).filter((s): s is number => s !== null);
+      if (scores.length > 0) {
+        const avgScore = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+        
+        if (avgScore < 2.5) {
+          // Find the lowest category for this student
+          let lowestScore = Infinity;
+          let lowestCategoryName = null;
+          
+          Object.entries(row.scores).forEach(([catIdStr, score]) => {
+            if (score !== null && score < lowestScore) {
+              lowestScore = score;
+              const category = categorySummaries.find(c => c.id === Number(catIdStr));
+              lowestCategoryName = category?.name || null;
+            }
+          });
+          
+          notableStudents.push({
+            studentId: row.studentId,
+            name: row.name,
+            className: row.className,
+            type: "low_score" as const,
+            score: avgScore,
+            trendDelta: null,
+            categoryName: lowestCategoryName,
+          });
+        }
+      }
+    }
     
     return {
       classAverageScore,
@@ -146,7 +245,7 @@ export const competencyMonitorService = {
       categorySummaries,
       scans,
       heatmapRows,
-      notableStudents: [], // Would need historical data
+      notableStudents,
     };
   },
 
