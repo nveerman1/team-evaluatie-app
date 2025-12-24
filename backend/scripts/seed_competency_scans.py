@@ -55,19 +55,6 @@ def seed_competency_scans(target_school_id=1):
         
         print(f"✓ Using school: {school.name} (ID: {school.id})")
         
-        # Get an admin or teacher user for created_by field
-        admin = db.query(User).filter(
-            User.school_id == school.id,
-            User.role.in_(["admin", "teacher"])
-        ).first()
-        
-        if not admin:
-            print("❌ Error: No admin or teacher found in this school.")
-            print("  Please create an admin or teacher user first.")
-            return
-        
-        print(f"✓ Using user: {admin.name} ({admin.role})")
-        
         # Get competencies from this school
         competencies = db.query(Competency).filter(
             Competency.school_id == school.id
@@ -92,13 +79,23 @@ def seed_competency_scans(target_school_id=1):
         
         # Select different subsets of competencies for each window
         # For Startscan: focus on collaboration and planning (first 10 competencies)
-        startscan_competencies = competencies[:10]
+        startscan_competencies = competencies[:10] if len(competencies) >= 10 else competencies
         
         # For Midscan: focus on creative thinking and technical skills (competencies 11-20)
-        midscan_competencies = competencies[10:20] if len(competencies) >= 20 else competencies[10:]
+        if len(competencies) >= 20:
+            midscan_competencies = competencies[10:20]
+        elif len(competencies) > 10:
+            midscan_competencies = competencies[10:]
+        else:
+            midscan_competencies = competencies  # Use all if less than 10
         
-        # For Eindscan: focus on communication and reflection (last 10 competencies)
-        eindscan_competencies = competencies[-10:] if len(competencies) >= 10 else competencies
+        # For Eindscan: focus on communication and reflection (last 10 competencies, avoiding overlap)
+        if len(competencies) >= 30:
+            eindscan_competencies = competencies[20:30]
+        elif len(competencies) > 20:
+            eindscan_competencies = competencies[20:]
+        else:
+            eindscan_competencies = competencies[-10:] if len(competencies) >= 10 else competencies
         
         # For Q1 scan: use all competencies
         q1_competencies = competencies
@@ -189,6 +186,8 @@ def seed_competency_scans(target_school_id=1):
                 require_reflection=window_data["require_reflection"],
                 settings={
                     "competency_ids": competency_ids,
+                    # Store deadline in settings for compatibility with wizard-created windows
+                    # In this case, deadline matches end_date (students must complete by window end)
                     "deadline": window_data["end_date"].isoformat(),
                 }
             )
