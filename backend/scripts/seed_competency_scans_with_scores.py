@@ -1,16 +1,17 @@
 """
 Seed script for competency scans with self-scores filled in
 
-Creates 5 competency scan windows for course_id=1 with self-scores
+Creates 6 competency scan windows for course_id=1 with self-scores
 filled in for specific students.
 
 Usage:
     python scripts/seed_competency_scans_with_scores.py
     
 This script:
-- Creates 5 competency scan windows for course_id=1
+- Creates 6 competency scan windows for course_id=1
 - First 3 scans: 10 competencies each with self-scores only
-- Last 2 scans: ALL competencies with self-scores, goals, and reflections
+- Scans 4-5: ALL competencies with self-scores, goals, and reflections
+- Scan 6: ALL competencies with extreme scores (very low, very high, and strong growth)
 - Fills in data for students with IDs: 5, 6, 7, 8, 18, 19, 20, 34, 35, 36, 37
 - Uses realistic score distributions (1-5 scale)
 """
@@ -174,6 +175,17 @@ def seed_competency_scans_with_scores():
                 "include_goals": True,
                 "include_reflection": True,
             },
+            {
+                "title": "Extreme scores scan - Course 1",
+                "description": "Competentiescan met extreme scores: erg lage scores, erg hoge scores, en sterke groei t.o.v. vorige scan.",
+                "start_date": now - timedelta(days=20),
+                "end_date": now - timedelta(days=5),
+                "status": "closed",
+                "competencies": competencies,  # ALL competencies
+                "include_goals": False,
+                "include_reflection": False,
+                "use_extreme_scores": True,  # Special flag for extreme scoring
+            },
         ]
         
         print("\n" + "-" * 60)
@@ -300,19 +312,64 @@ def seed_competency_scans_with_scores():
                 
                 # Create self-scores for each competency
                 for competency in window_data["competencies"]:
-                    # Generate realistic scores (weighted towards 3-4)
-                    # 10% = 1, 15% = 2, 35% = 3, 30% = 4, 10% = 5
-                    rand = random.random()
-                    if rand < 0.10:
-                        score = 1
-                    elif rand < 0.25:
-                        score = 2
-                    elif rand < 0.60:
-                        score = 3
-                    elif rand < 0.90:
-                        score = 4
+                    # Generate scores based on window type
+                    if use_extreme_scores:
+                        # Extreme scores logic
+                        if student in low_score_students:
+                            # Very low scores: 80% chance of 1-2
+                            rand = random.random()
+                            if rand < 0.5:
+                                score = 1
+                            elif rand < 0.8:
+                                score = 2
+                            else:
+                                score = 3
+                        elif student in high_score_students:
+                            # Very high scores: 80% chance of 4-5
+                            rand = random.random()
+                            if rand < 0.5:
+                                score = 5
+                            elif rand < 0.8:
+                                score = 4
+                            else:
+                                score = 3
+                        elif student in growth_students:
+                            # Strong growth: previous score + 1 or 2 (capped at 5)
+                            key = (student.id, competency.id)
+                            if key in previous_scores_by_student:
+                                prev_score = previous_scores_by_student[key]
+                                growth = random.randint(1, 2)
+                                score = min(5, prev_score + growth)
+                            else:
+                                # If no previous score, use high scores
+                                score = random.randint(4, 5)
+                        else:
+                            # Default to normal distribution
+                            rand = random.random()
+                            if rand < 0.10:
+                                score = 1
+                            elif rand < 0.25:
+                                score = 2
+                            elif rand < 0.60:
+                                score = 3
+                            elif rand < 0.90:
+                                score = 4
+                            else:
+                                score = 5
                     else:
-                        score = 5
+                        # Generate realistic scores (weighted towards 3-4)
+                        # 10% = 1, 15% = 2, 35% = 3, 30% = 4, 10% = 5
+                        rand = random.random()
+                        if rand < 0.10:
+                            score = 1
+                        elif rand < 0.25:
+                            score = 2
+                        elif rand < 0.60:
+                            score = 3
+                        elif rand < 0.90:
+                            score = 4
+                        else:
+                            score = 5
                     
                     # Random example text (50% chance)
                     example = None
