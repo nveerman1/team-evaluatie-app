@@ -83,20 +83,25 @@ export const competencyMonitorService = {
       // Calculate average score for this competency
       const scores = heatmapRows
         .map(row => row.scores[comp.id])
-        .filter((s): s is number => s !== null);
+        .filter((s): s is number => s !== null && !isNaN(s));
       
       const averageScore = scores.length > 0
         ? scores.reduce((sum, s) => sum + s, 0) / scores.length
         : 0;
       
+      // Skip if averageScore is invalid
+      if (isNaN(averageScore)) return;
+      
       if (categoryMap.has(comp.category_id)) {
         const existing = categoryMap.get(comp.category_id)!;
         // Update with average of all competencies in this category
-        const count = (existing.averageScore * existing.numStudentsUp + averageScore) / 2;
-        categoryMap.set(comp.category_id, {
-          ...existing,
-          averageScore: (existing.averageScore + averageScore) / 2,
-        });
+        const newAverage = (existing.averageScore + averageScore) / 2;
+        if (!isNaN(newAverage)) {
+          categoryMap.set(comp.category_id, {
+            ...existing,
+            averageScore: newAverage,
+          });
+        }
       } else {
         categoryMap.set(comp.category_id, {
           id: comp.category_id,

@@ -18,10 +18,12 @@ export function OverviewSubTab() {
   // Prepare radar chart data
   const radarData = useMemo(() => {
     if (!data?.categorySummaries) return [];
-    return data.categorySummaries.map((cat) => ({
-      name: cat.name,
-      value: cat.averageScore,
-    }));
+    return data.categorySummaries
+      .filter((cat) => cat.averageScore != null && !isNaN(cat.averageScore))
+      .map((cat) => ({
+        name: cat.name,
+        value: cat.averageScore,
+      }));
   }, [data]);
 
   if (loading) return <Loading />;

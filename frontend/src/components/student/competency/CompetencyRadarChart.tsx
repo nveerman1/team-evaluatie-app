@@ -56,7 +56,8 @@ export function CompetencyRadarChart({
   // Calculate polygon points for the data
   const radarPoints = items.map((item, index) => {
     const angle = (index / items.length) * Math.PI * 2 - Math.PI / 2; // Start from top
-    const radius = (item.value / maxValue) * maxRadius;
+    const value = isNaN(item.value) || item.value == null ? 0 : item.value;
+    const radius = (value / maxValue) * maxRadius;
     const x = centerX + radius * Math.cos(angle);
     const y = centerY + radius * Math.sin(angle);
     return { x, y, angle, radius };
