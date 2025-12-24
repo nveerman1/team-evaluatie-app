@@ -201,9 +201,9 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
               <span className="text-lg">📈</span> Sterke groei
             </h4>
             <div className="space-y-2">
-              {data.notableStudents.filter((s) => s.type === "strong_growth").map((student) => (
+              {data.notableStudents.filter((s) => s.type === "strong_growth").map((student, index) => (
                 <Link
-                  key={student.studentId}
+                  key={`strong-growth-${student.studentId}-${student.categoryName || index}`}
                   href={`/teacher/competencies/student/${student.studentId}`}
                   className="flex items-center justify-between p-2 bg-white rounded-lg hover:shadow-sm transition-shadow"
                 >
@@ -225,9 +225,9 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
               <span className="text-lg">📉</span> Achteruitgang
             </h4>
             <div className="space-y-2">
-              {data.notableStudents.filter((s) => s.type === "decline").map((student) => (
+              {data.notableStudents.filter((s) => s.type === "decline").map((student, index) => (
                 <Link
-                  key={student.studentId}
+                  key={`decline-${student.studentId}-${student.categoryName || index}`}
                   href={`/teacher/competencies/student/${student.studentId}`}
                   className="flex items-center justify-between p-2 bg-white rounded-lg hover:shadow-sm transition-shadow"
                 >
@@ -249,9 +249,9 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
               <span className="text-lg">⚠️</span> Lage scores
             </h4>
             <div className="space-y-2">
-              {data.notableStudents.filter((s) => s.type === "low_score").map((student) => (
+              {data.notableStudents.filter((s) => s.type === "low_score").map((student, index) => (
                 <Link
-                  key={student.studentId}
+                  key={`low-score-${student.studentId}-${student.categoryName || index}`}
                   href={`/teacher/competencies/student/${student.studentId}`}
                   className="flex items-center justify-between p-2 bg-white rounded-lg hover:shadow-sm transition-shadow"
                 >
