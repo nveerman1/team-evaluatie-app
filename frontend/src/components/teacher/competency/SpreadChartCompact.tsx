@@ -69,18 +69,8 @@ export function SpreadChartCompact({
     return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
   }).join(' ');
 
-  // Generate spread areas (P10-P90 and P25-P75)
-  const p1090Area = (() => {
-    const topPath = scans.map((scan, i) => `${xScale(i)},${yScale(scan.p90)}`).join(' ');
-    const bottomPath = scans.map((scan, i) => `${xScale(scans.length - 1 - i)},${yScale(scans[scans.length - 1 - i].p10)}`).join(' ');
-    return `M ${topPath} L ${bottomPath} Z`;
-  })();
-
-  const p2575Area = (() => {
-    const topPath = scans.map((scan, i) => `${xScale(i)},${yScale(scan.p75)}`).join(' ');
-    const bottomPath = scans.map((scan, i) => `${xScale(scans.length - 1 - i)},${yScale(scans[scans.length - 1 - i].p25)}`).join(' ');
-    return `M ${topPath} L ${bottomPath} Z`;
-  })();
+  // Band width for spread visualization (per scan)
+  const bandWidth = 22;
 
   return (
     <svg width={width} height={height} className="text-slate-600">
@@ -153,21 +143,56 @@ export function SpreadChartCompact({
           );
         })}
 
-        {/* Spread bands (only in spread mode) */}
-        {mode === "spread" && (
-          <>
-            <path
-              d={p1090Area}
-              fill="#3b82f6"
-              fillOpacity={0.1}
-            />
-            <path
-              d={p2575Area}
-              fill="#3b82f6"
-              fillOpacity={0.15}
-            />
-          </>
-        )}
+        {/* Spread bands (only in spread mode) - per scan vertical bands */}
+        {mode === "spread" && scans.map((scan, i) => {
+          const x = xScale(i);
+          const xLeft = x - bandWidth / 2;
+          
+          // P10-P90 band (lighter)
+          const yP90 = yScale(scan.p90);
+          const yP10 = yScale(scan.p10);
+          const heightP1090 = yP10 - yP90;
+          
+          // P25-P75 band (darker, on top of P10-P90)
+          const yP75 = yScale(scan.p75);
+          const yP25 = yScale(scan.p25);
+          const heightP2575 = yP25 - yP75;
+          
+          return (
+            <g key={`spread-${scan.scanId}`}>
+              {/* P10-P90 band */}
+              <rect
+                x={xLeft}
+                y={yP90}
+                width={bandWidth}
+                height={heightP1090}
+                fill="#3b82f6"
+                fillOpacity={0.1}
+                rx={2}
+              />
+              {/* P25-P75 band */}
+              <rect
+                x={xLeft}
+                y={yP75}
+                width={bandWidth}
+                height={heightP2575}
+                fill="#3b82f6"
+                fillOpacity={0.15}
+                rx={2}
+              />
+              {/* Small median tick */}
+              <line
+                x1={x - 5}
+                y1={yScale(scan.median)}
+                x2={x + 5}
+                y2={yScale(scan.median)}
+                stroke="#94a3b8"
+                strokeWidth={2}
+                opacity={0.7}
+              />
+            </g>
+          );
+        })}
 
         {/* Median line (dashed) */}
         <path
