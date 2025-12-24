@@ -4,13 +4,11 @@ import { useState } from "react";
 import { useCompetencyFilterOptions } from "@/hooks/useCompetencyOverview";
 import type { CompetencyOverviewFilters } from "@/dtos/competency-monitor.dto";
 import { OverviewSubTab } from "./competency/OverviewSubTab";
-import { CategoriesSubTab } from "./competency/CategoriesSubTab";
 import { LearningGoalsSubTab } from "./competency/LearningGoalsSubTab";
 import { ReflectionsSubTab } from "./competency/ReflectionsSubTab";
 
 const competencySubTabs = [
   { id: "overzicht", label: "Overzicht" },
-  { id: "categorieen", label: "Categorieën" },
   { id: "leerdoelen", label: "Leerdoelen" },
   { id: "reflecties", label: "Reflecties" },
 ];
@@ -96,7 +94,6 @@ export default function CompetenciesOverviewTab() {
       {/* Sub-tab Content */}
       <div>
         {activeSubTab === "overzicht" && <OverviewSubTab filters={filters} />}
-        {activeSubTab === "categorieen" && <CategoriesSubTab filters={filters} />}
         {activeSubTab === "leerdoelen" && <LearningGoalsSubTab filters={filters} />}
         {activeSubTab === "reflecties" && <ReflectionsSubTab filters={filters} />}
       </div>
