@@ -55,6 +55,18 @@ export const competencyMonitorService = {
     const heatmapResponse = await api.get(`/competencies/windows/${latestWindow.id}/heatmap`);
     const heatmapData = heatmapResponse.data;
     
+    // Get previous window heatmap for delta calculation (if available)
+    let previousHeatmapData = null;
+    if (windows.length > 1) {
+      const previousWindow = windows[1];
+      try {
+        const prevHeatmapResponse = await api.get(`/competencies/windows/${previousWindow.id}/heatmap`);
+        previousHeatmapData = prevHeatmapResponse.data;
+      } catch (error) {
+        console.error("Failed to fetch previous heatmap data:", error);
+      }
+    }
+    
     // Get categories from competencies in heatmap
     const competencies = heatmapData.competencies || [];
     
@@ -65,6 +77,38 @@ export const competencyMonitorService = {
         competencyToCategoryMap.set(comp.id, comp.category_id);
       }
     });
+    
+    // Build previous scores map by student if available
+    const previousScoresByStudent = new Map<number, Record<number, number>>();
+    if (previousHeatmapData) {
+      previousHeatmapData.rows.forEach((row: { user_id: number; scores: Record<number, number | null> }) => {
+        const categoryScores: Record<number, number[]> = {};
+        
+        Object.entries(row.scores).forEach(([compIdStr, score]) => {
+          if (score !== null && !isNaN(score)) {
+            const compId = Number(compIdStr);
+            const categoryId = competencyToCategoryMap.get(compId);
+            if (categoryId) {
+              if (!categoryScores[categoryId]) {
+                categoryScores[categoryId] = [];
+              }
+              categoryScores[categoryId].push(score);
+            }
+          }
+        });
+        
+        // Calculate average score per category for this student in previous scan
+        const avgCategoryScores: Record<number, number> = {};
+        Object.entries(categoryScores).forEach(([catIdStr, scores]) => {
+          const catId = Number(catIdStr);
+          if (scores.length > 0) {
+            avgCategoryScores[catId] = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+          }
+        });
+        
+        previousScoresByStudent.set(row.user_id, avgCategoryScores);
+      });
+    }
     
     // Transform heatmap rows and aggregate scores by category
     const heatmapRows = heatmapData.rows.map((row: { user_id: number; user_name: string; class_name: string | null; scores: Record<number, number | null> }) => {
@@ -86,11 +130,25 @@ export const competencyMonitorService = {
       
       // Calculate average score per category for this student
       const avgCategoryScores: Record<number, number | null> = {};
+      const scoreDeltas: Record<number, number | null> = {};
+      const previousScores = previousScoresByStudent.get(row.user_id);
+      
       Object.entries(categoryScores).forEach(([catIdStr, scores]) => {
         const catId = Number(catIdStr);
-        avgCategoryScores[catId] = scores.length > 0
-          ? scores.reduce((sum, s) => sum + s, 0) / scores.length
-          : null;
+        if (scores.length > 0) {
+          const currentAvg = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+          avgCategoryScores[catId] = currentAvg;
+          
+          // Calculate delta if previous score exists
+          if (previousScores && previousScores[catId] !== undefined) {
+            scoreDeltas[catId] = currentAvg - previousScores[catId];
+          } else {
+            scoreDeltas[catId] = null;
+          }
+        } else {
+          avgCategoryScores[catId] = null;
+          scoreDeltas[catId] = null;
+        }
       });
       
       return {
@@ -98,6 +156,7 @@ export const competencyMonitorService = {
         name: row.user_name,
         className: row.class_name,
         scores: avgCategoryScores,
+        scoreDeltas: scoreDeltas,
       };
     });
     

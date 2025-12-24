@@ -172,12 +172,20 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
                   </td>
                   {data.categorySummaries.map((cat) => {
                     const score = row.scores[cat.id];
+                    const delta = row.scoreDeltas[cat.id];
                     return (
                       <td key={cat.id} className="px-3 py-2 text-center">
                         {score !== null && score !== undefined ? (
-                          <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold ${getScoreColor(score)}`}>
-                            {score.toFixed(1)}
-                          </span>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold ${getScoreColor(score)}`}>
+                              {score.toFixed(1)}
+                            </span>
+                            {delta !== null && delta !== undefined && (
+                              <span className={`text-[10px] font-medium ${delta > 0 ? 'text-green-600' : delta < 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                                {delta > 0 ? '+' : ''}{delta.toFixed(1)}
+                              </span>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-slate-300">–</span>
                         )}
@@ -207,7 +215,12 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
                   href={`/teacher/competencies/student/${student.studentId}`}
                   className="flex items-center justify-between p-2 bg-white rounded-lg hover:shadow-sm transition-shadow"
                 >
-                  <span className="text-sm text-slate-700">{student.name}</span>
+                  <div className="flex-1">
+                    <span className="text-sm text-slate-700">{student.name}</span>
+                    {student.categoryName && (
+                      <span className="block text-xs text-slate-500">{student.categoryName}</span>
+                    )}
+                  </div>
                   <span className="text-sm font-semibold text-green-600">
                     +{student.trendDelta?.toFixed(1)}
                   </span>
@@ -231,7 +244,12 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
                   href={`/teacher/competencies/student/${student.studentId}`}
                   className="flex items-center justify-between p-2 bg-white rounded-lg hover:shadow-sm transition-shadow"
                 >
-                  <span className="text-sm text-slate-700">{student.name}</span>
+                  <div className="flex-1">
+                    <span className="text-sm text-slate-700">{student.name}</span>
+                    {student.categoryName && (
+                      <span className="block text-xs text-slate-500">{student.categoryName}</span>
+                    )}
+                  </div>
                   <span className="text-sm font-semibold text-red-600">
                     {student.trendDelta?.toFixed(1)}
                   </span>

@@ -95,6 +95,7 @@ export interface HeatmapStudentRow {
   name: string;
   className: string | null;
   scores: Record<number, number | null>; // categoryId -> score
+  scoreDeltas: Record<number, number | null>; // categoryId -> delta vs previous scan
 }
 
 // Main overview data response
