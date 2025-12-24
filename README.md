@@ -144,6 +144,7 @@ See [docs/FEEDBACK_SUMMARY.md](docs/FEEDBACK_SUMMARY.md) for detailed setup inst
    python scripts/seed_competency_scans.py
    
    # Optional: Seed competency scans with self-scores (for course 1)
+   # Creates 5 scans: 3 with 10 competencies each, 2 with ALL competencies + goals + reflections
    python scripts/seed_competency_scans_with_scores.py
    
    # Start backend

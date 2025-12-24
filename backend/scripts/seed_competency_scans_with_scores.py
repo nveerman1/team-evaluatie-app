@@ -1,15 +1,17 @@
 """
 Seed script for competency scans with self-scores filled in
 
-Creates 3 competency scan windows for course_id=1 with self-scores
+Creates 5 competency scan windows for course_id=1 with self-scores
 filled in for specific students.
 
 Usage:
     python scripts/seed_competency_scans_with_scores.py
     
 This script:
-- Creates 3 competency scan windows for course_id=1
-- Fills in self-scores for students with IDs: 5, 6, 7, 8, 18, 19, 20, 34, 35, 36, 37
+- Creates 5 competency scan windows for course_id=1
+- First 3 scans: 10 competencies each with self-scores only
+- Last 2 scans: ALL competencies with self-scores, goals, and reflections
+- Fills in data for students with IDs: 5, 6, 7, 8, 18, 19, 20, 34, 35, 36, 37
 - Uses realistic score distributions (1-5 scale)
 """
 
@@ -29,6 +31,8 @@ from app.infra.db.models import (
     Competency,
     CompetencyWindow,
     CompetencySelfScore,
+    CompetencyGoal,
+    CompetencyReflection,
     Course
 )
 
@@ -111,10 +115,10 @@ def seed_competency_scans_with_scores():
         
         print(f"✓ Found {len(competencies)} competencies")
         
-        # Define 3 competency scan windows
+        # Define 5 competency scan windows
         now = datetime.now()
         
-        # Select different subsets for each scan
+        # Select different subsets for first 3 scans
         scan1_competencies = competencies[:10] if len(competencies) >= 10 else competencies
         scan2_competencies = competencies[10:20] if len(competencies) >= 20 else competencies[:10]
         scan3_competencies = competencies[20:30] if len(competencies) >= 30 else competencies[-10:] if len(competencies) >= 10 else competencies
@@ -127,6 +131,8 @@ def seed_competency_scans_with_scores():
                 "end_date": now - timedelta(days=45),
                 "status": "closed",
                 "competencies": scan1_competencies,
+                "include_goals": False,
+                "include_reflection": False,
             },
             {
                 "title": "Midscan - Course 1",
@@ -135,6 +141,8 @@ def seed_competency_scans_with_scores():
                 "end_date": now - timedelta(days=15),
                 "status": "closed",
                 "competencies": scan2_competencies,
+                "include_goals": False,
+                "include_reflection": False,
             },
             {
                 "title": "Eindscan - Course 1",
@@ -143,6 +151,28 @@ def seed_competency_scans_with_scores():
                 "end_date": now + timedelta(days=7),
                 "status": "open",
                 "competencies": scan3_competencies,
+                "include_goals": False,
+                "include_reflection": False,
+            },
+            {
+                "title": "Volledige competentiescan Q1 - Course 1",
+                "description": "Complete competentiescan met alle competenties, leerdoelen en reflectie.",
+                "start_date": now - timedelta(days=90),
+                "end_date": now - timedelta(days=75),
+                "status": "closed",
+                "competencies": competencies,  # ALL competencies
+                "include_goals": True,
+                "include_reflection": True,
+            },
+            {
+                "title": "Volledige competentiescan Q2 - Course 1",
+                "description": "Complete competentiescan met alle competenties, leerdoelen en reflectie.",
+                "start_date": now - timedelta(days=50),
+                "end_date": now - timedelta(days=35),
+                "status": "closed",
+                "competencies": competencies,  # ALL competencies
+                "include_goals": True,
+                "include_reflection": True,
             },
         ]
         
@@ -160,8 +190,14 @@ def seed_competency_scans_with_scores():
             
             if existing:
                 print(f"\n⚠ Window already exists: {window_data['title']}")
-                print(f"  Deleting existing window and scores to recreate...")
-                # Delete existing scores
+                print(f"  Deleting existing window and related data to recreate...")
+                # Delete existing data
+                db.query(CompetencyReflection).filter(
+                    CompetencyReflection.window_id == existing.id
+                ).delete()
+                db.query(CompetencyGoal).filter(
+                    CompetencyGoal.window_id == existing.id
+                ).delete()
                 db.query(CompetencySelfScore).filter(
                     CompetencySelfScore.window_id == existing.id
                 ).delete()
@@ -172,6 +208,9 @@ def seed_competency_scans_with_scores():
             competency_ids = [c.id for c in window_data["competencies"]]
             
             # Create the window
+            include_goals = window_data.get("include_goals", False)
+            include_reflection = window_data.get("include_reflection", False)
+            
             window = CompetencyWindow(
                 school_id=school_id,
                 title=window_data["title"],
@@ -182,8 +221,8 @@ def seed_competency_scans_with_scores():
                 end_date=window_data["end_date"],
                 status=window_data["status"],
                 require_self_score=True,
-                require_goal=False,
-                require_reflection=False,
+                require_goal=include_goals,
+                require_reflection=include_reflection,
                 settings={
                     "competency_ids": competency_ids,
                     "deadline": window_data["end_date"].isoformat(),
@@ -197,10 +236,69 @@ def seed_competency_scans_with_scores():
             print(f"  - Start: {window.start_date.strftime('%Y-%m-%d')}")
             print(f"  - End: {window.end_date.strftime('%Y-%m-%d')}")
             print(f"  - Competencies: {len(competency_ids)}")
+            print(f"  - Includes goals: {include_goals}")
+            print(f"  - Includes reflection: {include_reflection}")
             
             # Create self-scores for each student
             scores_created = 0
+            goals_created = 0
+            reflections_created = 0
+            
+            # Track goals per student for reflection linking
+            student_goals = {}
+            
             for student in students:
+                # Create goals for this student if needed (one per student, not per competency)
+                if include_goals:
+                    # Create 2-3 goals per student
+                    num_goals = random.randint(2, 3)
+                    student_goals[student.id] = []
+                    
+                    goal_templates = [
+                        "Ik wil beter worden in {} door meer te oefenen en feedback te vragen.",
+                        "Ik ga werken aan {} door concrete voorbeelden te verzamelen.",
+                        "Mijn doel is om {} te verbeteren door actief te oefenen in projecten.",
+                        "Ik wil groeien in {} door bewuster te reflecteren op mijn werk.",
+                    ]
+                    
+                    success_criteria_templates = [
+                        "Ik heb dit bereikt als ik minimaal 3 concrete voorbeelden kan geven.",
+                        "Ik merk dit aan positieve feedback van teamgenoten en docenten.",
+                        "Dit is gelukt als ik deze vaardigheid zelfstandig kan toepassen.",
+                        "Ik zie vooruitgang in mijn zelfreflecties en voorbeelden.",
+                    ]
+                    
+                    for _ in range(num_goals):
+                        # Pick a random competency to focus on
+                        random_comp = random.choice(window_data["competencies"])
+                        goal_text = random.choice(goal_templates).format(random_comp.name.lower())
+                        success_criteria = random.choice(success_criteria_templates)
+                        
+                        # Random goal status
+                        status_rand = random.random()
+                        if status_rand < 0.3:
+                            status = "achieved"
+                        elif status_rand < 0.6:
+                            status = "in_progress"
+                        else:
+                            status = "not_achieved"
+                        
+                        goal = CompetencyGoal(
+                            school_id=school_id,
+                            window_id=window.id,
+                            user_id=student.id,
+                            competency_id=random_comp.id,
+                            goal_text=goal_text,
+                            success_criteria=success_criteria,
+                            status=status,
+                            submitted_at=window.start_date + timedelta(days=random.randint(1, 5))
+                        )
+                        db.add(goal)
+                        db.flush()
+                        student_goals[student.id].append(goal)
+                        goals_created += 1
+                
+                # Create self-scores for each competency
                 for competency in window_data["competencies"]:
                     # Generate realistic scores (weighted towards 3-4)
                     # 10% = 1, 15% = 2, 35% = 3, 30% = 4, 10% = 5
@@ -240,8 +338,46 @@ def seed_competency_scans_with_scores():
                     )
                     db.add(self_score)
                     scores_created += 1
+                
+                # Create reflection for this student if needed (one per student)
+                if include_reflection:
+                    reflection_templates = [
+                        "Deze periode heb ik veel geleerd over mijn vaardigheden. Ik ben vooral gegroeid in samenwerking en communicatie. De projecten hebben me geholpen om bewuster te worden van mijn sterke en zwakke punten.",
+                        "Tijdens deze competentiescan heb ik ontdekt dat ik goed ben in planning en organisatie, maar dat ik nog kan groeien in creatief denken. Ik ga me de komende periode meer focussen op het bedenken van originele oplossingen.",
+                        "De feedback van mijn teamgenoten was waardevol. Ik realiseer me dat ik meer mijn mening moet delen en initiatief moet nemen. Dit zijn punten waar ik bewust aan ga werken.",
+                        "Ik ben tevreden met mijn ontwikkeling dit kwartaal. De doelen die ik had gesteld zijn grotendeels behaald. Voor de volgende periode wil ik me meer richten op reflectie en professionele houding.",
+                    ]
+                    
+                    evidence_templates = [
+                        "Concrete voorbeelden: tijdens de groepspresentatie nam ik het voortouw, in het projectverslag schreef ik het grootste deel, en tijdens teamoverleggen droeg ik actief bij met ideeën.",
+                        "Ik kan dit onderbouwen met het eindproduct dat we als team hebben opgeleverd, de positieve feedback van mijn begeleider, en mijn eigen logboek waarin ik mijn voortgang heb bijgehouden.",
+                        "Bewijs hiervan is te zien in mijn portfolio, de peer-feedback die ik heb ontvangen, en de verbeteringen die zichtbaar zijn tussen mijn start- en eindevaluatie.",
+                    ]
+                    
+                    # Link to first goal if available
+                    goal_id = student_goals[student.id][0].id if student.id in student_goals and student_goals[student.id] else None
+                    
+                    # Determine if goal was achieved (70% chance if there's a goal)
+                    goal_achieved = random.random() < 0.7 if goal_id else None
+                    
+                    reflection = CompetencyReflection(
+                        school_id=school_id,
+                        window_id=window.id,
+                        user_id=student.id,
+                        goal_id=goal_id,
+                        text=random.choice(reflection_templates),
+                        goal_achieved=goal_achieved,
+                        evidence=random.choice(evidence_templates) if random.random() < 0.7 else None,
+                        submitted_at=window.end_date - timedelta(days=random.randint(0, 3))
+                    )
+                    db.add(reflection)
+                    reflections_created += 1
             
             print(f"  - Self-scores created: {scores_created}")
+            if include_goals:
+                print(f"  - Goals created: {goals_created}")
+            if include_reflection:
+                print(f"  - Reflections created: {reflections_created}")
             created_windows.append(window)
         
         db.commit()
@@ -258,8 +394,21 @@ def seed_competency_scans_with_scores():
             score_count = db.query(CompetencySelfScore).filter(
                 CompetencySelfScore.window_id == window.id
             ).count()
+            goal_count = db.query(CompetencyGoal).filter(
+                CompetencyGoal.window_id == window.id
+            ).count()
+            reflection_count = db.query(CompetencyReflection).filter(
+                CompetencyReflection.window_id == window.id
+            ).count()
+            
             print(f"  - {window.title}")
-            print(f"    Status: {window.status}, Competencies: {comp_count}, Self-scores: {score_count}")
+            print(f"    Status: {window.status}, Competencies: {comp_count}")
+            print(f"    Self-scores: {score_count}", end="")
+            if goal_count > 0:
+                print(f", Goals: {goal_count}", end="")
+            if reflection_count > 0:
+                print(f", Reflections: {reflection_count}", end="")
+            print()
         print("=" * 60)
         
     except Exception as e:
