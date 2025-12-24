@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useCompetencyReflections } from "@/hooks/useCompetencyOverview";
 import { Loading, ErrorMessage } from "@/components";
 import type { CompetencyOverviewFilters } from "@/dtos/competency-monitor.dto";
@@ -13,10 +13,30 @@ export function ReflectionsSubTab({ filters }: ReflectionsSubTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedReflections, setExpandedReflections] = useState<Set<number>>(new Set());
   
-  // Memoize filters to prevent infinite re-renders
-  const memoizedFilters = useMemo(() => ({ ...filters, searchQuery }), [filters, searchQuery]);
+  const { data: reflections, loading, error } = useCompetencyReflections(filters);
+
+  // Client-side filtering for search (to avoid refetch on every keystroke)
+  const [filteredReflections, setFilteredReflections] = useState(reflections || []);
   
-  const { data: reflections, loading, error } = useCompetencyReflections(memoizedFilters);
+  useEffect(() => {
+    if (!reflections) {
+      setFilteredReflections([]);
+      return;
+    }
+    
+    if (!searchQuery.trim()) {
+      setFilteredReflections(reflections);
+      return;
+    }
+    
+    const query = searchQuery.toLowerCase();
+    const filtered = reflections.filter((reflection) => 
+      reflection.reflectionText.toLowerCase().includes(query) ||
+      reflection.studentName.toLowerCase().includes(query) ||
+      (reflection.className && reflection.className.toLowerCase().includes(query))
+    );
+    setFilteredReflections(filtered);
+  }, [reflections, searchQuery]);
 
   const toggleExpand = (reflectionId: number) => {
     const newExpanded = new Set(expandedReflections);
@@ -49,7 +69,7 @@ export function ReflectionsSubTab({ filters }: ReflectionsSubTabProps) {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Zoek in reflecties..."
+            placeholder="Zoek in reflecties of leerlingnaam..."
             className="w-full px-3 py-2 text-sm border rounded-lg"
           />
         </div>
@@ -57,7 +77,7 @@ export function ReflectionsSubTab({ filters }: ReflectionsSubTabProps) {
 
       {/* Reflections Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        {reflections.length > 0 ? (
+        {filteredReflections.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50">
@@ -71,7 +91,7 @@ export function ReflectionsSubTab({ filters }: ReflectionsSubTabProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {reflections.map((reflection) => {
+                {filteredReflections.map((reflection) => {
                   const isExpanded = expandedReflections.has(reflection.id);
                   const text = reflection.reflectionText;
                   const shouldTruncate = text.length > 150;

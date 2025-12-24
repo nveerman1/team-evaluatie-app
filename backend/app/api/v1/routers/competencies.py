@@ -1848,20 +1848,30 @@ def get_window_goals(
 
     results = db.execute(query).all()
 
-    # Get competency names
+    # Get competency names and categories
     competency_map = {}
+    category_map = {}
     if results:
         comp_ids = [r[0].competency_id for r in results if r[0].competency_id]
         if comp_ids:
             competencies = (
-                db.execute(select(Competency).where(Competency.id.in_(comp_ids)))
+                db.execute(
+                    select(Competency)
+                    .options(selectinload(Competency.competency_category))
+                    .where(Competency.id.in_(comp_ids))
+                )
                 .scalars()
                 .all()
             )
             competency_map = {c.id: c.name for c in competencies}
+            category_map = {
+                c.id: (c.competency_category.name if c.competency_category else None)
+                for c in competencies
+            }
 
     items = []
     for goal, user in results:
+        competency_id = goal.competency_id
         items.append(
             TeacherGoalItem(
                 id=goal.id,
@@ -1870,10 +1880,15 @@ def get_window_goals(
                 class_name=user.class_name,
                 goal_text=goal.goal_text,
                 success_criteria=goal.success_criteria,
-                competency_id=goal.competency_id,
+                competency_id=competency_id,
                 competency_name=(
-                    competency_map.get(goal.competency_id)
-                    if goal.competency_id
+                    competency_map.get(competency_id)
+                    if competency_id
+                    else None
+                ),
+                category_name=(
+                    category_map.get(competency_id)
+                    if competency_id
                     else None
                 ),
                 status=goal.status,

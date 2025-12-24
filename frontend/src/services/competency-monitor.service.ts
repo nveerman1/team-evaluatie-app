@@ -448,50 +448,58 @@ export const competencyMonitorService = {
       return [];
     }
     
-    const latestWindow = windows[0];
+    // Determine which windows to fetch based on scanRange filter
+    const scanLimit = filters?.scanRange === "last_5" ? 5 : filters?.scanRange === "all" ? windows.length : 3;
+    const windowsToFetch = windows.slice(0, Math.min(scanLimit, windows.length));
     
-    // Get goals from API
-    const goalsResponse = await api.get(`/competencies/windows/${latestWindow.id}/goals`, {
-      params: filters?.status ? { status: filters.status } : {},
-    });
-    const apiGoals = goalsResponse.data.items || [];
+    // Fetch goals from all selected windows
+    let allGoals: LearningGoalSummary[] = [];
     
-    // Transform API response to our format
-    let result: LearningGoalSummary[] = apiGoals.map((g: {
-      id: number;
-      user_id: number;
-      user_name: string;
-      class_name: string | null;
-      competency_id: number | null;
-      competency_name: string | null;
-      goal_text: string;
-      status: string;
-      submitted_at: string;
-      updated_at: string;
-    }) => ({
-      id: g.id,
-      studentId: g.user_id,
-      studentName: g.user_name,
-      className: g.class_name,
-      categoryId: null, // Goals don't have direct category link in backend
-      categoryName: null,
-      goalText: g.goal_text,
-      status: g.status as "in_progress" | "achieved" | "not_achieved",
-      createdAt: g.submitted_at,
-      updatedAt: g.updated_at,
-    }));
+    for (const window of windowsToFetch) {
+      try {
+        const goalsResponse = await api.get(`/competencies/windows/${window.id}/goals`, {
+          params: filters?.status ? { status: filters.status } : {},
+        });
+        const apiGoals = goalsResponse.data.items || [];
+        
+        // Transform API response to our format
+        const windowGoals: LearningGoalSummary[] = apiGoals.map((g: {
+          id: number;
+          user_id: number;
+          user_name: string;
+          class_name: string | null;
+          competency_id: number | null;
+          competency_name: string | null;
+          category_name: string | null;
+          goal_text: string;
+          status: string;
+          submitted_at: string;
+          updated_at: string;
+        }) => ({
+          id: g.id,
+          studentId: g.user_id,
+          studentName: g.user_name,
+          className: g.class_name,
+          categoryId: null,
+          categoryName: g.category_name,
+          goalText: g.goal_text,
+          status: g.status as "in_progress" | "achieved" | "not_achieved",
+          createdAt: g.submitted_at,
+          updatedAt: g.updated_at,
+        }));
+        
+        allGoals = allGoals.concat(windowGoals);
+      } catch (error) {
+        console.error(`Failed to fetch goals for window ${window.id}:`, error);
+      }
+    }
     
     // Apply local filters
     if (filters?.categoryId) {
-      result = result.filter((g) => g.categoryId === filters.categoryId);
+      allGoals = allGoals.filter((g) => g.categoryId === filters.categoryId);
     }
     
-    if (filters?.searchQuery) {
-      const query = filters.searchQuery.toLowerCase();
-      result = result.filter((g) => g.goalText.toLowerCase().includes(query));
-    }
-    
-    return result;
+    return allGoals;
   },
 
   /**
@@ -513,43 +521,49 @@ export const competencyMonitorService = {
       return [];
     }
     
-    const latestWindow = windows[0];
+    // Determine which windows to fetch based on scanRange filter
+    const scanLimit = filters?.scanRange === "last_5" ? 5 : filters?.scanRange === "all" ? windows.length : 3;
+    const windowsToFetch = windows.slice(0, Math.min(scanLimit, windows.length));
     
-    // Get reflections from API
-    const reflectionsResponse = await api.get(`/competencies/windows/${latestWindow.id}/reflections`);
-    const apiReflections = reflectionsResponse.data.items || [];
+    // Fetch reflections from all selected windows
+    let allReflections: ReflectionSummary[] = [];
     
-    // Transform API response to our format
-    let result: ReflectionSummary[] = apiReflections.map((r: {
-      id: number;
-      user_id: number;
-      user_name: string;
-      class_name: string | null;
-      text: string;
-      goal_id: number | null;
-      goal_text: string | null;
-      submitted_at: string;
-      updated_at: string;
-    }) => ({
-      id: r.id,
-      studentId: r.user_id,
-      studentName: r.user_name,
-      className: r.class_name,
-      categoryId: null,
-      categoryName: null,
-      scanId: latestWindow.id,
-      scanLabel: latestWindow.title,
-      createdAt: r.submitted_at,
-      reflectionText: r.text,
-    }));
-    
-    // Apply local filters
-    if (filters?.searchQuery) {
-      const query = filters.searchQuery.toLowerCase();
-      result = result.filter((r) => r.reflectionText.toLowerCase().includes(query));
+    for (const window of windowsToFetch) {
+      try {
+        const reflectionsResponse = await api.get(`/competencies/windows/${window.id}/reflections`);
+        const apiReflections = reflectionsResponse.data.items || [];
+        
+        // Transform API response to our format
+        const windowReflections: ReflectionSummary[] = apiReflections.map((r: {
+          id: number;
+          user_id: number;
+          user_name: string;
+          class_name: string | null;
+          text: string;
+          goal_id: number | null;
+          goal_text: string | null;
+          submitted_at: string;
+          updated_at: string;
+        }) => ({
+          id: r.id,
+          studentId: r.user_id,
+          studentName: r.user_name,
+          className: r.class_name,
+          categoryId: null,
+          categoryName: null,
+          scanId: window.id,
+          scanLabel: window.title,
+          createdAt: r.submitted_at,
+          reflectionText: r.text,
+        }));
+        
+        allReflections = allReflections.concat(windowReflections);
+      } catch (error) {
+        console.error(`Failed to fetch reflections for window ${window.id}:`, error);
+      }
     }
     
-    return result;
+    return allReflections;
   },
 
   /**

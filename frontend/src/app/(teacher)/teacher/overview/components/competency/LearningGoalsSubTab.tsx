@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useCompetencyLearningGoals } from "@/hooks/useCompetencyOverview";
 import { Loading, ErrorMessage } from "@/components";
 import type { CompetencyOverviewFilters } from "@/dtos/competency-monitor.dto";
@@ -11,12 +11,36 @@ interface LearningGoalsSubTabProps {
 
 export function LearningGoalsSubTab({ filters }: LearningGoalsSubTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
   const [expandedGoals, setExpandedGoals] = useState<Set<number>>(new Set());
   
-  // Memoize filters to prevent infinite re-renders
-  const memoizedFilters = useMemo(() => ({ ...filters, searchQuery }), [filters, searchQuery]);
+  // Combine parent filters with local filters
+  const combinedFilters = { ...filters, status: statusFilter || undefined };
   
-  const { data: learningGoals, loading, error } = useCompetencyLearningGoals(memoizedFilters);
+  const { data: learningGoals, loading, error } = useCompetencyLearningGoals(combinedFilters);
+
+  // Client-side filtering for search (to avoid refetch on every keystroke)
+  const [filteredGoals, setFilteredGoals] = useState(learningGoals || []);
+  
+  useEffect(() => {
+    if (!learningGoals) {
+      setFilteredGoals([]);
+      return;
+    }
+    
+    if (!searchQuery.trim()) {
+      setFilteredGoals(learningGoals);
+      return;
+    }
+    
+    const query = searchQuery.toLowerCase();
+    const filtered = learningGoals.filter((goal) => 
+      goal.goalText.toLowerCase().includes(query) ||
+      goal.studentName.toLowerCase().includes(query) ||
+      (goal.className && goal.className.toLowerCase().includes(query))
+    );
+    setFilteredGoals(filtered);
+  }, [learningGoals, searchQuery]);
 
   const toggleExpand = (goalId: number) => {
     const newExpanded = new Set(expandedGoals);
@@ -55,23 +79,38 @@ export function LearningGoalsSubTab({ filters }: LearningGoalsSubTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* Search Bar */}
+      {/* Search and Filter Bar */}
       <div className="bg-gray-50 rounded-xl p-4">
-        <div>
-          <label className="block text-xs text-gray-600 mb-1">🔍 Zoeken</label>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Zoek in leerdoelen..."
-            className="w-full px-3 py-2 text-sm border rounded-lg"
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">🔍 Zoeken</label>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Zoek in leerdoelen of leerlingnaam..."
+              className="w-full px-3 py-2 text-sm border rounded-lg"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Status</label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full px-3 py-2 text-sm border rounded-lg"
+            >
+              <option value="">Alle statussen</option>
+              <option value="in_progress">Lopend</option>
+              <option value="achieved">Behaald</option>
+              <option value="not_achieved">Niet behaald</option>
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Learning Goals Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        {learningGoals.length > 0 ? (
+        {filteredGoals.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50">
@@ -85,7 +124,7 @@ export function LearningGoalsSubTab({ filters }: LearningGoalsSubTabProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {learningGoals.map((goal) => {
+                {filteredGoals.map((goal) => {
                   const isExpanded = expandedGoals.has(goal.id);
                   const goalText = goal.goalText;
                   const shouldTruncate = goalText.length > 100;

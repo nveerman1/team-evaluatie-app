@@ -467,6 +467,7 @@ class TeacherGoalItem(BaseModel):
     success_criteria: Optional[str] = None
     competency_id: Optional[int] = None
     competency_name: Optional[str] = None
+    category_name: Optional[str] = None
     status: str
     submitted_at: Optional[datetime] = None
     updated_at: datetime
