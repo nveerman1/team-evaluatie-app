@@ -77,14 +77,14 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-medium text-slate-500">Gemiddelde score</p>
-          <p className="mt-1 text-lg font-semibold text-slate-900 tabular-nums">
+          <p className="mt-1 text-2xl font-semibold text-slate-900 tabular-nums">
             {data.classAverageScore?.toFixed(1) || "–"}
           </p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-medium text-slate-500">Trend vs vorige scan</p>
           <div className="mt-1 flex items-center gap-2">
-            <span className={`text-lg font-semibold tabular-nums ${getTrendColor(data.classTrendDelta)}`}>
+            <span className={`text-2xl font-semibold tabular-nums ${getTrendColor(data.classTrendDelta)}`}>
               {data.classTrendDelta !== null ? (data.classTrendDelta > 0 ? "+" : "") + data.classTrendDelta.toFixed(1) : "–"}
             </span>
             <span className="text-xl">{getTrendArrow(data.classTrendDelta)}</span>
@@ -92,12 +92,12 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
         </div>
         <div className="rounded-2xl border border-green-200 bg-green-50 p-4 shadow-sm">
           <p className="text-xs font-medium text-green-600">Vooruitgang</p>
-          <p className="mt-1 text-lg font-semibold text-green-700 tabular-nums">{data.studentsImproved}</p>
+          <p className="mt-1 text-2xl font-semibold text-green-700 tabular-nums">{data.studentsImproved}</p>
           <p className="text-xs text-green-600 mt-1">leerlingen</p>
         </div>
         <div className="rounded-2xl border border-red-200 bg-red-50 p-4 shadow-sm">
           <p className="text-xs font-medium text-red-600">Achteruitgang</p>
-          <p className="mt-1 text-lg font-semibold text-red-700 tabular-nums">{data.studentsDeclined}</p>
+          <p className="mt-1 text-2xl font-semibold text-red-700 tabular-nums">{data.studentsDeclined}</p>
           <p className="text-xs text-red-600 mt-1">leerlingen</p>
         </div>
       </section>
@@ -204,13 +204,14 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
           </div>
 
           {/* Selected scan details */}
-          <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="text-sm font-semibold text-slate-900">Geselecteerde scan</h4>
+          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="text-sm font-semibold text-slate-900">Geselecteerde scan</div>
+
               <select
+                className="text-xs border border-slate-200 bg-white rounded-lg px-3 py-2 text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
                 value={selectedScan?.scanId || ""}
                 onChange={(e) => setSelectedScanId(Number(e.target.value))}
-                className="text-xs border border-slate-200 bg-white rounded-lg px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-200 focus:outline-none"
               >
                 {data.scans.map((scan) => (
                   <option key={scan.scanId} value={scan.scanId}>
@@ -222,35 +223,39 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
 
             {selectedScan && (
               <>
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4">
                   <div>
-                    <p className="text-xs font-medium text-slate-500">Gem.</p>
-                    <p className="mt-1 text-lg font-semibold text-slate-900 tabular-nums">
+                    <div className="text-xs font-medium text-slate-500">Gem.</div>
+                    <div className="mt-1 text-lg font-semibold text-slate-900 tabular-nums">
                       {selectedScan.overallAverage.toFixed(2)}
-                    </p>
+                    </div>
                   </div>
+
                   <div>
-                    <p className="text-xs font-medium text-slate-500">Mediaan</p>
-                    <p className="mt-1 text-lg font-semibold text-slate-900 tabular-nums">
+                    <div className="text-xs font-medium text-slate-500">Mediaan</div>
+                    <div className="mt-1 text-lg font-semibold text-slate-900 tabular-nums">
                       {selectedScan.median.toFixed(2)}
-                    </p>
+                    </div>
                   </div>
+
                   <div>
-                    <p className="text-xs font-medium text-slate-500">P10–P90</p>
-                    <p className="mt-1 text-lg font-semibold text-slate-900 tabular-nums">
-                      {selectedScan.p10.toFixed(1)} – {selectedScan.p90.toFixed(1)}
-                    </p>
+                    <div className="text-xs font-medium text-slate-500">P10–P90</div>
+                    <div className="mt-1 text-lg font-semibold text-slate-900 tabular-nums">
+                      {selectedScan.p10.toFixed(1)}–{selectedScan.p90.toFixed(1)}
+                    </div>
                   </div>
+
                   <div>
-                    <p className="text-xs font-medium text-slate-500">P25–P75</p>
-                    <p className="mt-1 text-lg font-semibold text-slate-900 tabular-nums">
-                      {selectedScan.p25.toFixed(1)} – {selectedScan.p75.toFixed(1)}
-                    </p>
+                    <div className="text-xs font-medium text-slate-500">P25–P75</div>
+                    <div className="mt-1 text-lg font-semibold text-slate-900 tabular-nums">
+                      {selectedScan.p25.toFixed(1)}–{selectedScan.p75.toFixed(1)}
+                    </div>
                   </div>
                 </div>
+
                 {spreadStatus && (
-                  <div className="border-t border-slate-200 pt-3 flex items-center justify-between">
-                    <span className="text-xs text-slate-600">Spreiding</span>
+                  <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-3">
+                    <div className="text-xs text-slate-600">Spreiding</div>
                     <span 
                       className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
                         spreadStatus.label === "Groot" 
@@ -280,7 +285,7 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50">
               <tr>
-                <th className="sticky left-0 z-20 bg-slate-50 px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[180px]">
+                <th className="sticky left-0 z-20 bg-slate-50 px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[140px]">
                   Leerling
                 </th>
                 <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
@@ -322,12 +327,12 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
                     return (
                       <td key={cat.id} className="px-3 py-2 text-center">
                         {score !== null && score !== undefined ? (
-                          <div className="flex flex-col items-center gap-0.5">
+                          <div className="inline-flex items-center gap-1">
                             <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(score)}`}>
                               {score.toFixed(1)}
                             </span>
-                            {delta !== null && delta !== undefined && (
-                              <span className={`text-[10px] font-medium tabular-nums ${delta > 0 ? 'text-green-600' : delta < 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                            {delta !== null && delta !== undefined && delta !== 0 && (
+                              <span className={`text-[10px] font-medium tabular-nums ${delta > 0 ? 'text-green-600' : 'text-red-600'}`}>
                                 {delta > 0 ? '+' : ''}{delta.toFixed(1)}
                               </span>
                             )}
