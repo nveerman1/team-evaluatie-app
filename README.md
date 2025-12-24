@@ -143,6 +143,9 @@ See [docs/FEEDBACK_SUMMARY.md](docs/FEEDBACK_SUMMARY.md) for detailed setup inst
    # Optional: Seed competency scans test data
    python scripts/seed_competency_scans.py
    
+   # Optional: Seed competency scans with self-scores (for course 1)
+   python scripts/seed_competency_scans_with_scores.py
+   
    # Start backend
    uvicorn app.main:app --reload
    ```
