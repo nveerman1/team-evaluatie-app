@@ -204,69 +204,63 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
           </div>
 
           {/* Selected scan details */}
-          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="text-sm font-semibold text-slate-900">Geselecteerde scan</div>
-
-              <select
-                className="text-xs border border-slate-200 bg-white rounded-lg px-3 py-2 text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-                value={selectedScan?.scanId || ""}
-                onChange={(e) => setSelectedScanId(Number(e.target.value))}
-              >
-                {data.scans.map((scan) => (
-                  <option key={scan.scanId} value={scan.scanId}>
-                    {scan.label}
-                  </option>
-                ))}
-              </select>
+          <div className="mt-4 rounded-lg border border-slate-200 p-3">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium">Geselecteerde scan</div>
+              <div className="flex items-center gap-2">
+                <select
+                  className="text-xs border rounded-md px-2 py-1"
+                  value={selectedScan?.scanId || ""}
+                  onChange={(e) => setSelectedScanId(Number(e.target.value))}
+                >
+                  {data.scans.map((scan) => (
+                    <option key={scan.scanId} value={scan.scanId}>
+                      {scan.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {selectedScan && (
               <>
-                <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4">
-                  <div>
-                    <div className="text-xs font-medium text-slate-500">Gem.</div>
-                    <div className="mt-1 text-lg font-semibold text-slate-900 tabular-nums">
+                <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-slate-500">Gem.</div>
+                    <div className="font-medium text-slate-900 tabular-nums">
                       {selectedScan.overallAverage.toFixed(2)}
                     </div>
                   </div>
 
-                  <div>
-                    <div className="text-xs font-medium text-slate-500">Mediaan</div>
-                    <div className="mt-1 text-lg font-semibold text-slate-900 tabular-nums">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-slate-500">Mediaan</div>
+                    <div className="font-medium text-slate-900 tabular-nums">
                       {selectedScan.median.toFixed(2)}
                     </div>
                   </div>
 
-                  <div>
-                    <div className="text-xs font-medium text-slate-500">P10–P90</div>
-                    <div className="mt-1 text-lg font-semibold text-slate-900 tabular-nums">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-slate-500">P10–P90</div>
+                    <div className="font-medium text-slate-900 tabular-nums">
                       {selectedScan.p10.toFixed(1)}–{selectedScan.p90.toFixed(1)}
                     </div>
                   </div>
 
-                  <div>
-                    <div className="text-xs font-medium text-slate-500">P25–P75</div>
-                    <div className="mt-1 text-lg font-semibold text-slate-900 tabular-nums">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-slate-500">P25–P75</div>
+                    <div className="font-medium text-slate-900 tabular-nums">
                       {selectedScan.p25.toFixed(1)}–{selectedScan.p75.toFixed(1)}
                     </div>
                   </div>
                 </div>
 
                 {spreadStatus && (
-                  <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-3">
-                    <div className="text-xs text-slate-600">Spreiding</div>
-                    <span 
-                      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        spreadStatus.label === "Groot" 
-                          ? "border border-red-200 bg-red-50 text-red-700"
-                          : spreadStatus.label === "Aandacht"
-                          ? "border border-orange-200 bg-orange-50 text-orange-700"
-                          : "border border-green-200 bg-green-50 text-green-700"
-                      }`}
-                    >
-                      {spreadStatus.label}
-                    </span>
+                  <div className="mt-2 text-xs text-slate-600">
+                    Spreiding: <span className={`font-medium ${
+                      spreadStatus.label === "Groot" ? "text-red-700" :
+                      spreadStatus.label === "Aandacht" ? "text-orange-700" :
+                      "text-green-700"
+                    }`}>{spreadStatus.label}</span>
                   </div>
                 )}
               </>
