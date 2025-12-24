@@ -25,6 +25,11 @@ export interface ScanSummary {
     averageScore: number;
   }[];
   overallAverage: number;
+  median: number;
+  p10: number;
+  p25: number;
+  p75: number;
+  p90: number;
 }
 
 // Student summary for the students tab

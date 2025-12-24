@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useCompetencyOverview } from "@/hooks/useCompetencyOverview";
 import { Loading, ErrorMessage } from "@/components";
 import { CompetencyRadarChart, CATEGORY_COLORS } from "@/components/student/competency/CompetencyRadarChart";
+import { SpreadChartCompact } from "@/components/teacher/competency/SpreadChartCompact";
 import type { CompetencyOverviewFilters } from "@/dtos/competency-monitor.dto";
 
 interface OverviewSubTabProps {
@@ -13,6 +14,8 @@ interface OverviewSubTabProps {
 
 export function OverviewSubTab({ filters }: OverviewSubTabProps) {
   const { data, loading, error } = useCompetencyOverview(filters);
+  const [chartMode, setChartMode] = useState<"average" | "spread" | "growth">("average");
+  const [selectedScanId, setSelectedScanId] = useState<number | null>(null);
 
   // Prepare radar chart data
   const radarData = useMemo(() => {
@@ -24,6 +27,26 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
         value: cat.averageScore,
       }));
   }, [data]);
+
+  // Select the latest scan by default
+  const selectedScan = useMemo(() => {
+    if (!data?.scans || data.scans.length === 0) return null;
+    if (selectedScanId !== null) {
+      return data.scans.find(s => s.scanId === selectedScanId) || data.scans[0];
+    }
+    return data.scans[0];
+  }, [data, selectedScanId]);
+
+  // Calculate spread status
+  const getSpreadStatus = (scan: typeof selectedScan) => {
+    if (!scan) return null;
+    const spread = scan.p90 - scan.p10;
+    if (spread > 2.5) return { label: "Groot", color: "text-orange-600" };
+    if (spread > 1.5) return { label: "Aandacht", color: "text-yellow-600" };
+    return { label: "Homogeen", color: "text-green-600" };
+  };
+
+  const spreadStatus = getSpreadStatus(selectedScan);
 
   if (loading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
@@ -103,24 +126,131 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
           </div>
         </div>
 
-        {/* Line Chart - Simple representation */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">Ontwikkeling over tijd</h3>
-          <div className="space-y-4">
-            {data.scans.map((scan) => (
-              <div key={scan.scanId} className="flex items-center gap-4">
-                <div className="w-32 text-sm text-slate-500 truncate">{scan.label}</div>
-                <div className="flex-1 h-4 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-blue-500 rounded-full transition-all"
-                    style={{ width: `${(scan.overallAverage / 5) * 100}%` }}
-                  />
-                </div>
-                <div className="w-12 text-right font-medium text-slate-900">{scan.overallAverage.toFixed(1)}</div>
-              </div>
-            ))}
+        {/* Spread Chart - Compact visualization */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="flex items-start justify-between mb-2">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">Ontwikkeling over tijd</h3>
+              <p className="text-sm text-slate-500">Gemiddelde + spreiding per scan (compact)</p>
+            </div>
+            {/* Segmented control for mode */}
+            <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50">
+              <button
+                onClick={() => setChartMode("average")}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                  chartMode === "average"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Gemiddelde
+              </button>
+              <button
+                onClick={() => setChartMode("spread")}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                  chartMode === "spread"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Spreiding
+              </button>
+              <button
+                onClick={() => setChartMode("growth")}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                  chartMode === "growth"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Groei
+              </button>
+            </div>
           </div>
-          <p className="text-xs text-slate-500 mt-4">Gemiddelde score per scan (schaal 1-5)</p>
+
+          {/* Chart */}
+          <div className="mt-4 mb-4">
+            {data.scans.length > 0 ? (
+              <SpreadChartCompact scans={data.scans} mode={chartMode} />
+            ) : (
+              <div className="h-[180px] flex items-center justify-center text-sm text-slate-400">
+                Geen scan data beschikbaar
+              </div>
+            )}
+          </div>
+
+          {/* Legend */}
+          <div className="flex items-center gap-4 text-xs text-slate-600 mb-4 pb-4 border-b border-slate-200">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+              <span>Gemiddelde</span>
+            </div>
+            {chartMode === "spread" && (
+              <>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-2 bg-blue-500 opacity-15"></div>
+                  <span>P25–P75</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-2 bg-blue-500 opacity-10"></div>
+                  <span>P10–P90</span>
+                </div>
+              </>
+            )}
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-0.5 bg-slate-400 border-t-2 border-dashed border-slate-400"></div>
+              <span>Mediaan</span>
+            </div>
+          </div>
+
+          {/* Selected scan details */}
+          <div className="bg-slate-50 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-xs font-medium text-slate-700">Geselecteerde scan</label>
+              <select
+                value={selectedScan?.scanId || ""}
+                onChange={(e) => setSelectedScanId(Number(e.target.value))}
+                className="text-sm border border-slate-200 rounded-md px-2 py-1 bg-white"
+              >
+                {data.scans.map((scan) => (
+                  <option key={scan.scanId} value={scan.scanId}>
+                    {scan.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {selectedScan && (
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="text-slate-500">Gem.</span>
+                  <div className="font-semibold text-slate-900">{selectedScan.overallAverage.toFixed(2)}</div>
+                </div>
+                <div>
+                  <span className="text-slate-500">Mediaan</span>
+                  <div className="font-semibold text-slate-900">{selectedScan.median.toFixed(2)}</div>
+                </div>
+                <div>
+                  <span className="text-slate-500">P10–P90</span>
+                  <div className="font-semibold text-slate-900">
+                    {selectedScan.p10.toFixed(1)} – {selectedScan.p90.toFixed(1)}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-slate-500">P25–P75</span>
+                  <div className="font-semibold text-slate-900">
+                    {selectedScan.p25.toFixed(1)} – {selectedScan.p75.toFixed(1)}
+                  </div>
+                </div>
+                {spreadStatus && (
+                  <div className="col-span-2 pt-2 border-t border-slate-200">
+                    <span className="text-slate-500">Spreiding: </span>
+                    <span className={`font-semibold ${spreadStatus.color}`}>{spreadStatus.label}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

@@ -244,11 +244,31 @@ export const competencyMonitorService = {
           ? windowScores.reduce((sum: number, s: number) => sum + s, 0) / windowScores.length
           : 0;
         
+        // Calculate percentiles
+        const sortedScores = [...windowScores].sort((a, b) => a - b);
+        const calculatePercentile = (p: number): number => {
+          if (sortedScores.length === 0) return 0;
+          const index = (p / 100) * (sortedScores.length - 1);
+          const lower = Math.floor(index);
+          const upper = Math.ceil(index);
+          const weight = index - lower;
+          return sortedScores[lower] * (1 - weight) + sortedScores[upper] * weight;
+        };
+        
+        const median = sortedScores.length > 0 
+          ? sortedScores[Math.floor(sortedScores.length / 2)] 
+          : 0;
+        
         scans.push({
           scanId: window.id,
           label: window.title,
           date: window.start_date,
           overallAverage: windowAverage,
+          median,
+          p10: calculatePercentile(10),
+          p25: calculatePercentile(25),
+          p75: calculatePercentile(75),
+          p90: calculatePercentile(90),
           categoryAverages: categorySummaries.map(cat => ({
             categoryId: cat.id,
             categoryName: cat.name,
