@@ -78,10 +78,15 @@ def seed_competency_scans(target_school_id=1):
         now = datetime.now()
         
         # Select different subsets of competencies for each window
-        # For Startscan: focus on collaboration and planning (first 10 competencies)
+        # Note: competencies are ordered by their 'order' field from the database.
+        # With the default template, this results in competencies grouped by category:
+        # 1-5: Samenwerken, 6-10: Plannen & Organiseren, 11-15: Creatief denken,
+        # 16-20: Technische vaardigheden, 21-25: Communicatie, 26-30: Reflectie
+        
+        # Startscan: First 10 competencies (collaboration and planning focus)
         startscan_competencies = competencies[:10] if len(competencies) >= 10 else competencies
         
-        # For Midscan: focus on creative thinking and technical skills (competencies 11-20)
+        # Midscan: Second group of 10 competencies (creative thinking and technical skills focus)
         if len(competencies) >= 20:
             midscan_competencies = competencies[10:20]
         elif len(competencies) > 10:
@@ -89,7 +94,7 @@ def seed_competency_scans(target_school_id=1):
         else:
             midscan_competencies = competencies  # Use all if less than 10
         
-        # For Eindscan: focus on communication and reflection (last 10 competencies, avoiding overlap)
+        # Eindscan: Third group of 10 competencies (communication and reflection focus)
         if len(competencies) >= 30:
             eindscan_competencies = competencies[20:30]
         elif len(competencies) > 20:
