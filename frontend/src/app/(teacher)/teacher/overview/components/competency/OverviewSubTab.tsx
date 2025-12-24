@@ -131,7 +131,7 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
           <div className="flex items-start justify-between mb-2">
             <div>
               <h3 className="text-base font-semibold text-slate-900 leading-6">Ontwikkeling over tijd</h3>
-              <p className="text-sm text-slate-600">Gemiddelde + spreiding per scan (compact)</p>
+              <p className="text-sm text-slate-600">Gemiddelde + spreiding per scan</p>
             </div>
             {/* Segmented control for mode */}
             <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50">
@@ -154,16 +154,6 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
                 }`}
               >
                 Spreiding
-              </button>
-              <button
-                onClick={() => setChartMode("growth")}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                  chartMode === "growth"
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Groei
               </button>
             </div>
           </div>
