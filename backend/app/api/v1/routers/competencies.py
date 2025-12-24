@@ -1791,6 +1791,7 @@ def get_class_heatmap(
             ClassHeatmapRow(
                 user_id=student.id,
                 user_name=student.name,
+                class_name=student.class_name,
                 scores=student_scores,
                 deltas={},  # TODO: implement delta calculation
             )

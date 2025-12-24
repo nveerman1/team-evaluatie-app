@@ -441,6 +441,7 @@ class ClassHeatmapRow(BaseModel):
     """One row in the class heatmap (one student)"""
     user_id: int
     user_name: str
+    class_name: Optional[str] = None
     scores: Dict[int, float]  # competency_id -> final_score
     deltas: Dict[int, float]  # competency_id -> delta
 

@@ -67,7 +67,7 @@ export const competencyMonitorService = {
     });
     
     // Transform heatmap rows and aggregate scores by category
-    const heatmapRows = heatmapData.rows.map((row: { user_id: number; user_name: string; scores: Record<number, number | null> }) => {
+    const heatmapRows = heatmapData.rows.map((row: { user_id: number; user_name: string; class_name: string | null; scores: Record<number, number | null> }) => {
       // Transform competency scores to category scores
       const categoryScores: Record<number, number[]> = {};
       
@@ -96,7 +96,7 @@ export const competencyMonitorService = {
       return {
         studentId: row.user_id,
         name: row.user_name,
-        className: null,
+        className: row.class_name,
         scores: avgCategoryScores,
       };
     });
@@ -236,11 +236,91 @@ export const competencyMonitorService = {
       }
     }
     
+    // Calculate trend data if there's a previous window
+    let classTrendDelta = null;
+    let studentsImproved = 0;
+    let studentsDeclined = 0;
+    
+    if (windows.length >= 2) {
+      try {
+        // Get data from the previous window
+        const previousWindow = windows[1];
+        const previousHeatmapResponse = await api.get(`/competencies/windows/${previousWindow.id}/heatmap`);
+        const previousHeatmapData = previousHeatmapResponse.data;
+        
+        // Build competency to category map for previous window
+        const previousCompetencies = previousHeatmapData.competencies || [];
+        const previousCompToCatMap = new Map<number, number>();
+        previousCompetencies.forEach((comp: { id: number; category_id: number }) => {
+          if (comp.category_id) {
+            previousCompToCatMap.set(comp.id, comp.category_id);
+          }
+        });
+        
+        // Calculate previous overall average
+        const previousScores = previousHeatmapData.rows.flatMap((row: { scores: Record<number, number | null> }) => 
+          Object.values(row.scores).filter((s): s is number => s !== null && !isNaN(s))
+        );
+        const previousAverage = previousScores.length > 0
+          ? previousScores.reduce((sum: number, s: number) => sum + s, 0) / previousScores.length
+          : null;
+        
+        if (previousAverage !== null && classAverageScore !== null) {
+          classTrendDelta = classAverageScore - previousAverage;
+        }
+        
+        // Build a map of student scores from previous window
+        const previousStudentScores = new Map<number, number>();
+        for (const row of previousHeatmapData.rows) {
+          const categoryScores: Record<number, number[]> = {};
+          Object.entries(row.scores).forEach(([compIdStr, score]) => {
+            if (score !== null && !isNaN(score as number)) {
+              const compId = Number(compIdStr);
+              const categoryId = previousCompToCatMap.get(compId);
+              if (categoryId) {
+                if (!categoryScores[categoryId]) {
+                  categoryScores[categoryId] = [];
+                }
+                categoryScores[categoryId].push(score as number);
+              }
+            }
+          });
+          
+          // Calculate overall average for this student in previous window
+          const allScoresForStudent = Object.values(categoryScores).flat();
+          if (allScoresForStudent.length > 0) {
+            const avgScore = allScoresForStudent.reduce((sum, s) => sum + s, 0) / allScoresForStudent.length;
+            previousStudentScores.set(row.user_id, avgScore);
+          }
+        }
+        
+        // Compare current vs previous for each student
+        for (const row of heatmapRows) {
+          const currentScores = Object.values(row.scores).filter((s): s is number => s !== null);
+          if (currentScores.length > 0) {
+            const currentAvg = currentScores.reduce((sum, s) => sum + s, 0) / currentScores.length;
+            const previousAvg = previousStudentScores.get(row.studentId);
+            
+            if (previousAvg !== undefined) {
+              const delta = currentAvg - previousAvg;
+              if (delta > 0.1) { // Threshold for improvement
+                studentsImproved++;
+              } else if (delta < -0.1) { // Threshold for decline
+                studentsDeclined++;
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch previous window data for trend calculation:", error);
+      }
+    }
+    
     return {
       classAverageScore,
-      classTrendDelta: null, // Would need historical data
-      studentsImproved: 0, // Would need historical data
-      studentsDeclined: 0, // Would need historical data
+      classTrendDelta,
+      studentsImproved,
+      studentsDeclined,
       totalStudents: heatmapRows.length,
       categorySummaries,
       scans,
