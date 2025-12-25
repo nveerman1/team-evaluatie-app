@@ -1313,6 +1313,7 @@ def get_peer_evaluation_dashboard(
     
     # Build heatmap data with current scores
     heatmap_data = []
+    student_overall_scores = {}  # For KPI calculations
     
     for student in students:
         student_scores = {}
@@ -1368,6 +1369,14 @@ def get_peer_evaluation_dashboard(
                     diffs = [self_scores[cat] - peer_scores[cat] for cat in common_cats]
                     self_vs_peer_diff = sum(diffs) / len(diffs)
             
+            # Calculate overall average for KPI
+            overall_avg = sum(s.current for s in student_scores.values()) / len(student_scores)
+            student_overall_scores[student.id] = {
+                'name': student.name,
+                'score': overall_avg,
+                'self_vs_peer_diff': abs(self_vs_peer_diff) if self_vs_peer_diff else 0
+            }
+            
             heatmap_data.append(StudentHeatmapRow(
                 student_id=student.id,
                 student_name=student.name,
@@ -1376,14 +1385,114 @@ def get_peer_evaluation_dashboard(
                 self_vs_peer_diff=self_vs_peer_diff
             ))
     
-    # Calculate KPI data
-    kpi_data = KpiData()
+    # Calculate trend data - group evaluations by month
+    trend_data = []
+    if evaluations:
+        # Sort evaluations by closed_at or created_at
+        sorted_evals = sorted(
+            [e for e in evaluations if e.closed_at or e.created_at],
+            key=lambda e: e.closed_at or e.created_at
+        )
+        
+        # Group by month
+        from datetime import datetime
+        monthly_data = defaultdict(lambda: defaultdict(list))
+        
+        for evaluation in sorted_evals:
+            eval_date = evaluation.closed_at or evaluation.created_at
+            if eval_date and eval_date >= start_date:
+                month_key = eval_date.strftime("%b %Y")  # e.g., "Dec 2024"
+                
+                # Get criteria for this evaluation
+                eval_criteria = db.query(RubricCriterion).filter(
+                    RubricCriterion.rubric_id == evaluation.rubric_id,
+                    RubricCriterion.category.isnot(None)
+                ).all()
+                
+                eval_category_criteria = defaultdict(list)
+                for criterion in eval_criteria:
+                    if criterion.category:
+                        normalized_cat = category_map.get(criterion.category)
+                        if normalized_cat:
+                            eval_category_criteria[normalized_cat].append(criterion.id)
+                
+                # Calculate average scores per category for this evaluation
+                for cat_name, criterion_ids in eval_category_criteria.items():
+                    if criterion_ids:
+                        avg_score = db.query(func.avg(Score.score)).join(
+                            Allocation, Allocation.id == Score.allocation_id
+                        ).filter(
+                            Allocation.evaluation_id == evaluation.id,
+                            Allocation.is_self == False,
+                            Score.criterion_id.in_(criterion_ids),
+                            Score.status == "submitted"
+                        ).scalar()
+                        
+                        if avg_score:
+                            monthly_data[month_key][cat_name].append(float(avg_score))
+        
+        # Convert to trend data points
+        for month_key in sorted(monthly_data.keys(), key=lambda x: datetime.strptime(x, "%b %Y")):
+            scores = monthly_data[month_key]
+            trend_point = OmzaTrendDataPoint(
+                date=month_key,
+                organiseren=sum(scores.get('organiseren', [])) / len(scores.get('organiseren', [1])) if scores.get('organiseren') else 0,
+                meedoen=sum(scores.get('meedoen', [])) / len(scores.get('meedoen', [1])) if scores.get('meedoen') else 0,
+                zelfvertrouwen=sum(scores.get('zelfvertrouwen', [])) / len(scores.get('zelfvertrouwen', [1])) if scores.get('zelfvertrouwen') else 0,
+                autonomie=sum(scores.get('autonomie', [])) / len(scores.get('autonomie', [1])) if scores.get('autonomie') else 0
+            )
+            trend_data.append(trend_point)
     
-    # For now, return basic structure
-    # TODO: Calculate trends over time, identify top/bottom performers
+    # Calculate KPI data
+    kpi_students = list(student_overall_scores.items())
+    
+    # Grootste stijgers - students with highest scores
+    top_performers = sorted(
+        kpi_students,
+        key=lambda x: x[1]['score'],
+        reverse=True
+    )[:3]
+    
+    # Grootste dalers - students with lowest scores
+    bottom_performers = sorted(
+        kpi_students,
+        key=lambda x: x[1]['score']
+    )[:3]
+    
+    # Structureel laag - students consistently below 3.0
+    structurally_low = [
+        (student_id, data) for student_id, data in kpi_students
+        if data['score'] < 3.0
+    ][:5]
+    
+    # Inconsistenties - students with large self vs peer differences
+    inconsistencies = sorted(
+        kpi_students,
+        key=lambda x: x[1]['self_vs_peer_diff'],
+        reverse=True
+    )[:5]
+    
+    kpi_data = KpiData(
+        grootsteStijgers=[
+            KpiStudent(student_id=sid, student_name=data['name'], value=data['score'])
+            for sid, data in top_performers
+        ],
+        grootsteDalers=[
+            KpiStudent(student_id=sid, student_name=data['name'], value=data['score'])
+            for sid, data in bottom_performers
+        ],
+        structureelLaag=[
+            KpiStudent(student_id=sid, student_name=data['name'], value=data['score'])
+            for sid, data in structurally_low
+        ],
+        inconsistenties=[
+            KpiStudent(student_id=sid, student_name=data['name'], value=data['self_vs_peer_diff'])
+            for sid, data in inconsistencies if data['self_vs_peer_diff'] > 0
+        ]
+    )
     
     return PeerOverviewDashboardResponse(
-        trendData=[],  # TODO: Implement trend calculation
+        trendData=trend_data,
         heatmapData=heatmap_data,
         kpiData=kpi_data
     )
