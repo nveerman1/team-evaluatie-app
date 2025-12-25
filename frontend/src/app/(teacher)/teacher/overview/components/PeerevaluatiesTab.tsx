@@ -553,59 +553,29 @@ function FeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters }) 
   const getSentimentColor = (sentiment: string) => {
     switch (sentiment) {
       case "positief":
-        return "bg-green-100 text-green-800";
+        return "ring-green-200 bg-green-50 text-green-700";
       case "kritiek":
-        return "bg-red-100 text-red-800";
+        return "ring-red-200 bg-red-50 text-red-700";
       case "waarschuwing":
-        return "bg-amber-100 text-amber-800";
+        return "ring-amber-200 bg-amber-50 text-amber-700";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "ring-slate-200 bg-slate-50 text-slate-700";
     }
   };
 
   const getCategoryColor = (category: string) => {
     switch (category) {
       case "organiseren":
-        return "bg-blue-100 text-blue-800";
+        return "ring-blue-200 bg-blue-50 text-blue-700";
       case "meedoen":
-        return "bg-green-100 text-green-800";
+        return "ring-green-200 bg-green-50 text-green-700";
       case "zelfvertrouwen":
-        return "bg-amber-100 text-amber-800";
+        return "ring-amber-200 bg-amber-50 text-amber-700";
       case "autonomie":
-        return "bg-violet-100 text-violet-800";
+        return "ring-violet-200 bg-violet-50 text-violet-700";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "ring-slate-200 bg-slate-50 text-slate-700";
     }
-  };
-
-  // Escape special regex characters to prevent ReDoS attacks
-  const escapeRegex = (str: string) => {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  };
-
-  // Escape HTML to prevent XSS
-  const escapeHtml = (text: string) => {
-    return text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  };
-
-  const highlightKeywords = (text: string, keywords: string[]) => {
-    // First escape HTML in the original text
-    let result = escapeHtml(text);
-    keywords.forEach((keyword) => {
-      // Escape special regex characters in keyword
-      const escapedKeyword = escapeRegex(keyword);
-      const regex = new RegExp(`(${escapedKeyword})`, "gi");
-      result = result.replace(
-        regex,
-        '<mark class="bg-yellow-200 px-0.5 rounded">$1</mark>'
-      );
-    });
-    return result;
   };
 
   if (error) {
@@ -618,169 +588,171 @@ function FeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters }) 
 
   return (
     <div className="space-y-6">
-      {/* Two-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* LEFT: Filters (40%) */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Filter className="w-5 h-5 text-blue-600" />
-              Filters
-            </h3>
+      {/* Filters Bar */}
+      <div className="bg-slate-50 rounded-xl p-4">
+        <div className="flex flex-wrap gap-4 items-center">
+          {/* Category filter */}
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">OMZA Categorie</label>
+            <select
+              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
+              value={localFilters.category || ""}
+              onChange={(e) =>
+                setLocalFilters({ ...localFilters, category: e.target.value || undefined })
+              }
+            >
+              <option value="">Alle categorieën</option>
+              <option value="organiseren">Organiseren</option>
+              <option value="meedoen">Meedoen</option>
+              <option value="zelfvertrouwen">Zelfvertrouwen</option>
+              <option value="autonomie">Autonomie</option>
+            </select>
+          </div>
 
-            <div className="space-y-4">
-              {/* Category filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  OMZA Categorie
-                </label>
-                <select
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                  value={localFilters.category || ""}
-                  onChange={(e) =>
-                    setLocalFilters({ ...localFilters, category: e.target.value || undefined })
-                  }
-                >
-                  <option value="">Alle categorieën</option>
-                  <option value="organiseren">Organiseren</option>
-                  <option value="meedoen">Meedoen</option>
-                  <option value="zelfvertrouwen">Zelfvertrouwen</option>
-                  <option value="autonomie">Autonomie</option>
-                </select>
-              </div>
+          {/* Sentiment filter */}
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">Sentiment</label>
+            <select
+              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
+              value={localFilters.sentiment || ""}
+              onChange={(e) =>
+                setLocalFilters({ ...localFilters, sentiment: e.target.value || undefined })
+              }
+            >
+              <option value="">Alle sentimenten</option>
+              <option value="positief">Positief</option>
+              <option value="kritiek">Kritiek</option>
+              <option value="waarschuwing">Waarschuwing</option>
+            </select>
+          </div>
 
-              {/* Sentiment filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Sentiment
-                </label>
-                <select
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                  value={localFilters.sentiment || ""}
-                  onChange={(e) =>
-                    setLocalFilters({ ...localFilters, sentiment: e.target.value || undefined })
-                  }
-                >
-                  <option value="">Alle sentimenten</option>
-                  <option value="positief">Positief</option>
-                  <option value="kritiek">Kritiek</option>
-                  <option value="waarschuwing">Waarschuwing</option>
-                </select>
-              </div>
-
-              {/* Search text */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Zoeken in feedback
-                </label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Zoek op trefwoord..."
-                    className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm"
-                    value={localFilters.searchText || ""}
-                    onChange={(e) =>
-                      setLocalFilters({ ...localFilters, searchText: e.target.value || undefined })
-                    }
-                  />
-                </div>
-              </div>
-
-              {/* Risk behavior toggle */}
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="riskOnly"
-                  className="w-4 h-4 rounded border-gray-300"
-                  checked={localFilters.riskOnly || false}
-                  onChange={(e) =>
-                    setLocalFilters({ ...localFilters, riskOnly: e.target.checked || undefined })
-                  }
-                />
-                <label htmlFor="riskOnly" className="text-sm text-gray-700">
-                  Alleen risico-gedrag opmerkingen
-                </label>
-              </div>
-
-              {/* Clear filters button */}
-              <button
-                onClick={() => setLocalFilters({})}
-                className="w-full px-3 py-2 border rounded-lg text-sm hover:bg-gray-50"
-              >
-                Filters wissen
-              </button>
+          {/* Search text */}
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-xs text-slate-600 mb-1">Zoeken in feedback</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Zoek op trefwoord..."
+                className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm"
+                value={localFilters.searchText || ""}
+                onChange={(e) =>
+                  setLocalFilters({ ...localFilters, searchText: e.target.value || undefined })
+                }
+              />
             </div>
           </div>
-        </div>
 
-        {/* RIGHT: Feedback List (60%) */}
-        <div className="lg:col-span-3">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-blue-600" />
-              Feedback ({data?.totalCount || 0} resultaten)
-            </h3>
-
-            <Suspense fallback={<TableSkeleton />}>
-              {loading ? (
-                <TableSkeleton />
-              ) : (
-                <div className="space-y-3 max-h-[500px] overflow-y-auto">
-                  {data?.feedbackItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="border rounded-lg p-4 hover:bg-gray-50"
-                    >
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(
-                            item.category
-                          )}`}
-                        >
-                          {item.category.charAt(0).toUpperCase() +
-                            item.category.slice(1)}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${getSentimentColor(
-                            item.sentiment
-                          )}`}
-                        >
-                          {item.sentiment}
-                        </span>
-                        {item.is_risk_behavior && (
-                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                            ⚠️ Risico
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-sm text-gray-600 mb-2">
-                        <span className="font-medium">{item.student_name}</span>
-                        <span className="mx-2">•</span>
-                        <span>{item.project_name}</span>
-                        <span className="mx-2">•</span>
-                        <span>
-                          {new Date(item.date).toLocaleDateString("nl-NL")}
-                        </span>
-                      </div>
-                      <p
-                        className="text-sm text-gray-800"
-                        dangerouslySetInnerHTML={{
-                          __html: highlightKeywords(item.text, item.keywords),
-                        }}
-                      />
-                    </div>
-                  ))}
-                  {data?.feedbackItems.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      Geen feedback gevonden voor de geselecteerde filters
-                    </div>
-                  )}
-                </div>
-              )}
-            </Suspense>
+          {/* Risk behavior toggle */}
+          <div className="flex items-center gap-2 mt-5">
+            <input
+              type="checkbox"
+              id="riskOnly"
+              className="w-4 h-4 rounded border-slate-300"
+              checked={localFilters.riskOnly || false}
+              onChange={(e) =>
+                setLocalFilters({ ...localFilters, riskOnly: e.target.checked || undefined })
+              }
+            />
+            <label htmlFor="riskOnly" className="text-sm text-slate-700">
+              Alleen risico-gedrag
+            </label>
           </div>
+
+          {/* Clear filters button */}
+          <button
+            onClick={() => setLocalFilters({})}
+            className="px-3 py-2 border rounded-lg text-sm hover:bg-slate-100 mt-5"
+          >
+            Filters wissen
+          </button>
         </div>
+      </div>
+
+      {/* Feedback Table */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
+          <h3 className="text-base font-semibold text-slate-900 leading-6">
+            Feedback ({data?.totalCount || 0} resultaten)
+          </h3>
+          <p className="text-sm text-slate-600">Verzamelde feedback uit peer evaluaties</p>
+        </div>
+
+        <Suspense fallback={<div className="p-6"><TableSkeleton /></div>}>
+          {loading ? (
+            <div className="p-6"><TableSkeleton /></div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200 text-sm">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[120px]">
+                      Student
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[120px]">
+                      Project/Scan
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                      Categorie
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                      Sentiment
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
+                      Feedback
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                      Datum
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {data?.feedbackItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                        Geen feedback gevonden voor de geselecteerde filters
+                      </td>
+                    </tr>
+                  ) : (
+                    data?.feedbackItems.map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-3 text-sm text-slate-800">
+                          {item.student_name}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-800">
+                          {item.project_name}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`px-2 py-0.5 rounded-full text-xs ring-1 ${getCategoryColor(item.category)}`}>
+                            {item.category.charAt(0).toUpperCase() + item.category.slice(1)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`px-2 py-0.5 rounded-full text-xs ring-1 ${getSentimentColor(item.sentiment)}`}>
+                            {item.sentiment.charAt(0).toUpperCase() + item.sentiment.slice(1)}
+                          </span>
+                          {item.is_risk_behavior && (
+                            <span className="ml-1 text-red-600" title="Risico gedrag">⚠️</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-800 max-w-md">
+                          <p className="line-clamp-2">{item.text}</p>
+                        </td>
+                        <td className="px-4 py-3 text-center text-sm text-slate-600">
+                          {new Date(item.date).toLocaleDateString("nl-NL", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric"
+                          })}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Suspense>
       </div>
     </div>
   );
