@@ -28,6 +28,7 @@ from app.infra.db.models import (
     Client,
     ClientProjectLink,
     AcademicYear,
+    Score,
 )
 from app.api.v1.schemas.overview import (
     OverviewItemOut,
@@ -1230,7 +1231,8 @@ def get_peer_evaluation_dashboard(
     - student_name: Filter by student name
     """
     from datetime import datetime, timedelta
-    from sqlalchemy import func, case
+    from sqlalchemy import func, case, distinct
+    from collections import defaultdict
     
     school_id = current_user.school_id
     
@@ -1265,19 +1267,125 @@ def get_peer_evaluation_dashboard(
             kpiData=KpiData()
         )
     
-    # For now, return mock data structure
-    # TODO: Implement real data aggregation from Score table
-    # This would involve:
-    # 1. Query all scores for these evaluations
-    # 2. Group by student and category
-    # 3. Calculate averages and trends over time
-    # 4. Calculate self vs peer differences
-    # 5. Identify top/bottom performers
+    # Get rubric criteria with OMZA categories
+    rubric_ids = list(set([e.rubric_id for e in evaluations]))
+    criteria = db.query(RubricCriterion).filter(
+        RubricCriterion.rubric_id.in_(rubric_ids),
+        RubricCriterion.category.isnot(None)
+    ).all()
+    
+    # Map category names to normalized keys
+    category_map = {
+        "Organiseren": "organiseren",
+        "Meedoen": "meedoen",
+        "Zelfvertrouwen": "zelfvertrouwen",
+        "Autonomie": "autonomie",
+        "organiseren": "organiseren",
+        "meedoen": "meedoen",
+        "zelfvertrouwen": "zelfvertrouwen",
+        "autonomie": "autonomie",
+        "O": "organiseren",
+        "M": "meedoen",
+        "Z": "zelfvertrouwen",
+        "A": "autonomie",
+    }
+    
+    # Group criteria by normalized category
+    category_criteria = defaultdict(list)
+    for criterion in criteria:
+        if criterion.category:
+            normalized_cat = category_map.get(criterion.category)
+            if normalized_cat:
+                category_criteria[normalized_cat].append(criterion.id)
+    
+    # Get all students
+    students_query = db.query(User).filter(
+        User.school_id == school_id,
+        User.role == "student",
+        User.archived == False
+    )
+    
+    if student_name:
+        students_query = students_query.filter(User.name.ilike(f"%{student_name}%"))
+    
+    students = students_query.all()
+    student_map = {s.id: s for s in students}
+    
+    # Build heatmap data with current scores
+    heatmap_data = []
+    
+    for student in students:
+        student_scores = {}
+        self_scores = {}
+        peer_scores = {}
+        
+        for cat_name, criterion_ids in category_criteria.items():
+            if not criterion_ids:
+                continue
+            
+            # Peer scores (where student is reviewee, reviewer is not self)
+            peer_avg = db.query(func.avg(Score.score)).join(
+                Allocation, Allocation.id == Score.allocation_id
+            ).filter(
+                Allocation.evaluation_id.in_(evaluation_ids),
+                Allocation.reviewee_id == student.id,
+                Allocation.is_self == False,
+                Score.criterion_id.in_(criterion_ids),
+                Score.status == "submitted"
+            ).scalar()
+            
+            # Self scores
+            self_avg = db.query(func.avg(Score.score)).join(
+                Allocation, Allocation.id == Score.allocation_id
+            ).filter(
+                Allocation.evaluation_id.in_(evaluation_ids),
+                Allocation.reviewee_id == student.id,
+                Allocation.is_self == True,
+                Score.criterion_id.in_(criterion_ids),
+                Score.status == "submitted"
+            ).scalar()
+            
+            # Combined average (peer scores primarily)
+            combined_avg = peer_avg if peer_avg else self_avg
+            
+            if combined_avg:
+                student_scores[cat_name] = OmzaCategoryScore(
+                    current=float(combined_avg),
+                    trend="neutral"  # TODO: Calculate trend by comparing time periods
+                )
+                
+                if self_avg:
+                    self_scores[cat_name] = float(self_avg)
+                if peer_avg:
+                    peer_scores[cat_name] = float(peer_avg)
+        
+        if student_scores:
+            # Calculate self vs peer difference (average across all categories)
+            self_vs_peer_diff = None
+            if self_scores and peer_scores:
+                common_cats = set(self_scores.keys()) & set(peer_scores.keys())
+                if common_cats:
+                    diffs = [self_scores[cat] - peer_scores[cat] for cat in common_cats]
+                    self_vs_peer_diff = sum(diffs) / len(diffs)
+            
+            heatmap_data.append(StudentHeatmapRow(
+                student_id=student.id,
+                student_name=student.name,
+                class_name=student.class_name,
+                scores=student_scores,
+                self_vs_peer_diff=self_vs_peer_diff
+            ))
+    
+    # Calculate KPI data
+    kpi_data = KpiData()
+    
+    # For now, return basic structure
+    # TODO: Calculate trends over time, identify top/bottom performers
     
     return PeerOverviewDashboardResponse(
-        trendData=[],
-        heatmapData=[],
-        kpiData=KpiData()
+        trendData=[],  # TODO: Implement trend calculation
+        heatmapData=heatmap_data,
+        kpiData=kpi_data
     )
 
 
@@ -1307,6 +1415,8 @@ def get_peer_evaluation_feedback(
     - search_text: Search in feedback text
     - risk_only: Show only risk behavior items
     """
+    from collections import defaultdict
+    
     school_id = current_user.school_id
     
     # Get evaluations matching filters
@@ -1329,15 +1439,113 @@ def get_peer_evaluation_feedback(
             totalCount=0
         )
     
-    # For now, return mock data structure
-    # TODO: Implement real feedback aggregation
-    # This would involve:
-    # 1. Query Reflection table for written feedback
-    # 2. Extract and categorize feedback text
-    # 3. Apply filters
-    # 4. Return structured feedback items
+    # Get rubric criteria with OMZA categories
+    rubric_ids = list(set([e.rubric_id for e in evaluations]))
+    criteria = db.query(RubricCriterion).filter(
+        RubricCriterion.rubric_id.in_(rubric_ids),
+        RubricCriterion.category.isnot(None)
+    ).all()
+    
+    # Map category names to normalized keys
+    category_map = {
+        "Organiseren": "organiseren",
+        "Meedoen": "meedoen",
+        "Zelfvertrouwen": "zelfvertrouwen",
+        "Autonomie": "autonomie",
+        "organiseren": "organiseren",
+        "meedoen": "meedoen",
+        "zelfvertrouwen": "zelfvertrouwen",
+        "autonomie": "autonomie",
+        "O": "organiseren",
+        "M": "meedoen",
+        "Z": "zelfvertrouwen",
+        "A": "autonomie",
+    }
+    
+    # Create criterion_id -> category mapping
+    criterion_category_map = {}
+    for criterion in criteria:
+        if criterion.category:
+            normalized_cat = category_map.get(criterion.category)
+            if normalized_cat:
+                criterion_category_map[criterion.id] = normalized_cat
+    
+    # Get all scores with comments (feedback text)
+    scores_with_comments = db.query(
+        Score, Allocation, User, Evaluation, Project
+    ).join(
+        Allocation, Allocation.id == Score.allocation_id
+    ).join(
+        User, User.id == Allocation.reviewee_id
+    ).join(
+        Evaluation, Evaluation.id == Allocation.evaluation_id
+    ).outerjoin(
+        Project, Project.id == Evaluation.project_id
+    ).filter(
+        Allocation.evaluation_id.in_(evaluation_ids),
+        Score.comment.isnot(None),
+        Score.comment != "",
+        Score.status == "submitted"
+    ).all()
+    
+    feedback_items = []
+    
+    for score, allocation, user, evaluation, project in scores_with_comments:
+        # Determine category from criterion
+        item_category = criterion_category_map.get(score.criterion_id, "algemeen")
+        
+        # Apply category filter
+        if category and item_category != category:
+            continue
+        
+        # Apply search filter
+        if search_text and search_text.lower() not in score.comment.lower():
+            continue
+        
+        # Simple sentiment analysis based on keywords
+        comment_lower = score.comment.lower()
+        sentiment_value = "neutraal"
+        
+        positive_keywords = ["goed", "uitstekend", "prima", "sterk", "helpt", "positief", "actief"]
+        negative_keywords = ["slecht", "zwak", "niet", "weinig", "probleem", "moeilijk", "laag"]
+        warning_keywords = ["aandacht", "verbeteren", "soms", "onzeker"]
+        
+        if any(word in comment_lower for word in positive_keywords):
+            sentiment_value = "positief"
+        elif any(word in comment_lower for word in negative_keywords):
+            sentiment_value = "kritiek"
+        elif any(word in comment_lower for word in warning_keywords):
+            sentiment_value = "waarschuwing"
+        
+        # Apply sentiment filter
+        if sentiment and sentiment_value != sentiment:
+            continue
+        
+        # Determine if it's risk behavior (very negative sentiment or specific keywords)
+        is_risk = any(word in comment_lower for word in ["probleem", "onzeker", "zwak", "niet"])
+        
+        # Apply risk filter
+        if risk_only and not is_risk:
+            continue
+        
+        # Extract simple keywords (first few significant words)
+        words = [w for w in score.comment.split() if len(w) > 3]
+        keywords = words[:3] if len(words) > 3 else words
+        
+        feedback_items.append(FeedbackItem(
+            id=str(score.id),
+            student_id=user.id,
+            student_name=user.name,
+            project_name=project.title if project else evaluation.title,
+            date=evaluation.closed_at or evaluation.created_at,
+            category=item_category,
+            sentiment=sentiment_value,
+            text=score.comment,
+            keywords=keywords,
+            is_risk_behavior=is_risk
+        ))
     
     return FeedbackCollectionResponse(
-        feedbackItems=[],
-        totalCount=0
+        feedbackItems=feedback_items,
+        totalCount=len(feedback_items)
     )
