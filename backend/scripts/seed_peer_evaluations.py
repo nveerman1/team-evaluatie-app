@@ -41,6 +41,40 @@ from app.infra.db.models import (
 )
 
 
+def generate_realistic_score(is_self_assessment: bool) -> int:
+    """Generate realistic scores based on assessment type.
+
+    Args:
+        is_self_assessment: True for self-assessment, False for peer assessment
+
+    Returns:
+        Score value between 1-5
+    """
+    rand = random.random()
+    if is_self_assessment:
+        # Self-assessment: 10% = 2, 25% = 3, 40% = 4, 25% = 5
+        if rand < 0.10:
+            return 2
+        elif rand < 0.35:
+            return 3
+        elif rand < 0.75:
+            return 4
+        else:
+            return 5
+    else:
+        # Peer assessment: 10% = 1, 20% = 2, 35% = 3, 25% = 4, 10% = 5
+        if rand < 0.10:
+            return 1
+        elif rand < 0.30:
+            return 2
+        elif rand < 0.65:
+            return 3
+        elif rand < 0.90:
+            return 4
+        else:
+            return 5
+
+
 def seed_peer_evaluations():
     """Seed peer evaluations with scores, feedback, and reflections"""
     print("=" * 60)
@@ -140,20 +174,20 @@ def seed_peer_evaluations():
 
         evaluations_data = [
             {
-                "title": "Peer Evaluatie Q1 - Teamwork",
-                "description": "Peer evaluatie gericht op samenwerking en communicatie binnen teams.",
+                "title": "Peerevaluatie Q1 - Teamwork",
+                "description": "Peerevaluatie gericht op samenwerking en communicatie binnen teams.",
                 "status": "closed",
                 "closed_at": now - timedelta(days=10),
             },
             {
-                "title": "Peer Evaluatie Q2 - Project Skills",
-                "description": "Peer evaluatie gericht op projectvaardigheden en zelfsturing.",
+                "title": "Peerevaluatie Q2 - Project Skills",
+                "description": "Peerevaluatie gericht op projectvaardigheden en zelfsturing.",
                 "status": "closed",
                 "closed_at": now - timedelta(days=3),
             },
             {
-                "title": "Peer Evaluatie Q3 - Current",
-                "description": "Lopende peer evaluatie voor het huidige kwartaal.",
+                "title": "Peerevaluatie Q3 - Current",
+                "description": "Lopende peerevaluatie voor het huidige kwartaal.",
                 "status": "open",
                 "closed_at": None,
             },
@@ -268,32 +302,8 @@ def seed_peer_evaluations():
             for student_id, allocations in student_allocations.items():
                 for allocation in allocations:
                     for criterion in criteria:
-                        # Generate realistic scores (weighted towards 3-4)
-                        # Self-scores tend to be slightly higher
-                        if allocation.is_self:
-                            # Self-assessment: 10% = 2, 25% = 3, 40% = 4, 25% = 5
-                            rand = random.random()
-                            if rand < 0.10:
-                                score_value = 2
-                            elif rand < 0.35:
-                                score_value = 3
-                            elif rand < 0.75:
-                                score_value = 4
-                            else:
-                                score_value = 5
-                        else:
-                            # Peer assessment: 10% = 1, 20% = 2, 35% = 3, 25% = 4, 10% = 5
-                            rand = random.random()
-                            if rand < 0.10:
-                                score_value = 1
-                            elif rand < 0.30:
-                                score_value = 2
-                            elif rand < 0.65:
-                                score_value = 3
-                            elif rand < 0.90:
-                                score_value = 4
-                            else:
-                                score_value = 5
+                        # Generate realistic scores
+                        score_value = generate_realistic_score(allocation.is_self)
 
                         # Generate optional feedback (60% chance)
                         comment = None
@@ -352,26 +362,40 @@ def seed_peer_evaluations():
             if evaluation.status == "closed":
                 for student in students:
                     reflection_templates = [
-                        "Deze peer evaluatie heeft me geholpen om bewuster te worden van mijn rol in het team. "
-                        "Ik realiseer me dat ik sterker ben in organisatie dan ik dacht, maar dat ik nog kan groeien "
-                        "in het delen van mijn ideeën tijdens teamoverleggen. De feedback van mijn teamgenoten was waardevol.",
-                        "De feedback die ik heb ontvangen bevestigt waar ik al aan werkte: beter luisteren en meer ruimte "
-                        "geven aan anderen. Ik ben trots op mijn bijdrage aan het project en de manier waarop ik taken heb "
-                        "georganiseerd. Voor de volgende periode wil ik meer initiatief nemen in het oplossen van problemen.",
-                        "Wat me opviel is dat mijn teamgenoten mijn inzet waarderen, maar dat ik soms te snel conclusies trek. "
-                        "Ik ga bewuster nadenken voordat ik beslissingen neem en meer samenwerken bij het zoeken naar oplossingen. "
-                        "Mijn sterke punten zijn creativiteit en doorzettingsvermogen.",
-                        "Deze evaluatie heeft me nieuwe inzichten gegeven. Ik ben goed in het motiveren van anderen en het "
-                        "bewaken van deadlines, maar ik kan nog werken aan het geven van constructieve feedback aan teamleden. "
-                        "Ik neem me voor om opener te zijn in communicatie en meer te reflecteren op mijn eigen acties.",
-                        "De peer feedback was eerlijk en constructief. Ik zie dat ik sterk ben in technische uitvoering en "
-                        "detailgericht werk, maar dat ik meer kan communiceren over mijn voortgang. Ik ga actief updates delen "
-                        "met het team en meer vragen stellen als iets onduidelijk is. Samenwerken is een continu leerproces.",
+                        (
+                            "Deze peer evaluatie heeft me geholpen om bewuster te worden van mijn rol in het team. "
+                            "Ik realiseer me dat ik sterker ben in organisatie dan ik dacht, maar dat ik nog kan groeien "
+                            "in het delen van mijn ideeën tijdens teamoverleggen. De feedback van mijn teamgenoten was waardevol.",
+                            38,
+                        ),
+                        (
+                            "De feedback die ik heb ontvangen bevestigt waar ik al aan werkte: beter luisteren en meer ruimte "
+                            "geven aan anderen. Ik ben trots op mijn bijdrage aan het project en de manier waarop ik taken heb "
+                            "georganiseerd. Voor de volgende periode wil ik meer initiatief nemen in het oplossen van problemen.",
+                            43,
+                        ),
+                        (
+                            "Wat me opviel is dat mijn teamgenoten mijn inzet waarderen, maar dat ik soms te snel conclusies trek. "
+                            "Ik ga bewuster nadenken voordat ik beslissingen neem en meer samenwerken bij het zoeken naar oplossingen. "
+                            "Mijn sterke punten zijn creativiteit en doorzettingsvermogen.",
+                            38,
+                        ),
+                        (
+                            "Deze evaluatie heeft me nieuwe inzichten gegeven. Ik ben goed in het motiveren van anderen en het "
+                            "bewaken van deadlines, maar ik kan nog werken aan het geven van constructieve feedback aan teamleden. "
+                            "Ik neem me voor om opener te zijn in communicatie en meer te reflecteren op mijn eigen acties.",
+                            43,
+                        ),
+                        (
+                            "De peer feedback was eerlijk en constructief. Ik zie dat ik sterk ben in technische uitvoering en "
+                            "detailgericht werk, maar dat ik meer kan communiceren over mijn voortgang. Ik ga actief updates delen "
+                            "met het team en meer vragen stellen als iets onduidelijk is. Samenwerken is een continu leerproces.",
+                            44,
+                        ),
                     ]
 
-                    # Calculate word count
-                    reflection_text = random.choice(reflection_templates)
-                    word_count = len(reflection_text.split())
+                    # Select a random reflection with pre-calculated word count
+                    reflection_text, word_count = random.choice(reflection_templates)
 
                     # Random submission time (within the evaluation period)
                     days_before_close = random.randint(0, 7)
