@@ -27,6 +27,7 @@ export type OmzaTrendDataPoint = {
 export type OmzaCategoryScore = {
   current: number;
   trend: "up" | "down" | "neutral";
+  teacher_score?: number;  // Teacher emoticon score (1-3)
 };
 
 export type StudentHeatmapRow = {
@@ -37,6 +38,7 @@ export type StudentHeatmapRow = {
     [key: string]: OmzaCategoryScore;
   };
   self_vs_peer_diff?: number;
+  teacher_comment?: string;  // General teacher feedback
 };
 
 export type KpiStudent = {
@@ -76,6 +78,25 @@ export type FeedbackCollectionResponse = {
   totalCount: number;
 };
 
+export type TeacherFeedbackItem = {
+  id: number;
+  student_id: number;
+  student_name: string;
+  project_name: string;
+  evaluation_id: number;
+  date: string;
+  organiseren_score?: number;
+  meedoen_score?: number;
+  zelfvertrouwen_score?: number;
+  autonomie_score?: number;
+  teacher_comment?: string;
+};
+
+export type TeacherFeedbackResponse = {
+  feedbackItems: TeacherFeedbackItem[];
+  totalCount: number;
+};
+
 export const peerEvaluationOverviewService = {
   /**
    * Get peer evaluation dashboard data
@@ -109,6 +130,21 @@ export const peerEvaluationOverviewService = {
     
     const { data } = await api.get<FeedbackCollectionResponse>(
       `/overview/peer-evaluations/feedback?${params.toString()}`
+    );
+    return data;
+  },
+
+  /**
+   * Get teacher feedback/assessments
+   */
+  async getTeacherFeedback(filters?: {courseId?: number; projectId?: number}): Promise<TeacherFeedbackResponse> {
+    const params = new URLSearchParams();
+    
+    if (filters?.courseId) params.set("course_id", String(filters.courseId));
+    if (filters?.projectId) params.set("project_id", String(filters.projectId));
+    
+    const { data } = await api.get<TeacherFeedbackResponse>(
+      `/overview/peer-evaluations/teacher-feedback?${params.toString()}`
     );
     return data;
   },

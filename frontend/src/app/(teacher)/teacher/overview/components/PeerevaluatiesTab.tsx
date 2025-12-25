@@ -25,6 +25,7 @@ import {
 } from "chart.js";
 import { usePeerOverview, type PeerOverviewFilters } from "@/hooks/usePeerOverview";
 import { useFeedbackData, type FeedbackFilters } from "@/hooks/useFeedbackData";
+import { useTeacherFeedback } from "@/hooks/useTeacherFeedback";
 import { overviewService } from "@/services/overview.service";
 import { projectService } from "@/services/project.service";
 
@@ -679,6 +680,125 @@ function FeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters }) 
           )}
         </Suspense>
       </div>
+
+      {/* Teacher Feedback Table */}
+      <TeacherFeedbackTable parentFilters={parentFilters} />
+    </div>
+  );
+}
+
+// Helper component for teacher feedback
+function TeacherFeedbackTable({ parentFilters }: { parentFilters: PeerOverviewFilters }) {
+  const { data: teacherData, loading: teacherLoading, error: teacherError } = useTeacherFeedback({
+    courseId: parentFilters.courseId,
+    projectId: parentFilters.projectId,
+  });
+
+  const getEmoticonDisplay = (score?: number) => {
+    if (!score) return "–";
+    if (score === 1) return <span className="text-red-600 text-lg">!!</span>;
+    if (score === 2) return <span className="text-amber-600 text-lg">!</span>;
+    if (score === 3) return <span className="text-green-600 text-lg">✓</span>;
+    return "–";
+  };
+
+  if (teacherError) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div className="text-red-500">Fout bij laden van docentfeedback: {teacherError}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
+        <h3 className="text-base font-semibold text-slate-900 leading-6">
+          Docentbeoordelingen ({teacherData?.totalCount || 0})
+        </h3>
+        <p className="text-sm text-slate-600">OMZA-scores en feedback van docenten</p>
+      </div>
+
+      <Suspense fallback={<div className="p-6"><TableSkeleton /></div>}>
+        {teacherLoading ? (
+          <div className="p-6"><TableSkeleton /></div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 text-sm">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[120px]">
+                    Student
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[120px]">
+                    Project/Scan
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                    O
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                    M
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                    Z
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                    A
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
+                    Opmerking
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
+                    Datum
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {teacherData?.feedbackItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
+                      Geen docentbeoordelingen gevonden
+                    </td>
+                  </tr>
+                ) : (
+                  teacherData?.feedbackItems.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3 text-sm text-slate-800">
+                        {item.student_name}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-800">
+                        {item.project_name}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {getEmoticonDisplay(item.organiseren_score)}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {getEmoticonDisplay(item.meedoen_score)}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {getEmoticonDisplay(item.zelfvertrouwen_score)}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {getEmoticonDisplay(item.autonomie_score)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-800 max-w-md">
+                        <p className="line-clamp-2">{item.teacher_comment || "–"}</p>
+                      </td>
+                      <td className="px-4 py-3 text-center text-sm text-slate-600">
+                        {new Date(item.date).toLocaleDateString("nl-NL", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric"
+                        })}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Suspense>
     </div>
   );
 }
