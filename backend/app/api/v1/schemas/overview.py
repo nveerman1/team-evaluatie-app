@@ -193,6 +193,16 @@ class OmzaCategoryScore(BaseModel):
     teacher_score: Optional[int] = None  # Teacher emoticon score (1-3)
 
 
+class PeerEvaluationDetail(BaseModel):
+    """
+    Individual peer evaluation with OMZA scores
+    """
+    id: int
+    date: str  # ISO format date
+    label: str  # Project/evaluation name
+    scores: dict[str, float]  # category -> score value (O, M, Z, A)
+
+
 class StudentHeatmapRow(BaseModel):
     """
     One row in the student heatmap showing OMZA scores
@@ -203,6 +213,7 @@ class StudentHeatmapRow(BaseModel):
     scores: dict[str, OmzaCategoryScore]  # category -> score data
     self_vs_peer_diff: Optional[float] = None  # Self-assessment vs peer average difference
     teacher_comment: Optional[str] = None  # General teacher feedback for this student
+    evaluations: Optional[List[PeerEvaluationDetail]] = None  # List of individual evaluations for row expansion
 
 
 class KpiStudent(BaseModel):

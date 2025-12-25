@@ -24,6 +24,15 @@ export type OmzaTrendDataPoint = {
   autonomie: number;
 };
 
+export type PeerEvaluationDetail = {
+  id: number;
+  date: string;  // ISO format
+  label: string;  // Project/evaluation name
+  scores: {  // Short category names: O, M, Z, A
+    [key: string]: number;
+  };
+};
+
 export type OmzaCategoryScore = {
   current: number;
   trend: "up" | "down" | "neutral";
@@ -39,6 +48,7 @@ export type StudentHeatmapRow = {
   };
   self_vs_peer_diff?: number;
   teacher_comment?: string;  // General teacher feedback
+  evaluations?: PeerEvaluationDetail[];  // List of individual evaluations for row expansion
 };
 
 export type KpiStudent = {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense, useEffect } from "react";
+import React, { useState, Suspense, useEffect, useMemo } from "react";
 import {
   ArrowUp,
   ArrowDown,
@@ -11,6 +11,8 @@ import {
   MessageSquare,
   Users,
   LayoutDashboard,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { Line } from "react-chartjs-2";
 import {
@@ -77,6 +79,8 @@ function CardSkeleton() {
 
 function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
   const { data, loading, error } = usePeerOverview(filters);
+  const [viewMode, setViewMode] = useState<'latest' | 'average'>('latest');
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   if (error) {
     return (
@@ -85,6 +89,85 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
       </div>
     );
   }
+
+  // Helper functions for evaluation calculations
+  const getLatestEvaluation = (row: any) => {
+    if (!row.evaluations || row.evaluations.length === 0) return null;
+    return row.evaluations[0]; // Already sorted newest first from backend
+  };
+
+  const getPreviousEvaluation = (row: any) => {
+    if (!row.evaluations || row.evaluations.length < 2) return null;
+    return row.evaluations[1]; // Second item is previous
+  };
+
+  const calculateLatestScores = (row: any) => {
+    const latest = getLatestEvaluation(row);
+    if (!latest) return null;
+    
+    return {
+      organiseren: latest.scores['O'] || null,
+      meedoen: latest.scores['M'] || null,
+      zelfvertrouwen: latest.scores['Z'] || null,
+      autonomie: latest.scores['A'] || null,
+    };
+  };
+
+  const calculateAverageScores = (row: any) => {
+    if (!row.evaluations || row.evaluations.length === 0) return null;
+    
+    const sums = { O: 0, M: 0, Z: 0, A: 0 };
+    const counts = { O: 0, M: 0, Z: 0, A: 0 };
+    
+    row.evaluations.forEach((eval: any) => {
+      if (eval.scores['O']) { sums.O += eval.scores['O']; counts.O++; }
+      if (eval.scores['M']) { sums.M += eval.scores['M']; counts.M++; }
+      if (eval.scores['Z']) { sums.Z += eval.scores['Z']; counts.Z++; }
+      if (eval.scores['A']) { sums.A += eval.scores['A']; counts.A++; }
+    });
+    
+    return {
+      organiseren: counts.O > 0 ? sums.O / counts.O : null,
+      meedoen: counts.M > 0 ? sums.M / counts.M : null,
+      zelfvertrouwen: counts.Z > 0 ? sums.Z / counts.Z : null,
+      autonomie: counts.A > 0 ? sums.A / counts.A : null,
+    };
+  };
+
+  const calculateDelta = (row: any, category: 'O' | 'M' | 'Z' | 'A') => {
+    const latest = getLatestEvaluation(row);
+    const previous = getPreviousEvaluation(row);
+    
+    if (!latest || !previous) return null;
+    if (!latest.scores[category] || !previous.scores[category]) return null;
+    
+    return latest.scores[category] - previous.scores[category];
+  };
+
+  const toggleRow = (studentId: number) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(studentId)) {
+      newExpanded.delete(studentId);
+    } else {
+      newExpanded.add(studentId);
+    }
+    setExpandedRows(newExpanded);
+  };
+
+  // Memoized display scores based on view mode
+  const getDisplayScores = useMemo(() => {
+    if (!data?.heatmapData) return {};
+    
+    const scores: Record<number, any> = {};
+    data.heatmapData.forEach((row) => {
+      if (viewMode === 'latest') {
+        scores[row.student_id] = calculateLatestScores(row);
+      } else {
+        scores[row.student_id] = calculateAverageScores(row);
+      }
+    });
+    return scores;
+  }, [data?.heatmapData, viewMode]);
 
   // Chart configuration
   const chartData = {
@@ -204,9 +287,42 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
 
       {/* Section 2: Leerling Heatmap */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
-          <h3 className="text-base font-semibold text-slate-900 leading-6">Leerling Heatmap</h3>
-          <p className="text-sm text-slate-600">Gemiddelde OMZA-scores per leerling (over alle peer evaluaties)</p>
+        <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900 leading-6">Leerling Heatmap</h3>
+            <p className="text-sm text-slate-600">
+              {viewMode === 'latest' 
+                ? 'OMZA-scores van laatste peerevaluatie'
+                : 'Gemiddelde OMZA-scores per leerling (over alle peer evaluaties)'}
+            </p>
+          </div>
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('latest')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                viewMode === 'latest'
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+              aria-label="Toon laatste evaluatie"
+              aria-pressed={viewMode === 'latest'}
+            >
+              Laatste evaluatie
+            </button>
+            <button
+              onClick={() => setViewMode('average')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                viewMode === 'average'
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+              aria-label="Toon gemiddelde periode"
+              aria-pressed={viewMode === 'average'}
+            >
+              Gemiddelde periode
+            </button>
+          </div>
         </div>
         <Suspense fallback={<div className="p-6"><TableSkeleton /></div>}>
           {loading ? (
@@ -240,98 +356,227 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {data?.heatmapData.map((student) => (
-                    <tr key={student.student_id} className="bg-white hover:bg-slate-50">
-                      <td className="sticky left-0 z-10 bg-white px-4 py-2 text-sm text-slate-900 font-medium border-r border-slate-100">
-                        {student.student_name}
-                      </td>
-                      <td className="px-3 py-2 text-center text-sm text-slate-600">
-                        {student.class_name || "–"}
-                      </td>
-                      {/* Organiseren */}
-                      <td className="px-3 py-2 text-left">
-                        {student.scores.organiseren ? (
-                          <div className="flex items-center gap-1">
-                            <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(student.scores.organiseren.current)}`}>
-                              {student.scores.organiseren.current.toFixed(1)}
-                            </span>
-                            {getTrendDelta(student.scores.organiseren.trend) !== null && (
-                              <span className={`text-[10px] font-medium tabular-nums ${getTrendDelta(student.scores.organiseren.trend)! > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {getTrendDelta(student.scores.organiseren.trend)! > 0 ? '+' : ''}{getTrendDelta(student.scores.organiseren.trend)!.toFixed(1)}
-                              </span>
+                  {data?.heatmapData.map((student) => {
+                    const displayScores = getDisplayScores[student.student_id];
+                    const isExpanded = expandedRows.has(student.student_id);
+                    const hasEvaluations = student.evaluations && student.evaluations.length > 0;
+                    
+                    return (
+                      <React.Fragment key={student.student_id}>
+                        <tr 
+                          className={`bg-white hover:bg-slate-50 ${hasEvaluations ? 'cursor-pointer' : ''}`}
+                          onClick={() => hasEvaluations && toggleRow(student.student_id)}
+                        >
+                          <td className="sticky left-0 z-10 bg-white px-4 py-2 text-sm text-slate-900 font-medium border-r border-slate-100">
+                            <div className="flex items-center gap-2">
+                              {hasEvaluations && (
+                                isExpanded ? (
+                                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                                ) : (
+                                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                                )
+                              )}
+                              <span>{student.student_name}</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 text-center text-sm text-slate-600">
+                            {student.class_name || "–"}
+                          </td>
+                          {/* Organiseren */}
+                          <td className="px-3 py-2 text-left">
+                            {displayScores?.organiseren ? (
+                              <div className="flex items-center gap-1">
+                                <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(displayScores.organiseren)}`}>
+                                  {displayScores.organiseren.toFixed(1)}
+                                </span>
+                                {(() => {
+                                  const delta = calculateDelta(student, 'O');
+                                  return delta !== null && (
+                                    <span className={`text-[10px] font-medium tabular-nums ${delta > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                      {delta > 0 ? '+' : ''}{delta.toFixed(1)}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
+                            ) : (
+                              <span className="text-slate-300">–</span>
                             )}
-                          </div>
-                        ) : (
-                          <span className="text-slate-300">–</span>
-                        )}
-                      </td>
-                      {/* Meedoen */}
-                      <td className="px-3 py-2 text-left">
-                        {student.scores.meedoen ? (
-                          <div className="flex items-center gap-1">
-                            <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(student.scores.meedoen.current)}`}>
-                              {student.scores.meedoen.current.toFixed(1)}
-                            </span>
-                            {getTrendDelta(student.scores.meedoen.trend) !== null && (
-                              <span className={`text-[10px] font-medium tabular-nums ${getTrendDelta(student.scores.meedoen.trend)! > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {getTrendDelta(student.scores.meedoen.trend)! > 0 ? '+' : ''}{getTrendDelta(student.scores.meedoen.trend)!.toFixed(1)}
-                              </span>
+                          </td>
+                          {/* Meedoen */}
+                          <td className="px-3 py-2 text-left">
+                            {displayScores?.meedoen ? (
+                              <div className="flex items-center gap-1">
+                                <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(displayScores.meedoen)}`}>
+                                  {displayScores.meedoen.toFixed(1)}
+                                </span>
+                                {(() => {
+                                  const delta = calculateDelta(student, 'M');
+                                  return delta !== null && (
+                                    <span className={`text-[10px] font-medium tabular-nums ${delta > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                      {delta > 0 ? '+' : ''}{delta.toFixed(1)}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
+                            ) : (
+                              <span className="text-slate-300">–</span>
                             )}
-                          </div>
-                        ) : (
-                          <span className="text-slate-300">–</span>
-                        )}
-                      </td>
-                      {/* Zelfvertrouwen */}
-                      <td className="px-3 py-2 text-left">
-                        {student.scores.zelfvertrouwen ? (
-                          <div className="flex items-center gap-1">
-                            <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(student.scores.zelfvertrouwen.current)}`}>
-                              {student.scores.zelfvertrouwen.current.toFixed(1)}
-                            </span>
-                            {getTrendDelta(student.scores.zelfvertrouwen.trend) !== null && (
-                              <span className={`text-[10px] font-medium tabular-nums ${getTrendDelta(student.scores.zelfvertrouwen.trend)! > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {getTrendDelta(student.scores.zelfvertrouwen.trend)! > 0 ? '+' : ''}{getTrendDelta(student.scores.zelfvertrouwen.trend)!.toFixed(1)}
-                              </span>
+                          </td>
+                          {/* Zelfvertrouwen */}
+                          <td className="px-3 py-2 text-left">
+                            {displayScores?.zelfvertrouwen ? (
+                              <div className="flex items-center gap-1">
+                                <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(displayScores.zelfvertrouwen)}`}>
+                                  {displayScores.zelfvertrouwen.toFixed(1)}
+                                </span>
+                                {(() => {
+                                  const delta = calculateDelta(student, 'Z');
+                                  return delta !== null && (
+                                    <span className={`text-[10px] font-medium tabular-nums ${delta > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                      {delta > 0 ? '+' : ''}{delta.toFixed(1)}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
+                            ) : (
+                              <span className="text-slate-300">–</span>
                             )}
-                          </div>
-                        ) : (
-                          <span className="text-slate-300">–</span>
-                        )}
-                      </td>
-                      {/* Autonomie */}
-                      <td className="px-3 py-2 text-left">
-                        {student.scores.autonomie ? (
-                          <div className="flex items-center gap-1">
-                            <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(student.scores.autonomie.current)}`}>
-                              {student.scores.autonomie.current.toFixed(1)}
-                            </span>
-                            {getTrendDelta(student.scores.autonomie.trend) !== null && (
-                              <span className={`text-[10px] font-medium tabular-nums ${getTrendDelta(student.scores.autonomie.trend)! > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {getTrendDelta(student.scores.autonomie.trend)! > 0 ? '+' : ''}{getTrendDelta(student.scores.autonomie.trend)!.toFixed(1)}
-                              </span>
+                          </td>
+                          {/* Autonomie */}
+                          <td className="px-3 py-2 text-left">
+                            {displayScores?.autonomie ? (
+                              <div className="flex items-center gap-1">
+                                <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(displayScores.autonomie)}`}>
+                                  {displayScores.autonomie.toFixed(1)}
+                                </span>
+                                {(() => {
+                                  const delta = calculateDelta(student, 'A');
+                                  return delta !== null && (
+                                    <span className={`text-[10px] font-medium tabular-nums ${delta > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                      {delta > 0 ? '+' : ''}{delta.toFixed(1)}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
+                            ) : (
+                              <span className="text-slate-300">–</span>
                             )}
-                          </div>
-                        ) : (
-                          <span className="text-slate-300">–</span>
+                          </td>
+                          {/* Self vs Peer */}
+                          <td className="px-3 py-2 text-center">
+                            <span className={`text-sm font-medium tabular-nums ${
+                              (student.self_vs_peer_diff || 0) > 0.3
+                                ? "text-red-600"
+                                : (student.self_vs_peer_diff || 0) < -0.3
+                                ? "text-amber-600"
+                                : "text-slate-600"
+                            }`}>
+                              {student.self_vs_peer_diff !== undefined
+                                ? ((student.self_vs_peer_diff || 0) > 0 ? "+" : "") + student.self_vs_peer_diff.toFixed(1)
+                                : "–"}
+                            </span>
+                          </td>
+                        </tr>
+                        
+                        {/* Expanded Row Content */}
+                        {isExpanded && hasEvaluations && (
+                          <tr className="bg-slate-50">
+                            <td colSpan={7} className="px-4 py-3">
+                              <div className="overflow-x-auto">
+                                <table className="min-w-full text-sm">
+                                  <thead className="border-b border-slate-300">
+                                    <tr>
+                                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Datum</th>
+                                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Evaluatie</th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">O</th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">M</th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">Z</th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">A</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-200">
+                                    {student.evaluations!.map((evaluation) => (
+                                      <tr key={evaluation.id} className="hover:bg-slate-100">
+                                        <td className="px-3 py-2 text-slate-600">
+                                          {new Date(evaluation.date).toLocaleDateString('nl-NL')}
+                                        </td>
+                                        <td className="px-3 py-2 text-slate-900 font-medium">{evaluation.label}</td>
+                                        <td className="px-3 py-2 text-center">
+                                          {evaluation.scores['O'] ? (
+                                            <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores['O'])}`}>
+                                              {evaluation.scores['O'].toFixed(1)}
+                                            </span>
+                                          ) : <span className="text-slate-300">–</span>}
+                                        </td>
+                                        <td className="px-3 py-2 text-center">
+                                          {evaluation.scores['M'] ? (
+                                            <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores['M'])}`}>
+                                              {evaluation.scores['M'].toFixed(1)}
+                                            </span>
+                                          ) : <span className="text-slate-300">–</span>}
+                                        </td>
+                                        <td className="px-3 py-2 text-center">
+                                          {evaluation.scores['Z'] ? (
+                                            <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores['Z'])}`}>
+                                              {evaluation.scores['Z'].toFixed(1)}
+                                            </span>
+                                          ) : <span className="text-slate-300">–</span>}
+                                        </td>
+                                        <td className="px-3 py-2 text-center">
+                                          {evaluation.scores['A'] ? (
+                                            <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores['A'])}`}>
+                                              {evaluation.scores['A'].toFixed(1)}
+                                            </span>
+                                          ) : <span className="text-slate-300">–</span>}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                    {/* Average Period Row */}
+                                    {(() => {
+                                      const avgScores = calculateAverageScores(student);
+                                      return avgScores && (
+                                        <tr className="bg-slate-100 border-t-2 border-slate-300 font-semibold">
+                                          <td className="px-3 py-2 text-slate-900" colSpan={2}>Gemiddelde periode</td>
+                                          <td className="px-3 py-2 text-center">
+                                            {avgScores.organiseren ? (
+                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(avgScores.organiseren)}`}>
+                                                {avgScores.organiseren.toFixed(1)}
+                                              </span>
+                                            ) : <span className="text-slate-300">–</span>}
+                                          </td>
+                                          <td className="px-3 py-2 text-center">
+                                            {avgScores.meedoen ? (
+                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(avgScores.meedoen)}`}>
+                                                {avgScores.meedoen.toFixed(1)}
+                                              </span>
+                                            ) : <span className="text-slate-300">–</span>}
+                                          </td>
+                                          <td className="px-3 py-2 text-center">
+                                            {avgScores.zelfvertrouwen ? (
+                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(avgScores.zelfvertrouwen)}`}>
+                                                {avgScores.zelfvertrouwen.toFixed(1)}
+                                              </span>
+                                            ) : <span className="text-slate-300">–</span>}
+                                          </td>
+                                          <td className="px-3 py-2 text-center">
+                                            {avgScores.autonomie ? (
+                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(avgScores.autonomie)}`}>
+                                                {avgScores.autonomie.toFixed(1)}
+                                              </span>
+                                            ) : <span className="text-slate-300">–</span>}
+                                          </td>
+                                        </tr>
+                                      );
+                                    })()}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </td>
+                          </tr>
                         )}
-                      </td>
-                      {/* Self vs Peer */}
-                      <td className="px-3 py-2 text-center">
-                        <span className={`text-sm font-medium tabular-nums ${
-                          (student.self_vs_peer_diff || 0) > 0.3
-                            ? "text-red-600"
-                            : (student.self_vs_peer_diff || 0) < -0.3
-                            ? "text-amber-600"
-                            : "text-slate-600"
-                        }`}>
-                          {student.self_vs_peer_diff !== undefined
-                            ? ((student.self_vs_peer_diff || 0) > 0 ? "+" : "") + student.self_vs_peer_diff.toFixed(1)
-                            : "–"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

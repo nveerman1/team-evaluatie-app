@@ -42,6 +42,7 @@ from app.api.v1.schemas.overview import (
     OmzaTrendDataPoint,
     StudentHeatmapRow,
     OmzaCategoryScore,
+    PeerEvaluationDetail,
     KpiData,
     KpiStudent,
     FeedbackItem,
@@ -1384,6 +1385,56 @@ def get_peer_evaluation_dashboard(
                         teacher_comment = evaluation.settings[comment_key]
                         break
         
+        # Build list of individual evaluations for this student (for row expansion)
+        student_evaluations = []
+        if evaluations:
+            for evaluation in evaluations:
+                # Get project name
+                project = db.query(Project).filter(Project.id == evaluation.project_id).first()
+                project_name = project.name if project else f"Evaluatie {evaluation.id}"
+                
+                # Get eval date
+                eval_date = evaluation.closed_at or evaluation.created_at
+                if eval_date:
+                    if hasattr(eval_date, 'tzinfo') and eval_date.tzinfo is not None:
+                        eval_date = eval_date.replace(tzinfo=None)
+                    date_str = eval_date.isoformat()
+                else:
+                    date_str = ""
+                
+                # Calculate scores for this evaluation
+                eval_scores = {}
+                for cat_name, criterion_ids in category_criteria.items():
+                    if not criterion_ids:
+                        continue
+                    
+                    # Get peer average for this evaluation only
+                    peer_avg = db.query(func.avg(Score.score)).join(
+                        Allocation, Allocation.id == Score.allocation_id
+                    ).filter(
+                        Allocation.evaluation_id == evaluation.id,
+                        Allocation.reviewee_id == student.id,
+                        Allocation.is_self == False,
+                        Score.criterion_id.in_(criterion_ids),
+                        Score.status == "submitted"
+                    ).scalar()
+                    
+                    if peer_avg:
+                        # Use short category names for frontend (O, M, Z, A)
+                        cat_short = cat_name[0].upper()  # First letter
+                        eval_scores[cat_short] = float(peer_avg)
+                
+                if eval_scores:  # Only add if there are scores
+                    student_evaluations.append(PeerEvaluationDetail(
+                        id=evaluation.id,
+                        date=date_str,
+                        label=project_name,
+                        scores=eval_scores
+                    ))
+        
+        # Sort evaluations by date (newest first)
+        student_evaluations.sort(key=lambda e: e.date, reverse=True)
+        
         if student_scores:
             # Calculate self vs peer difference (average across all categories)
             self_vs_peer_diff = None
@@ -1407,7 +1458,8 @@ def get_peer_evaluation_dashboard(
                 class_name=student.class_name,
                 scores=student_scores,
                 self_vs_peer_diff=self_vs_peer_diff,
-                teacher_comment=teacher_comment
+                teacher_comment=teacher_comment,
+                evaluations=student_evaluations if student_evaluations else None
             ))
     
     # Calculate trend data - group evaluations by month
