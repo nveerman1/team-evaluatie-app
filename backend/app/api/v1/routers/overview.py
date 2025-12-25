@@ -1695,7 +1695,7 @@ def get_teacher_feedback(
     course_id: Optional[int] = None,
     project_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_teacher),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get teacher feedback/assessments from OMZA evaluations including:
