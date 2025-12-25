@@ -165,10 +165,13 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
     <div className="space-y-6">
       {/* Section 1: OMZA Trends Line Chart */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-blue-600" />
-          OMZA Trends over tijd
-        </h3>
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-blue-600" />
+            OMZA Trends over tijd
+          </h3>
+          <p className="text-sm text-slate-600 mt-1">Gemiddelde scores per maand over alle peer evaluaties</p>
+        </div>
         <Suspense fallback={<ChartSkeleton />}>
           {loading ? (
             <ChartSkeleton />
@@ -203,7 +206,7 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
           <h3 className="text-base font-semibold text-slate-900 leading-6">Leerling Heatmap</h3>
-          <p className="text-sm text-slate-600">OMZA-scores per leerling</p>
+          <p className="text-sm text-slate-600">Gemiddelde OMZA-scores per leerling (over alle peer evaluaties)</p>
         </div>
         <Suspense fallback={<div className="p-6"><TableSkeleton /></div>}>
           {loading ? (
@@ -350,9 +353,12 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
             <>
               {/* Grootste stijgers */}
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <ArrowUp className="w-5 h-5 text-green-600" />
-                  <h4 className="font-semibold text-gray-900">Grootste stijgers</h4>
+                <div className="mb-3">
+                  <div className="flex items-center gap-2">
+                    <ArrowUp className="w-5 h-5 text-green-600" />
+                    <h4 className="font-semibold text-gray-900">Grootste stijgers</h4>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Hoogste gemiddelde scores</p>
                 </div>
                 <div className="space-y-2">
                   {data?.kpiData.grootsteStijgers.map((student, idx) => (
@@ -376,9 +382,12 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
 
               {/* Grootste dalers */}
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <ArrowDown className="w-5 h-5 text-red-600" />
-                  <h4 className="font-semibold text-gray-900">Grootste dalers</h4>
+                <div className="mb-3">
+                  <div className="flex items-center gap-2">
+                    <ArrowDown className="w-5 h-5 text-red-600" />
+                    <h4 className="font-semibold text-gray-900">Grootste dalers</h4>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Laagste gemiddelde scores</p>
                 </div>
                 <div className="space-y-2">
                   {data?.kpiData.grootsteDalers.map((student, idx) => (
@@ -402,9 +411,12 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
 
               {/* Structureel lage scores */}
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <AlertTriangle className="w-5 h-5 text-amber-600" />
-                  <h4 className="font-semibold text-gray-900">Structureel laag</h4>
+                <div className="mb-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-amber-600" />
+                    <h4 className="font-semibold text-gray-900">Structureel laag</h4>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Gemiddeld onder 3.0</p>
                 </div>
                 <div className="space-y-2">
                   {data?.kpiData.structureelLaag.map((student, idx) => (
@@ -428,11 +440,13 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
 
               {/* Inconsistenties */}
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <AlertTriangle className="w-5 h-5 text-violet-600" />
-                  <h4 className="font-semibold text-gray-900">Inconsistenties</h4>
+                <div className="mb-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-violet-600" />
+                    <h4 className="font-semibold text-gray-900">Inconsistenties</h4>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Grootste self vs peer verschil</p>
                 </div>
-                <p className="text-xs text-gray-500 mb-2">Self vs peer verschil</p>
                 <div className="space-y-2">
                   {data?.kpiData.inconsistenties.map((student, idx) => (
                     <div
@@ -601,7 +615,7 @@ function FeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters }) 
           <h3 className="text-base font-semibold text-slate-900 leading-6">
             Feedback ({data?.totalCount || 0} resultaten)
           </h3>
-          <p className="text-sm text-slate-600">Verzamelde feedback uit peer evaluaties</p>
+          <p className="text-sm text-slate-600">Alle feedback opmerkingen uit peer evaluaties</p>
         </div>
 
         <Suspense fallback={<div className="p-6"><TableSkeleton /></div>}>
@@ -716,7 +730,7 @@ function TeacherFeedbackTable({ parentFilters }: { parentFilters: PeerOverviewFi
         <h3 className="text-base font-semibold text-slate-900 leading-6">
           Docentbeoordelingen ({teacherData?.totalCount || 0})
         </h3>
-        <p className="text-sm text-slate-600">OMZA-scores en feedback van docenten</p>
+        <p className="text-sm text-slate-600">Meest recente OMZA-beoordeling per leerling door docent</p>
       </div>
 
       <Suspense fallback={<div className="p-6"><TableSkeleton /></div>}>

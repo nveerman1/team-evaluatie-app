@@ -45,6 +45,8 @@ from app.api.v1.schemas.overview import (
     KpiData,
     KpiStudent,
     FeedbackItem,
+    TeacherFeedbackItem,
+    TeacherFeedbackResponse,
 )
 
 router = APIRouter(prefix="/overview", tags=["overview"])
