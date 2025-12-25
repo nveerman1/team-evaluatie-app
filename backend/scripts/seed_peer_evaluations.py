@@ -40,6 +40,40 @@ from app.infra.db.models import (
     Reflection,
 )
 
+# Reflection templates with pre-calculated word counts
+REFLECTION_TEMPLATES = [
+    (
+        "Deze peer evaluatie heeft me geholpen om bewuster te worden van mijn rol in het team. "
+        "Ik realiseer me dat ik sterker ben in organisatie dan ik dacht, maar dat ik nog kan groeien "
+        "in het delen van mijn ideeën tijdens teamoverleggen. De feedback van mijn teamgenoten was waardevol.",
+        38,
+    ),
+    (
+        "De feedback die ik heb ontvangen bevestigt waar ik al aan werkte: beter luisteren en meer ruimte "
+        "geven aan anderen. Ik ben trots op mijn bijdrage aan het project en de manier waarop ik taken heb "
+        "georganiseerd. Voor de volgende periode wil ik meer initiatief nemen in het oplossen van problemen.",
+        43,
+    ),
+    (
+        "Wat me opviel is dat mijn teamgenoten mijn inzet waarderen, maar dat ik soms te snel conclusies trek. "
+        "Ik ga bewuster nadenken voordat ik beslissingen neem en meer samenwerken bij het zoeken naar oplossingen. "
+        "Mijn sterke punten zijn creativiteit en doorzettingsvermogen.",
+        38,
+    ),
+    (
+        "Deze evaluatie heeft me nieuwe inzichten gegeven. Ik ben goed in het motiveren van anderen en het "
+        "bewaken van deadlines, maar ik kan nog werken aan het geven van constructieve feedback aan teamleden. "
+        "Ik neem me voor om opener te zijn in communicatie en meer te reflecteren op mijn eigen acties.",
+        43,
+    ),
+    (
+        "De peer feedback was eerlijk en constructief. Ik zie dat ik sterk ben in technische uitvoering en "
+        "detailgericht werk, maar dat ik meer kan communiceren over mijn voortgang. Ik ga actief updates delen "
+        "met het team en meer vragen stellen als iets onduidelijk is. Samenwerken is een continu leerproces.",
+        44,
+    ),
+]
+
 
 def generate_realistic_score(is_self_assessment: bool) -> int:
     """Generate realistic scores based on assessment type.
@@ -361,41 +395,8 @@ def seed_peer_evaluations():
             # Create reflections for each student (only for closed evaluations)
             if evaluation.status == "closed":
                 for student in students:
-                    reflection_templates = [
-                        (
-                            "Deze peer evaluatie heeft me geholpen om bewuster te worden van mijn rol in het team. "
-                            "Ik realiseer me dat ik sterker ben in organisatie dan ik dacht, maar dat ik nog kan groeien "
-                            "in het delen van mijn ideeën tijdens teamoverleggen. De feedback van mijn teamgenoten was waardevol.",
-                            38,
-                        ),
-                        (
-                            "De feedback die ik heb ontvangen bevestigt waar ik al aan werkte: beter luisteren en meer ruimte "
-                            "geven aan anderen. Ik ben trots op mijn bijdrage aan het project en de manier waarop ik taken heb "
-                            "georganiseerd. Voor de volgende periode wil ik meer initiatief nemen in het oplossen van problemen.",
-                            43,
-                        ),
-                        (
-                            "Wat me opviel is dat mijn teamgenoten mijn inzet waarderen, maar dat ik soms te snel conclusies trek. "
-                            "Ik ga bewuster nadenken voordat ik beslissingen neem en meer samenwerken bij het zoeken naar oplossingen. "
-                            "Mijn sterke punten zijn creativiteit en doorzettingsvermogen.",
-                            38,
-                        ),
-                        (
-                            "Deze evaluatie heeft me nieuwe inzichten gegeven. Ik ben goed in het motiveren van anderen en het "
-                            "bewaken van deadlines, maar ik kan nog werken aan het geven van constructieve feedback aan teamleden. "
-                            "Ik neem me voor om opener te zijn in communicatie en meer te reflecteren op mijn eigen acties.",
-                            43,
-                        ),
-                        (
-                            "De peer feedback was eerlijk en constructief. Ik zie dat ik sterk ben in technische uitvoering en "
-                            "detailgericht werk, maar dat ik meer kan communiceren over mijn voortgang. Ik ga actief updates delen "
-                            "met het team en meer vragen stellen als iets onduidelijk is. Samenwerken is een continu leerproces.",
-                            44,
-                        ),
-                    ]
-
                     # Select a random reflection with pre-calculated word count
-                    reflection_text, word_count = random.choice(reflection_templates)
+                    reflection_text, word_count = random.choice(REFLECTION_TEMPLATES)
 
                     # Random submission time (within the evaluation period)
                     days_before_close = random.randint(0, 7)
