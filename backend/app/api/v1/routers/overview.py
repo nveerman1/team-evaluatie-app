@@ -1391,7 +1391,7 @@ def get_peer_evaluation_dashboard(
             for evaluation in evaluations:
                 # Get project name
                 project = db.query(Project).filter(Project.id == evaluation.project_id).first()
-                project_name = project.name if project else f"Evaluatie {evaluation.id}"
+                project_name = project.title if project else f"Evaluatie {evaluation.id}"
                 
                 # Get eval date
                 eval_date = evaluation.closed_at or evaluation.created_at

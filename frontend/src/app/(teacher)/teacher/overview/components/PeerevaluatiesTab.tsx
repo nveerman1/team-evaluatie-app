@@ -82,14 +82,6 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
   const [viewMode, setViewMode] = useState<'latest' | 'average'>('latest');
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
-  if (error) {
-    return (
-      <div className="text-red-500 p-4 bg-red-50 rounded-lg">
-        Fout bij laden: {error}
-      </div>
-    );
-  }
-
   // Helper functions for evaluation calculations
   const getLatestEvaluation = (row: any) => {
     if (!row.evaluations || row.evaluations.length === 0) return null;
@@ -243,6 +235,15 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
     if (trend === "down") return -0.2;
     return null;
   };
+
+  // Show error after all hooks are called
+  if (error) {
+    return (
+      <div className="text-red-500 p-4 bg-red-50 rounded-lg">
+        Fout bij laden: {error}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
