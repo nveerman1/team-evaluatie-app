@@ -25,6 +25,8 @@ import {
 } from "chart.js";
 import { usePeerOverview, type PeerOverviewFilters } from "@/hooks/usePeerOverview";
 import { useFeedbackData, type FeedbackFilters } from "@/hooks/useFeedbackData";
+import { overviewService } from "@/services/overview.service";
+import { projectService } from "@/services/project.service";
 
 // Register Chart.js components
 ChartJS.register(
@@ -690,11 +692,8 @@ export default function PeerevaluatiesTab() {
     const fetchCourses = async () => {
       setLoadingCourses(true);
       try {
-        const response = await fetch("/api/v1/overview/courses");
-        if (response.ok) {
-          const data = await response.json();
-          setCourses(data);
-        }
+        const data = await overviewService.getCourses();
+        setCourses(data);
       } catch (error) {
         console.error("Failed to fetch courses:", error);
       } finally {
@@ -714,11 +713,11 @@ export default function PeerevaluatiesTab() {
     const fetchProjects = async () => {
       setLoadingProjects(true);
       try {
-        const response = await fetch(`/api/v1/projects?course_id=${filters.courseId}&per_page=100`);
-        if (response.ok) {
-          const data = await response.json();
-          setProjects(data.items || []);
-        }
+        const response = await projectService.listProjects({
+          course_id: filters.courseId,
+          per_page: 100,
+        });
+        setProjects(response.items || []);
       } catch (error) {
         console.error("Failed to fetch projects:", error);
       } finally {
