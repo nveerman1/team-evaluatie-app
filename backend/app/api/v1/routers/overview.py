@@ -1319,6 +1319,7 @@ def get_peer_evaluation_dashboard(
         student_scores = {}
         self_scores = {}
         peer_scores = {}
+        teacher_comment = None
         
         for cat_name, criterion_ids in category_criteria.items():
             if not criterion_ids:
@@ -1346,19 +1347,40 @@ def get_peer_evaluation_dashboard(
                 Score.status == "submitted"
             ).scalar()
             
+            # Get teacher score from most recent evaluation settings
+            teacher_score = None
+            if evaluations:
+                # Try to find teacher score in the most recent evaluation
+                for evaluation in reversed(evaluations):  # Start with most recent
+                    if evaluation.settings:
+                        teacher_key = f"teacher_score_{student.id}_{cat_name[0].upper()}"  # O, M, Z, A
+                        if teacher_key in evaluation.settings:
+                            teacher_score = int(evaluation.settings[teacher_key])
+                            break
+            
             # Combined average (peer scores primarily)
             combined_avg = peer_avg if peer_avg else self_avg
             
             if combined_avg:
                 student_scores[cat_name] = OmzaCategoryScore(
                     current=float(combined_avg),
-                    trend="neutral"  # TODO: Calculate trend by comparing time periods
+                    trend="neutral",  # TODO: Calculate trend by comparing time periods
+                    teacher_score=teacher_score
                 )
                 
                 if self_avg:
                     self_scores[cat_name] = float(self_avg)
                 if peer_avg:
                     peer_scores[cat_name] = float(peer_avg)
+        
+        # Get teacher comment from most recent evaluation
+        if evaluations:
+            for evaluation in reversed(evaluations):
+                if evaluation.settings:
+                    comment_key = f"teacher_comment_{student.id}"
+                    if comment_key in evaluation.settings:
+                        teacher_comment = evaluation.settings[comment_key]
+                        break
         
         if student_scores:
             # Calculate self vs peer difference (average across all categories)
@@ -1382,7 +1404,8 @@ def get_peer_evaluation_dashboard(
                 student_name=student.name,
                 class_name=student.class_name,
                 scores=student_scores,
-                self_vs_peer_diff=self_vs_peer_diff
+                self_vs_peer_diff=self_vs_peer_diff,
+                teacher_comment=teacher_comment
             ))
     
     # Calculate trend data - group evaluations by month
@@ -1662,4 +1685,106 @@ def get_peer_evaluation_feedback(
     return FeedbackCollectionResponse(
         feedbackItems=feedback_items,
         totalCount=len(feedback_items)
+    )
+
+
+@router.get("/peer-evaluations/teacher-feedback", response_model=TeacherFeedbackResponse)
+def get_teacher_feedback(
+    course_id: Optional[int] = None,
+    project_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_teacher),
+):
+    """
+    Get teacher feedback/assessments from OMZA evaluations including:
+    - Teacher emoticon scores per OMZA category (1-3)
+    - General teacher comments
+    
+    Filters:
+    - course_id: Filter by specific course
+    - project_id: Filter by specific project
+    """
+    from app.api.v1.schemas.overview import TeacherFeedbackItem, TeacherFeedbackResponse
+    
+    school_id = current_user.school_id
+    
+    # Get evaluations matching filters
+    eval_query = db.query(Evaluation).filter(
+        Evaluation.school_id == school_id,
+        Evaluation.evaluation_type == "peer"
+    )
+    
+    if course_id:
+        eval_query = eval_query.filter(Evaluation.course_id == course_id)
+    if project_id:
+        eval_query = eval_query.filter(Evaluation.project_id == project_id)
+    
+    evaluations = eval_query.all()
+    
+    if not evaluations:
+        return TeacherFeedbackResponse(
+            feedbackItems=[],
+            totalCount=0
+        )
+    
+    # Get all students
+    students = db.query(User).filter(
+        User.school_id == school_id,
+        User.role == "student",
+        User.archived == False
+    ).all()
+    
+    teacher_feedback_items = []
+    
+    for evaluation in evaluations:
+        if not evaluation.settings:
+            continue
+        
+        # Check if this evaluation has any teacher assessments
+        has_teacher_data = any(
+            key.startswith("teacher_score_") or key.startswith("teacher_comment_")
+            for key in evaluation.settings.keys()
+        )
+        
+        if not has_teacher_data:
+            continue
+        
+        # Get project name
+        project_name = evaluation.project.title if evaluation.project else f"Peer Evaluatie {evaluation.id}"
+        eval_date = evaluation.closed_at or evaluation.created_at
+        
+        # Extract teacher assessments for each student
+        for student in students:
+            # Get teacher scores for each OMZA category
+            org_key = f"teacher_score_{student.id}_O"
+            mee_key = f"teacher_score_{student.id}_M"
+            zel_key = f"teacher_score_{student.id}_Z"
+            aut_key = f"teacher_score_{student.id}_A"
+            comment_key = f"teacher_comment_{student.id}"
+            
+            org_score = evaluation.settings.get(org_key)
+            mee_score = evaluation.settings.get(mee_key)
+            zel_score = evaluation.settings.get(zel_key)
+            aut_score = evaluation.settings.get(aut_key)
+            comment = evaluation.settings.get(comment_key)
+            
+            # Only include if at least one score or comment exists
+            if org_score or mee_score or zel_score or aut_score or comment:
+                teacher_feedback_items.append(TeacherFeedbackItem(
+                    id=evaluation.id * 10000 + student.id,  # Unique ID
+                    student_id=student.id,
+                    student_name=student.name,
+                    project_name=project_name,
+                    evaluation_id=evaluation.id,
+                    date=eval_date,
+                    organiseren_score=int(org_score) if org_score else None,
+                    meedoen_score=int(mee_score) if mee_score else None,
+                    zelfvertrouwen_score=int(zel_score) if zel_score else None,
+                    autonomie_score=int(aut_score) if aut_score else None,
+                    teacher_comment=comment
+                ))
+    
+    return TeacherFeedbackResponse(
+        feedbackItems=teacher_feedback_items,
+        totalCount=len(teacher_feedback_items)
     )

@@ -190,6 +190,7 @@ class OmzaCategoryScore(BaseModel):
     """
     current: float
     trend: str  # "up" | "down" | "neutral"
+    teacher_score: Optional[int] = None  # Teacher emoticon score (1-3)
 
 
 class StudentHeatmapRow(BaseModel):
@@ -201,6 +202,7 @@ class StudentHeatmapRow(BaseModel):
     class_name: Optional[str] = None
     scores: dict[str, OmzaCategoryScore]  # category -> score data
     self_vs_peer_diff: Optional[float] = None  # Self-assessment vs peer average difference
+    teacher_comment: Optional[str] = None  # General teacher feedback for this student
 
 
 class KpiStudent(BaseModel):
@@ -252,4 +254,31 @@ class FeedbackCollectionResponse(BaseModel):
     Feedback collection data for peer evaluations
     """
     feedbackItems: List[FeedbackItem]
+    totalCount: int
+
+
+class TeacherFeedbackItem(BaseModel):
+    """
+    Single teacher feedback/assessment entry from OMZA evaluations
+    """
+    id: int
+    student_id: int
+    student_name: str
+    project_name: str
+    evaluation_id: int
+    date: datetime  # When the teacher assessment was given
+    # OMZA category scores (icon levels 1-3)
+    organiseren_score: Optional[int] = None
+    meedoen_score: Optional[int] = None
+    zelfvertrouwen_score: Optional[int] = None
+    autonomie_score: Optional[int] = None
+    # General teacher comment
+    teacher_comment: Optional[str] = None
+
+
+class TeacherFeedbackResponse(BaseModel):
+    """
+    Teacher feedback/assessment data
+    """
+    feedbackItems: List[TeacherFeedbackItem]
     totalCount: int
