@@ -433,9 +433,17 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
    TAB 2: FEEDBACKVERZAMELING
    ========================================= */
 
-function FeedbackTab() {
-  const [filters, setFilters] = useState<FeedbackFilters>({});
-  const { data, loading, error } = useFeedbackData(filters);
+function FeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters }) {
+  const [localFilters, setLocalFilters] = useState<Omit<FeedbackFilters, 'courseId' | 'projectId'>>({});
+  
+  // Merge parent filters (courseId, projectId) with local filters (category, sentiment, etc.)
+  const mergedFilters: FeedbackFilters = {
+    courseId: parentFilters.courseId,
+    projectId: parentFilters.projectId,
+    ...localFilters,
+  };
+  
+  const { data, loading, error } = useFeedbackData(mergedFilters);
 
   const getSentimentColor = (sentiment: string) => {
     switch (sentiment) {
@@ -523,9 +531,9 @@ function FeedbackTab() {
                 </label>
                 <select
                   className="w-full px-3 py-2 border rounded-lg text-sm"
-                  value={filters.category || ""}
+                  value={localFilters.category || ""}
                   onChange={(e) =>
-                    setFilters({ ...filters, category: e.target.value || undefined })
+                    setLocalFilters({ ...localFilters, category: e.target.value || undefined })
                   }
                 >
                   <option value="">Alle categorieën</option>
@@ -543,9 +551,9 @@ function FeedbackTab() {
                 </label>
                 <select
                   className="w-full px-3 py-2 border rounded-lg text-sm"
-                  value={filters.sentiment || ""}
+                  value={localFilters.sentiment || ""}
                   onChange={(e) =>
-                    setFilters({ ...filters, sentiment: e.target.value || undefined })
+                    setLocalFilters({ ...localFilters, sentiment: e.target.value || undefined })
                   }
                 >
                   <option value="">Alle sentimenten</option>
@@ -566,9 +574,9 @@ function FeedbackTab() {
                     type="text"
                     placeholder="Zoek op trefwoord..."
                     className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm"
-                    value={filters.searchText || ""}
+                    value={localFilters.searchText || ""}
                     onChange={(e) =>
-                      setFilters({ ...filters, searchText: e.target.value || undefined })
+                      setLocalFilters({ ...localFilters, searchText: e.target.value || undefined })
                     }
                   />
                 </div>
@@ -580,9 +588,9 @@ function FeedbackTab() {
                   type="checkbox"
                   id="riskOnly"
                   className="w-4 h-4 rounded border-gray-300"
-                  checked={filters.riskOnly || false}
+                  checked={localFilters.riskOnly || false}
                   onChange={(e) =>
-                    setFilters({ ...filters, riskOnly: e.target.checked || undefined })
+                    setLocalFilters({ ...localFilters, riskOnly: e.target.checked || undefined })
                   }
                 />
                 <label htmlFor="riskOnly" className="text-sm text-gray-700">
@@ -592,7 +600,7 @@ function FeedbackTab() {
 
               {/* Clear filters button */}
               <button
-                onClick={() => setFilters({})}
+                onClick={() => setLocalFilters({})}
                 className="w-full px-3 py-2 border rounded-lg text-sm hover:bg-gray-50"
               >
                 Filters wissen
@@ -857,7 +865,7 @@ export default function PeerevaluatiesTab() {
       {/* Tab Content */}
       <div>
         {activeSubTab === "dashboard" && <DashboardTab filters={filters} />}
-        {activeSubTab === "feedback" && <FeedbackTab />}
+        {activeSubTab === "feedback" && <FeedbackTab parentFilters={filters} />}
       </div>
     </div>
   );
