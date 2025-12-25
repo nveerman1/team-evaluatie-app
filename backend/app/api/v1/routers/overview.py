@@ -1400,36 +1400,41 @@ def get_peer_evaluation_dashboard(
         
         for evaluation in sorted_evals:
             eval_date = evaluation.closed_at or evaluation.created_at
-            if eval_date and eval_date >= start_date:
-                month_key = eval_date.strftime("%b %Y")  # e.g., "Dec 2024"
+            # Make timezone-naive for comparison
+            if eval_date:
+                if hasattr(eval_date, 'tzinfo') and eval_date.tzinfo is not None:
+                    eval_date = eval_date.replace(tzinfo=None)
                 
-                # Get criteria for this evaluation
-                eval_criteria = db.query(RubricCriterion).filter(
-                    RubricCriterion.rubric_id == evaluation.rubric_id,
-                    RubricCriterion.category.isnot(None)
-                ).all()
-                
-                eval_category_criteria = defaultdict(list)
-                for criterion in eval_criteria:
-                    if criterion.category:
-                        normalized_cat = category_map.get(criterion.category)
-                        if normalized_cat:
-                            eval_category_criteria[normalized_cat].append(criterion.id)
-                
-                # Calculate average scores per category for this evaluation
-                for cat_name, criterion_ids in eval_category_criteria.items():
-                    if criterion_ids:
-                        avg_score = db.query(func.avg(Score.score)).join(
-                            Allocation, Allocation.id == Score.allocation_id
-                        ).filter(
-                            Allocation.evaluation_id == evaluation.id,
-                            Allocation.is_self == False,
-                            Score.criterion_id.in_(criterion_ids),
-                            Score.status == "submitted"
-                        ).scalar()
-                        
-                        if avg_score:
-                            monthly_data[month_key][cat_name].append(float(avg_score))
+                if eval_date >= start_date:
+                    month_key = eval_date.strftime("%b %Y")  # e.g., "Dec 2024"
+                    
+                    # Get criteria for this evaluation
+                    eval_criteria = db.query(RubricCriterion).filter(
+                        RubricCriterion.rubric_id == evaluation.rubric_id,
+                        RubricCriterion.category.isnot(None)
+                    ).all()
+                    
+                    eval_category_criteria = defaultdict(list)
+                    for criterion in eval_criteria:
+                        if criterion.category:
+                            normalized_cat = category_map.get(criterion.category)
+                            if normalized_cat:
+                                eval_category_criteria[normalized_cat].append(criterion.id)
+                    
+                    # Calculate average scores per category for this evaluation
+                    for cat_name, criterion_ids in eval_category_criteria.items():
+                        if criterion_ids:
+                            avg_score = db.query(func.avg(Score.score)).join(
+                                Allocation, Allocation.id == Score.allocation_id
+                            ).filter(
+                                Allocation.evaluation_id == evaluation.id,
+                                Allocation.is_self == False,
+                                Score.criterion_id.in_(criterion_ids),
+                                Score.status == "submitted"
+                            ).scalar()
+                            
+                            if avg_score:
+                                monthly_data[month_key][cat_name].append(float(avg_score))
         
         # Convert to trend data points
         for month_key in sorted(monthly_data.keys(), key=lambda x: datetime.strptime(x, "%b %Y")):
