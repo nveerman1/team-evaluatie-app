@@ -119,11 +119,11 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
     const sums = { O: 0, M: 0, Z: 0, A: 0 };
     const counts = { O: 0, M: 0, Z: 0, A: 0 };
     
-    row.evaluations.forEach((eval: any) => {
-      if (eval.scores['O']) { sums.O += eval.scores['O']; counts.O++; }
-      if (eval.scores['M']) { sums.M += eval.scores['M']; counts.M++; }
-      if (eval.scores['Z']) { sums.Z += eval.scores['Z']; counts.Z++; }
-      if (eval.scores['A']) { sums.A += eval.scores['A']; counts.A++; }
+    row.evaluations.forEach((evaluation: any) => {
+      if (evaluation.scores['O']) { sums.O += evaluation.scores['O']; counts.O++; }
+      if (evaluation.scores['M']) { sums.M += evaluation.scores['M']; counts.M++; }
+      if (evaluation.scores['Z']) { sums.Z += evaluation.scores['Z']; counts.Z++; }
+      if (evaluation.scores['A']) { sums.A += evaluation.scores['A']; counts.A++; }
     });
     
     return {
