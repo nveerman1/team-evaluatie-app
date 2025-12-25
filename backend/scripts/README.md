@@ -1,0 +1,143 @@
+# Backend Scripts
+
+This directory contains utility and seeding scripts for the Team Evaluatie App backend.
+
+## Seeding Scripts
+
+### seed_peer_evaluations.py
+
+**Purpose:** Seeds peer evaluations with scores, feedback, and reflections for specified students.
+
+**What it creates:**
+- Multiple peer evaluations (draft, open, and closed status)
+- Allocations (reviewer -> reviewee pairs) including self-assessments
+- Scores with optional feedback comments for each rubric criterion
+- Reflections for students (for closed evaluations)
+
+**Target data:**
+- School ID: 1
+- Course ID: 1
+- Student IDs: 5, 6, 7, 8, 18, 19, 20, 34, 35, 36, 37
+
+**Prerequisites:**
+1. School with ID 1 must exist
+2. Course with ID 1 must exist
+3. Students with the specified IDs must exist and be enrolled in school 1
+4. At least one peer rubric must exist for school 1
+
+**Usage:**
+```bash
+cd backend
+python scripts/seed_peer_evaluations.py
+```
+
+**What it does:**
+1. Validates that school, course, and students exist
+2. Finds available peer rubrics for the school
+3. Creates 3 peer evaluations:
+   - Q1 evaluation (closed)
+   - Q2 evaluation (closed)
+   - Q3 evaluation (open/current)
+4. For each evaluation:
+   - Creates self-assessment allocations (each student reviews themselves)
+   - Creates peer review allocations (each student reviews 2-3 others randomly)
+   - Generates realistic scores (1-5 scale) with appropriate distribution
+   - Adds optional feedback comments (60% probability)
+   - Creates reflections for closed evaluations
+
+**Score distributions:**
+- Self-assessments: tend to be slightly higher (mostly 3-5)
+- Peer assessments: more varied (1-5 with realistic distribution)
+- Feedback quality varies based on score level (positive, neutral, constructive)
+
+**Note:** If an evaluation with the same name already exists, it will be deleted and recreated.
+
+---
+
+### seed_competency_scans_with_scores.py
+
+Seeds competency scan windows with self-scores, goals, and reflections for the same set of students.
+
+**Target data:**
+- Course ID: 1
+- Student IDs: 5, 6, 7, 8, 18, 19, 20, 34, 35, 36, 37
+
+**Usage:**
+```bash
+cd backend
+python scripts/seed_competency_scans_with_scores.py
+```
+
+---
+
+### seed_demo_data.py
+
+Creates basic demo data including a demo school and admin user.
+
+**Usage:**
+```bash
+cd backend
+python scripts/seed_demo_data.py
+```
+
+---
+
+### seed_3de_blok.py
+
+Seeds test data for the 3de Blok RFID attendance module.
+
+**Usage:**
+```bash
+cd backend
+python scripts/seed_3de_blok.py [school_id]
+```
+
+---
+
+### seed_external_work.py
+
+Seeds external work assignments and submissions.
+
+**Usage:**
+```bash
+cd backend
+python scripts/seed_external_work.py
+```
+
+---
+
+## Utility Scripts
+
+### backfill_project_teams.py
+
+Backfills project team data for existing projects.
+
+**Usage:**
+```bash
+cd backend
+python scripts/backfill_project_teams.py
+```
+
+---
+
+## General Requirements
+
+All scripts require:
+1. Database connection configured in `app/core/config.py`
+2. Python dependencies installed: `pip install -r requirements.txt`
+3. Database migrations applied: `alembic upgrade head`
+
+## Running Scripts
+
+From the repository root:
+```bash
+cd backend
+python scripts/<script_name>.py
+```
+
+Or with virtual environment:
+```bash
+cd backend
+source venv/bin/activate  # or `. venv/bin/activate`
+python scripts/<script_name>.py
+```
