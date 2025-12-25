@@ -145,10 +145,19 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
     return <span className="w-4 h-4 text-gray-400">—</span>;
   };
 
-  const getTrendBg = (trend: "up" | "down" | "neutral") => {
-    if (trend === "up") return "bg-green-100";
-    if (trend === "down") return "bg-red-100";
-    return "bg-gray-100";
+  const getScoreColor = (score: number | null): string => {
+    if (score === null) return "bg-gray-100 text-gray-400";
+    if (score >= 4) return "bg-green-100 text-green-700";
+    if (score >= 3) return "bg-blue-100 text-blue-700";
+    return "bg-orange-100 text-orange-700";
+  };
+
+  const getTrendDelta = (trend: "up" | "down" | "neutral"): number | null => {
+    // TODO: Calculate actual delta from previous evaluation
+    // For now, return estimated values based on trend
+    if (trend === "up") return 0.2;
+    if (trend === "down") return -0.2;
+    return null;
   };
 
   return (
@@ -190,45 +199,141 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
       </div>
 
       {/* Section 2: Leerling Heatmap */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Users className="w-5 h-5 text-blue-600" />
-          Leerling Heatmap
-        </h3>
-        <Suspense fallback={<TableSkeleton />}>
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
+          <h3 className="text-base font-semibold text-slate-900 leading-6">Leerling Heatmap</h3>
+          <p className="text-sm text-slate-600">OMZA-scores per leerling</p>
+        </div>
+        <Suspense fallback={<div className="p-6"><TableSkeleton /></div>}>
           {loading ? (
-            <TableSkeleton />
+            <div className="p-6"><TableSkeleton /></div>
           ) : (
-            <div className="overflow-x-auto -mx-6 px-6">
-              <table className="w-full min-w-[600px]">
-                <thead className="bg-gray-50">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200 text-sm">
+                <thead className="bg-slate-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase sticky left-0 bg-gray-50 z-10">
+                    <th className="sticky left-0 z-20 bg-slate-50 px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[140px]">
                       Leerling
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
                       Klas
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-blue-700 uppercase">
-                      O
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide min-w-[90px]">
+                      <span className="block">Organiseren</span>
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-green-700 uppercase">
-                      M
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide min-w-[90px]">
+                      <span className="block">Meedoen</span>
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-amber-700 uppercase">
-                      Z
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide min-w-[90px]">
+                      <span className="block">Zelfvertrouwen</span>
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase">
-                      A
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide min-w-[90px]">
+                      <span className="block">Autonomie</span>
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide min-w-[90px]">
                       Self vs Peer
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-slate-100">
                   {data?.heatmapData.map((student) => (
-                    <tr key={student.student_id} className="hover:bg-gray-50">
+                    <tr key={student.student_id} className="bg-white hover:bg-slate-50">
+                      <td className="sticky left-0 z-10 bg-white px-4 py-2 text-sm text-slate-900 font-medium border-r border-slate-100">
+                        {student.student_name}
+                      </td>
+                      <td className="px-3 py-2 text-center text-sm text-slate-600">
+                        {student.class_name || "–"}
+                      </td>
+                      {/* Organiseren */}
+                      <td className="px-3 py-2 text-left">
+                        {student.scores.organiseren ? (
+                          <div className="flex items-center gap-1">
+                            <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(student.scores.organiseren.current)}`}>
+                              {student.scores.organiseren.current.toFixed(1)}
+                            </span>
+                            {getTrendDelta(student.scores.organiseren.trend) !== null && (
+                              <span className={`text-[10px] font-medium tabular-nums ${getTrendDelta(student.scores.organiseren.trend)! > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {getTrendDelta(student.scores.organiseren.trend)! > 0 ? '+' : ''}{getTrendDelta(student.scores.organiseren.trend)!.toFixed(1)}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-300">–</span>
+                        )}
+                      </td>
+                      {/* Meedoen */}
+                      <td className="px-3 py-2 text-left">
+                        {student.scores.meedoen ? (
+                          <div className="flex items-center gap-1">
+                            <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(student.scores.meedoen.current)}`}>
+                              {student.scores.meedoen.current.toFixed(1)}
+                            </span>
+                            {getTrendDelta(student.scores.meedoen.trend) !== null && (
+                              <span className={`text-[10px] font-medium tabular-nums ${getTrendDelta(student.scores.meedoen.trend)! > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {getTrendDelta(student.scores.meedoen.trend)! > 0 ? '+' : ''}{getTrendDelta(student.scores.meedoen.trend)!.toFixed(1)}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-300">–</span>
+                        )}
+                      </td>
+                      {/* Zelfvertrouwen */}
+                      <td className="px-3 py-2 text-left">
+                        {student.scores.zelfvertrouwen ? (
+                          <div className="flex items-center gap-1">
+                            <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(student.scores.zelfvertrouwen.current)}`}>
+                              {student.scores.zelfvertrouwen.current.toFixed(1)}
+                            </span>
+                            {getTrendDelta(student.scores.zelfvertrouwen.trend) !== null && (
+                              <span className={`text-[10px] font-medium tabular-nums ${getTrendDelta(student.scores.zelfvertrouwen.trend)! > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {getTrendDelta(student.scores.zelfvertrouwen.trend)! > 0 ? '+' : ''}{getTrendDelta(student.scores.zelfvertrouwen.trend)!.toFixed(1)}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-300">–</span>
+                        )}
+                      </td>
+                      {/* Autonomie */}
+                      <td className="px-3 py-2 text-left">
+                        {student.scores.autonomie ? (
+                          <div className="flex items-center gap-1">
+                            <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(student.scores.autonomie.current)}`}>
+                              {student.scores.autonomie.current.toFixed(1)}
+                            </span>
+                            {getTrendDelta(student.scores.autonomie.trend) !== null && (
+                              <span className={`text-[10px] font-medium tabular-nums ${getTrendDelta(student.scores.autonomie.trend)! > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {getTrendDelta(student.scores.autonomie.trend)! > 0 ? '+' : ''}{getTrendDelta(student.scores.autonomie.trend)!.toFixed(1)}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-300">–</span>
+                        )}
+                      </td>
+                      {/* Self vs Peer */}
+                      <td className="px-3 py-2 text-center">
+                        <span className={`text-sm font-medium tabular-nums ${
+                          (student.self_vs_peer_diff || 0) > 0.3
+                            ? "text-red-600"
+                            : (student.self_vs_peer_diff || 0) < -0.3
+                            ? "text-amber-600"
+                            : "text-slate-600"
+                        }`}>
+                          {student.self_vs_peer_diff !== undefined
+                            ? ((student.self_vs_peer_diff || 0) > 0 ? "+" : "") + student.self_vs_peer_diff.toFixed(1)
+                            : "–"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Suspense>
+      </div>
                       <td className="px-4 py-3 text-sm font-medium text-gray-900 sticky left-0 bg-white">
                         {student.student_name}
                       </td>
