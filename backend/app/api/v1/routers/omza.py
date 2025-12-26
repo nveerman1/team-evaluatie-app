@@ -169,6 +169,11 @@ async def get_omza_data(
     student_ids = [s.id for s in students]
     batch_scores = compute_weighted_omza_scores_batch(db, evaluation_id, student_ids)
     
+    # Collect all unique category names from the batch scores
+    all_categories = set()
+    for student_scores in batch_scores.values():
+        all_categories.update(student_scores.keys())
+    
     for student in students:
         # Get weighted scores from batch calculation
         omza_scores = batch_scores.get(student.id, {})
@@ -227,21 +232,14 @@ async def get_omza_data(
             )
         )
 
-    # For OMZA, always ensure O, M, Z, A categories exist
-    # These are the standard OMZA categories and should always be shown
-    category_order = ["O", "M", "Z", "A"]
-    for cat in category_order:
-        if cat not in categories:
-            categories[cat] = []  # Add empty category if not in rubric
-    
-    # Sort categories in specific order: O, M, Z, A
-    # Only include O, M, Z, A - don't include any other categories
-    sorted_categories = [cat for cat in category_order if cat in categories]
+    # Return the actual category names from the rubric
+    # Convert set to sorted list for consistent ordering
+    categories_list = sorted(list(all_categories))
     
     return OmzaDataResponse(
         evaluation_id=evaluation_id,
         students=student_data_list,
-        categories=sorted_categories,
+        categories=categories_list,
     )
 
 

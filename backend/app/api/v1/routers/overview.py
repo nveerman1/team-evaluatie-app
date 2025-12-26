@@ -1478,6 +1478,7 @@ def get_peer_evaluation_dashboard(
         # Sort evaluations by date (newest first)
         student_evaluations.sort(key=lambda e: e.date, reverse=True)
         
+        # Only include student in heatmap if they have scores in at least one category
         if student_scores:
             # Calculate self vs peer difference (average across all categories)
             self_vs_peer_diff = None
