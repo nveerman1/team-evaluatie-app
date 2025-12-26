@@ -81,34 +81,44 @@ function CardSkeleton() {
 function renderTeacherEmoticon(score: number | null | undefined) {
   if (!score) return null;
   
-  // Render in same style as /teacher/evaluations/[id]/omza page
+  // 4-level system matching OMZA evaluation page: 1=best (🙂), 4=worst (!!)
   if (score === 1) {
     return (
       <span 
-        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-rose-500 bg-rose-100 text-[10px] font-medium text-rose-700 ml-1" 
-        title="Urgent"
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[10px] font-medium text-green-700 ml-1" 
+        title="Gaat goed"
       >
-        !!
+        🙂
       </span>
     );
   }
   if (score === 2) {
     return (
       <span 
-        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-400 bg-amber-100 text-[10px] font-medium text-amber-700 ml-1" 
-        title="Let op / bespreken"
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[10px] font-medium text-green-700 ml-1" 
+        title="Voldoet aan verwachting"
       >
-        !
+        ✓
       </span>
     );
   }
   if (score === 3) {
     return (
       <span 
-        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[10px] font-medium text-green-700 ml-1" 
-        title="Voldoet aan verwachting"
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-400 bg-amber-100 text-[10px] font-medium text-amber-700 ml-1" 
+        title="Let op: verbeterpunt"
       >
-        ✓
+        !
+      </span>
+    );
+  }
+  if (score === 4) {
+    return (
+      <span 
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-rose-500 bg-rose-100 text-[10px] font-medium text-rose-700 ml-1" 
+        title="Urgent: direct bespreken"
+      >
+        !!
       </span>
     );
   }
