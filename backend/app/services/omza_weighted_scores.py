@@ -10,7 +10,7 @@ This ensures that:
 
 from typing import Dict, Optional
 from sqlalchemy.orm import Session
-from app.models import Evaluation, RubricCriterion, Score, Allocation
+from ..models import Evaluation, RubricCriterion, Score, Allocation
 
 
 def compute_weighted_omza_scores(
