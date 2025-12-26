@@ -132,19 +132,18 @@ def compute_weighted_omza_scores_batch(
             }
         }
     """
-    # Initialize results for all students
-    results = {}
-    for reviewee_id in reviewee_ids:
-        results[reviewee_id] = {
-            "O": {"peer": None, "self": None},
-            "M": {"peer": None, "self": None},
-            "Z": {"peer": None, "self": None},
-            "A": {"peer": None, "self": None}
-        }
-    
     # Get evaluation to access rubric_id
     evaluation = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
     if not evaluation or not evaluation.rubric_id:
+        # Return empty results with default structure
+        results = {}
+        for reviewee_id in reviewee_ids:
+            results[reviewee_id] = {
+                "O": {"peer": None, "self": None},
+                "M": {"peer": None, "self": None},
+                "Z": {"peer": None, "self": None},
+                "A": {"peer": None, "self": None}
+            }
         return results
     
     # Get all criteria for this rubric
@@ -163,6 +162,13 @@ def compute_weighted_omza_scores_batch(
             "id": criterion.id,
             "weight": criterion.weight if criterion.weight else 1.0
         })
+    
+    # Initialize results for all students with actual categories from rubric
+    results = {}
+    for reviewee_id in reviewee_ids:
+        results[reviewee_id] = {}
+        for cat_name in category_criteria.keys():
+            results[reviewee_id][cat_name] = {"peer": None, "self": None}
     
     # Get all scores for all students in one query
     all_criterion_ids = [c.id for c in criteria]
