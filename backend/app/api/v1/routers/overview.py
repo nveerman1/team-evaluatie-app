@@ -1353,12 +1353,13 @@ def get_peer_evaluation_dashboard(
                     continue
                 
                 # Peer average for this evaluation and category
+                # Use same logic as OMZA page: reviewer_id != student.id
                 peer_avg = db.query(func.avg(Score.score)).join(
                     Allocation, Allocation.id == Score.allocation_id
                 ).filter(
                     Allocation.evaluation_id == evaluation.id,
                     Allocation.reviewee_id == student.id,
-                    Allocation.is_self == False,
+                    Allocation.reviewer_id != student.id,  # Peer scores: reviewer != reviewee
                     Score.criterion_id.in_(criterion_ids),
                     Score.status == "submitted"
                 ).scalar()
@@ -1367,12 +1368,13 @@ def get_peer_evaluation_dashboard(
                     category_peer_scores[cat_name].append(float(peer_avg))
                 
                 # Self average for this evaluation and category
+                # Use same logic as OMZA page: reviewer_id == student.id
                 self_avg = db.query(func.avg(Score.score)).join(
                     Allocation, Allocation.id == Score.allocation_id
                 ).filter(
                     Allocation.evaluation_id == evaluation.id,
                     Allocation.reviewee_id == student.id,
-                    Allocation.is_self == True,
+                    Allocation.reviewer_id == student.id,  # Self scores: reviewer == reviewee
                     Score.criterion_id.in_(criterion_ids),
                     Score.status == "submitted"
                 ).scalar()
@@ -1463,12 +1465,13 @@ def get_peer_evaluation_dashboard(
                         continue
                     
                     # Get peer average for this evaluation only
+                    # Use same logic as OMZA page: reviewer_id != student.id
                     peer_avg = db.query(func.avg(Score.score)).join(
                         Allocation, Allocation.id == Score.allocation_id
                     ).filter(
                         Allocation.evaluation_id == evaluation.id,
                         Allocation.reviewee_id == student.id,
-                        Allocation.is_self == False,
+                        Allocation.reviewer_id != student.id,  # Peer scores: reviewer != reviewee
                         Score.criterion_id.in_(criterion_ids),
                         Score.status == "submitted"
                     ).scalar()
@@ -1568,11 +1571,12 @@ def get_peer_evaluation_dashboard(
                     # Calculate average scores per category for this evaluation
                     for cat_name, criterion_ids in eval_category_criteria.items():
                         if criterion_ids:
+                            # Use same logic as OMZA page: peer scores where reviewer != reviewee
                             avg_score = db.query(func.avg(Score.score)).join(
                                 Allocation, Allocation.id == Score.allocation_id
                             ).filter(
                                 Allocation.evaluation_id == evaluation.id,
-                                Allocation.is_self == False,
+                                Allocation.reviewer_id != Allocation.reviewee_id,  # Peer scores only
                                 Score.criterion_id.in_(criterion_ids),
                                 Score.status == "submitted"
                             ).scalar()
