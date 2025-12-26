@@ -788,6 +788,7 @@ function PeerfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters
     key: 'student_name',
     direction: 'asc'
   });
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   
   // Merge parent filters (courseId, projectId) with local filters (category, sentiment, etc.)
   const mergedFilters: FeedbackFilters = {
@@ -851,6 +852,18 @@ function PeerfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters
   const getSortIndicator = (key: string) => {
     if (sortConfig.key !== key) return null;
     return sortConfig.direction === 'asc' ? ' ▲' : ' ▼';
+  };
+
+  const toggleRow = (id: number) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
   };
 
   const getSentimentColor = (sentiment: string) => {
@@ -1050,52 +1063,89 @@ function PeerfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters
                       </td>
                     </tr>
                   ) : (
-                    sortedData.map((item) => (
-                      <tr key={item.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3 text-sm text-slate-800">
-                          {item.student_name}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            item.feedback_type === 'self' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
-                          }`}>
-                            {item.feedback_type === 'self' ? 'Self' : 'Peer'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm font-semibold text-slate-700">
-                          {item.score ? item.score.toFixed(1) : '–'}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-800">
-                          {item.from_student_name || '–'}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-800">
-                          {item.project_name}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full text-xs ring-1 ${getCategoryColor(item.category)}`}>
-                            {item.category.charAt(0).toUpperCase() + item.category.slice(1)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full text-xs ring-1 ${getSentimentColor(item.sentiment)}`}>
-                            {item.sentiment.charAt(0).toUpperCase() + item.sentiment.slice(1)}
-                          </span>
-                          {item.is_risk_behavior && (
-                            <span className="ml-1 text-red-600" title="Risico gedrag">⚠️</span>
+                    sortedData.map((item) => {
+                      const isExpanded = expandedRows.has(item.id);
+                      return (
+                        <React.Fragment key={item.id}>
+                          <tr 
+                            className="hover:bg-slate-50 cursor-pointer"
+                            onClick={() => toggleRow(item.id)}
+                          >
+                            <td className="px-4 py-3 text-sm text-slate-800">
+                              <div className="flex items-center gap-2">
+                                {isExpanded ? (
+                                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                                ) : (
+                                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                                )}
+                                {item.student_name}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                item.feedback_type === 'self' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                              }`}>
+                                {item.feedback_type === 'self' ? 'Self' : 'Peer'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-center text-sm font-semibold text-slate-700">
+                              {item.score ? item.score.toFixed(1) : '–'}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-slate-800">
+                              {item.from_student_name || '–'}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-slate-800">
+                              {item.project_name}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={`px-2 py-0.5 rounded-full text-xs ring-1 ${getCategoryColor(item.category)}`}>
+                                {item.category.charAt(0).toUpperCase() + item.category.slice(1)}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={`px-2 py-0.5 rounded-full text-xs ring-1 ${getSentimentColor(item.sentiment)}`}>
+                                {item.sentiment.charAt(0).toUpperCase() + item.sentiment.slice(1)}
+                              </span>
+                              {item.is_risk_behavior && (
+                                <span className="ml-1 text-red-600" title="Risico gedrag">⚠️</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-slate-800 max-w-md">
+                              <p className="line-clamp-2">{item.text}</p>
+                            </td>
+                            <td className="px-4 py-3 text-center text-sm text-slate-600">
+                              {new Date(item.date).toLocaleDateString("nl-NL", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric"
+                              })}
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr className="bg-slate-50">
+                              <td colSpan={9} className="px-4 py-4">
+                                <div className="prose prose-sm max-w-none">
+                                  <div className="mb-3">
+                                    <span className="text-xs font-medium text-slate-500 uppercase">Volledige feedback:</span>
+                                    <p className="text-sm text-slate-700 mt-1 whitespace-pre-wrap">
+                                      {item.text}
+                                    </p>
+                                  </div>
+                                  <div className="flex flex-wrap gap-3 text-xs text-slate-500">
+                                    <div><span className="font-medium">Type:</span> {item.feedback_type === 'self' ? 'Self-evaluatie' : 'Peer-evaluatie'}</div>
+                                    <div><span className="font-medium">Score:</span> {item.score ? `${item.score.toFixed(1)}/5` : '–'}</div>
+                                    <div><span className="font-medium">Sentiment:</span> {item.sentiment}</div>
+                                    {item.from_student_name && (
+                                      <div><span className="font-medium">Van:</span> {item.from_student_name}</div>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
                           )}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-800 max-w-md">
-                          <p className="line-clamp-2">{item.text}</p>
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm text-slate-600">
-                          {new Date(item.date).toLocaleDateString("nl-NL", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric"
-                          })}
-                        </td>
-                      </tr>
-                    ))
+                        </React.Fragment>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -1121,6 +1171,7 @@ function DocentfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilte
     key: 'student_name',
     direction: 'asc'
   });
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   // Filter by student name from parent filters (cross-tab search)
   const filteredData = useMemo(() => {
@@ -1167,6 +1218,18 @@ function DocentfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilte
   const getSortIndicator = (key: string) => {
     if (sortConfig.key !== key) return null;
     return sortConfig.direction === 'asc' ? ' ▲' : ' ▼';
+  };
+
+  const toggleRow = (id: number) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
   };
 
   if (error) {
@@ -1227,38 +1290,78 @@ function DocentfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilte
                     </td>
                   </tr>
                 ) : (
-                  sortedData.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 text-sm font-medium text-slate-900">
-                        {item.student_name}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-800">
-                        {item.project_name}
-                      </td>
-                      <td className="px-3 py-3 text-center text-lg">
-                        {renderTeacherEmoticon(item.organiseren_score)}
-                      </td>
-                      <td className="px-3 py-3 text-center text-lg">
-                        {renderTeacherEmoticon(item.meedoen_score)}
-                      </td>
-                      <td className="px-3 py-3 text-center text-lg">
-                        {renderTeacherEmoticon(item.zelfvertrouwen_score)}
-                      </td>
-                      <td className="px-3 py-3 text-center text-lg">
-                        {renderTeacherEmoticon(item.autonomie_score)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-700 max-w-xs">
-                        <p className="line-clamp-2">{item.teacher_comment || '–'}</p>
-                      </td>
-                      <td className="px-4 py-3 text-center text-sm text-slate-600">
-                        {new Date(item.date).toLocaleDateString('nl-NL', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric'
-                        })}
-                      </td>
-                    </tr>
-                  ))
+                  sortedData.map((item) => {
+                    const isExpanded = expandedRows.has(item.id);
+                    return (
+                      <React.Fragment key={item.id}>
+                        <tr 
+                          className="hover:bg-slate-50 cursor-pointer"
+                          onClick={() => toggleRow(item.id)}
+                        >
+                          <td className="px-4 py-3 text-sm font-medium text-slate-900">
+                            <div className="flex items-center gap-2">
+                              {isExpanded ? (
+                                <ChevronDown className="w-4 h-4 text-slate-400" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4 text-slate-400" />
+                              )}
+                              {item.student_name}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-800">
+                            {item.project_name}
+                          </td>
+                          <td className="px-3 py-3 text-center text-lg">
+                            {renderTeacherEmoticon(item.organiseren_score)}
+                          </td>
+                          <td className="px-3 py-3 text-center text-lg">
+                            {renderTeacherEmoticon(item.meedoen_score)}
+                          </td>
+                          <td className="px-3 py-3 text-center text-lg">
+                            {renderTeacherEmoticon(item.zelfvertrouwen_score)}
+                          </td>
+                          <td className="px-3 py-3 text-center text-lg">
+                            {renderTeacherEmoticon(item.autonomie_score)}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-700 max-w-xs">
+                            <p className="line-clamp-2">{item.teacher_comment || '–'}</p>
+                          </td>
+                          <td className="px-4 py-3 text-center text-sm text-slate-600">
+                            {new Date(item.date).toLocaleDateString('nl-NL', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric'
+                            })}
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr className="bg-slate-50">
+                            <td colSpan={8} className="px-4 py-4">
+                              <div className="prose prose-sm max-w-none">
+                                <div className="mb-3">
+                                  <span className="text-xs font-medium text-slate-500 uppercase">Volledige opmerking:</span>
+                                  <p className="text-sm text-slate-700 mt-1 whitespace-pre-wrap">
+                                    {item.teacher_comment || 'Geen opmerking'}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-4 text-xs text-slate-500">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">OMZA Scores:</span>
+                                    <div className="flex gap-1 items-center">
+                                      <span>O:</span> {renderTeacherEmoticon(item.organiseren_score)}
+                                      <span className="ml-2">M:</span> {renderTeacherEmoticon(item.meedoen_score)}
+                                      <span className="ml-2">Z:</span> {renderTeacherEmoticon(item.zelfvertrouwen_score)}
+                                      <span className="ml-2">A:</span> {renderTeacherEmoticon(item.autonomie_score)}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })
                 )}
               </tbody>
             </table>
