@@ -1327,31 +1327,68 @@ def get_peer_evaluation_dashboard(
         peer_scores = {}
         teacher_comment = None
         
-        for cat_name, criterion_ids in category_criteria.items():
-            if not criterion_ids:
-                continue
+        # Calculate per-category scores by aggregating per-evaluation averages
+        # This ensures we only use criteria from each evaluation's actual rubric
+        category_peer_scores = defaultdict(list)
+        category_self_scores = defaultdict(list)
+        
+        for evaluation in evaluations:
+            # Get criteria specific to this evaluation's rubric
+            eval_criteria = db.query(RubricCriterion).filter(
+                RubricCriterion.rubric_id == evaluation.rubric_id,
+                RubricCriterion.category.isnot(None)
+            ).all()
             
-            # Peer scores (where student is reviewee, reviewer is not self)
-            peer_avg = db.query(func.avg(Score.score)).join(
-                Allocation, Allocation.id == Score.allocation_id
-            ).filter(
-                Allocation.evaluation_id.in_(evaluation_ids),
-                Allocation.reviewee_id == student.id,
-                Allocation.is_self == False,
-                Score.criterion_id.in_(criterion_ids),
-                Score.status == "submitted"
-            ).scalar()
+            # Group criteria by category for this evaluation
+            eval_category_criteria = defaultdict(list)
+            for criterion in eval_criteria:
+                if criterion.category:
+                    normalized_cat = category_map.get(criterion.category)
+                    if normalized_cat:
+                        eval_category_criteria[normalized_cat].append(criterion.id)
             
-            # Self scores
-            self_avg = db.query(func.avg(Score.score)).join(
-                Allocation, Allocation.id == Score.allocation_id
-            ).filter(
-                Allocation.evaluation_id.in_(evaluation_ids),
-                Allocation.reviewee_id == student.id,
-                Allocation.is_self == True,
-                Score.criterion_id.in_(criterion_ids),
-                Score.status == "submitted"
-            ).scalar()
+            # Calculate peer and self averages for each category in this evaluation
+            for cat_name, criterion_ids in eval_category_criteria.items():
+                if not criterion_ids:
+                    continue
+                
+                # Peer average for this evaluation and category
+                peer_avg = db.query(func.avg(Score.score)).join(
+                    Allocation, Allocation.id == Score.allocation_id
+                ).filter(
+                    Allocation.evaluation_id == evaluation.id,
+                    Allocation.reviewee_id == student.id,
+                    Allocation.is_self == False,
+                    Score.criterion_id.in_(criterion_ids),
+                    Score.status == "submitted"
+                ).scalar()
+                
+                if peer_avg:
+                    category_peer_scores[cat_name].append(float(peer_avg))
+                
+                # Self average for this evaluation and category
+                self_avg = db.query(func.avg(Score.score)).join(
+                    Allocation, Allocation.id == Score.allocation_id
+                ).filter(
+                    Allocation.evaluation_id == evaluation.id,
+                    Allocation.reviewee_id == student.id,
+                    Allocation.is_self == True,
+                    Score.criterion_id.in_(criterion_ids),
+                    Score.status == "submitted"
+                ).scalar()
+                
+                if self_avg:
+                    category_self_scores[cat_name].append(float(self_avg))
+        
+        # Now aggregate the per-evaluation averages into overall category scores
+        for cat_name in ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"]:
+            peer_evals = category_peer_scores.get(cat_name, [])
+            self_evals = category_self_scores.get(cat_name, [])
+            
+            # Average of peer evaluation averages
+            peer_overall = sum(peer_evals) / len(peer_evals) if peer_evals else None
+            # Average of self evaluation averages  
+            self_overall = sum(self_evals) / len(self_evals) if self_evals else None
             
             # Get teacher score from most recent evaluation settings
             teacher_score = None
@@ -1365,7 +1402,7 @@ def get_peer_evaluation_dashboard(
                             break
             
             # Combined average (peer scores primarily)
-            combined_avg = peer_avg if peer_avg else self_avg
+            combined_avg = peer_overall if peer_overall else self_overall
             
             if combined_avg:
                 student_scores[cat_name] = OmzaCategoryScore(
@@ -1374,10 +1411,10 @@ def get_peer_evaluation_dashboard(
                     teacher_score=teacher_score
                 )
                 
-                if self_avg:
-                    self_scores[cat_name] = float(self_avg)
-                if peer_avg:
-                    peer_scores[cat_name] = float(peer_avg)
+                if self_overall:
+                    self_scores[cat_name] = float(self_overall)
+                if peer_overall:
+                    peer_scores[cat_name] = float(peer_overall)
         
         # Get teacher comment from most recent evaluation
         if evaluations:
@@ -1405,9 +1442,23 @@ def get_peer_evaluation_dashboard(
                 else:
                     date_str = ""
                 
-                # Calculate scores for this evaluation
+                # Get criteria specific to THIS evaluation's rubric
+                eval_criteria = db.query(RubricCriterion).filter(
+                    RubricCriterion.rubric_id == evaluation.rubric_id,
+                    RubricCriterion.category.isnot(None)
+                ).all()
+                
+                # Group criteria by category for this evaluation
+                eval_category_criteria = defaultdict(list)
+                for criterion in eval_criteria:
+                    if criterion.category:
+                        normalized_cat = category_map.get(criterion.category)
+                        if normalized_cat:
+                            eval_category_criteria[normalized_cat].append(criterion.id)
+                
+                # Calculate scores for this evaluation using only its rubric's criteria
                 eval_scores = {}
-                for cat_name, criterion_ids in category_criteria.items():
+                for cat_name, criterion_ids in eval_category_criteria.items():
                     if not criterion_ids:
                         continue
                     
@@ -1430,7 +1481,7 @@ def get_peer_evaluation_dashboard(
                 # Extract teacher scores for this evaluation
                 eval_teacher_scores = {}
                 if evaluation.settings:
-                    for cat_name in category_criteria.keys():
+                    for cat_name in eval_category_criteria.keys():
                         cat_short = cat_name[0].upper()  # O, M, Z, A
                         teacher_key = f"teacher_score_{student.id}_{cat_short}"
                         if teacher_key in evaluation.settings:
