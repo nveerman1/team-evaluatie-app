@@ -1359,6 +1359,7 @@ def get_peer_evaluation_dashboard(
             # Get weighted scores from cache
             eval_scores = evaluation_scores_cache.get(evaluation.id, {})
             student_eval_scores = eval_scores.get(student.id, {})
+            logger.debug(f"Evaluation {evaluation.id}: student {student.id} has scores: {student_eval_scores}")
             
             # Aggregate scores by actual category names from rubric
             for cat_name in all_categories:
