@@ -29,6 +29,7 @@ from app.infra.db.models import (
     ClientProjectLink,
     AcademicYear,
     Score,
+    Reflection,
 )
 from app.api.v1.schemas.overview import (
     OverviewItemOut,
@@ -1900,48 +1901,48 @@ def get_peer_evaluation_reflections(
             totalCount=0
         )
     
-    # Get allocations (these contain the reflection text)
-    allocation_query = db.query(Allocation).join(User, Allocation.allocated_to == User.id).filter(
-        Allocation.evaluation_id.in_(evaluation_ids),
-        Allocation.allocated_to == Allocation.allocated_by,  # Self-assessment contains reflection
-        Allocation.reflection.isnot(None),
-        Allocation.reflection != ""
+    # Get reflections from the Reflection table
+    reflection_query = db.query(Reflection).join(User, Reflection.user_id == User.id).filter(
+        Reflection.evaluation_id.in_(evaluation_ids),
+        Reflection.text.isnot(None),
+        Reflection.text != ""
     )
     
     if student_name:
-        allocation_query = allocation_query.filter(
+        reflection_query = reflection_query.filter(
             User.name.ilike(f"%{student_name}%")
         )
     
-    allocations = allocation_query.all()
+    reflections = reflection_query.all()
     
     reflection_items = []
-    for allocation in allocations:
+    for reflection in reflections:
         # Get student info
-        student = db.query(User).filter(User.id == allocation.allocated_to).first()
+        student = db.query(User).filter(User.id == reflection.user_id).first()
         if not student:
             continue
         
         # Get evaluation and project info
-        evaluation = db.query(Evaluation).filter(Evaluation.id == allocation.evaluation_id).first()
+        evaluation = db.query(Evaluation).filter(Evaluation.id == reflection.evaluation_id).first()
         if not evaluation:
             continue
         
         project_name = evaluation.project.title if evaluation.project else f"Peer Evaluatie {evaluation.id}"
         eval_date = evaluation.closed_at or evaluation.created_at
         
-        # Calculate word count
-        word_count = len(allocation.reflection.split()) if allocation.reflection else 0
+        # Strip timezone if present
+        if eval_date and hasattr(eval_date, 'tzinfo') and eval_date.tzinfo is not None:
+            eval_date = eval_date.replace(tzinfo=None)
         
         reflection_items.append(ReflectionItem(
-            id=allocation.id,
+            id=reflection.id,
             student_id=student.id,
             student_name=student.name,
             project_name=project_name,
             evaluation_id=evaluation.id,
             date=eval_date,
-            reflection_text=allocation.reflection,
-            word_count=word_count
+            reflection_text=reflection.text,
+            word_count=reflection.word_count
         ))
     
     return ReflectionResponse(

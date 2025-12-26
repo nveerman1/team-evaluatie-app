@@ -1310,7 +1310,7 @@ function ReflectiesTab({ parentFilters }: { parentFilters: PeerOverviewFilters }
   if (error) {
     return (
       <div className="text-red-500 p-4 bg-red-50 rounded-lg">
-        Fout bij laden: {error}
+        Fout bij laden: {error.message || String(error)}
       </div>
     );
   }
