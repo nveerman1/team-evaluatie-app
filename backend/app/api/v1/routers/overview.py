@@ -1727,13 +1727,13 @@ def get_peer_evaluation_feedback(
         keywords = words[:3] if len(words) > 3 else words
         
         # Determine feedback type (self vs peer)
-        feedback_type = "self" if allocation.allocated_by == allocation.allocated_to else "peer"
+        feedback_type = "self" if allocation.reviewer_id == allocation.reviewee_id else "peer"
         
         # Get from student name (who gave this feedback)
         from_student = None
         from_student_name = None
         if feedback_type == "peer":
-            from_student = db.query(User).filter(User.id == allocation.allocated_by).first()
+            from_student = db.query(User).filter(User.id == allocation.reviewer_id).first()
             from_student_name = from_student.name if from_student else "Onbekend"
         
         feedback_items.append(FeedbackItem(
