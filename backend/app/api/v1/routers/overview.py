@@ -1327,11 +1327,14 @@ def get_peer_evaluation_dashboard(
     
     # Pre-compute scores for all students and evaluations using batch function for efficiency
     evaluation_scores_cache = {}
+    logger.debug(f"Starting to cache scores for {len(evaluations)} evaluations")
     for evaluation in evaluations:
         student_ids = [s.id for s in students]
+        logger.debug(f"Calling batch function for evaluation {evaluation.id} with {len(student_ids)} students: {student_ids}")
         batch_scores = compute_weighted_omza_scores_batch(
             db, evaluation.id, student_ids
         )
+        logger.debug(f"Batch function returned {len(batch_scores)} results: {list(batch_scores.keys()) if batch_scores else 'empty dict'}")
         evaluation_scores_cache[evaluation.id] = batch_scores
         logger.debug(f"Cached {len(batch_scores)} students for evaluation {evaluation.id}")
     
