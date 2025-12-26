@@ -80,9 +80,38 @@ function CardSkeleton() {
 
 function renderTeacherEmoticon(score: number | null | undefined) {
   if (!score) return null;
-  if (score === 1) return <span className="text-red-600 text-sm ml-1" title="Needs attention">!!</span>;
-  if (score === 2) return <span className="text-amber-600 text-sm ml-1" title="Could improve">!</span>;
-  if (score === 3) return <span className="text-green-600 text-sm ml-1" title="Doing well">✓</span>;
+  
+  // Render in same style as /teacher/evaluations/[id]/omza page
+  if (score === 1) {
+    return (
+      <span 
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-rose-500 bg-rose-100 text-[10px] font-medium text-rose-700 ml-1" 
+        title="Urgent"
+      >
+        !!
+      </span>
+    );
+  }
+  if (score === 2) {
+    return (
+      <span 
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-400 bg-amber-100 text-[10px] font-medium text-amber-700 ml-1" 
+        title="Let op / bespreken"
+      >
+        !
+      </span>
+    );
+  }
+  if (score === 3) {
+    return (
+      <span 
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[10px] font-medium text-green-700 ml-1" 
+        title="Voldoet aan verwachting"
+      >
+        ✓
+      </span>
+    );
+  }
   return null;
 }
 
