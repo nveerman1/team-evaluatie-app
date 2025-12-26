@@ -1341,16 +1341,21 @@ def get_peer_evaluation_dashboard(
         category_peer_scores = defaultdict(list)
         category_self_scores = defaultdict(list)
         
+        # Collect all unique category names from all evaluations
+        all_categories = set()
+        for evaluation in evaluations:
+            eval_scores = evaluation_scores_cache.get(evaluation.id, {})
+            student_eval_scores = eval_scores.get(student.id, {})
+            all_categories.update(student_eval_scores.keys())
+        
         for evaluation in evaluations:
             # Get weighted scores from cache
             eval_scores = evaluation_scores_cache.get(evaluation.id, {})
             student_eval_scores = eval_scores.get(student.id, {})
             
-            # Aggregate scores by category
-            for cat_name in ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"]:
-                # Map to short category code (O, M, Z, A)
-                cat_code = cat_name[0].upper()
-                cat_scores = student_eval_scores.get(cat_code, {})
+            # Aggregate scores by actual category names from rubric
+            for cat_name in all_categories:
+                cat_scores = student_eval_scores.get(cat_name, {})
                 
                 peer_score = cat_scores.get("peer")
                 if peer_score is not None:
@@ -1361,7 +1366,7 @@ def get_peer_evaluation_dashboard(
                     category_self_scores[cat_name].append(float(self_score))
         
         # Now aggregate the per-evaluation averages into overall category scores
-        for cat_name in ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"]:
+        for cat_name in all_categories:
             peer_evals = category_peer_scores.get(cat_name, [])
             self_evals = category_self_scores.get(cat_name, [])
             
@@ -1376,7 +1381,14 @@ def get_peer_evaluation_dashboard(
                 # Try to find teacher score in the most recent evaluation
                 for evaluation in reversed(evaluations):  # Start with most recent
                     if evaluation.settings:
-                        teacher_key = f"teacher_score_{student.id}_{cat_name[0].upper()}"  # O, M, Z, A
+                        # Try full category name first
+                        teacher_key = f"teacher_score_{student.id}_{cat_name}"
+                        if teacher_key in evaluation.settings:
+                            teacher_score = int(evaluation.settings[teacher_key])
+                            break
+                        # Fallback to abbreviated (first letter uppercase)
+                        cat_abbrev = cat_name[0].upper() if cat_name else ""
+                        teacher_key = f"teacher_score_{student.id}_{cat_abbrev}"
                         if teacher_key in evaluation.settings:
                             teacher_score = int(evaluation.settings[teacher_key])
                             break
@@ -1426,23 +1438,33 @@ def get_peer_evaluation_dashboard(
                 eval_student_scores = evaluation_scores_cache.get(evaluation.id, {}).get(student.id, {})
                 eval_scores = {}
                 
-                # Extract O, M, Z, A scores
-                for cat_code in ["O", "M", "Z", "A"]:
-                    cat_scores = eval_student_scores.get(cat_code, {})
+                # Extract scores for all actual categories (not hardcoded O/M/Z/A)
+                for cat_name in eval_student_scores.keys():
+                    cat_scores = eval_student_scores.get(cat_name, {})
                     peer_score = cat_scores.get("peer")
                     if peer_score is not None:
-                        eval_scores[cat_code] = float(peer_score)
+                        eval_scores[cat_name] = float(peer_score)
                 
                 # Extract teacher scores for this evaluation
                 eval_teacher_scores = {}
                 if evaluation.settings:
-                    for cat_code in ["O", "M", "Z", "A"]:
-                        teacher_key = f"teacher_score_{student.id}_{cat_code}"
+                    for cat_name in eval_student_scores.keys():
+                        # Try full category name first
+                        teacher_key = f"teacher_score_{student.id}_{cat_name}"
                         if teacher_key in evaluation.settings:
                             try:
-                                eval_teacher_scores[cat_code] = int(evaluation.settings[teacher_key])
+                                eval_teacher_scores[cat_name] = int(evaluation.settings[teacher_key])
                             except (ValueError, TypeError):
                                 pass
+                        else:
+                            # Fallback to abbreviated (first letter uppercase)
+                            cat_abbrev = cat_name[0].upper() if cat_name else ""
+                            teacher_key = f"teacher_score_{student.id}_{cat_abbrev}"
+                            if teacher_key in evaluation.settings:
+                                try:
+                                    eval_teacher_scores[cat_name] = int(evaluation.settings[teacher_key])
+                                except (ValueError, TypeError):
+                                    pass
                 
                 if eval_scores:  # Only add if there are scores
                     student_evaluations.append(PeerEvaluationDetail(
@@ -1512,25 +1534,35 @@ def get_peer_evaluation_dashboard(
                     # Aggregate all students' scores for this evaluation/month
                     for student_id in eval_all_scores:
                         student_omza = eval_all_scores[student_id]
-                        # Add peer scores to monthly aggregation
-                        for cat_code in ["O", "M", "Z", "A"]:
-                            peer_score = student_omza.get(cat_code, {}).get("peer")
+                        # Add peer scores to monthly aggregation (use actual category names from rubric)
+                        for cat_name in student_omza.keys():
+                            peer_score = student_omza.get(cat_name, {}).get("peer")
                             if peer_score is not None:
-                                # Map category code to full name
-                                cat_name_map = {"O": "organiseren", "M": "meedoen", "Z": "zelfvertrouwen", "A": "autonomie"}
-                                cat_name = cat_name_map.get(cat_code)
-                                if cat_name:
-                                    monthly_data[month_key][cat_name].append(float(peer_score))
+                                # Use the actual category name from the rubric
+                                monthly_data[month_key][cat_name].append(float(peer_score))
         
         # Convert to trend data points
+        # Note: OmzaTrendDataPoint expects specific lowercase fields, so we need to map
+        # actual category names to the expected format
         for month_key in sorted(monthly_data.keys(), key=lambda x: datetime.strptime(x, "%b %Y")):
             scores = monthly_data[month_key]
+            
+            # Create a flexible mapping - normalize category names to lowercase
+            normalized_scores = {}
+            for cat_name, cat_scores in scores.items():
+                normalized_key = cat_name.lower()
+                if cat_scores:
+                    normalized_scores[normalized_key] = sum(cat_scores) / len(cat_scores)
+                else:
+                    normalized_scores[normalized_key] = 0
+            
+            # Create trend point with available categories, defaulting to 0 for missing ones
             trend_point = OmzaTrendDataPoint(
                 date=month_key,
-                organiseren=sum(scores.get('organiseren', [])) / len(scores.get('organiseren', [1])) if scores.get('organiseren') else 0,
-                meedoen=sum(scores.get('meedoen', [])) / len(scores.get('meedoen', [1])) if scores.get('meedoen') else 0,
-                zelfvertrouwen=sum(scores.get('zelfvertrouwen', [])) / len(scores.get('zelfvertrouwen', [1])) if scores.get('zelfvertrouwen') else 0,
-                autonomie=sum(scores.get('autonomie', [])) / len(scores.get('autonomie', [1])) if scores.get('autonomie') else 0
+                organiseren=normalized_scores.get('organiseren', 0),
+                meedoen=normalized_scores.get('meedoen', 0),
+                zelfvertrouwen=normalized_scores.get('zelfvertrouwen', 0),
+                autonomie=normalized_scores.get('autonomie', 0)
             )
             trend_data.append(trend_point)
     

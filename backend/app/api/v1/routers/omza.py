@@ -171,24 +171,29 @@ async def get_omza_data(
     
     for student in students:
         # Get weighted scores from batch calculation
-        omza_scores = batch_scores.get(student.id, {
-            "O": {"peer": None, "self": None},
-            "M": {"peer": None, "self": None},
-            "Z": {"peer": None, "self": None},
-            "A": {"peer": None, "self": None}
-        })
+        omza_scores = batch_scores.get(student.id, {})
         
         category_scores = {}
-        for category in ["O", "M", "Z", "A"]:
+        # Use actual category names from the rubric (not hardcoded O/M/Z/A)
+        for category in omza_scores.keys():
             peer_avg = omza_scores.get(category, {}).get("peer")
             self_avg = omza_scores.get(category, {}).get("self")
             
             # Teacher score (stored in settings for now - we'll use a dedicated table later)
             # For MVP, we'll store teacher scores in evaluation settings
+            # Try both full category name and abbreviated first letter
             teacher_score = None
-            teacher_key = f"teacher_score_{student.id}_{category}"
-            if evaluation.settings and teacher_key in evaluation.settings:
-                teacher_score = evaluation.settings[teacher_key]
+            if evaluation.settings:
+                # Try full category name first
+                teacher_key = f"teacher_score_{student.id}_{category}"
+                if teacher_key in evaluation.settings:
+                    teacher_score = evaluation.settings[teacher_key]
+                else:
+                    # Fallback to abbreviated (first letter uppercase)
+                    cat_abbrev = category[0].upper() if category else ""
+                    teacher_key = f"teacher_score_{student.id}_{cat_abbrev}"
+                    if teacher_key in evaluation.settings:
+                        teacher_score = evaluation.settings[teacher_key]
 
             category_scores[category] = OmzaCategoryScore(
                 peer_avg=round(peer_avg, 2) if peer_avg is not None else None,
