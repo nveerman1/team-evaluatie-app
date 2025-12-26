@@ -201,6 +201,7 @@ class PeerEvaluationDetail(BaseModel):
     date: str  # ISO format date
     label: str  # Project/evaluation name
     scores: dict[str, float]  # category -> score value (O, M, Z, A)
+    teacher_scores: Optional[dict[str, int]] = None  # category -> teacher emoticon score (1-3)
 
 
 class StudentHeatmapRow(BaseModel):

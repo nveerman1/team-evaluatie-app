@@ -31,6 +31,9 @@ export type PeerEvaluationDetail = {
   scores: {  // Short category names: O, M, Z, A
     [key: string]: number;
   };
+  teacher_scores?: {  // Teacher emoticon scores (1-3) per category
+    [key: string]: number;
+  };
 };
 
 export type OmzaCategoryScore = {

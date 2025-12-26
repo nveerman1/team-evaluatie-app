@@ -1427,12 +1427,25 @@ def get_peer_evaluation_dashboard(
                         cat_short = cat_name[0].upper()  # First letter
                         eval_scores[cat_short] = float(peer_avg)
                 
+                # Extract teacher scores for this evaluation
+                eval_teacher_scores = {}
+                if evaluation.settings:
+                    for cat_name in category_criteria.keys():
+                        cat_short = cat_name[0].upper()  # O, M, Z, A
+                        teacher_key = f"teacher_score_{student.id}_{cat_short}"
+                        if teacher_key in evaluation.settings:
+                            try:
+                                eval_teacher_scores[cat_short] = int(evaluation.settings[teacher_key])
+                            except (ValueError, TypeError):
+                                pass
+                
                 if eval_scores:  # Only add if there are scores
                     student_evaluations.append(PeerEvaluationDetail(
                         id=evaluation.id,
                         date=date_str,
                         label=project_name,
-                        scores=eval_scores
+                        scores=eval_scores,
+                        teacher_scores=eval_teacher_scores if eval_teacher_scores else None
                     ))
         
         # Sort evaluations by date (newest first)

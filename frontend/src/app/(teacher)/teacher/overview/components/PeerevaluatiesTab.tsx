@@ -550,30 +550,42 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
                                         <td className="px-3 py-2 text-slate-900 font-medium">{evaluation.label}</td>
                                         <td className="px-3 py-2 text-center">
                                           {evaluation.scores['O'] ? (
-                                            <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores['O'])}`}>
-                                              {evaluation.scores['O'].toFixed(1)}
-                                            </span>
+                                            <div className="inline-flex items-center gap-1">
+                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores['O'])}`}>
+                                                {evaluation.scores['O'].toFixed(1)}
+                                              </span>
+                                              {evaluation.teacher_scores?.['O'] && renderTeacherEmoticon(evaluation.teacher_scores['O'])}
+                                            </div>
                                           ) : <span className="text-slate-300">–</span>}
                                         </td>
                                         <td className="px-3 py-2 text-center">
                                           {evaluation.scores['M'] ? (
-                                            <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores['M'])}`}>
-                                              {evaluation.scores['M'].toFixed(1)}
-                                            </span>
+                                            <div className="inline-flex items-center gap-1">
+                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores['M'])}`}>
+                                                {evaluation.scores['M'].toFixed(1)}
+                                              </span>
+                                              {evaluation.teacher_scores?.['M'] && renderTeacherEmoticon(evaluation.teacher_scores['M'])}
+                                            </div>
                                           ) : <span className="text-slate-300">–</span>}
                                         </td>
                                         <td className="px-3 py-2 text-center">
                                           {evaluation.scores['Z'] ? (
-                                            <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores['Z'])}`}>
-                                              {evaluation.scores['Z'].toFixed(1)}
-                                            </span>
+                                            <div className="inline-flex items-center gap-1">
+                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores['Z'])}`}>
+                                                {evaluation.scores['Z'].toFixed(1)}
+                                              </span>
+                                              {evaluation.teacher_scores?.['Z'] && renderTeacherEmoticon(evaluation.teacher_scores['Z'])}
+                                            </div>
                                           ) : <span className="text-slate-300">–</span>}
                                         </td>
                                         <td className="px-3 py-2 text-center">
                                           {evaluation.scores['A'] ? (
-                                            <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores['A'])}`}>
-                                              {evaluation.scores['A'].toFixed(1)}
-                                            </span>
+                                            <div className="inline-flex items-center gap-1">
+                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores['A'])}`}>
+                                                {evaluation.scores['A'].toFixed(1)}
+                                              </span>
+                                              {evaluation.teacher_scores?.['A'] && renderTeacherEmoticon(evaluation.teacher_scores['A'])}
+                                            </div>
                                           ) : <span className="text-slate-300">–</span>}
                                         </td>
                                       </tr>
