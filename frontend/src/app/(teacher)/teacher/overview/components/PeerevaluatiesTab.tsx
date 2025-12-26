@@ -28,6 +28,7 @@ import {
 import { usePeerOverview, type PeerOverviewFilters } from "@/hooks/usePeerOverview";
 import { useFeedbackData, type FeedbackFilters } from "@/hooks/useFeedbackData";
 import { useTeacherFeedback } from "@/hooks/useTeacherFeedback";
+import { useReflections } from "@/hooks/useReflections";
 import { overviewService } from "@/services/overview.service";
 import { projectService } from "@/services/project.service";
 
@@ -71,6 +72,18 @@ function CardSkeleton() {
       <div className="h-32 bg-gray-200 rounded-lg"></div>
     </div>
   );
+}
+
+/* =========================================
+   HELPER: TEACHER EMOTICON RENDERING
+   ========================================= */
+
+function renderTeacherEmoticon(score: number | null | undefined) {
+  if (!score) return null;
+  if (score === 1) return <span className="text-red-600 text-sm ml-1" title="Needs attention">!!</span>;
+  if (score === 2) return <span className="text-amber-600 text-sm ml-1" title="Could improve">!</span>;
+  if (score === 3) return <span className="text-green-600 text-sm ml-1" title="Doing well">✓</span>;
+  return null;
 }
 
 /* =========================================
@@ -390,6 +403,7 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
                                 <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(displayScores.organiseren)}`}>
                                   {displayScores.organiseren.toFixed(1)}
                                 </span>
+                                {renderTeacherEmoticon(student.scores.O?.teacher_score)}
                                 {(() => {
                                   const delta = calculateDelta(student, 'O');
                                   return delta !== null && (
@@ -410,6 +424,7 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
                                 <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(displayScores.meedoen)}`}>
                                   {displayScores.meedoen.toFixed(1)}
                                 </span>
+                                {renderTeacherEmoticon(student.scores.M?.teacher_score)}
                                 {(() => {
                                   const delta = calculateDelta(student, 'M');
                                   return delta !== null && (
@@ -430,6 +445,7 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
                                 <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(displayScores.zelfvertrouwen)}`}>
                                   {displayScores.zelfvertrouwen.toFixed(1)}
                                 </span>
+                                {renderTeacherEmoticon(student.scores.Z?.teacher_score)}
                                 {(() => {
                                   const delta = calculateDelta(student, 'Z');
                                   return delta !== null && (
@@ -450,6 +466,7 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
                                 <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(displayScores.autonomie)}`}>
                                   {displayScores.autonomie.toFixed(1)}
                                 </span>
+                                {renderTeacherEmoticon(student.scores.A?.teacher_score)}
                                 {(() => {
                                   const delta = calculateDelta(student, 'A');
                                   return delta !== null && (
@@ -721,11 +738,15 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
 }
 
 /* =========================================
-   TAB 2: FEEDBACKVERZAMELING
+   TAB 2: PEERFEEDBACK (formerly Feedbackverzameling)
    ========================================= */
 
-function FeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters }) {
+function PeerfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters }) {
   const [localFilters, setLocalFilters] = useState<Omit<FeedbackFilters, 'courseId' | 'projectId'>>({});
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({
+    key: 'student_name',
+    direction: 'asc'
+  });
   
   // Merge parent filters (courseId, projectId) with local filters (category, sentiment, etc.)
   const mergedFilters: FeedbackFilters = {
@@ -735,6 +756,61 @@ function FeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters }) 
   };
   
   const { data, loading, error } = useFeedbackData(mergedFilters);
+
+  // Filter by student name from parent filters (cross-tab search)
+  const filteredData = useMemo(() => {
+    if (!data?.feedbackItems) return [];
+    if (!parentFilters.studentName) return data.feedbackItems;
+    
+    const searchLower = parentFilters.studentName.toLowerCase();
+    return data.feedbackItems.filter(item =>
+      item.student_name.toLowerCase().includes(searchLower)
+    );
+  }, [data?.feedbackItems, parentFilters.studentName]);
+
+  // Sorted data
+  const sortedData = useMemo(() => {
+    const items = [...filteredData];
+    items.sort((a, b) => {
+      let aVal: any = a[sortConfig.key as keyof typeof a];
+      let bVal: any = b[sortConfig.key as keyof typeof b];
+      
+      // Handle date sorting
+      if (sortConfig.key === 'date') {
+        aVal = new Date(aVal).getTime();
+        bVal = new Date(bVal).getTime();
+      }
+      
+      // Handle numeric sorting
+      if (sortConfig.key === 'score') {
+        aVal = aVal || 0;
+        bVal = bVal || 0;
+      }
+      
+      // Handle string sorting
+      if (typeof aVal === 'string') {
+        aVal = aVal.toLowerCase();
+        bVal = bVal.toLowerCase();
+      }
+      
+      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return items;
+  }, [filteredData, sortConfig]);
+
+  const handleSort = (key: string) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const getSortIndicator = (key: string) => {
+    if (sortConfig.key !== key) return null;
+    return sortConfig.direction === 'asc' ? ' ▲' : ' ▼';
+  };
 
   const getSentimentColor = (sentiment: string) => {
     switch (sentiment) {
@@ -872,38 +948,84 @@ function FeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters }) 
               <table className="min-w-full divide-y divide-slate-200 text-sm">
                 <thead className="bg-slate-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[120px]">
-                      Student
+                    <th 
+                      className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[120px] cursor-pointer hover:bg-slate-100"
+                      onClick={() => handleSort('student_name')}
+                    >
+                      Student{getSortIndicator('student_name')}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[120px]">
-                      Project/Scan
+                    <th 
+                      className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                      onClick={() => handleSort('feedback_type')}
+                    >
+                      Type{getSortIndicator('feedback_type')}
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
-                      Categorie
+                    <th 
+                      className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                      onClick={() => handleSort('score')}
+                    >
+                      Score{getSortIndicator('score')}
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
-                      Sentiment
+                    <th 
+                      className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[100px] cursor-pointer hover:bg-slate-100"
+                      onClick={() => handleSort('from_student_name')}
+                    >
+                      Van{getSortIndicator('from_student_name')}
+                    </th>
+                    <th 
+                      className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[120px] cursor-pointer hover:bg-slate-100"
+                      onClick={() => handleSort('project_name')}
+                    >
+                      Project/Scan{getSortIndicator('project_name')}
+                    </th>
+                    <th 
+                      className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                      onClick={() => handleSort('category')}
+                    >
+                      Categorie{getSortIndicator('category')}
+                    </th>
+                    <th 
+                      className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                      onClick={() => handleSort('sentiment')}
+                    >
+                      Sentiment{getSortIndicator('sentiment')}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
                       Feedback
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
-                      Datum
+                    <th 
+                      className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                      onClick={() => handleSort('date')}
+                    >
+                      Datum{getSortIndicator('date')}
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {data?.feedbackItems.length === 0 ? (
+                  {sortedData.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                      <td colSpan={9} className="px-4 py-8 text-center text-slate-500">
                         Geen feedback gevonden voor de geselecteerde filters
                       </td>
                     </tr>
                   ) : (
-                    data?.feedbackItems.map((item) => (
+                    sortedData.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50">
                         <td className="px-4 py-3 text-sm text-slate-800">
                           {item.student_name}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            item.feedback_type === 'self' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                          }`}>
+                            {item.feedback_type === 'self' ? 'Self' : 'Peer'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center text-sm font-semibold text-slate-700">
+                          {item.score ? item.score.toFixed(1) : '–'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-800">
+                          {item.from_student_name || '–'}
                         </td>
                         <td className="px-4 py-3 text-sm text-slate-800">
                           {item.project_name}
@@ -940,32 +1062,76 @@ function FeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters }) 
           )}
         </Suspense>
       </div>
-
-      {/* Teacher Feedback Table */}
-      <TeacherFeedbackTable parentFilters={parentFilters} />
     </div>
   );
 }
 
-// Helper component for teacher feedback
-function TeacherFeedbackTable({ parentFilters }: { parentFilters: PeerOverviewFilters }) {
-  const { data: teacherData, loading: teacherLoading, error: teacherError } = useTeacherFeedback({
+/* =========================================
+   TAB 3: DOCENTFEEDBACK
+   ========================================= */
+
+function DocentfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters }) {
+  const { data, loading, error } = useTeacherFeedback({
     courseId: parentFilters.courseId,
     projectId: parentFilters.projectId,
   });
 
-  const getEmoticonDisplay = (score?: number) => {
-    if (!score) return "–";
-    if (score === 1) return <span className="text-red-600 text-lg">!!</span>;
-    if (score === 2) return <span className="text-amber-600 text-lg">!</span>;
-    if (score === 3) return <span className="text-green-600 text-lg">✓</span>;
-    return "–";
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({
+    key: 'student_name',
+    direction: 'asc'
+  });
+
+  // Filter by student name from parent filters (cross-tab search)
+  const filteredData = useMemo(() => {
+    if (!data?.feedbackItems) return [];
+    if (!parentFilters.studentName) return data.feedbackItems;
+    
+    const searchLower = parentFilters.studentName.toLowerCase();
+    return data.feedbackItems.filter(item =>
+      item.student_name.toLowerCase().includes(searchLower)
+    );
+  }, [data?.feedbackItems, parentFilters.studentName]);
+
+  // Sorted data
+  const sortedData = useMemo(() => {
+    const items = [...filteredData];
+    items.sort((a, b) => {
+      let aVal: any = a[sortConfig.key as keyof typeof a];
+      let bVal: any = b[sortConfig.key as keyof typeof b];
+      
+      if (sortConfig.key === 'date') {
+        aVal = new Date(aVal).getTime();
+        bVal = new Date(bVal).getTime();
+      }
+      
+      if (typeof aVal === 'string') {
+        aVal = aVal.toLowerCase();
+        bVal = bVal.toLowerCase();
+      }
+      
+      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return items;
+  }, [filteredData, sortConfig]);
+
+  const handleSort = (key: string) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
   };
 
-  if (teacherError) {
+  const getSortIndicator = (key: string) => {
+    if (sortConfig.key !== key) return null;
+    return sortConfig.direction === 'asc' ? ' ▲' : ' ▼';
+  };
+
+  if (error) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <div className="text-red-500">Fout bij laden van docentfeedback: {teacherError}</div>
+      <div className="text-red-500 p-4 bg-red-50 rounded-lg">
+        Fout bij laden: {error}
       </div>
     );
   }
@@ -974,85 +1140,278 @@ function TeacherFeedbackTable({ parentFilters }: { parentFilters: PeerOverviewFi
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
       <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
         <h3 className="text-base font-semibold text-slate-900 leading-6">
-          Docentbeoordelingen ({teacherData?.totalCount || 0})
+          Docentbeoordelingen ({sortedData.length})
         </h3>
         <p className="text-sm text-slate-600">Meest recente OMZA-beoordeling per leerling door docent</p>
       </div>
 
       <Suspense fallback={<div className="p-6"><TableSkeleton /></div>}>
-        {teacherLoading ? (
+        {loading ? (
           <div className="p-6"><TableSkeleton /></div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[120px]">
-                    Student
+                  <th 
+                    className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[140px] cursor-pointer hover:bg-slate-100"
+                    onClick={() => handleSort('student_name')}
+                  >
+                    Student{getSortIndicator('student_name')}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[120px]">
-                    Project/Scan
+                  <th 
+                    className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[120px] cursor-pointer hover:bg-slate-100"
+                    onClick={() => handleSort('project_name')}
+                  >
+                    Project/Scan{getSortIndicator('project_name')}
                   </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
-                    O
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
-                    M
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
-                    Z
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
-                    A
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
-                    Opmerking
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
-                    Datum
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">O</th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">M</th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">Z</th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">A</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">Opmerking</th>
+                  <th 
+                    className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                    onClick={() => handleSort('date')}
+                  >
+                    Datum{getSortIndicator('date')}
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {teacherData?.feedbackItems.length === 0 ? (
+                {sortedData.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
                       Geen docentbeoordelingen gevonden
                     </td>
                   </tr>
                 ) : (
-                  teacherData?.feedbackItems.map((item) => (
+                  sortedData.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 text-sm text-slate-800">
+                      <td className="px-4 py-3 text-sm font-medium text-slate-900">
                         {item.student_name}
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-800">
                         {item.project_name}
                       </td>
-                      <td className="px-4 py-3 text-center">
-                        {getEmoticonDisplay(item.organiseren_score)}
+                      <td className="px-3 py-3 text-center text-lg">
+                        {renderTeacherEmoticon(item.organiseren_score)}
                       </td>
-                      <td className="px-4 py-3 text-center">
-                        {getEmoticonDisplay(item.meedoen_score)}
+                      <td className="px-3 py-3 text-center text-lg">
+                        {renderTeacherEmoticon(item.meedoen_score)}
                       </td>
-                      <td className="px-4 py-3 text-center">
-                        {getEmoticonDisplay(item.zelfvertrouwen_score)}
+                      <td className="px-3 py-3 text-center text-lg">
+                        {renderTeacherEmoticon(item.zelfvertrouwen_score)}
                       </td>
-                      <td className="px-4 py-3 text-center">
-                        {getEmoticonDisplay(item.autonomie_score)}
+                      <td className="px-3 py-3 text-center text-lg">
+                        {renderTeacherEmoticon(item.autonomie_score)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-slate-800 max-w-md">
-                        <p className="line-clamp-2">{item.teacher_comment || "–"}</p>
+                      <td className="px-4 py-3 text-sm text-slate-700 max-w-xs">
+                        <p className="line-clamp-2">{item.teacher_comment || '–'}</p>
                       </td>
                       <td className="px-4 py-3 text-center text-sm text-slate-600">
-                        {new Date(item.date).toLocaleDateString("nl-NL", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric"
+                        {new Date(item.date).toLocaleDateString('nl-NL', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric'
                         })}
                       </td>
                     </tr>
                   ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Suspense>
+    </div>
+  );
+}
+
+/* =========================================
+   TAB 4: REFLECTIES
+   ========================================= */
+
+function ReflectiesTab({ parentFilters }: { parentFilters: PeerOverviewFilters }) {
+  const { data, loading, error } = useReflections({
+    courseId: parentFilters.courseId,
+    projectId: parentFilters.projectId,
+  });
+
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({
+    key: 'student_name',
+    direction: 'asc'
+  });
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+
+  // Filter by student name from parent filters (cross-tab search)
+  const filteredData = useMemo(() => {
+    if (!data?.reflectionItems) return [];
+    if (!parentFilters.studentName) return data.reflectionItems;
+    
+    const searchLower = parentFilters.studentName.toLowerCase();
+    return data.reflectionItems.filter(item =>
+      item.student_name.toLowerCase().includes(searchLower)
+    );
+  }, [data?.reflectionItems, parentFilters.studentName]);
+
+  // Sorted data
+  const sortedData = useMemo(() => {
+    const items = [...filteredData];
+    items.sort((a, b) => {
+      let aVal: any = a[sortConfig.key as keyof typeof a];
+      let bVal: any = b[sortConfig.key as keyof typeof b];
+      
+      if (sortConfig.key === 'date') {
+        aVal = new Date(aVal).getTime();
+        bVal = new Date(bVal).getTime();
+      }
+      
+      if (sortConfig.key === 'word_count') {
+        return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+      
+      if (typeof aVal === 'string') {
+        aVal = aVal.toLowerCase();
+        bVal = bVal.toLowerCase();
+      }
+      
+      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return items;
+  }, [filteredData, sortConfig]);
+
+  const handleSort = (key: string) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const getSortIndicator = (key: string) => {
+    if (sortConfig.key !== key) return null;
+    return sortConfig.direction === 'asc' ? ' ▲' : ' ▼';
+  };
+
+  const toggleRow = (id: number) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  if (error) {
+    return (
+      <div className="text-red-500 p-4 bg-red-50 rounded-lg">
+        Fout bij laden: {error}
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
+        <h3 className="text-base font-semibold text-slate-900 leading-6">
+          Reflecties ({sortedData.length})
+        </h3>
+        <p className="text-sm text-slate-600">Alle reflecties van leerlingen uit peer evaluaties</p>
+      </div>
+
+      <Suspense fallback={<div className="p-6"><TableSkeleton /></div>}>
+        {loading ? (
+          <div className="p-6"><TableSkeleton /></div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 text-sm">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th 
+                    className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[140px] cursor-pointer hover:bg-slate-100"
+                    onClick={() => handleSort('student_name')}
+                  >
+                    Student{getSortIndicator('student_name')}
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
+                    Reflectie
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                    onClick={() => handleSort('date')}
+                  >
+                    Datum{getSortIndicator('date')}
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                    onClick={() => handleSort('word_count')}
+                  >
+                    Woorden{getSortIndicator('word_count')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {sortedData.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                      Geen reflecties gevonden
+                    </td>
+                  </tr>
+                ) : (
+                  sortedData.map((item) => {
+                    const isExpanded = expandedRows.has(item.id);
+                    return (
+                      <React.Fragment key={item.id}>
+                        <tr 
+                          className="hover:bg-slate-50 cursor-pointer"
+                          onClick={() => toggleRow(item.id)}
+                        >
+                          <td className="px-4 py-3 text-sm font-medium text-slate-900">
+                            <div className="flex items-center gap-2">
+                              {isExpanded ? (
+                                <ChevronDown className="w-4 h-4 text-slate-400" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4 text-slate-400" />
+                              )}
+                              {item.student_name}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-700">
+                            <p className="line-clamp-2">{item.reflection_text}</p>
+                          </td>
+                          <td className="px-4 py-3 text-center text-sm text-slate-600">
+                            {new Date(item.date).toLocaleDateString('nl-NL', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric'
+                            })}
+                          </td>
+                          <td className="px-4 py-3 text-center text-sm text-slate-600">
+                            {item.word_count}
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr className="bg-slate-50">
+                            <td colSpan={4} className="px-4 py-4">
+                              <div className="prose prose-sm max-w-none">
+                                <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                                  {item.reflection_text}
+                                </p>
+                                <div className="mt-2 text-xs text-slate-500">
+                                  <span className="font-medium">Project:</span> {item.project_name}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -1119,7 +1478,9 @@ export default function PeerevaluatiesTab() {
 
   const subTabs = [
     { id: "dashboard", label: "Dashboard & Trends", icon: LayoutDashboard },
-    { id: "feedback", label: "Feedbackverzameling", icon: MessageSquare },
+    { id: "peerfeedback", label: "Peerfeedback", icon: MessageSquare },
+    { id: "docentfeedback", label: "Docentfeedback", icon: Users },
+    { id: "reflecties", label: "Reflecties", icon: MessageSquare },
   ];
 
   return (
@@ -1247,7 +1608,9 @@ export default function PeerevaluatiesTab() {
       {/* Tab Content */}
       <div>
         {activeSubTab === "dashboard" && <DashboardTab filters={filters} />}
-        {activeSubTab === "feedback" && <FeedbackTab parentFilters={filters} />}
+        {activeSubTab === "peerfeedback" && <PeerfeedbackTab parentFilters={filters} />}
+        {activeSubTab === "docentfeedback" && <DocentfeedbackTab parentFilters={filters} />}
+        {activeSubTab === "reflecties" && <ReflectiesTab parentFilters={filters} />}
       </div>
     </div>
   );
