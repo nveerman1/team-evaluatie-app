@@ -7,6 +7,9 @@ from io import StringIO
 import csv
 from datetime import datetime
 from typing import Optional
+import logging
+
+logger = logging.getLogger(__name__)
 
 from app.api.v1.deps import get_db, get_current_user
 from app.core.grading import score_to_grade as _score_to_grade
@@ -1326,9 +1329,11 @@ def get_peer_evaluation_dashboard(
     evaluation_scores_cache = {}
     for evaluation in evaluations:
         student_ids = [s.id for s in students]
-        evaluation_scores_cache[evaluation.id] = compute_weighted_omza_scores_batch(
+        batch_scores = compute_weighted_omza_scores_batch(
             db, evaluation.id, student_ids
         )
+        evaluation_scores_cache[evaluation.id] = batch_scores
+        logger.debug(f"Cached {len(batch_scores)} students for evaluation {evaluation.id}")
     
     for student in students:
         student_scores = {}
@@ -1347,6 +1352,8 @@ def get_peer_evaluation_dashboard(
             eval_scores = evaluation_scores_cache.get(evaluation.id, {})
             student_eval_scores = eval_scores.get(student.id, {})
             all_categories.update(student_eval_scores.keys())
+        
+        logger.debug(f"Student {student.name} (id={student.id}) has categories: {sorted(all_categories)}")
         
         for evaluation in evaluations:
             # Get weighted scores from cache
@@ -1369,6 +1376,8 @@ def get_peer_evaluation_dashboard(
         for cat_name in all_categories:
             peer_evals = category_peer_scores.get(cat_name, [])
             self_evals = category_self_scores.get(cat_name, [])
+            
+            logger.debug(f"Category '{cat_name}' - peer scores: {peer_evals}, self scores: {self_evals}")
             
             # Average of peer evaluation averages
             peer_overall = sum(peer_evals) / len(peer_evals) if peer_evals else None
@@ -1397,6 +1406,7 @@ def get_peer_evaluation_dashboard(
             combined_avg = peer_overall if peer_overall else self_overall
             
             if combined_avg:
+                logger.debug(f"Adding '{cat_name}' to student_scores with peer={peer_overall}, self={self_overall}")
                 student_scores[cat_name] = OmzaCategoryScore(
                     current=float(combined_avg),
                     trend="neutral",  # TODO: Calculate trend by comparing time periods
@@ -1480,6 +1490,7 @@ def get_peer_evaluation_dashboard(
         
         # Only include student in heatmap if they have scores in at least one category
         if student_scores:
+            logger.debug(f"Student {student.name} has {len(student_scores)} category scores, adding to heatmap")
             # Calculate self vs peer difference (average across all categories)
             self_vs_peer_diff = None
             if self_scores and peer_scores:
@@ -1503,8 +1514,10 @@ def get_peer_evaluation_dashboard(
                 scores=student_scores,
                 self_vs_peer_diff=self_vs_peer_diff,
                 teacher_comment=teacher_comment,
-                evaluations=student_evaluations if student_evaluations else None
+                 evaluations=student_evaluations if student_evaluations else None
             ))
+        else:
+            logger.warning(f"Student {student.name} (id={student.id}) has no scores, not adding to heatmap. all_categories={sorted(all_categories)}")
     
     # Calculate trend data - group evaluations by month
     trend_data = []
