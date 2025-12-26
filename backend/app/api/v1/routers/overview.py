@@ -1621,6 +1621,13 @@ def get_peer_evaluation_dashboard(
         ]
     )
     
+    # Debug: Log what we're returning
+    print(f"[OVERVIEW DEBUG] Returning {len(heatmap_data)} students in heatmap")
+    for student_row in heatmap_data[:3]:  # Log first 3 students
+        print(f"[OVERVIEW DEBUG] Student: {student_row.student_name}, scores keys: {list(student_row.scores.keys())}")
+        for cat_name, score_obj in student_row.scores.items():
+            print(f"[OVERVIEW DEBUG]   {cat_name}: current={score_obj.current}, teacher_score={score_obj.teacher_score}")
+    
     return PeerOverviewDashboardResponse(
         trendData=trend_data,
         heatmapData=heatmap_data,
