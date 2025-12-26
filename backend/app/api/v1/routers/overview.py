@@ -31,6 +31,7 @@ from app.infra.db.models import (
     Score,
     Reflection,
 )
+from app.services.omza_weighted_scores import compute_weighted_omza_scores_batch
 from app.api.v1.schemas.overview import (
     OverviewItemOut,
     OverviewListResponse,
@@ -1321,6 +1322,14 @@ def get_peer_evaluation_dashboard(
     heatmap_data = []
     student_overall_scores = {}  # For KPI calculations
     
+    # Pre-compute scores for all students and evaluations using batch function for efficiency
+    evaluation_scores_cache = {}
+    for evaluation in evaluations:
+        student_ids = [s.id for s in students]
+        evaluation_scores_cache[evaluation.id] = compute_weighted_omza_scores_batch(
+            db, evaluation.id, student_ids
+        )
+    
     for student in students:
         student_scores = {}
         self_scores = {}
@@ -1328,73 +1337,28 @@ def get_peer_evaluation_dashboard(
         teacher_comment = None
         
         # Calculate per-category scores by aggregating per-evaluation averages
-        # This ensures we only use criteria from each evaluation's actual rubric
+        # Using pre-computed weighted scores from shared service
         category_peer_scores = defaultdict(list)
         category_self_scores = defaultdict(list)
         
         for evaluation in evaluations:
-            # Get criteria specific to this evaluation's rubric
-            eval_criteria = db.query(RubricCriterion).filter(
-                RubricCriterion.rubric_id == evaluation.rubric_id,
-                RubricCriterion.category.isnot(None)
-            ).all()
+            # Get weighted scores from cache
+            eval_scores = evaluation_scores_cache.get(evaluation.id, {})
+            student_eval_scores = eval_scores.get(student.id, {})
             
-            # Group criteria by category for this evaluation
-            eval_category_criteria = defaultdict(list)
-            for criterion in eval_criteria:
-                if criterion.category:
-                    normalized_cat = category_map.get(criterion.category)
-                    if normalized_cat:
-                        eval_category_criteria[normalized_cat].append(criterion.id)
-            
-            # Calculate peer and self WEIGHTED averages for each category in this evaluation
-            for cat_name, criterion_ids in eval_category_criteria.items():
-                if not criterion_ids:
-                    continue
+            # Aggregate scores by category
+            for cat_name in ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"]:
+                # Map to short category code (O, M, Z, A)
+                cat_code = cat_name[0].upper()
+                cat_scores = student_eval_scores.get(cat_code, {})
                 
-                # Get criteria with weights for this category
-                criteria_with_weights = [c for c in eval_criteria if c.id in criterion_ids]
-                weight_map = {c.id: c.weight for c in criteria_with_weights}
+                peer_score = cat_scores.get("peer")
+                if peer_score is not None:
+                    category_peer_scores[cat_name].append(float(peer_score))
                 
-                # Peer weighted average for this evaluation and category
-                # Get all peer scores with their criterion IDs
-                peer_scores_data = db.query(Score.score, Score.criterion_id).join(
-                    Allocation, Allocation.id == Score.allocation_id
-                ).filter(
-                    Allocation.evaluation_id == evaluation.id,
-                    Allocation.reviewee_id == student.id,
-                    Allocation.reviewer_id != student.id,  # Peer scores: reviewer != reviewee
-                    Score.criterion_id.in_(criterion_ids),
-                    Score.status == "submitted"
-                ).all()
-                
-                if peer_scores_data:
-                    # Calculate weighted average
-                    weighted_sum = sum(score * weight_map.get(crit_id, 1.0) for score, crit_id in peer_scores_data)
-                    weight_sum = sum(weight_map.get(crit_id, 1.0) for _, crit_id in peer_scores_data)
-                    peer_weighted_avg = weighted_sum / weight_sum if weight_sum > 0 else None
-                    if peer_weighted_avg:
-                        category_peer_scores[cat_name].append(float(peer_weighted_avg))
-                
-                # Self weighted average for this evaluation and category
-                # Get all self scores with their criterion IDs
-                self_scores_data = db.query(Score.score, Score.criterion_id).join(
-                    Allocation, Allocation.id == Score.allocation_id
-                ).filter(
-                    Allocation.evaluation_id == evaluation.id,
-                    Allocation.reviewee_id == student.id,
-                    Allocation.reviewer_id == student.id,  # Self scores: reviewer == reviewee
-                    Score.criterion_id.in_(criterion_ids),
-                    Score.status == "submitted"
-                ).all()
-                
-                if self_scores_data:
-                    # Calculate weighted average
-                    weighted_sum = sum(score * weight_map.get(crit_id, 1.0) for score, crit_id in self_scores_data)
-                    weight_sum = sum(weight_map.get(crit_id, 1.0) for _, crit_id in self_scores_data)
-                    self_weighted_avg = weighted_sum / weight_sum if weight_sum > 0 else None
-                    if self_weighted_avg:
-                        category_self_scores[cat_name].append(float(self_weighted_avg))
+                self_score = cat_scores.get("self")
+                if self_score is not None:
+                    category_self_scores[cat_name].append(float(self_score))
         
         # Now aggregate the per-evaluation averages into overall category scores
         for cat_name in ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"]:
@@ -1458,61 +1422,25 @@ def get_peer_evaluation_dashboard(
                 else:
                     date_str = ""
                 
-                # Get criteria specific to THIS evaluation's rubric
-                eval_criteria = db.query(RubricCriterion).filter(
-                    RubricCriterion.rubric_id == evaluation.rubric_id,
-                    RubricCriterion.category.isnot(None)
-                ).all()
-                
-                # Group criteria by category for this evaluation
-                eval_category_criteria = defaultdict(list)
-                for criterion in eval_criteria:
-                    if criterion.category:
-                        normalized_cat = category_map.get(criterion.category)
-                        if normalized_cat:
-                            eval_category_criteria[normalized_cat].append(criterion.id)
-                
-                # Calculate WEIGHTED scores for this evaluation using only its rubric's criteria
+                # Get weighted scores from cache for this evaluation
+                eval_student_scores = evaluation_scores_cache.get(evaluation.id, {}).get(student.id, {})
                 eval_scores = {}
-                for cat_name, criterion_ids in eval_category_criteria.items():
-                    if not criterion_ids:
-                        continue
-                    
-                    # Get criteria with weights for this category
-                    criteria_with_weights = [c for c in eval_criteria if c.id in criterion_ids]
-                    weight_map = {c.id: c.weight for c in criteria_with_weights}
-                    
-                    # Get peer scores with criterion IDs for this evaluation
-                    peer_scores_data = db.query(Score.score, Score.criterion_id).join(
-                        Allocation, Allocation.id == Score.allocation_id
-                    ).filter(
-                        Allocation.evaluation_id == evaluation.id,
-                        Allocation.reviewee_id == student.id,
-                        Allocation.reviewer_id != student.id,  # Peer scores: reviewer != reviewee
-                        Score.criterion_id.in_(criterion_ids),
-                        Score.status == "submitted"
-                    ).all()
-                    
-                    if peer_scores_data:
-                        # Calculate weighted average
-                        weighted_sum = sum(score * weight_map.get(crit_id, 1.0) for score, crit_id in peer_scores_data)
-                        weight_sum = sum(weight_map.get(crit_id, 1.0) for _, crit_id in peer_scores_data)
-                        peer_weighted_avg = weighted_sum / weight_sum if weight_sum > 0 else None
-                        
-                        if peer_weighted_avg:
-                            # Use short category names for frontend (O, M, Z, A)
-                            cat_short = cat_name[0].upper()  # First letter
-                            eval_scores[cat_short] = float(peer_weighted_avg)
+                
+                # Extract O, M, Z, A scores
+                for cat_code in ["O", "M", "Z", "A"]:
+                    cat_scores = eval_student_scores.get(cat_code, {})
+                    peer_score = cat_scores.get("peer")
+                    if peer_score is not None:
+                        eval_scores[cat_code] = float(peer_score)
                 
                 # Extract teacher scores for this evaluation
                 eval_teacher_scores = {}
                 if evaluation.settings:
-                    for cat_name in eval_category_criteria.keys():
-                        cat_short = cat_name[0].upper()  # O, M, Z, A
-                        teacher_key = f"teacher_score_{student.id}_{cat_short}"
+                    for cat_code in ["O", "M", "Z", "A"]:
+                        teacher_key = f"teacher_score_{student.id}_{cat_code}"
                         if teacher_key in evaluation.settings:
                             try:
-                                eval_teacher_scores[cat_short] = int(evaluation.settings[teacher_key])
+                                eval_teacher_scores[cat_code] = int(evaluation.settings[teacher_key])
                             except (ValueError, TypeError):
                                 pass
                 
@@ -1578,44 +1506,21 @@ def get_peer_evaluation_dashboard(
                 if eval_date >= start_date:
                     month_key = eval_date.strftime("%b %Y")  # e.g., "Dec 2024"
                     
-                    # Get criteria for this evaluation
-                    eval_criteria = db.query(RubricCriterion).filter(
-                        RubricCriterion.rubric_id == evaluation.rubric_id,
-                        RubricCriterion.category.isnot(None)
-                    ).all()
+                    # Use cached scores from batch calculation
+                    eval_all_scores = evaluation_scores_cache.get(evaluation.id, {})
                     
-                    eval_category_criteria = defaultdict(list)
-                    for criterion in eval_criteria:
-                        if criterion.category:
-                            normalized_cat = category_map.get(criterion.category)
-                            if normalized_cat:
-                                eval_category_criteria[normalized_cat].append(criterion.id)
-                    
-                    # Calculate WEIGHTED average scores per category for this evaluation
-                    for cat_name, criterion_ids in eval_category_criteria.items():
-                        if criterion_ids:
-                            # Get criteria with weights for this category
-                            criteria_with_weights = [c for c in eval_criteria if c.id in criterion_ids]
-                            weight_map = {c.id: c.weight for c in criteria_with_weights}
-                            
-                            # Get peer scores with criterion IDs
-                            scores_data = db.query(Score.score, Score.criterion_id).join(
-                                Allocation, Allocation.id == Score.allocation_id
-                            ).filter(
-                                Allocation.evaluation_id == evaluation.id,
-                                Allocation.reviewer_id != Allocation.reviewee_id,  # Peer scores only
-                                Score.criterion_id.in_(criterion_ids),
-                                Score.status == "submitted"
-                            ).all()
-                            
-                            if scores_data:
-                                # Calculate weighted average
-                                weighted_sum = sum(score * weight_map.get(crit_id, 1.0) for score, crit_id in scores_data)
-                                weight_sum = sum(weight_map.get(crit_id, 1.0) for _, crit_id in scores_data)
-                                weighted_avg = weighted_sum / weight_sum if weight_sum > 0 else None
-                                
-                                if weighted_avg:
-                                    monthly_data[month_key][cat_name].append(float(weighted_avg))
+                    # Aggregate all students' scores for this evaluation/month
+                    for student_id in eval_all_scores:
+                        student_omza = eval_all_scores[student_id]
+                        # Add peer scores to monthly aggregation
+                        for cat_code in ["O", "M", "Z", "A"]:
+                            peer_score = student_omza.get(cat_code, {}).get("peer")
+                            if peer_score is not None:
+                                # Map category code to full name
+                                cat_name_map = {"O": "organiseren", "M": "meedoen", "Z": "zelfvertrouwen", "A": "autonomie"}
+                                cat_name = cat_name_map.get(cat_code)
+                                if cat_name:
+                                    monthly_data[month_key][cat_name].append(float(peer_score))
         
         # Convert to trend data points
         for month_key in sorted(monthly_data.keys(), key=lambda x: datetime.strptime(x, "%b %Y")):

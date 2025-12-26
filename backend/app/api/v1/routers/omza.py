@@ -37,6 +37,7 @@ from app.api.v1.schemas.omza import (
 )
 from app.core.rbac import require_role
 from app.core.audit import log_create, log_update, log_delete
+from app.services.omza_weighted_scores import compute_weighted_omza_scores_batch
 
 router = APIRouter(prefix="/omza", tags=["omza"])
 
@@ -163,47 +164,25 @@ async def get_omza_data(
 
     # Build student data
     student_data_list = []
+    
+    # Use batch scoring for efficiency
+    student_ids = [s.id for s in students]
+    batch_scores = compute_weighted_omza_scores_batch(db, evaluation_id, student_ids)
+    
     for student in students:
+        # Get weighted scores from batch calculation
+        omza_scores = batch_scores.get(student.id, {
+            "O": {"peer": None, "self": None},
+            "M": {"peer": None, "self": None},
+            "Z": {"peer": None, "self": None},
+            "A": {"peer": None, "self": None}
+        })
+        
         category_scores = {}
-
-        # Calculate peer and self averages per category
-        for category, criterion_ids in categories.items():
-            # Peer scores (where student is reviewee and reviewer is someone else)
-            peer_scores = (
-                db.query(Score.score)
-                .join(Allocation, Allocation.id == Score.allocation_id)
-                .filter(
-                    Allocation.reviewee_id == student.id,
-                    Allocation.reviewer_id != student.id,
-                    Score.criterion_id.in_(criterion_ids),
-                    Score.status == "submitted",
-                )
-                .all()
-            )
-            peer_avg = (
-                sum([s[0] for s in peer_scores]) / len(peer_scores)
-                if peer_scores
-                else None
-            )
-
-            # Self scores (where student is both reviewer and reviewee)
-            self_scores = (
-                db.query(Score.score)
-                .join(Allocation, Allocation.id == Score.allocation_id)
-                .filter(
-                    Allocation.reviewee_id == student.id,
-                    Allocation.reviewer_id == student.id,
-                    Score.criterion_id.in_(criterion_ids),
-                    Score.status == "submitted",
-                )
-                .all()
-            )
-            self_avg = (
-                sum([s[0] for s in self_scores]) / len(self_scores)
-                if self_scores
-                else None
-            )
-
+        for category in ["O", "M", "Z", "A"]:
+            peer_avg = omza_scores.get(category, {}).get("peer")
+            self_avg = omza_scores.get(category, {}).get("self")
+            
             # Teacher score (stored in settings for now - we'll use a dedicated table later)
             # For MVP, we'll store teacher scores in evaluation settings
             teacher_score = None
