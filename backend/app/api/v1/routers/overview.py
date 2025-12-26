@@ -1327,16 +1327,16 @@ def get_peer_evaluation_dashboard(
     
     # Pre-compute scores for all students and evaluations using batch function for efficiency
     evaluation_scores_cache = {}
-    logger.debug(f"Starting to cache scores for {len(evaluations)} evaluations")
+    print(f"[OVERVIEW DEBUG] Starting to cache scores for {len(evaluations)} evaluations")
     for evaluation in evaluations:
         student_ids = [s.id for s in students]
-        logger.debug(f"Calling batch function for evaluation {evaluation.id} with {len(student_ids)} students: {student_ids}")
+        print(f"[OVERVIEW DEBUG] Calling batch function for evaluation {evaluation.id} with {len(student_ids)} students: {student_ids}")
         batch_scores = compute_weighted_omza_scores_batch(
             db, evaluation.id, student_ids
         )
-        logger.debug(f"Batch function returned {len(batch_scores)} results: {list(batch_scores.keys()) if batch_scores else 'empty dict'}")
+        print(f"[OVERVIEW DEBUG] Batch function returned {len(batch_scores)} results: {list(batch_scores.keys()) if batch_scores else 'empty dict'}")
         evaluation_scores_cache[evaluation.id] = batch_scores
-        logger.debug(f"Cached {len(batch_scores)} students for evaluation {evaluation.id}")
+        print(f"[OVERVIEW DEBUG] Cached {len(batch_scores)} students for evaluation {evaluation.id}")
     
     for student in students:
         student_scores = {}
@@ -1356,13 +1356,13 @@ def get_peer_evaluation_dashboard(
             student_eval_scores = eval_scores.get(student.id, {})
             all_categories.update(student_eval_scores.keys())
         
-        logger.debug(f"Student {student.name} (id={student.id}) has categories: {sorted(all_categories)}")
+        print(f"[OVERVIEW DEBUG] Student {student.name} (id={student.id}) has categories: {sorted(all_categories)}")
         
         for evaluation in evaluations:
             # Get weighted scores from cache
             eval_scores = evaluation_scores_cache.get(evaluation.id, {})
             student_eval_scores = eval_scores.get(student.id, {})
-            logger.debug(f"Evaluation {evaluation.id}: student {student.id} has scores: {student_eval_scores}")
+            print(f"[OVERVIEW DEBUG] Evaluation {evaluation.id}: student {student.id} has scores: {student_eval_scores}")
             
             # Aggregate scores by actual category names from rubric
             for cat_name in all_categories:
@@ -1381,7 +1381,7 @@ def get_peer_evaluation_dashboard(
             peer_evals = category_peer_scores.get(cat_name, [])
             self_evals = category_self_scores.get(cat_name, [])
             
-            logger.debug(f"Category '{cat_name}' - peer scores: {peer_evals}, self scores: {self_evals}")
+            print(f"[OVERVIEW DEBUG] Category '{cat_name}' - peer scores: {peer_evals}, self scores: {self_evals}")
             
             # Average of peer evaluation averages
             peer_overall = sum(peer_evals) / len(peer_evals) if peer_evals else None
@@ -1410,7 +1410,7 @@ def get_peer_evaluation_dashboard(
             combined_avg = peer_overall if peer_overall else self_overall
             
             if combined_avg:
-                logger.debug(f"Adding '{cat_name}' to student_scores with peer={peer_overall}, self={self_overall}")
+                print(f"[OVERVIEW DEBUG] Adding '{cat_name}' to student_scores with peer={peer_overall}, self={self_overall}")
                 student_scores[cat_name] = OmzaCategoryScore(
                     current=float(combined_avg),
                     trend="neutral",  # TODO: Calculate trend by comparing time periods
@@ -1494,7 +1494,7 @@ def get_peer_evaluation_dashboard(
         
         # Only include student in heatmap if they have scores in at least one category
         if student_scores:
-            logger.debug(f"Student {student.name} has {len(student_scores)} category scores, adding to heatmap")
+            print(f"[OVERVIEW DEBUG] Student {student.name} has {len(student_scores)} category scores, adding to heatmap")
             # Calculate self vs peer difference (average across all categories)
             self_vs_peer_diff = None
             if self_scores and peer_scores:
