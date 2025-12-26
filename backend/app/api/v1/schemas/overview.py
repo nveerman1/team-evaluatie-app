@@ -258,6 +258,10 @@ class FeedbackItem(BaseModel):
     text: str
     keywords: List[str] = []
     is_risk_behavior: bool = False
+    # Enhanced fields for sortable table
+    feedback_type: str = "peer"  # "self" | "peer" 
+    score: Optional[float] = None  # The score given with this feedback
+    from_student_name: Optional[str] = None  # Name of student who gave this feedback (for peer feedback)
 
 
 class FeedbackCollectionResponse(BaseModel):
@@ -292,4 +296,26 @@ class TeacherFeedbackResponse(BaseModel):
     Teacher feedback/assessment data
     """
     feedbackItems: List[TeacherFeedbackItem]
+    totalCount: int
+
+
+class ReflectionItem(BaseModel):
+    """
+    Single reflection from a peer evaluation
+    """
+    id: int
+    student_id: int
+    student_name: str
+    project_name: str
+    evaluation_id: int
+    date: datetime  # When the reflection was submitted
+    reflection_text: str
+    word_count: int
+
+
+class ReflectionResponse(BaseModel):
+    """
+    Collection of reflections from peer evaluations
+    """
+    reflectionItems: List[ReflectionItem]
     totalCount: int

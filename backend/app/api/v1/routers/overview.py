@@ -48,6 +48,8 @@ from app.api.v1.schemas.overview import (
     FeedbackItem,
     TeacherFeedbackItem,
     TeacherFeedbackResponse,
+    ReflectionItem,
+    ReflectionResponse,
 )
 
 router = APIRouter(prefix="/overview", tags=["overview"])
@@ -1723,6 +1725,16 @@ def get_peer_evaluation_feedback(
         words = [w for w in score.comment.split() if len(w) > 3]
         keywords = words[:3] if len(words) > 3 else words
         
+        # Determine feedback type (self vs peer)
+        feedback_type = "self" if allocation.allocated_by == allocation.allocated_to else "peer"
+        
+        # Get from student name (who gave this feedback)
+        from_student = None
+        from_student_name = None
+        if feedback_type == "peer":
+            from_student = db.query(User).filter(User.id == allocation.allocated_by).first()
+            from_student_name = from_student.name if from_student else "Onbekend"
+        
         feedback_items.append(FeedbackItem(
             id=str(score.id),
             student_id=user.id,
@@ -1733,7 +1745,10 @@ def get_peer_evaluation_feedback(
             sentiment=sentiment_value,
             text=score.comment,
             keywords=keywords,
-            is_risk_behavior=is_risk
+            is_risk_behavior=is_risk,
+            feedback_type=feedback_type,
+            score=float(score.score) if score.score else None,
+            from_student_name=from_student_name
         ))
     
     return FeedbackCollectionResponse(
@@ -1841,4 +1856,95 @@ def get_teacher_feedback(
     return TeacherFeedbackResponse(
         feedbackItems=teacher_feedback_items,
         totalCount=len(teacher_feedback_items)
+    )
+
+
+@router.get("/peer-evaluations/reflections", response_model=ReflectionResponse)
+def get_peer_evaluation_reflections(
+    course_id: Optional[int] = Query(None),
+    project_id: Optional[int] = Query(None),
+    student_name: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get all reflections from peer evaluations including:
+    - Student reflections per evaluation
+    - Word count
+    - Date submitted
+    
+    Filters:
+    - course_id: Filter by specific course
+    - project_id: Filter by specific project
+    - student_name: Filter by student name (partial match)
+    """
+    school_id = current_user.school_id
+    
+    # Get evaluations matching filters
+    eval_query = db.query(Evaluation).filter(
+        Evaluation.school_id == school_id,
+        Evaluation.evaluation_type == "peer"
+    )
+    
+    if course_id:
+        eval_query = eval_query.filter(Evaluation.course_id == course_id)
+    if project_id:
+        eval_query = eval_query.filter(Evaluation.project_id == project_id)
+    
+    evaluations = eval_query.all()
+    evaluation_ids = [e.id for e in evaluations]
+    
+    if not evaluation_ids:
+        return ReflectionResponse(
+            reflectionItems=[],
+            totalCount=0
+        )
+    
+    # Get allocations (these contain the reflection text)
+    allocation_query = db.query(Allocation).join(User, Allocation.allocated_to == User.id).filter(
+        Allocation.evaluation_id.in_(evaluation_ids),
+        Allocation.allocated_to == Allocation.allocated_by,  # Self-assessment contains reflection
+        Allocation.reflection.isnot(None),
+        Allocation.reflection != ""
+    )
+    
+    if student_name:
+        allocation_query = allocation_query.filter(
+            User.name.ilike(f"%{student_name}%")
+        )
+    
+    allocations = allocation_query.all()
+    
+    reflection_items = []
+    for allocation in allocations:
+        # Get student info
+        student = db.query(User).filter(User.id == allocation.allocated_to).first()
+        if not student:
+            continue
+        
+        # Get evaluation and project info
+        evaluation = db.query(Evaluation).filter(Evaluation.id == allocation.evaluation_id).first()
+        if not evaluation:
+            continue
+        
+        project_name = evaluation.project.title if evaluation.project else f"Peer Evaluatie {evaluation.id}"
+        eval_date = evaluation.closed_at or evaluation.created_at
+        
+        # Calculate word count
+        word_count = len(allocation.reflection.split()) if allocation.reflection else 0
+        
+        reflection_items.append(ReflectionItem(
+            id=allocation.id,
+            student_id=student.id,
+            student_name=student.name,
+            project_name=project_name,
+            evaluation_id=evaluation.id,
+            date=eval_date,
+            reflection_text=allocation.reflection,
+            word_count=word_count
+        ))
+    
+    return ReflectionResponse(
+        reflectionItems=reflection_items,
+        totalCount=len(reflection_items)
     )
