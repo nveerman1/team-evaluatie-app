@@ -81,10 +81,29 @@ export type FeedbackItem = {
   text: string;
   keywords: string[];
   is_risk_behavior: boolean;
+  feedback_type: string;  // "self" | "peer"
+  score?: number;  // Score given with this feedback
+  from_student_name?: string;  // Who gave this feedback (for peer)
 };
 
 export type FeedbackCollectionResponse = {
   feedbackItems: FeedbackItem[];
+  totalCount: number;
+};
+
+export type ReflectionItem = {
+  id: number;
+  student_id: number;
+  student_name: string;
+  project_name: string;
+  evaluation_id: number;
+  date: string;
+  reflection_text: string;
+  word_count: number;
+};
+
+export type ReflectionResponse = {
+  reflectionItems: ReflectionItem[];
   totalCount: number;
 };
 
@@ -153,8 +172,24 @@ export const peerEvaluationOverviewService = {
     if (filters?.courseId) params.set("course_id", String(filters.courseId));
     if (filters?.projectId) params.set("project_id", String(filters.projectId));
     
-    const { data } = await api.get<TeacherFeedbackResponse>(
+    const { data} = await api.get<TeacherFeedbackResponse>(
       `/overview/peer-evaluations/teacher-feedback?${params.toString()}`
+    );
+    return data;
+  },
+
+  /**
+   * Get all reflections from peer evaluations
+   */
+  async getReflections(filters?: {courseId?: number; projectId?: number; studentName?: string}): Promise<ReflectionResponse> {
+    const params = new URLSearchParams();
+    
+    if (filters?.courseId) params.set("course_id", String(filters.courseId));
+    if (filters?.projectId) params.set("project_id", String(filters.projectId));
+    if (filters?.studentName) params.set("student_name", filters.studentName);
+    
+    const { data } = await api.get<ReflectionResponse>(
+      `/overview/peer-evaluations/reflections?${params.toString()}`
     );
     return data;
   },
