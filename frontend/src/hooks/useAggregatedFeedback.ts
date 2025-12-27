@@ -11,6 +11,7 @@ export type { AggregatedFeedbackItem };
 export type AggregatedFeedbackFilters = {
   courseId?: number;
   projectId?: number;
+  evaluationId?: number;
 };
 
 export type AggregatedFeedbackData = {
@@ -34,7 +35,7 @@ export function useAggregatedFeedback(filters?: AggregatedFeedbackFilters) {
     } finally {
       setLoading(false);
     }
-  }, [filters?.courseId, filters?.projectId]);
+  }, [filters?.courseId, filters?.projectId, filters?.evaluationId]);
 
   useEffect(() => {
     fetchData();
