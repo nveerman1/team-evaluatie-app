@@ -1880,10 +1880,10 @@ def get_aggregated_peer_feedback(
             project = db.query(Project).filter(Project.id == evaluation.project_id).first()
         eval_map[evaluation.id] = (evaluation, project)
     
-    # Get all allocations for these evaluations with submitted status
+    # Get all allocations for these evaluations
+    # Note: Status is tracked on Score, not Allocation
     allocations = db.query(Allocation).filter(
-        Allocation.evaluation_id.in_(evaluation_ids),
-        Allocation.status == "submitted"
+        Allocation.evaluation_id.in_(evaluation_ids)
     ).all()
     
     # Get rubric criteria with categories
@@ -1940,6 +1940,10 @@ def get_aggregated_peer_feedback(
         
         # Get scores for this allocation
         alloc_scores = allocation_scores.get(allocation.id, [])
+        
+        # Skip allocations with no submitted scores
+        if not alloc_scores:
+            continue
         
         # Calculate OMZA category averages and collect feedback
         category_scores = defaultdict(list)  # category -> list of scores
