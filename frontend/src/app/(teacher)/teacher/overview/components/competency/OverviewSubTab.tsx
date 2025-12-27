@@ -57,6 +57,16 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
       }));
   }, [selectedRadarScan]);
 
+  // Debug effect to log scan changes
+  useEffect(() => {
+    if (data?.scans) {
+      console.log('Available scans:', data.scans.map(s => ({ id: s.scanId, label: s.label })));
+      console.log('Selected scan ID:', selectedRadarScanId);
+      console.log('Selected scan:', selectedRadarScan);
+      console.log('Radar data:', radarData);
+    }
+  }, [data, selectedRadarScanId, selectedRadarScan, radarData]);
+
   // Select the latest scan by default
   const selectedScan = useMemo(() => {
     if (!data?.scans || data.scans.length === 0) return null;
@@ -191,7 +201,12 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
             )}
           </div>
           <div className="flex justify-center mt-4">
-            <CompetencyRadarChart items={radarData} size={280} maxValue={5} />
+            <CompetencyRadarChart 
+              key={`radar-${selectedRadarScanId || 'default'}`}
+              items={radarData} 
+              size={280} 
+              maxValue={5} 
+            />
           </div>
           {/* Legend - Update to use selected scan data */}
           <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
