@@ -40,7 +40,7 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
 
   // Increment key whenever selected scan changes to force re-render
   useEffect(() => {
-    setRadarChartKey(prev => prev + 1);
+    setRadarChartKey(Date.now());
   }, [selectedRadarScanId]);
 
   // Prepare selected scan data for radar chart
@@ -378,11 +378,6 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
                     title={cat.name}
                   >
                     <span className="block truncate max-w-[80px]">{cat.name}</span>
-                    {cat.trendDelta !== null && (
-                      <span className={`block text-[10px] font-medium mt-0.5 tabular-nums ${getTrendColor(cat.trendDelta)}`}>
-                        {cat.trendDelta > 0 ? '+' : ''}{cat.trendDelta.toFixed(1)}
-                      </span>
-                    )}
                   </th>
                 ))}
               </tr>
