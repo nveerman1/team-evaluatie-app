@@ -1834,6 +1834,7 @@ def get_peer_evaluation_feedback(
 def get_aggregated_peer_feedback(
     course_id: Optional[int] = Query(None),
     project_id: Optional[int] = Query(None),
+    evaluation_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -1847,6 +1848,7 @@ def get_aggregated_peer_feedback(
     Filters:
     - course_id: Filter by specific course
     - project_id: Filter by specific project
+    - evaluation_id: Filter by specific evaluation
     """
     from collections import defaultdict
     
@@ -1862,6 +1864,8 @@ def get_aggregated_peer_feedback(
         eval_query = eval_query.filter(Evaluation.course_id == course_id)
     if project_id:
         eval_query = eval_query.filter(Evaluation.project_id == project_id)
+    if evaluation_id:
+        eval_query = eval_query.filter(Evaluation.id == evaluation_id)
     
     evaluations = eval_query.all()
     evaluation_ids = [e.id for e in evaluations]

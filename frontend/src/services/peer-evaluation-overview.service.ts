@@ -232,11 +232,12 @@ export const peerEvaluationOverviewService = {
    * Get aggregated feedback per allocation (peer review instance)
    * Shows OMZA category scores and combined feedback
    */
-  async getAggregatedFeedback(filters?: {courseId?: number; projectId?: number}): Promise<AggregatedFeedbackResponse> {
+  async getAggregatedFeedback(filters?: {courseId?: number; projectId?: number; evaluationId?: number}): Promise<AggregatedFeedbackResponse> {
     const params = new URLSearchParams();
     
     if (filters?.courseId) params.set("course_id", String(filters.courseId));
     if (filters?.projectId) params.set("project_id", String(filters.projectId));
+    if (filters?.evaluationId) params.set("evaluation_id", String(filters.evaluationId));
     
     const { data } = await api.get<AggregatedFeedbackResponse>(
       `/overview/peer-evaluations/aggregated-feedback?${params.toString()}`
