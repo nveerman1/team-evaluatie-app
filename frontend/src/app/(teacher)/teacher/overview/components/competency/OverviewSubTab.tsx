@@ -40,10 +40,19 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
   // Prepare selected scan data for radar chart
   const selectedRadarScan = useMemo(() => {
     if (!data?.scans || data.scans.length === 0) return null;
-    return selectedRadarScanId !== null
+    
+    const foundScan = selectedRadarScanId !== null
       ? data.scans.find(s => s.scanId === selectedRadarScanId)
       : data.scans[0];
-  }, [data, selectedRadarScanId]);
+    
+    console.log('useMemo recalculating selectedRadarScan:', {
+      selectedRadarScanId,
+      foundScan: foundScan ? { id: foundScan.scanId, label: foundScan.label } : null,
+      availableIds: data.scans.map(s => s.scanId),
+    });
+    
+    return foundScan || data.scans[0];
+  }, [data?.scans, selectedRadarScanId]);
 
   // Prepare radar chart data - use selectedRadarScanId if available, otherwise use latest
   const radarData = useMemo(() => {
@@ -63,6 +72,14 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
       console.log('Available scans:', data.scans.map(s => ({ id: s.scanId, label: s.label })));
       console.log('Selected scan ID:', selectedRadarScanId);
       console.log('Selected scan:', selectedRadarScan);
+      if (selectedRadarScan) {
+        console.log('Selected scan details:', {
+          scanId: selectedRadarScan.scanId,
+          label: selectedRadarScan.label,
+          categoryAveragesCount: selectedRadarScan.categoryAverages?.length,
+          categoryAverages: selectedRadarScan.categoryAverages,
+        });
+      }
       console.log('Radar data:', radarData);
     }
   }, [data, selectedRadarScanId, selectedRadarScan, radarData]);
@@ -127,8 +144,12 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
             filters.courseId
           );
           
+          console.log(`Historical data for student ${studentId}:`, histData);
+          
           if (histData) {
             setStudentHistoricalData(prev => ({ ...prev, [studentId]: histData }));
+          } else {
+            console.warn(`No historical data returned for student ${studentId}`);
           }
         } catch (error) {
           console.error(`Failed to fetch historical data for student ${studentId}:`, error);
@@ -405,13 +426,7 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
                           ) : (
                             <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
                           )}
-                          <Link
-                            href={`/teacher/competencies/student/${row.studentId}`}
-                            className="text-blue-600 hover:text-blue-800 hover:underline"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {row.name}
-                          </Link>
+                          <span>{row.name}</span>
                         </div>
                       </td>
                       <td className="px-3 py-2 text-center text-sm text-slate-600">
