@@ -14,13 +14,27 @@ interface OverviewSubTabProps {
   filters: CompetencyOverviewFilters;
 }
 
+interface StudentScanScore {
+  scanId: number;
+  scanLabel: string;
+  scanDate: string;
+  categoryScores: Record<number, number | null>;
+}
+
+interface StudentHistoricalData {
+  studentId: number;
+  studentName: string;
+  className: string | null;
+  scans: StudentScanScore[];
+}
+
 export function OverviewSubTab({ filters }: OverviewSubTabProps) {
   const { data, loading, error } = useCompetencyOverview(filters);
   const [chartMode, setChartMode] = useState<"average" | "spread" | "growth">("average");
   const [selectedScanId, setSelectedScanId] = useState<number | null>(null);
   const [selectedRadarScanId, setSelectedRadarScanId] = useState<number | null>(null);
   const [expandedStudents, setExpandedStudents] = useState<Set<number>>(new Set());
-  const [studentHistoricalData, setStudentHistoricalData] = useState<Record<number, any>>({});
+  const [studentHistoricalData, setStudentHistoricalData] = useState<Record<number, StudentHistoricalData>>({});
   const [loadingStudentData, setLoadingStudentData] = useState<Record<number, boolean>>({});
 
   // Prepare selected scan data for radar chart
@@ -439,7 +453,7 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-200">
-                                  {studentHistoricalData[row.studentId].scans.map((scan: any) => (
+                                  {studentHistoricalData[row.studentId].scans.map((scan: StudentScanScore) => (
                                     <tr key={scan.scanId} className="hover:bg-slate-100">
                                       <td className="px-3 py-2 text-slate-900 font-medium">{scan.scanLabel}</td>
                                       <td className="px-3 py-2 text-slate-600">

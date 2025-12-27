@@ -597,7 +597,7 @@ class StudentScanScore(BaseModel):
     scan_id: int
     scan_label: str
     scan_date: str
-    category_scores: Dict[int, Optional[float]]  # category_id -> average_score
+    category_scores: Dict[int, Optional[float]]  # category_id -> score (average of competencies in that category)
 
 
 class StudentHistoricalScores(BaseModel):
