@@ -816,7 +816,6 @@ function PeerfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters
       item.student_name.toLowerCase().includes(searchLower)
     );
   }, [data?.feedbackItems, parentFilters.studentName]);
-  }, [data?.feedbackItems, parentFilters.studentName]);
 
   // Sorted data
   const sortedData = useMemo(() => {
