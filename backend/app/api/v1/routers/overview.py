@@ -11,6 +11,20 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Mapping from full Dutch category names to short abbreviations
+# This ensures frontend compatibility
+CATEGORY_NAME_TO_ABBREV = {
+    "Organiseren": "O",
+    "Meedoen": "M",
+    "Zelfvertrouwen": "Z",
+    "Autonomie": "A",
+    # Fallback: first letter uppercase
+}
+
+def get_category_abbrev(category_name: str) -> str:
+    """Convert full category name to abbreviation for frontend compatibility"""
+    return CATEGORY_NAME_TO_ABBREV.get(category_name, category_name[0].upper() if category_name else "")
+
 from app.api.v1.deps import get_db, get_current_user
 from app.core.grading import score_to_grade as _score_to_grade
 from app.infra.db.models import (
@@ -1391,7 +1405,7 @@ def get_peer_evaluation_dashboard(
                             teacher_score = int(evaluation.settings[teacher_key])
                             break
                         # Fallback to abbreviated (first letter uppercase)
-                        cat_abbrev = cat_name[0].upper() if cat_name else ""
+                        cat_abbrev = get_category_abbrev(cat_name)
                         teacher_key = f"teacher_score_{student.id}_{cat_abbrev}"
                         if teacher_key in evaluation.settings:
                             teacher_score = int(evaluation.settings[teacher_key])
@@ -1401,16 +1415,18 @@ def get_peer_evaluation_dashboard(
             combined_avg = peer_overall if peer_overall else self_overall
             
             if combined_avg:
-                student_scores[cat_name] = OmzaCategoryScore(
+                # Use abbreviated category name for frontend compatibility
+                cat_abbrev = get_category_abbrev(cat_name)
+                student_scores[cat_abbrev] = OmzaCategoryScore(
                     current=float(combined_avg),
                     trend="neutral",  # TODO: Calculate trend by comparing time periods
                     teacher_score=teacher_score
                 )
                 
                 if self_overall:
-                    self_scores[cat_name] = float(self_overall)
+                    self_scores[cat_abbrev] = float(self_overall)
                 if peer_overall:
-                    peer_scores[cat_name] = float(peer_overall)
+                    peer_scores[cat_abbrev] = float(peer_overall)
         
         # Get teacher comment from most recent evaluation
         if evaluations:
@@ -1442,31 +1458,32 @@ def get_peer_evaluation_dashboard(
                 eval_student_scores = evaluation_scores_cache.get(evaluation.id, {}).get(student.id, {})
                 eval_scores = {}
                 
-                # Extract scores for all actual categories (not hardcoded O/M/Z/A)
+                # Extract scores for all actual categories (using abbreviated names for frontend)
                 for cat_name in eval_student_scores.keys():
                     cat_scores = eval_student_scores.get(cat_name, {})
                     peer_score = cat_scores.get("peer")
                     if peer_score is not None:
-                        eval_scores[cat_name] = float(peer_score)
+                        cat_abbrev = get_category_abbrev(cat_name)
+                        eval_scores[cat_abbrev] = float(peer_score)
                 
                 # Extract teacher scores for this evaluation
                 eval_teacher_scores = {}
                 if evaluation.settings:
                     for cat_name in eval_student_scores.keys():
+                        cat_abbrev = get_category_abbrev(cat_name)
                         # Try full category name first
                         teacher_key = f"teacher_score_{student.id}_{cat_name}"
                         if teacher_key in evaluation.settings:
                             try:
-                                eval_teacher_scores[cat_name] = int(evaluation.settings[teacher_key])
+                                eval_teacher_scores[cat_abbrev] = int(evaluation.settings[teacher_key])
                             except (ValueError, TypeError):
                                 pass
                         else:
-                            # Fallback to abbreviated (first letter uppercase)
-                            cat_abbrev = cat_name[0].upper() if cat_name else ""
+                            # Fallback to abbreviated
                             teacher_key = f"teacher_score_{student.id}_{cat_abbrev}"
                             if teacher_key in evaluation.settings:
                                 try:
-                                    eval_teacher_scores[cat_name] = int(evaluation.settings[teacher_key])
+                                    eval_teacher_scores[cat_abbrev] = int(evaluation.settings[teacher_key])
                                 except (ValueError, TypeError):
                                     pass
                 
