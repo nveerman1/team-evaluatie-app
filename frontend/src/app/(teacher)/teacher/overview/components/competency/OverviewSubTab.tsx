@@ -36,6 +36,12 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
   const [expandedStudents, setExpandedStudents] = useState<Set<number>>(new Set());
   const [studentHistoricalData, setStudentHistoricalData] = useState<Record<number, StudentHistoricalData>>({});
   const [loadingStudentData, setLoadingStudentData] = useState<Record<number, boolean>>({});
+  const [radarChartKey, setRadarChartKey] = useState(0);
+
+  // Increment key whenever selected scan changes to force re-render
+  useEffect(() => {
+    setRadarChartKey(prev => prev + 1);
+  }, [selectedRadarScanId]);
 
   // Prepare selected scan data for radar chart
   const selectedRadarScan = useMemo(() => {
@@ -195,7 +201,7 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
           </div>
           <div className="flex justify-center mt-4">
             <CompetencyRadarChart 
-              key={`radar-${selectedRadarScanId || 'default'}-${radarData.map(d => d.value).join('-')}`}
+              key={radarChartKey}
               items={radarData} 
               size={280} 
               maxValue={5} 
