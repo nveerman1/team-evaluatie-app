@@ -3,28 +3,23 @@
 import { useState, useEffect, useCallback } from "react";
 import { peerEvaluationOverviewService } from "@/services/peer-evaluation-overview.service";
 import type {
-  FeedbackItem,
+  AggregatedFeedbackItem,
 } from "@/services/peer-evaluation-overview.service";
 
-export type { FeedbackItem };
+export type { AggregatedFeedbackItem };
 
-export type FeedbackFilters = {
+export type AggregatedFeedbackFilters = {
   courseId?: number;
   projectId?: number;
-  evaluationIds?: number[];
-  category?: string;
-  sentiment?: string;
-  searchText?: string;
-  riskOnly?: boolean;
 };
 
-export type FeedbackData = {
-  feedbackItems: FeedbackItem[];
+export type AggregatedFeedbackData = {
+  feedbackItems: AggregatedFeedbackItem[];
   totalCount: number;
 };
 
-export function useFeedbackData(filters?: FeedbackFilters) {
-  const [data, setData] = useState<FeedbackData | null>(null);
+export function useAggregatedFeedback(filters?: AggregatedFeedbackFilters) {
+  const [data, setData] = useState<AggregatedFeedbackData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,14 +27,14 @@ export function useFeedbackData(filters?: FeedbackFilters) {
     setLoading(true);
     setError(null);
     try {
-      const response = await peerEvaluationOverviewService.getFeedback(filters);
+      const response = await peerEvaluationOverviewService.getAggregatedFeedback(filters);
       setData(response);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load feedback data");
+      setError(e instanceof Error ? e.message : "Failed to load aggregated feedback");
     } finally {
       setLoading(false);
     }
-  }, [filters?.courseId, filters?.projectId, filters?.category, filters?.sentiment, filters?.searchText, filters?.riskOnly]);
+  }, [filters?.courseId, filters?.projectId]);
 
   useEffect(() => {
     fetchData();

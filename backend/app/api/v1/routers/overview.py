@@ -7,6 +7,23 @@ from io import StringIO
 import csv
 from datetime import datetime
 from typing import Optional
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Mapping from full Dutch category names to short abbreviations
+# This ensures frontend compatibility
+CATEGORY_NAME_TO_ABBREV = {
+    "Organiseren": "O",
+    "Meedoen": "M",
+    "Zelfvertrouwen": "Z",
+    "Autonomie": "A",
+    # Fallback: first letter uppercase
+}
+
+def get_category_abbrev(category_name: str) -> str:
+    """Convert full category name to abbreviation for frontend compatibility"""
+    return CATEGORY_NAME_TO_ABBREV.get(category_name, category_name[0].upper() if category_name else "")
 
 from app.api.v1.deps import get_db, get_current_user
 from app.core.grading import score_to_grade as _score_to_grade
@@ -28,7 +45,10 @@ from app.infra.db.models import (
     Client,
     ClientProjectLink,
     AcademicYear,
+    Score,
+    Reflection,
 )
+from app.services.omza_weighted_scores import compute_weighted_omza_scores_batch
 from app.api.v1.schemas.overview import (
     OverviewItemOut,
     OverviewListResponse,
@@ -36,6 +56,22 @@ from app.api.v1.schemas.overview import (
     ProjectTrendResponse,
     ProjectOverviewItem,
     CategoryTrendData,
+    PeerOverviewDashboardResponse,
+    FeedbackCollectionResponse,
+    OmzaTrendDataPoint,
+    StudentHeatmapRow,
+    OmzaCategoryScore,
+    PeerEvaluationDetail,
+    KpiData,
+    KpiStudent,
+    FeedbackItem,
+    TeacherFeedbackItem,
+    TeacherFeedbackResponse,
+    ReflectionItem,
+    ReflectionResponse,
+    AggregatedFeedbackItem,
+    AggregatedFeedbackResponse,
+    CriterionDetail,
 )
 
 router = APIRouter(prefix="/overview", tags=["overview"])
@@ -1198,3 +1234,970 @@ def get_courses_for_overview(
     ).order_by(Course.name).all()
     
     return [{"id": c.id, "name": c.name} for c in courses]
+
+
+@router.get("/peer-evaluations/dashboard", response_model=PeerOverviewDashboardResponse)
+def get_peer_evaluation_dashboard(
+    course_id: Optional[int] = Query(None),
+    project_id: Optional[int] = Query(None),
+    period: str = Query("6months"),  # "3months" | "6months" | "year"
+    student_name: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get dashboard data for peer evaluations overview including:
+    - OMZA trend data over time
+    - Student heatmap with current scores and trends
+    - KPI data (top performers, concerns, etc.)
+    
+    Filters:
+    - course_id: Filter by specific course (vak)
+    - project_id: Filter by specific project
+    - period: Time period for trends (3months, 6months, year)
+    - student_name: Filter by student name
+    """
+    from datetime import datetime, timedelta
+    from sqlalchemy import func, case, distinct
+    from collections import defaultdict
+    
+    school_id = current_user.school_id
+    
+    # Calculate date range based on period
+    end_date = datetime.now()
+    if period == "3months":
+        start_date = end_date - timedelta(days=90)
+    elif period == "year":
+        start_date = end_date - timedelta(days=365)
+    else:  # 6months (default)
+        start_date = end_date - timedelta(days=180)
+    
+    # Get evaluations matching filters
+    eval_query = db.query(Evaluation).filter(
+        Evaluation.school_id == school_id,
+        Evaluation.evaluation_type == "peer"  # Only peer evaluations
+    )
+    
+    if course_id:
+        eval_query = eval_query.filter(Evaluation.course_id == course_id)
+    if project_id:
+        eval_query = eval_query.filter(Evaluation.project_id == project_id)
+    
+    evaluations = eval_query.all()
+    evaluation_ids = [e.id for e in evaluations]
+    
+    if not evaluation_ids:
+        # Return empty data if no evaluations found
+        return PeerOverviewDashboardResponse(
+            trendData=[],
+            heatmapData=[],
+            kpiData=KpiData()
+        )
+    
+    # Get rubric criteria with OMZA categories
+    rubric_ids = list(set([e.rubric_id for e in evaluations]))
+    criteria = db.query(RubricCriterion).filter(
+        RubricCriterion.rubric_id.in_(rubric_ids),
+        RubricCriterion.category.isnot(None)
+    ).all()
+    
+    # Map category names to normalized keys
+    category_map = {
+        "Organiseren": "organiseren",
+        "Meedoen": "meedoen",
+        "Zelfvertrouwen": "zelfvertrouwen",
+        "Autonomie": "autonomie",
+        "organiseren": "organiseren",
+        "meedoen": "meedoen",
+        "zelfvertrouwen": "zelfvertrouwen",
+        "autonomie": "autonomie",
+        "O": "organiseren",
+        "M": "meedoen",
+        "Z": "zelfvertrouwen",
+        "A": "autonomie",
+    }
+    
+    # Group criteria by normalized category
+    category_criteria = defaultdict(list)
+    for criterion in criteria:
+        if criterion.category:
+            normalized_cat = category_map.get(criterion.category)
+            if normalized_cat:
+                category_criteria[normalized_cat].append(criterion.id)
+    
+    # Get all students
+    students_query = db.query(User).filter(
+        User.school_id == school_id,
+        User.role == "student",
+        User.archived == False
+    )
+    
+    if student_name:
+        students_query = students_query.filter(User.name.ilike(f"%{student_name}%"))
+    
+    students = students_query.all()
+    student_map = {s.id: s for s in students}
+    
+    # Build heatmap data with current scores
+    heatmap_data = []
+    student_overall_scores = {}  # For KPI calculations
+    
+    # Pre-compute scores for all students and evaluations using batch function for efficiency
+    evaluation_scores_cache = {}
+    for evaluation in evaluations:
+        student_ids = [s.id for s in students]
+        batch_scores = compute_weighted_omza_scores_batch(
+            db, evaluation.id, student_ids
+        )
+        evaluation_scores_cache[evaluation.id] = batch_scores
+    
+    for student in students:
+        student_scores = {}
+        self_scores = {}
+        peer_scores = {}
+        teacher_comment = None
+        
+        # Calculate per-category scores by aggregating per-evaluation averages
+        # Using pre-computed weighted scores from shared service
+        category_peer_scores = defaultdict(list)
+        category_self_scores = defaultdict(list)
+        
+        # Collect all unique category names from all evaluations
+        all_categories = set()
+        for evaluation in evaluations:
+            eval_scores = evaluation_scores_cache.get(evaluation.id, {})
+            student_eval_scores = eval_scores.get(student.id, {})
+            all_categories.update(student_eval_scores.keys())
+        
+        for evaluation in evaluations:
+            # Get weighted scores from cache
+            eval_scores = evaluation_scores_cache.get(evaluation.id, {})
+            student_eval_scores = eval_scores.get(student.id, {})
+            
+            # Aggregate scores by actual category names from rubric
+            for cat_name in all_categories:
+                cat_scores = student_eval_scores.get(cat_name, {})
+                
+                peer_score = cat_scores.get("peer")
+                if peer_score is not None:
+                    category_peer_scores[cat_name].append(float(peer_score))
+                
+                self_score = cat_scores.get("self")
+                if self_score is not None:
+                    category_self_scores[cat_name].append(float(self_score))
+        
+        # Now aggregate the per-evaluation averages into overall category scores
+        for cat_name in all_categories:
+            peer_evals = category_peer_scores.get(cat_name, [])
+            self_evals = category_self_scores.get(cat_name, [])
+            
+            # Average of peer evaluation averages
+            peer_overall = sum(peer_evals) / len(peer_evals) if peer_evals else None
+            # Average of self evaluation averages  
+            self_overall = sum(self_evals) / len(self_evals) if self_evals else None
+            
+            # Get teacher score from most recent evaluation settings
+            teacher_score = None
+            if evaluations:
+                # Try to find teacher score in the most recent evaluation
+                for evaluation in reversed(evaluations):  # Start with most recent
+                    if evaluation.settings:
+                        # Try full category name first
+                        teacher_key = f"teacher_score_{student.id}_{cat_name}"
+                        if teacher_key in evaluation.settings:
+                            teacher_score = int(evaluation.settings[teacher_key])
+                            break
+                        # Fallback to abbreviated (first letter uppercase)
+                        cat_abbrev = get_category_abbrev(cat_name)
+                        teacher_key = f"teacher_score_{student.id}_{cat_abbrev}"
+                        if teacher_key in evaluation.settings:
+                            teacher_score = int(evaluation.settings[teacher_key])
+                            break
+            
+            # Combined average (peer scores primarily)
+            combined_avg = peer_overall if peer_overall else self_overall
+            
+            if combined_avg:
+                # Use abbreviated category name for frontend compatibility
+                cat_abbrev = get_category_abbrev(cat_name)
+                student_scores[cat_abbrev] = OmzaCategoryScore(
+                    current=float(combined_avg),
+                    trend="neutral",  # TODO: Calculate trend by comparing time periods
+                    teacher_score=teacher_score
+                )
+                
+                if self_overall:
+                    self_scores[cat_abbrev] = float(self_overall)
+                if peer_overall:
+                    peer_scores[cat_abbrev] = float(peer_overall)
+        
+        # Get teacher comment from most recent evaluation
+        if evaluations:
+            for evaluation in reversed(evaluations):
+                if evaluation.settings:
+                    comment_key = f"teacher_comment_{student.id}"
+                    if comment_key in evaluation.settings:
+                        teacher_comment = evaluation.settings[comment_key]
+                        break
+        
+        # Build list of individual evaluations for this student (for row expansion)
+        student_evaluations = []
+        if evaluations:
+            for evaluation in evaluations:
+                # Get project name
+                project = db.query(Project).filter(Project.id == evaluation.project_id).first()
+                project_name = project.title if project else f"Evaluatie {evaluation.id}"
+                
+                # Get eval date
+                eval_date = evaluation.closed_at or evaluation.created_at
+                if eval_date:
+                    if hasattr(eval_date, 'tzinfo') and eval_date.tzinfo is not None:
+                        eval_date = eval_date.replace(tzinfo=None)
+                    date_str = eval_date.isoformat()
+                else:
+                    date_str = ""
+                
+                # Get weighted scores from cache for this evaluation
+                eval_student_scores = evaluation_scores_cache.get(evaluation.id, {}).get(student.id, {})
+                eval_scores = {}
+                
+                # Extract scores for all actual categories (using abbreviated names for frontend)
+                for cat_name in eval_student_scores.keys():
+                    cat_scores = eval_student_scores.get(cat_name, {})
+                    peer_score = cat_scores.get("peer")
+                    if peer_score is not None:
+                        cat_abbrev = get_category_abbrev(cat_name)
+                        eval_scores[cat_abbrev] = float(peer_score)
+                
+                # Extract teacher scores for this evaluation
+                eval_teacher_scores = {}
+                if evaluation.settings:
+                    for cat_name in eval_student_scores.keys():
+                        cat_abbrev = get_category_abbrev(cat_name)
+                        # Try full category name first
+                        teacher_key = f"teacher_score_{student.id}_{cat_name}"
+                        if teacher_key in evaluation.settings:
+                            try:
+                                eval_teacher_scores[cat_abbrev] = int(evaluation.settings[teacher_key])
+                            except (ValueError, TypeError):
+                                pass
+                        else:
+                            # Fallback to abbreviated
+                            teacher_key = f"teacher_score_{student.id}_{cat_abbrev}"
+                            if teacher_key in evaluation.settings:
+                                try:
+                                    eval_teacher_scores[cat_abbrev] = int(evaluation.settings[teacher_key])
+                                except (ValueError, TypeError):
+                                    pass
+                
+                if eval_scores:  # Only add if there are scores
+                    student_evaluations.append(PeerEvaluationDetail(
+                        id=evaluation.id,
+                        date=date_str,
+                        label=project_name,
+                        scores=eval_scores,
+                        teacher_scores=eval_teacher_scores if eval_teacher_scores else None
+                    ))
+        
+        # Sort evaluations by date (newest first)
+        student_evaluations.sort(key=lambda e: e.date, reverse=True)
+        
+        # Only include student in heatmap if they have scores in at least one category
+        if student_scores:
+            # Calculate self vs peer difference (average across all categories)
+            self_vs_peer_diff = None
+            if self_scores and peer_scores:
+                common_cats = set(self_scores.keys()) & set(peer_scores.keys())
+                if common_cats:
+                    diffs = [self_scores[cat] - peer_scores[cat] for cat in common_cats]
+                    self_vs_peer_diff = sum(diffs) / len(diffs)
+            
+            # Calculate overall average for KPI
+            overall_avg = sum(s.current for s in student_scores.values()) / len(student_scores)
+            student_overall_scores[student.id] = {
+                'name': student.name,
+                'score': overall_avg,
+                'self_vs_peer_diff': abs(self_vs_peer_diff) if self_vs_peer_diff else 0
+            }
+            
+            heatmap_data.append(StudentHeatmapRow(
+                student_id=student.id,
+                student_name=student.name,
+                class_name=student.class_name,
+                scores=student_scores,
+                self_vs_peer_diff=self_vs_peer_diff,
+                teacher_comment=teacher_comment,
+                 evaluations=student_evaluations if student_evaluations else None
+            ))
+        else:
+            logger.warning(f"Student {student.name} (id={student.id}) has no scores, not adding to heatmap. all_categories={sorted(all_categories)}")
+    
+    # Calculate trend data - group evaluations by month
+    trend_data = []
+    if evaluations:
+        # Sort evaluations by closed_at or created_at
+        sorted_evals = sorted(
+            [e for e in evaluations if e.closed_at or e.created_at],
+            key=lambda e: e.closed_at or e.created_at
+        )
+        
+        # Group by month
+        from datetime import datetime
+        monthly_data = defaultdict(lambda: defaultdict(list))
+        
+        for evaluation in sorted_evals:
+            eval_date = evaluation.closed_at or evaluation.created_at
+            # Make timezone-naive for comparison
+            if eval_date:
+                if hasattr(eval_date, 'tzinfo') and eval_date.tzinfo is not None:
+                    eval_date = eval_date.replace(tzinfo=None)
+                
+                if eval_date >= start_date:
+                    month_key = eval_date.strftime("%b %Y")  # e.g., "Dec 2024"
+                    
+                    # Use cached scores from batch calculation
+                    eval_all_scores = evaluation_scores_cache.get(evaluation.id, {})
+                    
+                    # Aggregate all students' scores for this evaluation/month
+                    for student_id in eval_all_scores:
+                        student_omza = eval_all_scores[student_id]
+                        # Add peer scores to monthly aggregation (use actual category names from rubric)
+                        for cat_name in student_omza.keys():
+                            peer_score = student_omza.get(cat_name, {}).get("peer")
+                            if peer_score is not None:
+                                # Use the actual category name from the rubric
+                                monthly_data[month_key][cat_name].append(float(peer_score))
+        
+        # Convert to trend data points
+        # Note: OmzaTrendDataPoint expects specific lowercase fields, so we need to map
+        # actual category names to the expected format
+        for month_key in sorted(monthly_data.keys(), key=lambda x: datetime.strptime(x, "%b %Y")):
+            scores = monthly_data[month_key]
+            
+            # Create a flexible mapping - normalize category names to lowercase
+            normalized_scores = {}
+            for cat_name, cat_scores in scores.items():
+                normalized_key = cat_name.lower()
+                if cat_scores:
+                    normalized_scores[normalized_key] = sum(cat_scores) / len(cat_scores)
+                else:
+                    normalized_scores[normalized_key] = 0
+            
+            # Create trend point with available categories, defaulting to 0 for missing ones
+            trend_point = OmzaTrendDataPoint(
+                date=month_key,
+                organiseren=normalized_scores.get('organiseren', 0),
+                meedoen=normalized_scores.get('meedoen', 0),
+                zelfvertrouwen=normalized_scores.get('zelfvertrouwen', 0),
+                autonomie=normalized_scores.get('autonomie', 0)
+            )
+            trend_data.append(trend_point)
+    
+    # Calculate KPI data
+    kpi_students = list(student_overall_scores.items())
+    
+    # Grootste stijgers - students with highest scores
+    top_performers = sorted(
+        kpi_students,
+        key=lambda x: x[1]['score'],
+        reverse=True
+    )[:3]
+    
+    # Grootste dalers - students with lowest scores
+    bottom_performers = sorted(
+        kpi_students,
+        key=lambda x: x[1]['score']
+    )[:3]
+    
+    # Structureel laag - students consistently below 3.0
+    structurally_low = [
+        (student_id, data) for student_id, data in kpi_students
+        if data['score'] < 3.0
+    ][:5]
+    
+    # Inconsistenties - students with large self vs peer differences
+    inconsistencies = sorted(
+        kpi_students,
+        key=lambda x: x[1]['self_vs_peer_diff'],
+        reverse=True
+    )[:5]
+    
+    kpi_data = KpiData(
+        grootsteStijgers=[
+            KpiStudent(student_id=sid, student_name=data['name'], value=data['score'])
+            for sid, data in top_performers
+        ],
+        grootsteDalers=[
+            KpiStudent(student_id=sid, student_name=data['name'], value=data['score'])
+            for sid, data in bottom_performers
+        ],
+        structureelLaag=[
+            KpiStudent(student_id=sid, student_name=data['name'], value=data['score'])
+            for sid, data in structurally_low
+        ],
+        inconsistenties=[
+            KpiStudent(student_id=sid, student_name=data['name'], value=data['self_vs_peer_diff'])
+            for sid, data in inconsistencies if data['self_vs_peer_diff'] > 0
+        ]
+    )
+    
+    # Debug: Log what we're returning
+    print(f"[OVERVIEW DEBUG] Returning {len(heatmap_data)} students in heatmap")
+    for student_row in heatmap_data[:3]:  # Log first 3 students
+        print(f"[OVERVIEW DEBUG] Student: {student_row.student_name}, scores keys: {list(student_row.scores.keys())}")
+        for cat_name, score_obj in student_row.scores.items():
+            print(f"[OVERVIEW DEBUG]   {cat_name}: current={score_obj.current}, teacher_score={score_obj.teacher_score}")
+    
+    return PeerOverviewDashboardResponse(
+        trendData=trend_data,
+        heatmapData=heatmap_data,
+        kpiData=kpi_data
+    )
+
+
+@router.get("/peer-evaluations/feedback", response_model=FeedbackCollectionResponse)
+def get_peer_evaluation_feedback(
+    course_id: Optional[int] = Query(None),
+    project_id: Optional[int] = Query(None),
+    category: Optional[str] = Query(None),  # OMZA category filter
+    sentiment: Optional[str] = Query(None),  # sentiment filter
+    search_text: Optional[str] = Query(None),
+    risk_only: bool = Query(False),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get feedback collection data from peer evaluations including:
+    - Individual feedback items with text
+    - Categories (OMZA)
+    - Sentiment analysis
+    - Risk behavior flags
+    
+    Filters:
+    - course_id: Filter by specific course
+    - project_id: Filter by specific project
+    - category: Filter by OMZA category
+    - sentiment: Filter by sentiment
+    - search_text: Search in feedback text
+    - risk_only: Show only risk behavior items
+    """
+    from collections import defaultdict
+    
+    school_id = current_user.school_id
+    
+    # Get evaluations matching filters
+    eval_query = db.query(Evaluation).filter(
+        Evaluation.school_id == school_id,
+        Evaluation.evaluation_type == "peer"
+    )
+    
+    if course_id:
+        eval_query = eval_query.filter(Evaluation.course_id == course_id)
+    if project_id:
+        eval_query = eval_query.filter(Evaluation.project_id == project_id)
+    
+    evaluations = eval_query.all()
+    evaluation_ids = [e.id for e in evaluations]
+    
+    if not evaluation_ids:
+        return FeedbackCollectionResponse(
+            feedbackItems=[],
+            totalCount=0
+        )
+    
+    # Get rubric criteria with OMZA categories
+    rubric_ids = list(set([e.rubric_id for e in evaluations]))
+    criteria = db.query(RubricCriterion).filter(
+        RubricCriterion.rubric_id.in_(rubric_ids),
+        RubricCriterion.category.isnot(None)
+    ).all()
+    
+    # Map category names to normalized keys
+    category_map = {
+        "Organiseren": "organiseren",
+        "Meedoen": "meedoen",
+        "Zelfvertrouwen": "zelfvertrouwen",
+        "Autonomie": "autonomie",
+        "organiseren": "organiseren",
+        "meedoen": "meedoen",
+        "zelfvertrouwen": "zelfvertrouwen",
+        "autonomie": "autonomie",
+        "O": "organiseren",
+        "M": "meedoen",
+        "Z": "zelfvertrouwen",
+        "A": "autonomie",
+    }
+    
+    # Create criterion_id -> category mapping
+    criterion_category_map = {}
+    for criterion in criteria:
+        if criterion.category:
+            normalized_cat = category_map.get(criterion.category)
+            if normalized_cat:
+                criterion_category_map[criterion.id] = normalized_cat
+    
+    # Get all scores with comments (feedback text)
+    scores_with_comments = db.query(
+        Score, Allocation, User, Evaluation, Project
+    ).join(
+        Allocation, Allocation.id == Score.allocation_id
+    ).join(
+        User, User.id == Allocation.reviewee_id
+    ).join(
+        Evaluation, Evaluation.id == Allocation.evaluation_id
+    ).outerjoin(
+        Project, Project.id == Evaluation.project_id
+    ).filter(
+        Allocation.evaluation_id.in_(evaluation_ids),
+        Score.comment.isnot(None),
+        Score.comment != "",
+        Score.status == "submitted"
+    ).all()
+    
+    feedback_items = []
+    
+    for score, allocation, user, evaluation, project in scores_with_comments:
+        # Determine category from criterion
+        item_category = criterion_category_map.get(score.criterion_id, "algemeen")
+        
+        # Apply category filter
+        if category and item_category != category:
+            continue
+        
+        # Apply search filter
+        if search_text and search_text.lower() not in score.comment.lower():
+            continue
+        
+        # Simple sentiment analysis based on keywords
+        comment_lower = score.comment.lower()
+        sentiment_value = "neutraal"
+        
+        positive_keywords = ["goed", "uitstekend", "prima", "sterk", "helpt", "positief", "actief"]
+        negative_keywords = ["slecht", "zwak", "niet", "weinig", "probleem", "moeilijk", "laag"]
+        warning_keywords = ["aandacht", "verbeteren", "soms", "onzeker"]
+        
+        if any(word in comment_lower for word in positive_keywords):
+            sentiment_value = "positief"
+        elif any(word in comment_lower for word in negative_keywords):
+            sentiment_value = "kritiek"
+        elif any(word in comment_lower for word in warning_keywords):
+            sentiment_value = "waarschuwing"
+        
+        # Apply sentiment filter
+        if sentiment and sentiment_value != sentiment:
+            continue
+        
+        # Determine if it's risk behavior (very negative sentiment or specific keywords)
+        is_risk = any(word in comment_lower for word in ["probleem", "onzeker", "zwak", "niet"])
+        
+        # Apply risk filter
+        if risk_only and not is_risk:
+            continue
+        
+        # Extract simple keywords (first few significant words)
+        words = [w for w in score.comment.split() if len(w) > 3]
+        keywords = words[:3] if len(words) > 3 else words
+        
+        # Determine feedback type (self vs peer)
+        feedback_type = "self" if allocation.reviewer_id == allocation.reviewee_id else "peer"
+        
+        # Get from student name (who gave this feedback)
+        from_student = None
+        from_student_name = None
+        if feedback_type == "peer":
+            from_student = db.query(User).filter(User.id == allocation.reviewer_id).first()
+            from_student_name = from_student.name if from_student else "Onbekend"
+        
+        feedback_items.append(FeedbackItem(
+            id=str(score.id),
+            student_id=user.id,
+            student_name=user.name,
+            project_name=project.title if project else evaluation.title,
+            date=evaluation.closed_at or evaluation.created_at,
+            category=item_category,
+            sentiment=sentiment_value,
+            text=score.comment,
+            keywords=keywords,
+            is_risk_behavior=is_risk,
+            feedback_type=feedback_type,
+            score=float(score.score) if score.score else None,
+            from_student_name=from_student_name
+        ))
+    
+    return FeedbackCollectionResponse(
+        feedbackItems=feedback_items,
+        totalCount=len(feedback_items)
+    )
+
+
+@router.get("/peer-evaluations/aggregated-feedback", response_model=AggregatedFeedbackResponse)
+def get_aggregated_peer_feedback(
+    course_id: Optional[int] = Query(None),
+    project_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get aggregated feedback per allocation (per peer review instance).
+    Each allocation represents one complete peer review with:
+    - OMZA category scores (O, M, Z, A)
+    - Combined feedback from all criteria
+    - Detailed breakdown of individual criteria for expansion
+    
+    Filters:
+    - course_id: Filter by specific course
+    - project_id: Filter by specific project
+    """
+    from collections import defaultdict
+    
+    school_id = current_user.school_id
+    
+    # Get evaluations matching filters
+    eval_query = db.query(Evaluation).filter(
+        Evaluation.school_id == school_id,
+        Evaluation.evaluation_type == "peer"
+    )
+    
+    if course_id:
+        eval_query = eval_query.filter(Evaluation.course_id == course_id)
+    if project_id:
+        eval_query = eval_query.filter(Evaluation.project_id == project_id)
+    
+    evaluations = eval_query.all()
+    evaluation_ids = [e.id for e in evaluations]
+    
+    if not evaluation_ids:
+        return AggregatedFeedbackResponse(
+            feedbackItems=[],
+            totalCount=0
+        )
+    
+    # Create evaluation_id -> (evaluation, project) mapping
+    eval_map = {}
+    for evaluation in evaluations:
+        project = None
+        if evaluation.project_id:
+            project = db.query(Project).filter(Project.id == evaluation.project_id).first()
+        eval_map[evaluation.id] = (evaluation, project)
+    
+    # Get all allocations for these evaluations
+    # Note: Status is tracked on Score, not Allocation
+    allocations = db.query(Allocation).filter(
+        Allocation.evaluation_id.in_(evaluation_ids)
+    ).all()
+    
+    # Get rubric criteria with categories
+    rubric_ids = list(set([e.rubric_id for e in evaluations]))
+    criteria = db.query(RubricCriterion).filter(
+        RubricCriterion.rubric_id.in_(rubric_ids),
+        RubricCriterion.category.isnot(None)
+    ).all()
+    
+    # Create criterion_id -> (criterion, category) mapping
+    criterion_map = {}
+    for criterion in criteria:
+        # Normalize category to abbreviated form (O, M, Z, A)
+        cat_abbrev = get_category_abbrev(criterion.category)
+        criterion_map[criterion.id] = (criterion, cat_abbrev)
+    
+    # Get all scores for these allocations
+    allocation_ids = [a.id for a in allocations]
+    scores = db.query(Score).filter(
+        Score.allocation_id.in_(allocation_ids),
+        Score.status == "submitted"
+    ).all()
+    
+    # Group scores by allocation_id
+    allocation_scores = defaultdict(list)
+    for score in scores:
+        allocation_scores[score.allocation_id].append(score)
+    
+    # Build aggregated feedback items
+    aggregated_items = []
+    
+    for allocation in allocations:
+        evaluation, project = eval_map.get(allocation.evaluation_id, (None, None))
+        if not evaluation:
+            continue
+        
+        # Get reviewee (student receiving feedback)
+        reviewee = db.query(User).filter(User.id == allocation.reviewee_id).first()
+        if not reviewee:
+            continue
+        
+        # Determine feedback type
+        feedback_type = "self" if allocation.reviewer_id == allocation.reviewee_id else "peer"
+        
+        # Get reviewer info (for peer feedback)
+        from_student = None
+        from_student_name = None
+        if feedback_type == "peer":
+            from_student = db.query(User).filter(User.id == allocation.reviewer_id).first()
+            from_student_name = from_student.name if from_student else "Onbekend"
+            from_student_id = from_student.id if from_student else None
+        else:
+            from_student_id = None
+        
+        # Get scores for this allocation
+        alloc_scores = allocation_scores.get(allocation.id, [])
+        
+        # Skip allocations with no submitted scores
+        if not alloc_scores:
+            continue
+        
+        # Calculate OMZA category averages and collect feedback
+        category_scores = defaultdict(list)  # category -> list of scores
+        category_feedback = defaultdict(list)  # category -> list of feedback texts
+        criteria_details = []
+        
+        for score in alloc_scores:
+            if score.criterion_id not in criterion_map:
+                continue
+            
+            criterion, cat_abbrev = criterion_map[score.criterion_id]
+            
+            # Add score to category average
+            if score.score is not None:
+                category_scores[cat_abbrev].append(float(score.score))
+            
+            # Collect feedback text
+            if score.comment and score.comment.strip():
+                category_feedback[cat_abbrev].append(score.comment.strip())
+            
+            # Add to criteria details for expansion
+            criteria_details.append(CriterionDetail(
+                criterion_id=criterion.id,
+                criterion_name=criterion.name,
+                category=cat_abbrev,
+                score=float(score.score) if score.score is not None else None,
+                feedback=score.comment if score.comment else None
+            ))
+        
+        # Calculate category averages
+        score_O = sum(category_scores["O"]) / len(category_scores["O"]) if category_scores["O"] else None
+        score_M = sum(category_scores["M"]) / len(category_scores["M"]) if category_scores["M"] else None
+        score_Z = sum(category_scores["Z"]) / len(category_scores["Z"]) if category_scores["Z"] else None
+        score_A = sum(category_scores["A"]) / len(category_scores["A"]) if category_scores["A"] else None
+        
+        # Combine all feedback texts
+        all_feedback = []
+        for cat in ["O", "M", "Z", "A"]:
+            all_feedback.extend(category_feedback[cat])
+        combined_feedback = " | ".join(all_feedback) if all_feedback else "Geen feedback"
+        
+        # Create aggregated item
+        aggregated_items.append(AggregatedFeedbackItem(
+            allocation_id=allocation.id,
+            student_id=reviewee.id,
+            student_name=reviewee.name,
+            project_name=project.title if project else evaluation.title,
+            evaluation_id=evaluation.id,
+            date=evaluation.closed_at or evaluation.created_at,
+            feedback_type=feedback_type,
+            from_student_id=from_student_id,
+            from_student_name=from_student_name,
+            score_O=score_O,
+            score_M=score_M,
+            score_Z=score_Z,
+            score_A=score_A,
+            combined_feedback=combined_feedback,
+            criteria_details=criteria_details
+        ))
+    
+    return AggregatedFeedbackResponse(
+        feedbackItems=aggregated_items,
+        totalCount=len(aggregated_items)
+    )
+
+
+@router.get("/peer-evaluations/teacher-feedback", response_model=TeacherFeedbackResponse)
+def get_teacher_feedback(
+    course_id: Optional[int] = None,
+    project_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get teacher feedback/assessments from OMZA evaluations including:
+    - Teacher emoticon scores per OMZA category (1-3)
+    - General teacher comments
+    
+    Filters:
+    - course_id: Filter by specific course
+    - project_id: Filter by specific project
+    """
+    from app.api.v1.schemas.overview import TeacherFeedbackItem, TeacherFeedbackResponse
+    
+    school_id = current_user.school_id
+    
+    # Get evaluations matching filters
+    eval_query = db.query(Evaluation).filter(
+        Evaluation.school_id == school_id,
+        Evaluation.evaluation_type == "peer"
+    )
+    
+    if course_id:
+        eval_query = eval_query.filter(Evaluation.course_id == course_id)
+    if project_id:
+        eval_query = eval_query.filter(Evaluation.project_id == project_id)
+    
+    evaluations = eval_query.all()
+    
+    if not evaluations:
+        return TeacherFeedbackResponse(
+            feedbackItems=[],
+            totalCount=0
+        )
+    
+    # Get all students
+    students = db.query(User).filter(
+        User.school_id == school_id,
+        User.role == "student",
+        User.archived == False
+    ).all()
+    
+    teacher_feedback_items = []
+    
+    for evaluation in evaluations:
+        if not evaluation.settings:
+            continue
+        
+        # Check if this evaluation has any teacher assessments
+        has_teacher_data = any(
+            key.startswith("teacher_score_") or key.startswith("teacher_comment_")
+            for key in evaluation.settings.keys()
+        )
+        
+        if not has_teacher_data:
+            continue
+        
+        # Get project name
+        project_name = evaluation.project.title if evaluation.project else f"Peer Evaluatie {evaluation.id}"
+        eval_date = evaluation.closed_at or evaluation.created_at
+        
+        # Extract teacher assessments for each student
+        for student in students:
+            # Get teacher scores for each OMZA category
+            org_key = f"teacher_score_{student.id}_O"
+            mee_key = f"teacher_score_{student.id}_M"
+            zel_key = f"teacher_score_{student.id}_Z"
+            aut_key = f"teacher_score_{student.id}_A"
+            comment_key = f"teacher_comment_{student.id}"
+            
+            org_score = evaluation.settings.get(org_key)
+            mee_score = evaluation.settings.get(mee_key)
+            zel_score = evaluation.settings.get(zel_key)
+            aut_score = evaluation.settings.get(aut_key)
+            comment = evaluation.settings.get(comment_key)
+            
+            # Only include if at least one score or comment exists
+            if org_score or mee_score or zel_score or aut_score or comment:
+                teacher_feedback_items.append(TeacherFeedbackItem(
+                    id=evaluation.id * 10000 + student.id,  # Unique ID
+                    student_id=student.id,
+                    student_name=student.name,
+                    project_name=project_name,
+                    evaluation_id=evaluation.id,
+                    date=eval_date,
+                    organiseren_score=int(org_score) if org_score else None,
+                    meedoen_score=int(mee_score) if mee_score else None,
+                    zelfvertrouwen_score=int(zel_score) if zel_score else None,
+                    autonomie_score=int(aut_score) if aut_score else None,
+                    teacher_comment=comment
+                ))
+    
+    return TeacherFeedbackResponse(
+        feedbackItems=teacher_feedback_items,
+        totalCount=len(teacher_feedback_items)
+    )
+
+
+@router.get("/peer-evaluations/reflections", response_model=ReflectionResponse)
+def get_peer_evaluation_reflections(
+    course_id: Optional[int] = Query(None),
+    project_id: Optional[int] = Query(None),
+    student_name: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get all reflections from peer evaluations including:
+    - Student reflections per evaluation
+    - Word count
+    - Date submitted
+    
+    Filters:
+    - course_id: Filter by specific course
+    - project_id: Filter by specific project
+    - student_name: Filter by student name (partial match)
+    """
+    school_id = current_user.school_id
+    
+    # Get evaluations matching filters
+    eval_query = db.query(Evaluation).filter(
+        Evaluation.school_id == school_id,
+        Evaluation.evaluation_type == "peer"
+    )
+    
+    if course_id:
+        eval_query = eval_query.filter(Evaluation.course_id == course_id)
+    if project_id:
+        eval_query = eval_query.filter(Evaluation.project_id == project_id)
+    
+    evaluations = eval_query.all()
+    evaluation_ids = [e.id for e in evaluations]
+    
+    if not evaluation_ids:
+        return ReflectionResponse(
+            reflectionItems=[],
+            totalCount=0
+        )
+    
+    # Get reflections from the Reflection table
+    reflection_query = db.query(Reflection).join(User, Reflection.user_id == User.id).filter(
+        Reflection.evaluation_id.in_(evaluation_ids),
+        Reflection.text.isnot(None),
+        Reflection.text != ""
+    )
+    
+    if student_name:
+        reflection_query = reflection_query.filter(
+            User.name.ilike(f"%{student_name}%")
+        )
+    
+    reflections = reflection_query.all()
+    
+    reflection_items = []
+    for reflection in reflections:
+        # Get student info
+        student = db.query(User).filter(User.id == reflection.user_id).first()
+        if not student:
+            continue
+        
+        # Get evaluation and project info
+        evaluation = db.query(Evaluation).filter(Evaluation.id == reflection.evaluation_id).first()
+        if not evaluation:
+            continue
+        
+        project_name = evaluation.project.title if evaluation.project else f"Peer Evaluatie {evaluation.id}"
+        eval_date = evaluation.closed_at or evaluation.created_at
+        
+        # Strip timezone if present
+        if eval_date and hasattr(eval_date, 'tzinfo') and eval_date.tzinfo is not None:
+            eval_date = eval_date.replace(tzinfo=None)
+        
+        reflection_items.append(ReflectionItem(
+            id=reflection.id,
+            student_id=student.id,
+            student_name=student.name,
+            project_name=project_name,
+            evaluation_id=evaluation.id,
+            date=eval_date,
+            reflection_text=reflection.text,
+            word_count=reflection.word_count
+        ))
+    
+    return ReflectionResponse(
+        reflectionItems=reflection_items,
+        totalCount=len(reflection_items)
+    )

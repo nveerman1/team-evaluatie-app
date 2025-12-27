@@ -1,20 +1,18 @@
 "use client";
 
-import { useState, Suspense } from "react";
-import { 
-  ArrowUp, 
-  ArrowDown, 
-  AlertTriangle, 
+import React, { useState, Suspense, useEffect, useMemo } from "react";
+import {
+  ArrowUp,
+  ArrowDown,
+  AlertTriangle,
   TrendingUp,
   Search,
   Filter,
   MessageSquare,
-  Brain,
   Users,
   LayoutDashboard,
   ChevronDown,
   ChevronRight,
-  ExternalLink
 } from "lucide-react";
 import { Line } from "react-chartjs-2";
 import {
@@ -29,8 +27,11 @@ import {
 } from "chart.js";
 import { usePeerOverview, type PeerOverviewFilters } from "@/hooks/usePeerOverview";
 import { useFeedbackData, type FeedbackFilters } from "@/hooks/useFeedbackData";
-import { useAiInsights } from "@/hooks/useAiInsights";
-import { usePeerCompare, type PeerCompareFilters } from "@/hooks/usePeerCompare";
+import { useAggregatedFeedback, type AggregatedFeedbackItem } from "@/hooks/useAggregatedFeedback";
+import { useTeacherFeedback } from "@/hooks/useTeacherFeedback";
+import { useReflections } from "@/hooks/useReflections";
+import { overviewService } from "@/services/overview.service";
+import { projectService } from "@/services/project.service";
 
 // Register Chart.js components
 ChartJS.register(
@@ -75,19 +76,143 @@ function CardSkeleton() {
 }
 
 /* =========================================
+   HELPER: TEACHER EMOTICON RENDERING
+   ========================================= */
+
+function renderTeacherEmoticon(score: number | null | undefined) {
+  if (!score) return null;
+  
+  // 4-level system matching OMZA evaluation page: 1=best (🙂), 4=worst (!!)
+  if (score === 1) {
+    return (
+      <span 
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[10px] font-medium text-green-700 ml-1" 
+        title="Gaat goed"
+      >
+        🙂
+      </span>
+    );
+  }
+  if (score === 2) {
+    return (
+      <span 
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[10px] font-medium text-green-700 ml-1" 
+        title="Voldoet aan verwachting"
+      >
+        ✓
+      </span>
+    );
+  }
+  if (score === 3) {
+    return (
+      <span 
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-400 bg-amber-100 text-[10px] font-medium text-amber-700 ml-1" 
+        title="Let op: verbeterpunt"
+      >
+        !
+      </span>
+    );
+  }
+  if (score === 4) {
+    return (
+      <span 
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-rose-500 bg-rose-100 text-[10px] font-medium text-rose-700 ml-1" 
+        title="Urgent: direct bespreken"
+      >
+        !!
+      </span>
+    );
+  }
+  return null;
+}
+
+/* =========================================
    TAB 1: DASHBOARD & TRENDS
    ========================================= */
 
 function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
   const { data, loading, error } = usePeerOverview(filters);
+  const [viewMode, setViewMode] = useState<'latest' | 'average'>('latest');
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
-  if (error) {
-    return (
-      <div className="text-red-500 p-4 bg-red-50 rounded-lg">
-        Fout bij laden: {error}
-      </div>
-    );
-  }
+  // Helper functions for evaluation calculations
+  const getLatestEvaluation = (row: any) => {
+    if (!row.evaluations || row.evaluations.length === 0) return null;
+    return row.evaluations[0]; // Already sorted newest first from backend
+  };
+
+  const getPreviousEvaluation = (row: any) => {
+    if (!row.evaluations || row.evaluations.length < 2) return null;
+    return row.evaluations[1]; // Second item is previous
+  };
+
+  const calculateLatestScores = (row: any) => {
+    const latest = getLatestEvaluation(row);
+    if (!latest) return null;
+    
+    return {
+      organiseren: latest.scores['O'] || null,
+      meedoen: latest.scores['M'] || null,
+      zelfvertrouwen: latest.scores['Z'] || null,
+      autonomie: latest.scores['A'] || null,
+    };
+  };
+
+  const calculateAverageScores = (row: any) => {
+    if (!row.evaluations || row.evaluations.length === 0) return null;
+    
+    const sums = { O: 0, M: 0, Z: 0, A: 0 };
+    const counts = { O: 0, M: 0, Z: 0, A: 0 };
+    
+    row.evaluations.forEach((evaluation: any) => {
+      if (evaluation.scores['O']) { sums.O += evaluation.scores['O']; counts.O++; }
+      if (evaluation.scores['M']) { sums.M += evaluation.scores['M']; counts.M++; }
+      if (evaluation.scores['Z']) { sums.Z += evaluation.scores['Z']; counts.Z++; }
+      if (evaluation.scores['A']) { sums.A += evaluation.scores['A']; counts.A++; }
+    });
+    
+    return {
+      organiseren: counts.O > 0 ? sums.O / counts.O : null,
+      meedoen: counts.M > 0 ? sums.M / counts.M : null,
+      zelfvertrouwen: counts.Z > 0 ? sums.Z / counts.Z : null,
+      autonomie: counts.A > 0 ? sums.A / counts.A : null,
+    };
+  };
+
+  const calculateDelta = (row: any, category: 'O' | 'M' | 'Z' | 'A') => {
+    const latest = getLatestEvaluation(row);
+    const previous = getPreviousEvaluation(row);
+    
+    if (!latest || !previous) return null;
+    if (!latest.scores[category] || !previous.scores[category]) return null;
+    
+    return latest.scores[category] - previous.scores[category];
+  };
+
+  const toggleRow = (studentId: number) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(studentId)) {
+      newExpanded.delete(studentId);
+    } else {
+      newExpanded.add(studentId);
+    }
+    setExpandedRows(newExpanded);
+  };
+
+  // Memoized display scores based on view mode
+  const getDisplayScores = useMemo(() => {
+    if (!data?.heatmapData) return {};
+    
+    const scores: Record<number, any> = {};
+    data.heatmapData.forEach((row) => {
+      if (viewMode === 'latest') {
+        scores[row.student_id] = calculateLatestScores(row);
+      } else {
+        scores[row.student_id] = calculateAverageScores(row);
+      }
+    });
+    return scores;
+  }, [data?.heatmapData, viewMode]);
 
   // Chart configuration
   const chartData = {
@@ -149,20 +274,41 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
     return <span className="w-4 h-4 text-gray-400">—</span>;
   };
 
-  const getTrendBg = (trend: "up" | "down" | "neutral") => {
-    if (trend === "up") return "bg-green-100";
-    if (trend === "down") return "bg-red-100";
-    return "bg-gray-100";
+  const getScoreColor = (score: number | null): string => {
+    if (score === null) return "bg-gray-100 text-gray-400";
+    if (score >= 4) return "bg-green-100 text-green-700";
+    if (score >= 3) return "bg-blue-100 text-blue-700";
+    return "bg-orange-100 text-orange-700";
   };
+
+  const getTrendDelta = (trend: "up" | "down" | "neutral"): number | null => {
+    // TODO: Calculate actual delta from previous evaluation
+    // For now, return estimated values based on trend
+    if (trend === "up") return 0.2;
+    if (trend === "down") return -0.2;
+    return null;
+  };
+
+  // Show error after all hooks are called
+  if (error) {
+    return (
+      <div className="text-red-500 p-4 bg-red-50 rounded-lg">
+        Fout bij laden: {error}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Section 1: OMZA Trends Line Chart */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-blue-600" />
-          OMZA Trends over tijd
-        </h3>
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-blue-600" />
+            OMZA Trends over tijd
+          </h3>
+          <p className="text-sm text-slate-600 mt-1">Gemiddelde scores per maand over alle peer evaluaties</p>
+        </div>
         <Suspense fallback={<ChartSkeleton />}>
           {loading ? (
             <ChartSkeleton />
@@ -194,98 +340,313 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
       </div>
 
       {/* Section 2: Leerling Heatmap */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Users className="w-5 h-5 text-blue-600" />
-          Leerling Heatmap
-        </h3>
-        <Suspense fallback={<TableSkeleton />}>
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900 leading-6">Leerling Heatmap</h3>
+            <p className="text-sm text-slate-600">
+              {viewMode === 'latest' 
+                ? 'OMZA-scores van laatste peerevaluatie'
+                : 'Gemiddelde OMZA-scores per leerling (over alle peer evaluaties)'}
+            </p>
+          </div>
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('latest')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                viewMode === 'latest'
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+              aria-label="Toon laatste evaluatie"
+              aria-pressed={viewMode === 'latest'}
+            >
+              Laatste evaluatie
+            </button>
+            <button
+              onClick={() => setViewMode('average')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                viewMode === 'average'
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+              aria-label="Toon gemiddelde periode"
+              aria-pressed={viewMode === 'average'}
+            >
+              Gemiddelde periode
+            </button>
+          </div>
+        </div>
+        <Suspense fallback={<div className="p-6"><TableSkeleton /></div>}>
           {loading ? (
-            <TableSkeleton />
+            <div className="p-6"><TableSkeleton /></div>
           ) : (
-            <div className="overflow-x-auto -mx-6 px-6">
-              <table className="w-full min-w-[600px]">
-                <thead className="bg-gray-50">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200 text-sm">
+                <thead className="bg-slate-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase sticky left-0 bg-gray-50 z-10">
+                    <th className="sticky left-0 z-20 bg-slate-50 px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[140px]">
                       Leerling
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
                       Klas
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-blue-700 uppercase">
-                      O
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide min-w-[90px]">
+                      <span className="block">Organiseren</span>
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-green-700 uppercase">
-                      M
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide min-w-[90px]">
+                      <span className="block">Meedoen</span>
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-amber-700 uppercase">
-                      Z
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide min-w-[90px]">
+                      <span className="block">Zelfvertrouwen</span>
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase">
-                      A
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide min-w-[90px]">
+                      <span className="block">Autonomie</span>
+                    </th>
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide min-w-[90px]">
+                      Self vs Peer
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {data?.heatmapData.map((student) => (
-                    <tr key={student.student_id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900 sticky left-0 bg-white">
-                        {student.student_name}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 text-center">
-                        {student.class_name}
-                      </td>
-                      <td className="px-2 py-2">
-                        <div
-                          className={`flex items-center justify-center gap-1 px-2 py-2 rounded ${getTrendBg(
-                            student.scores.organiseren.trend
-                          )}`}
+                <tbody className="divide-y divide-slate-100">
+                  {data?.heatmapData.map((student) => {
+                    const displayScores = getDisplayScores[student.student_id];
+                    const isExpanded = expandedRows.has(student.student_id);
+                    const hasEvaluations = student.evaluations && student.evaluations.length > 0;
+                    
+                    return (
+                      <React.Fragment key={student.student_id}>
+                        <tr 
+                          className={`bg-white hover:bg-slate-50 ${hasEvaluations ? 'cursor-pointer' : ''}`}
+                          onClick={() => hasEvaluations && toggleRow(student.student_id)}
                         >
-                          <span className="font-medium">
-                            {student.scores.organiseren.current.toFixed(1)}
-                          </span>
-                          {getTrendIcon(student.scores.organiseren.trend)}
-                        </div>
-                      </td>
-                      <td className="px-2 py-2">
-                        <div
-                          className={`flex items-center justify-center gap-1 px-2 py-2 rounded ${getTrendBg(
-                            student.scores.meedoen.trend
-                          )}`}
-                        >
-                          <span className="font-medium">
-                            {student.scores.meedoen.current.toFixed(1)}
-                          </span>
-                          {getTrendIcon(student.scores.meedoen.trend)}
-                        </div>
-                      </td>
-                      <td className="px-2 py-2">
-                        <div
-                          className={`flex items-center justify-center gap-1 px-2 py-2 rounded ${getTrendBg(
-                            student.scores.zelfvertrouwen.trend
-                          )}`}
-                        >
-                          <span className="font-medium">
-                            {student.scores.zelfvertrouwen.current.toFixed(1)}
-                          </span>
-                          {getTrendIcon(student.scores.zelfvertrouwen.trend)}
-                        </div>
-                      </td>
-                      <td className="px-2 py-2">
-                        <div
-                          className={`flex items-center justify-center gap-1 px-2 py-2 rounded ${getTrendBg(
-                            student.scores.autonomie.trend
-                          )}`}
-                        >
-                          <span className="font-medium">
-                            {student.scores.autonomie.current.toFixed(1)}
-                          </span>
-                          {getTrendIcon(student.scores.autonomie.trend)}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                          <td className="sticky left-0 z-10 bg-white px-4 py-2 text-sm text-slate-900 font-medium border-r border-slate-100">
+                            <div className="flex items-center gap-2">
+                              {hasEvaluations && (
+                                isExpanded ? (
+                                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                                ) : (
+                                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                                )
+                              )}
+                              <span>{student.student_name}</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 text-center text-sm text-slate-600">
+                            {student.class_name || "–"}
+                          </td>
+                          {/* Organiseren */}
+                          <td className="px-3 py-2 text-left">
+                            {displayScores?.organiseren ? (
+                              <div className="flex items-center gap-1">
+                                <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(displayScores.organiseren)}`}>
+                                  {displayScores.organiseren.toFixed(1)}
+                                </span>
+                                {renderTeacherEmoticon(student.scores.O?.teacher_score)}
+                                {(() => {
+                                  const delta = calculateDelta(student, 'O');
+                                  return delta !== null && (
+                                    <span className={`text-[10px] font-medium tabular-nums ${delta > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                      {delta > 0 ? '+' : ''}{delta.toFixed(1)}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
+                            ) : (
+                              <span className="text-slate-300">–</span>
+                            )}
+                          </td>
+                          {/* Meedoen */}
+                          <td className="px-3 py-2 text-left">
+                            {displayScores?.meedoen ? (
+                              <div className="flex items-center gap-1">
+                                <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(displayScores.meedoen)}`}>
+                                  {displayScores.meedoen.toFixed(1)}
+                                </span>
+                                {renderTeacherEmoticon(student.scores.M?.teacher_score)}
+                                {(() => {
+                                  const delta = calculateDelta(student, 'M');
+                                  return delta !== null && (
+                                    <span className={`text-[10px] font-medium tabular-nums ${delta > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                      {delta > 0 ? '+' : ''}{delta.toFixed(1)}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
+                            ) : (
+                              <span className="text-slate-300">–</span>
+                            )}
+                          </td>
+                          {/* Zelfvertrouwen */}
+                          <td className="px-3 py-2 text-left">
+                            {displayScores?.zelfvertrouwen ? (
+                              <div className="flex items-center gap-1">
+                                <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(displayScores.zelfvertrouwen)}`}>
+                                  {displayScores.zelfvertrouwen.toFixed(1)}
+                                </span>
+                                {renderTeacherEmoticon(student.scores.Z?.teacher_score)}
+                                {(() => {
+                                  const delta = calculateDelta(student, 'Z');
+                                  return delta !== null && (
+                                    <span className={`text-[10px] font-medium tabular-nums ${delta > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                      {delta > 0 ? '+' : ''}{delta.toFixed(1)}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
+                            ) : (
+                              <span className="text-slate-300">–</span>
+                            )}
+                          </td>
+                          {/* Autonomie */}
+                          <td className="px-3 py-2 text-left">
+                            {displayScores?.autonomie ? (
+                              <div className="flex items-center gap-1">
+                                <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(displayScores.autonomie)}`}>
+                                  {displayScores.autonomie.toFixed(1)}
+                                </span>
+                                {renderTeacherEmoticon(student.scores.A?.teacher_score)}
+                                {(() => {
+                                  const delta = calculateDelta(student, 'A');
+                                  return delta !== null && (
+                                    <span className={`text-[10px] font-medium tabular-nums ${delta > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                      {delta > 0 ? '+' : ''}{delta.toFixed(1)}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
+                            ) : (
+                              <span className="text-slate-300">–</span>
+                            )}
+                          </td>
+                          {/* Self vs Peer */}
+                          <td className="px-3 py-2 text-center">
+                            <span className={`text-sm font-medium tabular-nums ${
+                              (student.self_vs_peer_diff || 0) > 0.3
+                                ? "text-red-600"
+                                : (student.self_vs_peer_diff || 0) < -0.3
+                                ? "text-amber-600"
+                                : "text-slate-600"
+                            }`}>
+                              {student.self_vs_peer_diff !== undefined
+                                ? ((student.self_vs_peer_diff || 0) > 0 ? "+" : "") + student.self_vs_peer_diff.toFixed(1)
+                                : "–"}
+                            </span>
+                          </td>
+                        </tr>
+                        
+                        {/* Expanded Row Content */}
+                        {isExpanded && hasEvaluations && (
+                          <tr className="bg-slate-50">
+                            <td colSpan={7} className="px-4 py-3">
+                              <div className="overflow-x-auto">
+                                <table className="min-w-full text-sm">
+                                  <thead className="border-b border-slate-300">
+                                    <tr>
+                                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Datum</th>
+                                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Evaluatie</th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">O</th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">M</th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">Z</th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">A</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-200">
+                                    {student.evaluations!.map((evaluation) => (
+                                      <tr key={evaluation.id} className="hover:bg-slate-100">
+                                        <td className="px-3 py-2 text-slate-600">
+                                          {new Date(evaluation.date).toLocaleDateString('nl-NL')}
+                                        </td>
+                                        <td className="px-3 py-2 text-slate-900 font-medium">{evaluation.label}</td>
+                                        <td className="px-3 py-2 text-center">
+                                          {evaluation.scores['O'] ? (
+                                            <div className="inline-flex items-center gap-1">
+                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores['O'])}`}>
+                                                {evaluation.scores['O'].toFixed(1)}
+                                              </span>
+                                              {evaluation.teacher_scores?.['O'] && renderTeacherEmoticon(evaluation.teacher_scores['O'])}
+                                            </div>
+                                          ) : <span className="text-slate-300">–</span>}
+                                        </td>
+                                        <td className="px-3 py-2 text-center">
+                                          {evaluation.scores['M'] ? (
+                                            <div className="inline-flex items-center gap-1">
+                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores['M'])}`}>
+                                                {evaluation.scores['M'].toFixed(1)}
+                                              </span>
+                                              {evaluation.teacher_scores?.['M'] && renderTeacherEmoticon(evaluation.teacher_scores['M'])}
+                                            </div>
+                                          ) : <span className="text-slate-300">–</span>}
+                                        </td>
+                                        <td className="px-3 py-2 text-center">
+                                          {evaluation.scores['Z'] ? (
+                                            <div className="inline-flex items-center gap-1">
+                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores['Z'])}`}>
+                                                {evaluation.scores['Z'].toFixed(1)}
+                                              </span>
+                                              {evaluation.teacher_scores?.['Z'] && renderTeacherEmoticon(evaluation.teacher_scores['Z'])}
+                                            </div>
+                                          ) : <span className="text-slate-300">–</span>}
+                                        </td>
+                                        <td className="px-3 py-2 text-center">
+                                          {evaluation.scores['A'] ? (
+                                            <div className="inline-flex items-center gap-1">
+                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(evaluation.scores['A'])}`}>
+                                                {evaluation.scores['A'].toFixed(1)}
+                                              </span>
+                                              {evaluation.teacher_scores?.['A'] && renderTeacherEmoticon(evaluation.teacher_scores['A'])}
+                                            </div>
+                                          ) : <span className="text-slate-300">–</span>}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                    {/* Average Period Row */}
+                                    {(() => {
+                                      const avgScores = calculateAverageScores(student);
+                                      return avgScores && (
+                                        <tr className="bg-slate-100 border-t-2 border-slate-300 font-semibold">
+                                          <td className="px-3 py-2 text-slate-900" colSpan={2}>Gemiddelde periode</td>
+                                          <td className="px-3 py-2 text-center">
+                                            {avgScores.organiseren ? (
+                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(avgScores.organiseren)}`}>
+                                                {avgScores.organiseren.toFixed(1)}
+                                              </span>
+                                            ) : <span className="text-slate-300">–</span>}
+                                          </td>
+                                          <td className="px-3 py-2 text-center">
+                                            {avgScores.meedoen ? (
+                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(avgScores.meedoen)}`}>
+                                                {avgScores.meedoen.toFixed(1)}
+                                              </span>
+                                            ) : <span className="text-slate-300">–</span>}
+                                          </td>
+                                          <td className="px-3 py-2 text-center">
+                                            {avgScores.zelfvertrouwen ? (
+                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(avgScores.zelfvertrouwen)}`}>
+                                                {avgScores.zelfvertrouwen.toFixed(1)}
+                                              </span>
+                                            ) : <span className="text-slate-300">–</span>}
+                                          </td>
+                                          <td className="px-3 py-2 text-center">
+                                            {avgScores.autonomie ? (
+                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(avgScores.autonomie)}`}>
+                                                {avgScores.autonomie.toFixed(1)}
+                                              </span>
+                                            ) : <span className="text-slate-300">–</span>}
+                                          </td>
+                                        </tr>
+                                      );
+                                    })()}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -307,9 +668,12 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
             <>
               {/* Grootste stijgers */}
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <ArrowUp className="w-5 h-5 text-green-600" />
-                  <h4 className="font-semibold text-gray-900">Grootste stijgers</h4>
+                <div className="mb-3">
+                  <div className="flex items-center gap-2">
+                    <ArrowUp className="w-5 h-5 text-green-600" />
+                    <h4 className="font-semibold text-gray-900">Grootste stijgers</h4>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Hoogste gemiddelde scores</p>
                 </div>
                 <div className="space-y-2">
                   {data?.kpiData.grootsteStijgers.map((student, idx) => (
@@ -333,9 +697,12 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
 
               {/* Grootste dalers */}
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <ArrowDown className="w-5 h-5 text-red-600" />
-                  <h4 className="font-semibold text-gray-900">Grootste dalers</h4>
+                <div className="mb-3">
+                  <div className="flex items-center gap-2">
+                    <ArrowDown className="w-5 h-5 text-red-600" />
+                    <h4 className="font-semibold text-gray-900">Grootste dalers</h4>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Laagste gemiddelde scores</p>
                 </div>
                 <div className="space-y-2">
                   {data?.kpiData.grootsteDalers.map((student, idx) => (
@@ -359,9 +726,12 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
 
               {/* Structureel lage scores */}
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <AlertTriangle className="w-5 h-5 text-amber-600" />
-                  <h4 className="font-semibold text-gray-900">Structureel laag</h4>
+                <div className="mb-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-amber-600" />
+                    <h4 className="font-semibold text-gray-900">Structureel laag</h4>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Gemiddeld onder 3.0</p>
                 </div>
                 <div className="space-y-2">
                   {data?.kpiData.structureelLaag.map((student, idx) => (
@@ -385,11 +755,13 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
 
               {/* Inconsistenties */}
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <AlertTriangle className="w-5 h-5 text-violet-600" />
-                  <h4 className="font-semibold text-gray-900">Inconsistenties</h4>
+                <div className="mb-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-violet-600" />
+                    <h4 className="font-semibold text-gray-900">Inconsistenties</h4>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Grootste self vs peer verschil</p>
                 </div>
-                <p className="text-xs text-gray-500 mb-2">Self vs peer verschil</p>
                 <div className="space-y-2">
                   {data?.kpiData.inconsistenties.map((student, idx) => (
                     <div
@@ -418,313 +790,97 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
 }
 
 /* =========================================
-   TAB 2: FEEDBACKVERZAMELING
+   TAB 2: PEERFEEDBACK - Aggregated per allocation
    ========================================= */
 
-function FeedbackTab() {
-  const [filters, setFilters] = useState<FeedbackFilters>({});
-  const { data, loading, error } = useFeedbackData(filters);
+function PeerfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters }) {
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({
+    key: 'student_name',
+    direction: 'asc'
+  });
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  
+  // Use new aggregated feedback hook
+  const { data, loading, error } = useAggregatedFeedback({
+    courseId: parentFilters.courseId,
+    projectId: parentFilters.projectId,
+  });
 
-  const getSentimentColor = (sentiment: string) => {
-    switch (sentiment) {
-      case "positief":
-        return "bg-green-100 text-green-800";
-      case "kritiek":
-        return "bg-red-100 text-red-800";
-      case "waarschuwing":
-        return "bg-amber-100 text-amber-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "organiseren":
-        return "bg-blue-100 text-blue-800";
-      case "meedoen":
-        return "bg-green-100 text-green-800";
-      case "zelfvertrouwen":
-        return "bg-amber-100 text-amber-800";
-      case "autonomie":
-        return "bg-violet-100 text-violet-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  // Escape special regex characters to prevent ReDoS attacks
-  const escapeRegex = (str: string) => {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  };
-
-  // Escape HTML to prevent XSS
-  const escapeHtml = (text: string) => {
-    return text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  };
-
-  const highlightKeywords = (text: string, keywords: string[]) => {
-    // First escape HTML in the original text
-    let result = escapeHtml(text);
-    keywords.forEach((keyword) => {
-      // Escape special regex characters in keyword
-      const escapedKeyword = escapeRegex(keyword);
-      const regex = new RegExp(`(${escapedKeyword})`, "gi");
-      result = result.replace(
-        regex,
-        '<mark class="bg-yellow-200 px-0.5 rounded">$1</mark>'
-      );
-    });
-    return result;
-  };
-
-  if (error) {
-    return (
-      <div className="text-red-500 p-4 bg-red-50 rounded-lg">
-        Fout bij laden: {error}
-      </div>
+  // Filter by student name from parent filters (cross-tab search)
+  const filteredData = useMemo(() => {
+    if (!data?.feedbackItems) return [];
+    if (!parentFilters.studentName) return data.feedbackItems;
+    
+    const searchLower = parentFilters.studentName.toLowerCase();
+    return data.feedbackItems.filter(item =>
+      item.student_name.toLowerCase().includes(searchLower)
     );
-  }
+  }, [data?.feedbackItems, parentFilters.studentName]);
 
-  return (
-    <div className="space-y-6">
-      {/* Two-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* LEFT: Filters (40%) */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Filter className="w-5 h-5 text-blue-600" />
-              Filters
-            </h3>
-
-            <div className="space-y-4">
-              {/* Category filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  OMZA Categorie
-                </label>
-                <select
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                  value={filters.category || ""}
-                  onChange={(e) =>
-                    setFilters({ ...filters, category: e.target.value || undefined })
-                  }
-                >
-                  <option value="">Alle categorieën</option>
-                  <option value="organiseren">Organiseren</option>
-                  <option value="meedoen">Meedoen</option>
-                  <option value="zelfvertrouwen">Zelfvertrouwen</option>
-                  <option value="autonomie">Autonomie</option>
-                </select>
-              </div>
-
-              {/* Sentiment filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Sentiment
-                </label>
-                <select
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                  value={filters.sentiment || ""}
-                  onChange={(e) =>
-                    setFilters({ ...filters, sentiment: e.target.value || undefined })
-                  }
-                >
-                  <option value="">Alle sentimenten</option>
-                  <option value="positief">Positief</option>
-                  <option value="kritiek">Kritiek</option>
-                  <option value="waarschuwing">Waarschuwing</option>
-                </select>
-              </div>
-
-              {/* Search text */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Zoeken in feedback
-                </label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Zoek op trefwoord..."
-                    className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm"
-                    value={filters.searchText || ""}
-                    onChange={(e) =>
-                      setFilters({ ...filters, searchText: e.target.value || undefined })
-                    }
-                  />
-                </div>
-              </div>
-
-              {/* Risk behavior toggle */}
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="riskOnly"
-                  className="w-4 h-4 rounded border-gray-300"
-                  checked={filters.riskOnly || false}
-                  onChange={(e) =>
-                    setFilters({ ...filters, riskOnly: e.target.checked || undefined })
-                  }
-                />
-                <label htmlFor="riskOnly" className="text-sm text-gray-700">
-                  Alleen risico-gedrag opmerkingen
-                </label>
-              </div>
-
-              {/* Clear filters button */}
-              <button
-                onClick={() => setFilters({})}
-                className="w-full px-3 py-2 border rounded-lg text-sm hover:bg-gray-50"
-              >
-                Filters wissen
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT: Feedback List (60%) */}
-        <div className="lg:col-span-3">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-blue-600" />
-              Feedback ({data?.totalCount || 0} resultaten)
-            </h3>
-
-            <Suspense fallback={<TableSkeleton />}>
-              {loading ? (
-                <TableSkeleton />
-              ) : (
-                <div className="space-y-3 max-h-[500px] overflow-y-auto">
-                  {data?.feedbackItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="border rounded-lg p-4 hover:bg-gray-50"
-                    >
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(
-                            item.category
-                          )}`}
-                        >
-                          {item.category.charAt(0).toUpperCase() +
-                            item.category.slice(1)}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${getSentimentColor(
-                            item.sentiment
-                          )}`}
-                        >
-                          {item.sentiment}
-                        </span>
-                        {item.is_risk_behavior && (
-                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                            ⚠️ Risico
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-sm text-gray-600 mb-2">
-                        <span className="font-medium">{item.student_name}</span>
-                        <span className="mx-2">•</span>
-                        <span>{item.project_name}</span>
-                        <span className="mx-2">•</span>
-                        <span>
-                          {new Date(item.date).toLocaleDateString("nl-NL")}
-                        </span>
-                      </div>
-                      <p
-                        className="text-sm text-gray-800"
-                        dangerouslySetInnerHTML={{
-                          __html: highlightKeywords(item.text, item.keywords),
-                        }}
-                      />
-                    </div>
-                  ))}
-                  {data?.feedbackItems.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      Geen feedback gevonden voor de geselecteerde filters
-                    </div>
-                  )}
-                </div>
-              )}
-            </Suspense>
-          </div>
-        </div>
-      </div>
-
-      {/* AI-geclusterde thema's */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Brain className="w-5 h-5 text-violet-600" />
-          AI-geclusterde thema&apos;s
-        </h3>
-        <Suspense fallback={<TableSkeleton />}>
-          {loading ? (
-            <TableSkeleton />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {data?.aiClusters.map((cluster) => (
-                <div
-                  key={cluster.id}
-                  className="border rounded-lg p-4 hover:bg-gray-50"
-                >
-                  <h4 className="font-semibold text-gray-900">{cluster.title}</h4>
-                  <p className="text-sm text-gray-600 mb-3">
-                    {cluster.count} opmerkingen
-                  </p>
-                  <button className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
-                    <ExternalLink className="w-4 h-4" />
-                    Toon betrokken leerlingen
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </Suspense>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================
-   TAB 3: REFLECTIES & AI-INZICHTEN
-   ========================================= */
-
-function AiInsightsTab() {
-  const { data, loading, error } = useAiInsights();
-  const [expandedStudents, setExpandedStudents] = useState<Set<number>>(new Set());
-
-  const toggleStudent = (studentId: number) => {
-    setExpandedStudents((prev) => {
-      const next = new Set(prev);
-      if (next.has(studentId)) {
-        next.delete(studentId);
-      } else {
-        next.add(studentId);
+  // Sorted data
+  const sortedData = useMemo(() => {
+    const items = [...filteredData];
+    items.sort((a, b) => {
+      let aVal: any = a[sortConfig.key as keyof typeof a];
+      let bVal: any = b[sortConfig.key as keyof typeof b];
+      
+      // Handle date sorting
+      if (sortConfig.key === 'date') {
+        aVal = new Date(aVal).getTime();
+        bVal = new Date(bVal).getTime();
       }
-      return next;
+      
+      // Handle OMZA score sorting (O, M, Z, A)
+      if (['score_O', 'score_M', 'score_Z', 'score_A'].includes(sortConfig.key)) {
+        aVal = aVal || 0;
+        bVal = bVal || 0;
+      }
+      
+      // Handle string sorting
+      if (typeof aVal === 'string') {
+        aVal = aVal.toLowerCase();
+        bVal = bVal.toLowerCase();
+      }
+      
+      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return items;
+  }, [filteredData, sortConfig]);
+
+  const handleSort = (key: string) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const getSortIndicator = (key: string) => {
+    if (sortConfig.key !== key) return null;
+    return sortConfig.direction === 'asc' ? ' ▲' : ' ▼';
+  };
+
+  const toggleRow = (id: number) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
     });
   };
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "organiseren":
-        return "border-blue-500";
-      case "meedoen":
-        return "border-green-500";
-      case "zelfvertrouwen":
-        return "border-amber-500";
-      case "autonomie":
-        return "border-violet-500";
-      default:
-        return "border-gray-500";
-    }
+  // Get color for OMZA scores (1-5 scale)
+  const getScoreColor = (score: number | null | undefined) => {
+    if (!score) return "text-slate-400";
+    if (score >= 4.5) return "text-green-600 font-semibold";
+    if (score >= 3.5) return "text-green-500 font-medium";
+    if (score >= 2.5) return "text-amber-500";
+    if (score >= 1.5) return "text-orange-500";
+    return "text-red-500 font-semibold";
   };
 
   if (error) {
@@ -737,158 +893,196 @@ function AiInsightsTab() {
 
   return (
     <div className="space-y-6">
-      {/* Section 1: AI Samenvatting per leerling */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Brain className="w-5 h-5 text-violet-600" />
-          AI Samenvatting per leerling
-        </h3>
-        <Suspense fallback={<TableSkeleton />}>
+      {/* Feedback Table */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
+          <h3 className="text-base font-semibold text-slate-900 leading-6">
+            Peerfeedback ({data?.totalCount || 0} resultaten)
+          </h3>
+          <p className="text-sm text-slate-600">Peer evaluaties geaggregeerd per beoordeling met OMZA scores</p>
+        </div>
+
+        <Suspense fallback={<div className="p-6"><TableSkeleton /></div>}>
           {loading ? (
-            <TableSkeleton />
+            <div className="p-6"><TableSkeleton /></div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[800px]">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-slate-200 text-sm">
+                <thead className="bg-slate-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
-                      Naam
+                    <th 
+                      className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[140px] cursor-pointer hover:bg-slate-100"
+                      onClick={() => handleSort('student_name')}
+                    >
+                      Leerling{getSortIndicator('student_name')}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
-                      Sterk in…
+                    <th 
+                      className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[120px] cursor-pointer hover:bg-slate-100"
+                      onClick={() => handleSort('project_name')}
+                    >
+                      Project/Scan{getSortIndicator('project_name')}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
-                      Ontwikkelt in…
+                    <th 
+                      className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                      onClick={() => handleSort('feedback_type')}
+                    >
+                      Type{getSortIndicator('feedback_type')}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
-                      Aandachtspunt
+                    <th 
+                      className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[100px] cursor-pointer hover:bg-slate-100"
+                      onClick={() => handleSort('from_student_name')}
+                    >
+                      Van{getSortIndicator('from_student_name')}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
-                      Suggestie
+                    <th 
+                      className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                      onClick={() => handleSort('score_O')}
+                    >
+                      O{getSortIndicator('score_O')}
                     </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
-                      Detail
+                    <th 
+                      className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                      onClick={() => handleSort('score_M')}
+                    >
+                      M{getSortIndicator('score_M')}
+                    </th>
+                    <th 
+                      className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                      onClick={() => handleSort('score_Z')}
+                    >
+                      Z{getSortIndicator('score_Z')}
+                    </th>
+                    <th 
+                      className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                      onClick={() => handleSort('score_A')}
+                    >
+                      A{getSortIndicator('score_A')}
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[200px]">
+                      Feedback
+                    </th>
+                    <th 
+                      className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                      onClick={() => handleSort('date')}
+                    >
+                      Datum{getSortIndicator('date')}
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {data?.studentSummaries.map((student) => (
-                    <tr key={student.student_id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900">
-                          {student.student_name}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {student.class_name}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {student.sterk_in.length > 0 ? (
-                          <ul className="list-disc list-inside">
-                            {student.sterk_in.map((item, idx) => (
-                              <li key={idx}>{item}</li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <span className="text-gray-400">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {student.ontwikkelt_in.length > 0 ? (
-                          <ul className="list-disc list-inside">
-                            {student.ontwikkelt_in.map((item, idx) => (
-                              <li key={idx}>{item}</li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <span className="text-gray-400">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {student.aandachtspunt || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {student.suggestie || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <button className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 mx-auto">
-                          <ExternalLink className="w-4 h-4" />
-                          Bekijk
-                        </button>
+                <tbody className="divide-y divide-slate-100">
+                  {sortedData.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="px-4 py-8 text-center text-slate-500">
+                        Geen feedback gevonden
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    sortedData.map((item) => {
+                      const isExpanded = expandedRows.has(item.allocation_id);
+                      return (
+                        <React.Fragment key={item.allocation_id}>
+                          <tr 
+                            className="hover:bg-slate-50 cursor-pointer"
+                            onClick={() => toggleRow(item.allocation_id)}
+                          >
+                            <td className="px-4 py-3 text-sm text-slate-800">
+                              <div className="flex items-center gap-2">
+                                {isExpanded ? (
+                                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                                ) : (
+                                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                                )}
+                                {item.student_name}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-slate-800">
+                              {item.project_name}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                item.feedback_type === 'self' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                              }`}>
+                                {item.feedback_type === 'self' ? 'Self' : 'Peer'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-slate-800">
+                              {item.from_student_name || '–'}
+                            </td>
+                            <td className={`px-4 py-3 text-center text-sm font-medium ${getScoreColor(item.score_O)}`}>
+                              {item.score_O ? item.score_O.toFixed(1) : '–'}
+                            </td>
+                            <td className={`px-4 py-3 text-center text-sm font-medium ${getScoreColor(item.score_M)}`}>
+                              {item.score_M ? item.score_M.toFixed(1) : '–'}
+                            </td>
+                            <td className={`px-4 py-3 text-center text-sm font-medium ${getScoreColor(item.score_Z)}`}>
+                              {item.score_Z ? item.score_Z.toFixed(1) : '–'}
+                            </td>
+                            <td className={`px-4 py-3 text-center text-sm font-medium ${getScoreColor(item.score_A)}`}>
+                              {item.score_A ? item.score_A.toFixed(1) : '–'}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-slate-800 max-w-md">
+                              <p className="line-clamp-2">{item.combined_feedback}</p>
+                            </td>
+                            <td className="px-4 py-3 text-center text-sm text-slate-600">
+                              {new Date(item.date).toLocaleDateString("nl-NL", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric"
+                              })}
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr className="bg-slate-50">
+                              <td colSpan={10} className="px-4 py-4">
+                                <div className="space-y-3">
+                                  <div className="text-xs font-semibold text-slate-500 uppercase mb-3">
+                                    Individuele Criteria:
+                                  </div>
+                                  {item.criteria_details.length === 0 ? (
+                                    <p className="text-sm text-slate-500">Geen criteria details beschikbaar</p>
+                                  ) : (
+                                    <div className="space-y-2">
+                                      {item.criteria_details.map((criterion, idx) => (
+                                        <div key={idx} className="bg-white rounded-lg p-3 border border-slate-200">
+                                          <div className="flex items-start gap-3">
+                                            <div className="flex-shrink-0">
+                                              <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-semibold ${
+                                                criterion.category === 'O' ? 'bg-blue-100 text-blue-700' :
+                                                criterion.category === 'M' ? 'bg-green-100 text-green-700' :
+                                                criterion.category === 'Z' ? 'bg-amber-100 text-amber-700' :
+                                                'bg-violet-100 text-violet-700'
+                                              }`}>
+                                                {criterion.category}
+                                              </span>
+                                            </div>
+                                            <div className="flex-1">
+                                              <div className="flex items-center justify-between mb-1">
+                                                <span className="text-sm font-medium text-slate-800">{criterion.criterion_name}</span>
+                                                {criterion.score !== null && criterion.score !== undefined && (
+                                                  <span className={`text-sm font-semibold ${getScoreColor(criterion.score)}`}>
+                                                    {criterion.score.toFixed(1)}
+                                                  </span>
+                                                )}
+                                              </div>
+                                              {criterion.feedback && (
+                                                <p className="text-sm text-slate-600 mt-1">{criterion.feedback}</p>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
-            </div>
-          )}
-        </Suspense>
-      </div>
-
-      {/* Section 2: Reflecties tijdlijn */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <MessageSquare className="w-5 h-5 text-blue-600" />
-          Reflecties tijdlijn
-        </h3>
-        <Suspense fallback={<TableSkeleton />}>
-          {loading ? (
-            <TableSkeleton />
-          ) : (
-            <div className="space-y-2">
-              {data?.studentReflections.map((student) => (
-                <div
-                  key={student.student_id}
-                  className="border rounded-lg overflow-hidden"
-                >
-                  <button
-                    onClick={() => toggleStudent(student.student_id)}
-                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50"
-                  >
-                    <div className="flex items-center gap-3">
-                      {expandedStudents.has(student.student_id) ? (
-                        <ChevronDown className="w-5 h-5 text-gray-500" />
-                      ) : (
-                        <ChevronRight className="w-5 h-5 text-gray-500" />
-                      )}
-                      <span className="font-medium text-gray-900">
-                        {student.student_name}
-                      </span>
-                      <span className="text-sm text-gray-500">
-                        ({student.reflections.length} reflecties)
-                      </span>
-                    </div>
-                  </button>
-                  {expandedStudents.has(student.student_id) && (
-                    <div className="px-4 pb-4 pl-12">
-                      <div className="border-l-2 border-gray-200 pl-4 space-y-4">
-                        {student.reflections.map((reflection) => (
-                          <div
-                            key={reflection.id}
-                            className={`relative pl-4 border-l-2 -ml-4 ${getCategoryColor(
-                              reflection.category
-                            )}`}
-                          >
-                            <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                              <span>
-                                {new Date(reflection.date).toLocaleDateString(
-                                  "nl-NL"
-                                )}
-                              </span>
-                              <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100">
-                                {reflection.category}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-800">
-                              {reflection.note}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
             </div>
           )}
         </Suspense>
@@ -898,19 +1092,78 @@ function AiInsightsTab() {
 }
 
 /* =========================================
-   TAB 4: VERGELIJK LEERLINGEN
+   TAB 3: DOCENTFEEDBACK
    ========================================= */
 
-function CompareTab() {
-  const [filters, setFilters] = useState<PeerCompareFilters>({});
-  const { data, loading, error } = usePeerCompare(filters);
+function DocentfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters }) {
+  const { data, loading, error } = useTeacherFeedback({
+    courseId: parentFilters.courseId,
+    projectId: parentFilters.projectId,
+  });
 
-  const getScoreColor = (score: number | null) => {
-    if (score === null) return "bg-gray-100 text-gray-400";
-    if (score >= 4) return "bg-green-100 text-green-800";
-    if (score >= 3) return "bg-yellow-100 text-yellow-800";
-    if (score >= 2) return "bg-orange-100 text-orange-800";
-    return "bg-red-100 text-red-800";
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({
+    key: 'student_name',
+    direction: 'asc'
+  });
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+
+  // Filter by student name from parent filters (cross-tab search)
+  const filteredData = useMemo(() => {
+    if (!data?.feedbackItems) return [];
+    if (!parentFilters.studentName) return data.feedbackItems;
+    
+    const searchLower = parentFilters.studentName.toLowerCase();
+    return data.feedbackItems.filter(item =>
+      item.student_name.toLowerCase().includes(searchLower)
+    );
+  }, [data?.feedbackItems, parentFilters.studentName]);
+
+  // Sorted data
+  const sortedData = useMemo(() => {
+    const items = [...filteredData];
+    items.sort((a, b) => {
+      let aVal: any = a[sortConfig.key as keyof typeof a];
+      let bVal: any = b[sortConfig.key as keyof typeof b];
+      
+      if (sortConfig.key === 'date') {
+        aVal = new Date(aVal).getTime();
+        bVal = new Date(bVal).getTime();
+      }
+      
+      if (typeof aVal === 'string') {
+        aVal = aVal.toLowerCase();
+        bVal = bVal.toLowerCase();
+      }
+      
+      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return items;
+  }, [filteredData, sortConfig]);
+
+  const handleSort = (key: string) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const getSortIndicator = (key: string) => {
+    if (sortConfig.key !== key) return null;
+    return sortConfig.direction === 'asc' ? ' ▲' : ' ▼';
+  };
+
+  const toggleRow = (id: number) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
   };
 
   if (error) {
@@ -922,236 +1175,327 @@ function CompareTab() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-        <div className="flex flex-wrap items-center gap-4">
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Klas</label>
-            <select
-              className="px-3 py-2 border rounded-lg text-sm"
-              value={filters.classId || ""}
-              onChange={(e) =>
-                setFilters({ ...filters, classId: e.target.value || undefined })
-              }
-            >
-              <option value="">Alle klassen</option>
-              <option value="4A">4A</option>
-              <option value="4B">4B</option>
-            </select>
-          </div>
-          <button
-            onClick={() => setFilters({})}
-            className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-50"
-          >
-            Filters wissen
-          </button>
-        </div>
-      </div>
-
-      {/* Comparison Table */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Users className="w-5 h-5 text-blue-600" />
-          Vergelijking leerlingen
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
+        <h3 className="text-base font-semibold text-slate-900 leading-6">
+          Docentbeoordelingen ({sortedData.length})
         </h3>
-        <Suspense fallback={<TableSkeleton />}>
-          {loading ? (
-            <TableSkeleton />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[800px]">
-                <thead className="bg-gray-50">
+        <p className="text-sm text-slate-600">Meest recente OMZA-beoordeling per leerling door docent</p>
+      </div>
+
+      <Suspense fallback={<div className="p-6"><TableSkeleton /></div>}>
+        {loading ? (
+          <div className="p-6"><TableSkeleton /></div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 text-sm">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th 
+                    className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[140px] cursor-pointer hover:bg-slate-100"
+                    onClick={() => handleSort('student_name')}
+                  >
+                    Student{getSortIndicator('student_name')}
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[120px] cursor-pointer hover:bg-slate-100"
+                    onClick={() => handleSort('project_name')}
+                  >
+                    Project/Scan{getSortIndicator('project_name')}
+                  </th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">O</th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">M</th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">Z</th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">A</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">Opmerking</th>
+                  <th 
+                    className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                    onClick={() => handleSort('date')}
+                  >
+                    Datum{getSortIndicator('date')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {sortedData.length === 0 ? (
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
-                      Leerling
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
-                      Klas
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-blue-700 uppercase">
-                      O
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-green-700 uppercase">
-                      M
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-amber-700 uppercase">
-                      Z
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-violet-700 uppercase">
-                      A
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
-                      Self vs Peer
-                    </th>
+                    <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
+                      Geen docentbeoordelingen gevonden
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {/* Averages row */}
-                  {data?.averages && (
-                    <tr className="bg-gray-100 font-medium">
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        Gemiddelde
-                      </td>
-                      <td className="px-4 py-3 text-center text-sm text-gray-600">
-                        —
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span
-                          className={`inline-block px-3 py-1 rounded ${getScoreColor(
-                            data.averages.organiseren
-                          )}`}
-                        >
-                          {data.averages.organiseren?.toFixed(1) || "—"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span
-                          className={`inline-block px-3 py-1 rounded ${getScoreColor(
-                            data.averages.meedoen
-                          )}`}
-                        >
-                          {data.averages.meedoen?.toFixed(1) || "—"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span
-                          className={`inline-block px-3 py-1 rounded ${getScoreColor(
-                            data.averages.zelfvertrouwen
-                          )}`}
-                        >
-                          {data.averages.zelfvertrouwen?.toFixed(1) || "—"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span
-                          className={`inline-block px-3 py-1 rounded ${getScoreColor(
-                            data.averages.autonomie
-                          )}`}
-                        >
-                          {data.averages.autonomie?.toFixed(1) || "—"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">—</td>
-                    </tr>
-                  )}
-                  {/* Student rows */}
-                  {data?.students.map((student) => {
-                    // Calculate self vs peer difference
-                    const selfAvg =
-                      ((student.self_scores.organiseren || 0) +
-                        (student.self_scores.meedoen || 0) +
-                        (student.self_scores.zelfvertrouwen || 0) +
-                        (student.self_scores.autonomie || 0)) /
-                      4;
-                    const peerAvg =
-                      ((student.peer_scores.organiseren || 0) +
-                        (student.peer_scores.meedoen || 0) +
-                        (student.peer_scores.zelfvertrouwen || 0) +
-                        (student.peer_scores.autonomie || 0)) /
-                      4;
-                    const diff = selfAvg - peerAvg;
-
+                ) : (
+                  sortedData.map((item) => {
+                    const isExpanded = expandedRows.has(item.id);
                     return (
-                      <tr key={student.student_id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3">
-                          <span className="font-medium text-gray-900">
-                            {student.student_name}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm text-gray-600">
-                          {student.class_name}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span
-                            className={`inline-block px-3 py-1 rounded ${getScoreColor(
-                              student.scores.organiseren
-                            )}`}
-                          >
-                            {student.scores.organiseren?.toFixed(1) || "—"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span
-                            className={`inline-block px-3 py-1 rounded ${getScoreColor(
-                              student.scores.meedoen
-                            )}`}
-                          >
-                            {student.scores.meedoen?.toFixed(1) || "—"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span
-                            className={`inline-block px-3 py-1 rounded ${getScoreColor(
-                              student.scores.zelfvertrouwen
-                            )}`}
-                          >
-                            {student.scores.zelfvertrouwen?.toFixed(1) || "—"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span
-                            className={`inline-block px-3 py-1 rounded ${getScoreColor(
-                              student.scores.autonomie
-                            )}`}
-                          >
-                            {student.scores.autonomie?.toFixed(1) || "—"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span
-                            className={`inline-flex items-center gap-1 text-sm ${
-                              diff > 0.3
-                                ? "text-red-600"
-                                : diff < -0.3
-                                ? "text-amber-600"
-                                : "text-gray-600"
-                            }`}
-                          >
-                            {diff > 0 ? (
-                              <ArrowUp className="w-4 h-4" />
-                            ) : diff < 0 ? (
-                              <ArrowDown className="w-4 h-4" />
-                            ) : null}
-                            {diff > 0 ? "+" : ""}
-                            {diff.toFixed(1)}
-                          </span>
-                        </td>
-                      </tr>
+                      <React.Fragment key={item.id}>
+                        <tr 
+                          className="hover:bg-slate-50 cursor-pointer"
+                          onClick={() => toggleRow(item.id)}
+                        >
+                          <td className="px-4 py-3 text-sm font-medium text-slate-900">
+                            <div className="flex items-center gap-2">
+                              {isExpanded ? (
+                                <ChevronDown className="w-4 h-4 text-slate-400" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4 text-slate-400" />
+                              )}
+                              {item.student_name}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-800">
+                            {item.project_name}
+                          </td>
+                          <td className="px-3 py-3 text-center text-lg">
+                            {renderTeacherEmoticon(item.organiseren_score)}
+                          </td>
+                          <td className="px-3 py-3 text-center text-lg">
+                            {renderTeacherEmoticon(item.meedoen_score)}
+                          </td>
+                          <td className="px-3 py-3 text-center text-lg">
+                            {renderTeacherEmoticon(item.zelfvertrouwen_score)}
+                          </td>
+                          <td className="px-3 py-3 text-center text-lg">
+                            {renderTeacherEmoticon(item.autonomie_score)}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-700 max-w-xs">
+                            <p className="line-clamp-2">{item.teacher_comment || '–'}</p>
+                          </td>
+                          <td className="px-4 py-3 text-center text-sm text-slate-600">
+                            {new Date(item.date).toLocaleDateString('nl-NL', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric'
+                            })}
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr className="bg-slate-50">
+                            <td colSpan={8} className="px-4 py-4">
+                              <div className="prose prose-sm max-w-none">
+                                <div className="mb-3">
+                                  <span className="text-xs font-medium text-slate-500 uppercase">Volledige opmerking:</span>
+                                  <p className="text-sm text-slate-700 mt-1 whitespace-pre-wrap">
+                                    {item.teacher_comment || 'Geen opmerking'}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-4 text-xs text-slate-500">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">OMZA Scores:</span>
+                                    <div className="flex gap-1 items-center">
+                                      <span>O:</span> {renderTeacherEmoticon(item.organiseren_score)}
+                                      <span className="ml-2">M:</span> {renderTeacherEmoticon(item.meedoen_score)}
+                                      <span className="ml-2">Z:</span> {renderTeacherEmoticon(item.zelfvertrouwen_score)}
+                                      <span className="ml-2">A:</span> {renderTeacherEmoticon(item.autonomie_score)}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Suspense>
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Suspense>
+    </div>
+  );
+}
+
+/* =========================================
+   TAB 4: REFLECTIES
+   ========================================= */
+
+function ReflectiesTab({ parentFilters }: { parentFilters: PeerOverviewFilters }) {
+  const { data, loading, error } = useReflections({
+    courseId: parentFilters.courseId,
+    projectId: parentFilters.projectId,
+  });
+
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({
+    key: 'student_name',
+    direction: 'asc'
+  });
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+
+  // Filter by student name from parent filters (cross-tab search)
+  const filteredData = useMemo(() => {
+    if (!data?.reflectionItems) return [];
+    if (!parentFilters.studentName) return data.reflectionItems;
+    
+    const searchLower = parentFilters.studentName.toLowerCase();
+    return data.reflectionItems.filter(item =>
+      item.student_name.toLowerCase().includes(searchLower)
+    );
+  }, [data?.reflectionItems, parentFilters.studentName]);
+
+  // Sorted data
+  const sortedData = useMemo(() => {
+    const items = [...filteredData];
+    items.sort((a, b) => {
+      let aVal: any = a[sortConfig.key as keyof typeof a];
+      let bVal: any = b[sortConfig.key as keyof typeof b];
+      
+      if (sortConfig.key === 'date') {
+        aVal = new Date(aVal).getTime();
+        bVal = new Date(bVal).getTime();
+      }
+      
+      if (sortConfig.key === 'word_count') {
+        return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+      
+      if (typeof aVal === 'string') {
+        aVal = aVal.toLowerCase();
+        bVal = bVal.toLowerCase();
+      }
+      
+      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return items;
+  }, [filteredData, sortConfig]);
+
+  const handleSort = (key: string) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const getSortIndicator = (key: string) => {
+    if (sortConfig.key !== key) return null;
+    return sortConfig.direction === 'asc' ? ' ▲' : ' ▼';
+  };
+
+  const toggleRow = (id: number) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  if (error) {
+    return (
+      <div className="text-red-500 p-4 bg-red-50 rounded-lg">
+        Fout bij laden: {error.message || String(error)}
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
+        <h3 className="text-base font-semibold text-slate-900 leading-6">
+          Reflecties ({sortedData.length})
+        </h3>
+        <p className="text-sm text-slate-600">Alle reflecties van leerlingen uit peer evaluaties</p>
       </div>
 
-      {/* Legend */}
-      <div className="p-4 bg-gray-50 rounded-lg text-sm">
-        <h4 className="font-medium mb-2">Legenda:</h4>
-        <div className="flex flex-wrap gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-6 bg-green-100 rounded"></div>
-            <span>Goed (≥4.0)</span>
+      <Suspense fallback={<div className="p-6"><TableSkeleton /></div>}>
+        {loading ? (
+          <div className="p-6"><TableSkeleton /></div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 text-sm">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th 
+                    className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[140px] cursor-pointer hover:bg-slate-100"
+                    onClick={() => handleSort('student_name')}
+                  >
+                    Student{getSortIndicator('student_name')}
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
+                    Reflectie
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                    onClick={() => handleSort('date')}
+                  >
+                    Datum{getSortIndicator('date')}
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                    onClick={() => handleSort('word_count')}
+                  >
+                    Woorden{getSortIndicator('word_count')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {sortedData.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                      Geen reflecties gevonden
+                    </td>
+                  </tr>
+                ) : (
+                  sortedData.map((item) => {
+                    const isExpanded = expandedRows.has(item.id);
+                    return (
+                      <React.Fragment key={item.id}>
+                        <tr 
+                          className="hover:bg-slate-50 cursor-pointer"
+                          onClick={() => toggleRow(item.id)}
+                        >
+                          <td className="px-4 py-3 text-sm font-medium text-slate-900">
+                            <div className="flex items-center gap-2">
+                              {isExpanded ? (
+                                <ChevronDown className="w-4 h-4 text-slate-400" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4 text-slate-400" />
+                              )}
+                              {item.student_name}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-700">
+                            <p className="line-clamp-2">{item.reflection_text}</p>
+                          </td>
+                          <td className="px-4 py-3 text-center text-sm text-slate-600">
+                            {new Date(item.date).toLocaleDateString('nl-NL', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric'
+                            })}
+                          </td>
+                          <td className="px-4 py-3 text-center text-sm text-slate-600">
+                            {item.word_count}
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr className="bg-slate-50">
+                            <td colSpan={4} className="px-4 py-4">
+                              <div className="prose prose-sm max-w-none">
+                                <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                                  {item.reflection_text}
+                                </p>
+                                <div className="mt-2 text-xs text-slate-500">
+                                  <span className="font-medium">Project:</span> {item.project_name}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-6 bg-yellow-100 rounded"></div>
-            <span>Voldoende (3.0-3.9)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-6 bg-orange-100 rounded"></div>
-            <span>Matig (2.0-2.9)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-6 bg-red-100 rounded"></div>
-            <span>Onvoldoende ({"<"}2.0)</span>
-          </div>
-        </div>
-        <p className="mt-2 text-gray-600">
-          <strong>Self vs Peer:</strong> Positief = zelfbeoordeling hoger dan peers, Negatief = zelfbeoordeling lager
-        </p>
-      </div>
+        )}
+      </Suspense>
     </div>
   );
 }
@@ -1165,12 +1509,56 @@ export default function PeerevaluatiesTab() {
   const [filters, setFilters] = useState<PeerOverviewFilters>({
     period: "6months",
   });
+  const [courses, setCourses] = useState<Array<{id: number; name: string}>>([]);
+  const [projects, setProjects] = useState<Array<{id: number; title: string}>>([]);
+  const [loadingCourses, setLoadingCourses] = useState(false);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+
+  // Fetch active courses on mount
+  useEffect(() => {
+    const fetchCourses = async () => {
+      setLoadingCourses(true);
+      try {
+        const data = await overviewService.getCourses();
+        setCourses(data);
+      } catch (error) {
+        console.error("Failed to fetch courses:", error);
+      } finally {
+        setLoadingCourses(false);
+      }
+    };
+    fetchCourses();
+  }, []);
+
+  // Fetch projects when course changes
+  useEffect(() => {
+    if (!filters.courseId) {
+      setProjects([]);
+      return;
+    }
+    
+    const fetchProjects = async () => {
+      setLoadingProjects(true);
+      try {
+        const response = await projectService.listProjects({
+          course_id: filters.courseId,
+          per_page: 100,
+        });
+        setProjects(response.items || []);
+      } catch (error) {
+        console.error("Failed to fetch projects:", error);
+      } finally {
+        setLoadingProjects(false);
+      }
+    };
+    fetchProjects();
+  }, [filters.courseId]);
 
   const subTabs = [
     { id: "dashboard", label: "Dashboard & Trends", icon: LayoutDashboard },
-    { id: "feedback", label: "Feedbackverzameling", icon: MessageSquare },
-    { id: "ai", label: "Reflecties & AI-inzichten", icon: Brain },
-    { id: "compare", label: "Vergelijk leerlingen", icon: Users },
+    { id: "peerfeedback", label: "Peerfeedback", icon: MessageSquare },
+    { id: "docentfeedback", label: "Docentfeedback", icon: Users },
+    { id: "reflecties", label: "Reflecties", icon: MessageSquare },
   ];
 
   return (
@@ -1188,19 +1576,23 @@ export default function PeerevaluatiesTab() {
       {/* Filter Bar */}
       <div className="bg-gray-50 rounded-xl p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Class dropdown */}
+          {/* Course dropdown */}
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Selecteer klas</label>
+            <label className="block text-xs text-gray-600 mb-1">Selecteer vak</label>
             <select
               className="w-full px-3 py-2 border rounded-lg text-sm"
-              value={filters.classId || ""}
+              value={filters.courseId || ""}
               onChange={(e) =>
-                setFilters({ ...filters, classId: e.target.value || undefined })
+                setFilters({ ...filters, courseId: e.target.value ? parseInt(e.target.value) : undefined, projectId: undefined })
               }
+              disabled={loadingCourses}
             >
-              <option value="">Alle klassen</option>
-              <option value="4A">4A</option>
-              <option value="4B">4B</option>
+              <option value="">Alle vakken</option>
+              {courses.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -1213,12 +1605,16 @@ export default function PeerevaluatiesTab() {
               className="w-full px-3 py-2 border rounded-lg text-sm"
               value={filters.projectId || ""}
               onChange={(e) =>
-                setFilters({ ...filters, projectId: e.target.value || undefined })
+                setFilters({ ...filters, projectId: e.target.value ? parseInt(e.target.value) : undefined })
               }
+              disabled={!filters.courseId || loadingProjects}
             >
               <option value="">Alle projecten</option>
-              <option value="webshop">Webshop Project</option>
-              <option value="app">App Ontwikkeling</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.title}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -1290,9 +1686,9 @@ export default function PeerevaluatiesTab() {
       {/* Tab Content */}
       <div>
         {activeSubTab === "dashboard" && <DashboardTab filters={filters} />}
-        {activeSubTab === "feedback" && <FeedbackTab />}
-        {activeSubTab === "ai" && <AiInsightsTab />}
-        {activeSubTab === "compare" && <CompareTab />}
+        {activeSubTab === "peerfeedback" && <PeerfeedbackTab parentFilters={filters} />}
+        {activeSubTab === "docentfeedback" && <DocentfeedbackTab parentFilters={filters} />}
+        {activeSubTab === "reflecties" && <ReflectiesTab parentFilters={filters} />}
       </div>
     </div>
   );

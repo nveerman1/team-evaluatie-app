@@ -169,3 +169,201 @@ class ProjectTrendResponse(BaseModel):
     Trend data for project categories over time
     """
     trend_data: List[CategoryTrendData]
+
+
+# ==================== Peer Evaluation Overview Schemas ====================
+
+class OmzaTrendDataPoint(BaseModel):
+    """
+    Single data point for OMZA trend chart
+    """
+    date: str  # e.g., "Sep 2024"
+    organiseren: float
+    meedoen: float
+    zelfvertrouwen: float
+    autonomie: float
+
+
+class OmzaCategoryScore(BaseModel):
+    """
+    Score for one OMZA category with trend indicator
+    """
+    current: float
+    trend: str  # "up" | "down" | "neutral"
+    teacher_score: Optional[int] = None  # Teacher emoticon score (1-3)
+
+
+class PeerEvaluationDetail(BaseModel):
+    """
+    Individual peer evaluation with OMZA scores
+    """
+    id: int
+    date: str  # ISO format date
+    label: str  # Project/evaluation name
+    scores: dict[str, float]  # category -> score value (O, M, Z, A)
+    teacher_scores: Optional[dict[str, int]] = None  # category -> teacher emoticon score (1-3)
+
+
+class StudentHeatmapRow(BaseModel):
+    """
+    One row in the student heatmap showing OMZA scores
+    """
+    student_id: int
+    student_name: str
+    class_name: Optional[str] = None
+    scores: dict[str, OmzaCategoryScore]  # category -> score data
+    self_vs_peer_diff: Optional[float] = None  # Self-assessment vs peer average difference
+    teacher_comment: Optional[str] = None  # General teacher feedback for this student
+    evaluations: Optional[List[PeerEvaluationDetail]] = None  # List of individual evaluations for row expansion
+
+
+class KpiStudent(BaseModel):
+    """
+    Student entry in KPI cards (top/bottom performers)
+    """
+    student_id: int
+    student_name: str
+    value: float  # Score or difference value
+
+
+class KpiData(BaseModel):
+    """
+    KPI data for dashboard cards
+    """
+    grootsteStijgers: List[KpiStudent] = []
+    grootsteDalers: List[KpiStudent] = []
+    structureelLaag: List[KpiStudent] = []
+    inconsistenties: List[KpiStudent] = []
+
+
+class PeerOverviewDashboardResponse(BaseModel):
+    """
+    Dashboard data for peer evaluations overview
+    """
+    trendData: List[OmzaTrendDataPoint]
+    heatmapData: List[StudentHeatmapRow]
+    kpiData: KpiData
+
+
+class FeedbackItem(BaseModel):
+    """
+    Individual feedback item from peer evaluations
+    """
+    id: str
+    student_id: int
+    student_name: str
+    project_name: str
+    date: datetime
+    category: str  # "organiseren" | "meedoen" | "zelfvertrouwen" | "autonomie"
+    sentiment: str  # "positief" | "kritiek" | "waarschuwing"
+    text: str
+    keywords: List[str] = []
+    is_risk_behavior: bool = False
+    # Enhanced fields for sortable table
+    feedback_type: str = "peer"  # "self" | "peer" 
+    score: Optional[float] = None  # The score given with this feedback
+    from_student_name: Optional[str] = None  # Name of student who gave this feedback (for peer feedback)
+
+
+class FeedbackCollectionResponse(BaseModel):
+    """
+    Feedback collection data for peer evaluations
+    """
+    feedbackItems: List[FeedbackItem]
+    totalCount: int
+
+
+class TeacherFeedbackItem(BaseModel):
+    """
+    Single teacher feedback/assessment entry from OMZA evaluations
+    """
+    id: int
+    student_id: int
+    student_name: str
+    project_name: str
+    evaluation_id: int
+    date: datetime  # When the teacher assessment was given
+    # OMZA category scores (icon levels 1-3)
+    organiseren_score: Optional[int] = None
+    meedoen_score: Optional[int] = None
+    zelfvertrouwen_score: Optional[int] = None
+    autonomie_score: Optional[int] = None
+    # General teacher comment
+    teacher_comment: Optional[str] = None
+
+
+class TeacherFeedbackResponse(BaseModel):
+    """
+    Teacher feedback/assessment data
+    """
+    feedbackItems: List[TeacherFeedbackItem]
+    totalCount: int
+
+
+class ReflectionItem(BaseModel):
+    """
+    Single reflection from a peer evaluation
+    """
+    id: int
+    student_id: int
+    student_name: str
+    project_name: str
+    evaluation_id: int
+    date: datetime  # When the reflection was submitted
+    reflection_text: str
+    word_count: int
+
+
+class ReflectionResponse(BaseModel):
+    """
+    Collection of reflections from peer evaluations
+    """
+    reflectionItems: List[ReflectionItem]
+    totalCount: int
+
+
+class CriterionDetail(BaseModel):
+    """
+    Individual criterion score and feedback within an aggregated feedback item
+    """
+    criterion_id: int
+    criterion_name: str
+    category: str  # O, M, Z, or A
+    score: Optional[float] = None
+    feedback: Optional[str] = None
+
+
+class AggregatedFeedbackItem(BaseModel):
+    """
+    Aggregated feedback per allocation (per peer review instance)
+    Shows OMZA category scores and combined feedback for one peer review
+    """
+    allocation_id: int
+    student_id: int
+    student_name: str
+    project_name: str
+    evaluation_id: int
+    date: datetime
+    feedback_type: str  # "self" | "peer"
+    from_student_id: Optional[int] = None
+    from_student_name: Optional[str] = None
+    
+    # OMZA category scores (averaged from criteria in that category)
+    score_O: Optional[float] = None  # Organiseren
+    score_M: Optional[float] = None  # Meedoen
+    score_Z: Optional[float] = None  # Zelfvertrouwen
+    score_A: Optional[float] = None  # Autonomie
+    
+    # Combined feedback text from all criteria
+    combined_feedback: str
+    
+    # Detailed breakdown for expansion
+    criteria_details: List[CriterionDetail] = []
+
+
+class AggregatedFeedbackResponse(BaseModel):
+    """
+    Collection of aggregated feedback items
+    """
+    feedbackItems: List[AggregatedFeedbackItem]
+    totalCount: int

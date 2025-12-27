@@ -37,6 +37,7 @@ from app.api.v1.schemas.omza import (
 )
 from app.core.rbac import require_role
 from app.core.audit import log_create, log_update, log_delete
+from app.services.omza_weighted_scores import compute_weighted_omza_scores_batch
 
 router = APIRouter(prefix="/omza", tags=["omza"])
 
@@ -163,53 +164,41 @@ async def get_omza_data(
 
     # Build student data
     student_data_list = []
+    
+    # Use batch scoring for efficiency
+    student_ids = [s.id for s in students]
+    batch_scores = compute_weighted_omza_scores_batch(db, evaluation_id, student_ids)
+    
+    # Collect all unique category names from the batch scores
+    all_categories = set()
+    for student_scores in batch_scores.values():
+        all_categories.update(student_scores.keys())
+    
     for student in students:
+        # Get weighted scores from batch calculation
+        omza_scores = batch_scores.get(student.id, {})
+        
         category_scores = {}
-
-        # Calculate peer and self averages per category
-        for category, criterion_ids in categories.items():
-            # Peer scores (where student is reviewee and reviewer is someone else)
-            peer_scores = (
-                db.query(Score.score)
-                .join(Allocation, Allocation.id == Score.allocation_id)
-                .filter(
-                    Allocation.reviewee_id == student.id,
-                    Allocation.reviewer_id != student.id,
-                    Score.criterion_id.in_(criterion_ids),
-                    Score.status == "submitted",
-                )
-                .all()
-            )
-            peer_avg = (
-                sum([s[0] for s in peer_scores]) / len(peer_scores)
-                if peer_scores
-                else None
-            )
-
-            # Self scores (where student is both reviewer and reviewee)
-            self_scores = (
-                db.query(Score.score)
-                .join(Allocation, Allocation.id == Score.allocation_id)
-                .filter(
-                    Allocation.reviewee_id == student.id,
-                    Allocation.reviewer_id == student.id,
-                    Score.criterion_id.in_(criterion_ids),
-                    Score.status == "submitted",
-                )
-                .all()
-            )
-            self_avg = (
-                sum([s[0] for s in self_scores]) / len(self_scores)
-                if self_scores
-                else None
-            )
-
+        # Use actual category names from the rubric (not hardcoded O/M/Z/A)
+        for category in omza_scores.keys():
+            peer_avg = omza_scores.get(category, {}).get("peer")
+            self_avg = omza_scores.get(category, {}).get("self")
+            
             # Teacher score (stored in settings for now - we'll use a dedicated table later)
             # For MVP, we'll store teacher scores in evaluation settings
+            # Try both full category name and abbreviated first letter
             teacher_score = None
-            teacher_key = f"teacher_score_{student.id}_{category}"
-            if evaluation.settings and teacher_key in evaluation.settings:
-                teacher_score = evaluation.settings[teacher_key]
+            if evaluation.settings:
+                # Try full category name first
+                teacher_key = f"teacher_score_{student.id}_{category}"
+                if teacher_key in evaluation.settings:
+                    teacher_score = evaluation.settings[teacher_key]
+                else:
+                    # Fallback to abbreviated (first letter uppercase)
+                    cat_abbrev = category[0].upper() if category else ""
+                    teacher_key = f"teacher_score_{student.id}_{cat_abbrev}"
+                    if teacher_key in evaluation.settings:
+                        teacher_score = evaluation.settings[teacher_key]
 
             category_scores[category] = OmzaCategoryScore(
                 peer_avg=round(peer_avg, 2) if peer_avg is not None else None,
@@ -243,21 +232,14 @@ async def get_omza_data(
             )
         )
 
-    # For OMZA, always ensure O, M, Z, A categories exist
-    # These are the standard OMZA categories and should always be shown
-    category_order = ["O", "M", "Z", "A"]
-    for cat in category_order:
-        if cat not in categories:
-            categories[cat] = []  # Add empty category if not in rubric
-    
-    # Sort categories in specific order: O, M, Z, A
-    # Only include O, M, Z, A - don't include any other categories
-    sorted_categories = [cat for cat in category_order if cat in categories]
+    # Return the actual category names from the rubric
+    # Convert set to sorted list for consistent ordering
+    categories_list = sorted(list(all_categories))
     
     return OmzaDataResponse(
         evaluation_id=evaluation_id,
         students=student_data_list,
-        categories=sorted_categories,
+        categories=categories_list,
     )
 
 
