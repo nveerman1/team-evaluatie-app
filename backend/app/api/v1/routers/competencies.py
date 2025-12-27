@@ -1840,16 +1840,6 @@ def get_student_historical_scores(
     
     windows_query = windows_query.order_by(CompetencyWindow.start_date.desc())
     windows = db.execute(windows_query).scalars().all()
-    
-    print(f"DEBUG: Found {len(windows)} windows for student {student_id}, course_id={course_id}, school_id={current_user.school_id}")
-    if windows:
-        print(f"DEBUG: Windows: {[(w.id, w.title, w.status) for w in windows]}")
-    else:
-        print(f"DEBUG: No windows found. Checking all windows in school...")
-        all_windows = db.execute(select(CompetencyWindow).where(
-            CompetencyWindow.school_id == current_user.school_id
-        )).scalars().all()
-        print(f"DEBUG: Total windows in school: {len(all_windows)}, course_ids: {set(w.course_id for w in all_windows if w.course_id)}")
 
     # Get all categories for this school
     categories = db.execute(

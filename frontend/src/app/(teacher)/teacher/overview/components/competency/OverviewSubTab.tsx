@@ -45,12 +45,6 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
       ? data.scans.find(s => s.scanId === selectedRadarScanId)
       : data.scans[0];
     
-    console.log('useMemo recalculating selectedRadarScan:', {
-      selectedRadarScanId,
-      foundScan: foundScan ? { id: foundScan.scanId, label: foundScan.label } : null,
-      availableIds: data.scans.map(s => s.scanId),
-    });
-    
     return foundScan || data.scans[0];
   }, [data?.scans, selectedRadarScanId]);
 
@@ -65,25 +59,6 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
         value: cat.averageScore,
       }));
   }, [selectedRadarScan]);
-
-  // Debug effect to log scan changes
-  useEffect(() => {
-    if (data?.scans) {
-      console.log('Available scans:', data.scans.map(s => ({ id: s.scanId, label: s.label })));
-      console.log('Selected scan ID:', selectedRadarScanId);
-      console.log('Selected scan:', selectedRadarScan);
-      if (selectedRadarScan) {
-        console.log('Selected scan details:', {
-          scanId: selectedRadarScan.scanId,
-          label: selectedRadarScan.label,
-          categoryAveragesCount: selectedRadarScan.categoryAverages?.length,
-          categoryAverages: selectedRadarScan.categoryAverages,
-        });
-      }
-      console.log('Radar data:', radarData);
-      console.log('Radar data values:', radarData.map(d => ({ name: d.name, value: d.value })));
-    }
-  }, [data, selectedRadarScanId, selectedRadarScan, radarData]);
 
   // Select the latest scan by default
   const selectedScan = useMemo(() => {
@@ -145,12 +120,8 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
             filters.courseId
           );
           
-          console.log(`Historical data for student ${studentId}:`, histData);
-          
           if (histData) {
             setStudentHistoricalData(prev => ({ ...prev, [studentId]: histData }));
-          } else {
-            console.warn(`No historical data returned for student ${studentId}`);
           }
         } catch (error) {
           console.error(`Failed to fetch historical data for student ${studentId}:`, error);
@@ -224,7 +195,7 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
           </div>
           <div className="flex justify-center mt-4">
             <CompetencyRadarChart 
-              key={`radar-${selectedRadarScanId || 'default'}`}
+              key={`radar-${selectedRadarScanId || 'default'}-${radarData.map(d => d.value).join('-')}`}
               items={radarData} 
               size={280} 
               maxValue={5} 
