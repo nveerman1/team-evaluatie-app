@@ -297,14 +297,16 @@ export function PeerfeedbackTable({ filters, searchQuery = "", typeFilter = "all
                                               {criterion.category}
                                             </span>
                                           </div>
+                                          {criterion.score !== null && criterion.score !== undefined && (
+                                            <div className="flex-shrink-0">
+                                              <span className={`text-sm font-semibold ${getScoreColor(criterion.score)}`}>
+                                                {criterion.score.toFixed(1)}
+                                              </span>
+                                            </div>
+                                          )}
                                           <div className="flex-1">
-                                            <div className="flex items-center justify-between mb-1">
+                                            <div className="mb-1">
                                               <span className="text-sm font-medium text-slate-800">{criterion.criterion_name}</span>
-                                              {criterion.score !== null && criterion.score !== undefined && (
-                                                <span className={`text-sm font-semibold ${getScoreColor(criterion.score)}`}>
-                                                  {criterion.score.toFixed(1)}
-                                                </span>
-                                              )}
                                             </div>
                                             {criterion.feedback && (
                                               <p className="text-sm text-slate-600 mt-1">{criterion.feedback}</p>
