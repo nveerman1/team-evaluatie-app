@@ -20,23 +20,25 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
   const [selectedRadarScanId, setSelectedRadarScanId] = useState<number | null>(null);
   const [expandedStudents, setExpandedStudents] = useState<Set<number>>(new Set());
 
+  // Prepare selected scan data for radar chart
+  const selectedRadarScan = useMemo(() => {
+    if (!data?.scans || data.scans.length === 0) return null;
+    return selectedRadarScanId !== null
+      ? data.scans.find(s => s.scanId === selectedRadarScanId)
+      : data.scans[0];
+  }, [data, selectedRadarScanId]);
+
   // Prepare radar chart data - use selectedRadarScanId if available, otherwise use latest
   const radarData = useMemo(() => {
-    if (!data?.scans || data.scans.length === 0) return [];
+    if (!selectedRadarScan) return [];
     
-    const selectedScan = selectedRadarScanId !== null
-      ? data.scans.find(s => s.scanId === selectedRadarScanId)
-      : data.scans[0]; // Use latest scan by default
-    
-    if (!selectedScan) return [];
-    
-    return selectedScan.categoryAverages
+    return selectedRadarScan.categoryAverages
       .filter((cat) => cat.averageScore != null && !isNaN(cat.averageScore))
       .map((cat) => ({
         name: cat.categoryName,
         value: cat.averageScore,
       }));
-  }, [data, selectedRadarScanId]);
+  }, [selectedRadarScan]);
 
   // Select the latest scan by default
   const selectedScan = useMemo(() => {
@@ -137,8 +139,8 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
             <div>
               <h3 className="text-base font-semibold text-slate-900 leading-6">Klasprofiel per categorie</h3>
               <p className="text-sm text-slate-600">
-                {selectedRadarScanId !== null
-                  ? `Gemiddelde scores van ${data.scans.find(s => s.scanId === selectedRadarScanId)?.label || 'geselecteerde scan'}`
+                {selectedRadarScan
+                  ? `Gemiddelde scores van ${selectedRadarScan.label}`
                   : 'Gemiddelde scores van de laatste scan'}
               </p>
             </div>
@@ -163,22 +165,16 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
           </div>
           {/* Legend - Update to use selected scan data */}
           <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-            {(() => {
-              const selectedScan = selectedRadarScanId !== null
-                ? data.scans.find(s => s.scanId === selectedRadarScanId)
-                : data.scans[0];
-              
-              return selectedScan?.categoryAverages.map((cat, index) => (
-                <div key={cat.categoryId} className="flex items-center gap-2">
-                  <div 
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }}
-                  />
-                  <span className="text-slate-600 truncate">{cat.categoryName}</span>
-                  <span className="font-semibold text-slate-900 tabular-nums">{cat.averageScore.toFixed(1)}</span>
-                </div>
-              ));
-            })()}
+            {selectedRadarScan?.categoryAverages.map((cat, index) => (
+              <div key={cat.categoryId} className="flex items-center gap-2">
+                <div 
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }}
+                />
+                <span className="text-slate-600 truncate">{cat.categoryName}</span>
+                <span className="font-semibold text-slate-900 tabular-nums">{cat.averageScore.toFixed(1)}</span>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -408,7 +404,10 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
                       <tr className="bg-slate-50">
                         <td colSpan={data.categorySummaries.length + 2} className="px-4 py-3">
                           <div className="overflow-x-auto">
-                            <p className="text-xs text-slate-600 mb-2 font-medium">Voorgaande scans</p>
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-xs text-slate-600 font-medium">Historisch klasoverzicht per categorie</p>
+                              <p className="text-xs text-amber-600 italic">⚠️ Klasgemiddelden (niet individueel)</p>
+                            </div>
                             <table className="min-w-full text-sm">
                               <thead className="border-b border-slate-300">
                                 <tr>
@@ -429,7 +428,7 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
                                       {new Date(scan.date).toLocaleDateString('nl-NL')}
                                     </td>
                                     {data.categorySummaries.map((cat) => {
-                                      // For now, show category average from this scan as we don't have per-student historical data
+                                      // Show category average from this scan (class-wide, not per-student)
                                       const categoryAvg = scan.categoryAverages.find(ca => ca.categoryId === cat.id);
                                       return (
                                         <td key={cat.id} className="px-3 py-2 text-center">
@@ -447,9 +446,11 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
                                 ))}
                               </tbody>
                             </table>
-                            <p className="text-xs text-slate-500 mt-2 italic">
-                              Let op: Toont klasgemiddelden per categorie. Voor individuele studentscores per scan, klik op de studentnaam.
-                            </p>
+                            <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
+                              <p className="text-xs text-blue-700">
+                                <strong>Tip:</strong> Voor individuele scores van deze leerling over tijd, klik op de naam "{row.name}" om naar de leerling detailpagina te gaan.
+                              </p>
+                            </div>
                           </div>
                         </td>
                       </tr>
