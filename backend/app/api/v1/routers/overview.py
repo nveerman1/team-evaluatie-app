@@ -69,6 +69,9 @@ from app.api.v1.schemas.overview import (
     TeacherFeedbackResponse,
     ReflectionItem,
     ReflectionResponse,
+    AggregatedFeedbackItem,
+    AggregatedFeedbackResponse,
+    CriterionDetail,
 )
 
 router = APIRouter(prefix="/overview", tags=["overview"])
@@ -1824,6 +1827,182 @@ def get_peer_evaluation_feedback(
     return FeedbackCollectionResponse(
         feedbackItems=feedback_items,
         totalCount=len(feedback_items)
+    )
+
+
+@router.get("/peer-evaluations/aggregated-feedback", response_model=AggregatedFeedbackResponse)
+def get_aggregated_peer_feedback(
+    course_id: Optional[int] = Query(None),
+    project_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get aggregated feedback per allocation (per peer review instance).
+    Each allocation represents one complete peer review with:
+    - OMZA category scores (O, M, Z, A)
+    - Combined feedback from all criteria
+    - Detailed breakdown of individual criteria for expansion
+    
+    Filters:
+    - course_id: Filter by specific course
+    - project_id: Filter by specific project
+    """
+    from collections import defaultdict
+    
+    school_id = current_user.school_id
+    
+    # Get evaluations matching filters
+    eval_query = db.query(Evaluation).filter(
+        Evaluation.school_id == school_id,
+        Evaluation.evaluation_type == "peer"
+    )
+    
+    if course_id:
+        eval_query = eval_query.filter(Evaluation.course_id == course_id)
+    if project_id:
+        eval_query = eval_query.filter(Evaluation.project_id == project_id)
+    
+    evaluations = eval_query.all()
+    evaluation_ids = [e.id for e in evaluations]
+    
+    if not evaluation_ids:
+        return AggregatedFeedbackResponse(
+            feedbackItems=[],
+            totalCount=0
+        )
+    
+    # Create evaluation_id -> (evaluation, project) mapping
+    eval_map = {}
+    for evaluation in evaluations:
+        project = None
+        if evaluation.project_id:
+            project = db.query(Project).filter(Project.id == evaluation.project_id).first()
+        eval_map[evaluation.id] = (evaluation, project)
+    
+    # Get all allocations for these evaluations with submitted status
+    allocations = db.query(Allocation).filter(
+        Allocation.evaluation_id.in_(evaluation_ids),
+        Allocation.status == "submitted"
+    ).all()
+    
+    # Get rubric criteria with categories
+    rubric_ids = list(set([e.rubric_id for e in evaluations]))
+    criteria = db.query(RubricCriterion).filter(
+        RubricCriterion.rubric_id.in_(rubric_ids),
+        RubricCriterion.category.isnot(None)
+    ).all()
+    
+    # Create criterion_id -> (criterion, category) mapping
+    criterion_map = {}
+    for criterion in criteria:
+        # Normalize category to abbreviated form (O, M, Z, A)
+        cat_abbrev = get_category_abbrev(criterion.category)
+        criterion_map[criterion.id] = (criterion, cat_abbrev)
+    
+    # Get all scores for these allocations
+    allocation_ids = [a.id for a in allocations]
+    scores = db.query(Score).filter(
+        Score.allocation_id.in_(allocation_ids),
+        Score.status == "submitted"
+    ).all()
+    
+    # Group scores by allocation_id
+    allocation_scores = defaultdict(list)
+    for score in scores:
+        allocation_scores[score.allocation_id].append(score)
+    
+    # Build aggregated feedback items
+    aggregated_items = []
+    
+    for allocation in allocations:
+        evaluation, project = eval_map.get(allocation.evaluation_id, (None, None))
+        if not evaluation:
+            continue
+        
+        # Get reviewee (student receiving feedback)
+        reviewee = db.query(User).filter(User.id == allocation.reviewee_id).first()
+        if not reviewee:
+            continue
+        
+        # Determine feedback type
+        feedback_type = "self" if allocation.reviewer_id == allocation.reviewee_id else "peer"
+        
+        # Get reviewer info (for peer feedback)
+        from_student = None
+        from_student_name = None
+        if feedback_type == "peer":
+            from_student = db.query(User).filter(User.id == allocation.reviewer_id).first()
+            from_student_name = from_student.name if from_student else "Onbekend"
+            from_student_id = from_student.id if from_student else None
+        else:
+            from_student_id = None
+        
+        # Get scores for this allocation
+        alloc_scores = allocation_scores.get(allocation.id, [])
+        
+        # Calculate OMZA category averages and collect feedback
+        category_scores = defaultdict(list)  # category -> list of scores
+        category_feedback = defaultdict(list)  # category -> list of feedback texts
+        criteria_details = []
+        
+        for score in alloc_scores:
+            if score.criterion_id not in criterion_map:
+                continue
+            
+            criterion, cat_abbrev = criterion_map[score.criterion_id]
+            
+            # Add score to category average
+            if score.score is not None:
+                category_scores[cat_abbrev].append(float(score.score))
+            
+            # Collect feedback text
+            if score.comment and score.comment.strip():
+                category_feedback[cat_abbrev].append(score.comment.strip())
+            
+            # Add to criteria details for expansion
+            criteria_details.append(CriterionDetail(
+                criterion_id=criterion.id,
+                criterion_name=criterion.title,
+                category=cat_abbrev,
+                score=float(score.score) if score.score is not None else None,
+                feedback=score.comment if score.comment else None
+            ))
+        
+        # Calculate category averages
+        score_O = sum(category_scores["O"]) / len(category_scores["O"]) if category_scores["O"] else None
+        score_M = sum(category_scores["M"]) / len(category_scores["M"]) if category_scores["M"] else None
+        score_Z = sum(category_scores["Z"]) / len(category_scores["Z"]) if category_scores["Z"] else None
+        score_A = sum(category_scores["A"]) / len(category_scores["A"]) if category_scores["A"] else None
+        
+        # Combine all feedback texts
+        all_feedback = []
+        for cat in ["O", "M", "Z", "A"]:
+            all_feedback.extend(category_feedback[cat])
+        combined_feedback = " | ".join(all_feedback) if all_feedback else "Geen feedback"
+        
+        # Create aggregated item
+        aggregated_items.append(AggregatedFeedbackItem(
+            allocation_id=allocation.id,
+            student_id=reviewee.id,
+            student_name=reviewee.name,
+            project_name=project.title if project else evaluation.title,
+            evaluation_id=evaluation.id,
+            date=evaluation.closed_at or evaluation.created_at,
+            feedback_type=feedback_type,
+            from_student_id=from_student_id,
+            from_student_name=from_student_name,
+            score_O=score_O,
+            score_M=score_M,
+            score_Z=score_Z,
+            score_A=score_A,
+            combined_feedback=combined_feedback,
+            criteria_details=criteria_details
+        ))
+    
+    return AggregatedFeedbackResponse(
+        feedbackItems=aggregated_items,
+        totalCount=len(aggregated_items)
     )
 
 

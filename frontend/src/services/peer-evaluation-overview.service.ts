@@ -129,6 +129,37 @@ export type TeacherFeedbackResponse = {
   totalCount: number;
 };
 
+export type CriterionDetail = {
+  criterion_id: number;
+  criterion_name: string;
+  category: string;  // "O" | "M" | "Z" | "A"
+  score?: number;
+  feedback?: string;
+};
+
+export type AggregatedFeedbackItem = {
+  allocation_id: number;
+  student_id: number;
+  student_name: string;
+  project_name: string;
+  evaluation_id: number;
+  date: string;
+  feedback_type: string;  // "self" | "peer"
+  from_student_id?: number;
+  from_student_name?: string;
+  score_O?: number;  // Organiseren
+  score_M?: number;  // Meedoen
+  score_Z?: number;  // Zelfvertrouwen
+  score_A?: number;  // Autonomie
+  combined_feedback: string;
+  criteria_details: CriterionDetail[];
+};
+
+export type AggregatedFeedbackResponse = {
+  feedbackItems: AggregatedFeedbackItem[];
+  totalCount: number;
+};
+
 export const peerEvaluationOverviewService = {
   /**
    * Get peer evaluation dashboard data
@@ -193,6 +224,22 @@ export const peerEvaluationOverviewService = {
     
     const { data } = await api.get<ReflectionResponse>(
       `/overview/peer-evaluations/reflections?${params.toString()}`
+    );
+    return data;
+  },
+
+  /**
+   * Get aggregated feedback per allocation (peer review instance)
+   * Shows OMZA category scores and combined feedback
+   */
+  async getAggregatedFeedback(filters?: {courseId?: number; projectId?: number}): Promise<AggregatedFeedbackResponse> {
+    const params = new URLSearchParams();
+    
+    if (filters?.courseId) params.set("course_id", String(filters.courseId));
+    if (filters?.projectId) params.set("project_id", String(filters.projectId));
+    
+    const { data } = await api.get<AggregatedFeedbackResponse>(
+      `/overview/peer-evaluations/aggregated-feedback?${params.toString()}`
     );
     return data;
   },

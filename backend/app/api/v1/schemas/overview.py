@@ -320,3 +320,50 @@ class ReflectionResponse(BaseModel):
     """
     reflectionItems: List[ReflectionItem]
     totalCount: int
+
+
+class CriterionDetail(BaseModel):
+    """
+    Individual criterion score and feedback within an aggregated feedback item
+    """
+    criterion_id: int
+    criterion_name: str
+    category: str  # O, M, Z, or A
+    score: Optional[float] = None
+    feedback: Optional[str] = None
+
+
+class AggregatedFeedbackItem(BaseModel):
+    """
+    Aggregated feedback per allocation (per peer review instance)
+    Shows OMZA category scores and combined feedback for one peer review
+    """
+    allocation_id: int
+    student_id: int
+    student_name: str
+    project_name: str
+    evaluation_id: int
+    date: datetime
+    feedback_type: str  # "self" | "peer"
+    from_student_id: Optional[int] = None
+    from_student_name: Optional[str] = None
+    
+    # OMZA category scores (averaged from criteria in that category)
+    score_O: Optional[float] = None  # Organiseren
+    score_M: Optional[float] = None  # Meedoen
+    score_Z: Optional[float] = None  # Zelfvertrouwen
+    score_A: Optional[float] = None  # Autonomie
+    
+    # Combined feedback text from all criteria
+    combined_feedback: str
+    
+    # Detailed breakdown for expansion
+    criteria_details: List[CriterionDetail] = []
+
+
+class AggregatedFeedbackResponse(BaseModel):
+    """
+    Collection of aggregated feedback items
+    """
+    feedbackItems: List[AggregatedFeedbackItem]
+    totalCount: int

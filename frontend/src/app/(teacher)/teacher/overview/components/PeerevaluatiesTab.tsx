@@ -27,6 +27,7 @@ import {
 } from "chart.js";
 import { usePeerOverview, type PeerOverviewFilters } from "@/hooks/usePeerOverview";
 import { useFeedbackData, type FeedbackFilters } from "@/hooks/useFeedbackData";
+import { useAggregatedFeedback, type AggregatedFeedbackItem } from "@/hooks/useAggregatedFeedback";
 import { useTeacherFeedback } from "@/hooks/useTeacherFeedback";
 import { useReflections } from "@/hooks/useReflections";
 import { overviewService } from "@/services/overview.service";
@@ -789,25 +790,21 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
 }
 
 /* =========================================
-   TAB 2: PEERFEEDBACK (formerly Feedbackverzameling)
+   TAB 2: PEERFEEDBACK - Aggregated per allocation
    ========================================= */
 
 function PeerfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters }) {
-  const [localFilters, setLocalFilters] = useState<Omit<FeedbackFilters, 'courseId' | 'projectId'>>({});
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({
     key: 'student_name',
     direction: 'asc'
   });
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   
-  // Merge parent filters (courseId, projectId) with local filters (category, sentiment, etc.)
-  const mergedFilters: FeedbackFilters = {
+  // Use new aggregated feedback hook
+  const { data, loading, error } = useAggregatedFeedback({
     courseId: parentFilters.courseId,
     projectId: parentFilters.projectId,
-    ...localFilters,
-  };
-  
-  const { data, loading, error } = useFeedbackData(mergedFilters);
+  });
 
   // Filter by student name from parent filters (cross-tab search)
   const filteredData = useMemo(() => {
@@ -818,6 +815,7 @@ function PeerfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters
     return data.feedbackItems.filter(item =>
       item.student_name.toLowerCase().includes(searchLower)
     );
+  }, [data?.feedbackItems, parentFilters.studentName]);
   }, [data?.feedbackItems, parentFilters.studentName]);
 
   // Sorted data
@@ -833,8 +831,8 @@ function PeerfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters
         bVal = new Date(bVal).getTime();
       }
       
-      // Handle numeric sorting
-      if (sortConfig.key === 'score') {
+      // Handle OMZA score sorting (O, M, Z, A)
+      if (['score_O', 'score_M', 'score_Z', 'score_A'].includes(sortConfig.key)) {
         aVal = aVal || 0;
         bVal = bVal || 0;
       }
@@ -876,32 +874,14 @@ function PeerfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters
     });
   };
 
-  const getSentimentColor = (sentiment: string) => {
-    switch (sentiment) {
-      case "positief":
-        return "ring-green-200 bg-green-50 text-green-700";
-      case "kritiek":
-        return "ring-red-200 bg-red-50 text-red-700";
-      case "waarschuwing":
-        return "ring-amber-200 bg-amber-50 text-amber-700";
-      default:
-        return "ring-slate-200 bg-slate-50 text-slate-700";
-    }
-  };
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "organiseren":
-        return "ring-blue-200 bg-blue-50 text-blue-700";
-      case "meedoen":
-        return "ring-green-200 bg-green-50 text-green-700";
-      case "zelfvertrouwen":
-        return "ring-amber-200 bg-amber-50 text-amber-700";
-      case "autonomie":
-        return "ring-violet-200 bg-violet-50 text-violet-700";
-      default:
-        return "ring-slate-200 bg-slate-50 text-slate-700";
-    }
+  // Get color for OMZA scores (1-5 scale)
+  const getScoreColor = (score: number | null | undefined) => {
+    if (!score) return "text-slate-400";
+    if (score >= 4.5) return "text-green-600 font-semibold";
+    if (score >= 3.5) return "text-green-500 font-medium";
+    if (score >= 2.5) return "text-amber-500";
+    if (score >= 1.5) return "text-orange-500";
+    return "text-red-500 font-semibold";
   };
 
   if (error) {
@@ -914,94 +894,13 @@ function PeerfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters
 
   return (
     <div className="space-y-6">
-      {/* Filters Bar */}
-      <div className="bg-slate-50 rounded-xl p-4">
-        <div className="flex flex-wrap gap-4 items-center">
-          {/* Category filter */}
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">OMZA Categorie</label>
-            <select
-              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
-              value={localFilters.category || ""}
-              onChange={(e) =>
-                setLocalFilters({ ...localFilters, category: e.target.value || undefined })
-              }
-            >
-              <option value="">Alle categorieën</option>
-              <option value="organiseren">Organiseren</option>
-              <option value="meedoen">Meedoen</option>
-              <option value="zelfvertrouwen">Zelfvertrouwen</option>
-              <option value="autonomie">Autonomie</option>
-            </select>
-          </div>
-
-          {/* Sentiment filter */}
-          <div>
-            <label className="block text-xs text-slate-600 mb-1">Sentiment</label>
-            <select
-              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
-              value={localFilters.sentiment || ""}
-              onChange={(e) =>
-                setLocalFilters({ ...localFilters, sentiment: e.target.value || undefined })
-              }
-            >
-              <option value="">Alle sentimenten</option>
-              <option value="positief">Positief</option>
-              <option value="kritiek">Kritiek</option>
-              <option value="waarschuwing">Waarschuwing</option>
-            </select>
-          </div>
-
-          {/* Search text */}
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-xs text-slate-600 mb-1">Zoeken in feedback</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Zoek op trefwoord..."
-                className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm"
-                value={localFilters.searchText || ""}
-                onChange={(e) =>
-                  setLocalFilters({ ...localFilters, searchText: e.target.value || undefined })
-                }
-              />
-            </div>
-          </div>
-
-          {/* Risk behavior toggle */}
-          <div className="flex items-center gap-2 mt-5">
-            <input
-              type="checkbox"
-              id="riskOnly"
-              className="w-4 h-4 rounded border-slate-300"
-              checked={localFilters.riskOnly || false}
-              onChange={(e) =>
-                setLocalFilters({ ...localFilters, riskOnly: e.target.checked || undefined })
-              }
-            />
-            <label htmlFor="riskOnly" className="text-sm text-slate-700">
-              Alleen risico-gedrag
-            </label>
-          </div>
-
-          {/* Clear filters button */}
-          <button
-            onClick={() => setLocalFilters({})}
-            className="px-3 py-2 border rounded-lg text-sm hover:bg-slate-100 mt-5"
-          >
-            Filters wissen
-          </button>
-        </div>
-      </div>
-
       {/* Feedback Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
           <h3 className="text-base font-semibold text-slate-900 leading-6">
-            Feedback ({data?.totalCount || 0} resultaten)
+            Peerfeedback ({data?.totalCount || 0} resultaten)
           </h3>
-          <p className="text-sm text-slate-600">Alle feedback opmerkingen uit peer evaluaties</p>
+          <p className="text-sm text-slate-600">Peer evaluaties geaggregeerd per beoordeling met OMZA scores</p>
         </div>
 
         <Suspense fallback={<div className="p-6"><TableSkeleton /></div>}>
@@ -1013,28 +912,10 @@ function PeerfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters
                 <thead className="bg-slate-50">
                   <tr>
                     <th 
-                      className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[120px] cursor-pointer hover:bg-slate-100"
+                      className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[140px] cursor-pointer hover:bg-slate-100"
                       onClick={() => handleSort('student_name')}
                     >
-                      Student{getSortIndicator('student_name')}
-                    </th>
-                    <th 
-                      className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
-                      onClick={() => handleSort('feedback_type')}
-                    >
-                      Type{getSortIndicator('feedback_type')}
-                    </th>
-                    <th 
-                      className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
-                      onClick={() => handleSort('score')}
-                    >
-                      Score{getSortIndicator('score')}
-                    </th>
-                    <th 
-                      className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[100px] cursor-pointer hover:bg-slate-100"
-                      onClick={() => handleSort('from_student_name')}
-                    >
-                      Van{getSortIndicator('from_student_name')}
+                      Leerling{getSortIndicator('student_name')}
                     </th>
                     <th 
                       className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[120px] cursor-pointer hover:bg-slate-100"
@@ -1044,17 +925,41 @@ function PeerfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters
                     </th>
                     <th 
                       className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
-                      onClick={() => handleSort('category')}
+                      onClick={() => handleSort('feedback_type')}
                     >
-                      Categorie{getSortIndicator('category')}
+                      Type{getSortIndicator('feedback_type')}
+                    </th>
+                    <th 
+                      className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[100px] cursor-pointer hover:bg-slate-100"
+                      onClick={() => handleSort('from_student_name')}
+                    >
+                      Van{getSortIndicator('from_student_name')}
                     </th>
                     <th 
                       className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
-                      onClick={() => handleSort('sentiment')}
+                      onClick={() => handleSort('score_O')}
                     >
-                      Sentiment{getSortIndicator('sentiment')}
+                      O{getSortIndicator('score_O')}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide">
+                    <th 
+                      className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                      onClick={() => handleSort('score_M')}
+                    >
+                      M{getSortIndicator('score_M')}
+                    </th>
+                    <th 
+                      className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                      onClick={() => handleSort('score_Z')}
+                    >
+                      Z{getSortIndicator('score_Z')}
+                    </th>
+                    <th 
+                      className="px-4 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
+                      onClick={() => handleSort('score_A')}
+                    >
+                      A{getSortIndicator('score_A')}
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[200px]">
                       Feedback
                     </th>
                     <th 
@@ -1068,18 +973,18 @@ function PeerfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters
                 <tbody className="divide-y divide-slate-100">
                   {sortedData.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="px-4 py-8 text-center text-slate-500">
-                        Geen feedback gevonden voor de geselecteerde filters
+                      <td colSpan={10} className="px-4 py-8 text-center text-slate-500">
+                        Geen feedback gevonden
                       </td>
                     </tr>
                   ) : (
                     sortedData.map((item) => {
-                      const isExpanded = expandedRows.has(item.id);
+                      const isExpanded = expandedRows.has(item.allocation_id);
                       return (
-                        <React.Fragment key={item.id}>
+                        <React.Fragment key={item.allocation_id}>
                           <tr 
                             className="hover:bg-slate-50 cursor-pointer"
-                            onClick={() => toggleRow(item.id)}
+                            onClick={() => toggleRow(item.allocation_id)}
                           >
                             <td className="px-4 py-3 text-sm text-slate-800">
                               <div className="flex items-center gap-2">
@@ -1091,6 +996,9 @@ function PeerfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters
                                 {item.student_name}
                               </div>
                             </td>
+                            <td className="px-4 py-3 text-sm text-slate-800">
+                              {item.project_name}
+                            </td>
                             <td className="px-4 py-3 text-center">
                               <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                                 item.feedback_type === 'self' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
@@ -1098,30 +1006,23 @@ function PeerfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters
                                 {item.feedback_type === 'self' ? 'Self' : 'Peer'}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-center text-sm font-semibold text-slate-700">
-                              {item.score ? item.score.toFixed(1) : '–'}
-                            </td>
                             <td className="px-4 py-3 text-sm text-slate-800">
                               {item.from_student_name || '–'}
                             </td>
-                            <td className="px-4 py-3 text-sm text-slate-800">
-                              {item.project_name}
+                            <td className={`px-4 py-3 text-center text-sm font-medium ${getScoreColor(item.score_O)}`}>
+                              {item.score_O ? item.score_O.toFixed(1) : '–'}
                             </td>
-                            <td className="px-4 py-3 text-center">
-                              <span className={`px-2 py-0.5 rounded-full text-xs ring-1 ${getCategoryColor(item.category)}`}>
-                                {item.category.charAt(0).toUpperCase() + item.category.slice(1)}
-                              </span>
+                            <td className={`px-4 py-3 text-center text-sm font-medium ${getScoreColor(item.score_M)}`}>
+                              {item.score_M ? item.score_M.toFixed(1) : '–'}
                             </td>
-                            <td className="px-4 py-3 text-center">
-                              <span className={`px-2 py-0.5 rounded-full text-xs ring-1 ${getSentimentColor(item.sentiment)}`}>
-                                {item.sentiment.charAt(0).toUpperCase() + item.sentiment.slice(1)}
-                              </span>
-                              {item.is_risk_behavior && (
-                                <span className="ml-1 text-red-600" title="Risico gedrag">⚠️</span>
-                              )}
+                            <td className={`px-4 py-3 text-center text-sm font-medium ${getScoreColor(item.score_Z)}`}>
+                              {item.score_Z ? item.score_Z.toFixed(1) : '–'}
+                            </td>
+                            <td className={`px-4 py-3 text-center text-sm font-medium ${getScoreColor(item.score_A)}`}>
+                              {item.score_A ? item.score_A.toFixed(1) : '–'}
                             </td>
                             <td className="px-4 py-3 text-sm text-slate-800 max-w-md">
-                              <p className="line-clamp-2">{item.text}</p>
+                              <p className="line-clamp-2">{item.combined_feedback}</p>
                             </td>
                             <td className="px-4 py-3 text-center text-sm text-slate-600">
                               {new Date(item.date).toLocaleDateString("nl-NL", {
@@ -1133,22 +1034,46 @@ function PeerfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilters
                           </tr>
                           {isExpanded && (
                             <tr className="bg-slate-50">
-                              <td colSpan={9} className="px-4 py-4">
-                                <div className="prose prose-sm max-w-none">
-                                  <div className="mb-3">
-                                    <span className="text-xs font-medium text-slate-500 uppercase">Volledige feedback:</span>
-                                    <p className="text-sm text-slate-700 mt-1 whitespace-pre-wrap">
-                                      {item.text}
-                                    </p>
+                              <td colSpan={10} className="px-4 py-4">
+                                <div className="space-y-3">
+                                  <div className="text-xs font-semibold text-slate-500 uppercase mb-3">
+                                    Individuele Criteria:
                                   </div>
-                                  <div className="flex flex-wrap gap-3 text-xs text-slate-500">
-                                    <div><span className="font-medium">Type:</span> {item.feedback_type === 'self' ? 'Self-evaluatie' : 'Peer-evaluatie'}</div>
-                                    <div><span className="font-medium">Score:</span> {item.score ? `${item.score.toFixed(1)}/5` : '–'}</div>
-                                    <div><span className="font-medium">Sentiment:</span> {item.sentiment}</div>
-                                    {item.from_student_name && (
-                                      <div><span className="font-medium">Van:</span> {item.from_student_name}</div>
-                                    )}
-                                  </div>
+                                  {item.criteria_details.length === 0 ? (
+                                    <p className="text-sm text-slate-500">Geen criteria details beschikbaar</p>
+                                  ) : (
+                                    <div className="space-y-2">
+                                      {item.criteria_details.map((criterion, idx) => (
+                                        <div key={idx} className="bg-white rounded-lg p-3 border border-slate-200">
+                                          <div className="flex items-start gap-3">
+                                            <div className="flex-shrink-0">
+                                              <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-semibold ${
+                                                criterion.category === 'O' ? 'bg-blue-100 text-blue-700' :
+                                                criterion.category === 'M' ? 'bg-green-100 text-green-700' :
+                                                criterion.category === 'Z' ? 'bg-amber-100 text-amber-700' :
+                                                'bg-violet-100 text-violet-700'
+                                              }`}>
+                                                {criterion.category}
+                                              </span>
+                                            </div>
+                                            <div className="flex-1">
+                                              <div className="flex items-center justify-between mb-1">
+                                                <span className="text-sm font-medium text-slate-800">{criterion.criterion_name}</span>
+                                                {criterion.score !== null && criterion.score !== undefined && (
+                                                  <span className={`text-sm font-semibold ${getScoreColor(criterion.score)}`}>
+                                                    {criterion.score.toFixed(1)}
+                                                  </span>
+                                                )}
+                                              </div>
+                                              {criterion.feedback && (
+                                                <p className="text-sm text-slate-600 mt-1">{criterion.feedback}</p>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               </td>
                             </tr>
