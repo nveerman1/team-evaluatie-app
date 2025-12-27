@@ -63,6 +63,8 @@ from app.api.v1.schemas.competencies import (
     TeacherGoalsList,
     TeacherReflectionItem,
     TeacherReflectionsList,
+    StudentHistoricalScores,
+    StudentScanScore,
 )
 
 router = APIRouter(prefix="/competencies", tags=["competencies"])
@@ -1807,6 +1809,113 @@ def get_class_heatmap(
         window_title=window.title,
         competencies=competencies_out,
         rows=rows,
+    )
+
+
+@router.get("/student/{student_id}/historical-scores", response_model=StudentHistoricalScores)
+def get_student_historical_scores(
+    student_id: int,
+    course_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get historical scores for a student across all windows (teacher only)"""
+    if current_user.role not in ["teacher", "admin"]:
+        raise HTTPException(
+            status_code=403, detail="Only teachers can view student historical scores"
+        )
+
+    # Get the student
+    student = db.get(User, student_id)
+    if not student or student.school_id != current_user.school_id:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    # Get all windows for this school, optionally filtered by course
+    windows_query = select(CompetencyWindow).where(
+        CompetencyWindow.school_id == current_user.school_id,
+        CompetencyWindow.status.in_(["active", "completed"]),
+    )
+    if course_id:
+        windows_query = windows_query.where(CompetencyWindow.course_id == course_id)
+    
+    windows_query = windows_query.order_by(CompetencyWindow.start_date.desc())
+    windows = db.execute(windows_query).scalars().all()
+
+    # Get all categories for this school
+    categories = db.execute(
+        select(CompetencyCategory).where(
+            CompetencyCategory.school_id == current_user.school_id
+        ).order_by(CompetencyCategory.order_index)
+    ).scalars().all()
+    
+    category_map = {cat.id: cat for cat in categories}
+
+    scans = []
+    for window in windows:
+        # Get selected competencies for this window
+        selected_competency_ids = (window.settings or {}).get("selected_competency_ids", [])
+        
+        if selected_competency_ids:
+            competencies = db.execute(
+                select(Competency).where(
+                    Competency.school_id == current_user.school_id,
+                    Competency.active,
+                    Competency.id.in_(selected_competency_ids),
+                )
+            ).scalars().all()
+        else:
+            competencies = db.execute(
+                select(Competency).where(
+                    Competency.school_id == current_user.school_id,
+                    Competency.active,
+                )
+            ).scalars().all()
+
+        # Get self scores for this student in this window
+        self_scores = db.execute(
+            select(CompetencySelfScore).where(
+                CompetencySelfScore.window_id == window.id,
+                CompetencySelfScore.user_id == student_id,
+            )
+        ).scalars().all()
+
+        # Build score map by competency
+        comp_scores = {score.competency_id: float(score.score) for score in self_scores}
+
+        # Calculate average score per category
+        category_scores: dict[int, list[float]] = {}
+        for comp in competencies:
+            if comp.category_id and comp.id in comp_scores:
+                if comp.category_id not in category_scores:
+                    category_scores[comp.category_id] = []
+                category_scores[comp.category_id].append(comp_scores[comp.id])
+
+        # Calculate averages
+        category_averages = {
+            cat_id: sum(scores) / len(scores) if scores else None
+            for cat_id, scores in category_scores.items()
+        }
+
+        # Build scan score with all categories (including None for missing)
+        scan_category_scores = {
+            cat.id: category_averages.get(cat.id)
+            for cat in categories
+        }
+
+        scans.append(
+            StudentScanScore(
+                scan_id=window.id,
+                scan_label=window.title,
+                scan_date=window.start_date.isoformat() if window.start_date else "",
+                category_scores=scan_category_scores,
+            )
+        )
+
+    return StudentHistoricalScores(
+        student_id=student.id,
+        student_name=student.name,
+        class_name=student.class_name,
+        scans=scans,
     )
 
 

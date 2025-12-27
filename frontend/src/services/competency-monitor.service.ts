@@ -818,4 +818,45 @@ export const competencyMonitorService = {
       return null;
     }
   },
+
+  /**
+   * Get historical scores for a student across all scans
+   */
+  async getStudentHistoricalScores(studentId: number, courseId?: number): Promise<{
+    studentId: number;
+    studentName: string;
+    className: string | null;
+    scans: {
+      scanId: number;
+      scanLabel: string;
+      scanDate: string;
+      categoryScores: Record<number, number | null>;
+    }[];
+  } | null> {
+    try {
+      const params: Record<string, any> = {};
+      if (courseId) {
+        params.course_id = courseId;
+      }
+
+      const response = await api.get(`/competencies/student/${studentId}/historical-scores`, {
+        params,
+      });
+      
+      return {
+        studentId: response.data.student_id,
+        studentName: response.data.student_name,
+        className: response.data.class_name,
+        scans: response.data.scans.map((scan: any) => ({
+          scanId: scan.scan_id,
+          scanLabel: scan.scan_label,
+          scanDate: scan.scan_date,
+          categoryScores: scan.category_scores,
+        })),
+      };
+    } catch (error) {
+      console.error("Failed to fetch student historical scores:", error);
+      return null;
+    }
+  },
 };

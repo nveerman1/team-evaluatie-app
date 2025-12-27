@@ -587,3 +587,22 @@ class ExternalScoreOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ============ Student Historical Scores Schema ============
+
+
+class StudentScanScore(BaseModel):
+    """Student's scores for one scan"""
+    scan_id: int
+    scan_label: str
+    scan_date: str
+    category_scores: Dict[int, Optional[float]]  # category_id -> average_score
+
+
+class StudentHistoricalScores(BaseModel):
+    """Historical scores for a student across multiple scans"""
+    student_id: int
+    student_name: str
+    class_name: Optional[str] = None
+    scans: List[StudentScanScore]

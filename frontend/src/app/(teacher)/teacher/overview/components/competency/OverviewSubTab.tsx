@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useCompetencyOverview } from "@/hooks/useCompetencyOverview";
@@ -8,6 +8,7 @@ import { Loading, ErrorMessage } from "@/components";
 import { CompetencyRadarChart, CATEGORY_COLORS } from "@/components/student/competency/CompetencyRadarChart";
 import { SpreadChartCompact } from "@/components/teacher/competency/SpreadChartCompact";
 import type { CompetencyOverviewFilters } from "@/dtos/competency-monitor.dto";
+import { competencyMonitorService } from "@/services/competency-monitor.service";
 
 interface OverviewSubTabProps {
   filters: CompetencyOverviewFilters;
@@ -19,6 +20,8 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
   const [selectedScanId, setSelectedScanId] = useState<number | null>(null);
   const [selectedRadarScanId, setSelectedRadarScanId] = useState<number | null>(null);
   const [expandedStudents, setExpandedStudents] = useState<Set<number>>(new Set());
+  const [studentHistoricalData, setStudentHistoricalData] = useState<Record<number, any>>({});
+  const [loadingStudentData, setLoadingStudentData] = useState<Record<number, boolean>>({});
 
   // Prepare selected scan data for radar chart
   const selectedRadarScan = useMemo(() => {
@@ -83,21 +86,34 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
     return "text-red-600";
   };
 
-  const toggleStudentRow = (studentId: number) => {
+  const toggleStudentRow = async (studentId: number) => {
     const newExpanded = new Set(expandedStudents);
     if (newExpanded.has(studentId)) {
       newExpanded.delete(studentId);
     } else {
       newExpanded.add(studentId);
+      
+      // Fetch historical data if not already loaded
+      if (!studentHistoricalData[studentId] && !loadingStudentData[studentId]) {
+        setLoadingStudentData(prev => ({ ...prev, [studentId]: true }));
+        
+        try {
+          const histData = await competencyMonitorService.getStudentHistoricalScores(
+            studentId,
+            filters.courseId
+          );
+          
+          if (histData) {
+            setStudentHistoricalData(prev => ({ ...prev, [studentId]: histData }));
+          }
+        } catch (error) {
+          console.error(`Failed to fetch historical data for student ${studentId}:`, error);
+        } finally {
+          setLoadingStudentData(prev => ({ ...prev, [studentId]: false }));
+        }
+      }
     }
     setExpandedStudents(newExpanded);
-  };
-
-  // Helper to get previous scans data - showing available scans
-  const getAvailableScans = () => {
-    if (!data || !data.scans) return [];
-    // Return all scans except the latest one (which is already shown in main row)
-    return data.scans.slice(1);
   };
 
   return (
@@ -346,7 +362,6 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
             <tbody className="divide-y divide-slate-100">
               {data.heatmapRows.map((row) => {
                 const isExpanded = expandedStudents.has(row.studentId);
-                const previousScans = getAvailableScans();
                 
                 return (
                   <React.Fragment key={row.studentId}>
@@ -356,12 +371,10 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
                     >
                       <td className="sticky left-0 z-10 bg-white px-4 py-2 text-sm text-slate-900 font-medium border-r border-slate-100">
                         <div className="flex items-center gap-2">
-                          {previousScans.length > 0 && (
-                            isExpanded ? (
-                              <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                            ) : (
-                              <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                            )
+                          {isExpanded ? (
+                            <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
                           )}
                           <Link
                             href={`/teacher/competencies/student/${row.studentId}`}
@@ -400,58 +413,62 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
                     </tr>
                     
                     {/* Expanded Row Content */}
-                    {isExpanded && previousScans.length > 0 && (
+                    {isExpanded && (
                       <tr className="bg-slate-50">
                         <td colSpan={data.categorySummaries.length + 2} className="px-4 py-3">
-                          <div className="overflow-x-auto">
-                            <div className="flex items-center justify-between mb-2">
-                              <p className="text-xs text-slate-600 font-medium">Historisch klasoverzicht per categorie</p>
-                              <p className="text-xs text-amber-600 italic">⚠️ Klasgemiddelden (niet individueel)</p>
+                          {loadingStudentData[row.studentId] ? (
+                            <div className="text-center py-4">
+                              <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                              <p className="text-sm text-slate-600 mt-2">Laden van historische gegevens...</p>
                             </div>
-                            <table className="min-w-full text-sm">
-                              <thead className="border-b border-slate-300">
-                                <tr>
-                                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Scan</th>
-                                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Datum</th>
-                                  {data.categorySummaries.map((cat) => (
-                                    <th key={cat.id} className="px-3 py-2 text-center text-xs font-semibold text-slate-600" title={cat.name}>
-                                      {cat.name}
-                                    </th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-200">
-                                {previousScans.map((scan) => (
-                                  <tr key={scan.scanId} className="hover:bg-slate-100">
-                                    <td className="px-3 py-2 text-slate-900 font-medium">{scan.label}</td>
-                                    <td className="px-3 py-2 text-slate-600">
-                                      {new Date(scan.date).toLocaleDateString('nl-NL')}
-                                    </td>
-                                    {data.categorySummaries.map((cat) => {
-                                      // Show category average from this scan (class-wide, not per-student)
-                                      const categoryAvg = scan.categoryAverages.find(ca => ca.categoryId === cat.id);
-                                      return (
-                                        <td key={cat.id} className="px-3 py-2 text-center">
-                                          {categoryAvg ? (
-                                            <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(categoryAvg.averageScore)}`}>
-                                              {categoryAvg.averageScore.toFixed(1)}
-                                            </span>
-                                          ) : (
-                                            <span className="text-slate-300">–</span>
-                                          )}
-                                        </td>
-                                      );
-                                    })}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                            <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
-                              <p className="text-xs text-blue-700">
-                                <strong>Tip:</strong> Voor individuele scores van deze leerling over tijd, klik op de naam "{row.name}" om naar de leerling detailpagina te gaan.
+                          ) : studentHistoricalData[row.studentId] ? (
+                            <div className="overflow-x-auto">
+                              <p className="text-xs text-slate-600 font-medium mb-2">
+                                Historische scores van {row.name}
                               </p>
+                              <table className="min-w-full text-sm">
+                                <thead className="border-b border-slate-300">
+                                  <tr>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Scan</th>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Datum</th>
+                                    {data.categorySummaries.map((cat) => (
+                                      <th key={cat.id} className="px-3 py-2 text-center text-xs font-semibold text-slate-600" title={cat.name}>
+                                        {cat.name}
+                                      </th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-200">
+                                  {studentHistoricalData[row.studentId].scans.map((scan: any) => (
+                                    <tr key={scan.scanId} className="hover:bg-slate-100">
+                                      <td className="px-3 py-2 text-slate-900 font-medium">{scan.scanLabel}</td>
+                                      <td className="px-3 py-2 text-slate-600">
+                                        {new Date(scan.scanDate).toLocaleDateString('nl-NL')}
+                                      </td>
+                                      {data.categorySummaries.map((cat) => {
+                                        const score = scan.categoryScores[cat.id];
+                                        return (
+                                          <td key={cat.id} className="px-3 py-2 text-center">
+                                            {score !== null && score !== undefined ? (
+                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(score)}`}>
+                                                {score.toFixed(1)}
+                                              </span>
+                                            ) : (
+                                              <span className="text-slate-300">–</span>
+                                            )}
+                                          </td>
+                                        );
+                                      })}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
                             </div>
-                          </div>
+                          ) : (
+                            <div className="text-center py-4 text-slate-500">
+                              <p className="text-sm">Geen historische gegevens beschikbaar voor deze leerling</p>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     )}
