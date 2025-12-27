@@ -81,6 +81,7 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
         });
       }
       console.log('Radar data:', radarData);
+      console.log('Radar data values:', radarData.map(d => ({ name: d.name, value: d.value })));
     }
   }, [data, selectedRadarScanId, selectedRadarScan, radarData]);
 

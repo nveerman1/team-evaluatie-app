@@ -1831,15 +1831,25 @@ def get_student_historical_scores(
         raise HTTPException(status_code=404, detail="Student not found")
 
     # Get all windows for this school, optionally filtered by course
+    # Include all statuses to ensure we get historical data
     windows_query = select(CompetencyWindow).where(
         CompetencyWindow.school_id == current_user.school_id,
-        CompetencyWindow.status.in_(["active", "completed"]),
     )
     if course_id:
         windows_query = windows_query.where(CompetencyWindow.course_id == course_id)
     
     windows_query = windows_query.order_by(CompetencyWindow.start_date.desc())
     windows = db.execute(windows_query).scalars().all()
+    
+    print(f"DEBUG: Found {len(windows)} windows for student {student_id}, course_id={course_id}, school_id={current_user.school_id}")
+    if windows:
+        print(f"DEBUG: Windows: {[(w.id, w.title, w.status) for w in windows]}")
+    else:
+        print(f"DEBUG: No windows found. Checking all windows in school...")
+        all_windows = db.execute(select(CompetencyWindow).where(
+            CompetencyWindow.school_id == current_user.school_id
+        )).scalars().all()
+        print(f"DEBUG: Total windows in school: {len(all_windows)}, course_ids: {set(w.course_id for w in all_windows if w.course_id)}")
 
     # Get all categories for this school
     categories = db.execute(
