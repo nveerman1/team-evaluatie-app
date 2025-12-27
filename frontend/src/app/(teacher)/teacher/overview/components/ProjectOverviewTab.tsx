@@ -128,7 +128,7 @@ function useProjectOverviewData(filters: ProjectOverviewFilters) {
         periodLabel: p.period_label,
         year: p.year,
         numTeams: p.num_teams,
-        averageScoreOverall: p.average_score_overall,
+        averageScoreOverall: p.average_score_overall ?? null,
         averageScoresByCategory: p.average_scores_by_category,
         status: p.status,
       }));
