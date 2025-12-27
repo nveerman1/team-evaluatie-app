@@ -1967,7 +1967,7 @@ def get_aggregated_peer_feedback(
             # Add to criteria details for expansion
             criteria_details.append(CriterionDetail(
                 criterion_id=criterion.id,
-                criterion_name=criterion.title,
+                criterion_name=criterion.name,
                 category=cat_abbrev,
                 score=float(score.score) if score.score is not None else None,
                 feedback=score.comment if score.comment else None
