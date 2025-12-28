@@ -636,7 +636,7 @@ function ProjectTable({
               ))}
               {sortedProjects.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={TABLE_COLUMNS_COUNT} className="px-4 py-8 text-center text-gray-500">
                     Geen projecten gevonden
                   </td>
                 </tr>
@@ -689,7 +689,11 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
+          label: (context: {
+            dataIndex: number;
+            dataset: { label?: string };
+            parsed: { y: number | null };
+          }) => {
             const dataIndex = context.dataIndex;
             const datasetLabel = context.dataset.label || "";
             const value = context.parsed.y;

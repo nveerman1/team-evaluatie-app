@@ -8,6 +8,7 @@ import csv
 from datetime import datetime
 from typing import Optional
 import logging
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -1100,7 +1101,6 @@ def get_project_overview(
                 criterion_map = {c.id: c for c in criteria}
                 
                 # Group scores by team_number
-                from collections import defaultdict
                 team_scores = defaultdict(list)
                 for score in all_scores:
                     team_scores[score.team_number].append(score)
@@ -1253,7 +1253,6 @@ def get_project_trends(
         ).all()
         
         # Group scores by team_number
-        from collections import defaultdict
         team_scores = defaultdict(list)
         for score in all_scores:
             team_scores[score.team_number].append(score)
