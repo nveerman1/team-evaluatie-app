@@ -1386,7 +1386,7 @@ def get_project_teams(
         
         team_info_map[pt.team_number] = {
             "name": pt.display_name_at_time,
-            "members": [f"{m.user.first_name} {m.user.last_name}" for m in members]
+            "members": [m.user.name for m in members]
         }
     
     # Calculate scores for each team
