@@ -76,28 +76,53 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
     fetchStudentData();
   }, [studentId, courseId]);
 
-  // Update category scores when scan is selected
+  // Update category scores when scan is selected - fetch actual category names
   useEffect(() => {
-    if (!selectedScanId || scans.length === 0) {
-      setCategoryScores([]);
-      return;
+    async function fetchCategoryNames() {
+      if (!selectedScanId || scans.length === 0) {
+        setCategoryScores([]);
+        return;
+      }
+
+      const selectedScan = scans.find(s => s.scanId === selectedScanId);
+      if (!selectedScan || !selectedScan.categoryScores) {
+        setCategoryScores([]);
+        return;
+      }
+
+      try {
+        // Fetch the scan overview to get category names
+        const overview = await competencyMonitorService.getOverview({ courseId });
+        
+        // Build a map of category ID to name
+        const categoryNameMap = new Map<number, string>();
+        if (overview.categorySummaries) {
+          overview.categorySummaries.forEach(cat => {
+            categoryNameMap.set(cat.id, cat.name);
+          });
+        }
+
+        // Convert category scores to array format with actual names
+        const categories = Object.entries(selectedScan.categoryScores).map(([catId, score]) => ({
+          category_id: Number(catId),
+          category_name: categoryNameMap.get(Number(catId)) || `Categorie ${catId}`,
+          avg_score: score,
+        }));
+
+        setCategoryScores(categories);
+      } catch (error) {
+        console.error("Error fetching category names:", error);
+        // Fallback to category IDs if fetch fails
+        const categories = Object.entries(selectedScan.categoryScores).map(([catId, score]) => ({
+          category_id: Number(catId),
+          category_name: `Categorie ${catId}`,
+          avg_score: score,
+        }));
+        setCategoryScores(categories);
+      }
     }
-
-    const selectedScan = scans.find(s => s.scanId === selectedScanId);
-    if (!selectedScan || !selectedScan.categoryScores) {
-      setCategoryScores([]);
-      return;
-    }
-
-    // Convert category scores to array format
-    const categories = Object.entries(selectedScan.categoryScores).map(([catId, score]) => ({
-      category_id: Number(catId),
-      category_name: `Categorie ${catId}`, // Will be replaced by actual names if available
-      avg_score: score,
-    }));
-
-    setCategoryScores(categories);
-  }, [selectedScanId, scans]);
+    fetchCategoryNames();
+  }, [selectedScanId, scans, courseId]);
 
   // Chart data
   const chartData = {

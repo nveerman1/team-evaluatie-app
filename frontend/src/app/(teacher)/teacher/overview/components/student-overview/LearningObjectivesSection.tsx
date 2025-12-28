@@ -1,71 +1,63 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { getLearningObjectivesOverview, listLearningObjectives } from "@/services/learning-objective.service";
-import type { LearningObjectiveDto, LearningObjectiveOverviewResponse } from "@/dtos/learning-objective.dto";
+import { competencyMonitorService } from "@/services/competency-monitor.service";
+import type { LearningGoalSummary } from "@/dtos/competency-monitor.dto";
 
 interface LearningObjectivesSectionProps {
   studentId: number;
   courseId: number;
 }
 
-function getScoreColor(score: number | null): string {
-  if (score === null) return "bg-gray-100 text-gray-400";
-  if (score >= 4) return "bg-green-100 text-green-800";
-  if (score >= 3) return "bg-yellow-100 text-yellow-800";
-  if (score >= 2) return "bg-orange-100 text-orange-800";
-  return "bg-red-100 text-red-800";
+function getStatusColor(status: string): string {
+  const statusMap: Record<string, string> = {
+    in_progress: "bg-blue-100 text-blue-700",
+    achieved: "bg-green-100 text-green-700",
+    not_achieved: "bg-red-100 text-red-700",
+  };
+  return statusMap[status] || "bg-gray-100 text-gray-700";
 }
 
-function formatScore(score: number | null): string {
-  if (score === null) return "-";
-  return score.toFixed(1);
+function getStatusLabel(status: string): string {
+  const statusMap: Record<string, string> = {
+    in_progress: "Lopend",
+    achieved: "Behaald",
+    not_achieved: "Niet behaald",
+  };
+  return statusMap[status] || status;
+}
+
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 export function LearningObjectivesSection({ studentId, courseId }: LearningObjectivesSectionProps) {
-  const [objectives, setObjectives] = useState<LearningObjectiveDto[]>([]);
-  const [studentProgress, setStudentProgress] = useState<any>(null);
+  const [goals, setGoals] = useState<LearningGoalSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchData() {
+    async function fetchGoals() {
       try {
         setLoading(true);
         
-        // Fetch all objectives
-        const objResponse = await listLearningObjectives({
-          limit: 100,
-          include_teacher_objectives: true,
-          include_course_objectives: true,
-        });
-        setObjectives(objResponse.items);
-        
-        // Fetch overview data
-        const overviewResponse = await getLearningObjectivesOverview({
-          course_id: courseId,
-          include_teacher_objectives: true,
-          include_course_objectives: true,
+        // Fetch competency learning goals
+        const allGoals = await competencyMonitorService.getLearningGoals({
+          courseId,
         });
         
-        // Find this student's data - check both student_id and id fields
-        const student = overviewResponse.students.find(
-          (s: any) => s.student_id === studentId || s.id === studentId
-        );
+        // Filter for this student
+        const studentGoals = allGoals.filter(g => g.studentId === studentId);
         
-        console.log("Learning objectives - looking for student:", studentId);
-        console.log("Learning objectives - found students:", overviewResponse.students.map((s: any) => ({ id: s.id, student_id: s.student_id, name: s.student_name })));
-        console.log("Learning objectives - matched student:", student);
-        
-        setStudentProgress(student || null);
+        setGoals(studentGoals);
       } catch (error) {
-        console.error("Error fetching learning objectives:", error);
-        setObjectives([]);
-        setStudentProgress(null);
+        console.error("Error fetching learning goals:", error);
+        setGoals([]);
       } finally {
         setLoading(false);
       }
     }
-    fetchData();
+    fetchGoals();
   }, [studentId, courseId]);
 
   if (loading) {
@@ -84,60 +76,54 @@ export function LearningObjectivesSection({ studentId, courseId }: LearningObjec
     <div className="bg-white rounded-lg border border-gray-200 p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Leerdoelen</h3>
       
-      {objectives.length === 0 || !studentProgress ? (
+      {goals.length === 0 ? (
         <p className="text-gray-500 text-center py-4">Geen leerdoelen gevonden</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full table-fixed">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="w-[40%] px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                <th className="w-[50%] px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Leerdoel
                 </th>
-                <th className="w-[30%] px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                  Domein
+                <th className="w-[20%] px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                  Competentie
                 </th>
                 <th className="w-[15%] px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
-                  Score
+                  Status
                 </th>
-                <th className="w-[15%] px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
-                  Voortgang
+                <th className="w-[15%] px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                  Datum
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {objectives.map((objective) => {
-                const progress = studentProgress.objectives?.find(
-                  (o: any) => o.objective_id === objective.id
-                );
-                
-                return (
-                  <tr key={objective.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      <div className="line-clamp-2 whitespace-normal break-words">
-                        {objective.title}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      <div className="line-clamp-1">
-                        {objective.domain || "-"}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getScoreColor(
-                          progress?.average_score || null
-                        )}`}
-                      >
-                        {formatScore(progress?.average_score || null)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 text-center">
-                      {progress?.assessment_count || 0}x
-                    </td>
-                  </tr>
-                );
-              })}
+              {goals.map((goal) => (
+                <tr key={goal.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    <div className="line-clamp-2 whitespace-normal break-words">
+                      {goal.goalText}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    <div className="line-clamp-1">
+                      {goal.categoryName || "-"}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                        goal.status
+                      )}`}
+                    >
+                      {getStatusLabel(goal.status)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    {formatDate(goal.createdAt)}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

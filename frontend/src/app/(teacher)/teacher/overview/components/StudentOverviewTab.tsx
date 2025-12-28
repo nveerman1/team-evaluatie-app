@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { ChevronLeft, ChevronRight, X, MessageSquare } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { courseService } from "@/services/course.service";
 import type { CourseLite, CourseStudent } from "@/dtos/course.dto";
 import { ProjectResultsSection } from "./student-overview/ProjectResultsSection";
-import { OmzaHeatmapSection } from "./student-overview/OmzaHeatmapSection";
+import { EvaluationHeatmapSection } from "./student-overview/OmzaHeatmapSection";
 import { CompetencyProfileSection } from "./student-overview/CompetencyProfileSection";
 import { LearningObjectivesSection } from "./student-overview/LearningObjectivesSection";
 import { ReflectionsSection } from "./student-overview/ReflectionsSection";
@@ -124,11 +124,6 @@ export default function StudentOverviewTab() {
 
   const handleEvaluationClick = useCallback((evaluationId: number) => {
     setSelectedEvaluationId(evaluationId);
-    setFeedbackPanelOpen(true);
-  }, []);
-
-  const handleFeedbackButtonClick = useCallback(() => {
-    setSelectedEvaluationId(null);
     setFeedbackPanelOpen(true);
   }, []);
 
@@ -340,35 +335,25 @@ export default function StudentOverviewTab() {
         </div>
       </div>
 
-      {/* Feedback Button */}
-      <div className="flex justify-end">
-        <button
-          onClick={handleFeedbackButtonClick}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-        >
-          <MessageSquare className="w-4 h-4" />
-          Feedback
-        </button>
-      </div>
-
       {/* A) Project Results */}
       <ProjectResultsSection 
         studentId={filters.selectedStudentId} 
         courseId={filters.selectedCourseId} 
       />
 
-      {/* B) OMZA + Heatmap side by side */}
-      <OmzaHeatmapSection 
-        studentId={filters.selectedStudentId} 
-        courseId={filters.selectedCourseId}
-        onEvaluationClick={handleEvaluationClick}
-      />
-
-      {/* D) Competency Profile (next to heatmap conceptually, but we put it below) */}
-      <CompetencyProfileSection 
-        studentId={filters.selectedStudentId} 
-        courseId={filters.selectedCourseId} 
-      />
+      {/* B) Heatmap (left) + Competency Profile (right) side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <EvaluationHeatmapSection 
+          studentId={filters.selectedStudentId} 
+          courseId={filters.selectedCourseId}
+          onEvaluationClick={handleEvaluationClick}
+        />
+        
+        <CompetencyProfileSection 
+          studentId={filters.selectedStudentId} 
+          courseId={filters.selectedCourseId} 
+        />
+      </div>
 
       {/* E) Learning Objectives */}
       <LearningObjectivesSection 
