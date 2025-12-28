@@ -1385,7 +1385,7 @@ def get_project_teams(
         ).all()
         
         team_info_map[pt.team_number] = {
-            "name": pt.name,
+            "name": pt.display_name_at_time,
             "members": [f"{m.user.first_name} {m.user.last_name}" for m in members]
         }
     
