@@ -23,6 +23,12 @@ export default function CompetenciesOverviewTab() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h2 className="text-2xl font-bold text-slate-900">Competentiemonitor – Overzicht</h2>
+        <p className="text-sm text-slate-600 mt-1">Inzicht in ontwikkeling, trends en feedback uit meerdere scans.</p>
+      </div>
+
       {/* Global Filter Bar */}
       <div className="bg-gray-50 rounded-xl p-4">
         <div className="flex flex-wrap gap-4 items-center">

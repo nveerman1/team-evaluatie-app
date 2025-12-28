@@ -260,6 +260,55 @@ export const competencyMonitorService = {
           ? sortedScores[Math.floor(sortedScores.length / 2)] 
           : 0;
         
+        // Calculate category averages FOR THIS SPECIFIC WINDOW/SCAN
+        const windowCompetencies = windowHeatmapData.competencies || [];
+        const windowCompToCatMap = new Map<number, number>();
+        const windowCatNames = new Map<number, string>();
+        
+        windowCompetencies.forEach((comp: { id: number; category_id: number; category_name: string }) => {
+          if (comp.category_id) {
+            windowCompToCatMap.set(comp.id, comp.category_id);
+            windowCatNames.set(comp.category_id, comp.category_name || `Category ${comp.category_id}`);
+          }
+        });
+        
+        // Build category averages map for this window
+        const windowCategoryScores = new Map<number, number[]>();
+        
+        windowCompetencies.forEach((comp: { id: number; category_id: number }) => {
+          if (!comp.category_id) return;
+          
+          const scores = windowHeatmapData.rows
+            .map((row: { scores: Record<number, number | null> }) => row.scores[comp.id])
+            .filter((s: number | null | undefined): s is number => s !== null && s !== undefined && !isNaN(s));
+          
+          if (!windowCategoryScores.has(comp.category_id)) {
+            windowCategoryScores.set(comp.category_id, []);
+          }
+          
+          // Add average score for this competency to the category's scores
+          if (scores.length > 0) {
+            const compAvg = scores.reduce((sum: number, s: number) => sum + s, 0) / scores.length;
+            windowCategoryScores.get(comp.category_id)!.push(compAvg);
+          }
+        });
+        
+        // Calculate final category averages for this window
+        const windowCategoryAverages = Array.from(windowCategoryScores.entries()).map(([catId, compScores]) => ({
+          categoryId: catId,
+          categoryName: windowCatNames.get(catId) || `Category ${catId}`,
+          averageScore: compScores.length > 0 
+            ? compScores.reduce((sum: number, s: number) => sum + s, 0) / compScores.length 
+            : 0,
+        }));
+        
+        console.log(`DEBUG: Scan ${window.id} (${window.title}) category averages:`, 
+          windowCategoryAverages.map(cat => ({ 
+            category: cat.categoryName, 
+            avg: cat.averageScore.toFixed(2) 
+          }))
+        );
+        
         scans.push({
           scanId: window.id,
           label: window.title,
@@ -270,11 +319,7 @@ export const competencyMonitorService = {
           p25: calculatePercentile(25),
           p75: calculatePercentile(75),
           p90: calculatePercentile(90),
-          categoryAverages: categorySummaries.map(cat => ({
-            categoryId: cat.id,
-            categoryName: cat.name,
-            averageScore: cat.averageScore,
-          })),
+          categoryAverages: windowCategoryAverages,
         });
       } catch (error) {
         console.error(`Failed to fetch heatmap for window ${window.id}:`, error);
