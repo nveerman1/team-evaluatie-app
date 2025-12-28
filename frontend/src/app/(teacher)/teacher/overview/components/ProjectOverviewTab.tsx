@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   X,
   TrendingUp,
-  FolderOpen,
   ExternalLink,
 } from "lucide-react";
 import { Line } from "react-chartjs-2";
@@ -21,7 +21,7 @@ import {
   Legend,
 } from "chart.js";
 import { overviewService } from "@/services/overview.service";
-import type { CategoryTrendData } from "@/dtos/overview.dto";
+import type { CategoryTrendData, ProjectTeamScore } from "@/dtos/overview.dto";
 
 // Register Chart.js components
 ChartJS.register(
@@ -83,6 +83,16 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 // Table configuration - removed Status and Acties columns
 const TABLE_COLUMNS_COUNT = 9; // Total number of columns in the project table
+
+// Helper function for score color coding
+function getScoreColor(score: number | null | undefined): string {
+  if (!score) return "bg-slate-100 text-slate-400";
+  if (score >= 8.0) return "bg-emerald-100 text-emerald-700";
+  if (score >= 7.0) return "bg-green-100 text-green-700";
+  if (score >= 6.0) return "bg-amber-100 text-amber-700";
+  if (score >= 5.5) return "bg-orange-100 text-orange-700";
+  return "bg-red-100 text-red-700";
+}
 
 /* =========================================
    HOOK: useProjectOverviewData
@@ -305,16 +315,17 @@ function ProjectDetailDrawer({ project, onClose }: ProjectDetailDrawerProps) {
 interface ProjectTableProps {
   projects: ProjectOverviewItem[];
   loading: boolean;
-  onSelectProject: (project: ProjectOverviewItem) => void;
 }
 
 function ProjectTable({
   projects,
   loading,
-  onSelectProject,
 }: ProjectTableProps) {
   const [sortField, setSortField] = useState<SortField>("projectName");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const [teamScores, setTeamScores] = useState<Record<number, ProjectTeamScore[]>>({});
+  const [loadingTeams, setLoadingTeams] = useState<Set<number>>(new Set());
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -323,6 +334,30 @@ function ProjectTable({
       setSortField(field);
       setSortOrder("asc");
     }
+  };
+
+  const toggleRow = async (projectId: number) => {
+    const newExpandedRows = new Set(expandedRows);
+    if (newExpandedRows.has(projectId)) {
+      newExpandedRows.delete(projectId);
+    } else {
+      newExpandedRows.add(projectId);
+      // Load team scores if not already loaded
+      if (!teamScores[projectId] && !loadingTeams.has(projectId)) {
+        setLoadingTeams(new Set(loadingTeams).add(projectId));
+        try {
+          const data = await overviewService.getProjectTeams(projectId);
+          setTeamScores(prev => ({ ...prev, [projectId]: data.teams }));
+        } catch (error) {
+          console.error("Failed to load team scores:", error);
+        } finally {
+          const newLoading = new Set(loadingTeams);
+          newLoading.delete(projectId);
+          setLoadingTeams(newLoading);
+        }
+      }
+    }
+    setExpandedRows(newExpandedRows);
   };
 
   const sortedProjects = useMemo(() => {
@@ -372,89 +407,177 @@ function ProjectTable({
       {loading ? (
         <TableSkeleton />
       ) : (
-        <div className="border rounded-xl overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50 sticky top-0 z-10">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <thead className="bg-slate-50">
               <tr>
                 <th
-                  className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="sticky left-0 z-20 bg-slate-50 px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[200px] cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort("projectName")}
                 >
                   Project <SortIcon field="projectName" />
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
                   Vak
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
                   Opdrachtgever
                 </th>
                 <th
-                  className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort("periodLabel")}
                 >
                   Periode <SortIcon field="periodLabel" />
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
                   Teams
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-blue-700 uppercase tracking-wider">
+                <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide min-w-[90px]">
                   Projectproces
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-green-700 uppercase tracking-wider">
+                <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide min-w-[90px]">
                   Eindresultaat
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-amber-700 uppercase tracking-wider">
+                <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide min-w-[90px]">
                   Communicatie
                 </th>
                 <th
-                  className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100 min-w-[90px]"
                   onClick={() => handleSort("averageScoreOverall")}
                 >
                   Gem. score <SortIcon field="averageScoreOverall" />
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
-              {sortedProjects.map((project) => (
-                <tr
-                  key={project.projectId}
-                  className="hover:bg-gray-50 cursor-pointer"
-                  onClick={() => onSelectProject(project)}
-                >
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                    {project.projectName}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{project.courseName}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{project.clientName}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{project.periodLabel}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 text-center">
-                    {project.numTeams}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-center">
-                    <span className="font-medium text-blue-700">
-                      {project.averageScoresByCategory.projectproces?.toFixed(1) || "—"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-center">
-                    <span className="font-medium text-green-700">
-                      {project.averageScoresByCategory.eindresultaat?.toFixed(1) || "—"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-center">
-                    <span className="font-medium text-amber-700">
-                      {project.averageScoresByCategory.communicatie?.toFixed(1) || "—"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-center">
-                    <span className="font-semibold text-gray-900">
-                      {project.averageScoreOverall?.toFixed(1) || "—"}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+            <tbody className="divide-y divide-slate-100">
+              {sortedProjects.map((project) => {
+                const isExpanded = expandedRows.has(project.projectId);
+                const projectTeams = teamScores[project.projectId] || [];
+                const isLoadingTeams = loadingTeams.has(project.projectId);
+
+                return (
+                  <React.Fragment key={project.projectId}>
+                    <tr
+                      className="bg-white hover:bg-slate-50 cursor-pointer"
+                      onClick={() => toggleRow(project.projectId)}
+                    >
+                      <td className="sticky left-0 z-10 bg-white px-4 py-2 text-sm text-slate-900 font-medium border-r border-slate-100">
+                        <div className="flex items-center gap-2">
+                          {isExpanded ? (
+                            <ChevronDown className="w-4 h-4 text-slate-400" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-slate-400" />
+                          )}
+                          <span>{project.projectName}</span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 text-center text-sm text-slate-600">
+                        {project.courseName || "—"}
+                      </td>
+                      <td className="px-3 py-2 text-center text-sm text-slate-600">
+                        {project.clientName || "—"}
+                      </td>
+                      <td className="px-3 py-2 text-center text-sm text-slate-600">
+                        {project.periodLabel}
+                      </td>
+                      <td className="px-3 py-2 text-center text-sm text-slate-600">
+                        {project.numTeams}
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(project.averageScoresByCategory.projectproces)}`}>
+                          {project.averageScoresByCategory.projectproces?.toFixed(1) || "—"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(project.averageScoresByCategory.eindresultaat)}`}>
+                          {project.averageScoresByCategory.eindresultaat?.toFixed(1) || "—"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(project.averageScoresByCategory.communicatie)}`}>
+                          {project.averageScoresByCategory.communicatie?.toFixed(1) || "—"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(project.averageScoreOverall)}`}>
+                          {project.averageScoreOverall?.toFixed(1) || "—"}
+                        </span>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr>
+                        <td colSpan={TABLE_COLUMNS_COUNT} className="bg-slate-50 px-0 py-0">
+                          <div className="px-6 py-4">
+                            {isLoadingTeams ? (
+                              <div className="flex items-center justify-center py-4">
+                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-slate-900"></div>
+                                <span className="ml-2 text-sm text-slate-600">Teamscores laden...</span>
+                              </div>
+                            ) : projectTeams.length > 0 ? (
+                              <div className="space-y-2">
+                                <h4 className="text-sm font-semibold text-slate-700 mb-3">Teamscores</h4>
+                                <table className="min-w-full divide-y divide-slate-200 text-sm bg-white rounded-lg overflow-hidden">
+                                  <thead className="bg-slate-100">
+                                    <tr>
+                                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Team</th>
+                                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Teamleden</th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">Projectproces</th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">Eindresultaat</th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">Communicatie</th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">Gem. score</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-100">
+                                    {projectTeams
+                                      .sort((a, b) => (b.overall_score || 0) - (a.overall_score || 0))
+                                      .map((team) => (
+                                        <tr key={team.team_number} className="hover:bg-slate-50">
+                                          <td className="px-3 py-2 text-sm font-medium text-slate-900">
+                                            {team.team_name || `Team ${team.team_number}`}
+                                          </td>
+                                          <td className="px-3 py-2 text-sm text-slate-600">
+                                            <div className="max-w-xs truncate" title={team.team_members.join(", ")}>
+                                              {team.team_members.length > 0 ? team.team_members.join(", ") : "—"}
+                                            </div>
+                                          </td>
+                                          <td className="px-3 py-2 text-center">
+                                            <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(team.category_scores.projectproces)}`}>
+                                              {team.category_scores.projectproces?.toFixed(1) || "—"}
+                                            </span>
+                                          </td>
+                                          <td className="px-3 py-2 text-center">
+                                            <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(team.category_scores.eindresultaat)}`}>
+                                              {team.category_scores.eindresultaat?.toFixed(1) || "—"}
+                                            </span>
+                                          </td>
+                                          <td className="px-3 py-2 text-center">
+                                            <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(team.category_scores.communicatie)}`}>
+                                              {team.category_scores.communicatie?.toFixed(1) || "—"}
+                                            </span>
+                                          </td>
+                                          <td className="px-3 py-2 text-center">
+                                            <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(team.overall_score)}`}>
+                                              {team.overall_score?.toFixed(1) || "—"}
+                                            </span>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            ) : (
+                              <p className="text-sm text-slate-500 text-center py-4">Geen teamscores beschikbaar</p>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
               {sortedProjects.length === 0 && (
                 <tr>
-                  <td colSpan={TABLE_COLUMNS_COUNT} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={TABLE_COLUMNS_COUNT} className="px-4 py-8 text-center text-slate-500">
                     Geen projecten gevonden
                   </td>
                 </tr>
@@ -779,7 +902,6 @@ export default function ProjectOverviewTab() {
     period: PERIODS[0],
   });
 
-  const [selectedProject, setSelectedProject] = useState<ProjectOverviewItem | null>(null);
   const [academicYears, setAcademicYears] = useState<Array<{label: string; id: number}>>([]);
   const [courses, setCourses] = useState<Array<{id: number; name: string}>>([]);
 
@@ -833,10 +955,10 @@ export default function ProjectOverviewTab() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">
+        <h2 className="text-2xl font-bold text-slate-900">
           Projectbeoordelingen — Overzicht
         </h2>
-        <p className="text-gray-600 mt-1">
+        <p className="text-slate-600 mt-1">
           Inzicht in projecten, rubriccategorieën en trends
         </p>
       </div>
@@ -896,15 +1018,16 @@ export default function ProjectOverviewTab() {
       </div>
 
       {/* Project Table */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <FolderOpen className="w-5 h-5 text-blue-600" />
-          Projecten
-        </h3>
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
+          <h3 className="text-base font-semibold text-slate-900 leading-6">Projecten</h3>
+          <p className="text-sm text-slate-600">
+            Klik op een project om teamscores te bekijken
+          </p>
+        </div>
         <ProjectTable
           projects={projects}
           loading={loading}
-          onSelectProject={setSelectedProject}
         />
       </div>
 
@@ -919,14 +1042,6 @@ export default function ProjectOverviewTab() {
         </p>
         <CategoryTrendChart trendData={trendData} loading={loading} />
       </div>
-
-      {/* Project Detail Drawer */}
-      {selectedProject && (
-        <ProjectDetailDrawer
-          project={selectedProject}
-          onClose={() => setSelectedProject(null)}
-        />
-      )}
     </div>
   );
 }

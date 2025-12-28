@@ -152,3 +152,17 @@ export interface CategoryTrendData {
 export interface ProjectTrendResponse {
   trend_data: CategoryTrendData[];
 }
+
+export interface ProjectTeamScore {
+  team_number: number;
+  team_name?: string | null;
+  team_members: string[];
+  overall_score?: number | null;
+  category_scores: Record<string, number>;
+}
+
+export interface ProjectTeamsResponse {
+  project_id: number;
+  project_name: string;
+  teams: ProjectTeamScore[];
+}

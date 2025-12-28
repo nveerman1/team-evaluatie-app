@@ -6,6 +6,7 @@ import {
   MatrixFilters,
   ProjectOverviewListResponse,
   ProjectTrendResponse,
+  ProjectTeamsResponse,
 } from "@/dtos/overview.dto";
 
 export const overviewService = {
@@ -137,6 +138,16 @@ export const overviewService = {
     
     const { data } = await api.get<ProjectTrendResponse>(
       `/overview/projects/trends?${params.toString()}`
+    );
+    return data;
+  },
+
+  /**
+   * Get team scores for a specific project
+   */
+  async getProjectTeams(projectId: number): Promise<ProjectTeamsResponse> {
+    const { data } = await api.get<ProjectTeamsResponse>(
+      `/overview/projects/${projectId}/teams`
     );
     return data;
   },

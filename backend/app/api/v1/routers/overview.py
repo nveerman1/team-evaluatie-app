@@ -58,6 +58,8 @@ from app.api.v1.schemas.overview import (
     ProjectOverviewItem,
     CategoryTrendData,
     CategoryStatistics,
+    ProjectTeamScore,
+    ProjectTeamsResponse,
     PeerOverviewDashboardResponse,
     FeedbackCollectionResponse,
     OmzaTrendDataPoint,
@@ -1313,6 +1315,134 @@ def get_project_trends(
         ))
     
     return ProjectTrendResponse(trend_data=trend_data)
+
+
+@router.get("/projects/{project_id}/teams", response_model=ProjectTeamsResponse)
+def get_project_teams(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get team scores for a specific project assessment
+    """
+    school_id = current_user.school_id
+    
+    # Get the project assessment
+    assessment = db.query(ProjectAssessment).filter(
+        ProjectAssessment.id == project_id,
+        ProjectAssessment.school_id == school_id
+    ).first()
+    
+    if not assessment:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    # Get rubric
+    rubric = db.query(Rubric).filter(Rubric.id == assessment.rubric_id).first()
+    if not rubric:
+        return ProjectTeamsResponse(
+            project_id=project_id,
+            project_name=assessment.title,
+            teams=[]
+        )
+    
+    # Get all scores for this assessment
+    all_scores = db.query(ProjectAssessmentScore).filter(
+        ProjectAssessmentScore.assessment_id == assessment.id,
+        ProjectAssessmentScore.team_number.isnot(None)
+    ).all()
+    
+    if not all_scores:
+        return ProjectTeamsResponse(
+            project_id=project_id,
+            project_name=assessment.title,
+            teams=[]
+        )
+    
+    # Get criteria with categories
+    criteria = db.query(RubricCriterion).filter(
+        RubricCriterion.rubric_id == rubric.id
+    ).all()
+    
+    # Group scores by team_number
+    team_scores_map = defaultdict(list)
+    for score in all_scores:
+        team_scores_map[score.team_number].append(score)
+    
+    # Get team information (names and members)
+    from app.infra.db.models import ProjectTeam, ProjectTeamMember, User
+    project_teams = db.query(ProjectTeam).filter(
+        ProjectTeam.project_id == assessment.project_id
+    ).all() if assessment.project_id else []
+    
+    team_info_map = {}
+    for pt in project_teams:
+        members = db.query(ProjectTeamMember).join(
+            User, ProjectTeamMember.user_id == User.id
+        ).filter(
+            ProjectTeamMember.project_team_id == pt.id
+        ).all()
+        
+        team_info_map[pt.team_number] = {
+            "name": pt.name,
+            "members": [f"{m.user.first_name} {m.user.last_name}" for m in members]
+        }
+    
+    # Calculate scores for each team
+    teams = []
+    for team_number in sorted(team_scores_map.keys()):
+        scores = team_scores_map[team_number]
+        score_map = {s.criterion_id: s.score for s in scores}
+        
+        # Calculate weighted average overall
+        total_weighted_score = 0.0
+        total_weight = 0.0
+        for criterion in criteria:
+            if criterion.id in score_map:
+                total_weighted_score += score_map[criterion.id] * criterion.weight
+                total_weight += criterion.weight
+        
+        overall_score = None
+        if total_weight > 0:
+            avg_score = total_weighted_score / total_weight
+            overall_score = _score_to_grade(avg_score, rubric.scale_min, rubric.scale_max)
+        
+        # Calculate scores by category
+        category_scores_dict = {}
+        category_weights_dict = {}
+        
+        for criterion in criteria:
+            if criterion.id in score_map and criterion.category:
+                cat = criterion.category.lower()
+                if cat not in category_scores_dict:
+                    category_scores_dict[cat] = 0.0
+                    category_weights_dict[cat] = 0.0
+                category_scores_dict[cat] += score_map[criterion.id] * criterion.weight
+                category_weights_dict[cat] += criterion.weight
+        
+        category_scores = {}
+        for cat, total_score in category_scores_dict.items():
+            if category_weights_dict[cat] > 0:
+                avg = total_score / category_weights_dict[cat]
+                category_scores[cat] = round(_score_to_grade(avg, rubric.scale_min, rubric.scale_max), 1)
+        
+        # Get team info
+        team_info = team_info_map.get(team_number, {"name": None, "members": []})
+        
+        teams.append(ProjectTeamScore(
+            team_number=team_number,
+            team_name=team_info["name"] or f"Team {team_number}",
+            team_members=team_info["members"],
+            overall_score=round(overall_score, 1) if overall_score else None,
+            category_scores=category_scores
+        ))
+    
+    return ProjectTeamsResponse(
+        project_id=project_id,
+        project_name=assessment.title,
+        teams=teams
+    )
 
 
 @router.get("/academic-years")

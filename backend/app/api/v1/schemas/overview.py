@@ -193,6 +193,26 @@ class ProjectTrendResponse(BaseModel):
     trend_data: List[CategoryTrendData]
 
 
+class ProjectTeamScore(BaseModel):
+    """
+    Score details for a single team in a project
+    """
+    team_number: int
+    team_name: Optional[str] = None
+    team_members: List[str] = []  # Student names
+    overall_score: Optional[float] = None
+    category_scores: dict[str, float] = {}  # category -> score
+
+
+class ProjectTeamsResponse(BaseModel):
+    """
+    Team scores for a specific project
+    """
+    project_id: int
+    project_name: str
+    teams: List[ProjectTeamScore]
+
+
 # ==================== Peer Evaluation Overview Schemas ====================
 
 class OmzaTrendDataPoint(BaseModel):
