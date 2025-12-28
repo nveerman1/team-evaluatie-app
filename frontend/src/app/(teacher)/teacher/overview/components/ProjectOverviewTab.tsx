@@ -641,22 +641,6 @@ function ProjectTable({
                   </td>
                 </tr>
               )}
-                        onSelectProject(project);
-                      }}
-                      className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                    >
-                      Details
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {sortedProjects.length === 0 && (
-                <tr>
-                  <td colSpan={TABLE_COLUMNS_COUNT} className="px-4 py-8 text-center text-gray-500">
-                    Geen projecten gevonden
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
