@@ -11,7 +11,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import api from "@/lib/api";
+import { competencyMonitorService } from "@/services/competency-monitor.service";
 
 // Register Chart.js components
 ChartJS.register(
@@ -28,10 +28,11 @@ interface CompetencyProfileSectionProps {
   courseId: number;
 }
 
-interface CompetencyScan {
-  id: number;
-  title: string;
-  created_at: string;
+interface ScanData {
+  scanId: number;
+  scanLabel: string;
+  scanDate: string;
+  categoryScores: Record<number, number | null>;
 }
 
 interface CategoryScore {
@@ -41,78 +42,62 @@ interface CategoryScore {
 }
 
 export function CompetencyProfileSection({ studentId, courseId }: CompetencyProfileSectionProps) {
-  const [scans, setScans] = useState<CompetencyScan[]>([]);
+  const [scans, setScans] = useState<ScanData[]>([]);
   const [selectedScanId, setSelectedScanId] = useState<number | null>(null);
   const [categoryScores, setCategoryScores] = useState<CategoryScore[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch available scans
+  // Fetch student historical data
   useEffect(() => {
-    async function fetchScans() {
-      try {
-        const response = await api.get("/competencies/windows/", {
-          params: { course_id: courseId, status: "all" },
-        });
-        const scansData = response.data || [];
-        setScans(scansData);
-        
-        // Select latest scan by default
-        if (scansData.length > 0) {
-          setSelectedScanId(scansData[0].id);
-        }
-      } catch (error) {
-        console.error("Error fetching scans:", error);
-        setScans([]);
-      }
-    }
-    fetchScans();
-  }, [courseId]);
-
-  // Fetch scan data when scan is selected
-  useEffect(() => {
-    async function fetchScanData() {
-      if (!selectedScanId) {
-        setCategoryScores([]);
-        setLoading(false);
-        return;
-      }
-
+    async function fetchStudentData() {
       try {
         setLoading(true);
-        // Fetch heatmap data for the scan
-        const response = await api.get(`/competencies/windows/${selectedScanId}/heatmap`);
-        const heatmapData = response.data;
+        const data = await competencyMonitorService.getStudentHistoricalScores(
+          studentId,
+          courseId
+        );
         
-        // Find student data
-        const studentRow = heatmapData.students?.find((s: any) => s.user_id === studentId);
-        
-        if (studentRow && studentRow.category_scores) {
-          // Build category scores
-          const categories = Object.keys(studentRow.category_scores).map((catId) => {
-            const score = studentRow.category_scores[catId];
-            // Try to get category name from competencies
-            const categoryName = heatmapData.categories?.find((c: any) => c.id === Number(catId))?.name || `Cat ${catId}`;
-            
-            return {
-              category_id: Number(catId),
-              category_name: categoryName,
-              avg_score: score?.average || null,
-            };
-          });
-          
-          setCategoryScores(categories);
+        if (data && data.scans && data.scans.length > 0) {
+          setScans(data.scans);
+          // Select latest scan by default
+          setSelectedScanId(data.scans[0].scanId);
         } else {
-          setCategoryScores([]);
+          setScans([]);
+          setSelectedScanId(null);
         }
       } catch (error) {
-        console.error("Error fetching scan data:", error);
-        setCategoryScores([]);
+        console.error("Error fetching student competency data:", error);
+        setScans([]);
+        setSelectedScanId(null);
       } finally {
         setLoading(false);
       }
     }
-    fetchScanData();
-  }, [selectedScanId, studentId]);
+    fetchStudentData();
+  }, [studentId, courseId]);
+
+  // Update category scores when scan is selected
+  useEffect(() => {
+    if (!selectedScanId || scans.length === 0) {
+      setCategoryScores([]);
+      return;
+    }
+
+    const selectedScan = scans.find(s => s.scanId === selectedScanId);
+    if (!selectedScan || !selectedScan.categoryScores) {
+      setCategoryScores([]);
+      return;
+    }
+
+    // Convert category scores to array format
+    const categories = Object.entries(selectedScan.categoryScores).map(([catId, score]) => ({
+      category_id: Number(catId),
+      category_name: `Categorie ${catId}`, // Will be replaced by actual names if available
+      avg_score: score,
+    }));
+
+    setCategoryScores(categories);
+  }, [selectedScanId, scans]);
 
   // Chart data
   const chartData = {
@@ -173,8 +158,8 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
             className="px-3 py-1.5 text-sm border rounded-lg"
           >
             {scans.map((scan) => (
-              <option key={scan.id} value={scan.id}>
-                {scan.title}
+              <option key={scan.scanId} value={scan.scanId}>
+                {scan.scanLabel}
               </option>
             ))}
           </select>

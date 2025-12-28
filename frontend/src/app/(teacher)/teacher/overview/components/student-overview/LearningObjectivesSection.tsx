@@ -47,8 +47,15 @@ export function LearningObjectivesSection({ studentId, courseId }: LearningObjec
           include_course_objectives: true,
         });
         
-        // Find this student's data
-        const student = overviewResponse.students.find((s: any) => s.student_id === studentId);
+        // Find this student's data - check both student_id and id fields
+        const student = overviewResponse.students.find(
+          (s: any) => s.student_id === studentId || s.id === studentId
+        );
+        
+        console.log("Learning objectives - looking for student:", studentId);
+        console.log("Learning objectives - found students:", overviewResponse.students.map((s: any) => ({ id: s.id, student_id: s.student_id, name: s.student_name })));
+        console.log("Learning objectives - matched student:", student);
+        
         setStudentProgress(student || null);
       } catch (error) {
         console.error("Error fetching learning objectives:", error);
