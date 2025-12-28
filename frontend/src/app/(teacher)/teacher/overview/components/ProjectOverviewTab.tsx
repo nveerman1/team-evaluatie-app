@@ -1,16 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
-  Search,
-  Filter,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   X,
   TrendingUp,
-  BarChart3,
-  FolderOpen,
-  Award,
   ExternalLink,
 } from "lucide-react";
 import { Line } from "react-chartjs-2";
@@ -25,7 +21,7 @@ import {
   Legend,
 } from "chart.js";
 import { overviewService } from "@/services/overview.service";
-import type { CategoryTrendData } from "@/dtos/overview.dto";
+import type { CategoryTrendData, ProjectTeamScore } from "@/dtos/overview.dto";
 
 // Register Chart.js components
 ChartJS.register(
@@ -59,8 +55,6 @@ interface ProjectOverviewFilters {
   schoolYear: string;
   courseId: string;
   period: string;
-  searchQuery: string;
-  statusFilter: string;
 }
 
 type SortField = "projectName" | "periodLabel" | "averageScoreOverall";
@@ -87,8 +81,18 @@ const CATEGORY_LABELS: Record<string, string> = {
   communicatie: "Communicatie",
 };
 
-// Table configuration
-const TABLE_COLUMNS_COUNT = 11; // Total number of columns in the project table
+// Table configuration - removed Status and Acties columns
+const TABLE_COLUMNS_COUNT = 9; // Total number of columns in the project table
+
+// Helper function for score color coding
+function getScoreColor(score: number | null | undefined): string {
+  if (!score) return "bg-slate-100 text-slate-400";
+  if (score >= 8.0) return "bg-emerald-100 text-emerald-700";
+  if (score >= 7.0) return "bg-green-100 text-green-700";
+  if (score >= 6.0) return "bg-amber-100 text-amber-700";
+  if (score >= 5.5) return "bg-orange-100 text-orange-700";
+  return "bg-red-100 text-red-700";
+}
 
 /* =========================================
    HOOK: useProjectOverviewData
@@ -109,8 +113,6 @@ function useProjectOverviewData(filters: ProjectOverviewFilters) {
         schoolYear: filters.schoolYear,
         courseId: filters.courseId,
         period: filters.period,
-        statusFilter: filters.statusFilter,
-        searchQuery: filters.searchQuery,
       });
 
       // Fetch trends from API
@@ -140,7 +142,7 @@ function useProjectOverviewData(filters: ProjectOverviewFilters) {
     } finally {
       setLoading(false);
     }
-  }, [filters.courseId, filters.period, filters.schoolYear, filters.statusFilter, filters.searchQuery]);
+  }, [filters.courseId, filters.period, filters.schoolYear]);
 
   useEffect(() => {
     fetchData();
@@ -152,14 +154,6 @@ function useProjectOverviewData(filters: ProjectOverviewFilters) {
 /* =========================================
    SKELETON COMPONENTS
    ========================================= */
-
-function KpiSkeleton() {
-  return (
-    <div className="animate-pulse">
-      <div className="h-24 bg-gray-200 rounded-xl"></div>
-    </div>
-  );
-}
 
 function TableSkeleton() {
   return (
@@ -187,100 +181,6 @@ function TextSkeleton() {
       <div className="h-4 bg-gray-200 rounded w-3/4"></div>
       <div className="h-4 bg-gray-200 rounded w-full"></div>
       <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-    </div>
-  );
-}
-
-/* =========================================
-   KPI CARDS COMPONENT
-   ========================================= */
-
-interface KpiCardsProps {
-  projects: ProjectOverviewItem[];
-  loading: boolean;
-}
-
-function KpiCards({ projects, loading }: KpiCardsProps) {
-  const kpis = useMemo(() => {
-    const completedProjects = projects.filter((p) => p.status === "completed");
-    const projectsWithScores = completedProjects.filter((p) => p.averageScoreOverall !== null);
-
-    // Calculate overall average
-    const avgOverall =
-      projectsWithScores.length > 0
-        ? projectsWithScores.reduce((sum, p) => sum + (p.averageScoreOverall || 0), 0) /
-          projectsWithScores.length
-        : null;
-
-    // Count completed assessments
-    const completedCount = completedProjects.length;
-
-    // Find most assessed category
-    const categoryCounts: Record<string, number> = {};
-    projectsWithScores.forEach((p) => {
-      Object.keys(p.averageScoresByCategory).forEach((cat) => {
-        categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
-      });
-    });
-    const mostAssessedCategory = Object.entries(categoryCounts).sort(
-      ([, a], [, b]) => b - a
-    )[0]?.[0];
-
-    return {
-      avgOverall,
-      completedCount,
-      mostAssessedCategory: mostAssessedCategory
-        ? CATEGORY_LABELS[mostAssessedCategory] || mostAssessedCategory
-        : "—",
-    };
-  }, [projects]);
-
-  if (loading) {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <KpiSkeleton />
-        <KpiSkeleton />
-        <KpiSkeleton />
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {/* Average Score Card */}
-      <div className="bg-slate-50 rounded-xl p-4 border border-gray-200">
-        <div className="flex items-center gap-2 mb-2">
-          <BarChart3 className="w-5 h-5 text-blue-600" />
-          <span className="text-sm text-gray-600">Gem. projectscores</span>
-        </div>
-        <div className="text-2xl font-bold text-gray-900">
-          {kpis.avgOverall !== null ? kpis.avgOverall.toFixed(1) : "—"}
-          <span className="text-lg font-normal text-gray-500"> / 10</span>
-        </div>
-        <p className="text-xs text-gray-500 mt-1">Gemiddelde over alle projecten</p>
-      </div>
-
-      {/* Completed Assessments Card */}
-      <div className="bg-slate-50 rounded-xl p-4 border border-gray-200">
-        <div className="flex items-center gap-2 mb-2">
-          <Award className="w-5 h-5 text-green-600" />
-          <span className="text-sm text-gray-600">Afgeronde beoordelingen</span>
-        </div>
-        <div className="text-2xl font-bold text-gray-900">{kpis.completedCount}</div>
-        <p className="text-xs text-gray-500 mt-1">Projectbeoordelingen afgerond</p>
-      </div>
-
-      {/* Most Assessed Category Card */}
-      <div className="bg-slate-50 rounded-xl p-4 border border-gray-200">
-        <div className="flex items-center gap-2 mb-2">
-          <FolderOpen className="w-5 h-5 text-purple-600" />
-          <span className="text-sm text-gray-600">Meest beoordeeld</span>
-        </div>
-        <div className="text-lg font-bold text-gray-900 truncate">
-          {kpis.mostAssessedCategory}
-        </div>
-        <p className="text-xs text-gray-500 mt-1">Meest beoordeelde categorie</p>
-      </div>
     </div>
   );
 }
@@ -415,24 +315,17 @@ function ProjectDetailDrawer({ project, onClose }: ProjectDetailDrawerProps) {
 interface ProjectTableProps {
   projects: ProjectOverviewItem[];
   loading: boolean;
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
-  statusFilter: string;
-  onStatusFilterChange: (status: string) => void;
-  onSelectProject: (project: ProjectOverviewItem) => void;
 }
 
 function ProjectTable({
   projects,
   loading,
-  searchQuery,
-  onSearchChange,
-  statusFilter,
-  onStatusFilterChange,
-  onSelectProject,
 }: ProjectTableProps) {
   const [sortField, setSortField] = useState<SortField>("projectName");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const [teamScores, setTeamScores] = useState<Record<number, ProjectTeamScore[]>>({});
+  const [loadingTeams, setLoadingTeams] = useState<Set<number>>(new Set());
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -441,6 +334,36 @@ function ProjectTable({
       setSortField(field);
       setSortOrder("asc");
     }
+  };
+
+  const toggleRow = async (projectId: number) => {
+    const newExpandedRows = new Set(expandedRows);
+    if (newExpandedRows.has(projectId)) {
+      newExpandedRows.delete(projectId);
+    } else {
+      newExpandedRows.add(projectId);
+      // Load team scores if not already loaded
+      if (!teamScores[projectId] && !loadingTeams.has(projectId)) {
+        setLoadingTeams(prev => {
+          const newSet = new Set(prev);
+          newSet.add(projectId);
+          return newSet;
+        });
+        try {
+          const data = await overviewService.getProjectTeams(projectId);
+          setTeamScores(prev => ({ ...prev, [projectId]: data.teams }));
+        } catch (error) {
+          console.error("Failed to load team scores:", error);
+        } finally {
+          setLoadingTeams(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(projectId);
+            return newSet;
+          });
+        }
+      }
+    }
+    setExpandedRows(newExpandedRows);
   };
 
   const sortedProjects = useMemo(() => {
@@ -484,154 +407,183 @@ function ProjectTable({
     );
   };
 
-  const getStatusBadge = (status: "active" | "completed") => {
-    return status === "active" ? (
-      <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-        Actief
-      </span>
-    ) : (
-      <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-        Afgerond
-      </span>
-    );
-  };
-
   return (
     <div className="space-y-4">
-      {/* Table Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        {/* Search */}
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Zoek op project of opdrachtgever..."
-            className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
-        </div>
-
-        {/* Status Filter */}
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-gray-500" />
-          <select
-            className="px-3 py-2 border rounded-lg text-sm"
-            value={statusFilter}
-            onChange={(e) => onStatusFilterChange(e.target.value)}
-          >
-            <option value="all">Alle statussen</option>
-            <option value="active">Actief</option>
-            <option value="completed">Afgerond</option>
-          </select>
-        </div>
-      </div>
-
       {/* Table */}
       {loading ? (
         <TableSkeleton />
       ) : (
-        <div className="overflow-x-auto border rounded-xl">
-          <table className="w-full min-w-[900px]">
-            <thead className="bg-gray-50 sticky top-0 z-10">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <thead className="bg-slate-50">
               <tr>
                 <th
-                  className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="sticky left-0 z-20 bg-slate-50 px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[200px] cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort("projectName")}
                 >
                   Project <SortIcon field="projectName" />
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
                   Vak
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
                   Opdrachtgever
                 </th>
                 <th
-                  className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
                   onClick={() => handleSort("periodLabel")}
                 >
                   Periode <SortIcon field="periodLabel" />
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide">
                   Teams
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-blue-700 uppercase tracking-wider">
+                <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide min-w-[90px]">
                   Projectproces
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-green-700 uppercase tracking-wider">
+                <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide min-w-[90px]">
                   Eindresultaat
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-amber-700 uppercase tracking-wider">
+                <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide min-w-[90px]">
                   Communicatie
                 </th>
                 <th
-                  className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100 min-w-[90px]"
                   onClick={() => handleSort("averageScoreOverall")}
                 >
                   Gem. score <SortIcon field="averageScoreOverall" />
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Acties
-                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
-              {sortedProjects.map((project) => (
-                <tr
-                  key={project.projectId}
-                  className="hover:bg-gray-50 cursor-pointer"
-                  onClick={() => onSelectProject(project)}
-                >
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                    {project.projectName}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{project.courseName}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{project.clientName}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{project.periodLabel}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 text-center">
-                    {project.numTeams}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-center">
-                    <span className="font-medium text-blue-700">
-                      {project.averageScoresByCategory.projectproces?.toFixed(1) || "—"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-center">
-                    <span className="font-medium text-green-700">
-                      {project.averageScoresByCategory.eindresultaat?.toFixed(1) || "—"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-center">
-                    <span className="font-medium text-amber-700">
-                      {project.averageScoresByCategory.communicatie?.toFixed(1) || "—"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-center">
-                    <span className="font-semibold text-gray-900">
-                      {project.averageScoreOverall?.toFixed(1) || "—"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">{getStatusBadge(project.status)}</td>
-                  <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectProject(project);
-                      }}
-                      className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+            <tbody className="divide-y divide-slate-100">
+              {sortedProjects.map((project) => {
+                const isExpanded = expandedRows.has(project.projectId);
+                const projectTeams = teamScores[project.projectId] || [];
+                const isLoadingTeams = loadingTeams.has(project.projectId);
+
+                return (
+                  <React.Fragment key={project.projectId}>
+                    <tr
+                      className="bg-white hover:bg-slate-50 cursor-pointer"
+                      onClick={() => toggleRow(project.projectId)}
                     >
-                      Details
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                      <td className="sticky left-0 z-10 bg-white px-4 py-2 text-sm text-slate-900 font-medium border-r border-slate-100">
+                        <div className="flex items-center gap-2">
+                          {isExpanded ? (
+                            <ChevronDown className="w-4 h-4 text-slate-400" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-slate-400" />
+                          )}
+                          <span>{project.projectName}</span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 text-center text-sm text-slate-600">
+                        {project.courseName || "—"}
+                      </td>
+                      <td className="px-3 py-2 text-center text-sm text-slate-600">
+                        {project.clientName || "—"}
+                      </td>
+                      <td className="px-3 py-2 text-center text-sm text-slate-600">
+                        {project.periodLabel}
+                      </td>
+                      <td className="px-3 py-2 text-center text-sm text-slate-600">
+                        {project.numTeams}
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(project.averageScoresByCategory.projectproces)}`}>
+                          {project.averageScoresByCategory.projectproces?.toFixed(1) || "—"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(project.averageScoresByCategory.eindresultaat)}`}>
+                          {project.averageScoresByCategory.eindresultaat?.toFixed(1) || "—"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(project.averageScoresByCategory.communicatie)}`}>
+                          {project.averageScoresByCategory.communicatie?.toFixed(1) || "—"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(project.averageScoreOverall)}`}>
+                          {project.averageScoreOverall?.toFixed(1) || "—"}
+                        </span>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr>
+                        <td colSpan={TABLE_COLUMNS_COUNT} className="bg-slate-50 px-0 py-0">
+                          <div className="px-6 py-4">
+                            {isLoadingTeams ? (
+                              <div className="flex items-center justify-center py-4">
+                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-slate-900"></div>
+                                <span className="ml-2 text-sm text-slate-600">Teamscores laden...</span>
+                              </div>
+                            ) : projectTeams.length > 0 ? (
+                              <div className="space-y-2">
+                                <h4 className="text-sm font-semibold text-slate-700 mb-3">Teamscores</h4>
+                                <table className="min-w-full divide-y divide-slate-200 text-sm bg-white rounded-lg overflow-hidden">
+                                  <thead className="bg-slate-100">
+                                    <tr>
+                                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Team</th>
+                                      <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Teamleden</th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">Projectproces</th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">Eindresultaat</th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">Communicatie</th>
+                                      <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600">Gem. score</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-100">
+                                    {projectTeams
+                                      .sort((a, b) => (b.overall_score || 0) - (a.overall_score || 0))
+                                      .map((team) => (
+                                        <tr key={team.team_number} className="hover:bg-slate-50">
+                                          <td className="px-3 py-2 text-sm font-medium text-slate-900">
+                                            {team.team_name || `Team ${team.team_number}`}
+                                          </td>
+                                          <td className="px-3 py-2 text-sm text-slate-600">
+                                            <div className="max-w-xs truncate" title={team.team_members.join(", ")}>
+                                              {team.team_members.length > 0 ? team.team_members.join(", ") : "—"}
+                                            </div>
+                                          </td>
+                                          <td className="px-3 py-2 text-center">
+                                            <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(team.category_scores.projectproces)}`}>
+                                              {team.category_scores.projectproces?.toFixed(1) || "—"}
+                                            </span>
+                                          </td>
+                                          <td className="px-3 py-2 text-center">
+                                            <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(team.category_scores.eindresultaat)}`}>
+                                              {team.category_scores.eindresultaat?.toFixed(1) || "—"}
+                                            </span>
+                                          </td>
+                                          <td className="px-3 py-2 text-center">
+                                            <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(team.category_scores.communicatie)}`}>
+                                              {team.category_scores.communicatie?.toFixed(1) || "—"}
+                                            </span>
+                                          </td>
+                                          <td className="px-3 py-2 text-center">
+                                            <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(team.overall_score)}`}>
+                                              {team.overall_score?.toFixed(1) || "—"}
+                                            </span>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            ) : (
+                              <p className="text-sm text-slate-500 text-center py-4">Geen teamscores beschikbaar</p>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
               {sortedProjects.length === 0 && (
                 <tr>
-                  <td colSpan={TABLE_COLUMNS_COUNT} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={TABLE_COLUMNS_COUNT} className="px-4 py-8 text-center text-slate-500">
                     Geen projecten gevonden
                   </td>
                 </tr>
@@ -684,10 +636,42 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
       },
       tooltip: {
         callbacks: {
-          label: (context: { dataset: { label?: string }; parsed: { y: number | null } }) => {
-            const label = context.dataset.label || "";
+          label: (context: {
+            dataIndex: number;
+            dataset: { label?: string };
+            parsed: { y: number | null };
+          }) => {
+            const dataIndex = context.dataIndex;
+            const datasetLabel = context.dataset.label || "";
             const value = context.parsed.y;
-            return `${label}: ${value !== null ? value.toFixed(1) : "—"}`;
+            
+            // Get the trend data point for this data index
+            const trendPoint = trendData[dataIndex];
+            if (!trendPoint) {
+              return `${datasetLabel}: ${value !== null ? value.toFixed(1) : "—"}`;
+            }
+
+            // Find category key that matches this dataset
+            const categoryKey = Object.keys(CATEGORY_LABELS).find(
+              key => CATEGORY_LABELS[key] === datasetLabel
+            );
+            
+            if (!categoryKey || !trendPoint.statistics[categoryKey]) {
+              return `${datasetLabel}: ${value !== null ? value.toFixed(1) : "—"}`;
+            }
+
+            const stats = trendPoint.statistics[categoryKey];
+            
+            // Build tooltip with statistics
+            const lines = [
+              `${datasetLabel}: ${value !== null ? value.toFixed(1) : "—"}`,
+              `Mediaan: ${stats.median?.toFixed(1) || "—"}`,
+              `Spreiding (P25-P75): ${stats.p25?.toFixed(1) || "—"} - ${stats.p75?.toFixed(1) || "—"}`,
+              `Min-Max: ${stats.min?.toFixed(1) || "—"} - ${stats.max?.toFixed(1) || "—"}`,
+              `Teams: ${stats.count_teams || 0}`,
+            ];
+            
+            return lines;
           },
         },
       },
@@ -717,6 +701,9 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
   const insights = useMemo(() => {
     if (trendData.length === 0) return [];
 
+    const insightsList = [];
+
+    // Calculate category averages
     const categoryAverages: Record<string, number[]> = {};
     trendData.forEach((d) => {
       Object.entries(d.scores).forEach(([cat, score]) => {
@@ -734,7 +721,6 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
     const highest = sortedCategories[0];
     const lowest = sortedCategories[sortedCategories.length - 1];
 
-    const insightsList = [];
     if (highest) {
       insightsList.push(
         `Hoogste gemiddelde categorie: ${CATEGORY_LABELS[highest[0]] || highest[0]} (${highest[1].toFixed(1)})`
@@ -743,6 +729,63 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
     if (lowest && lowest[0] !== highest?.[0]) {
       insightsList.push(
         `Laagste gemiddelde categorie: ${CATEGORY_LABELS[lowest[0]] || lowest[0]} (${lowest[1].toFixed(1)})`
+      );
+    }
+
+    // Find project with largest spreiding (highest IQR)
+    let maxSpreadProject = null;
+    let maxSpreadValue = 0;
+    let minSpreadProject = null;
+    let minSpreadValue = Infinity;
+
+    trendData.forEach((d) => {
+      // Calculate average IQR across categories for this project
+      const iqrs = Object.values(d.statistics).map(s => s.iqr).filter(iqr => iqr !== null && iqr !== undefined) as number[];
+      if (iqrs.length > 0) {
+        const avgIqr = iqrs.reduce((a, b) => a + b, 0) / iqrs.length;
+        if (avgIqr > maxSpreadValue) {
+          maxSpreadValue = avgIqr;
+          maxSpreadProject = d.project_label;
+        }
+        if (avgIqr < minSpreadValue) {
+          minSpreadValue = avgIqr;
+          minSpreadProject = d.project_label;
+        }
+      }
+    });
+
+    if (maxSpreadProject) {
+      insightsList.push(
+        `Grootste spreiding: ${maxSpreadProject} (IQR ${maxSpreadValue.toFixed(1)})`
+      );
+    }
+    if (minSpreadProject && minSpreadProject !== maxSpreadProject) {
+      insightsList.push(
+        `Meest consistente project: ${minSpreadProject} (IQR ${minSpreadValue.toFixed(1)})`
+      );
+    }
+
+    // Find category with most variation across all projects
+    const categoryIqrs: Record<string, number[]> = {};
+    trendData.forEach((d) => {
+      Object.entries(d.statistics).forEach(([cat, stats]) => {
+        if (stats.iqr !== null && stats.iqr !== undefined) {
+          if (!categoryIqrs[cat]) categoryIqrs[cat] = [];
+          categoryIqrs[cat].push(stats.iqr);
+        }
+      });
+    });
+
+    const avgIqrByCategory: Record<string, number> = {};
+    Object.entries(categoryIqrs).forEach(([cat, iqrs]) => {
+      avgIqrByCategory[cat] = iqrs.reduce((a, b) => a + b, 0) / iqrs.length;
+    });
+
+    const sortedByVariation = Object.entries(avgIqrByCategory).sort(([, a], [, b]) => b - a);
+    if (sortedByVariation.length > 0) {
+      const [mostVariedCat, avgIqr] = sortedByVariation[0];
+      insightsList.push(
+        `Categorie met meeste variatie: ${CATEGORY_LABELS[mostVariedCat] || mostVariedCat} (gem. IQR ${avgIqr.toFixed(1)})`
       );
     }
 
@@ -782,9 +825,54 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
       {loading ? (
         <ChartSkeleton />
       ) : (
-        <div className="h-72">
-          <Line data={chartData} options={chartOptions} />
-        </div>
+        <>
+          <div className="h-72">
+            <Line data={chartData} options={chartOptions} />
+          </div>
+          
+          {/* Stat Chips - Show statistics for selected category */}
+          {selectedCategory !== "all" && trendData.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {(() => {
+                // Calculate overall stats for selected category across all projects
+                const categoryStats = trendData
+                  .map(d => d.statistics[selectedCategory])
+                  .filter(s => s && s.mean !== null && s.mean !== undefined);
+                
+                if (categoryStats.length === 0) return null;
+                
+                const avgMean = categoryStats.reduce((sum, s) => sum + (s.mean || 0), 0) / categoryStats.length;
+                const avgMedian = categoryStats.reduce((sum, s) => sum + (s.median || 0), 0) / categoryStats.length;
+                const avgIqr = categoryStats.reduce((sum, s) => sum + (s.iqr || 0), 0) / categoryStats.length;
+                
+                // Find overall min and max
+                const allMins = categoryStats.map(s => s.min).filter(v => v !== null) as number[];
+                const allMaxs = categoryStats.map(s => s.max).filter(v => v !== null) as number[];
+                const overallMin = allMins.length > 0 ? Math.min(...allMins) : null;
+                const overallMax = allMaxs.length > 0 ? Math.max(...allMaxs) : null;
+                
+                return (
+                  <>
+                    <div className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
+                      Gem: {avgMean.toFixed(1)}
+                    </div>
+                    <div className="px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-xs font-medium">
+                      Mediaan: {avgMedian.toFixed(1)}
+                    </div>
+                    <div className="px-3 py-1.5 bg-orange-50 text-orange-700 rounded-full text-xs font-medium">
+                      Spreiding (IQR): {avgIqr.toFixed(1)}
+                    </div>
+                    {overallMin !== null && overallMax !== null && (
+                      <div className="px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-xs font-medium">
+                        Min–Max: {overallMin.toFixed(1)}–{overallMax.toFixed(1)}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          )}
+        </>
       )}
 
       {/* Insights */}
@@ -818,11 +906,8 @@ export default function ProjectOverviewTab() {
     schoolYear: "",
     courseId: "",
     period: PERIODS[0],
-    searchQuery: "",
-    statusFilter: "all",
   });
 
-  const [selectedProject, setSelectedProject] = useState<ProjectOverviewItem | null>(null);
   const [academicYears, setAcademicYears] = useState<Array<{label: string; id: number}>>([]);
   const [courses, setCourses] = useState<Array<{id: number; name: string}>>([]);
 
@@ -875,23 +960,23 @@ export default function ProjectOverviewTab() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">
-            Projectbeoordelingen — Overzicht
-          </h2>
-          <p className="text-gray-600 mt-1">
-            Inzicht in projecten, rubriccategorieën en trends
-          </p>
-        </div>
+      <div>
+        <h2 className="text-2xl font-bold text-slate-900">
+          Projectbeoordelingen — Overzicht
+        </h2>
+        <p className="text-slate-600 mt-1">
+          Inzicht in projecten, rubriccategorieën en trends
+        </p>
+      </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3">
+      {/* Global Filter Bar */}
+      <div className="bg-gray-50 rounded-xl p-4">
+        <div className="flex flex-wrap gap-4 items-center">
           {/* School Year */}
           <div>
             <label className="block text-xs text-gray-600 mb-1">Schooljaar</label>
             <select
-              className="px-3 py-2 border rounded-lg text-sm"
+              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
               value={filters.schoolYear}
               onChange={(e) => handleFilterChange("schoolYear", e.target.value)}
             >
@@ -907,7 +992,7 @@ export default function ProjectOverviewTab() {
           <div>
             <label className="block text-xs text-gray-600 mb-1">Vak</label>
             <select
-              className="px-3 py-2 border rounded-lg text-sm"
+              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
               value={filters.courseId}
               onChange={(e) => handleFilterChange("courseId", e.target.value)}
             >
@@ -924,7 +1009,7 @@ export default function ProjectOverviewTab() {
           <div>
             <label className="block text-xs text-gray-600 mb-1">Periode</label>
             <select
-              className="px-3 py-2 border rounded-lg text-sm"
+              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
               value={filters.period}
               onChange={(e) => handleFilterChange("period", e.target.value)}
             >
@@ -938,23 +1023,17 @@ export default function ProjectOverviewTab() {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <KpiCards projects={projects} loading={loading} />
-
       {/* Project Table */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <FolderOpen className="w-5 h-5 text-blue-600" />
-          Projecten
-        </h3>
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
+          <h3 className="text-base font-semibold text-slate-900 leading-6">Projecten</h3>
+          <p className="text-sm text-slate-600">
+            Klik op een project om teamscores te bekijken
+          </p>
+        </div>
         <ProjectTable
           projects={projects}
           loading={loading}
-          searchQuery={filters.searchQuery}
-          onSearchChange={(query) => handleFilterChange("searchQuery", query)}
-          statusFilter={filters.statusFilter}
-          onStatusFilterChange={(status) => handleFilterChange("statusFilter", status)}
-          onSelectProject={setSelectedProject}
         />
       </div>
 
@@ -969,14 +1048,6 @@ export default function ProjectOverviewTab() {
         </p>
         <CategoryTrendChart trendData={trendData} loading={loading} />
       </div>
-
-      {/* Project Detail Drawer */}
-      {selectedProject && (
-        <ProjectDetailDrawer
-          project={selectedProject}
-          onClose={() => setSelectedProject(null)}
-        />
-      )}
     </div>
   );
 }

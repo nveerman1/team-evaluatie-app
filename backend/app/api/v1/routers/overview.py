@@ -1,5 +1,5 @@
 from __future__ import annotations
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
@@ -8,6 +8,7 @@ import csv
 from datetime import datetime
 from typing import Optional
 import logging
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,8 @@ from app.infra.db.models import (
     AcademicYear,
     Score,
     Reflection,
+    ProjectTeam,
+    ProjectTeamMember,
 )
 from app.services.omza_weighted_scores import compute_weighted_omza_scores_batch
 from app.api.v1.schemas.overview import (
@@ -56,6 +59,9 @@ from app.api.v1.schemas.overview import (
     ProjectTrendResponse,
     ProjectOverviewItem,
     CategoryTrendData,
+    CategoryStatistics,
+    ProjectTeamScore,
+    ProjectTeamsResponse,
     PeerOverviewDashboardResponse,
     FeedbackCollectionResponse,
     OmzaTrendDataPoint,
@@ -75,6 +81,67 @@ from app.api.v1.schemas.overview import (
 )
 
 router = APIRouter(prefix="/overview", tags=["overview"])
+
+
+def _calculate_statistics(values: list[float]) -> CategoryStatistics:
+    """
+    Calculate statistical measures from a list of values
+    Returns mean, median, percentiles, min, max, and IQR
+    """
+    if not values:
+        return CategoryStatistics(count_teams=0, count_assessments=0)
+    
+    sorted_values = sorted(values)
+    n = len(sorted_values)
+    
+    # Calculate mean
+    mean = sum(sorted_values) / n
+    
+    # Calculate median
+    if n % 2 == 0:
+        median = (sorted_values[n // 2 - 1] + sorted_values[n // 2]) / 2
+    else:
+        median = sorted_values[n // 2]
+    
+    # Calculate percentiles
+    def percentile(data: list[float], p: float) -> float:
+        """Calculate the p-th percentile (p between 0 and 100)"""
+        k = (len(data) - 1) * (p / 100.0)
+        f = int(k)
+        c = f + 1
+        if c >= len(data):
+            return data[-1]
+        if f < 0:
+            return data[0]
+        d0 = data[f] * (c - k)
+        d1 = data[c] * (k - f)
+        return d0 + d1
+    
+    p10 = percentile(sorted_values, 10)
+    p25 = percentile(sorted_values, 25)
+    p75 = percentile(sorted_values, 75)
+    p90 = percentile(sorted_values, 90)
+    
+    # Min and max
+    min_val = sorted_values[0]
+    max_val = sorted_values[-1]
+    
+    # IQR (Interquartile Range)
+    iqr = p75 - p25
+    
+    return CategoryStatistics(
+        mean=round(mean, 2),
+        median=round(median, 2),
+        p25=round(p25, 2),
+        p75=round(p75, 2),
+        p10=round(p10, 2),
+        p90=round(p90, 2),
+        min=round(min_val, 2),
+        max=round(max_val, 2),
+        iqr=round(iqr, 2),
+        count_teams=n,
+        count_assessments=n
+    )
 
 
 def _calculate_project_score(db: Session, assessment_id: int, rubric_id: int, team_number: int) -> Optional[float]:
@@ -1021,7 +1088,8 @@ def get_project_overview(
         else:
             # Get all scores for this assessment
             all_scores = db.query(ProjectAssessmentScore).filter(
-                ProjectAssessmentScore.assessment_id == assessment.id
+                ProjectAssessmentScore.assessment_id == assessment.id,
+                ProjectAssessmentScore.team_number.isnot(None)
             ).all()
             
             if not all_scores:
@@ -1033,41 +1101,69 @@ def get_project_overview(
                     RubricCriterion.rubric_id == rubric.id
                 ).all()
                 
-                # Create score map
-                score_map = {s.criterion_id: s.score for s in all_scores}
+                # Create criterion map for easy lookup
+                criterion_map = {c.id: c for c in criteria}
                 
-                # Calculate weighted average overall
-                total_weighted_score = 0.0
-                total_weight = 0.0
-                for criterion in criteria:
-                    if criterion.id in score_map:
-                        total_weighted_score += score_map[criterion.id] * criterion.weight
-                        total_weight += criterion.weight
+                # Group scores by team_number
+                team_scores = defaultdict(list)
+                for score in all_scores:
+                    team_scores[score.team_number].append(score)
                 
-                if total_weight == 0:
-                    average_score_overall = None
+                # Calculate grade for each team, then average across teams
+                team_grades = []
+                team_category_grades = defaultdict(list)
+                
+                for team_number, scores in team_scores.items():
+                    # Create score map for this team
+                    score_map = {s.criterion_id: s.score for s in scores}
+                    
+                    # Calculate weighted average for this team
+                    total_weighted_score = 0.0
+                    total_weight = 0.0
+                    for criterion in criteria:
+                        if criterion.id in score_map:
+                            total_weighted_score += score_map[criterion.id] * criterion.weight
+                            total_weight += criterion.weight
+                    
+                    if total_weight > 0:
+                        avg_score = total_weighted_score / total_weight
+                        team_grade = _score_to_grade(avg_score, rubric.scale_min, rubric.scale_max)
+                        team_grades.append(team_grade)
+                    
+                    # Calculate weighted average by category for this team
+                    category_scores = {}
+                    category_weights = {}
+                    
+                    for criterion in criteria:
+                        if criterion.id in score_map and criterion.category:
+                            cat = criterion.category.lower()
+                            if cat not in category_scores:
+                                category_scores[cat] = 0.0
+                                category_weights[cat] = 0.0
+                            category_scores[cat] += score_map[criterion.id] * criterion.weight
+                            category_weights[cat] += criterion.weight
+                    
+                    for cat, total_score in category_scores.items():
+                        if category_weights[cat] > 0:
+                            avg = total_score / category_weights[cat]
+                            cat_grade = _score_to_grade(avg, rubric.scale_min, rubric.scale_max)
+                            team_category_grades[cat].append(cat_grade)
+                
+                # Average across all teams
+                if team_grades:
+                    average_score_overall = sum(team_grades) / len(team_grades)
+                    # Calculate overall statistics
+                    overall_statistics = _calculate_statistics(team_grades)
                 else:
-                    avg_score = total_weighted_score / total_weight
-                    average_score_overall = _score_to_grade(avg_score, rubric.scale_min, rubric.scale_max)
-                
-                # Calculate average by category
-                category_scores = {}
-                category_weights = {}
-                
-                for criterion in criteria:
-                    if criterion.id in score_map and criterion.category:
-                        cat = criterion.category.lower()
-                        if cat not in category_scores:
-                            category_scores[cat] = 0.0
-                            category_weights[cat] = 0.0
-                        category_scores[cat] += score_map[criterion.id] * criterion.weight
-                        category_weights[cat] += criterion.weight
+                    average_score_overall = None
+                    overall_statistics = None
                 
                 average_scores_by_category = {}
-                for cat, total_score in category_scores.items():
-                    if category_weights[cat] > 0:
-                        avg = total_score / category_weights[cat]
-                        average_scores_by_category[cat] = round(_score_to_grade(avg, rubric.scale_min, rubric.scale_max), 1)
+                category_statistics = {}
+                for cat, grades in team_category_grades.items():
+                    if grades:
+                        average_scores_by_category[cat] = round(sum(grades) / len(grades), 1)
+                        category_statistics[cat] = _calculate_statistics(grades)
         
         # Determine status
         status = "active" if assessment.status in ["draft", "open"] else "completed"
@@ -1082,7 +1178,9 @@ def get_project_overview(
             num_teams=num_teams,
             average_score_overall=round(average_score_overall, 1) if average_score_overall else None,
             average_scores_by_category=average_scores_by_category,
-            status=status
+            status=status,
+            overall_statistics=overall_statistics,
+            category_statistics=category_statistics
         ))
     
     return ProjectOverviewListResponse(
@@ -1144,9 +1242,10 @@ def get_project_trends(
         if not rubric:
             continue
         
-        # Get scores
+        # Get scores (only with team numbers)
         all_scores = db.query(ProjectAssessmentScore).filter(
-            ProjectAssessmentScore.assessment_id == assessment.id
+            ProjectAssessmentScore.assessment_id == assessment.id,
+            ProjectAssessmentScore.team_number.isnot(None)
         ).all()
         
         if not all_scores:
@@ -1157,26 +1256,44 @@ def get_project_trends(
             RubricCriterion.rubric_id == rubric.id
         ).all()
         
-        score_map = {s.criterion_id: s.score for s in all_scores}
+        # Group scores by team_number
+        team_scores = defaultdict(list)
+        for score in all_scores:
+            team_scores[score.team_number].append(score)
         
-        # Calculate average by category
-        category_scores = {}
-        category_weights = {}
+        # Calculate grades per team, then average across teams by category
+        team_category_grades = defaultdict(list)
         
-        for criterion in criteria:
-            if criterion.id in score_map and criterion.category:
-                cat = criterion.category.lower()
-                if cat not in category_scores:
-                    category_scores[cat] = 0.0
-                    category_weights[cat] = 0.0
-                category_scores[cat] += score_map[criterion.id] * criterion.weight
-                category_weights[cat] += criterion.weight
+        for team_number, scores_list in team_scores.items():
+            # Create score map for this team
+            score_map = {s.criterion_id: s.score for s in scores_list}
+            
+            # Calculate weighted average by category for this team
+            category_scores = {}
+            category_weights = {}
+            
+            for criterion in criteria:
+                if criterion.id in score_map and criterion.category:
+                    cat = criterion.category.lower()
+                    if cat not in category_scores:
+                        category_scores[cat] = 0.0
+                        category_weights[cat] = 0.0
+                    category_scores[cat] += score_map[criterion.id] * criterion.weight
+                    category_weights[cat] += criterion.weight
+            
+            for cat, total_score in category_scores.items():
+                if category_weights[cat] > 0:
+                    avg = total_score / category_weights[cat]
+                    cat_grade = _score_to_grade(avg, rubric.scale_min, rubric.scale_max)
+                    team_category_grades[cat].append(cat_grade)
         
+        # Average across all teams by category
         scores = {}
-        for cat, total_score in category_scores.items():
-            if category_weights[cat] > 0:
-                avg = total_score / category_weights[cat]
-                scores[cat] = round(_score_to_grade(avg, rubric.scale_min, rubric.scale_max), 1)
+        statistics = {}
+        for cat, grades in team_category_grades.items():
+            if grades:
+                scores[cat] = round(sum(grades) / len(grades), 1)
+                statistics[cat] = _calculate_statistics(grades)
         
         # Create label
         month = assessment.published_at.month
@@ -1194,10 +1311,138 @@ def get_project_trends(
         
         trend_data.append(CategoryTrendData(
             project_label=project_label,
-            scores=scores
+            project_id=assessment.id,
+            scores=scores,
+            statistics=statistics
         ))
     
     return ProjectTrendResponse(trend_data=trend_data)
+
+
+@router.get("/projects/{project_id}/teams", response_model=ProjectTeamsResponse)
+def get_project_teams(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get team scores for a specific project assessment
+    """
+    school_id = current_user.school_id
+    
+    # Get the project assessment
+    assessment = db.query(ProjectAssessment).filter(
+        ProjectAssessment.id == project_id,
+        ProjectAssessment.school_id == school_id
+    ).first()
+    
+    if not assessment:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    # Get rubric
+    rubric = db.query(Rubric).filter(Rubric.id == assessment.rubric_id).first()
+    if not rubric:
+        return ProjectTeamsResponse(
+            project_id=project_id,
+            project_name=assessment.title,
+            teams=[]
+        )
+    
+    # Get all scores for this assessment
+    all_scores = db.query(ProjectAssessmentScore).filter(
+        ProjectAssessmentScore.assessment_id == assessment.id,
+        ProjectAssessmentScore.team_number.isnot(None)
+    ).all()
+    
+    if not all_scores:
+        return ProjectTeamsResponse(
+            project_id=project_id,
+            project_name=assessment.title,
+            teams=[]
+        )
+    
+    # Get criteria with categories
+    criteria = db.query(RubricCriterion).filter(
+        RubricCriterion.rubric_id == rubric.id
+    ).all()
+    
+    # Group scores by team_number
+    team_scores_map = defaultdict(list)
+    for score in all_scores:
+        team_scores_map[score.team_number].append(score)
+    
+    # Get team information (names and members)
+    project_teams = db.query(ProjectTeam).filter(
+        ProjectTeam.project_id == assessment.project_id
+    ).all() if assessment.project_id else []
+    
+    team_info_map = {}
+    for pt in project_teams:
+        members = db.query(ProjectTeamMember).join(
+            User, ProjectTeamMember.user_id == User.id
+        ).filter(
+            ProjectTeamMember.project_team_id == pt.id
+        ).all()
+        
+        team_info_map[pt.team_number] = {
+            "name": pt.display_name_at_time,
+            "members": [m.user.name for m in members]
+        }
+    
+    # Calculate scores for each team
+    teams = []
+    for team_number in sorted(team_scores_map.keys()):
+        scores = team_scores_map[team_number]
+        score_map = {s.criterion_id: s.score for s in scores}
+        
+        # Calculate weighted average overall
+        total_weighted_score = 0.0
+        total_weight = 0.0
+        for criterion in criteria:
+            if criterion.id in score_map:
+                total_weighted_score += score_map[criterion.id] * criterion.weight
+                total_weight += criterion.weight
+        
+        overall_score = None
+        if total_weight > 0:
+            avg_score = total_weighted_score / total_weight
+            overall_score = _score_to_grade(avg_score, rubric.scale_min, rubric.scale_max)
+        
+        # Calculate scores by category
+        category_scores_dict = {}
+        category_weights_dict = {}
+        
+        for criterion in criteria:
+            if criterion.id in score_map and criterion.category:
+                cat = criterion.category.lower()
+                if cat not in category_scores_dict:
+                    category_scores_dict[cat] = 0.0
+                    category_weights_dict[cat] = 0.0
+                category_scores_dict[cat] += score_map[criterion.id] * criterion.weight
+                category_weights_dict[cat] += criterion.weight
+        
+        category_scores = {}
+        for cat, total_score in category_scores_dict.items():
+            if category_weights_dict[cat] > 0:
+                avg = total_score / category_weights_dict[cat]
+                category_scores[cat] = round(_score_to_grade(avg, rubric.scale_min, rubric.scale_max), 1)
+        
+        # Get team info
+        team_info = team_info_map.get(team_number, {"name": None, "members": []})
+        
+        teams.append(ProjectTeamScore(
+            team_number=team_number,
+            team_name=team_info["name"] or f"Team {team_number}",
+            team_members=team_info["members"],
+            overall_score=round(overall_score, 1) if overall_score else None,
+            category_scores=category_scores
+        ))
+    
+    return ProjectTeamsResponse(
+        project_id=project_id,
+        project_name=assessment.title,
+        teams=teams
+    )
 
 
 @router.get("/academic-years")

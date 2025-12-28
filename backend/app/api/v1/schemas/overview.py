@@ -132,6 +132,23 @@ class OverviewMatrixResponse(BaseModel):
 
 # ==================== Project Overview Schemas ====================
 
+class CategoryStatistics(BaseModel):
+    """
+    Statistical data for a category
+    """
+    mean: Optional[float] = None
+    median: Optional[float] = None
+    p25: Optional[float] = None  # 25th percentile
+    p75: Optional[float] = None  # 75th percentile
+    p10: Optional[float] = None  # 10th percentile (optional whisker)
+    p90: Optional[float] = None  # 90th percentile (optional whisker)
+    min: Optional[float] = None
+    max: Optional[float] = None
+    iqr: Optional[float] = None  # Interquartile range (P75 - P25)
+    count_teams: int = 0
+    count_assessments: int = 0
+
+
 class ProjectOverviewItem(BaseModel):
     """
     Single project in the teacher's project overview
@@ -146,6 +163,9 @@ class ProjectOverviewItem(BaseModel):
     average_score_overall: Optional[float] = None
     average_scores_by_category: dict[str, float] = {}  # category -> average score
     status: str  # "active" | "completed"
+    # Statistics for overall and by category
+    overall_statistics: Optional[CategoryStatistics] = None
+    category_statistics: dict[str, CategoryStatistics] = {}  # category -> statistics
 
 
 class ProjectOverviewListResponse(BaseModel):
@@ -161,7 +181,9 @@ class CategoryTrendData(BaseModel):
     Trend data point for category scores across projects
     """
     project_label: str  # e.g., "Q1 2025 - Web"
-    scores: dict[str, float]  # category -> score
+    project_id: int  # For filtering/linking
+    scores: dict[str, float]  # category -> score (mean)
+    statistics: dict[str, CategoryStatistics] = {}  # category -> statistics
 
 
 class ProjectTrendResponse(BaseModel):
@@ -169,6 +191,26 @@ class ProjectTrendResponse(BaseModel):
     Trend data for project categories over time
     """
     trend_data: List[CategoryTrendData]
+
+
+class ProjectTeamScore(BaseModel):
+    """
+    Score details for a single team in a project
+    """
+    team_number: int
+    team_name: Optional[str] = None
+    team_members: List[str] = []  # Student names
+    overall_score: Optional[float] = None
+    category_scores: dict[str, float] = {}  # category -> score
+
+
+class ProjectTeamsResponse(BaseModel):
+    """
+    Team scores for a specific project
+    """
+    project_id: int
+    project_name: str
+    teams: List[ProjectTeamScore]
 
 
 # ==================== Peer Evaluation Overview Schemas ====================
