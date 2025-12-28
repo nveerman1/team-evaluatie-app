@@ -87,8 +87,8 @@ const CATEGORY_LABELS: Record<string, string> = {
   communicatie: "Communicatie",
 };
 
-// Table configuration
-const TABLE_COLUMNS_COUNT = 11; // Total number of columns in the project table
+// Table configuration - removed Status and Acties columns
+const TABLE_COLUMNS_COUNT = 9; // Total number of columns in the project table
 
 /* =========================================
    HOOK: useProjectOverviewData
@@ -226,18 +226,29 @@ function KpiCards({ projects, loading }: KpiCardsProps) {
       ([, a], [, b]) => b - a
     )[0]?.[0];
 
+    // Calculate average spreiding (IQR) across all projects
+    const iqrs: number[] = [];
+    projectsWithScores.forEach((p) => {
+      if (p.overall_statistics?.iqr !== null && p.overall_statistics?.iqr !== undefined) {
+        iqrs.push(p.overall_statistics.iqr);
+      }
+    });
+    const avgIqr = iqrs.length > 0 ? iqrs.reduce((sum, iqr) => sum + iqr, 0) / iqrs.length : null;
+
     return {
       avgOverall,
       completedCount,
       mostAssessedCategory: mostAssessedCategory
         ? CATEGORY_LABELS[mostAssessedCategory] || mostAssessedCategory
         : "—",
+      avgIqr,
     };
   }, [projects]);
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiSkeleton />
         <KpiSkeleton />
         <KpiSkeleton />
         <KpiSkeleton />
@@ -246,7 +257,7 @@ function KpiCards({ projects, loading }: KpiCardsProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* Average Score Card */}
       <div className="bg-slate-50 rounded-xl p-4 border border-gray-200">
         <div className="flex items-center gap-2 mb-2">
@@ -268,6 +279,18 @@ function KpiCards({ projects, loading }: KpiCardsProps) {
         </div>
         <div className="text-2xl font-bold text-gray-900">{kpis.completedCount}</div>
         <p className="text-xs text-gray-500 mt-1">Projectbeoordelingen afgerond</p>
+      </div>
+
+      {/* Spreiding Card */}
+      <div className="bg-slate-50 rounded-xl p-4 border border-gray-200">
+        <div className="flex items-center gap-2 mb-2">
+          <TrendingUp className="w-5 h-5 text-orange-600" />
+          <span className="text-sm text-gray-600">Spreiding (gemiddeld)</span>
+        </div>
+        <div className="text-2xl font-bold text-gray-900">
+          {kpis.avgIqr !== null ? `IQR ${kpis.avgIqr.toFixed(1)}` : "—"}
+        </div>
+        <p className="text-xs text-gray-500 mt-1">Gem. verschil tussen teams per project</p>
       </div>
 
       {/* Most Assessed Category Card */}
@@ -531,8 +554,8 @@ function ProjectTable({
       {loading ? (
         <TableSkeleton />
       ) : (
-        <div className="overflow-x-auto border rounded-xl">
-          <table className="w-full min-w-[900px]">
+        <div className="border rounded-xl overflow-hidden">
+          <table className="w-full">
             <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
                 <th
@@ -570,12 +593,6 @@ function ProjectTable({
                   onClick={() => handleSort("averageScoreOverall")}
                 >
                   Gem. score <SortIcon field="averageScoreOverall" />
-                </th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Acties
                 </th>
               </tr>
             </thead>
@@ -615,11 +632,15 @@ function ProjectTable({
                       {project.averageScoreOverall?.toFixed(1) || "—"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center">{getStatusBadge(project.status)}</td>
-                  <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
+                </tr>
+              ))}
+              {sortedProjects.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                    Geen projecten gevonden
+                  </td>
+                </tr>
+              )}
                         onSelectProject(project);
                       }}
                       className="text-sm text-blue-600 hover:text-blue-800 font-medium"
@@ -684,10 +705,38 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
       },
       tooltip: {
         callbacks: {
-          label: (context: { dataset: { label?: string }; parsed: { y: number | null } }) => {
-            const label = context.dataset.label || "";
+          label: (context: any) => {
+            const dataIndex = context.dataIndex;
+            const datasetLabel = context.dataset.label || "";
             const value = context.parsed.y;
-            return `${label}: ${value !== null ? value.toFixed(1) : "—"}`;
+            
+            // Get the trend data point for this data index
+            const trendPoint = trendData[dataIndex];
+            if (!trendPoint) {
+              return `${datasetLabel}: ${value !== null ? value.toFixed(1) : "—"}`;
+            }
+
+            // Find category key that matches this dataset
+            const categoryKey = Object.keys(CATEGORY_LABELS).find(
+              key => CATEGORY_LABELS[key] === datasetLabel
+            );
+            
+            if (!categoryKey || !trendPoint.statistics[categoryKey]) {
+              return `${datasetLabel}: ${value !== null ? value.toFixed(1) : "—"}`;
+            }
+
+            const stats = trendPoint.statistics[categoryKey];
+            
+            // Build tooltip with statistics
+            const lines = [
+              `${datasetLabel}: ${value !== null ? value.toFixed(1) : "—"}`,
+              `Mediaan: ${stats.median?.toFixed(1) || "—"}`,
+              `Spreiding (P25-P75): ${stats.p25?.toFixed(1) || "—"} - ${stats.p75?.toFixed(1) || "—"}`,
+              `Min-Max: ${stats.min?.toFixed(1) || "—"} - ${stats.max?.toFixed(1) || "—"}`,
+              `Teams: ${stats.count_teams || 0}`,
+            ];
+            
+            return lines;
           },
         },
       },
@@ -717,6 +766,9 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
   const insights = useMemo(() => {
     if (trendData.length === 0) return [];
 
+    const insightsList = [];
+
+    // Calculate category averages
     const categoryAverages: Record<string, number[]> = {};
     trendData.forEach((d) => {
       Object.entries(d.scores).forEach(([cat, score]) => {
@@ -734,7 +786,6 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
     const highest = sortedCategories[0];
     const lowest = sortedCategories[sortedCategories.length - 1];
 
-    const insightsList = [];
     if (highest) {
       insightsList.push(
         `Hoogste gemiddelde categorie: ${CATEGORY_LABELS[highest[0]] || highest[0]} (${highest[1].toFixed(1)})`
@@ -743,6 +794,63 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
     if (lowest && lowest[0] !== highest?.[0]) {
       insightsList.push(
         `Laagste gemiddelde categorie: ${CATEGORY_LABELS[lowest[0]] || lowest[0]} (${lowest[1].toFixed(1)})`
+      );
+    }
+
+    // Find project with largest spreiding (highest IQR)
+    let maxSpreadProject = null;
+    let maxSpreadValue = 0;
+    let minSpreadProject = null;
+    let minSpreadValue = Infinity;
+
+    trendData.forEach((d) => {
+      // Calculate average IQR across categories for this project
+      const iqrs = Object.values(d.statistics).map(s => s.iqr).filter(iqr => iqr !== null && iqr !== undefined) as number[];
+      if (iqrs.length > 0) {
+        const avgIqr = iqrs.reduce((a, b) => a + b, 0) / iqrs.length;
+        if (avgIqr > maxSpreadValue) {
+          maxSpreadValue = avgIqr;
+          maxSpreadProject = d.project_label;
+        }
+        if (avgIqr < minSpreadValue) {
+          minSpreadValue = avgIqr;
+          minSpreadProject = d.project_label;
+        }
+      }
+    });
+
+    if (maxSpreadProject) {
+      insightsList.push(
+        `Grootste spreiding: ${maxSpreadProject} (IQR ${maxSpreadValue.toFixed(1)})`
+      );
+    }
+    if (minSpreadProject && minSpreadProject !== maxSpreadProject) {
+      insightsList.push(
+        `Meest consistente project: ${minSpreadProject} (IQR ${minSpreadValue.toFixed(1)})`
+      );
+    }
+
+    // Find category with most variation across all projects
+    const categoryIqrs: Record<string, number[]> = {};
+    trendData.forEach((d) => {
+      Object.entries(d.statistics).forEach(([cat, stats]) => {
+        if (stats.iqr !== null && stats.iqr !== undefined) {
+          if (!categoryIqrs[cat]) categoryIqrs[cat] = [];
+          categoryIqrs[cat].push(stats.iqr);
+        }
+      });
+    });
+
+    const avgIqrByCategory: Record<string, number> = {};
+    Object.entries(categoryIqrs).forEach(([cat, iqrs]) => {
+      avgIqrByCategory[cat] = iqrs.reduce((a, b) => a + b, 0) / iqrs.length;
+    });
+
+    const sortedByVariation = Object.entries(avgIqrByCategory).sort(([, a], [, b]) => b - a);
+    if (sortedByVariation.length > 0) {
+      const [mostVariedCat, avgIqr] = sortedByVariation[0];
+      insightsList.push(
+        `Categorie met meeste variatie: ${CATEGORY_LABELS[mostVariedCat] || mostVariedCat} (gem. IQR ${avgIqr.toFixed(1)})`
       );
     }
 
@@ -782,9 +890,54 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
       {loading ? (
         <ChartSkeleton />
       ) : (
-        <div className="h-72">
-          <Line data={chartData} options={chartOptions} />
-        </div>
+        <>
+          <div className="h-72">
+            <Line data={chartData} options={chartOptions} />
+          </div>
+          
+          {/* Stat Chips - Show statistics for selected category */}
+          {selectedCategory !== "all" && trendData.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {(() => {
+                // Calculate overall stats for selected category across all projects
+                const categoryStats = trendData
+                  .map(d => d.statistics[selectedCategory])
+                  .filter(s => s && s.mean !== null && s.mean !== undefined);
+                
+                if (categoryStats.length === 0) return null;
+                
+                const avgMean = categoryStats.reduce((sum, s) => sum + (s.mean || 0), 0) / categoryStats.length;
+                const avgMedian = categoryStats.reduce((sum, s) => sum + (s.median || 0), 0) / categoryStats.length;
+                const avgIqr = categoryStats.reduce((sum, s) => sum + (s.iqr || 0), 0) / categoryStats.length;
+                
+                // Find overall min and max
+                const allMins = categoryStats.map(s => s.min).filter(v => v !== null) as number[];
+                const allMaxs = categoryStats.map(s => s.max).filter(v => v !== null) as number[];
+                const overallMin = allMins.length > 0 ? Math.min(...allMins) : null;
+                const overallMax = allMaxs.length > 0 ? Math.max(...allMaxs) : null;
+                
+                return (
+                  <>
+                    <div className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
+                      Gem: {avgMean.toFixed(1)}
+                    </div>
+                    <div className="px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-xs font-medium">
+                      Mediaan: {avgMedian.toFixed(1)}
+                    </div>
+                    <div className="px-3 py-1.5 bg-orange-50 text-orange-700 rounded-full text-xs font-medium">
+                      Spreiding (IQR): {avgIqr.toFixed(1)}
+                    </div>
+                    {overallMin !== null && overallMax !== null && (
+                      <div className="px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-xs font-medium">
+                        Min–Max: {overallMin.toFixed(1)}–{overallMax.toFixed(1)}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          )}
+        </>
       )}
 
       {/* Insights */}
