@@ -127,7 +127,7 @@ export function CategoriesSubTab({ filters }: CategoriesSubTabProps) {
                           name: row.name,
                           className: row.className,
                           lastScore: avgScore,
-                          trendDelta: null,
+                          trendDelta: null as number | null,
                         };
                       }
                       return null;
@@ -158,7 +158,7 @@ export function CategoriesSubTab({ filters }: CategoriesSubTabProps) {
                                 </span>
                               </td>
                               <td className={`px-4 py-3 text-center text-sm font-medium ${getTrendColor(student.trendDelta)}`}>
-                                {student.trendDelta !== null 
+                                {student.trendDelta !== null && typeof student.trendDelta === 'number'
                                   ? (student.trendDelta > 0 ? "+" : "") + student.trendDelta.toFixed(1)
                                   : "–"
                                 }

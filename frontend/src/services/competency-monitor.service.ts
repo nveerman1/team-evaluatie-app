@@ -14,6 +14,7 @@ import type {
   CompetencyOverviewFilters,
   FilterOptions,
   StudentDetailData,
+  HeatmapStudentRow,
 } from "@/dtos/competency-monitor.dto";
 
 // Service implementation
@@ -178,10 +179,10 @@ export const competencyMonitorService = {
       // Calculate average score for this competency across all students
       const scores = heatmapData.rows
         .map((row: { scores: Record<number, number | null> }) => row.scores[comp.id])
-        .filter((s): s is number => s !== null && !isNaN(s));
+        .filter((s: number | null | undefined): s is number => s !== null && s !== undefined && !isNaN(s));
       
       const averageScore = scores.length > 0
-        ? scores.reduce((sum, s) => sum + s, 0) / scores.length
+        ? scores.reduce((sum: number, s: number) => sum + s, 0) / scores.length
         : 0;
       
       // Skip if averageScore is invalid
@@ -221,9 +222,9 @@ export const competencyMonitorService = {
     }));
     
     // Calculate overall statistics
-    const allScores = heatmapRows.flatMap((row) => Object.values(row.scores).filter((s): s is number => s !== null));
+    const allScores = heatmapRows.flatMap((row: HeatmapStudentRow) => Object.values(row.scores).filter((s: number | null): s is number => s !== null));
     const classAverageScore = allScores.length > 0 
-      ? allScores.reduce((sum, s) => sum + s, 0) / allScores.length 
+      ? allScores.reduce((sum: number, s: number) => sum + s, 0) / allScores.length 
       : null;
     
     // Build scans data - fetch multiple windows based on scanRange filter
@@ -259,6 +260,55 @@ export const competencyMonitorService = {
           ? sortedScores[Math.floor(sortedScores.length / 2)] 
           : 0;
         
+        // Calculate category averages FOR THIS SPECIFIC WINDOW/SCAN
+        const windowCompetencies = windowHeatmapData.competencies || [];
+        const windowCompToCatMap = new Map<number, number>();
+        const windowCatNames = new Map<number, string>();
+        
+        windowCompetencies.forEach((comp: { id: number; category_id: number; category_name: string }) => {
+          if (comp.category_id) {
+            windowCompToCatMap.set(comp.id, comp.category_id);
+            windowCatNames.set(comp.category_id, comp.category_name || `Category ${comp.category_id}`);
+          }
+        });
+        
+        // Build category averages map for this window
+        const windowCategoryScores = new Map<number, number[]>();
+        
+        windowCompetencies.forEach((comp: { id: number; category_id: number }) => {
+          if (!comp.category_id) return;
+          
+          const scores = windowHeatmapData.rows
+            .map((row: { scores: Record<number, number | null> }) => row.scores[comp.id])
+            .filter((s: number | null | undefined): s is number => s !== null && s !== undefined && !isNaN(s));
+          
+          if (!windowCategoryScores.has(comp.category_id)) {
+            windowCategoryScores.set(comp.category_id, []);
+          }
+          
+          // Add average score for this competency to the category's scores
+          if (scores.length > 0) {
+            const compAvg = scores.reduce((sum: number, s: number) => sum + s, 0) / scores.length;
+            windowCategoryScores.get(comp.category_id)!.push(compAvg);
+          }
+        });
+        
+        // Calculate final category averages for this window
+        const windowCategoryAverages = Array.from(windowCategoryScores.entries()).map(([catId, compScores]) => ({
+          categoryId: catId,
+          categoryName: windowCatNames.get(catId) || `Category ${catId}`,
+          averageScore: compScores.length > 0 
+            ? compScores.reduce((sum: number, s: number) => sum + s, 0) / compScores.length 
+            : 0,
+        }));
+        
+        console.log(`DEBUG: Scan ${window.id} (${window.title}) category averages:`, 
+          windowCategoryAverages.map(cat => ({ 
+            category: cat.categoryName, 
+            avg: cat.averageScore.toFixed(2) 
+          }))
+        );
+        
         scans.push({
           scanId: window.id,
           label: window.title,
@@ -269,11 +319,7 @@ export const competencyMonitorService = {
           p25: calculatePercentile(25),
           p75: calculatePercentile(75),
           p90: calculatePercentile(90),
-          categoryAverages: categorySummaries.map(cat => ({
-            categoryId: cat.id,
-            categoryName: cat.name,
-            averageScore: cat.averageScore,
-          })),
+          categoryAverages: windowCategoryAverages,
         });
       } catch (error) {
         console.error(`Failed to fetch heatmap for window ${window.id}:`, error);
@@ -294,7 +340,7 @@ export const competencyMonitorService = {
     // Find students with low scores in specific categories (< 2.5)
     for (const row of heatmapRows) {
       Object.entries(row.scores).forEach(([catIdStr, score]) => {
-        if (score !== null && score < 2.5) {
+        if (typeof score === 'number' && score < 2.5) {
           const category = categorySummaries.find(c => c.id === Number(catIdStr));
           notableStudents.push({
             studentId: row.studentId,
@@ -349,10 +395,10 @@ export const competencyMonitorService = {
           
           const scores = previousHeatmapData.rows
             .map((row: { scores: Record<number, number | null> }) => row.scores[comp.id])
-            .filter((s): s is number => s !== null && !isNaN(s));
+            .filter((s: number | null | undefined): s is number => s !== null && s !== undefined && !isNaN(s));
           
           if (scores.length > 0) {
-            const avg = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+            const avg = scores.reduce((sum: number, s: number) => sum + s, 0) / scores.length;
             
             if (previousCategoryAverages.has(comp.category_id)) {
               const existing = previousCategoryAverages.get(comp.category_id)!;
@@ -429,11 +475,11 @@ export const competencyMonitorService = {
             const previousCatScores = previousStudentCategoryScores.get(row.studentId);
             if (previousCatScores) {
               Object.entries(row.scores).forEach(([catIdStr, currentScore]) => {
-                if (currentScore !== null) {
+                if (typeof currentScore === 'number') {
                   const catId = Number(catIdStr);
                   const previousScore = previousCatScores[catId];
                   
-                  if (previousScore !== undefined) {
+                  if (typeof previousScore === 'number') {
                     const catDelta = currentScore - previousScore;
                     const category = categorySummaries.find(c => c.id === catId);
                     
@@ -814,6 +860,47 @@ export const competencyMonitorService = {
       };
     } catch (error) {
       console.error("Failed to fetch student detail:", error);
+      return null;
+    }
+  },
+
+  /**
+   * Get historical scores for a student across all scans
+   */
+  async getStudentHistoricalScores(studentId: number, courseId?: number): Promise<{
+    studentId: number;
+    studentName: string;
+    className: string | null;
+    scans: {
+      scanId: number;
+      scanLabel: string;
+      scanDate: string;
+      categoryScores: Record<number, number | null>;
+    }[];
+  } | null> {
+    try {
+      const params: Record<string, any> = {};
+      if (courseId) {
+        params.course_id = courseId;
+      }
+
+      const response = await api.get(`/competencies/student/${studentId}/historical-scores`, {
+        params,
+      });
+      
+      return {
+        studentId: response.data.student_id,
+        studentName: response.data.student_name,
+        className: response.data.class_name,
+        scans: response.data.scans.map((scan: any) => ({
+          scanId: scan.scan_id,
+          scanLabel: scan.scan_label,
+          scanDate: scan.scan_date,
+          categoryScores: scan.category_scores,
+        })),
+      };
+    } catch (error) {
+      console.error("Failed to fetch student historical scores:", error);
       return null;
     }
   },

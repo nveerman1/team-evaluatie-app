@@ -1,32 +1,70 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useCompetencyOverview } from "@/hooks/useCompetencyOverview";
 import { Loading, ErrorMessage } from "@/components";
 import { CompetencyRadarChart, CATEGORY_COLORS } from "@/components/student/competency/CompetencyRadarChart";
 import { SpreadChartCompact } from "@/components/teacher/competency/SpreadChartCompact";
 import type { CompetencyOverviewFilters } from "@/dtos/competency-monitor.dto";
+import { competencyMonitorService } from "@/services/competency-monitor.service";
 
 interface OverviewSubTabProps {
   filters: CompetencyOverviewFilters;
+}
+
+interface StudentScanScore {
+  scanId: number;
+  scanLabel: string;
+  scanDate: string;
+  categoryScores: Record<number, number | null>;
+}
+
+interface StudentHistoricalData {
+  studentId: number;
+  studentName: string;
+  className: string | null;
+  scans: StudentScanScore[];
 }
 
 export function OverviewSubTab({ filters }: OverviewSubTabProps) {
   const { data, loading, error } = useCompetencyOverview(filters);
   const [chartMode, setChartMode] = useState<"average" | "spread" | "growth">("average");
   const [selectedScanId, setSelectedScanId] = useState<number | null>(null);
+  const [selectedRadarScanId, setSelectedRadarScanId] = useState<number | null>(null);
+  const [expandedStudents, setExpandedStudents] = useState<Set<number>>(new Set());
+  const [studentHistoricalData, setStudentHistoricalData] = useState<Record<number, StudentHistoricalData>>({});
+  const [loadingStudentData, setLoadingStudentData] = useState<Record<number, boolean>>({});
+  const [radarChartKey, setRadarChartKey] = useState(0);
 
-  // Prepare radar chart data
+  // Increment key whenever selected scan changes to force re-render
+  useEffect(() => {
+    setRadarChartKey(Date.now());
+  }, [selectedRadarScanId]);
+
+  // Prepare selected scan data for radar chart
+  const selectedRadarScan = useMemo(() => {
+    if (!data?.scans || data.scans.length === 0) return null;
+    
+    const foundScan = selectedRadarScanId !== null
+      ? data.scans.find(s => s.scanId === selectedRadarScanId)
+      : data.scans[0];
+    
+    return foundScan || data.scans[0];
+  }, [data?.scans, selectedRadarScanId]);
+
+  // Prepare radar chart data - use selectedRadarScanId if available, otherwise use latest
   const radarData = useMemo(() => {
-    if (!data?.categorySummaries) return [];
-    return data.categorySummaries
+    if (!selectedRadarScan) return [];
+    
+    return selectedRadarScan.categoryAverages
       .filter((cat) => cat.averageScore != null && !isNaN(cat.averageScore))
       .map((cat) => ({
-        name: cat.name,
+        name: cat.categoryName,
         value: cat.averageScore,
       }));
-  }, [data]);
+  }, [selectedRadarScan]);
 
   // Select the latest scan by default
   const selectedScan = useMemo(() => {
@@ -71,6 +109,36 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
     return "text-red-600";
   };
 
+  const toggleStudentRow = async (studentId: number) => {
+    const newExpanded = new Set(expandedStudents);
+    if (newExpanded.has(studentId)) {
+      newExpanded.delete(studentId);
+    } else {
+      newExpanded.add(studentId);
+      
+      // Fetch historical data if not already loaded
+      if (!studentHistoricalData[studentId] && !loadingStudentData[studentId]) {
+        setLoadingStudentData(prev => ({ ...prev, [studentId]: true }));
+        
+        try {
+          const histData = await competencyMonitorService.getStudentHistoricalScores(
+            studentId,
+            filters.courseId
+          );
+          
+          if (histData) {
+            setStudentHistoricalData(prev => ({ ...prev, [studentId]: histData }));
+          }
+        } catch (error) {
+          console.error(`Failed to fetch historical data for student ${studentId}:`, error);
+        } finally {
+          setLoadingStudentData(prev => ({ ...prev, [studentId]: false }));
+        }
+      }
+    }
+    setExpandedStudents(newExpanded);
+  };
+
   return (
     <div className="space-y-6 text-slate-900">
       {/* KPI Cards */}
@@ -106,20 +174,48 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Radar Chart */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-          <h3 className="text-base font-semibold text-slate-900 leading-6">Klasprofiel per categorie</h3>
-          <p className="text-sm text-slate-600 mb-4">Gemiddelde scores van de laatste scan</p>
-          <div className="flex justify-center">
-            <CompetencyRadarChart items={radarData} size={280} maxValue={5} />
+          <div className="flex items-start justify-between mb-2">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900 leading-6">Klasprofiel per categorie</h3>
+              <p className="text-sm text-slate-600">
+                {selectedRadarScan
+                  ? `Gemiddelde scores van ${selectedRadarScan.label}`
+                  : 'Gemiddelde scores van de laatste scan'}
+              </p>
+            </div>
+            {/* Scan Selector Dropdown */}
+            {data.scans.length > 0 && (
+              <select
+                className="text-xs border rounded-md px-2 py-1"
+                value={selectedRadarScanId || ""}
+                onChange={(e) => setSelectedRadarScanId(e.target.value ? Number(e.target.value) : null)}
+              >
+                <option value="">Laatste scan</option>
+                {data.scans.map((scan) => (
+                  <option key={scan.scanId} value={scan.scanId}>
+                    {scan.label}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
-          {/* Legend */}
+          <div className="flex justify-center mt-4">
+            <CompetencyRadarChart 
+              key={radarChartKey}
+              items={radarData} 
+              size={280} 
+              maxValue={5} 
+            />
+          </div>
+          {/* Legend - Update to use selected scan data */}
           <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-            {data.categorySummaries.map((cat, index) => (
-              <div key={cat.id} className="flex items-center gap-2">
+            {selectedRadarScan?.categoryAverages.map((cat, index) => (
+              <div key={cat.categoryId} className="flex items-center gap-2">
                 <div 
                   className="w-3 h-3 rounded-full"
                   style={{ backgroundColor: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }}
                 />
-                <span className="text-slate-600 truncate">{cat.name}</span>
+                <span className="text-slate-600 truncate">{cat.categoryName}</span>
                 <span className="font-semibold text-slate-900 tabular-nums">{cat.averageScore.toFixed(1)}</span>
               </div>
             ))}
@@ -263,7 +359,7 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
           <h3 className="text-base font-semibold text-slate-900 leading-6">Klasoverzicht per categorie</h3>
-          <p className="text-sm text-slate-600">Gemiddelde scores per leerling van de laatste scan - Klik op een leerling voor meer details</p>
+          <p className="text-sm text-slate-600">Gemiddelde scores per leerling van de laatste scan - Klik op een rij om voorgaande scans te zien</p>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
@@ -282,53 +378,120 @@ export function OverviewSubTab({ filters }: OverviewSubTabProps) {
                     title={cat.name}
                   >
                     <span className="block truncate max-w-[80px]">{cat.name}</span>
-                    {cat.trendDelta !== null && (
-                      <span className={`block text-[10px] font-medium mt-0.5 tabular-nums ${getTrendColor(cat.trendDelta)}`}>
-                        {cat.trendDelta > 0 ? '+' : ''}{cat.trendDelta.toFixed(1)}
-                      </span>
-                    )}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {data.heatmapRows.map((row) => (
-                <tr key={row.studentId} className="bg-white hover:bg-slate-50">
-                  <td className="sticky left-0 z-10 bg-white px-4 py-2 text-sm text-slate-900 font-medium border-r border-slate-100">
-                    <Link
-                      href={`/teacher/competencies/student/${row.studentId}`}
-                      className="text-blue-600 hover:text-blue-800 hover:underline"
+              {data.heatmapRows.map((row) => {
+                const isExpanded = expandedStudents.has(row.studentId);
+                
+                return (
+                  <React.Fragment key={row.studentId}>
+                    <tr 
+                      className="bg-white hover:bg-slate-50 cursor-pointer"
+                      onClick={() => toggleStudentRow(row.studentId)}
                     >
-                      {row.name}
-                    </Link>
-                  </td>
-                  <td className="px-3 py-2 text-center text-sm text-slate-600">
-                    {row.className || "–"}
-                  </td>
-                  {data.categorySummaries.map((cat) => {
-                    const score = row.scores[cat.id];
-                    const delta = row.scoreDeltas[cat.id];
-                    return (
-                      <td key={cat.id} className="px-3 py-2 text-left">
-                        {score !== null && score !== undefined ? (
-                          <div className="flex items-center gap-1">
-                            <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(score)}`}>
-                              {score.toFixed(1)}
-                            </span>
-                            {delta !== null && delta !== undefined && delta !== 0 && (
-                              <span className={`text-[10px] font-medium tabular-nums ${delta > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {delta > 0 ? '+' : ''}{delta.toFixed(1)}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-slate-300">–</span>
-                        )}
+                      <td className="sticky left-0 z-10 bg-white px-4 py-2 text-sm text-slate-900 font-medium border-r border-slate-100">
+                        <div className="flex items-center gap-2">
+                          {isExpanded ? (
+                            <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                          )}
+                          <span>{row.name}</span>
+                        </div>
                       </td>
-                    );
-                  })}
-                </tr>
-              ))}
+                      <td className="px-3 py-2 text-center text-sm text-slate-600">
+                        {row.className || "–"}
+                      </td>
+                      {data.categorySummaries.map((cat) => {
+                        const score = row.scores[cat.id];
+                        const delta = row.scoreDeltas[cat.id];
+                        return (
+                          <td key={cat.id} className="px-3 py-2 text-left">
+                            {score !== null && score !== undefined ? (
+                              <div className="flex items-center gap-1">
+                                <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md text-sm font-semibold tabular-nums ${getScoreColor(score)}`}>
+                                  {score.toFixed(1)}
+                                </span>
+                                {delta !== null && delta !== undefined && delta !== 0 && (
+                                  <span className={`text-[10px] font-medium tabular-nums ${delta > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    {delta > 0 ? '+' : ''}{delta.toFixed(1)}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-slate-300">–</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    
+                    {/* Expanded Row Content */}
+                    {isExpanded && (
+                      <tr className="bg-slate-50">
+                        <td colSpan={data.categorySummaries.length + 2} className="px-4 py-3">
+                          {loadingStudentData[row.studentId] ? (
+                            <div className="text-center py-4">
+                              <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                              <p className="text-sm text-slate-600 mt-2">Laden van historische gegevens...</p>
+                            </div>
+                          ) : studentHistoricalData[row.studentId] ? (
+                            <div className="overflow-x-auto">
+                              <p className="text-xs text-slate-600 font-medium mb-2">
+                                Historische scores van {row.name}
+                              </p>
+                              <table className="min-w-full text-sm">
+                                <thead className="border-b border-slate-300">
+                                  <tr>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Scan</th>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Datum</th>
+                                    {data.categorySummaries.map((cat) => (
+                                      <th key={cat.id} className="px-3 py-2 text-center text-xs font-semibold text-slate-600" title={cat.name}>
+                                        {cat.name}
+                                      </th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-200">
+                                  {studentHistoricalData[row.studentId].scans.map((scan: StudentScanScore) => (
+                                    <tr key={scan.scanId} className="hover:bg-slate-100">
+                                      <td className="px-3 py-2 text-slate-900 font-medium">{scan.scanLabel}</td>
+                                      <td className="px-3 py-2 text-slate-600">
+                                        {new Date(scan.scanDate).toLocaleDateString('nl-NL')}
+                                      </td>
+                                      {data.categorySummaries.map((cat) => {
+                                        const score = scan.categoryScores[cat.id];
+                                        return (
+                                          <td key={cat.id} className="px-3 py-2 text-center">
+                                            {score !== null && score !== undefined ? (
+                                              <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold ${getScoreColor(score)}`}>
+                                                {score.toFixed(1)}
+                                              </span>
+                                            ) : (
+                                              <span className="text-slate-300">–</span>
+                                            )}
+                                          </td>
+                                        );
+                                      })}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <div className="text-center py-4 text-slate-500">
+                              <p className="text-sm">Geen historische gegevens beschikbaar voor deze leerling</p>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
