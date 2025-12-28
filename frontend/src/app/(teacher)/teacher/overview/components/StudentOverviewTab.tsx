@@ -341,8 +341,8 @@ export default function StudentOverviewTab() {
         courseId={filters.selectedCourseId} 
       />
 
-      {/* B) Heatmap (left) + Competency Profile (right) side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* B) OMZA Trend (left) + Heatmap (middle) + Competency Profile (right) - three columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <EvaluationHeatmapSection 
           studentId={filters.selectedStudentId} 
           courseId={filters.selectedCourseId}
