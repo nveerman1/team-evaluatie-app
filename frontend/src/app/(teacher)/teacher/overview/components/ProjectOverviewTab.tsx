@@ -344,16 +344,22 @@ function ProjectTable({
       newExpandedRows.add(projectId);
       // Load team scores if not already loaded
       if (!teamScores[projectId] && !loadingTeams.has(projectId)) {
-        setLoadingTeams(new Set(loadingTeams).add(projectId));
+        setLoadingTeams(prev => {
+          const newSet = new Set(prev);
+          newSet.add(projectId);
+          return newSet;
+        });
         try {
           const data = await overviewService.getProjectTeams(projectId);
           setTeamScores(prev => ({ ...prev, [projectId]: data.teams }));
         } catch (error) {
           console.error("Failed to load team scores:", error);
         } finally {
-          const newLoading = new Set(loadingTeams);
-          newLoading.delete(projectId);
-          setLoadingTeams(newLoading);
+          setLoadingTeams(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(projectId);
+            return newSet;
+          });
         }
       }
     }

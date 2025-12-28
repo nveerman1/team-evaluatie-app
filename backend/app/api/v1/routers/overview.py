@@ -1,5 +1,5 @@
 from __future__ import annotations
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
@@ -48,6 +48,8 @@ from app.infra.db.models import (
     AcademicYear,
     Score,
     Reflection,
+    ProjectTeam,
+    ProjectTeamMember,
 )
 from app.services.omza_weighted_scores import compute_weighted_omza_scores_batch
 from app.api.v1.schemas.overview import (
@@ -1335,7 +1337,6 @@ def get_project_teams(
     ).first()
     
     if not assessment:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Project not found")
     
     # Get rubric
@@ -1371,7 +1372,6 @@ def get_project_teams(
         team_scores_map[score.team_number].append(score)
     
     # Get team information (names and members)
-    from app.infra.db.models import ProjectTeam, ProjectTeamMember, User
     project_teams = db.query(ProjectTeam).filter(
         ProjectTeam.project_id == assessment.project_id
     ).all() if assessment.project_id else []
