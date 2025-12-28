@@ -2,15 +2,11 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
-  Search,
-  Filter,
   ChevronDown,
   ChevronUp,
   X,
   TrendingUp,
-  BarChart3,
   FolderOpen,
-  Award,
   ExternalLink,
 } from "lucide-react";
 import { Line } from "react-chartjs-2";
@@ -59,8 +55,6 @@ interface ProjectOverviewFilters {
   schoolYear: string;
   courseId: string;
   period: string;
-  searchQuery: string;
-  statusFilter: string;
 }
 
 type SortField = "projectName" | "periodLabel" | "averageScoreOverall";
@@ -109,8 +103,6 @@ function useProjectOverviewData(filters: ProjectOverviewFilters) {
         schoolYear: filters.schoolYear,
         courseId: filters.courseId,
         period: filters.period,
-        statusFilter: filters.statusFilter,
-        searchQuery: filters.searchQuery,
       });
 
       // Fetch trends from API
@@ -140,7 +132,7 @@ function useProjectOverviewData(filters: ProjectOverviewFilters) {
     } finally {
       setLoading(false);
     }
-  }, [filters.courseId, filters.period, filters.schoolYear, filters.statusFilter, filters.searchQuery]);
+  }, [filters.courseId, filters.period, filters.schoolYear]);
 
   useEffect(() => {
     fetchData();
@@ -152,14 +144,6 @@ function useProjectOverviewData(filters: ProjectOverviewFilters) {
 /* =========================================
    SKELETON COMPONENTS
    ========================================= */
-
-function KpiSkeleton() {
-  return (
-    <div className="animate-pulse">
-      <div className="h-24 bg-gray-200 rounded-xl"></div>
-    </div>
-  );
-}
 
 function TableSkeleton() {
   return (
@@ -187,123 +171,6 @@ function TextSkeleton() {
       <div className="h-4 bg-gray-200 rounded w-3/4"></div>
       <div className="h-4 bg-gray-200 rounded w-full"></div>
       <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-    </div>
-  );
-}
-
-/* =========================================
-   KPI CARDS COMPONENT
-   ========================================= */
-
-interface KpiCardsProps {
-  projects: ProjectOverviewItem[];
-  loading: boolean;
-}
-
-function KpiCards({ projects, loading }: KpiCardsProps) {
-  const kpis = useMemo(() => {
-    const completedProjects = projects.filter((p) => p.status === "completed");
-    const projectsWithScores = completedProjects.filter((p) => p.averageScoreOverall !== null);
-
-    // Calculate overall average
-    const avgOverall =
-      projectsWithScores.length > 0
-        ? projectsWithScores.reduce((sum, p) => sum + (p.averageScoreOverall || 0), 0) /
-          projectsWithScores.length
-        : null;
-
-    // Count completed assessments
-    const completedCount = completedProjects.length;
-
-    // Find most assessed category
-    const categoryCounts: Record<string, number> = {};
-    projectsWithScores.forEach((p) => {
-      Object.keys(p.averageScoresByCategory).forEach((cat) => {
-        categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
-      });
-    });
-    const mostAssessedCategory = Object.entries(categoryCounts).sort(
-      ([, a], [, b]) => b - a
-    )[0]?.[0];
-
-    // Calculate average spreiding (IQR) across all projects
-    const iqrs: number[] = [];
-    projectsWithScores.forEach((p) => {
-      if (p.overall_statistics?.iqr !== null && p.overall_statistics?.iqr !== undefined) {
-        iqrs.push(p.overall_statistics.iqr);
-      }
-    });
-    const avgIqr = iqrs.length > 0 ? iqrs.reduce((sum, iqr) => sum + iqr, 0) / iqrs.length : null;
-
-    return {
-      avgOverall,
-      completedCount,
-      mostAssessedCategory: mostAssessedCategory
-        ? CATEGORY_LABELS[mostAssessedCategory] || mostAssessedCategory
-        : "—",
-      avgIqr,
-    };
-  }, [projects]);
-
-  if (loading) {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiSkeleton />
-        <KpiSkeleton />
-        <KpiSkeleton />
-        <KpiSkeleton />
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {/* Average Score Card */}
-      <div className="bg-slate-50 rounded-xl p-4 border border-gray-200">
-        <div className="flex items-center gap-2 mb-2">
-          <BarChart3 className="w-5 h-5 text-blue-600" />
-          <span className="text-sm text-gray-600">Gem. projectscores</span>
-        </div>
-        <div className="text-2xl font-bold text-gray-900">
-          {kpis.avgOverall !== null ? kpis.avgOverall.toFixed(1) : "—"}
-          <span className="text-lg font-normal text-gray-500"> / 10</span>
-        </div>
-        <p className="text-xs text-gray-500 mt-1">Gemiddelde over alle projecten</p>
-      </div>
-
-      {/* Completed Assessments Card */}
-      <div className="bg-slate-50 rounded-xl p-4 border border-gray-200">
-        <div className="flex items-center gap-2 mb-2">
-          <Award className="w-5 h-5 text-green-600" />
-          <span className="text-sm text-gray-600">Afgeronde beoordelingen</span>
-        </div>
-        <div className="text-2xl font-bold text-gray-900">{kpis.completedCount}</div>
-        <p className="text-xs text-gray-500 mt-1">Projectbeoordelingen afgerond</p>
-      </div>
-
-      {/* Spreiding Card */}
-      <div className="bg-slate-50 rounded-xl p-4 border border-gray-200">
-        <div className="flex items-center gap-2 mb-2">
-          <TrendingUp className="w-5 h-5 text-orange-600" />
-          <span className="text-sm text-gray-600">Spreiding (gemiddeld)</span>
-        </div>
-        <div className="text-2xl font-bold text-gray-900">
-          {kpis.avgIqr !== null ? `IQR ${kpis.avgIqr.toFixed(1)}` : "—"}
-        </div>
-        <p className="text-xs text-gray-500 mt-1">Gem. verschil tussen teams per project</p>
-      </div>
-
-      {/* Most Assessed Category Card */}
-      <div className="bg-slate-50 rounded-xl p-4 border border-gray-200">
-        <div className="flex items-center gap-2 mb-2">
-          <FolderOpen className="w-5 h-5 text-purple-600" />
-          <span className="text-sm text-gray-600">Meest beoordeeld</span>
-        </div>
-        <div className="text-lg font-bold text-gray-900 truncate">
-          {kpis.mostAssessedCategory}
-        </div>
-        <p className="text-xs text-gray-500 mt-1">Meest beoordeelde categorie</p>
-      </div>
     </div>
   );
 }
@@ -438,20 +305,12 @@ function ProjectDetailDrawer({ project, onClose }: ProjectDetailDrawerProps) {
 interface ProjectTableProps {
   projects: ProjectOverviewItem[];
   loading: boolean;
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
-  statusFilter: string;
-  onStatusFilterChange: (status: string) => void;
   onSelectProject: (project: ProjectOverviewItem) => void;
 }
 
 function ProjectTable({
   projects,
   loading,
-  searchQuery,
-  onSearchChange,
-  statusFilter,
-  onStatusFilterChange,
   onSelectProject,
 }: ProjectTableProps) {
   const [sortField, setSortField] = useState<SortField>("projectName");
@@ -507,49 +366,8 @@ function ProjectTable({
     );
   };
 
-  const getStatusBadge = (status: "active" | "completed") => {
-    return status === "active" ? (
-      <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-        Actief
-      </span>
-    ) : (
-      <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-        Afgerond
-      </span>
-    );
-  };
-
   return (
     <div className="space-y-4">
-      {/* Table Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        {/* Search */}
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Zoek op project of opdrachtgever..."
-            className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
-        </div>
-
-        {/* Status Filter */}
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-gray-500" />
-          <select
-            className="px-3 py-2 border rounded-lg text-sm"
-            value={statusFilter}
-            onChange={(e) => onStatusFilterChange(e.target.value)}
-          >
-            <option value="all">Alle statussen</option>
-            <option value="active">Actief</option>
-            <option value="completed">Afgerond</option>
-          </select>
-        </div>
-      </div>
-
       {/* Table */}
       {loading ? (
         <TableSkeleton />
@@ -959,8 +777,6 @@ export default function ProjectOverviewTab() {
     schoolYear: "",
     courseId: "",
     period: PERIODS[0],
-    searchQuery: "",
-    statusFilter: "all",
   });
 
   const [selectedProject, setSelectedProject] = useState<ProjectOverviewItem | null>(null);
@@ -1016,23 +832,23 @@ export default function ProjectOverviewTab() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">
-            Projectbeoordelingen — Overzicht
-          </h2>
-          <p className="text-gray-600 mt-1">
-            Inzicht in projecten, rubriccategorieën en trends
-          </p>
-        </div>
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900">
+          Projectbeoordelingen — Overzicht
+        </h2>
+        <p className="text-gray-600 mt-1">
+          Inzicht in projecten, rubriccategorieën en trends
+        </p>
+      </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3">
+      {/* Global Filter Bar */}
+      <div className="bg-gray-50 rounded-xl p-4">
+        <div className="flex flex-wrap gap-4 items-center">
           {/* School Year */}
           <div>
             <label className="block text-xs text-gray-600 mb-1">Schooljaar</label>
             <select
-              className="px-3 py-2 border rounded-lg text-sm"
+              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
               value={filters.schoolYear}
               onChange={(e) => handleFilterChange("schoolYear", e.target.value)}
             >
@@ -1048,7 +864,7 @@ export default function ProjectOverviewTab() {
           <div>
             <label className="block text-xs text-gray-600 mb-1">Vak</label>
             <select
-              className="px-3 py-2 border rounded-lg text-sm"
+              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
               value={filters.courseId}
               onChange={(e) => handleFilterChange("courseId", e.target.value)}
             >
@@ -1065,7 +881,7 @@ export default function ProjectOverviewTab() {
           <div>
             <label className="block text-xs text-gray-600 mb-1">Periode</label>
             <select
-              className="px-3 py-2 border rounded-lg text-sm"
+              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
               value={filters.period}
               onChange={(e) => handleFilterChange("period", e.target.value)}
             >
@@ -1079,9 +895,6 @@ export default function ProjectOverviewTab() {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <KpiCards projects={projects} loading={loading} />
-
       {/* Project Table */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -1091,10 +904,6 @@ export default function ProjectOverviewTab() {
         <ProjectTable
           projects={projects}
           loading={loading}
-          searchQuery={filters.searchQuery}
-          onSearchChange={(query) => handleFilterChange("searchQuery", query)}
-          statusFilter={filters.statusFilter}
-          onStatusFilterChange={(status) => handleFilterChange("statusFilter", status)}
           onSelectProject={setSelectedProject}
         />
       </div>
