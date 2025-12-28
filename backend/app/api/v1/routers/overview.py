@@ -56,6 +56,7 @@ from app.api.v1.schemas.overview import (
     ProjectTrendResponse,
     ProjectOverviewItem,
     CategoryTrendData,
+    CategoryStatistics,
     PeerOverviewDashboardResponse,
     FeedbackCollectionResponse,
     OmzaTrendDataPoint,
@@ -75,6 +76,67 @@ from app.api.v1.schemas.overview import (
 )
 
 router = APIRouter(prefix="/overview", tags=["overview"])
+
+
+def _calculate_statistics(values: list[float]) -> CategoryStatistics:
+    """
+    Calculate statistical measures from a list of values
+    Returns mean, median, percentiles, min, max, and IQR
+    """
+    if not values:
+        return CategoryStatistics(count_teams=0, count_assessments=0)
+    
+    sorted_values = sorted(values)
+    n = len(sorted_values)
+    
+    # Calculate mean
+    mean = sum(sorted_values) / n
+    
+    # Calculate median
+    if n % 2 == 0:
+        median = (sorted_values[n // 2 - 1] + sorted_values[n // 2]) / 2
+    else:
+        median = sorted_values[n // 2]
+    
+    # Calculate percentiles
+    def percentile(data: list[float], p: float) -> float:
+        """Calculate the p-th percentile (p between 0 and 100)"""
+        k = (len(data) - 1) * (p / 100.0)
+        f = int(k)
+        c = f + 1
+        if c >= len(data):
+            return data[-1]
+        if f < 0:
+            return data[0]
+        d0 = data[f] * (c - k)
+        d1 = data[c] * (k - f)
+        return d0 + d1
+    
+    p10 = percentile(sorted_values, 10)
+    p25 = percentile(sorted_values, 25)
+    p75 = percentile(sorted_values, 75)
+    p90 = percentile(sorted_values, 90)
+    
+    # Min and max
+    min_val = sorted_values[0]
+    max_val = sorted_values[-1]
+    
+    # IQR (Interquartile Range)
+    iqr = p75 - p25
+    
+    return CategoryStatistics(
+        mean=round(mean, 2),
+        median=round(median, 2),
+        p25=round(p25, 2),
+        p75=round(p75, 2),
+        p10=round(p10, 2),
+        p90=round(p90, 2),
+        min=round(min_val, 2),
+        max=round(max_val, 2),
+        iqr=round(iqr, 2),
+        count_teams=n,
+        count_assessments=n
+    )
 
 
 def _calculate_project_score(db: Session, assessment_id: int, rubric_id: int, team_number: int) -> Optional[float]:
@@ -1086,13 +1148,18 @@ def get_project_overview(
                 # Average across all teams
                 if team_grades:
                     average_score_overall = sum(team_grades) / len(team_grades)
+                    # Calculate overall statistics
+                    overall_statistics = _calculate_statistics(team_grades)
                 else:
                     average_score_overall = None
+                    overall_statistics = None
                 
                 average_scores_by_category = {}
+                category_statistics = {}
                 for cat, grades in team_category_grades.items():
                     if grades:
                         average_scores_by_category[cat] = round(sum(grades) / len(grades), 1)
+                        category_statistics[cat] = _calculate_statistics(grades)
         
         # Determine status
         status = "active" if assessment.status in ["draft", "open"] else "completed"
@@ -1107,7 +1174,9 @@ def get_project_overview(
             num_teams=num_teams,
             average_score_overall=round(average_score_overall, 1) if average_score_overall else None,
             average_scores_by_category=average_scores_by_category,
-            status=status
+            status=status,
+            overall_statistics=overall_statistics,
+            category_statistics=category_statistics
         ))
     
     return ProjectOverviewListResponse(
@@ -1217,9 +1286,11 @@ def get_project_trends(
         
         # Average across all teams by category
         scores = {}
+        statistics = {}
         for cat, grades in team_category_grades.items():
             if grades:
                 scores[cat] = round(sum(grades) / len(grades), 1)
+                statistics[cat] = _calculate_statistics(grades)
         
         # Create label
         month = assessment.published_at.month
@@ -1237,7 +1308,9 @@ def get_project_trends(
         
         trend_data.append(CategoryTrendData(
             project_label=project_label,
-            scores=scores
+            project_id=assessment.id,
+            scores=scores,
+            statistics=statistics
         ))
     
     return ProjectTrendResponse(trend_data=trend_data)

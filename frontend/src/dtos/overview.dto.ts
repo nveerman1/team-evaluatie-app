@@ -108,6 +108,20 @@ export interface MatrixFilters {
 
 // ==================== Project Overview Types ====================
 
+export interface CategoryStatistics {
+  mean?: number | null;
+  median?: number | null;
+  p25?: number | null;  // 25th percentile
+  p75?: number | null;  // 75th percentile
+  p10?: number | null;  // 10th percentile (optional whisker)
+  p90?: number | null;  // 90th percentile (optional whisker)
+  min?: number | null;
+  max?: number | null;
+  iqr?: number | null;  // Interquartile range (P75 - P25)
+  count_teams: number;
+  count_assessments: number;
+}
+
 export interface ProjectOverviewItem {
   project_id: number;
   project_name: string;
@@ -119,6 +133,8 @@ export interface ProjectOverviewItem {
   average_score_overall?: number | null;
   average_scores_by_category: Record<string, number>;
   status: "active" | "completed";
+  overall_statistics?: CategoryStatistics | null;
+  category_statistics: Record<string, CategoryStatistics>;
 }
 
 export interface ProjectOverviewListResponse {
@@ -128,7 +144,9 @@ export interface ProjectOverviewListResponse {
 
 export interface CategoryTrendData {
   project_label: string;
-  scores: Record<string, number>;
+  project_id: number;  // For filtering/linking
+  scores: Record<string, number>;  // category -> score (mean)
+  statistics: Record<string, CategoryStatistics>;  // category -> statistics
 }
 
 export interface ProjectTrendResponse {
