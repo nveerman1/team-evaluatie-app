@@ -15,7 +15,8 @@ import {
 import { peerEvaluationOverviewService } from "@/services/peer-evaluation-overview.service";
 import type { 
   PeerEvaluationDetail,
-  StudentHeatmapRow 
+  StudentHeatmapRow,
+  OmzaTrendDataPoint
 } from "@/services/peer-evaluation-overview.service";
 
 // Register Chart.js components
@@ -48,7 +49,7 @@ function formatDate(dateStr: string): string {
 }
 
 export function OmzaHeatmapSection({ studentId, courseId, onEvaluationClick }: OmzaHeatmapSectionProps) {
-  const [trendData, setTrendData] = useState<any[]>([]);
+  const [trendData, setTrendData] = useState<OmzaTrendDataPoint[]>([]);
   const [studentData, setStudentData] = useState<StudentHeatmapRow | null>(null);
   const [loading, setLoading] = useState(true);
 

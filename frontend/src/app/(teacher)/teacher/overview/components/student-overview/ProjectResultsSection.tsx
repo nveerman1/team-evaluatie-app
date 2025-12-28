@@ -44,7 +44,7 @@ export function ProjectResultsSection({ studentId, courseId }: ProjectResultsSec
       }
     }
     fetchProjects();
-  }, [studentId, courseId]);
+  }, [courseId]); // studentId not needed - we show all projects in the course
 
   if (loading) {
     return (
