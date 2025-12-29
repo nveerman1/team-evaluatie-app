@@ -102,14 +102,17 @@ export default function LearningObjectivesOverviewTab() {
       const response = await api.get<Array<{ class_name: string | null }>>("/students", {
         params: { limit: 500 }
       });
-      const uniqueClasses = Array.from(
+      const uniqueClassNames = Array.from(
         new Set(
           response.data
             .map((s) => s.class_name)
             .filter((c): c is string => !!c)
         )
       ).sort();
-      setClasses(uniqueClasses.map(c => ({ id: c, name: c })));
+      
+      // Transform class names to dropdown format
+      const classOptions = uniqueClassNames.map(className => ({ id: className, name: className }));
+      setClasses(classOptions);
     } catch (err) {
       console.error("Error fetching classes:", err);
     }

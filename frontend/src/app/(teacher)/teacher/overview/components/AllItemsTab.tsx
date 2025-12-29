@@ -75,7 +75,8 @@ export default function AllItemsTab() {
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }, [filterValues, pathname, router, searchParams]);
 
-  // Apply filters with debounce and load data
+  // Handle filter changes and data loading with debounce
+  // Empty state check: don't load data without a course selected
   useEffect(() => {
     if (!filterValues.courseId) {
       // Don't load data without a course selected

@@ -72,9 +72,10 @@ export default function CompetenciesOverviewTab() {
   
   // Update internal filters when filterValues change
   useEffect(() => {
+    const academicYearId = filterValues.academicYear ? Number(filterValues.academicYear) : undefined;
     setFilters({
       scanRange: filterValues.period as CompetencyOverviewFilters["scanRange"] || "last_3",
-      academicYearId: filterValues.academicYear ? Number(filterValues.academicYear) : undefined,
+      academicYearId,
       courseId: filterValues.courseId ? Number(filterValues.courseId) : undefined,
     });
   }, [filterValues]);

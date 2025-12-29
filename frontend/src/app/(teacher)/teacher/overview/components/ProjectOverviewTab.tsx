@@ -981,8 +981,9 @@ export default function ProjectOverviewTab() {
         setAcademicYears(years);
         setCourses(coursesData);
         
-        // Set default school year to the first one if available and not already set
-        if (years.length > 0 && !filterValues.academicYear) {
+        // Only set default if no year is selected AND years are available
+        // This respects the URL as single source of truth
+        if (years.length > 0 && !filterValues.academicYear && !searchParams.get("year")) {
           setFilterValues(prev => ({
             ...prev,
             academicYear: years[0].label,
