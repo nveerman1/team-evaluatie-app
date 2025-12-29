@@ -137,16 +137,16 @@ export function ProjectResultsSection({ studentId, studentName, courseId }: Proj
                 <th className="w-[18%] px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Teamleden
                 </th>
-                <th className="w-[9%] px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
+                <th className="w-[9%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Projectproces
                 </th>
-                <th className="w-[9%] px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
+                <th className="w-[9%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Eindresultaat
                 </th>
-                <th className="w-[9%] px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
+                <th className="w-[9%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Communicatie
                 </th>
-                <th className="w-[9%] px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
+                <th className="w-[9%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Gem. score
                 </th>
               </tr>
@@ -171,7 +171,7 @@ export function ProjectResultsSection({ studentId, studentName, courseId }: Proj
                       {result.team_members.join(", ")}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-2 py-3 text-center">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getScoreColor(
                         result.projectproces
@@ -180,7 +180,7 @@ export function ProjectResultsSection({ studentId, studentName, courseId }: Proj
                       {formatScore(result.projectproces)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-2 py-3 text-center">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getScoreColor(
                         result.eindresultaat
@@ -189,7 +189,7 @@ export function ProjectResultsSection({ studentId, studentName, courseId }: Proj
                       {formatScore(result.eindresultaat)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-2 py-3 text-center">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getScoreColor(
                         result.communicatie
@@ -198,7 +198,7 @@ export function ProjectResultsSection({ studentId, studentName, courseId }: Proj
                       {formatScore(result.communicatie)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-2 py-3 text-center">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getScoreColor(
                         result.overall_score

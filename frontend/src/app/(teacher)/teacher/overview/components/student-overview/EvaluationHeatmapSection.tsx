@@ -11,6 +11,7 @@ import type { GradePreviewItem } from "@/dtos/grades.dto";
 
 interface EvaluationHeatmapSectionProps {
   studentId: number;
+  studentName: string;
   courseId: number;
   onEvaluationClick?: (evaluationId: number) => void;
 }
@@ -85,7 +86,7 @@ interface EvaluationData extends PeerEvaluationDetail {
   finalGrade?: number | null;
 }
 
-export function EvaluationHeatmapSection({ studentId, courseId, onEvaluationClick }: EvaluationHeatmapSectionProps) {
+export function EvaluationHeatmapSection({ studentId, studentName, courseId, onEvaluationClick }: EvaluationHeatmapSectionProps) {
   const [studentData, setStudentData] = useState<StudentHeatmapRow | null>(null);
   const [evaluations, setEvaluations] = useState<EvaluationData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,8 +95,10 @@ export function EvaluationHeatmapSection({ studentId, courseId, onEvaluationClic
     async function fetchData() {
       try {
         setLoading(true);
+        // Filter by student name to get specific student's peer evaluation data
         const response = await peerEvaluationOverviewService.getDashboard({
           courseId,
+          studentName,
         });
 
         // Find student in heatmap data
@@ -129,11 +132,11 @@ export function EvaluationHeatmapSection({ studentId, courseId, onEvaluationClic
           
           setEvaluations(enrichedEvaluations);
         } else {
-          console.warn("No evaluations found for student:", {studentId, student});
+          console.warn("No peer evaluations found for student:", {studentId, studentName, student, evaluations: student?.evaluations});
           setEvaluations([]);
         }
       } catch (error) {
-        console.error("Error fetching evaluation data:", error);
+        console.error("Error fetching peer evaluation data:", error);
         setStudentData(null);
         setEvaluations([]);
       } finally {
@@ -141,7 +144,7 @@ export function EvaluationHeatmapSection({ studentId, courseId, onEvaluationClic
       }
     }
     fetchData();
-  }, [studentId, courseId]);
+  }, [studentId, studentName, courseId]);
 
   if (loading) {
     return (
@@ -165,37 +168,37 @@ export function EvaluationHeatmapSection({ studentId, courseId, onEvaluationClic
           <table className="w-full table-fixed">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="w-[20%] px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                <th className="w-[15%] px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Evaluatie
                 </th>
-                <th className="w-[8%] px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
+                <th className="w-[7%] px-3 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Organiseren Peers">
                   O
                 </th>
-                <th className="w-[8%] px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
+                <th className="w-[7%] px-3 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Meedoen Peers">
                   M
                 </th>
-                <th className="w-[8%] px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
+                <th className="w-[7%] px-3 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Zelfvertrouwen Peers">
                   Z
                 </th>
-                <th className="w-[8%] px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
+                <th className="w-[7%] px-3 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Autonomie Peers">
                   A
                 </th>
-                <th className="w-[6%] px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
+                <th className="w-[7%] px-3 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Organiseren Docent">
                   O
                 </th>
-                <th className="w-[6%] px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
+                <th className="w-[7%] px-3 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Meedoen Docent">
                   M
                 </th>
-                <th className="w-[6%] px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
+                <th className="w-[7%] px-3 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Zelfvertrouwen Docent">
                   Z
                 </th>
-                <th className="w-[6%] px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
+                <th className="w-[7%] px-3 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Autonomie Docent">
                   A
                 </th>
-                <th className="w-[8%] px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Persoonlijke teambijdrage factor">
+                <th className="w-[10%] px-3 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Persoonlijke teambijdrage factor">
                   GCF
                 </th>
-                <th className="w-[8%] px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
+                <th className="w-[10%] px-3 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Eindcijfer
                 </th>
               </tr>
@@ -208,49 +211,49 @@ export function EvaluationHeatmapSection({ studentId, courseId, onEvaluationClic
                   className="hover:bg-gray-50 cursor-pointer"
                 >
                   <td className="px-4 py-3 text-sm">
-                    <div className="line-clamp-1 text-gray-900">{evaluation.label}</div>
+                    <div className="line-clamp-2 text-gray-900">{evaluation.label}</div>
                     <div className="text-xs text-gray-500">{formatDate(evaluation.date)}</div>
                   </td>
                   {/* Peer scores */}
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-3 py-3 text-center">
                     <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getScoreColor(evaluation.scores['O'])}`}>
                       {evaluation.scores['O'] ? evaluation.scores['O'].toFixed(1) : "-"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-3 py-3 text-center">
                     <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getScoreColor(evaluation.scores['M'])}`}>
                       {evaluation.scores['M'] ? evaluation.scores['M'].toFixed(1) : "-"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-3 py-3 text-center">
                     <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getScoreColor(evaluation.scores['Z'])}`}>
                       {evaluation.scores['Z'] ? evaluation.scores['Z'].toFixed(1) : "-"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-3 py-3 text-center">
                     <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getScoreColor(evaluation.scores['A'])}`}>
                       {evaluation.scores['A'] ? evaluation.scores['A'].toFixed(1) : "-"}
                     </span>
                   </td>
                   {/* Teacher emoticon scores */}
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-3 py-3 text-center">
                     {renderTeacherEmoticon(evaluation.teacher_scores?.['O'])}
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-3 py-3 text-center">
                     {renderTeacherEmoticon(evaluation.teacher_scores?.['M'])}
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-3 py-3 text-center">
                     {renderTeacherEmoticon(evaluation.teacher_scores?.['Z'])}
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-3 py-3 text-center">
                     {renderTeacherEmoticon(evaluation.teacher_scores?.['A'])}
                   </td>
                   {/* GCF */}
-                  <td className="px-4 py-3 text-center text-sm text-gray-700 font-medium">
-                    {evaluation.gcf ? evaluation.gcf.toFixed(2) : "-"}
+                  <td className="px-3 py-3 text-center text-sm text-gray-700">
+                    {evaluation.gcf !== null && evaluation.gcf !== undefined ? evaluation.gcf.toFixed(2) : "-"}
                   </td>
                   {/* Final Grade */}
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-3 py-3 text-center">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
                       {formatGrade(evaluation.finalGrade)}
                     </span>

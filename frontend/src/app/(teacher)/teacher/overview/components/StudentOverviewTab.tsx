@@ -346,6 +346,7 @@ export default function StudentOverviewTab() {
       {/* B) Evaluations Heatmap - Full width */}
       <EvaluationHeatmapSection 
         studentId={filters.selectedStudentId} 
+        studentName={selectedStudent?.name || ""}
         courseId={filters.selectedCourseId}
         onEvaluationClick={handleEvaluationClick}
       />

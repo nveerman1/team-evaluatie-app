@@ -153,6 +153,32 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
         ticks: {
           stepSize: 1,
         },
+        pointLabels: {
+          font: {
+            size: 11,
+          },
+          callback: function(label: string) {
+            // Allow labels to wrap by splitting on spaces
+            const maxCharsPerLine = 15;
+            if (label.length <= maxCharsPerLine) return label;
+            
+            const words = label.split(' ');
+            const lines = [];
+            let currentLine = '';
+            
+            words.forEach(word => {
+              if ((currentLine + ' ' + word).trim().length <= maxCharsPerLine) {
+                currentLine = currentLine ? currentLine + ' ' + word : word;
+              } else {
+                if (currentLine) lines.push(currentLine);
+                currentLine = word;
+              }
+            });
+            if (currentLine) lines.push(currentLine);
+            
+            return lines;
+          }
+        }
       },
     },
     plugins: {
@@ -196,7 +222,7 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
       ) : categoryScores.length === 0 ? (
         <p className="text-gray-500 text-center py-4">Geen data beschikbaar voor deze scan</p>
       ) : (
-        <div className="h-64">
+        <div className="h-72">
           <Radar data={chartData} options={chartOptions} />
         </div>
       )}
