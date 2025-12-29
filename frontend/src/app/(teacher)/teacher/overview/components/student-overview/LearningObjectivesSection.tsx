@@ -35,6 +35,8 @@ function formatDate(dateStr: string): string {
 export function LearningObjectivesSection({ studentId, courseId }: LearningObjectivesSectionProps) {
   const [goals, setGoals] = useState<LearningGoalSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchText, setSearchText] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   useEffect(() => {
     async function fetchGoals() {
@@ -60,6 +62,17 @@ export function LearningObjectivesSection({ studentId, courseId }: LearningObjec
     fetchGoals();
   }, [studentId, courseId]);
 
+  // Filter goals based on search and status
+  const filteredGoals = goals.filter(goal => {
+    const matchesSearch = searchText === "" || 
+      goal.goalText.toLowerCase().includes(searchText.toLowerCase()) ||
+      (goal.categoryName && goal.categoryName.toLowerCase().includes(searchText.toLowerCase()));
+    
+    const matchesStatus = statusFilter === "all" || goal.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+
   if (loading) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -74,10 +87,33 @@ export function LearningObjectivesSection({ studentId, courseId }: LearningObjec
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Leerdoelen</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900">Leerdoelen</h3>
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            placeholder="Zoek leerdoel..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="all">Alle statussen</option>
+            <option value="in_progress">Lopend</option>
+            <option value="achieved">Behaald</option>
+            <option value="not_achieved">Niet behaald</option>
+          </select>
+        </div>
+      </div>
       
-      {goals.length === 0 ? (
-        <p className="text-gray-500 text-center py-4">Geen leerdoelen gevonden</p>
+      {filteredGoals.length === 0 ? (
+        <p className="text-gray-500 text-center py-4">
+          {goals.length === 0 ? "Geen leerdoelen gevonden" : "Geen leerdoelen gevonden met deze filters"}
+        </p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full table-fixed">
@@ -98,7 +134,7 @@ export function LearningObjectivesSection({ studentId, courseId }: LearningObjec
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {goals.map((goal) => (
+              {filteredGoals.map((goal) => (
                 <tr key={goal.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-sm text-gray-900">
                     <div className="line-clamp-2 whitespace-normal break-words">

@@ -82,6 +82,7 @@ function renderTeacherEmoticon(score: number | null | undefined) {
 }
 
 interface EvaluationData extends PeerEvaluationDetail {
+  spr?: number | null;
   gcf?: number | null;
   finalGrade?: number | null;
 }
@@ -125,6 +126,7 @@ export function EvaluationHeatmapSection({ studentId, studentName, courseId, onE
                 
                 return {
                   ...evaluation,
+                  spr: studentGrade?.spr ?? null,
                   gcf: studentGrade?.gcf ?? null,
                   finalGrade: studentGrade?.suggested_grade ?? null,
                 };
@@ -132,6 +134,7 @@ export function EvaluationHeatmapSection({ studentId, studentName, courseId, onE
                 console.error(`Error fetching grade for evaluation ${evaluation.id}:`, error);
                 return {
                   ...evaluation,
+                  spr: null,
                   gcf: null,
                   finalGrade: null,
                 };
@@ -177,37 +180,40 @@ export function EvaluationHeatmapSection({ studentId, studentName, courseId, onE
           <table className="w-full table-fixed">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="w-[15%] px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                <th className="w-[13%] px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Evaluatie
                 </th>
-                <th className="w-[7%] px-3 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Organiseren Peers">
+                <th className="w-[6%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Organiseren Peers">
                   O
                 </th>
-                <th className="w-[7%] px-3 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Meedoen Peers">
+                <th className="w-[6%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Meedoen Peers">
                   M
                 </th>
-                <th className="w-[7%] px-3 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Zelfvertrouwen Peers">
+                <th className="w-[6%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Zelfvertrouwen Peers">
                   Z
                 </th>
-                <th className="w-[7%] px-3 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Autonomie Peers">
+                <th className="w-[6%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Autonomie Peers">
                   A
                 </th>
-                <th className="w-[7%] px-3 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Organiseren Docent">
+                <th className="w-[6%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Organiseren Docent">
                   O
                 </th>
-                <th className="w-[7%] px-3 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Meedoen Docent">
+                <th className="w-[6%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Meedoen Docent">
                   M
                 </th>
-                <th className="w-[7%] px-3 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Zelfvertrouwen Docent">
+                <th className="w-[6%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Zelfvertrouwen Docent">
                   Z
                 </th>
-                <th className="w-[7%] px-3 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Autonomie Docent">
+                <th className="w-[6%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Autonomie Docent">
                   A
                 </th>
-                <th className="w-[10%] px-3 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Persoonlijke teambijdrage factor">
+                <th className="w-[10%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider whitespace-normal break-words leading-tight">
+                  Self vs Peer
+                </th>
+                <th className="w-[9%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Persoonlijke teambijdrage factor">
                   GCF
                 </th>
-                <th className="w-[10%] px-3 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
+                <th className="w-[10%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Eindcijfer
                 </th>
               </tr>
@@ -224,45 +230,49 @@ export function EvaluationHeatmapSection({ studentId, studentName, courseId, onE
                     <div className="text-xs text-gray-500">{formatDate(evaluation.date)}</div>
                   </td>
                   {/* Peer scores */}
-                  <td className="px-3 py-3 text-center">
-                    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getScoreColor(evaluation.scores['O'])}`}>
+                  <td className="px-2 py-3 text-center">
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${getScoreColor(evaluation.scores['O'])}`}>
                       {evaluation.scores['O'] ? evaluation.scores['O'].toFixed(1) : "-"}
                     </span>
                   </td>
-                  <td className="px-3 py-3 text-center">
-                    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getScoreColor(evaluation.scores['M'])}`}>
+                  <td className="px-2 py-3 text-center">
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${getScoreColor(evaluation.scores['M'])}`}>
                       {evaluation.scores['M'] ? evaluation.scores['M'].toFixed(1) : "-"}
                     </span>
                   </td>
-                  <td className="px-3 py-3 text-center">
-                    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getScoreColor(evaluation.scores['Z'])}`}>
+                  <td className="px-2 py-3 text-center">
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${getScoreColor(evaluation.scores['Z'])}`}>
                       {evaluation.scores['Z'] ? evaluation.scores['Z'].toFixed(1) : "-"}
                     </span>
                   </td>
-                  <td className="px-3 py-3 text-center">
-                    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getScoreColor(evaluation.scores['A'])}`}>
+                  <td className="px-2 py-3 text-center">
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${getScoreColor(evaluation.scores['A'])}`}>
                       {evaluation.scores['A'] ? evaluation.scores['A'].toFixed(1) : "-"}
                     </span>
                   </td>
                   {/* Teacher emoticon scores */}
-                  <td className="px-3 py-3 text-center">
+                  <td className="px-2 py-3 text-center">
                     {renderTeacherEmoticon(evaluation.teacher_scores?.['O'])}
                   </td>
-                  <td className="px-3 py-3 text-center">
+                  <td className="px-2 py-3 text-center">
                     {renderTeacherEmoticon(evaluation.teacher_scores?.['M'])}
                   </td>
-                  <td className="px-3 py-3 text-center">
+                  <td className="px-2 py-3 text-center">
                     {renderTeacherEmoticon(evaluation.teacher_scores?.['Z'])}
                   </td>
-                  <td className="px-3 py-3 text-center">
+                  <td className="px-2 py-3 text-center">
                     {renderTeacherEmoticon(evaluation.teacher_scores?.['A'])}
                   </td>
+                  {/* Self vs Peer (SPR) */}
+                  <td className="px-2 py-3 text-center text-sm text-gray-700">
+                    {evaluation.spr !== null && evaluation.spr !== undefined ? evaluation.spr.toFixed(2) : "-"}
+                  </td>
                   {/* GCF */}
-                  <td className="px-3 py-3 text-center text-sm text-gray-700">
+                  <td className="px-2 py-3 text-center text-sm text-gray-700">
                     {evaluation.gcf !== null && evaluation.gcf !== undefined ? evaluation.gcf.toFixed(2) : "-"}
                   </td>
                   {/* Final Grade */}
-                  <td className="px-3 py-3 text-center">
+                  <td className="px-2 py-3 text-center">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
                       {formatGrade(evaluation.finalGrade)}
                     </span>
