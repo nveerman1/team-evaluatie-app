@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   ChevronDown,
   ChevronUp,
@@ -22,6 +23,8 @@ import {
 } from "chart.js";
 import { overviewService } from "@/services/overview.service";
 import type { CategoryTrendData, ProjectTeamScore } from "@/dtos/overview.dto";
+import OverviewFilters, { OverviewFilterValues } from "./OverviewFilters";
+import EmptyState from "./EmptyState";
 
 // Register Chart.js components
 ChartJS.register(
@@ -902,20 +905,74 @@ function CategoryTrendChart({ trendData, loading }: CategoryTrendChartProps) {
    ========================================= */
 
 export default function ProjectOverviewTab() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  
+  // Initialize filter values from URL
+  const [filterValues, setFilterValues] = useState<OverviewFilterValues>({
+    academicYear: searchParams.get("year") || undefined,
+    courseId: searchParams.get("subjectId") || undefined,
+    period: searchParams.get("period") || PERIODS[0],
+    searchQuery: searchParams.get("q") || undefined,
+  });
+  
   const [filters, setFilters] = useState<ProjectOverviewFilters>({
-    schoolYear: "",
-    courseId: "",
-    period: PERIODS[0],
+    schoolYear: filterValues.academicYear || "",
+    courseId: filterValues.courseId || "",
+    period: filterValues.period || PERIODS[0],
   });
 
   const [academicYears, setAcademicYears] = useState<Array<{label: string; id: number}>>([]);
   const [courses, setCourses] = useState<Array<{id: number; name: string}>>([]);
+  const [loadingOptions, setLoadingOptions] = useState(true);
 
   const { projects, trendData, loading, error } = useProjectOverviewData(filters);
+  
+  // Sync URL with filter values
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    
+    if (filterValues.academicYear) {
+      params.set("year", filterValues.academicYear);
+    } else {
+      params.delete("year");
+    }
+    
+    if (filterValues.courseId) {
+      params.set("subjectId", filterValues.courseId);
+    } else {
+      params.delete("subjectId");
+    }
+    
+    if (filterValues.period && filterValues.period !== PERIODS[0]) {
+      params.set("period", filterValues.period);
+    } else {
+      params.delete("period");
+    }
+    
+    if (filterValues.searchQuery) {
+      params.set("q", filterValues.searchQuery);
+    } else {
+      params.delete("q");
+    }
+    
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [filterValues, pathname, router, searchParams]);
+  
+  // Update internal filters when filterValues change
+  useEffect(() => {
+    setFilters({
+      schoolYear: filterValues.academicYear || "",
+      courseId: filterValues.courseId || "",
+      period: filterValues.period || PERIODS[0],
+    });
+  }, [filterValues]);
 
   // Fetch academic years and courses on mount
   useEffect(() => {
     const fetchOptions = async () => {
+      setLoadingOptions(true);
       try {
         const [years, coursesData] = await Promise.all([
           overviewService.getAcademicYears(),
@@ -924,104 +981,89 @@ export default function ProjectOverviewTab() {
         setAcademicYears(years);
         setCourses(coursesData);
         
-        // Set default school year to the first one if available
-        if (years.length > 0) {
-          setFilters(prev => {
-            if (!prev.schoolYear) {
-              return { ...prev, schoolYear: years[0].label };
-            }
-            return prev;
-          });
+        // Set default school year to the first one if available and not already set
+        if (years.length > 0 && !filterValues.academicYear) {
+          setFilterValues(prev => ({
+            ...prev,
+            academicYear: years[0].label,
+          }));
         }
       } catch (e) {
         console.error("Failed to fetch options:", e);
+      } finally {
+        setLoadingOptions(false);
       }
     };
     fetchOptions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run on mount
 
-  const handleFilterChange = <K extends keyof ProjectOverviewFilters>(
-    key: K,
-    value: ProjectOverviewFilters[K]
-  ) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
+  const handleFilterChange = (newFilters: OverviewFilterValues) => {
+    setFilterValues(newFilters);
   };
+  
+  // Map periods to the format expected by OverviewFilters
+  const periodOptions = PERIODS.map(p => ({ value: p, label: p }));
+
+  // Show empty state if no course selected
+  if (!filterValues.courseId) {
+    return (
+      <div className="space-y-6">
+        <OverviewFilters
+          filters={filterValues}
+          onFiltersChange={handleFilterChange}
+          academicYears={academicYears}
+          courses={courses}
+          periods={periodOptions}
+          loading={loadingOptions}
+          showAcademicYear={true}
+          showPeriod={true}
+          showClass={false}
+          showSearch={true}
+        />
+        <EmptyState />
+      </div>
+    );
+  }
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-        <p className="font-medium">Fout bij het laden van gegevens</p>
-        <p className="text-sm mt-1">{error}</p>
+      <div className="space-y-6">
+        <OverviewFilters
+          filters={filterValues}
+          onFiltersChange={handleFilterChange}
+          academicYears={academicYears}
+          courses={courses}
+          periods={periodOptions}
+          loading={loadingOptions}
+          showAcademicYear={true}
+          showPeriod={true}
+          showClass={false}
+          showSearch={true}
+        />
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+          <p className="font-medium">Fout bij het laden van gegevens</p>
+          <p className="text-sm mt-1">{error}</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">
-          Projectbeoordelingen — Overzicht
-        </h2>
-        <p className="text-slate-600 mt-1">
-          Inzicht in projecten, rubriccategorieën en trends
-        </p>
-      </div>
-
       {/* Global Filter Bar */}
-      <div className="bg-gray-50 rounded-xl p-4">
-        <div className="flex flex-wrap gap-4 items-center">
-          {/* School Year */}
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Schooljaar</label>
-            <select
-              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
-              value={filters.schoolYear}
-              onChange={(e) => handleFilterChange("schoolYear", e.target.value)}
-            >
-              {academicYears.map((year) => (
-                <option key={year.id} value={year.label}>
-                  {year.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Course */}
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Vak</label>
-            <select
-              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
-              value={filters.courseId}
-              onChange={(e) => handleFilterChange("courseId", e.target.value)}
-            >
-              <option value="">Alle vakken</option>
-              {courses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Period */}
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Periode</label>
-            <select
-              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
-              value={filters.period}
-              onChange={(e) => handleFilterChange("period", e.target.value)}
-            >
-              {PERIODS.map((period) => (
-                <option key={period} value={period}>
-                  {period}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
+      <OverviewFilters
+        filters={filterValues}
+        onFiltersChange={handleFilterChange}
+        academicYears={academicYears}
+        courses={courses}
+        periods={periodOptions}
+        loading={loadingOptions}
+        showAcademicYear={true}
+        showPeriod={true}
+        showClass={false}
+        showSearch={true}
+      />
 
       {/* Project Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">

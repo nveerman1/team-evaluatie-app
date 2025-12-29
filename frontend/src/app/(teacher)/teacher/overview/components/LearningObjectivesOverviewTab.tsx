@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   getLearningObjectivesOverview,
   listLearningObjectives,
@@ -12,40 +13,86 @@ import type {
   LearningObjectiveDto,
 } from "@/dtos/learning-objective.dto";
 import type { CourseLite } from "@/dtos/course.dto";
+import OverviewFilters, { OverviewFilterValues } from "./OverviewFilters";
+import EmptyState from "./EmptyState";
 
 type AggregationType = "average" | "most_recent" | "highest";
 type Phase = "onderbouw" | "bovenbouw";
 
 export default function LearningObjectivesOverviewTab() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  
   const [overview, setOverview] = useState<LearningObjectiveOverviewResponse | null>(
     null
   );
   const [allObjectives, setAllObjectives] = useState<LearningObjectiveDto[]>(
     []
   );
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [loadingOptions, setLoadingOptions] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Phase toggle
   const [phase, setPhase] = useState<Phase>("onderbouw");
 
-  // Filters
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [courseFilter, setCourseFilter] = useState<number | undefined>(undefined);
-  const [classFilter, setClassFilter] = useState<string>("");
-  const [periodFilter, setPeriodFilter] = useState<string>("all");
-  const [aggregationType, setAggregationType] = useState<AggregationType>("average");
+  // Initialize filter values from URL
+  const [filterValues, setFilterValues] = useState<OverviewFilterValues>({
+    courseId: searchParams.get("subjectId") || undefined,
+    period: searchParams.get("period") || undefined,
+    classId: searchParams.get("classId") || undefined,
+    searchQuery: searchParams.get("q") || undefined,
+  });
 
   // Dropdown data
   const [courses, setCourses] = useState<CourseLite[]>([]);
-  const [classes, setClasses] = useState<string[]>([]);
+  const [classes, setClasses] = useState<Array<{id: string; name: string}>>([]);
+  
+  // Sync URL with filter values
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    
+    if (filterValues.courseId) {
+      params.set("subjectId", filterValues.courseId);
+    } else {
+      params.delete("subjectId");
+    }
+    
+    if (filterValues.period) {
+      params.set("period", filterValues.period);
+    } else {
+      params.delete("period");
+    }
+    
+    if (filterValues.classId) {
+      params.set("classId", filterValues.classId);
+    } else {
+      params.delete("classId");
+    }
+    
+    if (filterValues.searchQuery) {
+      params.set("q", filterValues.searchQuery);
+    } else {
+      params.delete("q");
+    }
+    
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [filterValues, pathname, router, searchParams]);
+  
+  const handleFilterChange = (newFilters: OverviewFilterValues) => {
+    setFilterValues(newFilters);
+  };
 
   const fetchCourses = useCallback(async () => {
+    setLoadingOptions(true);
     try {
       const coursesData = await courseService.getCourses();
       setCourses(coursesData);
     } catch (err) {
       console.error("Error fetching courses:", err);
+    } finally {
+      setLoadingOptions(false);
     }
   }, []);
 
@@ -62,7 +109,7 @@ export default function LearningObjectivesOverviewTab() {
             .filter((c): c is string => !!c)
         )
       ).sort();
-      setClasses(uniqueClasses);
+      setClasses(uniqueClasses.map(c => ({ id: c, name: c })));
     } catch (err) {
       console.error("Error fetching classes:", err);
     }
@@ -83,13 +130,19 @@ export default function LearningObjectivesOverviewTab() {
   }, [phase]);
 
   const fetchOverview = useCallback(async () => {
+    if (!filterValues.courseId) {
+      setOverview(null);
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     setError(null);
 
     try {
       const response = await getLearningObjectivesOverview({
-        class_name: classFilter || undefined,
-        course_id: courseFilter,
+        class_name: filterValues.classId || undefined,
+        course_id: filterValues.courseId ? Number(filterValues.courseId) : undefined,
         include_teacher_objectives: true, // Include teacher's own objectives
         include_course_objectives: true, // Include objectives from shared courses
       });
@@ -103,7 +156,7 @@ export default function LearningObjectivesOverviewTab() {
     } finally {
       setLoading(false);
     }
-  }, [classFilter, courseFilter]);
+  }, [filterValues.classId, filterValues.courseId]);
 
   useEffect(() => {
     fetchCourses();
@@ -178,18 +231,117 @@ export default function LearningObjectivesOverviewTab() {
 
   // Filter students by search query
   const filteredStudents = overview?.students.filter(student => {
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+    if (filterValues.searchQuery) {
+      const query = filterValues.searchQuery.toLowerCase();
       return student.user_name.toLowerCase().includes(query) ||
              student.class_name?.toLowerCase().includes(query);
     }
     return true;
   }) || [];
+  
+  // Show empty state if no course selected
+  if (!filterValues.courseId) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold mb-2">Leerdoelen / Eindtermen Overzicht</h2>
+            <p className="text-gray-600">
+              Totaaloverzicht van hoe goed leerlingen de leerdoelen/eindtermen beheersen
+            </p>
+          </div>
+        </div>
+
+        {/* Phase Toggle */}
+        <div className="flex gap-4 p-4 bg-gray-50 rounded-lg">
+          <button
+            onClick={() => setPhase("onderbouw")}
+            className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+              phase === "onderbouw"
+                ? "bg-blue-600 text-white shadow-md"
+                : "bg-white text-gray-700 hover:bg-gray-100"
+            }`}
+          >
+            Onderbouw
+          </button>
+          <button
+            onClick={() => setPhase("bovenbouw")}
+            className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+              phase === "bovenbouw"
+                ? "bg-purple-600 text-white shadow-md"
+                : "bg-white text-gray-700 hover:bg-gray-100"
+            }`}
+          >
+            Bovenbouw
+          </button>
+        </div>
+
+        <OverviewFilters
+          filters={filterValues}
+          onFiltersChange={handleFilterChange}
+          courses={courses}
+          classes={classes}
+          loading={loadingOptions}
+          showAcademicYear={false}
+          showPeriod={false}
+          showClass={true}
+          showSearch={true}
+        />
+        <EmptyState />
+      </div>
+    );
+  }
 
   if (loading && !overview) {
     return (
-      <div className="p-8">
-        <div className="text-center">Laden...</div>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold mb-2">Leerdoelen / Eindtermen Overzicht</h2>
+            <p className="text-gray-600">
+              Totaaloverzicht van hoe goed leerlingen de leerdoelen/eindtermen beheersen
+            </p>
+          </div>
+        </div>
+
+        {/* Phase Toggle */}
+        <div className="flex gap-4 p-4 bg-gray-50 rounded-lg">
+          <button
+            onClick={() => setPhase("onderbouw")}
+            className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+              phase === "onderbouw"
+                ? "bg-blue-600 text-white shadow-md"
+                : "bg-white text-gray-700 hover:bg-gray-100"
+            }`}
+          >
+            Onderbouw
+          </button>
+          <button
+            onClick={() => setPhase("bovenbouw")}
+            className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+              phase === "bovenbouw"
+                ? "bg-purple-600 text-white shadow-md"
+                : "bg-white text-gray-700 hover:bg-gray-100"
+            }`}
+          >
+            Bovenbouw
+          </button>
+        </div>
+
+        <OverviewFilters
+          filters={filterValues}
+          onFiltersChange={handleFilterChange}
+          courses={courses}
+          classes={classes}
+          loading={loadingOptions}
+          showAcademicYear={false}
+          showPeriod={false}
+          showClass={true}
+          showSearch={true}
+        />
+        <div className="p-8">
+          <div className="text-center">Laden...</div>
+        </div>
       </div>
     );
   }
@@ -242,63 +394,17 @@ export default function LearningObjectivesOverviewTab() {
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white border rounded-lg p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">🔍 Zoeken</label>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Naam leerling"
-              className="w-full px-3 py-2 border rounded-lg"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">🧭 Vak / Course</label>
-            <select
-              value={courseFilter || ""}
-              onChange={(e) => setCourseFilter(e.target.value ? Number(e.target.value) : undefined)}
-              className="w-full px-3 py-2 border rounded-lg"
-            >
-              <option value="">Alle vakken</option>
-              {courses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">🏫 Klas</label>
-            <select
-              value={classFilter}
-              onChange={(e) => setClassFilter(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg"
-            >
-              <option value="">Alle klassen</option>
-              {classes.map((className) => (
-                <option key={className} value={className}>
-                  {className}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">📅 Periode</label>
-            <select
-              value={periodFilter}
-              onChange={(e) => setPeriodFilter(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg"
-            >
-              <option value="all">Alle data</option>
-              <option value="4weeks">Laatste 4 weken</option>
-              <option value="quarter">Dit kwartaal</option>
-              <option value="year">Dit schooljaar</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      <OverviewFilters
+        filters={filterValues}
+        onFiltersChange={handleFilterChange}
+        courses={courses}
+        classes={classes}
+        loading={loadingOptions}
+        showAcademicYear={false}
+        showPeriod={false}
+        showClass={true}
+        showSearch={true}
+      />
 
       {/* Overview Table */}
       {overview && (
