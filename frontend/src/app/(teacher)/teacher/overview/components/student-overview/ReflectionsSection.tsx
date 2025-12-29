@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { peerEvaluationOverviewService } from "@/services/peer-evaluation-overview.service";
 import { competencyMonitorService } from "@/services/competency-monitor.service";
 import type { ReflectionItem } from "@/services/peer-evaluation-overview.service";
@@ -28,6 +29,7 @@ function formatDate(dateStr: string): string {
 export function ReflectionsSection({ studentId, courseId }: ReflectionsSectionProps) {
   const [reflections, setReflections] = useState<CombinedReflection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedRows, setExpandedRows] = useState<Set<number | string>>(new Set());
 
   useEffect(() => {
     async function fetchReflections() {
@@ -82,6 +84,18 @@ export function ReflectionsSection({ studentId, courseId }: ReflectionsSectionPr
     fetchReflections();
   }, [studentId, courseId]);
 
+  const toggleRow = (id: number | string) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
   if (loading) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -123,37 +137,64 @@ export function ReflectionsSection({ studentId, courseId }: ReflectionsSectionPr
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {reflections.map((reflection) => (
-                <tr key={reflection.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm">
-                    <span
-                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        reflection.type === "Peer"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-purple-100 text-purple-700"
-                      }`}
+              {reflections.map((reflection) => {
+                const isExpanded = expandedRows.has(reflection.id);
+                return (
+                  <React.Fragment key={reflection.id}>
+                    <tr 
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => toggleRow(reflection.id)}
                     >
-                      {reflection.type}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-900">
-                    <div className="line-clamp-2">
-                      {reflection.project_name}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                    {formatDate(reflection.date)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">
-                    <div className="line-clamp-3 whitespace-normal break-words">
-                      {reflection.reflection_text}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 text-center">
-                    {reflection.word_count}
-                  </td>
-                </tr>
-              ))}
+                      <td className="px-4 py-3 text-sm">
+                        <span
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            reflection.type === "Peer"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-purple-100 text-purple-700"
+                          }`}
+                        >
+                          {reflection.type}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        <div className="line-clamp-2">
+                          {reflection.project_name}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                        {formatDate(reflection.date)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        <div className="flex items-start gap-2">
+                          {isExpanded ? (
+                            <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                          )}
+                          <div className="line-clamp-3 whitespace-normal break-words flex-1">
+                            {reflection.reflection_text}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600 text-center">
+                        {reflection.word_count}
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr className="bg-gray-50">
+                        <td colSpan={5} className="px-4 py-4">
+                          <div className="ml-6">
+                            <span className="text-xs font-medium text-gray-500 uppercase">Volledige reflectie:</span>
+                            <p className="text-sm text-gray-700 mt-2 whitespace-pre-wrap break-words">
+                              {reflection.reflection_text}
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>

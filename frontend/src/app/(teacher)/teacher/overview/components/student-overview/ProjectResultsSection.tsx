@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { overviewService } from "@/services/overview.service";
-import type { ProjectOverviewItem } from "@/dtos/overview.dto";
+import type { ProjectOverviewItem, ProjectTeamScore } from "@/dtos/overview.dto";
 
 interface ProjectResultsSectionProps {
   studentId: number;
@@ -24,27 +24,76 @@ function formatScore(score: number | null | undefined): string {
   return score.toFixed(1);
 }
 
+interface StudentProjectResult {
+  project_id: number;
+  project_name: string;
+  period_label: string;
+  client_name: string | null;
+  team_number: number;
+  team_name: string | null;
+  team_members: string[];
+  projectproces: number | null;
+  eindresultaat: number | null;
+  communicatie: number | null;
+  overall_score: number | null;
+}
+
 export function ProjectResultsSection({ studentId, courseId }: ProjectResultsSectionProps) {
-  const [projects, setProjects] = useState<ProjectOverviewItem[]>([]);
+  const [studentResults, setStudentResults] = useState<StudentProjectResult[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchProjects() {
+    async function fetchStudentProjects() {
       try {
         setLoading(true);
-        const response = await overviewService.getProjectOverview({
+        
+        // First, get all projects for the course
+        const projectsResponse = await overviewService.getProjectOverview({
           courseId: String(courseId),
         });
-        setProjects(response.projects);
+        
+        // Then for each project, get team details to find student
+        const results: StudentProjectResult[] = [];
+        
+        for (const project of projectsResponse.projects) {
+          try {
+            const teamsResponse = await overviewService.getProjectTeams(project.project_id);
+            
+            // Find the team that contains this student
+            const studentTeam = teamsResponse.teams.find(team => 
+              team.team_members.some(member => member.includes(String(studentId)))
+            );
+            
+            if (studentTeam) {
+              results.push({
+                project_id: project.project_id,
+                project_name: project.project_name,
+                period_label: project.period_label,
+                client_name: project.client_name ?? null,
+                team_number: studentTeam.team_number,
+                team_name: studentTeam.team_name ?? null,
+                team_members: studentTeam.team_members,
+                projectproces: studentTeam.category_scores.projectproces ?? null,
+                eindresultaat: studentTeam.category_scores.eindresultaat ?? null,
+                communicatie: studentTeam.category_scores.communicatie ?? null,
+                overall_score: studentTeam.overall_score ?? null,
+              });
+            }
+          } catch (error) {
+            console.error(`Error fetching teams for project ${project.project_id}:`, error);
+          }
+        }
+        
+        setStudentResults(results);
       } catch (error) {
-        console.error("Error fetching projects:", error);
-        setProjects([]);
+        console.error("Error fetching student projects:", error);
+        setStudentResults([]);
       } finally {
         setLoading(false);
       }
     }
-    fetchProjects();
-  }, [courseId]); // studentId not needed - we show all projects in the course
+    fetchStudentProjects();
+  }, [studentId, courseId]);
 
   if (loading) {
     return (
@@ -62,66 +111,96 @@ export function ProjectResultsSection({ studentId, courseId }: ProjectResultsSec
     <div className="bg-white rounded-lg border border-gray-200 p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Projectresultaten</h3>
       
-      {projects.length === 0 ? (
-        <p className="text-gray-500 text-center py-4">Geen projecten gevonden</p>
+      {studentResults.length === 0 ? (
+        <p className="text-gray-500 text-center py-4">Geen projectresultaten gevonden</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full table-fixed">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="w-[25%] px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                <th className="w-[15%] px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Project
                 </th>
-                <th className="w-[15%] px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                <th className="w-[8%] px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Periode
                 </th>
-                <th className="w-[15%] px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                  Client
+                <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                  Opdrachtgever
                 </th>
-                <th className="w-[15%] px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
-                  Teams
+                <th className="w-[6%] px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
+                  Team
                 </th>
-                <th className="w-[15%] px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
-                  Gemiddelde
+                <th className="w-[18%] px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                  Teamleden
                 </th>
-                <th className="w-[15%] px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                  Status
+                <th className="w-[9%] px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
+                  Projectproces
+                </th>
+                <th className="w-[9%] px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
+                  Eindresultaat
+                </th>
+                <th className="w-[9%] px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
+                  Communicatie
+                </th>
+                <th className="w-[9%] px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
+                  Gem. score
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {projects.map((project) => (
-                <tr key={project.project_id} className="hover:bg-gray-50">
+              {studentResults.map((result) => (
+                <tr key={result.project_id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-sm text-gray-900">
-                    <div className="line-clamp-2">{project.project_name}</div>
+                    <div className="line-clamp-2">{result.project_name}</div>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                    {project.period_label}
+                    {result.period_label}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
-                    <div className="line-clamp-1">{project.client_name || "-"}</div>
+                    <div className="line-clamp-2">{result.client_name || "-"}</div>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 text-center">
-                    {project.num_teams}
+                    {result.team_number}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    <div className="line-clamp-2" title={result.team_members.join(", ")}>
+                      {result.team_members.join(", ")}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getScoreColor(
-                        project.average_score_overall
+                        result.projectproces
                       )}`}
                     >
-                      {formatScore(project.average_score_overall)}
+                      {formatScore(result.projectproces)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm">
+                  <td className="px-4 py-3 text-center">
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        project.status === "active"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-gray-100 text-gray-700"
-                      }`}
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getScoreColor(
+                        result.eindresultaat
+                      )}`}
                     >
-                      {project.status === "active" ? "Actief" : "Voltooid"}
+                      {formatScore(result.eindresultaat)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getScoreColor(
+                        result.communicatie
+                      )}`}
+                    >
+                      {formatScore(result.communicatie)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getScoreColor(
+                        result.overall_score
+                      )}`}
+                    >
+                      {formatScore(result.overall_score)}
                     </span>
                   </td>
                 </tr>

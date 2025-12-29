@@ -5,7 +5,8 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { courseService } from "@/services/course.service";
 import type { CourseLite, CourseStudent } from "@/dtos/course.dto";
 import { ProjectResultsSection } from "./student-overview/ProjectResultsSection";
-import { EvaluationHeatmapSection } from "./student-overview/OmzaHeatmapSection";
+import { EvaluationHeatmapSection } from "./student-overview/EvaluationHeatmapSection";
+import { OMZATrendSection } from "./student-overview/OMZATrendSection";
 import { CompetencyProfileSection } from "./student-overview/CompetencyProfileSection";
 import { LearningObjectivesSection } from "./student-overview/LearningObjectivesSection";
 import { ReflectionsSection } from "./student-overview/ReflectionsSection";
@@ -341,12 +342,18 @@ export default function StudentOverviewTab() {
         courseId={filters.selectedCourseId} 
       />
 
-      {/* B) OMZA Trend (left) + Heatmap (middle) + Competency Profile (right) - three columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <EvaluationHeatmapSection 
+      {/* B) Evaluations Heatmap - Full width */}
+      <EvaluationHeatmapSection 
+        studentId={filters.selectedStudentId} 
+        courseId={filters.selectedCourseId}
+        onEvaluationClick={handleEvaluationClick}
+      />
+
+      {/* C) OMZA Trend (left) + Competency Profile (right) - two columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <OMZATrendSection 
           studentId={filters.selectedStudentId} 
           courseId={filters.selectedCourseId}
-          onEvaluationClick={handleEvaluationClick}
         />
         
         <CompetencyProfileSection 
