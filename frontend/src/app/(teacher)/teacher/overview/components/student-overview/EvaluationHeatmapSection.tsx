@@ -105,6 +105,15 @@ export function EvaluationHeatmapSection({ studentId, studentName, courseId, onE
         const student = response.heatmapData.find(s => s.student_id === studentId);
         setStudentData(student || null);
         
+        console.log("EvaluationHeatmap: Fetched peer evaluation data for student:", {
+          studentId,
+          studentName,
+          courseId,
+          foundStudent: !!student,
+          evaluationsCount: student?.evaluations?.length || 0,
+          evaluationLabels: student?.evaluations?.map(e => e.label) || []
+        });
+        
         if (student && student.evaluations && student.evaluations.length > 0) {
           // For each evaluation, try to fetch grade data
           const enrichedEvaluations = await Promise.all(

@@ -137,13 +137,13 @@ export function ProjectResultsSection({ studentId, studentName, courseId }: Proj
                 <th className="w-[18%] px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                   Teamleden
                 </th>
-                <th className="w-[9%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
-                  Projectproces
+                <th className="w-[9%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Projectproces">
+                  Proces
                 </th>
-                <th className="w-[9%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
-                  Eindresultaat
+                <th className="w-[9%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Eindresultaat">
+                  Resultaat
                 </th>
-                <th className="w-[9%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
+                <th className="w-[9%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider" title="Communicatie">
                   Communicatie
                 </th>
                 <th className="w-[9%] px-2 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
