@@ -32,11 +32,11 @@ function formatGrade(grade: number | null | undefined): string {
   return grade.toFixed(1);
 }
 
-// Render teacher emoticon similar to Peerevaluaties tab
+// Render teacher emoticon matching Peerevaluaties tab style exactly
 function renderTeacherEmoticon(score: number | null | undefined) {
   if (!score) return <span className="text-slate-300">–</span>;
   
-  // 4-level system: 1=best (🙂), 4=worst (!!)
+  // 4-level system matching OMZA evaluation page: 1=best (🙂), 4=worst (!!)
   if (score === 1) {
     return (
       <span 
@@ -53,25 +53,25 @@ function renderTeacherEmoticon(score: number | null | undefined) {
         className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[10px] font-medium text-green-700" 
         title="Voldoet aan verwachting"
       >
-        
+        ✓
       </span>
     );
   }
   if (score === 3) {
     return (
       <span 
-        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-orange-500 bg-orange-100 text-[10px] font-medium text-orange-700" 
-        title="Aandachtspunt"
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-400 bg-amber-100 text-[10px] font-medium text-amber-700" 
+        title="Let op: verbeterpunt"
       >
-        😐
+        !
       </span>
     );
   }
   if (score === 4) {
     return (
       <span 
-        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-red-500 bg-red-100 text-[10px] font-bold text-red-700" 
-        title="Actie vereist"
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-rose-500 bg-rose-100 text-[10px] font-medium text-rose-700" 
+        title="Urgent: direct bespreken"
       >
         !!
       </span>
@@ -102,7 +102,7 @@ export function EvaluationHeatmapSection({ studentId, courseId, onEvaluationClic
         const student = response.heatmapData.find(s => s.student_id === studentId);
         setStudentData(student || null);
         
-        if (student && student.evaluations) {
+        if (student && student.evaluations && student.evaluations.length > 0) {
           // For each evaluation, try to fetch grade data
           const enrichedEvaluations = await Promise.all(
             student.evaluations.map(async (evaluation) => {
@@ -129,6 +129,7 @@ export function EvaluationHeatmapSection({ studentId, courseId, onEvaluationClic
           
           setEvaluations(enrichedEvaluations);
         } else {
+          console.warn("No evaluations found for student:", {studentId, student});
           setEvaluations([]);
         }
       } catch (error) {

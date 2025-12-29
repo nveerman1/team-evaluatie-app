@@ -6,6 +6,7 @@ import type { ProjectOverviewItem, ProjectTeamScore } from "@/dtos/overview.dto"
 
 interface ProjectResultsSectionProps {
   studentId: number;
+  studentName: string;
   courseId: number;
 }
 
@@ -38,7 +39,7 @@ interface StudentProjectResult {
   overall_score: number | null;
 }
 
-export function ProjectResultsSection({ studentId, courseId }: ProjectResultsSectionProps) {
+export function ProjectResultsSection({ studentId, studentName, courseId }: ProjectResultsSectionProps) {
   const [studentResults, setStudentResults] = useState<StudentProjectResult[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -59,9 +60,12 @@ export function ProjectResultsSection({ studentId, courseId }: ProjectResultsSec
           try {
             const teamsResponse = await overviewService.getProjectTeams(project.project_id);
             
-            // Find the team that contains this student
+            // Find the team that contains this student by name
             const studentTeam = teamsResponse.teams.find(team => 
-              team.team_members.some(member => member.includes(String(studentId)))
+              team.team_members.some(member => 
+                member.toLowerCase().includes(studentName.toLowerCase()) ||
+                studentName.toLowerCase().includes(member.toLowerCase())
+              )
             );
             
             if (studentTeam) {
@@ -93,7 +97,7 @@ export function ProjectResultsSection({ studentId, courseId }: ProjectResultsSec
       }
     }
     fetchStudentProjects();
-  }, [studentId, courseId]);
+  }, [studentId, studentName, courseId]);
 
   if (loading) {
     return (

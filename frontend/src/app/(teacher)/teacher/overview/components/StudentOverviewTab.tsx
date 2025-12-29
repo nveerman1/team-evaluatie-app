@@ -99,6 +99,12 @@ export default function StudentOverviewTab() {
     return filteredStudents.findIndex(s => s.id === filters.selectedStudentId);
   }, [filters.selectedStudentId, filteredStudents]);
 
+  // Get selected student
+  const selectedStudent = useMemo(() => {
+    if (!filters.selectedStudentId) return null;
+    return students.find(s => s.id === filters.selectedStudentId) || null;
+  }, [filters.selectedStudentId, students]);
+
   // Navigation handlers
   const handlePreviousStudent = useCallback(() => {
     if (currentStudentIndex > 0) {
@@ -127,12 +133,6 @@ export default function StudentOverviewTab() {
     setSelectedEvaluationId(evaluationId);
     setFeedbackPanelOpen(true);
   }, []);
-
-  // Find selected student
-  const selectedStudent = useMemo(() => {
-    if (!filters.selectedStudentId) return null;
-    return students.find(s => s.id === filters.selectedStudentId) || null;
-  }, [filters.selectedStudentId, students]);
 
   /* =========================================
      STATE 0: No course selected
@@ -339,6 +339,7 @@ export default function StudentOverviewTab() {
       {/* A) Project Results */}
       <ProjectResultsSection 
         studentId={filters.selectedStudentId} 
+        studentName={selectedStudent?.name || ""}
         courseId={filters.selectedCourseId} 
       />
 
