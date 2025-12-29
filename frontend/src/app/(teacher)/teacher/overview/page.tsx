@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import AllItemsTab from "./components/AllItemsTab";
 import LearningObjectivesOverviewTab from "./components/LearningObjectivesOverviewTab";
 import PeerevaluatiesTab from "./components/PeerevaluatiesTab";
@@ -9,7 +10,23 @@ import ProjectOverviewTab from "./components/ProjectOverviewTab";
 import StudentOverviewTab from "./components/StudentOverviewTab";
 
 export default function OverviewPage() {
-  const [activeTab, setActiveTab] = useState("totaal");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  
+  // Initialize state from URL or defaults
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "totaal");
+
+  // Sync URL with active tab
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (activeTab !== "totaal") {
+      params.set("tab", activeTab);
+    } else {
+      params.delete("tab");
+    }
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [activeTab, pathname, router, searchParams]);
 
   const tabs = [
     { id: "totaal", label: "Totaal" },
