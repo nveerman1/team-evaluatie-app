@@ -33,6 +33,54 @@ function formatGrade(grade: number | null | undefined): string {
   return grade.toFixed(1);
 }
 
+// Render Self vs Peer (SPR) with color coding and tooltip
+function renderSelfVsPeer(spr: number | null | undefined) {
+  if (spr === null || spr === undefined) {
+    return <span className="text-gray-400">-</span>;
+  }
+
+  // Color mapping based on deviation from 1.0
+  // 0.9 - 1.1 = realistic (blue)
+  // 0.8 - 0.9 or 1.1 - 1.2 = slight deviation (amber)
+  // < 0.8 or > 1.2 = clear mismatch (red)
+  
+  let colorClass = "";
+  let tooltip = "";
+  
+  if (spr >= 0.9 && spr <= 1.1) {
+    // Blue - realistic
+    colorClass = "bg-blue-100 text-blue-700 border-blue-300";
+    tooltip = "Realistische zelfbeoordeling (in lijn met peers)";
+  } else if ((spr >= 0.8 && spr < 0.9) || (spr > 1.1 && spr <= 1.2)) {
+    // Amber - slight deviation
+    if (spr < 1.0) {
+      colorClass = "bg-amber-100 text-amber-700 border-amber-300";
+      tooltip = "Lichte afwijking: beoordeelt zichzelf gemiddeld lager dan peers";
+    } else {
+      colorClass = "bg-amber-100 text-amber-700 border-amber-300";
+      tooltip = "Lichte afwijking: beoordeelt zichzelf gemiddeld hoger dan peers";
+    }
+  } else {
+    // Red - clear mismatch
+    if (spr < 1.0) {
+      colorClass = "bg-red-100 text-red-700 border-red-300";
+      tooltip = "Duidelijke mismatch: beoordeelt zichzelf gemiddeld veel lager dan peers";
+    } else {
+      colorClass = "bg-red-100 text-red-700 border-red-300";
+      tooltip = "Duidelijke mismatch: beoordeelt zichzelf gemiddeld veel hoger dan peers";
+    }
+  }
+
+  return (
+    <span 
+      className={`inline-flex items-center px-2 py-0.5 rounded border text-xs font-medium ${colorClass}`}
+      title={tooltip}
+    >
+      {spr.toFixed(2)}
+    </span>
+  );
+}
+
 // Render teacher emoticon matching Peerevaluaties tab style exactly
 function renderTeacherEmoticon(score: number | null | undefined) {
   if (!score) return <span className="text-slate-300">–</span>;
@@ -264,8 +312,8 @@ export function EvaluationHeatmapSection({ studentId, studentName, courseId, onE
                     {renderTeacherEmoticon(evaluation.teacher_scores?.['A'])}
                   </td>
                   {/* Self vs Peer (SPR) */}
-                  <td className="px-2 py-3 text-center text-sm text-gray-700">
-                    {evaluation.spr !== null && evaluation.spr !== undefined ? evaluation.spr.toFixed(2) : "-"}
+                  <td className="px-2 py-3 text-center">
+                    {renderSelfVsPeer(evaluation.spr)}
                   </td>
                   {/* GCF */}
                   <td className="px-2 py-3 text-center text-sm text-gray-700">
