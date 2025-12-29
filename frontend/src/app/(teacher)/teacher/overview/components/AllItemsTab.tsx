@@ -149,8 +149,19 @@ export default function AllItemsTab() {
   };
 
   const handleExportCSV = async () => {
+    if (!filterValues.courseId) return;
+    
     try {
-      const blob = await overviewService.exportMatrixCSV(filters);
+      const courseId = Number(filterValues.courseId);
+      const exportFilters: MatrixFilters = {
+        course_id: !isNaN(courseId) ? courseId : undefined,
+        class_name: filterValues.classId || undefined,
+        student_name: filterValues.searchQuery || undefined,
+        sort_by: sortBy || undefined,
+        sort_order: sortOrder,
+      };
+      
+      const blob = await overviewService.exportMatrixCSV(exportFilters);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;

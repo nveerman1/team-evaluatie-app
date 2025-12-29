@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import AllItemsTab from "./components/AllItemsTab";
 import LearningObjectivesOverviewTab from "./components/LearningObjectivesOverviewTab";
@@ -9,7 +9,7 @@ import CompetenciesOverviewTab from "./components/CompetenciesOverviewTab";
 import ProjectOverviewTab from "./components/ProjectOverviewTab";
 import StudentOverviewTab from "./components/StudentOverviewTab";
 
-export default function OverviewPage() {
+function OverviewPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -91,5 +91,13 @@ export default function OverviewPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function OverviewPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center">Laden...</div>}>
+      <OverviewPageContent />
+    </Suspense>
   );
 }
