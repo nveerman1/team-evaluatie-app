@@ -616,6 +616,22 @@ def get_overview_matrix(
     date_from_dt = datetime.fromisoformat(date_from) if date_from else None
     date_to_dt = datetime.fromisoformat(date_to) if date_to else None
     
+    # If course_id is specified, get all student IDs who are members of groups in that course
+    allowed_student_ids = None
+    if course_id:
+        from app.infra.db.models import GroupMember
+        student_ids_query = db.query(User.id).join(
+            GroupMember, GroupMember.user_id == User.id
+        ).join(
+            Group, GroupMember.group_id == Group.id
+        ).filter(
+            Group.course_id == course_id,
+            GroupMember.active == True,
+            ~User.archived,
+            User.role == "student"
+        ).distinct()
+        allowed_student_ids = set(sid for (sid,) in student_ids_query.all())
+    
     # Dictionary to store all evaluations with metadata
     evaluations = []  # List of (key, type, title, date, evaluation_id)
     
@@ -674,6 +690,10 @@ def get_overview_matrix(
         # Filter by student name if specified
         if student_name:
             members = [m for m in members if student_name.lower() in m.name.lower()]
+        
+        # Filter by allowed students (if course filter is active)
+        if allowed_student_ids is not None:
+            members = [m for m in members if m.id in allowed_student_ids]
         
         for member in members:
             if member.id not in student_data:
@@ -750,6 +770,10 @@ def get_overview_matrix(
         if student_name:
             students_in_eval = [s for s in students_in_eval if student_name.lower() in s.name.lower()]
         
+        # Filter by allowed students (if course filter is active)
+        if allowed_student_ids is not None:
+            students_in_eval = [s for s in students_in_eval if s.id in allowed_student_ids]
+        
         for student in students_in_eval:
             if student.id not in student_data:
                 student_data[student.id] = {
@@ -814,6 +838,10 @@ def get_overview_matrix(
         # Filter by student name if specified
         if student_name:
             students_with_scores = [s for s in students_with_scores if student_name.lower() in s.name.lower()]
+        
+        # Filter by allowed students (if course filter is active)
+        if allowed_student_ids is not None:
+            students_with_scores = [s for s in students_with_scores if s.id in allowed_student_ids]
         
         for student in students_with_scores:
             if student.id not in student_data:
