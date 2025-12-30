@@ -144,7 +144,7 @@ export default function EvaluationSettingsPageInner() {
     setInfo(null);
 
     try {
-      if (!courseId || rubricId === "" || projectId === "") {
+      if (!courseId || !projectId || !rubricId) {
         throw new Error("Kies een course, project én een rubric.");
       }
 
