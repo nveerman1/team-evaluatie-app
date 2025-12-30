@@ -622,7 +622,8 @@ def get_overview_matrix(
         Course, Group.course_id == Course.id
     ).filter(
         ProjectAssessment.school_id == school_id,
-        ProjectAssessment.status == "published"  # Only published projects
+        ProjectAssessment.status == "published",  # Only published projects
+        ProjectAssessment.is_advisory == False  # Exclude external assessments
     )
     
     if course_id:

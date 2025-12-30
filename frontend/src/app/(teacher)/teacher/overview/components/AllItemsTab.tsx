@@ -22,6 +22,19 @@ export default function AllItemsTab() {
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [courses, setCourses] = useState<Array<{id: number; name: string}>>([]);
   
+  // Extract unique classes from matrix data
+  const availableClasses = useMemo(() => {
+    if (!matrixData) return [];
+    const classNames = Array.from(
+      new Set(
+        matrixData.rows
+          .map(row => row.student_class)
+          .filter((className): className is string => Boolean(className))
+      )
+    ).sort();
+    return classNames.map(name => ({ id: name, name }));
+  }, [matrixData]);
+  
   // Initialize filters from URL
   const [filterValues, setFilterValues] = useState<OverviewFilterValues>({
     courseId: searchParams.get("subjectId") || undefined,
@@ -198,8 +211,8 @@ export default function AllItemsTab() {
   const renderCell = (cell: MatrixCell | null, studentId: number, colKey: string) => {
     if (!cell) {
       return (
-        <td key={colKey} className="px-2 py-2 text-center border-r border-gray-200">
-          <div className="w-full h-10 bg-gray-50 rounded flex items-center justify-center text-gray-300 text-xs">
+        <td key={colKey} className="px-3 py-2 text-center">
+          <div className="w-full h-10 bg-slate-50 rounded flex items-center justify-center text-slate-300 text-xs">
             —
           </div>
         </td>
@@ -209,7 +222,7 @@ export default function AllItemsTab() {
     const scoreColor = getScoreColor(cell.score);
     
     return (
-      <td key={colKey} className="px-2 py-2 text-center border-r border-gray-200">
+      <td key={colKey} className="px-3 py-2 text-center">
         <Link
           href={cell.detail_url}
           className="group block"
@@ -239,10 +252,11 @@ export default function AllItemsTab() {
           filters={filterValues}
           onFiltersChange={setFilterValues}
           courses={courses}
+          classes={availableClasses}
           loading={loadingCourses}
           showAcademicYear={false}
           showPeriod={true}
-          showClass={false}
+          showClass={true}
           showSearch={true}
         />
         <EmptyState />
@@ -263,10 +277,11 @@ export default function AllItemsTab() {
           filters={filterValues}
           onFiltersChange={setFilterValues}
           courses={courses}
+          classes={availableClasses}
           loading={loadingCourses}
           showAcademicYear={false}
           showPeriod={true}
-          showClass={false}
+          showClass={true}
           showSearch={true}
         >
           {/* Column toggles */}
@@ -319,10 +334,11 @@ export default function AllItemsTab() {
           filters={filterValues}
           onFiltersChange={setFilterValues}
           courses={courses}
+          classes={availableClasses}
           loading={loadingCourses}
           showAcademicYear={false}
           showPeriod={true}
-          showClass={false}
+          showClass={true}
           showSearch={true}
         >
           {/* Column toggles */}
@@ -380,10 +396,11 @@ export default function AllItemsTab() {
         filters={filterValues}
         onFiltersChange={setFilterValues}
         courses={courses}
+        classes={availableClasses}
         loading={loadingCourses}
         showAcademicYear={false}
         showPeriod={true}
-        showClass={false}
+        showClass={true}
         showSearch={true}
       >
         {/* Column toggles */}
@@ -419,36 +436,10 @@ export default function AllItemsTab() {
         </div>
       </OverviewFilters>
 
-      {/* Header with summary */}
+      {/* Header with summary and Export button */}
       <div className="flex items-center justify-between">
         <div className="text-sm text-gray-600">
           {matrixData.total_students} leerlingen • {filteredColumns.length} evaluaties
-        </div>
-      </div>
-
-      {/* Legend with Export button */}
-      <div className="flex items-center justify-between text-xs">
-        <div className="flex gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-green-100 rounded"></div>
-            <span>Hoog (≥8.0)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-yellow-100 rounded"></div>
-            <span>Voldoende (6.5-7.9)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-orange-100 rounded"></div>
-            <span>Matig (5.5-6.4)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-red-100 rounded"></div>
-            <span>Onvoldoende (&lt;5.5)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-gray-50 rounded"></div>
-            <span>Geen data</span>
-          </div>
         </div>
         <button
           onClick={handleExportCSV}
@@ -459,13 +450,13 @@ export default function AllItemsTab() {
       </div>
 
       {/* Matrix Table */}
-      <div className="overflow-x-auto border rounded-xl">
-        <table className="w-full">
-          <thead className="bg-gray-50 sticky top-0 z-10">
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <thead className="bg-slate-50 sticky top-0 z-10">
             <tr>
               {/* Sticky student columns - sortable */}
               <th 
-                className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r-2 border-gray-300 sticky left-0 bg-gray-50 z-20 cursor-pointer hover:bg-gray-100"
+                className="sticky left-0 z-20 bg-slate-50 px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[200px] cursor-pointer hover:bg-slate-100"
                 onClick={() => handleColumnSort("student")}
                 title="Klik om te sorteren op naam"
               >
@@ -476,7 +467,7 @@ export default function AllItemsTab() {
                   )}
                 </div>
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r-2 border-gray-300 sticky left-[150px] bg-gray-50 z-20">
+              <th className="sticky left-[200px] z-20 bg-slate-50 px-4 py-3 text-left text-xs font-semibold text-slate-500 tracking-wide min-w-[120px]">
                 Klas
               </th>
               
@@ -484,7 +475,7 @@ export default function AllItemsTab() {
               {filteredColumns.map((col) => (
                 <th
                   key={col.key}
-                  className="px-2 py-3 text-center text-xs font-semibold text-gray-700 border-r border-gray-200 cursor-pointer hover:bg-gray-100"
+                  className="px-3 py-3 text-center text-xs font-semibold text-slate-500 tracking-wide cursor-pointer hover:bg-slate-100"
                   style={{ minWidth: "80px" }}
                   title={`${col.title}\n${col.date ? formatDate(col.date) : "Geen datum"}\nKlik om te sorteren`}
                   onClick={() => handleColumnSort(col.key)}
@@ -505,14 +496,14 @@ export default function AllItemsTab() {
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
+          <tbody className="divide-y divide-slate-100 bg-white">
             {matrixData.rows.map((row) => (
-              <tr key={row.student_id} className="hover:bg-gray-50">
+              <tr key={row.student_id} className="hover:bg-slate-50">
                 {/* Sticky student info */}
-                <td className="px-4 py-2 text-sm font-medium text-gray-900 border-r-2 border-gray-300 sticky left-0 bg-white z-10">
+                <td className="sticky left-0 z-10 bg-white px-4 py-2 text-sm font-medium text-slate-900 border-r border-slate-100 min-w-[200px]">
                   {row.student_name}
                 </td>
-                <td className="px-4 py-2 text-sm text-gray-600 border-r-2 border-gray-300 sticky left-[150px] bg-white z-10">
+                <td className="sticky left-[200px] z-10 bg-white px-4 py-2 text-sm text-slate-600 border-r border-slate-100 min-w-[120px]">
                   {row.student_class || "—"}
                 </td>
                 
@@ -524,6 +515,30 @@ export default function AllItemsTab() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Legend moved below the table */}
+      <div className="flex gap-4 text-xs">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 bg-green-100 rounded"></div>
+          <span>Hoog (≥8.0)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 bg-yellow-100 rounded"></div>
+          <span>Voldoende (6.5-7.9)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 bg-orange-100 rounded"></div>
+          <span>Matig (5.5-6.4)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 bg-red-100 rounded"></div>
+          <span>Onvoldoende (&lt;5.5)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 bg-slate-50 rounded"></div>
+          <span>Geen data</span>
+        </div>
       </div>
 
       {/* Info text */}
