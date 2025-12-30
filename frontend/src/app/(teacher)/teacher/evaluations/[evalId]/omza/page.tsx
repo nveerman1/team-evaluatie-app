@@ -815,7 +815,6 @@ export default function OMZAOverviewPage() {
                 </p>
               </div>
             </div>
-            </div>
           </div>
           </>
         )}
