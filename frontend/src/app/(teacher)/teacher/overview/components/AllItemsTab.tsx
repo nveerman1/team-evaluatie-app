@@ -2,34 +2,38 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { overviewService } from "@/services";
 import { OverviewMatrixResponse, MatrixFilters, MatrixCell, MatrixColumn } from "@/dtos/overview.dto";
 import { Loading } from "@/components";
 import { formatDate } from "@/utils";
+import OverviewFilters, { OverviewFilterValues } from "./OverviewFilters";
+import EmptyState from "./EmptyState";
 
 const FILTER_DEBOUNCE_MS = 300;
 
 export default function AllItemsTab() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  
   const [matrixData, setMatrixData] = useState<OverviewMatrixResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [loadingCourses, setLoadingCourses] = useState(true);
   const [courses, setCourses] = useState<Array<{id: number; name: string}>>([]);
   
-  // Filter state
-  const [filters, setFilters] = useState<MatrixFilters>({});
+  // Initialize filters from URL
+  const [filterValues, setFilterValues] = useState<OverviewFilterValues>({
+    courseId: searchParams.get("subjectId") || undefined,
+    period: searchParams.get("period") || undefined,
+    classId: searchParams.get("classId") || undefined,
+    searchQuery: searchParams.get("q") || undefined,
+  });
   
   // Column visibility toggles
   const [showProject, setShowProject] = useState(true);
   const [showPeer, setShowPeer] = useState(true);
   const [showCompetency, setShowCompetency] = useState(true);
-  
-  // Separate state for filter inputs
-  const [filterInputs, setFilterInputs] = useState({
-    course_id: "",
-    class_name: "",
-    student_name: "",
-    date_from: "",
-    date_to: "",
-  });
 
   // Sorting state
   const [sortBy, setSortBy] = useState<string | null>(null);
@@ -40,27 +44,52 @@ export default function AllItemsTab() {
     loadCourses();
   }, []);
 
-  // Apply filters automatically when inputs change (debounced)
+  // Sync URL with filter values
   useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    
+    if (filterValues.courseId) {
+      params.set("subjectId", filterValues.courseId);
+    } else {
+      params.delete("subjectId");
+    }
+    
+    if (filterValues.period) {
+      params.set("period", filterValues.period);
+    } else {
+      params.delete("period");
+    }
+    
+    if (filterValues.classId) {
+      params.set("classId", filterValues.classId);
+    } else {
+      params.delete("classId");
+    }
+    
+    if (filterValues.searchQuery) {
+      params.set("q", filterValues.searchQuery);
+    } else {
+      params.delete("q");
+    }
+    
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [filterValues, pathname, router, searchParams]);
+
+  // Handle filter changes and data loading with debounce
+  // Empty state check: don't load data without a course selected
+  useEffect(() => {
+    if (!filterValues.courseId) {
+      // Don't load data without a course selected
+      setMatrixData(null);
+      setLoading(false);
+      return;
+    }
+    
     const timer = setTimeout(() => {
-      const courseId = filterInputs.course_id ? Number(filterInputs.course_id) : undefined;
-      setFilters({
-        course_id: courseId && !isNaN(courseId) ? courseId : undefined,
-        class_name: filterInputs.class_name || undefined,
-        student_name: filterInputs.student_name || undefined,
-        date_from: filterInputs.date_from || undefined,
-        date_to: filterInputs.date_to || undefined,
-        sort_by: sortBy || undefined,
-        sort_order: sortOrder,
-      });
+      loadData();
     }, FILTER_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [filterInputs, sortBy, sortOrder]);
-
-  // Load data when filters change
-  useEffect(() => {
-    loadData();
-  }, [filters]);
+  }, [filterValues, sortBy, sortOrder]);
   
   // Filter columns based on type toggles
   const filteredColumns = useMemo((): MatrixColumn[] => {
@@ -74,18 +103,32 @@ export default function AllItemsTab() {
   }, [matrixData, showProject, showPeer, showCompetency]);
 
   const loadCourses = async () => {
+    setLoadingCourses(true);
     try {
       const { courseService } = await import("@/services");
       const coursesData = await courseService.getCourses();
       setCourses(coursesData);
     } catch (error) {
       console.error("Error loading courses:", error);
+    } finally {
+      setLoadingCourses(false);
     }
   };
 
   const loadData = async () => {
+    if (!filterValues.courseId) return;
+    
     setLoading(true);
     try {
+      const courseId = Number(filterValues.courseId);
+      const filters: MatrixFilters = {
+        course_id: !isNaN(courseId) ? courseId : undefined,
+        class_name: filterValues.classId || undefined,
+        student_name: filterValues.searchQuery || undefined,
+        sort_by: sortBy || undefined,
+        sort_order: sortOrder,
+      };
+      
       const response = await overviewService.getMatrix(filters);
       setMatrixData(response);
     } catch (error) {
@@ -107,8 +150,19 @@ export default function AllItemsTab() {
   };
 
   const handleExportCSV = async () => {
+    if (!filterValues.courseId) return;
+    
     try {
-      const blob = await overviewService.exportMatrixCSV(filters);
+      const courseId = Number(filterValues.courseId);
+      const exportFilters: MatrixFilters = {
+        course_id: !isNaN(courseId) ? courseId : undefined,
+        class_name: filterValues.classId || undefined,
+        student_name: filterValues.searchQuery || undefined,
+        sort_by: sortBy || undefined,
+        sort_order: sortOrder,
+      };
+      
+      const blob = await overviewService.exportMatrixCSV(exportFilters);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -171,118 +225,120 @@ export default function AllItemsTab() {
     );
   };
 
-  if (loading) {
-    return <Loading />;
+  // Show empty state if no course selected
+  if (!filterValues.courseId) {
+    return (
+      <div className="space-y-6">
+        <OverviewFilters
+          filters={filterValues}
+          onFiltersChange={setFilterValues}
+          courses={courses}
+          loading={loadingCourses}
+          showAcademicYear={false}
+          showPeriod={true}
+          showClass={false}
+          showSearch={true}
+        />
+        <EmptyState />
+      </div>
+    );
   }
 
-  // Show filters even when there's no data
-  const filtersSection = (
-    <div className="bg-gray-50 rounded-xl p-4 space-y-4">
-      <h3 className="font-semibold text-sm text-gray-700">Filters</h3>
-      
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        {/* Course Dropdown */}
-        <div>
-          <label className="block text-xs text-gray-600 mb-1">Vak</label>
-          <select
-            className="w-full px-3 py-2 text-sm border rounded-lg"
-            value={filterInputs.course_id}
-            onChange={(e) => setFilterInputs({ ...filterInputs, course_id: e.target.value })}
-          >
-            <option value="">Alle vakken</option>
-            {courses.map((course) => (
-              <option key={course.id} value={course.id}>
-                {course.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Class */}
-        <div>
-          <label className="block text-xs text-gray-600 mb-1">Klas</label>
-          <input
-            type="text"
-            placeholder="Klas naam..."
-            className="w-full px-3 py-2 text-sm border rounded-lg"
-            value={filterInputs.class_name}
-            onChange={(e) => setFilterInputs({ ...filterInputs, class_name: e.target.value })}
-          />
-        </div>
-
-        {/* Student Name */}
-        <div>
-          <label className="block text-xs text-gray-600 mb-1">Naam leerling</label>
-          <input
-            type="text"
-            placeholder="Zoek op naam..."
-            className="w-full px-3 py-2 text-sm border rounded-lg"
-            value={filterInputs.student_name}
-            onChange={(e) => setFilterInputs({ ...filterInputs, student_name: e.target.value })}
-          />
-        </div>
-
-        {/* Date From */}
-        <div>
-          <label className="block text-xs text-gray-600 mb-1">Van datum</label>
-          <input
-            type="date"
-            className="w-full px-3 py-2 text-sm border rounded-lg"
-            value={filterInputs.date_from}
-            onChange={(e) => setFilterInputs({ ...filterInputs, date_from: e.target.value })}
-          />
-        </div>
-
-        {/* Date To */}
-        <div>
-          <label className="block text-xs text-gray-600 mb-1">Tot datum</label>
-          <input
-            type="date"
-            className="w-full px-3 py-2 text-sm border rounded-lg"
-            value={filterInputs.date_to}
-            onChange={(e) => setFilterInputs({ ...filterInputs, date_to: e.target.value })}
-          />
-        </div>
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <OverviewFilters
+          filters={filterValues}
+          onFiltersChange={setFilterValues}
+          courses={courses}
+          loading={loadingCourses}
+          showAcademicYear={false}
+          showPeriod={true}
+          showClass={false}
+          showSearch={true}
+        >
+          {/* Column toggles */}
+          <div className="flex gap-6 items-center pt-2">
+            <span className="text-xs text-gray-600">Tonen:</span>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showProject}
+                onChange={(e) => setShowProject(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300"
+              />
+              <span className="text-sm">📊 Projectbeoordeling</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showPeer}
+                onChange={(e) => setShowPeer(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300"
+              />
+              <span className="text-sm">👥 Peerevaluatie</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showCompetency}
+                onChange={(e) => setShowCompetency(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300"
+              />
+              <span className="text-sm">🎯 Competentiescan</span>
+            </label>
+          </div>
+        </OverviewFilters>
+        <Loading />
       </div>
-
-      {/* Column toggles */}
-      <div className="flex gap-6 items-center pt-2">
-        <span className="text-xs text-gray-600">Tonen:</span>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showProject}
-            onChange={(e) => setShowProject(e.target.checked)}
-            className="w-4 h-4 rounded border-gray-300"
-          />
-          <span className="text-sm">📊 Projectbeoordeling</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showPeer}
-            onChange={(e) => setShowPeer(e.target.checked)}
-            className="w-4 h-4 rounded border-gray-300"
-          />
-          <span className="text-sm">👥 Peerevaluatie</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showCompetency}
-            onChange={(e) => setShowCompetency(e.target.checked)}
-            className="w-4 h-4 rounded border-gray-300"
-          />
-          <span className="text-sm">🎯 Competentiescan</span>
-        </label>
-      </div>
-    </div>
-  );
+    );
+  }
 
   if (!matrixData || matrixData.rows.length === 0) {
     return (
       <div className="space-y-6">
-        {filtersSection}
+        <OverviewFilters
+          filters={filterValues}
+          onFiltersChange={setFilterValues}
+          courses={courses}
+          loading={loadingCourses}
+          showAcademicYear={false}
+          showPeriod={true}
+          showClass={false}
+          showSearch={true}
+        >
+          {/* Column toggles */}
+          <div className="flex gap-6 items-center pt-2">
+            <span className="text-xs text-gray-600">Tonen:</span>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showProject}
+                onChange={(e) => setShowProject(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300"
+              />
+              <span className="text-sm">📊 Projectbeoordeling</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showPeer}
+                onChange={(e) => setShowPeer(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300"
+              />
+              <span className="text-sm">👥 Peerevaluatie</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showCompetency}
+                onChange={(e) => setShowCompetency(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300"
+              />
+              <span className="text-sm">🎯 Competentiescan</span>
+            </label>
+          </div>
+        </OverviewFilters>
         <div className="text-center py-12 text-gray-500">
           <p className="text-lg font-medium mb-2">Geen gegevens gevonden</p>
           <p className="text-sm">Pas de filters aan om resultaten te zien</p>
@@ -293,15 +349,56 @@ export default function AllItemsTab() {
 
   return (
     <div className="space-y-6">
+      {/* Filters */}
+      <OverviewFilters
+        filters={filterValues}
+        onFiltersChange={setFilterValues}
+        courses={courses}
+        loading={loadingCourses}
+        showAcademicYear={false}
+        showPeriod={true}
+        showClass={false}
+        showSearch={true}
+      >
+        {/* Column toggles */}
+        <div className="flex gap-6 items-center pt-2">
+          <span className="text-xs text-gray-600">Tonen:</span>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showProject}
+              onChange={(e) => setShowProject(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300"
+            />
+            <span className="text-sm">📊 Projectbeoordeling</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showPeer}
+              onChange={(e) => setShowPeer(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300"
+            />
+            <span className="text-sm">👥 Peerevaluatie</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showCompetency}
+              onChange={(e) => setShowCompetency(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300"
+            />
+            <span className="text-sm">🎯 Competentiescan</span>
+          </label>
+        </div>
+      </OverviewFilters>
+
       {/* Header with summary */}
       <div className="flex items-center justify-between">
         <div className="text-sm text-gray-600">
           {matrixData.total_students} leerlingen • {filteredColumns.length} evaluaties
         </div>
       </div>
-
-      {/* Filters */}
-      {filtersSection}
 
       {/* Legend with Export button */}
       <div className="flex items-center justify-between text-xs">

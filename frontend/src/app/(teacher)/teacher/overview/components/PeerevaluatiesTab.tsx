@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, Suspense, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   ArrowUp,
   ArrowDown,
@@ -31,6 +32,8 @@ import { useReflections } from "@/hooks/useReflections";
 import { overviewService } from "@/services/overview.service";
 import { projectService } from "@/services/project.service";
 import { PeerfeedbackTable } from "@/components/teacher/PeerfeedbackTable";
+import OverviewFilters, { OverviewFilterValues } from "./OverviewFilters";
+import EmptyState from "./EmptyState";
 
 // Register Chart.js components
 ChartJS.register(
@@ -1221,14 +1224,63 @@ function ReflectiesTab({ parentFilters }: { parentFilters: PeerOverviewFilters }
    ========================================= */
 
 export default function PeerevaluatiesTab() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  
   const [activeSubTab, setActiveSubTab] = useState("dashboard");
-  const [filters, setFilters] = useState<PeerOverviewFilters>({
-    period: "6months",
+  
+  // Initialize filter values from URL
+  const [filterValues, setFilterValues] = useState<OverviewFilterValues>({
+    courseId: searchParams.get("subjectId") || undefined,
+    period: searchParams.get("period") || "6months",
+    searchQuery: searchParams.get("q") || undefined,
   });
+  
+  const [filters, setFilters] = useState<PeerOverviewFilters>({
+    period: (filterValues.period as "3months" | "6months" | "year") || "6months",
+    courseId: filterValues.courseId ? Number(filterValues.courseId) : undefined,
+    studentName: filterValues.searchQuery,
+  });
+  
   const [courses, setCourses] = useState<Array<{id: number; name: string}>>([]);
   const [projects, setProjects] = useState<Array<{id: number; title: string}>>([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
+
+  // Sync URL with filter values
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    
+    if (filterValues.courseId) {
+      params.set("subjectId", filterValues.courseId);
+    } else {
+      params.delete("subjectId");
+    }
+    
+    if (filterValues.period && filterValues.period !== "6months") {
+      params.set("period", filterValues.period);
+    } else {
+      params.delete("period");
+    }
+    
+    if (filterValues.searchQuery) {
+      params.set("q", filterValues.searchQuery);
+    } else {
+      params.delete("q");
+    }
+    
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [filterValues, pathname, router, searchParams]);
+  
+  // Update internal filters when filterValues change
+  useEffect(() => {
+    setFilters({
+      period: (filterValues.period as "3months" | "6months" | "year") || "6months",
+      courseId: filterValues.courseId ? Number(filterValues.courseId) : undefined,
+      studentName: filterValues.searchQuery,
+    });
+  }, [filterValues]);
 
   // Fetch active courses on mount
   useEffect(() => {
@@ -1276,101 +1328,52 @@ export default function PeerevaluatiesTab() {
     { id: "docentfeedback", label: "Docentfeedback", icon: Users },
     { id: "reflecties", label: "Reflecties", icon: MessageSquare },
   ];
+  
+  const handleFilterChange = (newFilters: OverviewFilterValues) => {
+    setFilterValues(newFilters);
+  };
+  
+  // Period options
+  const periodOptions = [
+    { value: "3months", label: "Laatste 3 maanden" },
+    { value: "6months", label: "Laatste 6 maanden" },
+    { value: "year", label: "Hele jaar" },
+  ];
+  
+  // Show empty state if no course selected
+  if (!filterValues.courseId) {
+    return (
+      <div className="space-y-6">
+        <OverviewFilters
+          filters={filterValues}
+          onFiltersChange={handleFilterChange}
+          courses={courses}
+          periods={periodOptions}
+          loading={loadingCourses}
+          showAcademicYear={false}
+          showPeriod={true}
+          showClass={false}
+          showSearch={true}
+        />
+        <EmptyState />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Page Title & Subtitle */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">
-          Peerevaluaties – Overzicht
-        </h2>
-        <p className="text-gray-600 mt-1">
-          Inzicht in ontwikkeling, trends en feedback uit meerdere scans.
-        </p>
-      </div>
-
       {/* Filter Bar */}
-      <div className="bg-gray-50 rounded-xl p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Course dropdown */}
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Selecteer vak</label>
-            <select
-              className="w-full px-3 py-2 border rounded-lg text-sm"
-              value={filters.courseId || ""}
-              onChange={(e) =>
-                setFilters({ ...filters, courseId: e.target.value ? parseInt(e.target.value) : undefined, projectId: undefined })
-              }
-              disabled={loadingCourses}
-            >
-              <option value="">Alle vakken</option>
-              {courses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Project dropdown */}
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">
-              Selecteer project/evaluatiegroep
-            </label>
-            <select
-              className="w-full px-3 py-2 border rounded-lg text-sm"
-              value={filters.projectId || ""}
-              onChange={(e) =>
-                setFilters({ ...filters, projectId: e.target.value ? parseInt(e.target.value) : undefined })
-              }
-              disabled={!filters.courseId || loadingProjects}
-            >
-              <option value="">Alle projecten</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.title}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Period dropdown */}
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Periode</label>
-            <select
-              className="w-full px-3 py-2 border rounded-lg text-sm"
-              value={filters.period || "6months"}
-              onChange={(e) =>
-                setFilters({
-                  ...filters,
-                  period: e.target.value as "3months" | "6months" | "year",
-                })
-              }
-            >
-              <option value="3months">Laatste 3 maanden</option>
-              <option value="6months">Laatste 6 maanden</option>
-              <option value="year">Hele jaar</option>
-            </select>
-          </div>
-
-          {/* Student search */}
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Zoek leerling</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Naam leerling..."
-                className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm"
-                value={filters.studentName || ""}
-                onChange={(e) =>
-                  setFilters({ ...filters, studentName: e.target.value || undefined })
-                }
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+      <OverviewFilters
+        filters={filterValues}
+        onFiltersChange={handleFilterChange}
+        courses={courses}
+        periods={periodOptions}
+        loading={loadingCourses}
+        showAcademicYear={false}
+        showPeriod={true}
+        showClass={false}
+        showSearch={true}
+      />
 
       {/* Sub-Tabs Navigation */}
       <div className="border-b border-gray-200">

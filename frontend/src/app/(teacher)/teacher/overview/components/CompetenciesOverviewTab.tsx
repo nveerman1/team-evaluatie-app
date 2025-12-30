@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useCompetencyFilterOptions } from "@/hooks/useCompetencyOverview";
 import type { CompetencyOverviewFilters } from "@/dtos/competency-monitor.dto";
 import { OverviewSubTab } from "./competency/OverviewSubTab";
 import { LearningGoalsSubTab } from "./competency/LearningGoalsSubTab";
 import { ReflectionsSubTab } from "./competency/ReflectionsSubTab";
+import OverviewFilters, { OverviewFilterValues } from "./OverviewFilters";
+import EmptyState from "./EmptyState";
 
 const competencySubTabs = [
   { id: "overzicht", label: "Overzicht" },
@@ -14,65 +17,118 @@ const competencySubTabs = [
 ];
 
 export default function CompetenciesOverviewTab() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  
   const [activeSubTab, setActiveSubTab] = useState("overzicht");
+  
+  // Initialize filter values from URL
+  const [filterValues, setFilterValues] = useState<OverviewFilterValues>({
+    academicYear: searchParams.get("year") || undefined,
+    courseId: searchParams.get("subjectId") || undefined,
+    period: searchParams.get("period") || undefined,
+    searchQuery: searchParams.get("q") || undefined,
+  });
+  
   const [filters, setFilters] = useState<CompetencyOverviewFilters>({
-    scanRange: "last_3",
+    scanRange: filterValues.period as CompetencyOverviewFilters["scanRange"] || "last_3",
+    academicYearId: filterValues.academicYear ? Number(filterValues.academicYear) : undefined,
+    courseId: filterValues.courseId ? Number(filterValues.courseId) : undefined,
   });
   
   const { data: filterOptions } = useCompetencyFilterOptions();
+  
+  // Sync URL with filter values
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    
+    if (filterValues.academicYear) {
+      params.set("year", filterValues.academicYear);
+    } else {
+      params.delete("year");
+    }
+    
+    if (filterValues.courseId) {
+      params.set("subjectId", filterValues.courseId);
+    } else {
+      params.delete("subjectId");
+    }
+    
+    if (filterValues.period) {
+      params.set("period", filterValues.period);
+    } else {
+      params.delete("period");
+    }
+    
+    if (filterValues.searchQuery) {
+      params.set("q", filterValues.searchQuery);
+    } else {
+      params.delete("q");
+    }
+    
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [filterValues, pathname, router, searchParams]);
+  
+  // Update internal filters when filterValues change
+  useEffect(() => {
+    const academicYearId = filterValues.academicYear ? Number(filterValues.academicYear) : undefined;
+    setFilters({
+      scanRange: filterValues.period as CompetencyOverviewFilters["scanRange"] || "last_3",
+      academicYearId,
+      courseId: filterValues.courseId ? Number(filterValues.courseId) : undefined,
+    });
+  }, [filterValues]);
+  
+  const handleFilterChange = (newFilters: OverviewFilterValues) => {
+    setFilterValues(newFilters);
+  };
+  
+  // Period options
+  const periodOptions = [
+    { value: "last_3", label: "Laatste 3 scans" },
+    { value: "last_5", label: "Laatste 5 scans" },
+    { value: "last_year", label: "Dit schooljaar" },
+    { value: "all", label: "Alles" },
+  ];
+
+  
+  // Show empty state if no course selected
+  if (!filterValues.courseId) {
+    return (
+      <div className="space-y-6">
+        <OverviewFilters
+          filters={filterValues}
+          onFiltersChange={handleFilterChange}
+          academicYears={filterOptions?.academicYears}
+          courses={filterOptions?.courses}
+          periods={periodOptions}
+          loading={!filterOptions}
+          showAcademicYear={true}
+          showPeriod={true}
+          showClass={false}
+          showSearch={true}
+        />
+        <EmptyState />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">Competentiemonitor – Overzicht</h2>
-        <p className="text-sm text-slate-600 mt-1">Inzicht in ontwikkeling, trends en feedback uit meerdere scans.</p>
-      </div>
-
       {/* Global Filter Bar */}
-      <div className="bg-gray-50 rounded-xl p-4">
-        <div className="flex flex-wrap gap-4 items-center">
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Academisch Jaar</label>
-            <select
-              value={filters.academicYearId || ""}
-              onChange={(e) => setFilters({ ...filters, academicYearId: e.target.value ? Number(e.target.value) : undefined })}
-              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
-            >
-              <option value="">Alle jaren</option>
-              {filterOptions?.academicYears.map((ay) => (
-                <option key={ay.id} value={ay.id}>{ay.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Vak</label>
-            <select
-              value={filters.courseId || ""}
-              onChange={(e) => setFilters({ ...filters, courseId: e.target.value ? Number(e.target.value) : undefined })}
-              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
-            >
-              <option value="">Alle vakken</option>
-              {filterOptions?.courses.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Periode</label>
-            <select
-              value={filters.scanRange || "last_3"}
-              onChange={(e) => setFilters({ ...filters, scanRange: e.target.value as CompetencyOverviewFilters["scanRange"] })}
-              className="px-3 py-2 text-sm border rounded-lg min-w-[150px]"
-            >
-              <option value="last_3">Laatste 3 scans</option>
-              <option value="last_5">Laatste 5 scans</option>
-              <option value="last_year">Dit schooljaar</option>
-              <option value="all">Alles</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      <OverviewFilters
+        filters={filterValues}
+        onFiltersChange={handleFilterChange}
+        academicYears={filterOptions?.academicYears}
+        courses={filterOptions?.courses}
+        periods={periodOptions}
+        loading={!filterOptions}
+        showAcademicYear={true}
+        showPeriod={true}
+        showClass={false}
+        showSearch={true}
+      />
 
       {/* Sub-tabs Navigation */}
       <div className="border-b border-gray-200">
