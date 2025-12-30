@@ -6,12 +6,15 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { RubricListResponse, RubricListItem } from "@/lib/rubric-types";
 import { useCourses } from "@/hooks";
+import { projectService } from "@/services";
+import type { ProjectListItem } from "@/dtos/project.dto";
 
 type EvaluationOut = {
   id: number;
   title: string;
   course_id: number;
   cluster: string | null; // kept for backward compat (course name)
+  project_id?: number | null;
   rubric_id?: number | null;
   settings?: any;
 };
@@ -19,6 +22,7 @@ type EvaluationOut = {
 type SavePayload = {
   title: string;
   course_id: number;
+  project_id: number;
   rubric_id: number;
   settings: any;
 };
@@ -30,6 +34,7 @@ export default function EvaluationSettingsPageInner() {
   // Data
   const [evaluation, setEvaluation] = useState<EvaluationOut | null>(null);
   const [rubrics, setRubrics] = useState<RubricListItem[]>([]);
+  const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const { courses, courseNameById } = useCourses();
 
   // UI
@@ -41,6 +46,7 @@ export default function EvaluationSettingsPageInner() {
   // Form
   const [title, setTitle] = useState("");
   const [courseId, setCourseId] = useState<number | "">("");
+  const [projectId, setProjectId] = useState<number | "">("");
   const [rubricId, setRubricId] = useState<number | "">("");
   const [reviewDeadline, setReviewDeadline] = useState("");
   const [reflectionDeadline, setReflectionDeadline] = useState("");
@@ -53,22 +59,29 @@ export default function EvaluationSettingsPageInner() {
   const [smoothing, setSmoothing] = useState<boolean>(true);
   const [reviewerRating, setReviewerRating] = useState<boolean>(true);
 
+  // Filter projects based on selected course
+  const filteredProjects = useMemo(() => {
+    if (!courseId || typeof courseId !== "number") return [];
+    return projects.filter(p => p.course_id === Number(courseId));
+  }, [projects, courseId]);
+
   function toDateOnly(s: string) {
     if (!s) return "";
     const i = s.indexOf("T");
     return i > 0 ? s.slice(0, i) : s;
   }
 
-  // Load eval + rubrics
+  // Load eval + rubrics + projects
   useEffect(() => {
     let mounted = true;
     (async () => {
       setLoading(true);
       setError(null);
       try {
-        const [evRes, rubRes] = await Promise.all([
+        const [evRes, rubRes, projRes] = await Promise.all([
           api.get<EvaluationOut>(`/evaluations/${evalId}`),
           api.get<RubricListResponse>(`/rubrics?scope=peer`),
+          projectService.listProjects(),
         ]);
 
         if (!mounted) return;
@@ -79,9 +92,12 @@ export default function EvaluationSettingsPageInner() {
         const list = Array.isArray(rubRes.data?.items) ? rubRes.data.items : [];
         setRubrics(list);
 
+        setProjects(projRes.items || []);
+
         // Init form vanuit evaluatie
         setTitle(ev.title ?? "");
         setCourseId(ev.course_id ?? "");
+        setProjectId(ev.project_id ?? "");
         setRubricId(ev.rubric_id ?? "");
         const s = ev.settings || {};
         setAnonymity(s.anonymity ?? "pseudonym");
@@ -128,8 +144,8 @@ export default function EvaluationSettingsPageInner() {
     setInfo(null);
 
     try {
-      if (!courseId || rubricId === "") {
-        throw new Error("Kies een course én een rubric.");
+      if (!courseId || rubricId === "" || projectId === "") {
+        throw new Error("Kies een course, project én een rubric.");
       }
 
       const settings = {
@@ -148,6 +164,7 @@ export default function EvaluationSettingsPageInner() {
       const payload: SavePayload = {
         title: (title || "").trim(),
         course_id: Number(courseId),
+        project_id: Number(projectId),
         rubric_id: Number(rubricId),
         settings,
       };
@@ -193,14 +210,17 @@ export default function EvaluationSettingsPageInner() {
           />
         </div>
 
-        {/* Course (verplicht) + Rubric */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Course (verplicht) + Project + Rubric */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="space-y-1">
             <label className="block text-sm font-medium text-slate-900">Course</label>
             <select
               className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600"
               value={courseId === "" ? "" : Number(courseId)}
-              onChange={(e) => setCourseId(e.target.value ? Number(e.target.value) : "")}
+              onChange={(e) => {
+                setCourseId(e.target.value ? Number(e.target.value) : "");
+                setProjectId(""); // Reset project when course changes
+              }}
               required
               disabled={anyLoading}
             >
@@ -214,6 +234,27 @@ export default function EvaluationSettingsPageInner() {
             <p className="text-xs text-slate-500">
               Dit bepaalt welke leerlingen in de cijfers-/reviewpagina’s
               verschijnen.
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-900">Project</label>
+            <select
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600"
+              value={projectId === "" ? "" : Number(projectId)}
+              onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : "")}
+              required
+              disabled={anyLoading || !courseId}
+            >
+              <option value="">— Kies project —</option>
+              {filteredProjects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-500">
+              Alle teams van dit project zijn gekoppeld aan deze evaluatie.
             </p>
           </div>
 
@@ -310,7 +351,7 @@ export default function EvaluationSettingsPageInner() {
         <div className="flex items-center gap-2">
           <button
             type="submit"
-            disabled={saving || anyLoading || !courseId || rubricId === ""}
+            disabled={saving || anyLoading || !courseId || rubricId === "" || projectId === ""}
             className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 shadow-sm"
           >
             {saving ? "Opslaan…" : "Opslaan"}
