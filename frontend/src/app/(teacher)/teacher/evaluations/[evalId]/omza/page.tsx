@@ -191,6 +191,7 @@ export default function OMZAOverviewPage() {
   const [focusMode, setFocusMode] = useState(false);
   const [notesWidth, setNotesWidth] = useState(400);
   const { setSidebarCollapsed } = useTeacherLayout();
+  const originalSidebarState = useRef<boolean>(false);
   
   // Sorting state
   const [sortColumn, setSortColumn] = useState<"team" | "name" | "class" | null>(null);
@@ -270,9 +271,14 @@ export default function OMZAOverviewPage() {
 
   // Manage sidebar collapse when focus mode changes
   useEffect(() => {
-    setSidebarCollapsed(focusMode);
+    if (focusMode) {
+      setSidebarCollapsed(true);
+    }
     return () => {
-      setSidebarCollapsed(false);
+      // Only reset sidebar if we were the ones who collapsed it
+      if (focusMode) {
+        setSidebarCollapsed(false);
+      }
     };
   }, [focusMode, setSidebarCollapsed]);
 

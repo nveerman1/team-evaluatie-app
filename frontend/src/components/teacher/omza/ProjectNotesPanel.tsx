@@ -89,11 +89,23 @@ export function ProjectNotesPanel({
     const handleMouseUp = () => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
     };
 
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
   };
+
+  // Cleanup resize handlers on unmount
+  useEffect(() => {
+    return () => {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, []);
 
   if (!projectId) {
     return (
@@ -213,6 +225,10 @@ export function ProjectNotesPanel({
       <div
         className="w-1 bg-slate-200 hover:bg-indigo-400 cursor-col-resize transition-colors"
         onMouseDown={handleMouseDown}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Versleep om paneel grootte aan te passen"
+        tabIndex={0}
       />
     </div>
   );
