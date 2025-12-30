@@ -97,6 +97,12 @@ export default function CompetenciesOverviewTab() {
   if (!filterValues.courseId) {
     return (
       <div className="space-y-6">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Competenties</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Overzicht van competentiescans en -ontwikkeling
+          </p>
+        </div>
         <OverviewFilters
           filters={filterValues}
           onFiltersChange={handleFilterChange}
@@ -116,6 +122,14 @@ export default function CompetenciesOverviewTab() {
 
   return (
     <div className="space-y-6">
+      {/* Title Section */}
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold text-gray-900">Competenties</h2>
+        <p className="text-sm text-gray-600 mt-1">
+          Overzicht van competentiescans en -ontwikkeling
+        </p>
+      </div>
+      
       {/* Global Filter Bar */}
       <OverviewFilters
         filters={filterValues}

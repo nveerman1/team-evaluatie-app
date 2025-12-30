@@ -248,8 +248,8 @@ export default function LearningObjectivesOverviewTab() {
       <div className="space-y-6">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold mb-2">Leerdoelen / Eindtermen Overzicht</h2>
-            <p className="text-gray-600">
+            <h2 className="text-lg font-semibold text-gray-900">Leerdoelen / Eindtermen Overzicht</h2>
+            <p className="text-sm text-gray-600 mt-1">
               Totaaloverzicht van hoe goed leerlingen de leerdoelen/eindtermen beheersen
             </p>
           </div>
@@ -300,8 +300,8 @@ export default function LearningObjectivesOverviewTab() {
       <div className="space-y-6">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold mb-2">Leerdoelen / Eindtermen Overzicht</h2>
-            <p className="text-gray-600">
+            <h2 className="text-lg font-semibold text-gray-900">Leerdoelen / Eindtermen Overzicht</h2>
+            <p className="text-sm text-gray-600 mt-1">
               Totaaloverzicht van hoe goed leerlingen de leerdoelen/eindtermen beheersen
             </p>
           </div>
@@ -353,8 +353,8 @@ export default function LearningObjectivesOverviewTab() {
     <div className="space-y-6 w-full overflow-hidden">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold mb-2">Leerdoelen / Eindtermen Overzicht</h2>
-          <p className="text-gray-600">
+          <h2 className="text-lg font-semibold text-gray-900">Leerdoelen / Eindtermen Overzicht</h2>
+          <p className="text-sm text-gray-600 mt-1">
             Totaaloverzicht van hoe goed leerlingen de leerdoelen/eindtermen beheersen
           </p>
         </div>

@@ -1344,6 +1344,12 @@ export default function PeerevaluatiesTab() {
   if (!filterValues.courseId) {
     return (
       <div className="space-y-6">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Peerevaluaties</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Overzicht van OMZA scores en peerfeedback
+          </p>
+        </div>
         <OverviewFilters
           filters={filterValues}
           onFiltersChange={handleFilterChange}
@@ -1362,6 +1368,14 @@ export default function PeerevaluatiesTab() {
 
   return (
     <div className="space-y-6">
+      {/* Title Section */}
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold text-gray-900">Peerevaluaties</h2>
+        <p className="text-sm text-gray-600 mt-1">
+          Overzicht van OMZA scores en peerfeedback
+        </p>
+      </div>
+      
       {/* Filter Bar */}
       <OverviewFilters
         filters={filterValues}

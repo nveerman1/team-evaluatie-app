@@ -141,8 +141,8 @@ export default function StudentOverviewTab() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Leerlingoverzicht</h2>
-          <p className="text-sm text-slate-600 mt-1">
+          <h2 className="text-lg font-semibold text-gray-900">Leerlingoverzicht</h2>
+          <p className="text-sm text-gray-600 mt-1">
             Totaaloverzicht van één leerling: projecten, peerevaluaties, competenties en leerdoelen
           </p>
         </div>
@@ -179,8 +179,8 @@ export default function StudentOverviewTab() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Leerlingoverzicht</h2>
-          <p className="text-sm text-slate-600 mt-1">
+          <h2 className="text-lg font-semibold text-gray-900">Leerlingoverzicht</h2>
+          <p className="text-sm text-gray-600 mt-1">
             Selecteer een leerling om het overzicht te bekijken
           </p>
         </div>
@@ -274,10 +274,10 @@ export default function StudentOverviewTab() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-slate-900">
+        <h2 className="text-lg font-semibold text-gray-900">
           Leerlingoverzicht: {selectedStudent?.name || "Laden..."}
         </h2>
-        <p className="text-sm text-slate-600 mt-1">
+        <p className="text-sm text-gray-600 mt-1">
           {selectedStudent?.class_name && `Klas: ${selectedStudent.class_name}`}
         </p>
       </div>

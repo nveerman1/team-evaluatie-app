@@ -1010,6 +1010,12 @@ export default function ProjectOverviewTab() {
   if (!filterValues.courseId) {
     return (
       <div className="space-y-6">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Projecten</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Overzicht van projectbeoordelingen en trends
+          </p>
+        </div>
         <OverviewFilters
           filters={filterValues}
           onFiltersChange={handleFilterChange}
@@ -1030,6 +1036,12 @@ export default function ProjectOverviewTab() {
   if (error) {
     return (
       <div className="space-y-6">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Projecten</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Overzicht van projectbeoordelingen en trends
+          </p>
+        </div>
         <OverviewFilters
           filters={filterValues}
           onFiltersChange={handleFilterChange}
@@ -1052,6 +1064,14 @@ export default function ProjectOverviewTab() {
 
   return (
     <div className="space-y-6">
+      {/* Title Section */}
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold text-gray-900">Projecten</h2>
+        <p className="text-sm text-gray-600 mt-1">
+          Overzicht van projectbeoordelingen en trends
+        </p>
+      </div>
+      
       {/* Global Filter Bar */}
       <OverviewFilters
         filters={filterValues}
