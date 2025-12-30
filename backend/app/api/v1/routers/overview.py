@@ -196,6 +196,7 @@ def _calculate_peer_score(db: Session, evaluation_id: int, user_id: int) -> Opti
     """
     Get final peer evaluation grade for a student (Eindcijfer)
     Returns the published grade from the Grade table (1-10 scale)
+    If no explicit grade is set, falls back to the suggested grade from meta
     """
     # Try to get from PublishedGrade table first
     published = db.query(PublishedGrade).filter(
@@ -212,8 +213,14 @@ def _calculate_peer_score(db: Session, evaluation_id: int, user_id: int) -> Opti
         Grade.user_id == user_id
     ).first()
     
-    if grade and grade.grade is not None:
-        return round(float(grade.grade), 1)
+    if grade:
+        if grade.grade is not None:
+            return round(float(grade.grade), 1)
+        # If no explicit grade is set, try to use the suggested grade from meta
+        if grade.meta and isinstance(grade.meta, dict):
+            suggested = grade.meta.get('suggested')
+            if suggested is not None:
+                return round(float(suggested), 1)
     
     return None
 
