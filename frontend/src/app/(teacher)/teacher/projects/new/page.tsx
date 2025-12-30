@@ -58,6 +58,10 @@ export default function NewProjectWizardPage() {
   const [projectAssessmentDeadline, setProjectAssessmentDeadline] = useState("");
   const [projectAssessmentVersion, setProjectAssessmentVersion] = useState("");
   
+  const [projectAssessmentTussenEnabled, setProjectAssessmentTussenEnabled] = useState(false);
+  const [projectAssessmentTussenRubricId, setProjectAssessmentTussenRubricId] = useState<number | "">("");
+  const [projectAssessmentTussenDeadline, setProjectAssessmentTussenDeadline] = useState("");
+  
   const [competencyScanEnabled, setCompetencyScanEnabled] = useState(false);
   const [competencyScanStartDate, setCompetencyScanStartDate] = useState("");
   const [competencyScanEndDate, setCompetencyScanEndDate] = useState("");
@@ -197,7 +201,17 @@ export default function NewProjectWizardPage() {
         };
       }
       
-      if (projectAssessmentEnabled && projectAssessmentRubricId) {
+      // Project Assessment Tussentijds (interim) - takes precedence if enabled
+      if (projectAssessmentTussenEnabled && projectAssessmentTussenRubricId) {
+        evaluationConfig.project_assessment = {
+          enabled: true,
+          rubric_id: Number(projectAssessmentTussenRubricId),
+          deadline: projectAssessmentTussenDeadline || undefined,
+          version: "tussentijds",
+        };
+      }
+      // Project Assessment (final/eind) - only if tussentijds is not enabled
+      else if (projectAssessmentEnabled && projectAssessmentRubricId) {
         evaluationConfig.project_assessment = {
           enabled: true,
           rubric_id: Number(projectAssessmentRubricId),
@@ -312,6 +326,19 @@ export default function NewProjectWizardPage() {
           </div>
           
           <div className="flex gap-3 justify-center flex-wrap">
+            {/* Primary action: Navigate to class-teams to create teams */}
+            <button
+              onClick={() => {
+                const params = new URLSearchParams();
+                params.set("project_id", createdProjectId!.toString());
+                if (courseId) params.set("course_id", courseId.toString());
+                router.push(`/teacher/class-teams?${params.toString()}`);
+              }}
+              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
+            >
+              👥 Teams aanmaken
+            </button>
+            
             {projectAssessmentCount > 0 && (
               <button
                 onClick={() => router.push("/teacher/project-assessments")}
@@ -618,19 +645,82 @@ export default function NewProjectWizardPage() {
                   </label>
                 </div>
 
+                {/* Project Assessment Tussentijds (Interim) */}
+                <div className="border rounded-lg p-4">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={projectAssessmentTussenEnabled}
+                      onChange={(e) => {
+                        setProjectAssessmentTussenEnabled(e.target.checked);
+                        // Disable regular project assessment if tussentijds is enabled
+                        if (e.target.checked) {
+                          setProjectAssessmentEnabled(false);
+                        }
+                      }}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium">Projectbeoordeling Tussentijds</div>
+                      <div className="text-sm text-gray-600 mb-3">
+                        Docent beoordeelt het tussentijdse projectresultaat per team
+                      </div>
+                      
+                      {projectAssessmentTussenEnabled && (
+                        <div className="space-y-3 mt-3 pl-6 border-l-2 border-orange-200">
+                          <div>
+                            <label className="block text-xs font-medium mb-1">
+                              Rubric <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                              value={projectAssessmentTussenRubricId}
+                              onChange={(e) => setProjectAssessmentTussenRubricId(e.target.value ? Number(e.target.value) : "")}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                              required
+                            >
+                              <option value="">Selecteer project rubric...</option>
+                              {rubrics.filter(r => r.scope === "project").map(rubric => (
+                                <option key={rubric.id} value={rubric.id}>{rubric.title}</option>
+                              ))}
+                            </select>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Er wordt één tussentijdse beoordeling per team aangemaakt
+                            </p>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium mb-1">Deadline (optioneel)</label>
+                            <input
+                              type="datetime-local"
+                              value={projectAssessmentTussenDeadline}
+                              onChange={(e) => setProjectAssessmentTussenDeadline(e.target.value)}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                </div>
+
                 {/* Project Assessment */}
                 <div className="border rounded-lg p-4">
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={projectAssessmentEnabled}
-                      onChange={(e) => setProjectAssessmentEnabled(e.target.checked)}
+                      onChange={(e) => {
+                        setProjectAssessmentEnabled(e.target.checked);
+                        // Disable tussentijds if regular is enabled
+                        if (e.target.checked) {
+                          setProjectAssessmentTussenEnabled(false);
+                        }
+                      }}
                       className="mt-1"
                     />
                     <div className="flex-1">
-                      <div className="font-medium">Projectbeoordeling</div>
+                      <div className="font-medium">Projectbeoordeling (Eind)</div>
                       <div className="text-sm text-gray-600 mb-3">
-                        Docent beoordeelt het projectresultaat per team
+                        Docent beoordeelt het eindresultaat per team
                       </div>
                       
                       {projectAssessmentEnabled && (
@@ -904,9 +994,22 @@ export default function NewProjectWizardPage() {
                       )}
                     </li>
                   )}
+                  {projectAssessmentTussenEnabled && (
+                    <li>
+                      <div className="font-medium">✓ Projectbeoordeling Tussentijds</div>
+                      <div className="text-xs text-gray-600 ml-4">
+                        Rubric: {rubrics.find(r => r.id === projectAssessmentTussenRubricId)?.title || "Niet geselecteerd"}
+                      </div>
+                      {projectAssessmentTussenDeadline && (
+                        <div className="text-xs text-gray-600 ml-4">
+                          Deadline: {new Date(projectAssessmentTussenDeadline).toLocaleString("nl-NL")}
+                        </div>
+                      )}
+                    </li>
+                  )}
                   {projectAssessmentEnabled && (
                     <li>
-                      <div className="font-medium">✓ Projectbeoordeling</div>
+                      <div className="font-medium">✓ Projectbeoordeling (Eind)</div>
                       <div className="text-xs text-gray-600 ml-4">
                         Rubric: {rubrics.find(r => r.id === projectAssessmentRubricId)?.title || "Niet geselecteerd"}
                       </div>
@@ -935,6 +1038,7 @@ export default function NewProjectWizardPage() {
                   {!peerTussenEnabled &&
                     !peerEindEnabled &&
                     !projectAssessmentEnabled &&
+                    !projectAssessmentTussenEnabled &&
                     !competencyScanEnabled && (
                       <li className="text-gray-500 italic">Geen evaluaties geselecteerd</li>
                     )}
