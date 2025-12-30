@@ -1019,8 +1019,9 @@ def wizard_create_project(
     
     # Legacy support: process single project_assessment if provided
     if payload.evaluations.project_assessment and payload.evaluations.project_assessment.enabled:
-        version_suffix = payload.evaluations.project_assessment.version or ""
-        create_project_assessments(payload.evaluations.project_assessment, version_suffix)
+        # Use explicit version from payload, or no suffix if not provided
+        version_suffix = payload.evaluations.project_assessment.version or None
+        create_project_assessments(payload.evaluations.project_assessment, version_suffix or "")
 
     # 4. Create competency window (now creates CompetencyWindow records)
     if payload.evaluations.competency_scan and payload.evaluations.competency_scan.enabled:
