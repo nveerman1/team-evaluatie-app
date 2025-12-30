@@ -229,6 +229,12 @@ export default function AllItemsTab() {
   if (!filterValues.courseId) {
     return (
       <div className="space-y-6">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Totaaloverzicht</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Alle beoordelingen in één overzicht
+          </p>
+        </div>
         <OverviewFilters
           filters={filterValues}
           onFiltersChange={setFilterValues}
@@ -247,6 +253,12 @@ export default function AllItemsTab() {
   if (loading) {
     return (
       <div className="space-y-6">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Totaaloverzicht</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Alle beoordelingen in één overzicht
+          </p>
+        </div>
         <OverviewFilters
           filters={filterValues}
           onFiltersChange={setFilterValues}
@@ -297,6 +309,12 @@ export default function AllItemsTab() {
   if (!matrixData || matrixData.rows.length === 0) {
     return (
       <div className="space-y-6">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Totaaloverzicht</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Alle beoordelingen in één overzicht
+          </p>
+        </div>
         <OverviewFilters
           filters={filterValues}
           onFiltersChange={setFilterValues}
@@ -349,6 +367,14 @@ export default function AllItemsTab() {
 
   return (
     <div className="space-y-6">
+      {/* Title Section */}
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold text-gray-900">Totaaloverzicht</h2>
+        <p className="text-sm text-gray-600 mt-1">
+          Alle beoordelingen in één overzicht
+        </p>
+      </div>
+      
       {/* Filters */}
       <OverviewFilters
         filters={filterValues}
