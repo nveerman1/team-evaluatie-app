@@ -5,8 +5,11 @@ import Link from "next/link";
 import { useNumericEvalId } from "@/utils";
 import { Loading, ErrorMessage } from "@/components";
 import { omzaService } from "@/services/omza.service";
+import { evaluationService } from "@/services";
 import { OmzaDataResponse, OmzaStudentData, StandardComment } from "@/dtos/omza.dto";
 import { mapPeerScoreToIconLevel, ICON_LABELS, ICON_DESCRIPTIONS } from "@/utils/omza.utils";
+import { ProjectNotesPanel } from "@/components/teacher/omza/ProjectNotesPanel";
+import { useTeacherLayout } from "@/app/(teacher)/layout";
 
 // Helper to get badge color based on score
 const getBadgeColor = (value: number | null) => {
@@ -169,6 +172,7 @@ export default function OMZAOverviewPage() {
   const [omzaData, setOmzaData] = useState<OmzaDataResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [projectId, setProjectId] = useState<number | null>(null);
   
   const [searchQuery, setSearchQuery] = useState("");
   const [teamFilter, setTeamFilter] = useState<string>("all");
@@ -182,6 +186,11 @@ export default function OMZAOverviewPage() {
   const [savingScores, setSavingScores] = useState<Record<string, boolean>>({});
   const [savingComments, setSavingComments] = useState<Record<string, boolean>>({});
   const [toast, setToast] = useState<string | null>(null);
+  
+  // Focus mode state
+  const [focusMode, setFocusMode] = useState(false);
+  const [notesWidth, setNotesWidth] = useState(400);
+  const { setSidebarCollapsed } = useTeacherLayout();
   
   // Sorting state
   const [sortColumn, setSortColumn] = useState<"team" | "name" | "class" | null>(null);
@@ -239,6 +248,33 @@ export default function OMZAOverviewPage() {
       
     return () => controller.abort();
   }, [evalIdNum]);
+
+  // Load evaluation details to get project_id
+  useEffect(() => {
+    if (!evalIdNum) return;
+    
+    const controller = new AbortController();
+    
+    evaluationService.getEvaluation(evalIdNum)
+      .then((evaluation) => {
+        setProjectId(evaluation.project_id ?? null);
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError' && err.name !== 'CanceledError' && err.message !== 'canceled') {
+          console.error("Failed to load evaluation:", err);
+        }
+      });
+      
+    return () => controller.abort();
+  }, [evalIdNum]);
+
+  // Manage sidebar collapse when focus mode changes
+  useEffect(() => {
+    setSidebarCollapsed(focusMode);
+    return () => {
+      setSidebarCollapsed(false);
+    };
+  }, [focusMode, setSidebarCollapsed]);
 
   // Load standard comments
   useEffect(() => {
@@ -519,17 +555,51 @@ export default function OMZAOverviewPage() {
                 </select>
               </div>
 
-            <button
-              type="button"
-              className="h-9 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-xs md:text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-100 hover:border-indigo-300"
+            <div className="flex gap-2">
+              {projectId && (
+                <button
+                  type="button"
+                  className={`h-9 rounded-lg border px-3 text-xs md:text-sm font-medium shadow-sm transition-colors ${
+                    focusMode
+                      ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                  onClick={() => setFocusMode(!focusMode)}
+                  title="Toon projectaantekeningen"
+                >
+                  📝 {focusMode ? "Verberg aantekeningen" : "Toon aantekeningen"}
+                </button>
+              )}
+              <button
+                type="button"
+                className="h-9 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-xs md:text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-100 hover:border-indigo-300"
               onClick={applyPeerScoresAll}
             >
               Neem peer score over
             </button>
           </div>
 
-          {/* Table */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          {/* Main content area with optional notes panel */}
+          <div className={`flex gap-4 ${focusMode ? 'h-[calc(100vh-300px)]' : ''}`}>
+            {/* Notes panel (left side in focus mode) */}
+            {focusMode && projectId && (
+              <div className="flex-shrink-0" style={{ width: notesWidth }}>
+                <div className="h-full sticky top-4">
+                  <ProjectNotesPanel
+                    projectId={projectId}
+                    onClose={() => setFocusMode(false)}
+                    width={notesWidth}
+                    maxWidth={600}
+                    onWidthChange={setNotesWidth}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Table container */}
+            <div className="flex-1 min-w-0">
+              {/* Table */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200 text-sm">
                   <thead className="bg-gray-50">
@@ -745,6 +815,8 @@ export default function OMZAOverviewPage() {
                 </p>
               </div>
             </div>
+            </div>
+          </div>
           </>
         )}
 
