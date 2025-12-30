@@ -223,7 +223,11 @@ class EvaluationConfig(BaseModel):
     peer_tussen: Optional[PeerEvaluationConfig] = None
     peer_eind: Optional[PeerEvaluationConfig] = None
 
-    # Project assessment (creates ProjectAssessment records)
+    # Project assessments (creates ProjectAssessment records)
+    project_assessment_tussen: Optional[ProjectAssessmentConfig] = None
+    project_assessment_eind: Optional[ProjectAssessmentConfig] = None
+    
+    # Legacy support (deprecated, use project_assessment_tussen or project_assessment_eind instead)
     project_assessment: Optional[ProjectAssessmentConfig] = None
 
     # Competency scan (creates CompetencyWindow records)

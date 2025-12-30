@@ -21,6 +21,7 @@ from app.infra.db.models import (
     Group,
     GroupMember,
     ProjectAssessment,
+    ProjectTeam,
     CompetencyWindow,
     Competency,
     Course,
@@ -910,34 +911,43 @@ def wizard_create_project(
             warnings.append("No peer rubric found for peer_eind evaluation")
 
     # 3. Create project assessments (now creates ProjectAssessment records, one per group)
-    if payload.evaluations.project_assessment and payload.evaluations.project_assessment.enabled:
-        pa_config = payload.evaluations.project_assessment
-        
+    # Helper function to create project assessments for a given config
+    def create_project_assessments(pa_config: ProjectAssessmentConfig, version_suffix: str):
         if not project.course_id:
-            warnings.append("Project assessment requires a course_id but none was provided")
+            warnings.append(f"Project assessment ({version_suffix}) requires a course_id but none was provided")
+            return
+        
+        # Get all groups for this course
+        groups = db.query(Group).filter(
+            Group.school_id == user.school_id,
+            Group.course_id == project.course_id
+        ).all()
+        
+        if not groups:
+            # Edge case: course has no groups
+            warnings.append(
+                f"Course {project.course_id} has no groups. "
+                "Please create groups before creating project assessments, "
+                "or create them manually after wizard completion."
+            )
         else:
-            # Get all groups for this course
-            groups = db.query(Group).filter(
-                Group.school_id == user.school_id,
-                Group.course_id == project.course_id
-            ).all()
-            
-            if not groups:
-                # Edge case: course has no groups
-                warnings.append(
-                    f"Course {project.course_id} has no groups. "
-                    "Please create groups before creating project assessments, "
-                    "or create them manually after wizard completion."
-                )
-            else:
-                # Create one ProjectAssessment per group
-                # For each group, we create a ProjectTeam to freeze the team roster at this point in time.
-                # This ensures that project assessments reference the correct team composition,
-                # even if group membership changes later. The ProjectTeam preserves:
-                # - Team roster (members) at the time of project creation
-                # - Team number from the group for proper team identification
-                # - Historical record of team composition for this specific project
-                for group in groups:
+            # Create one ProjectAssessment per group
+            # For each group, we create a ProjectTeam to freeze the team roster at this point in time.
+            # This ensures that project assessments reference the correct team composition,
+            # even if group membership changes later. The ProjectTeam preserves:
+            # - Team roster (members) at the time of project creation
+            # - Team number from the group for proper team identification
+            # - Historical record of team composition for this specific project
+            for group in groups:
+                # Check if project team already exists for this group (might be created by previous assessment)
+                existing_project_team = db.query(ProjectTeam).filter(
+                    ProjectTeam.project_id == project.id,
+                    ProjectTeam.team_id == group.id
+                ).first()
+                
+                if existing_project_team:
+                    project_team = existing_project_team
+                else:
                     # Create ProjectTeam for this group to preserve team roster
                     project_team = ProjectTeamService.create_project_team(
                         db=db,
@@ -958,41 +968,60 @@ def wizard_create_project(
                         group_id=group.id,
                         school_id=user.school_id,
                     )
-                    db.flush()  # Flush to get project_team.id and assessment.id for linking
-                    
-                    # Create ProjectAssessment linked to project and project_team
-                    assessment = ProjectAssessment(
-                        school_id=user.school_id,
-                        project_id=project.id,  # Set project_id on the model
-                        group_id=group.id,
-                        project_team_id=project_team.id,  # Link to project team
-                        teacher_id=user.id,
-                        rubric_id=pa_config.rubric_id,
-                        title=f"{project.title} – {group.name}",
-                        version=pa_config.version,
-                        status="draft",
-                        metadata_json={
-                            "deadline": pa_config.deadline.isoformat() if pa_config.deadline else None,
-                        }
-                    )
-                    db.add(assessment)
-                    db.flush()
-                    
-                    created_entities.append(WizardEntityOut(
-                        type="project_assessment",
-                        data={
-                            "id": assessment.id,
-                            "title": assessment.title,
-                            "project_id": assessment.project_id,
-                            "group_id": assessment.group_id,
-                            "group_name": group.name,
-                            "project_team_id": assessment.project_team_id,
-                            "rubric_id": assessment.rubric_id,
-                            "version": assessment.version,
-                            "status": assessment.status,
-                            "deadline": pa_config.deadline.isoformat() if pa_config.deadline else None,
-                        }
-                    ))
+                    db.flush()  # Flush to get project_team.id
+                
+                # Create ProjectAssessment linked to project and project_team
+                # Include version suffix in title if provided, but not group name
+                title_with_version = project.title
+                if version_suffix:
+                    title_with_version += f" ({version_suffix})"
+                
+                assessment = ProjectAssessment(
+                    school_id=user.school_id,
+                    project_id=project.id,  # Set project_id on the model
+                    group_id=group.id,
+                    project_team_id=project_team.id,  # Link to project team
+                    teacher_id=user.id,
+                    rubric_id=pa_config.rubric_id,
+                    title=title_with_version,
+                    version=pa_config.version or version_suffix,
+                    status="draft",
+                    metadata_json={
+                        "deadline": pa_config.deadline.isoformat() if pa_config.deadline else None,
+                    }
+                )
+                db.add(assessment)
+                db.flush()
+                
+                created_entities.append(WizardEntityOut(
+                    type="project_assessment",
+                    data={
+                        "id": assessment.id,
+                        "title": assessment.title,
+                        "project_id": assessment.project_id,
+                        "group_id": assessment.group_id,
+                        "group_name": group.name,
+                        "project_team_id": assessment.project_team_id,
+                        "rubric_id": assessment.rubric_id,
+                        "version": assessment.version,
+                        "status": assessment.status,
+                        "deadline": pa_config.deadline.isoformat() if pa_config.deadline else None,
+                    }
+                ))
+    
+    # Process project_assessment_tussen
+    if payload.evaluations.project_assessment_tussen and payload.evaluations.project_assessment_tussen.enabled:
+        create_project_assessments(payload.evaluations.project_assessment_tussen, "tussentijds")
+    
+    # Process project_assessment_eind
+    if payload.evaluations.project_assessment_eind and payload.evaluations.project_assessment_eind.enabled:
+        create_project_assessments(payload.evaluations.project_assessment_eind, "eind")
+    
+    # Legacy support: process single project_assessment if provided
+    if payload.evaluations.project_assessment and payload.evaluations.project_assessment.enabled:
+        # Use explicit version from payload, or no suffix if not provided
+        version_suffix = payload.evaluations.project_assessment.version or None
+        create_project_assessments(payload.evaluations.project_assessment, version_suffix or "")
 
     # 4. Create competency window (now creates CompetencyWindow records)
     if payload.evaluations.competency_scan and payload.evaluations.competency_scan.enabled:
