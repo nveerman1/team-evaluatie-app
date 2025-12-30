@@ -258,20 +258,20 @@ export default function EvaluationsListInner() {
                     Dashboard
                   </Link>
 
+                  {/* OMZA button */}
+                  <Link
+                    href={`/teacher/evaluations/${e.id}/omza`}
+                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
+                  >
+                    OMZA
+                  </Link>
+
                   {/* Cijfers button */}
                   <Link
                     href={`/teacher/evaluations/${e.id}/grades`}
                     className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-800 transition hover:bg-slate-50"
                   >
                     Cijfers
-                  </Link>
-
-                  {/* Instellingen button */}
-                  <Link
-                    href={`/teacher/evaluations/${e.id}/settings`}
-                    className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
-                  >
-                    Instellingen
                   </Link>
 
                   {/* Delete button - icon only */}

@@ -54,13 +54,29 @@ def compute_weighted_omza_scores(
         RubricCriterion.category.isnot(None)
     ).all()
     
+    # Map full category names to short codes for consistency
+    category_name_to_code = {
+        "Organiseren": "O",
+        "Meedoen": "M",
+        "Zelfvertrouwen": "Z",
+        "Autonomie": "A",
+        # Also handle lowercase
+        "organiseren": "O",
+        "meedoen": "M",
+        "zelfvertrouwen": "Z",
+        "autonomie": "A",
+    }
+    
     # Group criteria by category with their weights
+    # Normalize category names to short codes
     category_criteria = {}
     for criterion in criteria:
         cat = criterion.category
-        if cat not in category_criteria:
-            category_criteria[cat] = []
-        category_criteria[cat].append({
+        # Normalize to short code
+        cat_normalized = category_name_to_code.get(cat, cat)
+        if cat_normalized not in category_criteria:
+            category_criteria[cat_normalized] = []
+        category_criteria[cat_normalized].append({
             "id": criterion.id,
             "weight": criterion.weight if criterion.weight else 1.0
         })
@@ -152,13 +168,29 @@ def compute_weighted_omza_scores_batch(
         RubricCriterion.category.isnot(None)
     ).all()
     
+    # Map full category names to short codes for consistency
+    category_name_to_code = {
+        "Organiseren": "O",
+        "Meedoen": "M",
+        "Zelfvertrouwen": "Z",
+        "Autonomie": "A",
+        # Also handle lowercase
+        "organiseren": "O",
+        "meedoen": "M",
+        "zelfvertrouwen": "Z",
+        "autonomie": "A",
+    }
+    
     # Group criteria by category with their weights
+    # Normalize category names to short codes
     category_criteria = {}
     for criterion in criteria:
         cat = criterion.category
-        if cat not in category_criteria:
-            category_criteria[cat] = []
-        category_criteria[cat].append({
+        # Normalize to short code
+        cat_normalized = category_name_to_code.get(cat, cat)
+        if cat_normalized not in category_criteria:
+            category_criteria[cat_normalized] = []
+        category_criteria[cat_normalized].append({
             "id": criterion.id,
             "weight": criterion.weight if criterion.weight else 1.0
         })

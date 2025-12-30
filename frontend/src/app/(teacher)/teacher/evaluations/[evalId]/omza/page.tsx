@@ -205,26 +205,6 @@ export default function OMZAOverviewPage() {
     omzaService
       .getOmzaData(evalIdNum, controller.signal)
       .then((data) => {
-        // Ensure categories are in the correct order: O, M, Z, A
-        const categoryOrder = ["O", "M", "Z", "A"];
-        const sortedCategories: string[] = [];
-        
-        // Add categories in the specified order
-        categoryOrder.forEach(cat => {
-          if (data.categories.indexOf(cat) !== -1) {
-            sortedCategories.push(cat);
-          }
-        });
-        
-        // Add any other categories that might exist
-        data.categories.forEach(cat => {
-          if (categoryOrder.indexOf(cat) === -1) {
-            sortedCategories.push(cat);
-          }
-        });
-        
-        data.categories = sortedCategories;
-        
         setOmzaData(data);
         
         // Initialize teacher scores and comments from loaded data
@@ -539,17 +519,17 @@ export default function OMZAOverviewPage() {
                 </select>
               </div>
 
-              <button
-                type="button"
-                className="h-9 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-xs md:text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-100 hover:border-indigo-300"
-                onClick={applyPeerScoresAll}
-              >
-                Neem peer score over
-              </button>
-            </div>
+            <button
+              type="button"
+              className="h-9 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-xs md:text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-100 hover:border-indigo-300"
+              onClick={applyPeerScoresAll}
+            >
+              Neem peer score over
+            </button>
+          </div>
 
-            {/* Table */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          {/* Table */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200 text-sm">
                   <thead className="bg-gray-50">
