@@ -972,7 +972,7 @@ def wizard_create_project(
                 
                 # Create ProjectAssessment linked to project and project_team
                 # Include version suffix in title if provided, but not group name
-                title_with_version = f"{project.title}"
+                title_with_version = project.title
                 if version_suffix:
                     title_with_version += f" ({version_suffix})"
                 
