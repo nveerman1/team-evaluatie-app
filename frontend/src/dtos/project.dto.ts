@@ -122,10 +122,12 @@ export type CompetencyScanConfig = {
 export type EvaluationConfig = {
   peer_tussen?: PeerEvaluationConfig;
   peer_eind?: PeerEvaluationConfig;
-  project_assessment?: ProjectAssessmentConfig;
+  project_assessment_tussen?: ProjectAssessmentConfig;
+  project_assessment_eind?: ProjectAssessmentConfig;
   competency_scan?: CompetencyScanConfig;
   
   // Legacy support (deprecated, for backward compatibility)
+  project_assessment?: ProjectAssessmentConfig;
   create_peer_tussen?: boolean;
   create_peer_eind?: boolean;
   create_project_assessment?: boolean;

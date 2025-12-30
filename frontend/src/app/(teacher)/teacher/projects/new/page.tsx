@@ -219,22 +219,23 @@ export default function NewProjectWizardPage() {
         };
       }
       
-      // Project Assessment Tussentijds (interim) - takes precedence if enabled
+      // Project Assessment Tussentijds (interim)
       if (projectAssessmentTussenEnabled && projectAssessmentTussenRubricId) {
-        evaluationConfig.project_assessment = {
+        evaluationConfig.project_assessment_tussen = {
           enabled: true,
           rubric_id: Number(projectAssessmentTussenRubricId),
           deadline: projectAssessmentTussenDeadline || undefined,
           version: "tussentijds",
         };
       }
-      // Project Assessment (final/eind) - only if tussentijds is not enabled
-      else if (projectAssessmentEnabled && projectAssessmentRubricId) {
-        evaluationConfig.project_assessment = {
+      
+      // Project Assessment (final/eind)
+      if (projectAssessmentEnabled && projectAssessmentRubricId) {
+        evaluationConfig.project_assessment_eind = {
           enabled: true,
           rubric_id: Number(projectAssessmentRubricId),
           deadline: projectAssessmentDeadline || undefined,
-          version: projectAssessmentVersion || undefined,
+          version: projectAssessmentVersion || "eind",
         };
       }
       
@@ -674,13 +675,7 @@ export default function NewProjectWizardPage() {
                     <input
                       type="checkbox"
                       checked={projectAssessmentTussenEnabled}
-                      onChange={(e) => {
-                        setProjectAssessmentTussenEnabled(e.target.checked);
-                        // Disable regular project assessment if tussentijds is enabled
-                        if (e.target.checked) {
-                          setProjectAssessmentEnabled(false);
-                        }
-                      }}
+                      onChange={(e) => setProjectAssessmentTussenEnabled(e.target.checked)}
                       className="mt-1"
                     />
                     <div className="flex-1">
@@ -731,13 +726,7 @@ export default function NewProjectWizardPage() {
                     <input
                       type="checkbox"
                       checked={projectAssessmentEnabled}
-                      onChange={(e) => {
-                        setProjectAssessmentEnabled(e.target.checked);
-                        // Disable tussentijds if regular is enabled
-                        if (e.target.checked) {
-                          setProjectAssessmentTussenEnabled(false);
-                        }
-                      }}
+                      onChange={(e) => setProjectAssessmentEnabled(e.target.checked)}
                       className="mt-1"
                     />
                     <div className="flex-1">
