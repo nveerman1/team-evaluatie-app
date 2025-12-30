@@ -327,17 +327,19 @@ export default function NewProjectWizardPage() {
           
           <div className="flex gap-3 justify-center flex-wrap">
             {/* Primary action: Navigate to class-teams to create teams */}
-            <button
-              onClick={() => {
-                const params = new URLSearchParams();
-                params.set("project_id", createdProjectId!.toString());
-                if (courseId) params.set("course_id", courseId.toString());
-                router.push(`/teacher/class-teams?${params.toString()}`);
-              }}
-              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
-            >
-              👥 Teams aanmaken
-            </button>
+            {createdProjectId && (
+              <button
+                onClick={() => {
+                  const params = new URLSearchParams();
+                  params.set("project_id", createdProjectId.toString());
+                  if (courseId) params.set("course_id", courseId.toString());
+                  router.push(`/teacher/class-teams?${params.toString()}`);
+                }}
+                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
+              >
+                👥 Teams aanmaken
+              </button>
+            )}
             
             {projectAssessmentCount > 0 && (
               <button
