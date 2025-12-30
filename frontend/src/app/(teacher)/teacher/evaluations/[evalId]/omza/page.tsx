@@ -205,26 +205,6 @@ export default function OMZAOverviewPage() {
     omzaService
       .getOmzaData(evalIdNum, controller.signal)
       .then((data) => {
-        // Ensure categories are in the correct order: O, M, Z, A
-        const categoryOrder = ["O", "M", "Z", "A"];
-        const sortedCategories: string[] = [];
-        
-        // Add categories in the specified order
-        categoryOrder.forEach(cat => {
-          if (data.categories.indexOf(cat) !== -1) {
-            sortedCategories.push(cat);
-          }
-        });
-        
-        // Add any other categories that might exist
-        data.categories.forEach(cat => {
-          if (categoryOrder.indexOf(cat) === -1) {
-            sortedCategories.push(cat);
-          }
-        });
-        
-        data.categories = sortedCategories;
-        
         setOmzaData(data);
         
         // Initialize teacher scores and comments from loaded data

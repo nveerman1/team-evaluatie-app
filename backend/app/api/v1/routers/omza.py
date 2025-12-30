@@ -232,9 +232,12 @@ async def get_omza_data(
             )
         )
 
-    # Return the actual category names from the rubric
-    # Convert set to sorted list for consistent ordering
-    categories_list = sorted(list(all_categories))
+    # Return the categories in the correct order: O, M, Z, A
+    # This is the OMZA order (Organiseren, Meedoen, Zelfvertrouwen, Autonomie)
+    category_order = ["O", "M", "Z", "A"]
+    categories_list = [cat for cat in category_order if cat in all_categories]
+    # Add any other categories that might exist
+    categories_list.extend([cat for cat in sorted(all_categories) if cat not in category_order])
     
     return OmzaDataResponse(
         evaluation_id=evaluation_id,
