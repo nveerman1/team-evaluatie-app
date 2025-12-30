@@ -1856,13 +1856,22 @@ def get_peer_evaluation_dashboard(
         # Convert to trend data points
         # Note: OmzaTrendDataPoint expects specific lowercase fields, so we need to map
         # actual category names to the expected format
+        # Map short codes to full lowercase names
+        short_code_to_full = {
+            "O": "organiseren",
+            "M": "meedoen",
+            "Z": "zelfvertrouwen",
+            "A": "autonomie",
+        }
+        
         for month_key in sorted(monthly_data.keys(), key=lambda x: datetime.strptime(x, "%b %Y")):
             scores = monthly_data[month_key]
             
             # Create a flexible mapping - normalize category names to lowercase
             normalized_scores = {}
             for cat_name, cat_scores in scores.items():
-                normalized_key = cat_name.lower()
+                # Check if it's a short code, otherwise use lowercase
+                normalized_key = short_code_to_full.get(cat_name, cat_name.lower())
                 if cat_scores:
                     normalized_scores[normalized_key] = sum(cat_scores) / len(cat_scores)
                 else:
