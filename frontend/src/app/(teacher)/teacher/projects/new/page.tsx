@@ -162,9 +162,27 @@ export default function NewProjectWizardPage() {
     return true;
   }
 
+  function validateStep2() {
+    // Validate that if project assessment tussentijds is enabled, a rubric is selected
+    if (projectAssessmentTussenEnabled && !projectAssessmentTussenRubricId) {
+      setError("Selecteer een rubric voor Projectbeoordeling Tussentijds");
+      return false;
+    }
+    // Validate that if project assessment is enabled, a rubric is selected
+    if (projectAssessmentEnabled && !projectAssessmentRubricId) {
+      setError("Selecteer een rubric voor Projectbeoordeling");
+      return false;
+    }
+    setError(null);
+    return true;
+  }
+
   function handleNext() {
     if (step === 1) {
       if (!validateStep1()) return;
+    }
+    if (step === 2) {
+      if (!validateStep2()) return;
     }
     setError(null);
     setStep(step + 1);
@@ -330,6 +348,9 @@ export default function NewProjectWizardPage() {
             {createdProjectId && (
               <button
                 onClick={() => {
+                  // Defensive null check
+                  if (!createdProjectId) return;
+                  
                   const params = new URLSearchParams();
                   params.set("project_id", createdProjectId.toString());
                   if (courseId) params.set("course_id", courseId.toString());
