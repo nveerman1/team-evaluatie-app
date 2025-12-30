@@ -37,6 +37,7 @@ from app.infra.db.models import (
     CompetencyWindow,
     CompetencySelfScore,
     Group,
+    GroupMember,
     Rubric,
     RubricCriterion,
     Grade,
@@ -619,14 +620,13 @@ def get_overview_matrix(
     # If course_id is specified, get all student IDs who are members of groups in that course
     allowed_student_ids = None
     if course_id:
-        from app.infra.db.models import GroupMember
         student_ids_query = db.query(User.id).join(
             GroupMember, GroupMember.user_id == User.id
         ).join(
             Group, GroupMember.group_id == Group.id
         ).filter(
             Group.course_id == course_id,
-            GroupMember.active == True,
+            GroupMember.active.is_(True),
             ~User.archived,
             User.role == "student"
         ).distinct()
