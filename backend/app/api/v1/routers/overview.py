@@ -220,7 +220,11 @@ def _calculate_peer_score(db: Session, evaluation_id: int, user_id: int) -> Opti
         if grade.meta and isinstance(grade.meta, dict):
             suggested = grade.meta.get('suggested')
             if suggested is not None:
-                return round(float(suggested), 1)
+                try:
+                    return round(float(suggested), 1)
+                except (ValueError, TypeError):
+                    # Invalid suggested grade value, skip it
+                    pass
     
     return None
 
