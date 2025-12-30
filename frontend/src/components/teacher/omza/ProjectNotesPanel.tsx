@@ -41,6 +41,8 @@ export function ProjectNotesPanel({
         setLoading(true);
         
         // First, find the context for this project
+        // TODO: Consider adding a service method to fetch contexts by project_id 
+        // directly to avoid loading all contexts when there are many
         const contexts = await projectNotesService.listContexts();
         const projectContext = contexts.find(c => c.project_id === projectId);
         

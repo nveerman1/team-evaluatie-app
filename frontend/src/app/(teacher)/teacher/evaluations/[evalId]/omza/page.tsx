@@ -191,7 +191,6 @@ export default function OMZAOverviewPage() {
   const [focusMode, setFocusMode] = useState(false);
   const [notesWidth, setNotesWidth] = useState(400);
   const { setSidebarCollapsed } = useTeacherLayout();
-  const originalSidebarState = useRef<boolean>(false);
   
   // Sorting state
   const [sortColumn, setSortColumn] = useState<"team" | "name" | "class" | null>(null);
