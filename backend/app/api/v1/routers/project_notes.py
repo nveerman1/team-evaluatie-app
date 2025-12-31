@@ -64,8 +64,29 @@ def serialize_note(note: ProjectNote, db: Session) -> dict:
 
     # Add joined data
     if note.team_id:
-        team = db.query(Group).filter(Group.id == note.team_id).first()
-        note_dict["team_name"] = team.name if team else None
+        # Get the context to find the project_id
+        context = db.query(ProjectNotesContext).filter(ProjectNotesContext.id == note.context_id).first()
+        
+        # Try to get team_number from project_teams table
+        if context and context.project_id:
+            project_team = (
+                db.query(ProjectTeam)
+                .filter(
+                    ProjectTeam.team_id == note.team_id,
+                    ProjectTeam.project_id == context.project_id
+                )
+                .first()
+            )
+            if project_team and project_team.team_number:
+                note_dict["team_name"] = f"Team {project_team.team_number}"
+            else:
+                # Fallback to legacy team name if no project_team found
+                team = db.query(Group).filter(Group.id == note.team_id).first()
+                note_dict["team_name"] = team.name if team else None
+        else:
+            # Fallback to legacy team name if no project_id
+            team = db.query(Group).filter(Group.id == note.team_id).first()
+            note_dict["team_name"] = team.name if team else None
     else:
         note_dict["team_name"] = None
 
