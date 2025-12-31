@@ -533,9 +533,9 @@ export default function OMZAOverviewPage() {
       {error && <ErrorMessage message={error} />}
 
       {!loading && !error && omzaData && (
-        <>
+        <div className="flex flex-col space-y-4">
           {/* Filters bar */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div className="flex flex-wrap gap-3 items-center">
               <input
                 className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
@@ -831,8 +831,8 @@ export default function OMZAOverviewPage() {
             </div>
           </div>
           </div>
-          </>
-        )}
+        </div>
+      )}
 
       {evalIdNum == null && (
         <p className="text-sm text-gray-500">
