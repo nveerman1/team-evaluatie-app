@@ -596,7 +596,7 @@ export default function OMZAOverviewPage() {
 
           {/* Conditional grid wrapper for focus mode */}
           <div 
-            className={focusMode && projectId ? "grid gap-6" : ""}
+            className={focusMode && projectId ? "grid gap-6 min-w-0" : ""}
             style={focusMode && projectId ? { gridTemplateColumns: `${notesWidth}px 1fr` } : undefined}
           >
             {/* Notes panel - only in focus mode */}
@@ -611,7 +611,7 @@ export default function OMZAOverviewPage() {
             )}
             
             {/* Table wrapper - always present, but inside grid column when focus mode active */}
-            <div>
+            <div className="min-w-0">
               {/* Table */}
               <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="overflow-x-auto">

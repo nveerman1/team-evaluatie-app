@@ -25,6 +25,7 @@ export function ProjectNotesPanel({
   const [loading, setLoading] = useState(true);
   const [searchStudent, setSearchStudent] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("");
+  const [filterTeam, setFilterTeam] = useState<string>("");
   const [contextId, setContextId] = useState<number | null>(null);
 
   // Load project notes context for this project
@@ -73,8 +74,12 @@ export function ProjectNotesPanel({
       note.student_name?.toLowerCase().includes(searchStudent.toLowerCase()) ||
       note.team_name?.toLowerCase().includes(searchStudent.toLowerCase());
     const matchesCategory = !filterCategory || note.omza_category === filterCategory;
-    return matchesStudent && matchesCategory;
+    const matchesTeam = !filterTeam || note.team_name === filterTeam;
+    return matchesStudent && matchesCategory && matchesTeam;
   });
+
+  // Get unique team names for filter dropdown
+  const uniqueTeams = Array.from(new Set(notes.map(note => note.team_name).filter(Boolean))).sort();
 
   // Handle resize
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -155,6 +160,18 @@ export function ProjectNotesPanel({
             onChange={(e) => setSearchStudent(e.target.value)}
             className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           />
+          <select
+            value={filterTeam}
+            onChange={(e) => setFilterTeam(e.target.value)}
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          >
+            <option value="">Alle teams</option>
+            {uniqueTeams.map((team) => (
+              <option key={team} value={team}>
+                {team}
+              </option>
+            ))}
+          </select>
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
