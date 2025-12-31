@@ -189,8 +189,9 @@ export default function OMZAOverviewPage() {
   
   // Focus mode state
   const [focusMode, setFocusMode] = useState(false);
-  const [notesWidth, setNotesWidth] = useState(400);
+  const [notesWidth, setNotesWidth] = useState(0);
   const { setSidebarCollapsed } = useTeacherLayout();
+  const maxNotesWidth = focusMode ? 1500 : 600;
   
   // Sorting state
   const [sortColumn, setSortColumn] = useState<"team" | "name" | "class" | null>(null);
@@ -267,6 +268,13 @@ export default function OMZAOverviewPage() {
       
     return () => controller.abort();
   }, [evalIdNum]);
+
+  // Set notes panel width when opening focus mode
+  useEffect(() => {
+    if (focusMode && notesWidth === 0 && typeof window !== 'undefined') {
+      setNotesWidth(Math.floor(window.innerWidth * 0.5));
+    }
+  }, [focusMode, notesWidth]);
 
   // Manage sidebar collapse when focus mode changes
   useEffect(() => {
@@ -585,24 +593,23 @@ export default function OMZAOverviewPage() {
           </div>
 
           {/* Main content area with optional notes panel */}
-          <div className={`flex gap-4 ${focusMode ? 'h-[calc(100vh-300px)]' : ''}`}>
+          <div 
+            className="grid gap-6" 
+            style={focusMode && projectId ? { gridTemplateColumns: `${notesWidth}px 1fr` } : undefined}
+          >
             {/* Notes panel (left side in focus mode) */}
             {focusMode && projectId && (
-              <div className="flex-shrink-0" style={{ width: notesWidth }}>
-                <div className="h-full sticky top-4">
-                  <ProjectNotesPanel
-                    projectId={projectId}
-                    onClose={() => setFocusMode(false)}
-                    width={notesWidth}
-                    maxWidth={600}
-                    onWidthChange={setNotesWidth}
-                  />
-                </div>
-              </div>
+              <ProjectNotesPanel
+                projectId={projectId}
+                onClose={() => setFocusMode(false)}
+                width={notesWidth}
+                maxWidth={maxNotesWidth}
+                onWidthChange={setNotesWidth}
+              />
             )}
 
             {/* Table container */}
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0">
               {/* Table */}
               <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="overflow-x-auto">
