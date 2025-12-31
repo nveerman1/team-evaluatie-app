@@ -593,13 +593,13 @@ export default function OMZAOverviewPage() {
             </button>
           </div>
 
-          {/* Main content area with optional notes panel */}
-          <div 
-            className={focusMode && projectId ? "grid gap-6" : ""}
-            style={focusMode && projectId ? { gridTemplateColumns: `${notesWidth}px 1fr` } : undefined}
-          >
-            {/* Notes panel (left side in focus mode) */}
-            {focusMode && projectId && (
+          {/* Focus mode: notes panel and grid wrapper opening */}
+          {focusMode && projectId && (
+            <div 
+              className="grid gap-6" 
+              style={{ gridTemplateColumns: `${notesWidth}px 1fr` }}
+            >
+              {/* Notes panel (left side in focus mode) */}
               <ProjectNotesPanel
                 projectId={projectId}
                 onClose={() => setFocusMode(false)}
@@ -607,14 +607,13 @@ export default function OMZAOverviewPage() {
                 maxWidth={maxNotesWidth}
                 onWidthChange={setNotesWidth}
               />
-            )}
-
-            {/* Table container */}
-            <div>
-              {/* Table */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <div>
+          )}
+          
+          {/* Table - always rendered */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 text-sm">
                   <thead className="bg-gray-50">
                     <tr>
                       <th 
@@ -828,9 +827,14 @@ export default function OMZAOverviewPage() {
                 </p>
               </div>
             </div>
-          </div>
-          </div>
-          </div>
+          
+          {/* Close focus mode grid wrapper if active */}
+          {focusMode && projectId && (
+            <>
+              </div>
+            </div>
+            </>
+          )}
           </>
         )}
 
