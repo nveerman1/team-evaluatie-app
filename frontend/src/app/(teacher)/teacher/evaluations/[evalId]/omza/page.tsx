@@ -595,7 +595,7 @@ export default function OMZAOverviewPage() {
 
           {/* Main content area with optional notes panel */}
           <div 
-            className="grid gap-6" 
+            className={focusMode && projectId ? "grid gap-6" : ""}
             style={focusMode && projectId ? { gridTemplateColumns: `${notesWidth}px 1fr` } : undefined}
           >
             {/* Notes panel (left side in focus mode) */}
@@ -610,11 +610,11 @@ export default function OMZAOverviewPage() {
             )}
 
             {/* Table container */}
-            <div className="min-w-0">
+            <div>
               {/* Table */}
               <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 text-sm">
                   <thead className="bg-gray-50">
                     <tr>
                       <th 
@@ -828,7 +828,6 @@ export default function OMZAOverviewPage() {
                 </p>
               </div>
             </div>
-          </div>
           </div>
           </div>
           </>
