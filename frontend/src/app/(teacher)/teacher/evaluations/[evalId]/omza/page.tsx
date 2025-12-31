@@ -828,12 +828,8 @@ export default function OMZAOverviewPage() {
                 </p>
               </div>
             </div>
-          
-          {/* Close grid wrapper if in focus mode */}
-                </p>
-              </div>
             </div>
-            </div>
+          </div>
           </div>
           </>
         )}
