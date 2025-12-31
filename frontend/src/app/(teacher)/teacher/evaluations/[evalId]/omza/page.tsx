@@ -10,6 +10,7 @@ import { OmzaDataResponse, OmzaStudentData, StandardComment } from "@/dtos/omza.
 import { mapPeerScoreToIconLevel, ICON_LABELS, ICON_DESCRIPTIONS } from "@/utils/omza.utils";
 import { ProjectNotesPanel } from "@/components/teacher/omza/ProjectNotesPanel";
 import { useTeacherLayout } from "@/app/(teacher)/layout";
+import { useEvaluationFocusMode } from "../layout";
 
 // Helper to get badge color based on score
 const getBadgeColor = (value: number | null) => {
@@ -188,7 +189,7 @@ export default function OMZAOverviewPage() {
   const [toast, setToast] = useState<string | null>(null);
   
   // Focus mode state
-  const [focusMode, setFocusMode] = useState(false);
+  const { focusMode, setFocusMode } = useEvaluationFocusMode();
   const [notesWidth, setNotesWidth] = useState(0);
   const { setSidebarCollapsed } = useTeacherLayout();
   const maxNotesWidth = focusMode ? 1500 : 600;
