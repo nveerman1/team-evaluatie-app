@@ -533,7 +533,7 @@ export default function OMZAOverviewPage() {
       {error && <ErrorMessage message={error} />}
 
       {!loading && !error && omzaData && (
-        <div className="flex flex-col space-y-4">
+        <div className="space-y-6">
           {/* Filters bar */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div className="flex flex-wrap gap-3 items-center">
