@@ -593,13 +593,13 @@ export default function OMZAOverviewPage() {
             </button>
           </div>
 
-          {/* Focus mode: notes panel and grid wrapper opening */}
-          {focusMode && projectId && (
+          {/* Conditional grid wrapper for focus mode */}
+          {focusMode && projectId ? (
             <div 
               className="grid gap-6" 
               style={{ gridTemplateColumns: `${notesWidth}px 1fr` }}
             >
-              {/* Notes panel (left side in focus mode) */}
+              {/* Notes panel */}
               <ProjectNotesPanel
                 projectId={projectId}
                 onClose={() => setFocusMode(false)}
@@ -608,7 +608,7 @@ export default function OMZAOverviewPage() {
                 onWidthChange={setNotesWidth}
               />
               <div>
-          )}
+          ) : null}
           
           {/* Table - always rendered */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
@@ -828,13 +828,13 @@ export default function OMZAOverviewPage() {
               </div>
             </div>
           
-          {/* Close focus mode grid wrapper if active */}
-          {focusMode && projectId && (
+          {/* Close grid wrapper if in focus mode */}
+          {focusMode && projectId ? (
             <>
               </div>
             </div>
             </>
-          )}
+          ) : null}
           </>
         )}
 
