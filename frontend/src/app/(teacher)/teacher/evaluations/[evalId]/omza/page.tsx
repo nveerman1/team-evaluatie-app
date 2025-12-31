@@ -592,6 +592,7 @@ export default function OMZAOverviewPage() {
               Neem peer score over
             </button>
           </div>
+          </div>
 
           {/* Conditional grid wrapper for focus mode */}
           <div 
