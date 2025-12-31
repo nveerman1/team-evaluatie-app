@@ -594,12 +594,12 @@ export default function OMZAOverviewPage() {
           </div>
 
           {/* Conditional grid wrapper for focus mode */}
-          {focusMode && projectId ? (
-            <div 
-              className="grid gap-6" 
-              style={{ gridTemplateColumns: `${notesWidth}px 1fr` }}
-            >
-              {/* Notes panel */}
+          <div 
+            className={focusMode && projectId ? "grid gap-6" : ""}
+            style={focusMode && projectId ? { gridTemplateColumns: `${notesWidth}px 1fr` } : undefined}
+          >
+            {/* Notes panel - only in focus mode */}
+            {focusMode && projectId && (
               <ProjectNotesPanel
                 projectId={projectId}
                 onClose={() => setFocusMode(false)}
@@ -607,13 +607,14 @@ export default function OMZAOverviewPage() {
                 maxWidth={maxNotesWidth}
                 onWidthChange={setNotesWidth}
               />
-              <div>
-          ) : null}
-          
-          {/* Table - always rendered */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 text-sm">
+            )}
+            
+            {/* Table wrapper - always present, but inside grid column when focus mode active */}
+            <div>
+              {/* Table */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 text-sm">
                   <thead className="bg-gray-50">
                     <tr>
                       <th 
@@ -829,12 +830,11 @@ export default function OMZAOverviewPage() {
             </div>
           
           {/* Close grid wrapper if in focus mode */}
-          {focusMode && projectId ? (
-            <>
+                </p>
               </div>
             </div>
-            </>
-          ) : null}
+            </div>
+          </div>
           </>
         )}
 
