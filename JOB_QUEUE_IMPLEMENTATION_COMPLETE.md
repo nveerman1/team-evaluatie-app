@@ -317,3 +317,100 @@ All 9 required features have been successfully implemented with:
 - ✅ Monitoring capabilities
 
 The async job queue system is now ready for production use with enterprise-grade features including progress tracking, priority queues, webhooks, scheduling, and comprehensive monitoring.
+
+## Bug Fixes and Maintenance
+
+### Fixed: Missing updated_at Column (2026-01-01) ✅
+
+**Issue**: 
+- GET `/api/v1/feedback-summaries/queue/stats` returned HTTP 500
+- Error: `column summary_generation_jobs.updated_at does not exist`
+
+**Root Cause**:
+The `SummaryGenerationJob` model inherited from `Base` (which defines `updated_at`), but the database table was created without this column due to:
+1. Model incorrectly overrode `created_at` with Python-level default instead of server-level default
+2. Initial migrations didn't include `updated_at` column
+3. Mismatch between SQLAlchemy model expectations and actual database schema
+
+**Resolution**:
+
+1. **Model Changes** (`backend/app/infra/db/models.py`):
+   ```python
+   # Before (INCORRECT):
+   class SummaryGenerationJob(Base):
+       created_at: Mapped[datetime] = mapped_column(
+           default=datetime.utcnow, nullable=False  # ❌ Wrong
+       )
+       # updated_at missing but expected by Base
+   
+   # After (CORRECT):
+   class SummaryGenerationJob(Base):
+       # created_at and updated_at inherited from Base ✅
+       started_at: Mapped[Optional[datetime]] = mapped_column()
+       completed_at: Mapped[Optional[datetime]] = mapped_column()
+   ```
+
+2. **Database Migrations**:
+   - **queue_20260101_03**: Added `updated_at` column to `summary_generation_jobs`
+     - Type: `TIMESTAMP WITH TIME ZONE`
+     - Default: `NOW()`
+     - Backfilled existing rows with `created_at` value
+   
+   - **queue_20260101_04**: Fixed `updated_at` in `scheduled_jobs` table
+     - Made NOT NULL
+     - Added server_default
+     - Backfilled NULL values
+   
+   - **queue_20260101_05**: Fixed `created_at` in `summary_generation_jobs`
+     - Added server_default=NOW()
+     - Added timezone support
+     - Ensures consistency with Base class
+
+3. **Testing** (`backend/tests/test_queue_stats_endpoint.py`):
+   - Added 7 comprehensive tests
+   - Model field validation tests
+   - Query pattern tests
+   - Regression prevention tests
+   - Integration tests for database schema
+
+4. **Documentation** (`backend/UPDATED_AT_FIX_DOCUMENTATION.md`):
+   - Root cause analysis
+   - Prevention strategies
+   - Best practices for timestamp handling
+   - Migration commands and verification steps
+
+**Impact**:
+- ✅ `/queue/stats` endpoint now returns HTTP 200
+- ✅ Queue monitoring dashboard fully functional
+- ✅ All timestamp fields properly managed
+- ✅ Consistent with Base class timestamp strategy
+
+**Prevention Strategy**:
+1. Always use Base class timestamp fields (don't override)
+2. If override is necessary, override BOTH created_at and updated_at consistently
+3. Use server_default=func.now() instead of default=datetime.utcnow
+4. Add schema validation tests after model changes
+5. Verify migrations match model definitions
+
+**Verification Commands**:
+```bash
+# Apply migrations
+cd backend
+alembic upgrade head
+
+# Verify schema
+psql $DATABASE_URL -c "\d summary_generation_jobs"
+
+# Run tests
+pytest tests/test_queue_stats_endpoint.py -v
+```
+
+**Files Modified**:
+- `backend/app/infra/db/models.py` - Fixed SummaryGenerationJob and ScheduledJob models
+- `backend/migrations/versions/queue_20260101_03_*.py` - Add updated_at migration
+- `backend/migrations/versions/queue_20260101_04_*.py` - Fix scheduled_jobs migration  
+- `backend/migrations/versions/queue_20260101_05_*.py` - Fix created_at migration
+- `backend/tests/test_queue_stats_endpoint.py` - New test suite
+- `backend/UPDATED_AT_FIX_DOCUMENTATION.md` - Comprehensive fix documentation
+
+This fix ensures the job queue system is fully functional with proper timestamp tracking for all operations.
