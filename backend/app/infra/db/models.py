@@ -1537,10 +1537,7 @@ class SummaryGenerationJob(Base):
     result: Mapped[Optional[dict]] = mapped_column(JSONB)
     error_message: Mapped[Optional[str]] = mapped_column(Text)
 
-    # Timestamps
-    created_at: Mapped[datetime] = mapped_column(
-        default=datetime.utcnow, nullable=False
-    )
+    # Timestamps (created_at and updated_at inherited from Base)
     started_at: Mapped[Optional[datetime]] = mapped_column()
     completed_at: Mapped[Optional[datetime]] = mapped_column()
 
@@ -1576,9 +1573,7 @@ class ScheduledJob(Base):
     last_run_at: Mapped[Optional[datetime]] = mapped_column()
     next_run_at: Mapped[Optional[datetime]] = mapped_column()
     
-    # Audit fields
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, nullable=False)
-    updated_at: Mapped[Optional[datetime]] = mapped_column()
+    # Audit fields (created_at and updated_at inherited from Base)
     created_by: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
 
     __table_args__ = (
