@@ -505,14 +505,137 @@ const USE_ASYNC_SUMMARIES = process.env.NEXT_PUBLIC_USE_ASYNC_SUMMARIES === 'tru
 
 ## Future Enhancements
 
-- [ ] Add job progress tracking (0-100%)
-- [ ] Implement job cancellation
-- [ ] Add job priority queue
-- [ ] Webhook notifications on completion
-- [ ] Dashboard for queue monitoring
-- [ ] Automatic retry with exponential backoff
-- [ ] Multi-queue support for different task types
-- [ ] Job scheduling (cron-like)
+- [x] Add job progress tracking (0-100%)
+- [x] Implement job cancellation
+- [x] Add job priority queue
+- [x] Webhook notifications on completion
+- [x] Dashboard for queue monitoring
+- [x] Automatic retry with exponential backoff
+- [x] Multi-queue support for different task types
+- [x] Job scheduling (cron-like)
+- [x] Rate Limiting
+
+## Recent Enhancements (2026-01-01)
+
+### Job Progress Tracking
+Jobs now report progress from 0-100% during execution. Check progress via the job status endpoint:
+```json
+{
+  "job_id": "summary-123-456-...",
+  "status": "processing",
+  "progress": 60
+}
+```
+
+### Job Cancellation
+Cancel queued or processing jobs:
+```http
+POST /api/v1/feedback-summaries/jobs/{job_id}/cancel
+```
+
+### Priority Queues
+Queue jobs with different priorities:
+- `high`: Processed first (ai-summaries-high queue)
+- `normal`: Default priority (ai-summaries queue)
+- `low`: Processed last (ai-summaries-low queue)
+
+```http
+POST /api/v1/feedback-summaries/evaluation/{evaluation_id}/student/{student_id}/queue
+Content-Type: application/json
+
+{
+  "priority": "high",
+  "webhook_url": "https://example.com/webhook",
+  "max_retries": 3
+}
+```
+
+### Webhook Notifications
+Get notified when jobs complete or fail:
+```json
+{
+  "event": "job.completed",
+  "timestamp": "2026-01-01T10:00:00",
+  "data": {
+    "job_id": "summary-123-456-...",
+    "status": "completed",
+    "student_id": 456,
+    "evaluation_id": 123,
+    "result": { ... }
+  }
+}
+```
+
+### Queue Monitoring Dashboard
+Monitor queue health and statistics:
+```http
+GET /api/v1/feedback-summaries/queue/stats
+GET /api/v1/feedback-summaries/queue/health
+```
+
+Response:
+```json
+{
+  "status": "healthy",
+  "redis": "connected",
+  "workers": [
+    {"name": "worker-1", "state": "busy", "current_job": "..."}
+  ],
+  "queues": [
+    {"name": "ai-summaries-high", "count": 2},
+    {"name": "ai-summaries", "count": 5},
+    {"name": "ai-summaries-low", "count": 1}
+  ]
+}
+```
+
+### Automatic Retry with Exponential Backoff
+Jobs automatically retry on failure with exponential backoff:
+- 1st retry: 2 minutes
+- 2nd retry: 4 minutes
+- 3rd retry: 8 minutes
+
+Configure max retries when queueing:
+```json
+{
+  "max_retries": 5
+}
+```
+
+### Scheduled Jobs (Cron)
+Schedule recurring jobs with cron expressions:
+```http
+POST /api/v1/feedback-summaries/scheduled-jobs
+Content-Type: application/json
+
+{
+  "name": "Daily summary generation",
+  "cron_expression": "0 2 * * *",
+  "task_params": {
+    "evaluation_id": 123,
+    "student_ids": [456, 457]
+  },
+  "enabled": true
+}
+```
+
+Run the scheduler daemon:
+```bash
+python scheduler.py
+```
+
+### Rate Limiting
+API endpoints are rate-limited:
+- Queue endpoints: 10 requests/minute
+- Batch endpoints: 5 requests/minute
+- Other endpoints: 100 requests/minute
+
+Rate limit headers in responses:
+```
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 7
+X-RateLimit-Reset: 60
+```
 
 ## Support
 

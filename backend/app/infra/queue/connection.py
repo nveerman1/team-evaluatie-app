@@ -35,6 +35,14 @@ class RedisConnection:
 
 
 def get_queue(name: str = 'default') -> Queue:
-    """Get RQ queue instance."""
+    """
+    Get RQ queue instance.
+    
+    Args:
+        name: Queue name (supports priority suffixes like 'ai-summaries-high')
+    
+    Returns:
+        Queue instance
+    """
     conn = RedisConnection.get_connection()
     return Queue(name, connection=conn)

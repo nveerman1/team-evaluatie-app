@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 import time
 from typing import Optional
+from datetime import datetime, timedelta
 from sqlalchemy.orm import Session, aliased
 
 from app.infra.db.session import SessionLocal
@@ -17,6 +18,7 @@ from app.infra.db.models import (
 )
 from app.infra.services.ollama_service import OllamaService
 from app.infra.services.anonymization_service import AnonymizationService
+from app.infra.services.webhook_service import WebhookService
 import hashlib
 
 logger = logging.getLogger(__name__)
@@ -26,6 +28,13 @@ def _compute_feedback_hash(comments: list[str]) -> str:
     """Compute a hash of feedback comments for cache invalidation."""
     content = "|".join(sorted(comments))
     return hashlib.sha256(content.encode()).hexdigest()
+
+
+def _update_job_progress(db: Session, job: SummaryGenerationJob, progress: int):
+    """Update job progress."""
+    if job and 0 <= progress <= 100:
+        job.progress = progress
+        db.commit()
 
 
 def generate_ai_summary_task(
@@ -57,10 +66,22 @@ def generate_ai_summary_task(
             SummaryGenerationJob.job_id == job_id
         ).first()
         
-        if job:
-            job.status = "processing"
-            job.started_at = db.execute("SELECT NOW()").scalar()
-            db.commit()
+        if not job:
+            raise ValueError(f"Job {job_id} not found")
+        
+        # Check if job was cancelled
+        if job.status == "cancelled":
+            logger.info(f"Job {job_id} was cancelled, skipping")
+            return {
+                "status": "cancelled",
+                "student_id": student_id,
+                "evaluation_id": evaluation_id,
+            }
+        
+        job.status = "processing"
+        job.started_at = db.execute("SELECT NOW()").scalar()
+        job.progress = 10
+        db.commit()
         
         # Verify evaluation exists
         ev = (
@@ -71,6 +92,8 @@ def generate_ai_summary_task(
         if not ev:
             raise ValueError(f"Evaluation {evaluation_id} not found")
         
+        _update_job_progress(db, job, 20)
+        
         # Verify student exists
         student = (
             db.query(User)
@@ -79,6 +102,8 @@ def generate_ai_summary_task(
         )
         if not student:
             raise ValueError(f"Student {student_id} not found")
+        
+        _update_job_progress(db, job, 30)
         
         # Get peer feedback comments
         U_from = aliased(User)
@@ -100,6 +125,8 @@ def generate_ai_summary_task(
             .all()
         )
         
+        _update_job_progress(db, job, 40)
+        
         comments = [row.comment for row in feedback_rows if row.comment]
         reviewer_names = [row.name for row in feedback_rows if row.name]
         
@@ -109,12 +136,16 @@ def generate_ai_summary_task(
             method = "empty"
         else:
             # Anonymize comments
+            _update_job_progress(db, job, 50)
+            
             all_names = reviewer_names + [student.name]
             anonymizer = AnonymizationService()
             anonymized_comments = anonymizer.anonymize_comments(comments, all_names)
             
             if not anonymized_comments:
                 anonymized_comments = comments
+            
+            _update_job_progress(db, job, 60)
             
             # Try AI generation
             ollama = OllamaService()
@@ -127,6 +158,8 @@ def generate_ai_summary_task(
             except Exception as e:
                 logger.error(f"Exception during AI generation: {type(e).__name__}: {e}")
                 ai_summary = None
+            
+            _update_job_progress(db, job, 80)
             
             if ai_summary:
                 summary_text = ai_summary
@@ -145,6 +178,8 @@ def generate_ai_summary_task(
                 FeedbackSummary.student_id == student_id,
             ).delete()
             
+            _update_job_progress(db, job, 90)
+            
             duration_ms = int((time.time() - start_time) * 1000)
             
             new_summary = FeedbackSummary(
@@ -160,14 +195,29 @@ def generate_ai_summary_task(
             db.commit()
         
         # Update job status to completed
-        if job:
-            job.status = "completed"
-            job.completed_at = db.execute("SELECT NOW()").scalar()
-            job.result = {
-                "summary_text": summary_text,
-                "generation_method": method,
-                "feedback_count": len(comments),
-            }
+        job.status = "completed"
+        job.completed_at = db.execute("SELECT NOW()").scalar()
+        job.progress = 100
+        job.result = {
+            "summary_text": summary_text,
+            "generation_method": method,
+            "feedback_count": len(comments),
+        }
+        db.commit()
+        
+        # Send webhook if configured
+        if job.webhook_url:
+            webhook_service = WebhookService()
+            payload = webhook_service.create_job_payload(
+                job_id=job_id,
+                status="completed",
+                student_id=student_id,
+                evaluation_id=evaluation_id,
+                result=job.result,
+            )
+            success, error = webhook_service.send_webhook(job.webhook_url, payload)
+            job.webhook_delivered = success
+            job.webhook_attempts += 1
             db.commit()
         
         duration = time.time() - start_time
@@ -187,12 +237,64 @@ def generate_ai_summary_task(
         duration = time.time() - start_time
         logger.error(f"Failed to generate AI summary for student {student_id}: {e}", exc_info=True)
         
+        # Check if we should retry
+        if job and job.retry_count < job.max_retries:
+            # Schedule retry with exponential backoff
+            job.retry_count += 1
+            # Cap backoff at 30 minutes to prevent excessively long delays
+            # Formula: 2^retry_count * 60 seconds = 2min, 4min, 8min, 16min, ...
+            # Examples: retry 1 = 2^1*60 = 120s = 2min
+            #          retry 2 = 2^2*60 = 240s = 4min
+            #          retry 3 = 2^3*60 = 480s = 8min
+            backoff_seconds = min(2 ** job.retry_count * 60, 1800)
+            job.next_retry_at = datetime.utcnow() + timedelta(seconds=backoff_seconds)
+            job.status = "queued"  # Back to queued for retry
+            job.error_message = f"Retry {job.retry_count}/{job.max_retries}: {str(e)}"
+            db.commit()
+            
+            logger.info(f"Scheduling retry {job.retry_count}/{job.max_retries} for job {job_id} in {backoff_seconds}s")
+            
+            # Re-enqueue the job with delay
+            from app.infra.queue.connection import get_queue
+            queue = get_queue(job.queue_name)
+            queue.enqueue_in(
+                timedelta(seconds=backoff_seconds),
+                generate_ai_summary_task,
+                school_id=school_id,
+                evaluation_id=evaluation_id,
+                student_id=student_id,
+                job_id=job_id,
+            )
+            
+            return {
+                "status": "retry_scheduled",
+                "student_id": student_id,
+                "evaluation_id": evaluation_id,
+                "retry_count": job.retry_count,
+                "next_retry_at": job.next_retry_at.isoformat(),
+            }
+        
         # Update job status to failed
         if job:
             job.status = "failed"
             job.completed_at = db.execute("SELECT NOW()").scalar()
             job.error_message = str(e)
             db.commit()
+            
+            # Send webhook if configured
+            if job.webhook_url:
+                webhook_service = WebhookService()
+                payload = webhook_service.create_job_payload(
+                    job_id=job_id,
+                    status="failed",
+                    student_id=student_id,
+                    evaluation_id=evaluation_id,
+                    error_message=str(e),
+                )
+                success, error = webhook_service.send_webhook(job.webhook_url, payload)
+                job.webhook_delivered = success
+                job.webhook_attempts += 1
+                db.commit()
         
         return {
             "status": "failed",

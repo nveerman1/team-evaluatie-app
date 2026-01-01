@@ -210,8 +210,18 @@ See [docs/architecture.md](docs/architecture.md) for complete API documentation.
 
 ```bash
 cd backend
+
+# Run all tests
 pytest
+
+# Run specific test file
+pytest tests/test_job_enhancements.py -v
+
+# Run specific test class
+pytest tests/test_job_enhancements.py::TestJobProgressTracking -v
 ```
+
+Note: The `tests/conftest.py` file automatically sets up the Python path for imports.
 
 ### Database Migrations
 
