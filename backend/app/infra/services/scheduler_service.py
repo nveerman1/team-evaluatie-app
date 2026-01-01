@@ -174,23 +174,29 @@ class SchedulerService:
         """
         Execute a scheduled job by enqueueing it.
         
+        Uses a task registry pattern for extensibility.
+        
         Args:
             job: ScheduledJob to execute
             
         Returns:
             True if successfully enqueued, False otherwise
         """
+        # Task registry: maps task_type to callable function
+        task_registry = {
+            "generate_summary": self._get_generate_summary_task,
+            # Add more task types here as needed
+        }
+        
         try:
-            queue = get_queue(job.queue_name)
-            
-            # Import task dynamically based on task_type
-            # For now, we only support generate_summary task
-            if job.task_type == "generate_summary":
-                from app.infra.queue.tasks import generate_ai_summary_task
-                task_func = generate_ai_summary_task
-            else:
+            # Get task function from registry
+            task_getter = task_registry.get(job.task_type)
+            if not task_getter:
                 logger.error(f"Unknown task type: {job.task_type}")
                 return False
+            
+            task_func = task_getter()
+            queue = get_queue(job.queue_name)
             
             # Enqueue the task
             params = job.task_params or {}
@@ -210,6 +216,11 @@ class SchedulerService:
         except Exception as e:
             logger.error(f"Failed to execute scheduled job ID {job.id}: {e}", exc_info=True)
             return False
+    
+    def _get_generate_summary_task(self):
+        """Get the generate_ai_summary_task function."""
+        from app.infra.queue.tasks import generate_ai_summary_task
+        return generate_ai_summary_task
     
     def run_scheduler_tick(self) -> int:
         """

@@ -98,9 +98,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Try to get user ID from request state (set by auth middleware)
         if hasattr(request.state, "user") and request.state.user:
             user = request.state.user
-            # Safely get user ID
+            # Safely get user ID (check for None, not falsy value)
             user_id = getattr(user, "id", None)
-            if user_id:
+            if user_id is not None:  # Handles user ID 0 correctly
                 return f"user:{user_id}"
         
         # Fallback to IP address

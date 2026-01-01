@@ -31,7 +31,11 @@ class RateLimiter:
         """
         Check if request is allowed under rate limit.
         
-        Uses sliding window algorithm for accurate rate limiting.
+        Uses sliding window algorithm for accurate rate limiting:
+        - Stores timestamps in Redis sorted set (score = timestamp)
+        - Removes entries outside the time window
+        - Counts remaining entries in window
+        - Compares count against max_requests
         
         Args:
             key: Unique identifier for rate limit (e.g., "user:123:api_call")
@@ -40,8 +44,8 @@ class RateLimiter:
             
         Returns:
             Tuple of (is_allowed, retry_after_seconds)
-            - is_allowed: True if request should be allowed
-            - retry_after_seconds: Seconds to wait before retrying (if not allowed)
+            - is_allowed: True if request should be allowed, False if rate limit exceeded
+            - retry_after_seconds: None if allowed, positive integer (seconds to wait) if blocked
         """
         now = time.time()
         window_start = now - window_seconds

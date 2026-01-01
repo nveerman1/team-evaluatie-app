@@ -242,6 +242,10 @@ def generate_ai_summary_task(
             # Schedule retry with exponential backoff
             job.retry_count += 1
             # Cap backoff at 30 minutes to prevent excessively long delays
+            # Formula: 2^retry_count * 60 seconds = 2min, 4min, 8min, 16min, ...
+            # Examples: retry 1 = 2^1*60 = 120s = 2min
+            #          retry 2 = 2^2*60 = 240s = 4min
+            #          retry 3 = 2^3*60 = 480s = 8min
             backoff_seconds = min(2 ** job.retry_count * 60, 1800)
             job.next_retry_at = datetime.utcnow() + timedelta(seconds=backoff_seconds)
             job.status = "queued"  # Back to queued for retry
