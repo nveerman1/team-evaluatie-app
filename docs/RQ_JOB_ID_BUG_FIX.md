@@ -13,11 +13,19 @@ After implementing async AI summary generation using Python RQ and Redis, jobs w
 1. **Database state:** Jobs had status `queued` with no `started_at` or `completed_at` timestamps
 2. **RQ health check:** All queues showed count=0, worker was idle
 3. **Queue stats endpoint:** Showed `queued_count > 0` but jobs never processed
-4. **No errors:** Worker logs showed no crashes or exceptions
+4. **Worker timeout:** Worker would timeout after ~6 minutes of being idle
 
-### Investigation Results
+## Root Cause
 
-**Key Discovery:** There was a mismatch in how `job_id` was being passed between the enqueue operation and the task function.
+The issue had **two components**:
+
+### 1. Parameter Passing Mismatch (Fixed)
+
+The task function signature expected `job_id` as a parameter, but RQ's `parse_args()` extracts `job_id` from kwargs to use it as the RQ Job ID before passing remaining kwargs to the function. This caused a `TypeError` when the worker tried to execute jobs.
+
+### 2. Zombie Jobs (User Must Clean Up)
+
+After fixing the parameter issue, **existing "zombie" jobs** from before the fix remain in the database with status `queued`. The API has a duplicate prevention check that returns existing jobs instead of creating new ones, so these zombie jobs block new attempts to queue jobs for the same student/evaluation pairs.
 
 #### How RQ Handles Parameters
 
@@ -71,7 +79,7 @@ def parse_args(cls, f: 'FunctionReferenceType', *args, **kwargs):
 
 ## The Fix
 
-### Changes Made
+### Part 1: Code Changes (Completed)
 
 #### 1. Updated Task Function (`backend/app/infra/queue/tasks.py`)
 
@@ -102,21 +110,90 @@ def generate_ai_summary_task(
     # Rest of task logic...
 ```
 
-#### 2. Added Logging (`backend/app/api/v1/routers/feedback_summary.py`)
+#### 2. Added Redis Keepalive (`backend/app/infra/queue/connection.py`)
 
-Enhanced logging at enqueue time for better debugging:
+Added socket keepalive settings to prevent worker timeouts:
 
 ```python
-logger.info(
-    f"Enqueued job {job_id} to queue '{queue_name}' "
-    f"(RQ job ID: {rq_job.id}, student: {student_id}, evaluation: {evaluation_id})"
+cls._instance = Redis.from_url(
+    redis_url,
+    decode_responses=False,
+    socket_keepalive=True,
+    socket_keepalive_options={
+        1: 60,  # TCP_KEEPIDLE
+        2: 30,  # TCP_KEEPINTVL  
+        3: 5,   # TCP_KEEPCNT
+    },
+    socket_connect_timeout=5,
+    socket_timeout=300,
 )
 ```
 
-And in the task:
+#### 3. Added Logging
+
+Enhanced logging at enqueue time and in task execution for better debugging.
+
+### Part 2: Clean Up Zombie Jobs (User Action Required)
+
+**IMPORTANT:** After deploying the code fix, you must clean up existing zombie jobs that are stuck in "queued" state.
+
+#### Why Cleanup Is Needed
+
+The API has duplicate prevention logic (lines 388-417 in `feedback_summary.py`):
 ```python
-logger.info(f"[Job {job_id}] Starting AI summary generation for student {student_id}")
-logger.info(f"[Job {job_id}] AI summary generated successfully in {duration:.2f}s")
+# Check if job already exists and is not failed
+existing_job = (
+    db.query(SummaryGenerationJob)
+    .filter(
+        SummaryGenerationJob.evaluation_id == evaluation_id,
+        SummaryGenerationJob.student_id == student_id,
+        SummaryGenerationJob.status.in_(["queued", "processing"]),
+    )
+    .first()
+)
+
+if existing_job:
+    # Return existing job status (does NOT re-enqueue!)
+    return JobStatusResponse(...)
+```
+
+This means zombie jobs from before the fix will block new jobs from being created.
+
+#### Cleanup Options
+
+**Option 1: Using the cleanup script (Recommended)**
+
+```bash
+cd backend
+
+# Dry-run to see what would be cleaned
+python scripts/cleanup_stuck_jobs.py --dry-run
+
+# Clean up jobs older than 10 minutes
+python scripts/cleanup_stuck_jobs.py
+
+# Clean up all stuck jobs
+python scripts/cleanup_stuck_jobs.py --older-than 0
+```
+
+**Option 2: Via API**
+
+```bash
+# Cancel individual jobs
+curl -X POST -H "X-User-Email: docent@example.com" \
+  http://localhost:8000/api/v1/feedback-summaries/jobs/{job_id}/cancel
+```
+
+**Option 3: Direct SQL**
+
+```sql
+-- Mark all stuck jobs as failed
+UPDATE summary_generation_jobs 
+SET status = 'failed', 
+    error_message = 'Job stuck - cleaned up after bug fix',
+    completed_at = NOW()
+WHERE status = 'queued' 
+  AND created_at < NOW() - INTERVAL '10 minutes';
 ```
 
 #### 3. Updated Test Script (`backend/test_async_summary.py`)
