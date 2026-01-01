@@ -45,10 +45,6 @@ class JobStatusResponse(BaseModel):
     error_message: Optional[str] = None
 
 
-class QueueSummaryRequest(BaseModel):
-    async_mode: bool = True
-
-
 class BatchQueueRequest(BaseModel):
     student_ids: List[int]
 

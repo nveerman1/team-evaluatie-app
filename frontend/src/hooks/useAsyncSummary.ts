@@ -188,12 +188,13 @@ export function useAsyncSummary(
     await startGeneration();
   }, [startGeneration]);
 
-  // Auto-start on mount
+  // Auto-start on mount (if autoStart is true)
   useEffect(() => {
     if (autoStart && status === "idle") {
       startGeneration();
     }
-  }, [autoStart]); // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty array - only run on mount
 
   return {
     summary,

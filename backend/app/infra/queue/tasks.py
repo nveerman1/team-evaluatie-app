@@ -222,7 +222,6 @@ def batch_generate_summaries_task(
     Returns:
         dict with batch processing results
     """
-    from rq import get_current_job
     from app.infra.queue.connection import get_queue
     
     queue = get_queue('ai-summaries')
