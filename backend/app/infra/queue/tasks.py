@@ -327,6 +327,10 @@ def batch_generate_summaries_task(
     """
     Generate summaries for multiple students in batch.
     
+    This is a coordinator task that enqueues individual jobs for each student.
+    It doesn't track itself in the database, so it doesn't need to retrieve
+    its own job_id from RQ context.
+    
     Args:
         school_id: School ID
         evaluation_id: Evaluation ID
