@@ -29,16 +29,11 @@ class RedisConnection:
             redis_url = getattr(settings, 'REDIS_URL', 'redis://localhost:6379/0')
             # IMPORTANT: decode_responses must be False for RQ compatibility
             # RQ stores binary data that cannot be decoded as UTF-8
-            # Also enable socket keepalive to prevent connection timeouts
+            # Enable socket keepalive to prevent connection timeouts
             cls._instance = Redis.from_url(
                 redis_url,
                 decode_responses=False,
                 socket_keepalive=True,
-                socket_keepalive_options={
-                    1: 60,  # TCP_KEEPIDLE: seconds before sending keepalive probes
-                    2: 30,  # TCP_KEEPINTVL: interval between keepalive probes
-                    3: 5,   # TCP_KEEPCNT: number of probes before considering connection dead
-                },
                 socket_connect_timeout=5,
                 socket_timeout=300,  # 5 minute timeout for operations
             )
