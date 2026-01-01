@@ -1,4 +1,4 @@
-.PHONY: up down be fe test help
+.PHONY: up down be fe test worker help
 
 help:
 	@echo "Targets:"
@@ -6,6 +6,7 @@ help:
 	@echo "  down    - Stop Docker Compose stack"
 	@echo "  be      - Run FastAPI dev server"
 	@echo "  fe      - Run Next.js dev server"
+	@echo "  worker  - Run RQ worker for async jobs"
 	@echo "  test    - Run backend tests"
 
 up:
@@ -19,6 +20,9 @@ be:
 
 fe:
 	cd frontend && pnpm dev
+
+worker:
+	cd backend && . venv/bin/activate && python worker.py
 
 test:
 	cd backend && . venv/bin/activate && pytest -q

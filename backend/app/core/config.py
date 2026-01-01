@@ -114,5 +114,8 @@ class Settings(BaseSettings):
     OLLAMA_MODEL: str = "llama3.1"
     OLLAMA_TIMEOUT: float = 60.0
 
+    # Redis settings for queue
+    REDIS_URL: str = "redis://localhost:6379/0"
+
 
 settings = Settings()

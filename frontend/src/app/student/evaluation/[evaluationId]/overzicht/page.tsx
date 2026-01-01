@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Loading, ErrorMessage, TeamBadge, TeamMembersList } from "@/components";
 import { FeedbackSummary } from "@/components/student";
+import { AISummarySection } from "@/components/student/AISummarySection";
 import { peerFeedbackResultsService, studentService, evaluationService, courseService } from "@/services";
 import api from "@/lib/api";
 import type { EvaluationResult, OmzaKey, MyAllocation, DashboardResponse } from "@/dtos";
@@ -272,19 +273,15 @@ export default function OverzichtPage() {
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             {/* AI-samenvatting + docent-opmerkingen */}
             <div className="flex flex-col gap-3 md:col-span-2">
-              <div className="flex-1 rounded-xl border border-slate-100 bg-slate-50/80 p-3 flex flex-col">
-                <div className="mb-1 flex items-center justify-between text-xs font-medium text-slate-500">
-                  <span>AI-samenvatting</span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-500">
-                    🤖 AI
-                    <span className="h-1 w-1 rounded-full bg-emerald-400" />
-                    Concept
-                  </span>
-                </div>
-                <p className="text-sm leading-relaxed text-slate-700">
-                  {evaluationData.aiSummary || "Nog geen AI-samenvatting beschikbaar. Deze wordt gegenereerd zodra er peer-feedback is ontvangen."}
-                </p>
-              </div>
+              {/* Use async AI summary component */}
+              {currentUserId && (
+                <AISummarySection
+                  evaluationId={evaluationId}
+                  studentId={currentUserId}
+                  fallbackSummary={evaluationData.aiSummary}
+                  useAsync={true}
+                />
+              )}
 
               {/* Only show teacher comments if they exist */}
               {evaluationData.teacherComments && (

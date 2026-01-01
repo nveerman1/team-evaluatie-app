@@ -50,12 +50,16 @@ Zie [docs/architecture.md](docs/architecture.md#project-based-team-management) v
 
 ### AI Feedback Summaries
 Automatisch gegenereerde samenvattingen van peer-feedback met:
+- **Asynchrone verwerking** met RQ (Redis Queue) voor schaalbaarheid
 - Ollama voor lokale LLM verwerking
 - Volledige anonimisering van namen en PII
 - Caching voor efficiëntie
 - Fallback naar regel-gebaseerde summaries
+- Real-time status updates en polling
+- Retry mechanisme bij fouten
 
-### Somtoday Integration (Preparation)
+📚 Zie [docs/ASYNC_SUMMARY_GENERATION.md](docs/ASYNC_SUMMARY_GENERATION.md) voor gedetailleerde setup instructies.
+
 Voorbereiding voor integratie met Somtoday:
 - OAuth2 authenticatie
 - Import van klassen en studenten
