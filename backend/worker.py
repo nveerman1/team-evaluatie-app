@@ -15,7 +15,7 @@ from pathlib import Path
 backend_dir = Path(__file__).parent
 sys.path.insert(0, str(backend_dir))
 
-from rq import Worker, Queue, Connection
+from rq import Worker, Queue
 from app.infra.queue.connection import RedisConnection
 
 # Setup logging
@@ -34,19 +34,18 @@ def main():
     redis_conn = RedisConnection.get_connection()
     
     # Create worker and listen to the queue
-    with Connection(redis_conn):
-        queues = [Queue('ai-summaries')]
-        worker = Worker(queues, connection=redis_conn)
-        
-        logger.info(f"Worker listening on queues: {[q.name for q in queues]}")
-        logger.info("Press Ctrl+C to stop the worker")
-        
-        try:
-            worker.work(with_scheduler=True)
-        except KeyboardInterrupt:
-            logger.info("Worker stopped by user")
-        finally:
-            RedisConnection.close_connection()
+    queues = [Queue('ai-summaries', connection=redis_conn)]
+    worker = Worker(queues, connection=redis_conn)
+    
+    logger.info(f"Worker listening on queues: {[q.name for q in queues]}")
+    logger.info("Press Ctrl+C to stop the worker")
+    
+    try:
+        worker.work(with_scheduler=True)
+    except KeyboardInterrupt:
+        logger.info("Worker stopped by user")
+    finally:
+        RedisConnection.close_connection()
 
 
 if __name__ == '__main__':

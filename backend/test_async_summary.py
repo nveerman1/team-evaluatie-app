@@ -50,7 +50,7 @@ def test_database_connection():
     """Test database connection and model."""
     print("\nTesting database connection...")
     try:
-        from app.infra.db.base import SessionLocal
+        from app.infra.db.session import SessionLocal
         from app.infra.db.models import SummaryGenerationJob
         
         db = SessionLocal()

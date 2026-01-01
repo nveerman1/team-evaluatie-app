@@ -6,7 +6,7 @@ import time
 from typing import Optional
 from sqlalchemy.orm import Session, aliased
 
-from app.infra.db.base import SessionLocal
+from app.infra.db.session import SessionLocal
 from app.infra.db.models import (
     Evaluation,
     Allocation,
