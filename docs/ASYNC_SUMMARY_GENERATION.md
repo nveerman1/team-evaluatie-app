@@ -637,6 +637,46 @@ X-RateLimit-Remaining: 7
 X-RateLimit-Reset: 60
 ```
 
+## Bug Fixes and Maintenance
+
+### Fixed: Missing updated_at Column (2026-01-01)
+
+**Issue**: The `/queue/stats` endpoint was returning HTTP 500 error with:
+```
+psycopg2.errors.UndefinedColumn: column summary_generation_jobs.updated_at does not exist
+```
+
+**Root Cause**: 
+- The `SummaryGenerationJob` model inherited from `Base` which defines both `created_at` and `updated_at` columns
+- The model incorrectly overrode `created_at` without properly handling the inheritance
+- Initial migrations created the table without `updated_at` column and without proper server defaults
+
+**Fix Applied**:
+1. **Model Fix**: Removed timestamp field overrides to use Base class definitions
+   - Both `created_at` and `updated_at` now properly inherited from Base
+   - Ensures consistency across all models
+
+2. **Database Migrations**:
+   - `queue_20260101_03`: Added `updated_at` column with `TIMESTAMP WITH TIME ZONE` and `server_default=NOW()`
+   - `queue_20260101_04`: Fixed `updated_at` in `scheduled_jobs` table
+   - `queue_20260101_05`: Fixed `created_at` to add proper server_default
+
+3. **Prevention**:
+   - Added regression tests in `tests/test_queue_stats_endpoint.py`
+   - Updated model best practices to always use Base class timestamps
+   - Created comprehensive documentation in `backend/UPDATED_AT_FIX_DOCUMENTATION.md`
+
+**Verification**:
+```bash
+# Check schema includes updated_at
+psql $DATABASE_URL -c "SELECT column_name, data_type, column_default FROM information_schema.columns WHERE table_name='summary_generation_jobs' AND column_name IN ('created_at', 'updated_at');"
+
+# Run tests
+pytest tests/test_queue_stats_endpoint.py -v
+```
+
+**Impact**: The `/queue/stats` endpoint now works correctly, enabling queue monitoring dashboards.
+
 ## Support
 
 For issues or questions:
@@ -644,3 +684,4 @@ For issues or questions:
 2. Review this documentation
 3. Check GitHub issues
 4. Contact the development team
+5. For timestamp-related issues, see `backend/UPDATED_AT_FIX_DOCUMENTATION.md`

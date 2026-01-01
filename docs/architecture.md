@@ -1034,6 +1034,14 @@ The async queue system prevents timeout errors when generating AI summaries for 
 - `result`: JSONB result data
 - `error_message`: Error message if failed
 - `created_at`, `started_at`, `completed_at`: Timestamps
+- `updated_at`: Auto-updated timestamp (tracks any job record modification)
+
+**Note on Timestamp Fields:**
+- `created_at` and `updated_at` are inherited from the Base model
+- Both have `server_default=NOW()` for automatic timestamp generation
+- `updated_at` has `onupdate=NOW()` for automatic updates
+- All timestamps use `TIMESTAMP WITH TIME ZONE` for consistency
+- See "Bug Fixes" section below for details on timestamp column fix
 
 **ScheduledJob Table:**
 - `id`: Primary key
@@ -1280,10 +1288,76 @@ docker exec -it <redis_container> redis-cli
 - Verify webhook URL is accessible
 - Check webhook endpoint logs for errors
 
+### Bug Fixes and Maintenance
+
+#### Fixed: Missing updated_at Column (2026-01-01)
+
+**Issue**: The `/queue/stats` endpoint was returning HTTP 500 error:
+```
+psycopg2.errors.UndefinedColumn: column summary_generation_jobs.updated_at does not exist
+```
+
+**Root Cause**:
+- The `SummaryGenerationJob` model inherited from `Base` which defines both `created_at` and `updated_at`
+- The model incorrectly overrode `created_at` without properly handling timestamp inheritance
+- Initial migrations created the table without `updated_at` column and without proper server defaults
+- This caused a mismatch between SQLAlchemy's expectations (model has updated_at) and actual database schema (table missing the column)
+
+**Resolution**:
+
+1. **Model Fix**: Removed timestamp overrides to use Base class definitions
+   ```python
+   # Before (INCORRECT):
+   class SummaryGenerationJob(Base):
+       created_at: Mapped[datetime] = mapped_column(
+           default=datetime.utcnow, nullable=False  # Wrong approach
+       )
+       # updated_at missing but expected by Base
+   
+   # After (CORRECT):
+   class SummaryGenerationJob(Base):
+       # created_at and updated_at inherited from Base
+       started_at: Mapped[Optional[datetime]] = mapped_column()
+       completed_at: Mapped[Optional[datetime]] = mapped_column()
+   ```
+
+2. **Database Migrations**:
+   - `queue_20260101_03`: Added `updated_at` column with `TIMESTAMP WITH TIME ZONE`, `server_default=NOW()`
+   - `queue_20260101_04`: Fixed `updated_at` in `scheduled_jobs` table (made NOT NULL, added server_default)
+   - `queue_20260101_05`: Fixed `created_at` in `summary_generation_jobs` (added server_default, timezone support)
+
+3. **Testing**: Added comprehensive test suite in `tests/test_queue_stats_endpoint.py`
+   - Model field validation
+   - Query pattern tests
+   - Regression prevention tests
+
+**Impact**: The `/queue/stats` endpoint now works correctly, enabling queue monitoring dashboards.
+
+**Prevention Best Practices**:
+1. **Always use Base class timestamps** - Don't override created_at/updated_at unless absolutely necessary
+2. **If you must override** - Override BOTH fields consistently with server_default=func.now()
+3. **Use server defaults** - Prefer `server_default=func.now()` over `default=datetime.utcnow`
+4. **Verify migrations** - Ensure migrations match model definitions before applying
+5. **Add tests** - Include schema validation tests for critical fields
+
+**For More Details**:
+- See `backend/UPDATED_AT_FIX_DOCUMENTATION.md` for comprehensive fix documentation
+- See `backend/tests/test_queue_stats_endpoint.py` for regression tests
+
+**Verification**:
+```bash
+# Check schema (use .pgpass file or connection service to avoid exposing credentials)
+psql -h localhost -U app -d tea -c "SELECT column_name, data_type, column_default FROM information_schema.columns WHERE table_name='summary_generation_jobs' AND column_name IN ('created_at', 'updated_at');"
+
+# Run tests
+pytest tests/test_queue_stats_endpoint.py -v
+```
+
 **See Also:**
 - `docs/ASYNC_SUMMARY_GENERATION.md` - User guide
 - `backend/JOB_QUEUE_ENHANCEMENTS.md` - Technical documentation
 - `backend/tests/test_job_enhancements.py` - Test suite
+- `backend/UPDATED_AT_FIX_DOCUMENTATION.md` - Timestamp fix documentation
 
 ## Clients (Opdrachtgevers) Module
 
