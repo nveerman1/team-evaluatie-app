@@ -23,6 +23,17 @@ from app.infra.queue.tasks import generate_ai_summary_task, batch_generate_summa
 
 router = APIRouter(prefix="/feedback-summaries", tags=["feedback-summaries"])
 
+# Priority constants
+PRIORITY_HIGH = "high"
+PRIORITY_NORMAL = "normal"
+PRIORITY_LOW = "low"
+VALID_PRIORITIES = [PRIORITY_HIGH, PRIORITY_NORMAL, PRIORITY_LOW]
+
+# Queue name constants
+QUEUE_AI_SUMMARIES = "ai-summaries"
+QUEUE_AI_SUMMARIES_HIGH = "ai-summaries-high"
+QUEUE_AI_SUMMARIES_LOW = "ai-summaries-low"
+
 
 class FeedbackSummaryResponse(BaseModel):
     student_id: int
@@ -404,18 +415,18 @@ def queue_summary_generation(
         )
     
     # Validate priority
-    if request.priority not in ["high", "normal", "low"]:
-        raise HTTPException(status_code=400, detail="Priority must be 'high', 'normal', or 'low'")
+    if request.priority not in VALID_PRIORITIES:
+        raise HTTPException(status_code=400, detail=f"Priority must be one of: {', '.join(VALID_PRIORITIES)}")
     
     # Create new job
     job_id = f"summary-{evaluation_id}-{student_id}-{int(time.time())}"
     
     # Determine queue name based on priority
-    queue_name = "ai-summaries"
-    if request.priority == "high":
-        queue_name = "ai-summaries-high"
-    elif request.priority == "low":
-        queue_name = "ai-summaries-low"
+    queue_name = QUEUE_AI_SUMMARIES
+    if request.priority == PRIORITY_HIGH:
+        queue_name = QUEUE_AI_SUMMARIES_HIGH
+    elif request.priority == PRIORITY_LOW:
+        queue_name = QUEUE_AI_SUMMARIES_LOW
     
     new_job_record = SummaryGenerationJob(
         school_id=user.school_id,
@@ -585,11 +596,11 @@ def batch_queue_summaries(
         raise HTTPException(status_code=400, detail="Some students not found")
     
     # Determine queue name based on priority
-    queue_name = "ai-summaries"
-    if payload.priority == "high":
-        queue_name = "ai-summaries-high"
-    elif payload.priority == "low":
-        queue_name = "ai-summaries-low"
+    queue_name = QUEUE_AI_SUMMARIES
+    if payload.priority == PRIORITY_HIGH:
+        queue_name = QUEUE_AI_SUMMARIES_HIGH
+    elif payload.priority == PRIORITY_LOW:
+        queue_name = QUEUE_AI_SUMMARIES_LOW
     
     # Queue jobs for each student
     queue = get_queue(queue_name, priority=payload.priority)

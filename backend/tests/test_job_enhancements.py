@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, MagicMock
 from sqlalchemy.orm import Session
 
-from app.infra.db.models import SummaryGenerationJob, ScheduledJob, User
+from app.infra.db.models import SummaryGenerationJob, ScheduledJob
 from app.infra.services.webhook_service import WebhookService
 from app.infra.services.rate_limiter import RateLimiter
 from app.infra.services.scheduler_service import SchedulerService
@@ -179,11 +179,19 @@ class TestRateLimiter:
         assert allowed is True
         assert retry_after is None
     
-    def test_get_usage(self):
+    @patch('app.infra.services.rate_limiter.RedisConnection')
+    def test_get_usage(self, mock_redis):
         """Test getting rate limit usage."""
-        # This requires Redis, so we just test the method exists
-        limiter = RateLimiter.__new__(RateLimiter)
-        assert hasattr(limiter, 'get_usage')
+        mock_conn = MagicMock()
+        mock_redis.get_connection.return_value = mock_conn
+        mock_conn.zcount.return_value = 5
+        mock_conn.zrange.return_value = []
+        
+        limiter = RateLimiter(mock_conn)
+        usage = limiter.get_usage("test_key", 60)
+        
+        assert "current_count" in usage
+        assert "window_seconds" in usage
 
 
 class TestSchedulerService:

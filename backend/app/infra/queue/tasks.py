@@ -241,7 +241,8 @@ def generate_ai_summary_task(
         if job and job.retry_count < job.max_retries:
             # Schedule retry with exponential backoff
             job.retry_count += 1
-            backoff_seconds = 2 ** job.retry_count * 60  # 2min, 4min, 8min
+            # Cap backoff at 30 minutes to prevent excessively long delays
+            backoff_seconds = min(2 ** job.retry_count * 60, 1800)
             job.next_retry_at = datetime.utcnow() + timedelta(seconds=backoff_seconds)
             job.status = "queued"  # Back to queued for retry
             job.error_message = f"Retry {job.retry_count}/{job.max_retries}: {str(e)}"

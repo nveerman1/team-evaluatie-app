@@ -76,7 +76,7 @@ class RateLimiter:
             if oldest_requests:
                 oldest_time = oldest_requests[0][1]
                 retry_after = int(oldest_time + window_seconds - now) + 1
-                return False, max(retry_after, 1)
+                return False, max(1, retry_after)  # Ensure at least 1 second
             else:
                 return False, window_seconds
     
