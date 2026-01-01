@@ -1505,7 +1505,33 @@ class SummaryGenerationJob(Base):
     job_id: Mapped[str] = mapped_column(String(200), unique=True, nullable=False, index=True)
     status: Mapped[str] = mapped_column(
         String(20), default="queued", nullable=False
-    )  # "queued" | "processing" | "completed" | "failed"
+    )  # "queued" | "processing" | "completed" | "failed" | "cancelled"
+    
+    # Progress tracking (0-100)
+    progress: Mapped[int] = mapped_column(default=0, nullable=False)
+    
+    # Priority support
+    priority: Mapped[str] = mapped_column(
+        String(20), default="normal", nullable=False
+    )  # "high" | "normal" | "low"
+    
+    # Retry support
+    retry_count: Mapped[int] = mapped_column(default=0, nullable=False)
+    max_retries: Mapped[int] = mapped_column(default=3, nullable=False)
+    next_retry_at: Mapped[Optional[datetime]] = mapped_column()
+    
+    # Cancellation support
+    cancelled_at: Mapped[Optional[datetime]] = mapped_column()
+    cancelled_by: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    
+    # Webhook support
+    webhook_url: Mapped[Optional[str]] = mapped_column(String(500))
+    webhook_delivered: Mapped[bool] = mapped_column(default=False, nullable=False)
+    webhook_attempts: Mapped[int] = mapped_column(default=0, nullable=False)
+    
+    # Multi-queue support
+    queue_name: Mapped[str] = mapped_column(String(100), default="ai-summaries", nullable=False)
+    task_type: Mapped[str] = mapped_column(String(100), default="generate_summary", nullable=False)
     
     # Result data (JSON)
     result: Mapped[Optional[dict]] = mapped_column(JSONB)
@@ -1522,6 +1548,42 @@ class SummaryGenerationJob(Base):
         Index("ix_summary_job_status", "status"),
         Index("ix_summary_job_eval_student", "evaluation_id", "student_id"),
         Index("ix_summary_job_created", "created_at"),
+        Index("ix_summary_job_priority", "priority", "created_at"),
+        Index("ix_summary_job_queue", "queue_name"),
+        Index("ix_summary_job_next_retry", "next_retry_at"),
+    )
+
+
+class ScheduledJob(Base):
+    """
+    Scheduled jobs for cron-like recurring tasks.
+    """
+
+    __tablename__ = "scheduled_jobs"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = tenant_fk()
+    
+    # Job definition
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    task_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    queue_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    cron_expression: Mapped[str] = mapped_column(String(100), nullable=False)
+    task_params: Mapped[Optional[dict]] = mapped_column(JSONB)
+    
+    # Status
+    enabled: Mapped[bool] = mapped_column(default=True, nullable=False)
+    last_run_at: Mapped[Optional[datetime]] = mapped_column()
+    next_run_at: Mapped[Optional[datetime]] = mapped_column()
+    
+    # Audit fields
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[Optional[datetime]] = mapped_column()
+    created_by: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+
+    __table_args__ = (
+        Index("ix_scheduled_jobs_enabled", "enabled"),
+        Index("ix_scheduled_jobs_next_run", "next_run_at"),
     )
 
 

@@ -34,7 +34,25 @@ class RedisConnection:
             logger.info("Redis connection closed")
 
 
-def get_queue(name: str = 'default') -> Queue:
-    """Get RQ queue instance."""
+def get_queue(name: str = 'default', priority: str = 'normal') -> Queue:
+    """
+    Get RQ queue instance.
+    
+    Args:
+        name: Base queue name
+        priority: Priority level ('high', 'normal', 'low')
+    
+    Returns:
+        Queue instance
+    """
     conn = RedisConnection.get_connection()
-    return Queue(name, connection=conn)
+    
+    # Append priority to queue name if not default priority
+    if priority == 'high':
+        queue_name = f"{name}-high"
+    elif priority == 'low':
+        queue_name = f"{name}-low"
+    else:
+        queue_name = name
+    
+    return Queue(queue_name, connection=conn)

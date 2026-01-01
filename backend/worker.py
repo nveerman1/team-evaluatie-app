@@ -5,7 +5,10 @@ RQ Worker for processing AI summary generation jobs.
 Usage:
     python worker.py
 
-This worker processes jobs from the 'ai-summaries' queue.
+This worker processes jobs from multiple queues with priority support:
+- ai-summaries-high (high priority)
+- ai-summaries (normal priority)
+- ai-summaries-low (low priority)
 """
 import sys
 import logging
@@ -33,11 +36,16 @@ def main():
     # Get Redis connection
     redis_conn = RedisConnection.get_connection()
     
-    # Create worker and listen to the queue
-    queues = [Queue('ai-summaries', connection=redis_conn)]
+    # Create queues with priority order (high to low)
+    # Worker will process jobs from high priority queue first
+    queues = [
+        Queue('ai-summaries-high', connection=redis_conn),
+        Queue('ai-summaries', connection=redis_conn),
+        Queue('ai-summaries-low', connection=redis_conn),
+    ]
     worker = Worker(queues, connection=redis_conn)
     
-    logger.info(f"Worker listening on queues: {[q.name for q in queues]}")
+    logger.info(f"Worker listening on queues (priority order): {[q.name for q in queues]}")
     logger.info("Press Ctrl+C to stop the worker")
     
     try:
