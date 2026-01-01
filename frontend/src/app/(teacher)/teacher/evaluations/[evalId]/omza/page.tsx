@@ -5,8 +5,12 @@ import Link from "next/link";
 import { useNumericEvalId } from "@/utils";
 import { Loading, ErrorMessage } from "@/components";
 import { omzaService } from "@/services/omza.service";
+import { evaluationService } from "@/services";
 import { OmzaDataResponse, OmzaStudentData, StandardComment } from "@/dtos/omza.dto";
 import { mapPeerScoreToIconLevel, ICON_LABELS, ICON_DESCRIPTIONS } from "@/utils/omza.utils";
+import { ProjectNotesPanel } from "@/components/teacher/omza/ProjectNotesPanel";
+import { useTeacherLayout } from "@/app/(teacher)/layout";
+import { useEvaluationFocusMode } from "../layout";
 
 // Helper to get badge color based on score
 const getBadgeColor = (value: number | null) => {
@@ -169,6 +173,7 @@ export default function OMZAOverviewPage() {
   const [omzaData, setOmzaData] = useState<OmzaDataResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [projectId, setProjectId] = useState<number | null>(null);
   
   const [searchQuery, setSearchQuery] = useState("");
   const [teamFilter, setTeamFilter] = useState<string>("all");
@@ -182,6 +187,12 @@ export default function OMZAOverviewPage() {
   const [savingScores, setSavingScores] = useState<Record<string, boolean>>({});
   const [savingComments, setSavingComments] = useState<Record<string, boolean>>({});
   const [toast, setToast] = useState<string | null>(null);
+  
+  // Focus mode state
+  const { focusMode, setFocusMode } = useEvaluationFocusMode();
+  const [notesWidth, setNotesWidth] = useState(0);
+  const { setSidebarCollapsed } = useTeacherLayout();
+  const maxNotesWidth = focusMode ? 1500 : 600;
   
   // Sorting state
   const [sortColumn, setSortColumn] = useState<"team" | "name" | "class" | null>(null);
@@ -239,6 +250,45 @@ export default function OMZAOverviewPage() {
       
     return () => controller.abort();
   }, [evalIdNum]);
+
+  // Load evaluation details to get project_id
+  useEffect(() => {
+    if (!evalIdNum) return;
+    
+    const controller = new AbortController();
+    
+    evaluationService.getEvaluation(evalIdNum)
+      .then((evaluation) => {
+        setProjectId(evaluation.project_id ?? null);
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError' && err.name !== 'CanceledError' && err.message !== 'canceled') {
+          console.error("Failed to load evaluation:", err);
+        }
+      });
+      
+    return () => controller.abort();
+  }, [evalIdNum]);
+
+  // Set notes panel width when opening focus mode
+  useEffect(() => {
+    if (focusMode && notesWidth === 0 && typeof window !== 'undefined') {
+      setNotesWidth(Math.floor(window.innerWidth * 0.5));
+    }
+  }, [focusMode, notesWidth]);
+
+  // Manage sidebar collapse when focus mode changes
+  useEffect(() => {
+    if (focusMode) {
+      setSidebarCollapsed(true);
+    }
+    return () => {
+      // Only reset sidebar if we were the ones who collapsed it
+      if (focusMode) {
+        setSidebarCollapsed(false);
+      }
+    };
+  }, [focusMode, setSidebarCollapsed]);
 
   // Load standard comments
   useEffect(() => {
@@ -483,9 +533,9 @@ export default function OMZAOverviewPage() {
       {error && <ErrorMessage message={error} />}
 
       {!loading && !error && omzaData && (
-        <>
+        <div className="space-y-6">
           {/* Filters bar */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div className="flex flex-wrap gap-3 items-center">
               <input
                 className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
@@ -519,19 +569,53 @@ export default function OMZAOverviewPage() {
                 </select>
               </div>
 
-            <button
-              type="button"
-              className="h-9 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-xs md:text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-100 hover:border-indigo-300"
+            <div className="flex gap-2">
+              {projectId && (
+                <button
+                  type="button"
+                  className={`h-9 rounded-lg border px-3 text-xs md:text-sm font-medium shadow-sm transition-colors ${
+                    focusMode
+                      ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                  onClick={() => setFocusMode(!focusMode)}
+                  title="Toon projectaantekeningen"
+                >
+                  📝 {focusMode ? "Verberg aantekeningen" : "Toon aantekeningen"}
+                </button>
+              )}
+              <button
+                type="button"
+                className="h-9 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-xs md:text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-100 hover:border-indigo-300"
               onClick={applyPeerScoresAll}
             >
               Neem peer score over
             </button>
           </div>
+          </div>
 
-          {/* Table */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
+          {/* Conditional grid wrapper for focus mode */}
+          <div 
+            className={focusMode && projectId ? "grid gap-6 min-w-0" : ""}
+            style={focusMode && projectId ? { gridTemplateColumns: `${notesWidth}px 1fr` } : undefined}
+          >
+            {/* Notes panel - only in focus mode */}
+            {focusMode && projectId && (
+              <ProjectNotesPanel
+                projectId={projectId}
+                onClose={() => setFocusMode(false)}
+                width={notesWidth}
+                maxWidth={maxNotesWidth}
+                onWidthChange={setNotesWidth}
+              />
+            )}
+            
+            {/* Table wrapper - always present, but inside grid column when focus mode active */}
+            <div className="min-w-0">
+              {/* Table */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 text-sm">
                   <thead className="bg-gray-50">
                     <tr>
                       <th 
@@ -745,8 +829,10 @@ export default function OMZAOverviewPage() {
                 </p>
               </div>
             </div>
-          </>
-        )}
+          </div>
+        </div>
+        </div>
+      )}
 
       {evalIdNum == null && (
         <p className="text-sm text-gray-500">

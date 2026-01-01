@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, usePathname } from "next/navigation";
-import { useState, useEffect, ReactNode, useCallback } from "react";
+import { useState, useEffect, ReactNode, useCallback, createContext, useContext } from "react";
 import Link from "next/link";
 import { ApiAuthError } from "@/lib/api";
 import { evaluationService } from "@/services";
@@ -14,6 +14,19 @@ type LayoutProps = {
   children: ReactNode;
 };
 
+// Context for focus mode state
+type FocusModeContextType = {
+  focusMode: boolean;
+  setFocusMode: (value: boolean) => void;
+};
+
+const FocusModeContext = createContext<FocusModeContextType>({
+  focusMode: false,
+  setFocusMode: () => {},
+});
+
+export const useEvaluationFocusMode = () => useContext(FocusModeContext);
+
 function EvaluationLayoutInner({ children }: LayoutProps) {
   const params = useParams();
   const evalId = params?.evalId as string;
@@ -25,6 +38,7 @@ function EvaluationLayoutInner({ children }: LayoutProps) {
   const [data, setData] = useState<Evaluation | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [focusMode, setFocusMode] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!evalId) return;
@@ -106,7 +120,7 @@ function EvaluationLayoutInner({ children }: LayoutProps) {
   ];
 
   return (
-    <>
+    <FocusModeContext.Provider value={{ focusMode, setFocusMode }}>
       {/* Toast notification */}
       {toast && (
         <div className="fixed top-4 right-4 z-50 animate-fade-in">
@@ -168,7 +182,7 @@ function EvaluationLayoutInner({ children }: LayoutProps) {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <div className={`transition-all duration-300 py-6 space-y-6 ${focusMode ? 'w-full max-w-none px-4 sm:px-6' : 'max-w-6xl mx-auto px-4 sm:px-6'}`}>
         {/* Tabs Navigation */}
         <div className="border-b border-gray-200">
           <nav className="flex gap-6 text-sm" aria-label="Tabs">
@@ -204,7 +218,7 @@ function EvaluationLayoutInner({ children }: LayoutProps) {
         {/* Page-specific content */}
         {children}
       </div>
-    </>
+    </FocusModeContext.Provider>
   );
 }
 
