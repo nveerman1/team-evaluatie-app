@@ -209,7 +209,9 @@ alembic upgrade head
 
 Verify schema:
 ```bash
-psql $DATABASE_URL -c "\d summary_generation_jobs"
+# Note: For security, consider using .pgpass file or connection service file
+# instead of exposing DATABASE_URL in shell history
+psql -h localhost -U app -d tea -c "\d summary_generation_jobs"
 ```
 
 Expected output should include:

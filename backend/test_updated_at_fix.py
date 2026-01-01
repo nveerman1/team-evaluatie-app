@@ -12,9 +12,10 @@ from datetime import datetime
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from app.infra.db.models import School, User, SummaryGenerationJob
+from app.core.config import settings
 
-# Database connection
-DATABASE_URL = "postgresql+psycopg2://app:app@localhost:5432/tea"
+# Database connection - use settings to avoid hardcoding credentials
+DATABASE_URL = settings.DATABASE_URL
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

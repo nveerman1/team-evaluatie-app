@@ -1346,8 +1346,8 @@ psycopg2.errors.UndefinedColumn: column summary_generation_jobs.updated_at does 
 
 **Verification**:
 ```bash
-# Check schema
-psql $DATABASE_URL -c "SELECT column_name, data_type, column_default FROM information_schema.columns WHERE table_name='summary_generation_jobs' AND column_name IN ('created_at', 'updated_at');"
+# Check schema (use .pgpass file or connection service to avoid exposing credentials)
+psql -h localhost -U app -d tea -c "SELECT column_name, data_type, column_default FROM information_schema.columns WHERE table_name='summary_generation_jobs' AND column_name IN ('created_at', 'updated_at');"
 
 # Run tests
 pytest tests/test_queue_stats_endpoint.py -v

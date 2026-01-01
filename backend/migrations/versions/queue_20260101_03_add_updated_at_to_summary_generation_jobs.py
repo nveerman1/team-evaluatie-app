@@ -39,7 +39,7 @@ def upgrade() -> None:
     # Backfill existing rows: set updated_at to created_at for existing records
     # This ensures historical consistency
     op.execute(
-        "UPDATE summary_generation_jobs SET updated_at = created_at WHERE updated_at IS NULL"
+        "UPDATE summary_generation_jobs SET updated_at = created_at"
     )
 
 
