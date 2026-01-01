@@ -201,6 +201,24 @@ CREATE INDEX ix_summary_job_created ON summary_generation_jobs(created_at);
 
 ## Deployment Guide
 
+### Important: Redis Connection Configuration
+
+**Critical Requirement:** The Redis connection for RQ **must** be configured with `decode_responses=False`.
+
+RQ stores binary-serialized data (pickled payloads) in Redis. If `decode_responses=True` is set, Redis will attempt to decode binary data as UTF-8 strings, causing `UnicodeDecodeError: 'utf-8' codec can't decode byte` when the worker tries to fetch jobs.
+
+The connection configuration in `backend/app/infra/queue/connection.py` correctly sets:
+```python
+cls._instance = Redis.from_url(redis_url, decode_responses=False)
+```
+
+**For Existing Deployments:**
+If you previously had `decode_responses=True`, you must:
+1. Stop all workers
+2. Clear corrupted jobs: `python backend/scripts/clear_rq_queues.py`
+3. Update the connection configuration
+4. Restart workers
+
 ### Development
 ```bash
 # 1. Start infrastructure

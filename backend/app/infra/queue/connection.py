@@ -17,11 +17,19 @@ class RedisConnection:
     
     @classmethod
     def get_connection(cls) -> Redis:
-        """Get or create Redis connection."""
+        """Get or create Redis connection.
+        
+        Note: decode_responses=False is required for RQ to work correctly.
+        RQ stores binary-serialized data (pickled payloads) in Redis, which
+        cannot be decoded as UTF-8 strings. Using decode_responses=True would
+        cause UnicodeDecodeError when the worker tries to fetch jobs.
+        """
         if cls._instance is None:
             # Parse Redis URL from settings or use defaults
             redis_url = getattr(settings, 'REDIS_URL', 'redis://localhost:6379/0')
-            cls._instance = Redis.from_url(redis_url, decode_responses=True)
+            # IMPORTANT: decode_responses must be False for RQ compatibility
+            # RQ stores binary data that cannot be decoded as UTF-8
+            cls._instance = Redis.from_url(redis_url, decode_responses=False)
             logger.info(f"Redis connection established: {redis_url}")
         return cls._instance
     

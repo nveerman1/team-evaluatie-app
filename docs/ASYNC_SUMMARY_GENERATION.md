@@ -51,6 +51,25 @@ Display summary to student
 
 ## Configuration
 
+### Important: Redis Connection Settings
+
+**Critical Requirement:** The Redis connection for RQ **must** be configured with `decode_responses=False`.
+
+RQ stores binary-serialized data (pickled payloads) in Redis. Using `decode_responses=True` will cause worker crashes with:
+```
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0x9c in position 1: invalid start byte
+```
+
+The correct configuration is in `backend/app/infra/queue/connection.py`:
+```python
+cls._instance = Redis.from_url(redis_url, decode_responses=False)
+```
+
+**If you encounter worker crashes:**
+1. Verify `decode_responses=False` is set in the connection
+2. Clear any corrupted jobs: `python backend/scripts/clear_rq_queues.py`
+3. Restart the workers
+
 ### Environment Variables
 
 Add to your `.env` file in the backend directory:
@@ -375,6 +394,50 @@ docker logs -f <worker_container_name>
 ```
 
 ## Troubleshooting
+
+### Worker Crashes with UnicodeDecodeError (CRITICAL)
+
+**Symptom:** Worker crashes immediately when trying to process jobs with:
+```
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0x9c in position 1: invalid start byte
+```
+
+**Cause:** Redis connection is configured with `decode_responses=True`, but RQ stores binary-serialized (pickled) data that cannot be decoded as UTF-8.
+
+**Solution:**
+1. **Fix the configuration** in `backend/app/infra/queue/connection.py`:
+   ```python
+   # CORRECT:
+   cls._instance = Redis.from_url(redis_url, decode_responses=False)
+   
+   # INCORRECT (causes crashes):
+   # cls._instance = Redis.from_url(redis_url, decode_responses=True)
+   ```
+
+2. **Clear corrupted jobs** from Redis:
+   ```bash
+   cd backend
+   python scripts/clear_rq_queues.py
+   ```
+   
+   Or manually with Redis CLI:
+   ```bash
+   redis-cli
+   > FLUSHDB  # WARNING: Deletes all data in current Redis database
+   ```
+
+3. **Restart the worker**:
+   ```bash
+   make worker
+   ```
+
+4. **Verify the fix** by running tests:
+   ```bash
+   cd backend
+   pytest tests/test_job_enhancements.py::TestRedisConnectionConfiguration -v
+   ```
+
+**Prevention:** The test suite now includes specific tests to verify `decode_responses=False` is set correctly.
 
 ### Jobs Stuck in "Queued" State
 

@@ -320,5 +320,61 @@ class TestAPIEndpoints:
         assert any('/scheduled-jobs' in route for route in routes)
 
 
+class TestRedisConnectionConfiguration:
+    """Test Redis connection configuration for RQ compatibility."""
+    
+    def test_redis_connection_decode_responses_false(self):
+        """Test that Redis connection has decode_responses=False for RQ compatibility.
+        
+        RQ stores binary-serialized data (pickled payloads) in Redis.
+        If decode_responses=True is set, Redis will try to decode binary data as UTF-8,
+        causing UnicodeDecodeError when the worker tries to fetch jobs.
+        """
+        from app.infra.queue.connection import RedisConnection
+        
+        # Get connection
+        conn = RedisConnection.get_connection()
+        
+        # Check that decode_responses is False
+        # The connection_pool.connection_kwargs contains the decode_responses setting
+        connection_kwargs = conn.connection_pool.connection_kwargs
+        decode_responses = connection_kwargs.get('decode_responses', False)
+        
+        assert decode_responses is False, \
+            "Redis connection must have decode_responses=False for RQ compatibility"
+        
+        # Clean up
+        RedisConnection.close_connection()
+    
+    @patch('app.infra.queue.connection.Redis')
+    def test_queue_uses_binary_safe_connection(self, mock_redis):
+        """Test that get_queue function uses a binary-safe Redis connection."""
+        from app.infra.queue.connection import get_queue
+        
+        # Mock Redis.from_url to capture the arguments
+        mock_conn = MagicMock()
+        mock_redis.from_url.return_value = mock_conn
+        
+        # Reset the singleton instance to force new connection
+        from app.infra.queue.connection import RedisConnection
+        RedisConnection._instance = None
+        
+        # Get a queue (which will create a connection)
+        try:
+            queue = get_queue('test-queue')
+            
+            # Verify Redis.from_url was called with decode_responses=False
+            mock_redis.from_url.assert_called()
+            call_kwargs = mock_redis.from_url.call_args[1]
+            
+            assert 'decode_responses' in call_kwargs, \
+                "decode_responses parameter must be explicitly set"
+            assert call_kwargs['decode_responses'] is False, \
+                "decode_responses must be False for RQ compatibility"
+        finally:
+            # Clean up
+            RedisConnection._instance = None
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
