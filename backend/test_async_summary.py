@@ -52,12 +52,13 @@ def test_database_connection():
     try:
         from app.infra.db.session import SessionLocal
         from app.infra.db.models import SummaryGenerationJob
+        from sqlalchemy import text
         
         db = SessionLocal()
         
         # Check if table exists
         result = db.execute(
-            "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'summary_generation_jobs')"
+            text("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'summary_generation_jobs')")
         ).scalar()
         
         db.close()
