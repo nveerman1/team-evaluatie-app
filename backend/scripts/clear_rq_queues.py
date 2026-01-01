@@ -77,7 +77,7 @@ def flush_redis_db():
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Clear RQ queues for development/maintenance'
+        description='Clear RQ queues for development/maintenance.'
     )
     parser.add_argument(
         '--flush-db',

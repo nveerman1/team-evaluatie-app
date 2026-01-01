@@ -332,32 +332,32 @@ class TestRedisConnectionConfiguration:
         """
         from app.infra.queue.connection import RedisConnection
         
-        # Get connection
-        conn = RedisConnection.get_connection()
-        
-        # Check that decode_responses is False
-        # The connection_pool.connection_kwargs contains the decode_responses setting
-        connection_kwargs = conn.connection_pool.connection_kwargs
-        decode_responses = connection_kwargs.get('decode_responses', False)
-        
-        assert decode_responses is False, \
-            "Redis connection must have decode_responses=False for RQ compatibility"
-        
-        # Clean up
-        RedisConnection.close_connection()
+        try:
+            # Get connection
+            conn = RedisConnection.get_connection()
+            
+            # Check that decode_responses is False
+            # The connection_pool.connection_kwargs contains the decode_responses setting
+            connection_kwargs = conn.connection_pool.connection_kwargs
+            decode_responses = connection_kwargs.get('decode_responses', False)
+            
+            assert decode_responses is False, \
+                "Redis connection must have decode_responses=False for RQ compatibility"
+        finally:
+            # Clean up using the proper close method
+            RedisConnection.close_connection()
     
     @patch('app.infra.queue.connection.Redis')
     def test_queue_uses_binary_safe_connection(self, mock_redis):
         """Test that get_queue function uses a binary-safe Redis connection."""
-        from app.infra.queue.connection import get_queue
+        from app.infra.queue.connection import get_queue, RedisConnection
         
         # Mock Redis.from_url to capture the arguments
         mock_conn = MagicMock()
         mock_redis.from_url.return_value = mock_conn
         
-        # Reset the singleton instance to force new connection
-        from app.infra.queue.connection import RedisConnection
-        RedisConnection._instance = None
+        # Close any existing connection to force new connection
+        RedisConnection.close_connection()
         
         # Get a queue (which will create a connection)
         try:
@@ -372,8 +372,8 @@ class TestRedisConnectionConfiguration:
             assert call_kwargs['decode_responses'] is False, \
                 "decode_responses must be False for RQ compatibility"
         finally:
-            # Clean up
-            RedisConnection._instance = None
+            # Clean up using the proper close method
+            RedisConnection.close_connection()
 
 
 if __name__ == '__main__':
