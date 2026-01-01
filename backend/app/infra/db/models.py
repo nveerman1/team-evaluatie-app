@@ -1485,6 +1485,46 @@ class FeedbackSummary(Base):
     )
 
 
+class SummaryGenerationJob(Base):
+    """
+    Track async AI summary generation jobs.
+    """
+
+    __tablename__ = "summary_generation_jobs"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = tenant_fk()
+    evaluation_id: Mapped[int] = mapped_column(
+        ForeignKey("evaluations.id", ondelete="CASCADE"), nullable=False
+    )
+    student_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+
+    # Job tracking
+    job_id: Mapped[str] = mapped_column(String(200), unique=True, nullable=False, index=True)
+    status: Mapped[str] = mapped_column(
+        String(20), default="queued", nullable=False
+    )  # "queued" | "processing" | "completed" | "failed"
+    
+    # Result data (JSON)
+    result: Mapped[Optional[dict]] = mapped_column(JSONB)
+    error_message: Mapped[Optional[str]] = mapped_column(Text)
+
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(
+        default=datetime.utcnow, nullable=False
+    )
+    started_at: Mapped[Optional[datetime]] = mapped_column()
+    completed_at: Mapped[Optional[datetime]] = mapped_column()
+
+    __table_args__ = (
+        Index("ix_summary_job_status", "status"),
+        Index("ix_summary_job_eval_student", "evaluation_id", "student_id"),
+        Index("ix_summary_job_created", "created_at"),
+    )
+
+
 # ============ Learning Objectives (Leerdoelen/Eindtermen) ============
 
 
