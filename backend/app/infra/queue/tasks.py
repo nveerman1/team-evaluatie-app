@@ -6,6 +6,7 @@ import time
 from typing import Optional
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session, aliased
+from sqlalchemy import text
 from rq import get_current_job
 
 from app.infra.db.session import SessionLocal
@@ -89,7 +90,7 @@ def generate_ai_summary_task(
             }
         
         job.status = "processing"
-        job.started_at = db.execute("SELECT NOW()").scalar()
+        job.started_at = db.execute(text("SELECT NOW()")).scalar()
         job.progress = 10
         db.commit()
         
@@ -206,7 +207,7 @@ def generate_ai_summary_task(
         
         # Update job status to completed
         job.status = "completed"
-        job.completed_at = db.execute("SELECT NOW()").scalar()
+        job.completed_at = db.execute(text("SELECT NOW()")).scalar()
         job.progress = 100
         job.result = {
             "summary_text": summary_text,
@@ -288,7 +289,7 @@ def generate_ai_summary_task(
         # Update job status to failed
         if job:
             job.status = "failed"
-            job.completed_at = db.execute("SELECT NOW()").scalar()
+            job.completed_at = db.execute(text("SELECT NOW()")).scalar()
             job.error_message = str(e)
             db.commit()
             

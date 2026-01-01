@@ -5,6 +5,7 @@ import time
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, aliased
+from sqlalchemy import text
 from pydantic import BaseModel
 from rq.job import Job
 
@@ -554,7 +555,7 @@ def cancel_job(
     
     # Update job status
     job.status = "cancelled"
-    job.cancelled_at = db.execute("SELECT NOW()").scalar()
+    job.cancelled_at = db.execute(text("SELECT NOW()")).scalar()
     job.cancelled_by = user.id
     db.commit()
     
