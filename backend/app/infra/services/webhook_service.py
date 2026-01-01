@@ -100,7 +100,7 @@ class WebhookService:
         """
         payload = {
             "event": "job.completed" if status == "completed" else "job.failed",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now().isoformat(),
             "data": {
                 "job_id": job_id,
                 "status": status,
