@@ -1,5 +1,6 @@
 from __future__ import annotations
 import hashlib
+import logging
 import time
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -22,6 +23,7 @@ from app.infra.queue.connection import get_queue
 from app.infra.queue.tasks import generate_ai_summary_task, batch_generate_summaries_task
 
 router = APIRouter(prefix="/feedback-summaries", tags=["feedback-summaries"])
+logger = logging.getLogger(__name__)
 
 # Priority constants
 PRIORITY_HIGH = "high"
@@ -446,7 +448,7 @@ def queue_summary_generation(
     # Queue the job
     try:
         queue = get_queue(queue_name)
-        job = queue.enqueue(
+        rq_job = queue.enqueue(
             generate_ai_summary_task,
             school_id=user.school_id,
             evaluation_id=evaluation_id,
@@ -456,11 +458,16 @@ def queue_summary_generation(
             result_ttl=86400,  # Keep results for 24 hours
             failure_ttl=86400,
         )
+        logger.info(
+            f"Enqueued job {job_id} to queue '{queue_name}' "
+            f"(RQ job ID: {rq_job.id}, student: {student_id}, evaluation: {evaluation_id})"
+        )
     except Exception as e:
         # Update job status to failed
         new_job_record.status = "failed"
         new_job_record.error_message = f"Failed to queue job: {str(e)}"
         db.commit()
+        logger.error(f"Failed to enqueue job {job_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to queue job: {str(e)}")
     
     return JobStatusResponse(
@@ -642,7 +649,7 @@ def batch_queue_summaries(
         db.add(new_job_record)
         
         try:
-            job = queue.enqueue(
+            rq_job = queue.enqueue(
                 generate_ai_summary_task,
                 school_id=user.school_id,
                 evaluation_id=evaluation_id,
@@ -652,12 +659,17 @@ def batch_queue_summaries(
                 result_ttl=86400,
                 failure_ttl=86400,
             )
+            logger.info(
+                f"Batch: enqueued job {job_id} to queue '{queue_name}' "
+                f"(RQ job ID: {rq_job.id}, student: {student_id})"
+            )
             results.append({
                 "student_id": student_id,
                 "job_id": job_id,
                 "status": "queued",
             })
         except Exception as e:
+            logger.error(f"Batch: failed to enqueue job {job_id} for student {student_id}: {e}")
             new_job_record.status = "failed"
             new_job_record.error_message = f"Failed to queue: {str(e)}"
             results.append({
