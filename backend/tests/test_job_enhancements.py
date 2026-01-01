@@ -68,13 +68,14 @@ class TestPriorityQueues:
         assert hasattr(SummaryGenerationJob, 'queue_name')
     
     def test_get_queue_with_priority(self):
-        """Test getting queues with different priorities."""
-        # Test that get_queue function accepts priority parameter
+        """Test getting queues with different names."""
+        # Test that get_queue function works with priority queue names
         from app.infra.queue.connection import get_queue
         import inspect
         sig = inspect.signature(get_queue)
         params = list(sig.parameters.keys())
-        assert 'priority' in params
+        # Queue name is the parameter (not priority anymore)
+        assert 'name' in params
 
 
 class TestWebhookService:

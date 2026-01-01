@@ -445,7 +445,7 @@ def queue_summary_generation(
     
     # Queue the job
     try:
-        queue = get_queue(queue_name, priority=request.priority)
+        queue = get_queue(queue_name)
         job = queue.enqueue(
             generate_ai_summary_task,
             school_id=user.school_id,
@@ -603,7 +603,7 @@ def batch_queue_summaries(
         queue_name = QUEUE_AI_SUMMARIES_LOW
     
     # Queue jobs for each student
-    queue = get_queue(queue_name, priority=payload.priority)
+    queue = get_queue(queue_name)
     results = []
     
     for student_id in payload.student_ids:

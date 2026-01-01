@@ -975,6 +975,316 @@ The application includes a comprehensive template system for managing reusable c
   - `(template_type, template_id)`
 - **Purpose**: Links tags to various template entities
 
+## Async Job Queue System (AI Summary Generation)
+
+The application uses an asynchronous task processing system built on RQ (Redis Queue) for AI summary generation and other long-running tasks.
+
+### Overview
+
+The async queue system prevents timeout errors when generating AI summaries for multiple students and provides a better user experience with:
+- Real-time progress tracking
+- Job cancellation capabilities  
+- Priority-based processing
+- Automatic retry on failure
+- Webhook notifications
+- Comprehensive monitoring
+
+### Architecture Components
+
+**Backend (FastAPI):**
+- REST API endpoints for job management
+- Job persistence in PostgreSQL
+- Background task processing
+
+**Redis:**
+- Message broker and job queue
+- Rate limiting storage
+- Already configured in `ops/docker/compose.dev.yml`
+
+**RQ Worker:**
+- Background worker process for job execution
+- Horizontally scalable for increased throughput
+- Supports multiple priority queues
+
+**Scheduler Daemon:**
+- Processes scheduled jobs with cron expressions
+- Runs independently for recurring tasks
+
+### Database Schema
+
+**SummaryGenerationJob Table:**
+- `id`: Primary key
+- `school_id`: Foreign key to School (multi-tenant)
+- `evaluation_id`: Foreign key to Evaluation
+- `student_id`: Foreign key to User
+- `job_id`: Unique job identifier (string)
+- `status`: "queued" | "processing" | "completed" | "failed" | "cancelled"
+- `progress`: Integer (0-100) for real-time progress
+- `priority`: "high" | "normal" | "low"
+- `retry_count`: Current retry attempt
+- `max_retries`: Maximum retry attempts (default: 3)
+- `next_retry_at`: Timestamp for next retry
+- `cancelled_at`: Cancellation timestamp
+- `cancelled_by`: User who cancelled the job
+- `webhook_url`: URL for completion notifications
+- `webhook_delivered`: Boolean flag
+- `webhook_attempts`: Number of delivery attempts
+- `queue_name`: Queue name (e.g., "ai-summaries-high")
+- `task_type`: Task type for extensibility
+- `result`: JSONB result data
+- `error_message`: Error message if failed
+- `created_at`, `started_at`, `completed_at`: Timestamps
+
+**ScheduledJob Table:**
+- `id`: Primary key
+- `school_id`: Foreign key to School
+- `name`: Job name
+- `task_type`: Type of task to execute
+- `queue_name`: Queue to use
+- `cron_expression`: Cron schedule (e.g., "0 2 * * *")
+- `task_params`: JSONB task parameters
+- `enabled`: Boolean flag
+- `last_run_at`, `next_run_at`: Execution timestamps
+- `created_at`, `updated_at`: Audit timestamps
+- `created_by`: Foreign key to User
+
+### Key Features
+
+#### 1. Job Progress Tracking (0-100%)
+- Real-time progress updates during execution
+- Progress reported at key stages:
+  - 10%: Job started
+  - 20-40%: Data validation and retrieval
+  - 50-60%: Anonymization
+  - 80%: AI generation completed
+  - 90%: Summary cached
+  - 100%: Job completed
+
+#### 2. Job Cancellation
+- Cancel queued or processing jobs via API
+- Tracked with `cancelled_at` timestamp
+- `cancelled_by` links to user who cancelled
+
+#### 3. Priority Queues
+- Three priority levels: high, normal, low
+- Separate queues: `ai-summaries-high`, `ai-summaries`, `ai-summaries-low`
+- Workers process in priority order
+- Higher priority jobs execute first
+
+#### 4. Webhook Notifications
+- HTTP POST webhooks on job completion/failure
+- Automatic retry on webhook delivery failure (up to 3 attempts)
+- 10-second timeout per request
+- Delivery status tracked in database
+
+**Webhook Payload Example:**
+```json
+{
+  "event": "job.completed",
+  "timestamp": "2026-01-01T10:00:00",
+  "data": {
+    "job_id": "summary-123-456-...",
+    "status": "completed",
+    "student_id": 456,
+    "evaluation_id": 123,
+    "result": {...}
+  }
+}
+```
+
+#### 5. Queue Monitoring Dashboard
+- Real-time queue statistics (queued, processing, completed, failed, cancelled)
+- Worker health checks
+- Queue depth monitoring
+- Performance metrics
+
+#### 6. Automatic Retry with Exponential Backoff
+- Failed jobs automatically retry with increasing delays
+- Backoff schedule: 2min, 4min, 8min (capped at 30min)
+- Configurable `max_retries` per job
+- Retry status tracked in database
+
+#### 7. Multi-Queue Support
+- `queue_name` field enables different queues for different task types
+- `task_type` field for extensibility
+- Priority-based queue segregation
+
+#### 8. Job Scheduling (Cron-like)
+- Scheduled jobs with cron expressions
+- Examples: daily, weekly, custom schedules
+- Independent scheduler daemon
+- Managed via admin API
+
+#### 9. Rate Limiting
+- Redis-based sliding window rate limiting
+- Configurable limits per endpoint type:
+  - Queue endpoints: 10 requests/minute
+  - Batch endpoints: 5 requests/minute
+  - Other endpoints: 100 requests/minute
+- Rate limit headers in responses
+
+### Data Flow
+
+**Queue Summary Generation:**
+```
+Student visits overview page
+          ↓
+Frontend: POST /api/v1/feedback-summaries/evaluation/{id}/student/{id}/queue
+          ↓
+Backend creates SummaryGenerationJob record
+Backend enqueues task in Redis (priority queue)
+Returns job_id to frontend
+          ↓
+Frontend polls: GET /api/v1/feedback-summaries/jobs/{job_id}/status
+          ↓
+Worker picks up job from Redis (priority order)
+Worker updates progress (10%, 20%, etc.)
+Worker generates AI summary with Ollama
+Worker updates status → "completed"
+          ↓
+Optional: Worker sends webhook notification
+          ↓
+Frontend receives completed status with result
+Display summary to student
+```
+
+### API Endpoints
+
+**Job Management:**
+- `POST /api/v1/feedback-summaries/evaluation/{evaluation_id}/student/{student_id}/queue` - Queue job
+  - Body: `{priority, webhook_url, max_retries}`
+- `GET /api/v1/feedback-summaries/jobs/{job_id}/status` - Get job status
+- `POST /api/v1/feedback-summaries/jobs/{job_id}/cancel` - Cancel job
+- `POST /api/v1/feedback-summaries/evaluation/{evaluation_id}/batch-queue` - Batch queue
+  - Body: `{student_ids, priority, webhook_url}`
+- `GET /api/v1/feedback-summaries/evaluation/{evaluation_id}/jobs` - List jobs
+  - Query params: `status`
+
+**Queue Monitoring:**
+- `GET /api/v1/feedback-summaries/queue/stats` - Get queue statistics
+  - Returns: queued_count, processing_count, completed_count, failed_count, cancelled_count, workers_count
+- `GET /api/v1/feedback-summaries/queue/health` - Health check
+  - Returns: status, redis connection, workers info, queues info
+
+**Scheduled Jobs:**
+- `POST /api/v1/feedback-summaries/scheduled-jobs` - Create scheduled job
+  - Body: `{name, cron_expression, task_params, enabled}`
+- `GET /api/v1/feedback-summaries/scheduled-jobs` - List scheduled jobs
+- `PATCH /api/v1/feedback-summaries/scheduled-jobs/{id}` - Update scheduled job
+- `DELETE /api/v1/feedback-summaries/scheduled-jobs/{id}` - Delete scheduled job
+
+### Running the System
+
+**Start Infrastructure:**
+```bash
+make up  # Starts PostgreSQL and Redis
+```
+
+**Start Backend API:**
+```bash
+make be  # Starts FastAPI server
+```
+
+**Start Workers (Multiple Terminals for Redundancy):**
+```bash
+make worker  # Terminal 1
+make worker  # Terminal 2
+make worker  # Terminal 3
+```
+
+**Start Scheduler (For Cron Jobs):**
+```bash
+make scheduler
+```
+
+**Start Frontend:**
+```bash
+make fe
+```
+
+### Performance Tuning
+
+**Optimal Worker Count:**
+- Development: 1 worker
+- Production: 2-4 workers per CPU core (I/O bound tasks)
+- High load: 8-16 workers with load balancing
+
+**Queue Configuration:**
+- Job timeout: 10 minutes
+- Result TTL: 24 hours
+- Failure TTL: 24 hours
+
+**Rate Limiting:**
+- Prevents API abuse
+- Configurable per endpoint type
+- Redis-based sliding window algorithm
+
+### Security Considerations
+
+1. **Multi-tenancy**: All jobs scoped by `school_id`
+2. **Authentication**: All endpoints require authentication
+3. **Rate Limiting**: Prevents abuse and overload
+4. **Webhook Validation**: Webhooks sent with proper headers
+5. **Input Validation**: Cron expressions and URLs validated
+6. **Cancellation Authorization**: Only authorized users can cancel jobs
+
+### Monitoring
+
+**Check Queue Status:**
+```sql
+-- Active jobs
+SELECT job_id, status, progress, priority, student_id, evaluation_id
+FROM summary_generation_jobs
+WHERE status IN ('queued', 'processing')
+ORDER BY 
+  CASE priority 
+    WHEN 'high' THEN 1 
+    WHEN 'normal' THEN 2 
+    WHEN 'low' THEN 3 
+  END,
+  created_at ASC;
+
+-- Failed jobs with retries
+SELECT job_id, retry_count, max_retries, next_retry_at, error_message
+FROM summary_generation_jobs
+WHERE status = 'queued' AND retry_count > 0
+ORDER BY next_retry_at ASC;
+
+-- Scheduled jobs
+SELECT name, cron_expression, enabled, next_run_at
+FROM scheduled_jobs
+WHERE enabled = true
+ORDER BY next_run_at ASC;
+```
+
+**Redis Queue Inspection:**
+```bash
+docker exec -it <redis_container> redis-cli
+
+> LLEN rq:queue:ai-summaries-high
+> LLEN rq:queue:ai-summaries
+> LLEN rq:queue:ai-summaries-low
+> SMEMBERS rq:workers
+```
+
+### Troubleshooting
+
+**Jobs Stuck in Queued State:**
+- Check if workers are running: `ps aux | grep worker.py`
+- Check Redis connection: `docker ps | grep redis`
+- Review worker logs for errors
+- Restart workers: `make worker`
+
+**Webhooks Not Delivered:**
+- Check `webhook_delivered` and `webhook_attempts` in database
+- Verify webhook URL is accessible
+- Check webhook endpoint logs for errors
+
+**See Also:**
+- `docs/ASYNC_SUMMARY_GENERATION.md` - User guide
+- `backend/JOB_QUEUE_ENHANCEMENTS.md` - Technical documentation
+- `backend/tests/test_job_enhancements.py` - Test suite
+
 ## Clients (Opdrachtgevers) Module
 
 The Clients module manages external organizations that provide projects to students, with full database integration and automation features.
@@ -1907,6 +2217,16 @@ See `MIGRATION_NOTES.md` for detailed migration instructions.
   - ✅ Attendance aggregates and lesson blocks calculation
   - ✅ Real-time presence dashboard
   - ✅ Database schema with views and functions
+- ✅ Async job queue system with RQ (Redis Queue)
+  - ✅ Job progress tracking (0-100%)
+  - ✅ Job cancellation
+  - ✅ Priority queues (high/normal/low)
+  - ✅ Webhook notifications on completion
+  - ✅ Dashboard for queue monitoring
+  - ✅ Automatic retry with exponential backoff
+  - ✅ Multi-queue support for different task types
+  - ✅ Job scheduling (cron-like)
+  - ✅ Rate limiting
 
 ### Phase 2 (Current/Planned)
 - Analytics dashboards per course and school
