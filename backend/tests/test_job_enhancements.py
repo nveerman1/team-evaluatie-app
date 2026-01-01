@@ -11,7 +11,12 @@ Tests:
 7. Scheduled jobs
 8. Queue monitoring
 
-Run with: pytest tests/test_job_enhancements.py -v
+Run with: 
+    cd backend
+    pytest tests/test_job_enhancements.py -v
+
+Or run specific test class:
+    pytest tests/test_job_enhancements.py::TestJobProgressTracking -v
 """
 import pytest
 from datetime import datetime, timedelta

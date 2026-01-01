@@ -468,6 +468,21 @@ pytest tests/test_job_enhancements.py -v
 - Verify cron expression is valid
 - Check scheduler logs for errors
 
+### Test Import Errors
+If you get `ModuleNotFoundError: No module named 'app'` when running tests:
+```bash
+# Make sure you're in the backend directory
+cd backend
+
+# Run pytest (conftest.py will handle imports)
+pytest tests/test_job_enhancements.py -v
+
+# Or with PYTHONPATH explicitly set
+PYTHONPATH=. pytest tests/test_job_enhancements.py -v
+```
+
+The `tests/conftest.py` file automatically adds the backend directory to Python path.
+
 ## Future Enhancements
 
 - [ ] Job dependencies (run job B after job A completes)
