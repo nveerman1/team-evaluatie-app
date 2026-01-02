@@ -35,6 +35,9 @@ export function AISummarySection({
 
   const displaySummary = summary || fallbackSummary;
 
+  // Show loading state only if we don't have any summary yet
+  const isLoading = (status === "loading" || status === "queued" || status === "processing") && !displaySummary;
+
   return (
     <div className="flex-1 rounded-xl border border-slate-100 bg-slate-50/80 p-3 flex flex-col">
       <div className="mb-1 flex items-center justify-between text-xs font-medium text-slate-500">
@@ -42,7 +45,7 @@ export function AISummarySection({
         <StatusBadge status={status} isPolling={isPolling} method={generationMethod} />
       </div>
 
-      {status === "loading" || status === "queued" || status === "processing" ? (
+      {isLoading ? (
         <div className="flex flex-col items-center justify-center py-8">
           <div className="mb-3">
             <LoadingSpinner />
