@@ -386,14 +386,15 @@ def queue_summary_generation(
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
     
-    # Check if job already exists and is not failed
+    # Check if job already exists and is not failed or cancelled
     existing_job = (
         db.query(SummaryGenerationJob)
         .filter(
             SummaryGenerationJob.evaluation_id == evaluation_id,
             SummaryGenerationJob.student_id == student_id,
-            SummaryGenerationJob.status.in_(["queued", "processing"]),
+            SummaryGenerationJob.status.in_(["queued", "processing", "completed"]),
         )
+        .order_by(SummaryGenerationJob.created_at.desc())
         .first()
     )
     
@@ -615,14 +616,15 @@ def batch_queue_summaries(
     results = []
     
     for student_id in payload.student_ids:
-        # Check if job already queued
+        # Check if job already queued or completed
         existing_job = (
             db.query(SummaryGenerationJob)
             .filter(
                 SummaryGenerationJob.evaluation_id == evaluation_id,
                 SummaryGenerationJob.student_id == student_id,
-                SummaryGenerationJob.status.in_(["queued", "processing"]),
+                SummaryGenerationJob.status.in_(["queued", "processing", "completed"]),
             )
+            .order_by(SummaryGenerationJob.created_at.desc())
             .first()
         )
         
@@ -630,7 +632,7 @@ def batch_queue_summaries(
             results.append({
                 "student_id": student_id,
                 "job_id": existing_job.job_id,
-                "status": "already_queued",
+                "status": "already_exists" if existing_job.status == "completed" else "already_queued",
             })
             continue
         
