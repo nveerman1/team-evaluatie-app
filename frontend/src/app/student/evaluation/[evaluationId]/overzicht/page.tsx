@@ -35,6 +35,8 @@ export default function OverzichtPage() {
 
   // Load current user ID
   useEffect(() => {
+    if (!evaluationId) return;
+    
     const controller = new AbortController();
     
     async function loadUser() {
@@ -42,11 +44,22 @@ export default function OverzichtPage() {
         const response = await api.get("/users/me", { signal: controller.signal });
         setCurrentUserId(response.data.id);
       } catch (e: any) {
-        // Silently ignore 404 errors for /users/me endpoint - it's expected when not authenticated
-        // or endpoint doesn't exist. The page works fine without currentUserId (team section won't show).
+        // Silently ignore 404 errors - try fallback method
         if (e.name !== 'AbortError' && e.name !== 'CanceledError' && e.message !== 'canceled') {
           if (e?.response?.status !== 404) {
             console.error("Failed to load current user:", e);
+          }
+          
+          // Fallback: Get student ID from allocations
+          try {
+            const allocs = await studentService.getAllocations(evaluationId);
+            const selfAlloc = allocs.find((a) => a.is_self);
+            if (selfAlloc) {
+              console.log("Using student ID from allocations:", selfAlloc.reviewee_id);
+              setCurrentUserId(selfAlloc.reviewee_id);
+            }
+          } catch (allocError) {
+            console.error("Failed to load student ID from allocations:", allocError);
           }
         }
       }
@@ -54,7 +67,7 @@ export default function OverzichtPage() {
     loadUser();
     
     return () => controller.abort();
-  }, []);
+  }, [evaluationId]);
 
   // Load team context
   useEffect(() => {
