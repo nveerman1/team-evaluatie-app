@@ -61,33 +61,41 @@ export function useAsyncSummary(
     if (!mountedRef.current) return;
 
     try {
+      console.log(`[useAsyncSummary] Polling job ${currentJobId}...`);
       const jobStatus = await feedbackSummaryService.getJobStatus(currentJobId);
+      console.log(`[useAsyncSummary] Poll response for ${currentJobId}:`, jobStatus);
       
       if (!mountedRef.current) return;
 
-      setStatus(jobStatus.status);
-
       if (jobStatus.status === "completed" && jobStatus.result) {
+        console.log(`[useAsyncSummary] Job completed! Extracting summary from result`);
         setSummary(jobStatus.result.summary_text);
         setGenerationMethod(jobStatus.result.generation_method);
         setFeedbackCount(jobStatus.result.feedback_count);
+        setStatus("completed"); // Set status AFTER setting summary
         setIsPolling(false);
+        console.log(`[useAsyncSummary] Stopping polling, summary set: ${jobStatus.result.summary_text.substring(0, 50)}...`);
         if (pollingIntervalRef.current) {
           clearInterval(pollingIntervalRef.current);
           pollingIntervalRef.current = null;
         }
       } else if (jobStatus.status === "failed") {
+        console.log(`[useAsyncSummary] Job failed during polling:`, jobStatus.error_message);
+        setStatus("failed");
         setError(jobStatus.error_message || "Generation failed");
         setIsPolling(false);
         if (pollingIntervalRef.current) {
           clearInterval(pollingIntervalRef.current);
           pollingIntervalRef.current = null;
         }
+      } else {
+        console.log(`[useAsyncSummary] Job still in progress, status: ${jobStatus.status}`);
+        setStatus(jobStatus.status);
       }
       // Keep polling for "queued" and "processing" states
     } catch (err: any) {
       if (!mountedRef.current) return;
-      console.error("Error polling job status:", err);
+      console.error("[useAsyncSummary] Error polling job status:", err);
       // Don't stop polling on error, might be transient
     }
   }, []);
@@ -116,6 +124,7 @@ export function useAsyncSummary(
 
     try {
       // Queue the job
+      console.log(`[useAsyncSummary] Queueing job for evaluation ${evaluationId}, student ${studentId}`);
       const jobResponse = await feedbackSummaryService.queueSummaryGeneration(
         evaluationId,
         studentId
@@ -123,23 +132,43 @@ export function useAsyncSummary(
 
       if (!mountedRef.current) return;
 
+      console.log(`[useAsyncSummary] Queue response:`, jobResponse);
+      console.log(`[useAsyncSummary] Response status: ${jobResponse.status}, has result: ${!!jobResponse.result}`);
+      if (jobResponse.result) {
+        console.log(`[useAsyncSummary] Result details:`, {
+          summary_text: jobResponse.result.summary_text?.substring(0, 50) + '...',
+          generation_method: jobResponse.result.generation_method,
+          feedback_count: jobResponse.result.feedback_count
+        });
+      }
+      
       setJobId(jobResponse.job_id);
-      setStatus(jobResponse.status);
 
-      // Start polling if job is queued or processing
-      if (jobResponse.status === "queued" || jobResponse.status === "processing") {
-        startPolling(jobResponse.job_id);
-      } else if (jobResponse.status === "completed" && jobResponse.result) {
-        // Job already completed
+      // Handle different job statuses
+      if (jobResponse.status === "completed" && jobResponse.result) {
+        // Job already completed - set summary first, then status
+        console.log(`[useAsyncSummary] Job already completed, setting summary from result`);
         setSummary(jobResponse.result.summary_text);
         setGenerationMethod(jobResponse.result.generation_method);
         setFeedbackCount(jobResponse.result.feedback_count);
+        setStatus("completed"); // Set status AFTER setting summary
+        console.log(`[useAsyncSummary] Summary state updated: ${jobResponse.result.summary_text.substring(0, 50)}...`);
+      } else if (jobResponse.status === "queued" || jobResponse.status === "processing") {
+        setStatus(jobResponse.status);
+        console.log(`[useAsyncSummary] Starting polling for job ${jobResponse.job_id} with status ${jobResponse.status}`);
+        startPolling(jobResponse.job_id);
       } else if (jobResponse.status === "failed") {
+        console.log(`[useAsyncSummary] Job failed:`, jobResponse.error_message);
+        setStatus("failed");
         setError(jobResponse.error_message || "Generation failed");
+      } else {
+        console.warn(`[useAsyncSummary] Unexpected branch - status: ${jobResponse.status}, has result: ${!!jobResponse.result}`);
+        console.warn(`[useAsyncSummary] Full response:`, jobResponse);
+        setStatus(jobResponse.status);
       }
     } catch (err: any) {
       if (!mountedRef.current) return;
-      console.error("Error starting generation:", err);
+      console.error("[useAsyncSummary] Error starting generation:", err);
       setError(err?.response?.data?.detail || err?.message || "Failed to start generation");
       setStatus("failed");
     }

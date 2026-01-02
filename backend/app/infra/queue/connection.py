@@ -29,7 +29,14 @@ class RedisConnection:
             redis_url = getattr(settings, 'REDIS_URL', 'redis://localhost:6379/0')
             # IMPORTANT: decode_responses must be False for RQ compatibility
             # RQ stores binary data that cannot be decoded as UTF-8
-            cls._instance = Redis.from_url(redis_url, decode_responses=False)
+            # Enable socket keepalive to prevent connection timeouts
+            cls._instance = Redis.from_url(
+                redis_url,
+                decode_responses=False,
+                socket_keepalive=True,
+                socket_connect_timeout=5,
+                socket_timeout=300,  # 5 minute timeout for operations
+            )
             logger.info(f"Redis connection established: {redis_url}")
         return cls._instance
     

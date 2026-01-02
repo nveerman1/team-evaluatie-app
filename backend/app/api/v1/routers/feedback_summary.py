@@ -1,9 +1,11 @@
 from __future__ import annotations
 import hashlib
+import logging
 import time
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, aliased
+from sqlalchemy import text
 from pydantic import BaseModel
 from rq.job import Job
 
@@ -22,6 +24,7 @@ from app.infra.queue.connection import get_queue
 from app.infra.queue.tasks import generate_ai_summary_task, batch_generate_summaries_task
 
 router = APIRouter(prefix="/feedback-summaries", tags=["feedback-summaries"])
+logger = logging.getLogger(__name__)
 
 # Priority constants
 PRIORITY_HIGH = "high"
@@ -383,14 +386,15 @@ def queue_summary_generation(
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
     
-    # Check if job already exists and is not failed
+    # Check if job already exists and is not failed or cancelled
     existing_job = (
         db.query(SummaryGenerationJob)
         .filter(
             SummaryGenerationJob.evaluation_id == evaluation_id,
             SummaryGenerationJob.student_id == student_id,
-            SummaryGenerationJob.status.in_(["queued", "processing"]),
+            SummaryGenerationJob.status.in_(["queued", "processing", "completed"]),
         )
+        .order_by(SummaryGenerationJob.created_at.desc())
         .first()
     )
     
@@ -446,7 +450,7 @@ def queue_summary_generation(
     # Queue the job
     try:
         queue = get_queue(queue_name)
-        job = queue.enqueue(
+        rq_job = queue.enqueue(
             generate_ai_summary_task,
             school_id=user.school_id,
             evaluation_id=evaluation_id,
@@ -456,11 +460,16 @@ def queue_summary_generation(
             result_ttl=86400,  # Keep results for 24 hours
             failure_ttl=86400,
         )
+        logger.info(
+            f"Enqueued job {job_id} to queue '{queue_name}' "
+            f"(RQ job ID: {rq_job.id}, student: {student_id}, evaluation: {evaluation_id})"
+        )
     except Exception as e:
         # Update job status to failed
         new_job_record.status = "failed"
         new_job_record.error_message = f"Failed to queue job: {str(e)}"
         db.commit()
+        logger.error(f"Failed to enqueue job {job_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to queue job: {str(e)}")
     
     return JobStatusResponse(
@@ -547,7 +556,7 @@ def cancel_job(
     
     # Update job status
     job.status = "cancelled"
-    job.cancelled_at = db.execute("SELECT NOW()").scalar()
+    job.cancelled_at = db.execute(text("SELECT NOW()")).scalar()
     job.cancelled_by = user.id
     db.commit()
     
@@ -607,14 +616,15 @@ def batch_queue_summaries(
     results = []
     
     for student_id in payload.student_ids:
-        # Check if job already queued
+        # Check if job already queued or completed
         existing_job = (
             db.query(SummaryGenerationJob)
             .filter(
                 SummaryGenerationJob.evaluation_id == evaluation_id,
                 SummaryGenerationJob.student_id == student_id,
-                SummaryGenerationJob.status.in_(["queued", "processing"]),
+                SummaryGenerationJob.status.in_(["queued", "processing", "completed"]),
             )
+            .order_by(SummaryGenerationJob.created_at.desc())
             .first()
         )
         
@@ -622,7 +632,7 @@ def batch_queue_summaries(
             results.append({
                 "student_id": student_id,
                 "job_id": existing_job.job_id,
-                "status": "already_queued",
+                "status": "already_exists" if existing_job.status == "completed" else "already_queued",
             })
             continue
         
@@ -642,7 +652,7 @@ def batch_queue_summaries(
         db.add(new_job_record)
         
         try:
-            job = queue.enqueue(
+            rq_job = queue.enqueue(
                 generate_ai_summary_task,
                 school_id=user.school_id,
                 evaluation_id=evaluation_id,
@@ -652,12 +662,17 @@ def batch_queue_summaries(
                 result_ttl=86400,
                 failure_ttl=86400,
             )
+            logger.info(
+                f"Batch: enqueued job {job_id} to queue '{queue_name}' "
+                f"(RQ job ID: {rq_job.id}, student: {student_id})"
+            )
             results.append({
                 "student_id": student_id,
                 "job_id": job_id,
                 "status": "queued",
             })
         except Exception as e:
+            logger.error(f"Batch: failed to enqueue job {job_id} for student {student_id}: {e}")
             new_job_record.status = "failed"
             new_job_record.error_message = f"Failed to queue: {str(e)}"
             results.append({

@@ -111,9 +111,11 @@ def test_task_structure():
         sig = inspect.signature(generate_ai_summary_task)
         params = list(sig.parameters.keys())
         
-        expected = ['school_id', 'evaluation_id', 'student_id', 'job_id']
+        # Updated: job_id is now retrieved from RQ context, not a parameter
+        expected = ['school_id', 'evaluation_id', 'student_id']
         if params == expected:
             print(f"✓ Task signature correct: {params}")
+            print("  (job_id is retrieved from RQ context, not passed as parameter)")
             return True
         else:
             print(f"✗ Task signature incorrect. Expected {expected}, got {params}")

@@ -6,6 +6,8 @@ import time
 from typing import Optional
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session, aliased
+from sqlalchemy import text
+from rq import get_current_job
 
 from app.infra.db.session import SessionLocal
 from app.infra.db.models import (
@@ -41,7 +43,6 @@ def generate_ai_summary_task(
     school_id: int,
     evaluation_id: int,
     student_id: int,
-    job_id: str,
 ) -> dict:
     """
     Background task to generate AI summary for a student's peer feedback.
@@ -50,16 +51,26 @@ def generate_ai_summary_task(
         school_id: School ID for multi-tenant isolation
         evaluation_id: Evaluation ID
         student_id: Student ID
-        job_id: Unique job identifier
         
     Returns:
         dict with status and summary information
+        
+    Note:
+        The job_id is retrieved from RQ's current job context, not passed as a parameter.
+        This is because RQ's enqueue() pops job_id from kwargs to use it for the RQ Job ID.
     """
     db = SessionLocal()
     start_time = time.time()
     
+    # Get job_id from RQ job context
+    current_job = get_current_job()
+    job_id = current_job.id if current_job else None
+    
+    if not job_id:
+        raise ValueError("Could not retrieve job_id from RQ context. Task must be run via RQ worker.")
+    
     try:
-        logger.info(f"Starting AI summary generation for student {student_id} in evaluation {evaluation_id}")
+        logger.info(f"[Job {job_id}] Starting AI summary generation for student {student_id} in evaluation {evaluation_id}")
         
         # Update job status to processing
         job = db.query(SummaryGenerationJob).filter(
@@ -79,7 +90,7 @@ def generate_ai_summary_task(
             }
         
         job.status = "processing"
-        job.started_at = db.execute("SELECT NOW()").scalar()
+        job.started_at = db.execute(text("SELECT NOW()")).scalar()
         job.progress = 10
         db.commit()
         
@@ -196,7 +207,7 @@ def generate_ai_summary_task(
         
         # Update job status to completed
         job.status = "completed"
-        job.completed_at = db.execute("SELECT NOW()").scalar()
+        job.completed_at = db.execute(text("SELECT NOW()")).scalar()
         job.progress = 100
         job.result = {
             "summary_text": summary_text,
@@ -221,7 +232,7 @@ def generate_ai_summary_task(
             db.commit()
         
         duration = time.time() - start_time
-        logger.info(f"AI summary generated successfully in {duration:.2f}s for student {student_id}")
+        logger.info(f"[Job {job_id}] AI summary generated successfully in {duration:.2f}s for student {student_id}")
         
         return {
             "status": "completed",
@@ -235,7 +246,7 @@ def generate_ai_summary_task(
         
     except Exception as e:
         duration = time.time() - start_time
-        logger.error(f"Failed to generate AI summary for student {student_id}: {e}", exc_info=True)
+        logger.error(f"[Job {job_id}] Failed to generate AI summary for student {student_id}: {e}", exc_info=True)
         
         # Check if we should retry
         if job and job.retry_count < job.max_retries:
@@ -252,9 +263,10 @@ def generate_ai_summary_task(
             job.error_message = f"Retry {job.retry_count}/{job.max_retries}: {str(e)}"
             db.commit()
             
-            logger.info(f"Scheduling retry {job.retry_count}/{job.max_retries} for job {job_id} in {backoff_seconds}s")
+            logger.info(f"[Job {job_id}] Scheduling retry {job.retry_count}/{job.max_retries} in {backoff_seconds}s")
             
             # Re-enqueue the job with delay
+            # Note: job_id is passed as RQ parameter, not task argument
             from app.infra.queue.connection import get_queue
             queue = get_queue(job.queue_name)
             queue.enqueue_in(
@@ -263,7 +275,7 @@ def generate_ai_summary_task(
                 school_id=school_id,
                 evaluation_id=evaluation_id,
                 student_id=student_id,
-                job_id=job_id,
+                job_id=job_id,  # RQ parameter, not task argument
             )
             
             return {
@@ -277,7 +289,7 @@ def generate_ai_summary_task(
         # Update job status to failed
         if job:
             job.status = "failed"
-            job.completed_at = db.execute("SELECT NOW()").scalar()
+            job.completed_at = db.execute(text("SELECT NOW()")).scalar()
             job.error_message = str(e)
             db.commit()
             
@@ -315,6 +327,10 @@ def batch_generate_summaries_task(
 ) -> dict:
     """
     Generate summaries for multiple students in batch.
+    
+    This is a coordinator task that enqueues individual jobs for each student.
+    It doesn't track itself in the database, so it doesn't need to retrieve
+    its own job_id from RQ context.
     
     Args:
         school_id: School ID
