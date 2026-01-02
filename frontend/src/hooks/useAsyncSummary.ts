@@ -116,6 +116,7 @@ export function useAsyncSummary(
 
     try {
       // Queue the job
+      console.log(`[useAsyncSummary] Queueing job for evaluation ${evaluationId}, student ${studentId}`);
       const jobResponse = await feedbackSummaryService.queueSummaryGeneration(
         evaluationId,
         studentId
@@ -123,23 +124,29 @@ export function useAsyncSummary(
 
       if (!mountedRef.current) return;
 
+      console.log(`[useAsyncSummary] Queue response:`, jobResponse);
       setJobId(jobResponse.job_id);
       setStatus(jobResponse.status);
 
       // Start polling if job is queued or processing
       if (jobResponse.status === "queued" || jobResponse.status === "processing") {
+        console.log(`[useAsyncSummary] Starting polling for job ${jobResponse.job_id} with status ${jobResponse.status}`);
         startPolling(jobResponse.job_id);
       } else if (jobResponse.status === "completed" && jobResponse.result) {
         // Job already completed
+        console.log(`[useAsyncSummary] Job already completed, setting summary`);
         setSummary(jobResponse.result.summary_text);
         setGenerationMethod(jobResponse.result.generation_method);
         setFeedbackCount(jobResponse.result.feedback_count);
       } else if (jobResponse.status === "failed") {
+        console.log(`[useAsyncSummary] Job failed:`, jobResponse.error_message);
         setError(jobResponse.error_message || "Generation failed");
+      } else {
+        console.warn(`[useAsyncSummary] Unexpected status: ${jobResponse.status}, result:`, jobResponse.result);
       }
     } catch (err: any) {
       if (!mountedRef.current) return;
-      console.error("Error starting generation:", err);
+      console.error("[useAsyncSummary] Error starting generation:", err);
       setError(err?.response?.data?.detail || err?.message || "Failed to start generation");
       setStatus("failed");
     }

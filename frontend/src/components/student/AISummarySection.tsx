@@ -16,6 +16,8 @@ export function AISummarySection({
   fallbackSummary,
   useAsync = true,
 }: AISummarySectionProps) {
+  console.log(`[AISummarySection] Rendering with evaluationId=${evaluationId}, studentId=${studentId}, useAsync=${useAsync}`);
+  
   const {
     summary,
     status,
@@ -28,6 +30,8 @@ export function AISummarySection({
     useSync: !useAsync,
     pollingInterval: 3000,
   });
+
+  console.log(`[AISummarySection] Hook state: status=${status}, summary=${summary ? 'present' : 'null'}, error=${error}, isPolling=${isPolling}`);
 
   const displaySummary = summary || fallbackSummary;
 
