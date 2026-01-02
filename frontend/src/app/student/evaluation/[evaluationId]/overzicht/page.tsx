@@ -287,6 +287,7 @@ export default function OverzichtPage() {
             {/* AI-samenvatting + docent-opmerkingen */}
             <div className="flex flex-col gap-3 md:col-span-2">
               {/* Use async AI summary component */}
+              {console.log(`[OverzichtPage] About to render AISummarySection: currentUserId=${currentUserId}, evaluationId=${evaluationId}, typeof currentUserId=${typeof currentUserId}`)}
               {currentUserId && (
                 <AISummarySection
                   evaluationId={evaluationId}
