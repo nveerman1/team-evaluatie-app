@@ -45,6 +45,7 @@ export function useAsyncSummary(
 
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const mountedRef = useRef(true);
+  const hasStartedRef = useRef(false);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -214,12 +215,15 @@ export function useAsyncSummary(
   const retryGeneration = useCallback(async () => {
     setError(null);
     setStatus("idle");
+    hasStartedRef.current = false; // Allow restart
     await startGeneration();
   }, [startGeneration]);
 
   // Auto-start on mount (if autoStart is true)
   useEffect(() => {
-    if (autoStart && status === "idle") {
+    if (autoStart && !hasStartedRef.current) {
+      console.log(`[useAsyncSummary] Auto-starting generation (first time only)`);
+      hasStartedRef.current = true;
       startGeneration();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
