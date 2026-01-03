@@ -35,6 +35,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import { gradesService } from "@/services";
 
 type OverviewTabProps = {
   peerResults: EvaluationResult[];
@@ -69,6 +70,7 @@ export function OverviewTab({
 }: OverviewTabProps) {
   const [expandedReflections, setExpandedReflections] = React.useState<Set<string | number>>(new Set());
   const [selectedScanId, setSelectedScanId] = React.useState<string | null>(null);
+  const [enrichedEvaluations, setEnrichedEvaluations] = React.useState<EvaluationResult[]>(peerResults);
 
   // Initialize selected scan to the most recent one
   React.useEffect(() => {
@@ -77,21 +79,69 @@ export function OverviewTab({
     }
   }, [scans, selectedScanId]);
 
+  // Fetch grade data for evaluations to get GCF and final grade
+  React.useEffect(() => {
+    async function enrichEvaluationsWithGrades() {
+      if (peerResults.length === 0) {
+        setEnrichedEvaluations([]);
+        return;
+      }
+
+      const enriched = await Promise.all(
+        peerResults.map(async (evaluation) => {
+          // Skip if already has complete data
+          if (evaluation.gcfScore != null && evaluation.teacherGrade != null) {
+            return evaluation;
+          }
+
+          // Try to fetch grade data for this evaluation
+          try {
+            const evaluationIdNumber = parseInt(evaluation.id.replace('ev-', ''));
+            if (isNaN(evaluationIdNumber)) {
+              console.warn(`Invalid evaluation ID: ${evaluation.id}`);
+              return evaluation;
+            }
+
+            const gradeData = await gradesService.previewGrades(evaluationIdNumber);
+            
+            // Find current user's grade in the preview data (should be filtered server-side for student)
+            const userGrade = gradeData.items && gradeData.items.length > 0 ? gradeData.items[0] : null;
+            
+            return {
+              ...evaluation,
+              gcfScore: userGrade?.gcf ?? evaluation.gcfScore,
+              teamContributionFactor: userGrade?.gcf ?? evaluation.teamContributionFactor,
+              teacherGrade: evaluation.teacherGrade, // Keep existing if already set
+              teacherSuggestedGrade: userGrade?.suggested_grade ?? evaluation.teacherSuggestedGrade,
+            };
+          } catch (error) {
+            console.warn(`Could not fetch grade data for evaluation ${evaluation.id}:`, error);
+            return evaluation;
+          }
+        })
+      );
+
+      setEnrichedEvaluations(enriched);
+    }
+
+    enrichEvaluationsWithGrades();
+  }, [peerResults]);
+
   // Get the latest evaluation for OMZA data summary stats
   const latestResult = React.useMemo(() => {
-    if (peerResults.length === 0) return null;
-    const closedResults = peerResults.filter((r) => r.status === "closed");
+    if (enrichedEvaluations.length === 0) return null;
+    const closedResults = enrichedEvaluations.filter((r) => r.status === "closed");
     if (closedResults.length > 0) {
       return closedResults[0];
     }
-    return peerResults[0];
-  }, [peerResults]);
+    return enrichedEvaluations[0];
+  }, [enrichedEvaluations]);
 
   // Calculate OMZA trend data from all peer evaluations
   const omzaTrendData = React.useMemo(() => {
-    if (peerResults.length === 0) return [];
+    if (enrichedEvaluations.length === 0) return [];
     
-    const closedEvaluations = peerResults
+    const closedEvaluations = enrichedEvaluations
       .filter((r) => r.status === "closed" && r.omzaAverages && r.omzaAverages.length > 0)
       .sort((a, b) => {
         const dateA = new Date(a.deadlineISO || Date.now()).getTime();
@@ -117,7 +167,7 @@ export function OverviewTab({
         autonomie: omzaMap['autonomie'] || 0,
       };
     });
-  }, [peerResults]);
+  }, [enrichedEvaluations]);
 
   // Calculate OMZA average from latest
   const omzaScores = React.useMemo(() => {
@@ -280,7 +330,7 @@ export function OverviewTab({
           </p>
         </CardHeader>
         <CardContent>
-          {peerResults.length === 0 ? (
+          {enrichedEvaluations.length === 0 ? (
             <p className="text-slate-500 text-center py-4">Geen evaluaties gevonden</p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-200">
@@ -301,19 +351,9 @@ export function OverviewTab({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {peerResults
+                  {enrichedEvaluations
                     .filter((evaluation) => evaluation.status === "closed")
                     .map((evaluation) => {
-                      // Debug logging for missing data
-                      if (!evaluation.gcfScore && !evaluation.teamContributionFactor) {
-                        console.log(`Evaluation ${evaluation.id} missing GCF:`, {
-                          gcfScore: evaluation.gcfScore,
-                          teamContributionFactor: evaluation.teamContributionFactor,
-                          hasTeacherGrade: !!evaluation.teacherGrade,
-                          hasSuggestedGrade: !!evaluation.teacherSuggestedGrade
-                        });
-                      }
-                      
                       // Calculate average peer scores
                       const avgScores = {
                         O: 0,
