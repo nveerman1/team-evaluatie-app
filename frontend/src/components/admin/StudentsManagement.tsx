@@ -9,6 +9,7 @@ import {
 import { Course } from "@/dtos/course.dto";
 import { courseService } from "@/services/course.service";
 import LinkStudentToCourseModal from "@/components/admin/LinkStudentToCourseModal";
+import BulkLinkStudentsToCourseModal from "@/components/admin/BulkLinkStudentsToCourseModal";
 import StudentCSVImportModal from "@/components/admin/StudentCSVImportModal";
 
 const StudentsManagement = forwardRef((props, ref) => {
@@ -29,6 +30,10 @@ const StudentsManagement = forwardRef((props, ref) => {
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<AdminStudent | null>(null);
+  
+  // Bulk selection states
+  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<number>>(new Set());
+  const [showBulkLinkModal, setShowBulkLinkModal] = useState(false);
 
   // Debounce search to avoid too many API calls
   const debouncedSearch = useDebounce(searchTerm, 300);
@@ -184,6 +189,62 @@ const StudentsManagement = forwardRef((props, ref) => {
     await loadStudents();
     await loadKPIData();
   };
+
+  // Bulk selection handlers
+  const handleToggleSelectAll = () => {
+    if (selectedStudentIds.size === students.length && students.length > 0) {
+      // Deselect all
+      setSelectedStudentIds(new Set());
+    } else {
+      // Select all on current page
+      setSelectedStudentIds(new Set(students.map(s => s.id)));
+    }
+  };
+
+  const handleToggleSelectStudent = (studentId: number) => {
+    const newSelected = new Set(selectedStudentIds);
+    if (newSelected.has(studentId)) {
+      newSelected.delete(studentId);
+    } else {
+      newSelected.add(studentId);
+    }
+    setSelectedStudentIds(newSelected);
+  };
+
+  const handleBulkLink = () => {
+    if (selectedStudentIds.size === 0) return;
+    setShowBulkLinkModal(true);
+  };
+
+  const handleBulkLinkToCourse = async (courseName: string) => {
+    const idsToLink = Array.from(selectedStudentIds);
+    const errors: string[] = [];
+    
+    // Link each student individually (backend doesn't have bulk endpoint yet)
+    for (const id of idsToLink) {
+      try {
+        await adminStudentService.updateStudent(id, {
+          course_name: courseName,
+        });
+      } catch (err) {
+        console.error(`Failed to link student ${id}:`, err);
+        errors.push(`Student ID ${id}`);
+      }
+    }
+    
+    // Clear selection and reload
+    setSelectedStudentIds(new Set());
+    await Promise.all([loadStudents(), loadKPIData()]);
+    
+    if (errors.length > 0) {
+      throw new Error(`Kon ${errors.length} student(en) niet koppelen`);
+    }
+  };
+
+  // Clear selection when page changes
+  useEffect(() => {
+    setSelectedStudentIds(new Set());
+  }, [currentPage, debouncedSearch, statusFilter, courseFilter, onlyUnlinked]);
 
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
@@ -402,6 +463,31 @@ const StudentsManagement = forwardRef((props, ref) => {
         {/* Students table */}
         {!isLoading && !error && (
           <>
+            {/* Bulk actions bar */}
+            {selectedStudentIds.size > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-blue-900">
+                      {selectedStudentIds.size} {selectedStudentIds.size === 1 ? "leerling" : "leerlingen"} geselecteerd
+                    </span>
+                    <button
+                      onClick={() => setSelectedStudentIds(new Set())}
+                      className="text-sm text-blue-700 hover:text-blue-900 underline"
+                    >
+                      Deselecteren
+                    </button>
+                  </div>
+                  <button
+                    onClick={handleBulkLink}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+                  >
+                    Koppel geselecteerde leerlingen
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="text-sm text-gray-600">
               {totalStudents} {totalStudents === 1 ? "leerling" : "leerlingen"} gevonden
             </div>
@@ -423,6 +509,14 @@ const StudentsManagement = forwardRef((props, ref) => {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
+                        <th className="px-6 py-3 text-left">
+                          <input
+                            type="checkbox"
+                            checked={selectedStudentIds.size === students.length && students.length > 0}
+                            onChange={handleToggleSelectAll}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                        </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Naam
                         </th>
@@ -449,6 +543,14 @@ const StudentsManagement = forwardRef((props, ref) => {
                     <tbody className="bg-white divide-y divide-gray-200">
                       {students.map((student) => (
                         <tr key={student.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <input
+                              type="checkbox"
+                              checked={selectedStudentIds.has(student.id)}
+                              onChange={() => handleToggleSelectStudent(student.id)}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900">
                               {student.name}
@@ -555,6 +657,14 @@ const StudentsManagement = forwardRef((props, ref) => {
           onLink={handleLinkToCourse}
         />
       )}
+
+      {/* Bulk link modal */}
+      <BulkLinkStudentsToCourseModal
+        isOpen={showBulkLinkModal}
+        onClose={() => setShowBulkLinkModal(false)}
+        studentCount={selectedStudentIds.size}
+        onLink={handleBulkLinkToCourse}
+      />
 
       {/* Import CSV modal */}
       <StudentCSVImportModal
