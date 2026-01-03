@@ -1188,6 +1188,51 @@ def get_my_peer_feedback_results(
             if peer_scores_by_cat[k]:
                 trend[k] = [_calc_avg(peer_scores_by_cat[k])]
 
+        # Calculate omzaAverages with delta from previous evaluation
+        # Find previous evaluation for this student in the same course
+        prev_evaluation = (
+            db.query(Evaluation)
+            .join(Allocation, Allocation.evaluation_id == Evaluation.id)
+            .filter(
+                Evaluation.school_id == user.school_id,
+                Evaluation.course_id == ev.course_id,
+                Evaluation.id < ev.id,  # Earlier evaluation
+                Allocation.reviewee_id == user.id,
+                Evaluation.status.in_(["open", "closed"]),
+            )
+            .order_by(Evaluation.id.desc())
+            .first()
+        )
+
+        # Get previous scores if available
+        prev_scores_by_cat = {}
+        if prev_evaluation:
+            prev_scores_by_cat = _get_omza_scores_for_student(
+                db, prev_evaluation.id, user.id, is_self=False
+            )
+
+        # Build omzaAverages array with deltas
+        omza_averages = []
+        omza_labels_map = {
+            "organiseren": "Organiseren",
+            "meedoen": "Meedoen",
+            "zelfvertrouwen": "Zelfvertrouwen",
+            "autonomie": "Autonomie",
+        }
+        omza_keys_short = ["O", "M", "Z", "A"]
+        
+        for idx, k in enumerate(OMZA_KEYS):
+            current_avg = _calc_avg(peer_scores_by_cat[k])
+            prev_avg = _calc_avg(prev_scores_by_cat.get(k, [])) if prev_scores_by_cat else 0.0
+            delta = round(current_avg - prev_avg, 1) if prev_avg > 0 else 0.0
+            
+            omza_averages.append({
+                "key": omza_keys_short[idx],
+                "label": omza_labels_map[k],
+                "value": current_avg,
+                "delta": delta,
+            })
+
         result_item = {
             "id": f"ev-{ev.id}",
             "title": ev.title,
@@ -1205,6 +1250,8 @@ def get_my_peer_feedback_results(
             "teacherGrade": teacher_grade,
             "teacherGradeComment": teacher_grade_comment,
             "teacherOmza": teacher_omza_scores or None,
+            # OMZA averages with deltas
+            "omzaAverages": omza_averages,
         }
         results.append(result_item)
 
