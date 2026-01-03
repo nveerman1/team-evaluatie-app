@@ -118,13 +118,20 @@ export function useStudentOverview() {
             
             // Get client info from project if available
             let clientName = assessment.metadata_json?.client;
+            
+            // If not in metadata, try to fetch from project
             if (!clientName && assessment.project_id) {
               try {
                 const project = await projectService.getProject(assessment.project_id);
                 clientName = project.client_organization || undefined;
-              } catch {
-                // Ignore if project fetch fails
+              } catch (error) {
+                console.warn(`Could not fetch project ${assessment.project_id} for client info:`, error);
               }
+            }
+            
+            // Also try the assessment's own client field if available
+            if (!clientName && (assessment as any).client_organization) {
+              clientName = (assessment as any).client_organization;
             }
             
             // Calculate category averages from scores and criteria
@@ -154,9 +161,19 @@ export function useStudentOverview() {
 
             // Extract specific categories (with normalized names)
             // Try multiple variations for each category
-            const proces = normalizedAverages["projectproces"] || normalizedAverages["proces"];
-            const eindresultaat = normalizedAverages["eindresultaat"];
-            const communicatie = normalizedAverages["communicatie"];
+            const procesRaw = normalizedAverages["projectproces"] || normalizedAverages["proces"];
+            const eindresultaatRaw = normalizedAverages["eindresultaat"];
+            const communicatieRaw = normalizedAverages["communicatie"];
+
+            // Convert scores from 0-5 scale to 1-10 scale using formula: (score/5*9+1)
+            const convertScoreTo10 = (score: number | undefined): number | undefined => {
+              if (score === undefined || score === null) return undefined;
+              return (score / 5) * 9 + 1;
+            };
+
+            const proces = convertScoreTo10(procesRaw);
+            const eindresultaat = convertScoreTo10(eindresultaatRaw);
+            const communicatie = convertScoreTo10(communicatieRaw);
 
             return {
               id: assessment.id.toString(),

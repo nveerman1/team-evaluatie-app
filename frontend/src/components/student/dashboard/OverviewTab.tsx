@@ -304,6 +304,16 @@ export function OverviewTab({
                   {peerResults
                     .filter((evaluation) => evaluation.status === "closed")
                     .map((evaluation) => {
+                      // Debug logging for missing data
+                      if (!evaluation.gcfScore && !evaluation.teamContributionFactor) {
+                        console.log(`Evaluation ${evaluation.id} missing GCF:`, {
+                          gcfScore: evaluation.gcfScore,
+                          teamContributionFactor: evaluation.teamContributionFactor,
+                          hasTeacherGrade: !!evaluation.teacherGrade,
+                          hasSuggestedGrade: !!evaluation.teacherSuggestedGrade
+                        });
+                      }
+                      
                       // Calculate average peer scores
                       const avgScores = {
                         O: 0,
