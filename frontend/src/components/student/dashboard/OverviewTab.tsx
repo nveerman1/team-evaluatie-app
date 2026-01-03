@@ -36,6 +36,7 @@ import {
   Legend,
 } from "recharts";
 import { gradesService } from "@/services";
+import { useStudentCompetencyScans, useStudentCompetencyRadar } from "@/hooks/student/useStudentCompetencyRadar";
 
 type OverviewTabProps = {
   peerResults: EvaluationResult[];
@@ -72,16 +73,16 @@ export function OverviewTab({
   const [selectedScanId, setSelectedScanId] = React.useState<string | null>(null);
   const [enrichedEvaluations, setEnrichedEvaluations] = React.useState<EvaluationResult[]>(peerResults);
   
-  // Note: Student API doesn't provide per-scan category-level competency data
-  // The competency profile shown is aggregated/latest from the growth API
-  // The scan selector is kept for navigation purposes, but chart shows latest data only
+  // Fetch scan list and radar data using new hooks
+  const { data: scanList, isLoading: scansLoading, isError: scansError } = useStudentCompetencyScans();
+  const { data: radarData, isLoading: radarLoading, isError: radarError } = useStudentCompetencyRadar(selectedScanId);
 
-  // Initialize selected scan to the most recent one
+  // Initialize selected scan to the most recent one from API
   React.useEffect(() => {
-    if (scans.length > 0 && !selectedScanId) {
-      setSelectedScanId(scans[0].id);
+    if (scanList && scanList.length > 0 && !selectedScanId) {
+      setSelectedScanId(scanList[0].id);
     }
-  }, [scans, selectedScanId]);
+  }, [scanList, selectedScanId]);
 
   // Fetch grade data for evaluations to get GCF and final grade
   React.useEffect(() => {
@@ -203,14 +204,22 @@ export function OverviewTab({
     ? (omzaScores.reduce((sum, s) => sum + s.value, 0) / omzaScores.length).toFixed(1)
     : "0.0";
 
-  // Competency profile data - shows aggregated/latest scores
-  // Note: Per-scan historical category data not available in student API
+  // Competency profile data - uses per-scan radar data when available
   const competencyProfileData = React.useMemo(() => {
+    // If we have radar data for selected scan, use it
+    if (radarData && radarData.categories && radarData.categories.length > 0) {
+      return radarData.categories.map(cat => ({
+        category: cat.category_name,
+        value: cat.average_score,
+      }));
+    }
+    
+    // Fallback to aggregated competency profile
     if (!competencyProfile || competencyProfile.length === 0) {
       return [];
     }
     return competencyProfile;
-  }, [competencyProfile]);
+  }, [radarData, competencyProfile]);
 
   // Toggle reflection expansion
   const toggleReflection = (id: string | number) => {
@@ -567,16 +576,17 @@ export function OverviewTab({
               <div>
                 <CardTitle className="text-base">Competentieprofiel</CardTitle>
                 <p className="text-sm text-slate-600">
-                  Laatste scan • schaal 1–5
+                  {radarData ? radarData.scan_label : "Laatste scan"} • schaal 1–5
                 </p>
               </div>
-              {scans.length > 1 && (
+              {!scansLoading && !scansError && scanList && scanList.length > 1 && (
                 <select
                   value={selectedScanId || ""}
                   onChange={(e) => setSelectedScanId(e.target.value)}
                   className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  aria-label="Selecteer scan"
                 >
-                  {scans.map((scan) => (
+                  {scanList.map((scan) => (
                     <option key={scan.id} value={scan.id}>
                       {scan.title}
                     </option>
@@ -586,7 +596,25 @@ export function OverviewTab({
             </div>
           </CardHeader>
           <CardContent>
-            {competencyProfileData.length > 0 ? (
+            {radarLoading ? (
+              <div className="py-8 text-center">
+                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-indigo-600 border-r-transparent"></div>
+                <p className="mt-2 text-sm text-slate-600">Laden...</p>
+              </div>
+            ) : radarError || (scansError && !competencyProfile?.length) ? (
+              <div className="py-8 text-center">
+                <p className="text-sm text-slate-600">
+                  Fout bij het laden van competentie data.
+                </p>
+                <div className="mt-3">
+                  <Button asChild variant="secondary" className="rounded-xl">
+                    <Link href="/student/competency/growth">
+                      Ga naar scans <ChevronRight className="ml-1 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            ) : competencyProfileData.length > 0 ? (
               <>
                 <div className="h-64 w-full">
                   <ResponsiveContainer width="100%" height="100%">
