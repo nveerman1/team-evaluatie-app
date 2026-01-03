@@ -46,13 +46,51 @@ export function useAsyncSummary(
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const mountedRef = useRef(true);
   const hasStartedRef = useRef(false);
+  const prevEvaluationIdRef = useRef(evaluationId);
+  const prevStudentIdRef = useRef(studentId);
+
+  // Reset state when evaluationId or studentId changes
+  useEffect(() => {
+    const evaluationChanged = prevEvaluationIdRef.current !== evaluationId;
+    const studentChanged = prevStudentIdRef.current !== studentId;
+    
+    if (evaluationChanged || studentChanged) {
+      console.log(`[useAsyncSummary] Props changed - evaluationId: ${prevEvaluationIdRef.current} -> ${evaluationId}, studentId: ${prevStudentIdRef.current} -> ${studentId}`);
+      
+      // Stop any ongoing polling
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      
+      // Reset all state to initial values
+      setSummary(null);
+      setStatus("idle");
+      setError(null);
+      setGenerationMethod(null);
+      setFeedbackCount(0);
+      setJobId(null);
+      setIsPolling(false);
+      
+      // Allow auto-start to run again
+      hasStartedRef.current = false;
+      
+      // Update refs
+      prevEvaluationIdRef.current = evaluationId;
+      prevStudentIdRef.current = studentId;
+      
+      console.log(`[useAsyncSummary] State reset complete for new evaluation/student`);
+    }
+  }, [evaluationId, studentId]);
 
   // Cleanup on unmount
   useEffect(() => {
+    mountedRef.current = true; // Ensure it's true on mount
     return () => {
       mountedRef.current = false;
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
       }
     };
   }, []);
@@ -89,9 +127,12 @@ export function useAsyncSummary(
           clearInterval(pollingIntervalRef.current);
           pollingIntervalRef.current = null;
         }
-      } else {
+      } else if (jobStatus.status === "queued" || jobStatus.status === "processing") {
+        // Only update status if we're not already completed
         console.log(`[useAsyncSummary] Job still in progress, status: ${jobStatus.status}`);
         setStatus(jobStatus.status);
+      } else {
+        console.warn(`[useAsyncSummary] Unexpected job status during polling: ${jobStatus.status}`);
       }
       // Keep polling for "queued" and "processing" states
     } catch (err: any) {
@@ -120,6 +161,7 @@ export function useAsyncSummary(
   const startGenerationAsync = useCallback(async () => {
     if (!mountedRef.current) return;
 
+    console.log(`[useAsyncSummary] startGenerationAsync called - current status: ${status}`);
     setStatus("loading");
     setError(null);
 
@@ -153,7 +195,7 @@ export function useAsyncSummary(
         setGenerationMethod(jobResponse.result.generation_method);
         setFeedbackCount(jobResponse.result.feedback_count);
         setStatus("completed"); // Set status AFTER setting summary
-        console.log(`[useAsyncSummary] Summary state updated: ${jobResponse.result.summary_text.substring(0, 50)}...`);
+        console.log(`[useAsyncSummary] Summary state updated to completed: ${jobResponse.result.summary_text.substring(0, 50)}...`);
       } else if (jobResponse.status === "queued" || jobResponse.status === "processing") {
         setStatus(jobResponse.status);
         console.log(`[useAsyncSummary] Starting polling for job ${jobResponse.job_id} with status ${jobResponse.status}`);
@@ -219,15 +261,14 @@ export function useAsyncSummary(
     await startGeneration();
   }, [startGeneration]);
 
-  // Auto-start on mount (if autoStart is true)
+  // Auto-start generation when needed
   useEffect(() => {
-    if (autoStart && !hasStartedRef.current) {
-      console.log(`[useAsyncSummary] Auto-starting generation (first time only)`);
+    if (autoStart && status === "idle" && !hasStartedRef.current) {
+      console.log(`[useAsyncSummary] Auto-starting generation for evaluation ${evaluationId}, student ${studentId}`);
       hasStartedRef.current = true;
       startGeneration();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty array - only run on mount
+  }, [autoStart, status, evaluationId, studentId, startGeneration]);
 
   return {
     summary,
