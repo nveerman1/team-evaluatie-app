@@ -44,6 +44,8 @@ export type EvaluationResult = {
   teacherGrade?: number; // Eindcijfer van de docent (bijv. 7.4) (from grades table)
   teacherGradeComment?: string; // Commentaar bij cijfer van de docent (from grades table)
   teacherGradeTrend?: string; // Trend t.o.v. vorige sprint (bijv. "+0,3 t.o.v. vorige sprint")
+  teacherSuggestedGrade?: number; // Auto-generated suggested grade (from grades table)
+  teacherGroupGrade?: number; // Group grade (from grades table)
   teacherOmza?: TeacherOmza; // Docent-OMZA scores op 1-4 schaal (from OMZA table)
   teamContributionFactor?: number; // 0.90-1.10 correctiefactor
   teamContributionLabel?: string; // Label zoals "Boven verwachting"

@@ -283,115 +283,64 @@ export default function OverzichtPage() {
           </div>
 
           {/* Card content */}
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
-            {/* AI-samenvatting + docent-opmerkingen */}
-            <div className="flex flex-col gap-3 md:col-span-2">
-              {/* Use async AI summary component */}
-              {console.log(`[OverzichtPage] About to render AISummarySection: currentUserId=${currentUserId}, evaluationId=${evaluationId}, typeof currentUserId=${typeof currentUserId}`)}
-              {currentUserId && (
-                <AISummarySection
-                  evaluationId={evaluationId}
-                  studentId={currentUserId}
-                  fallbackSummary={evaluationData.aiSummary}
-                  useAsync={true}
-                />
-              )}
+          {/* PEER CARDS SECTION - Feedback Teamgenoten */}
+          <div className="mt-6">
+            <h3 className="text-base font-semibold text-slate-900 mb-3">Feedback Teamgenoten</h3>
+            
+            <div className="grid gap-4 md:grid-cols-3">
+              {/* AI-samenvatting */}
+              <div className="flex flex-col gap-3 md:col-span-2">
+                {currentUserId && (
+                  <AISummarySection
+                    evaluationId={evaluationId}
+                    studentId={currentUserId}
+                    fallbackSummary={evaluationData.aiSummary}
+                    useAsync={true}
+                  />
+                )}
+              </div>
 
-              {/* Only show teacher comments if they exist */}
-              {evaluationData.teacherComments && (
-                <div className="flex-1 rounded-xl border border-slate-100 bg-slate-50/70 p-3 flex flex-col">
-                  <div className="mb-1 flex items-center justify-between text-xs font-medium text-slate-500">
-                    <span>Opmerkingen van de docent</span>
-                    <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] uppercase tracking-wide text-indigo-600">
-                      Docent
-                    </span>
-                  </div>
-                  <p className="text-sm leading-relaxed text-slate-700">
-                    {evaluationData.teacherComments}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Right column: Team-bijdrage + Docentbeoordeling */}
-            <div className="space-y-3">
-              {/* Team-bijdrage / correctiefactor (GCF) */}
-              {teamContributionFactor != null && (
-                <div className="rounded-xl border border-slate-100 bg-indigo-50/60 p-3">
-                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                    <span>Team-bijdrage</span>
-                    <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] uppercase tracking-wide text-indigo-600">
-                      Correctiefactor
-                    </span>
-                  </div>
-                  <div className="mt-2 flex items-baseline justify-between">
-                    <div>
-                      <p className="text-2xl font-semibold text-slate-900">
-                        {teamContributionFactor.toFixed(2)}
-                      </p>
-                      <p className="text-xs text-slate-500">Range 0,90 – 1,10</p>
+              {/* Right column: Team-bijdrage */}
+              <div className="space-y-3">
+                {/* Team-bijdrage / correctiefactor (GCF) */}
+                {teamContributionFactor != null && (
+                  <div className="rounded-xl border border-slate-100 bg-indigo-50/60 p-3">
+                    <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                      <span>Team-bijdrage</span>
+                      <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] uppercase tracking-wide text-indigo-600">
+                        Correctiefactor
+                      </span>
                     </div>
-                    <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-700">
-                      {teamContributionLabel}
-                    </span>
-                  </div>
-                  <div className="mt-2 h-1.5 w-full rounded-full bg-indigo-100">
-                    <div
-                      className="h-1.5 rounded-full bg-indigo-500"
-                      style={{
-                        width: `${Math.min(100, Math.max(0, (teamContributionFactor - 0.9) * 500))}%`,
-                      }}
-                    />
-                  </div>
-                  <p className="mt-1 text-[11px] text-slate-500">
-                    Factor waarmee de docent het groepscijfer corrigeert op basis van peer-feedback.
-                  </p>
-                </div>
-              )}
-
-              {/* Docentbeoordeling samenvatting */}
-              {evaluationData.teacherGrade != null && (
-                <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
-                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                    <span>Docent-beoordeling</span>
-                    <span className="text-[11px] font-normal text-slate-400">Sprintgemiddelde</span>
-                  </div>
-                  <div className="mt-2 flex items-baseline justify-between">
-                    <div>
-                      <p className="text-[11px] uppercase tracking-wide text-slate-500">Eindcijfer</p>
-                      <p className="text-2xl font-semibold text-slate-900">
-                        {evaluationData.teacherGrade.toFixed(1)}
-                      </p>
-                    </div>
-                    {evaluationData.teacherGradeTrend && (
-                      <div className="text-right text-[11px] text-emerald-600">
-                        {evaluationData.teacherGradeTrend}
+                    <div className="mt-2 flex items-baseline justify-between">
+                      <div>
+                        <p className="text-2xl font-semibold text-slate-900">
+                          {teamContributionFactor.toFixed(2)}
+                        </p>
+                        <p className="text-xs text-slate-500">Range 0,90 – 1,10</p>
                       </div>
-                    )}
-                  </div>
-                  {evaluationData.teacherOmza && (
-                    <div className="mt-3 flex flex-wrap gap-1">
-                      {Object.entries(evaluationData.teacherOmza).map(([key, value]) => (
-                        <span
-                          key={key}
-                          className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] ring-1 ring-slate-200"
-                        >
-                          <span className="text-[10px] font-semibold text-slate-700 mr-1">{key}</span>
-                          <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full border text-[11px] shadow-sm ${getOmzaEmojiColorClasses(value)}`}>
-                            {getOmzaEmoji(value)}
-                          </span>
-                        </span>
-                      ))}
+                      <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-700">
+                        {teamContributionLabel}
+                      </span>
                     </div>
-                  )}
-                </div>
-              )}
+                    <div className="mt-2 h-1.5 w-full rounded-full bg-indigo-100">
+                      <div
+                        className="h-1.5 rounded-full bg-indigo-500"
+                        style={{
+                          width: `${Math.min(100, Math.max(0, (teamContributionFactor - 0.9) * 500))}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      Factor waarmee de docent het groepscijfer corrigeert op basis van peer-feedback.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* OMZA-balken (peer-feedback) */}
-          {omzaAverages && omzaAverages.length > 0 ? (
-            <div className="mt-4 grid gap-3 md:grid-cols-4">
+            {/* OMZA-balken (peer-feedback) */}
+            {omzaAverages && omzaAverages.length > 0 ? (
+              <div className="mt-4 grid gap-3 md:grid-cols-4">
               {omzaAverages.map((item) => (
                 <div key={item.key} className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
                   <div className="flex items-center justify-between text-xs text-slate-500">
@@ -401,7 +350,7 @@ export default function OverzichtPage() {
                         Gem.: {item.value.toFixed(1)}
                       </span>
                       <span
-                        className={`block text-[11px] ${
+                        className={`flex items-center gap-0.5 text-[11px] font-medium ${
                           item.delta > 0
                             ? "text-emerald-600"
                             : item.delta < 0
@@ -409,25 +358,103 @@ export default function OverzichtPage() {
                             : "text-slate-500"
                         }`}
                       >
-                        Δ {formatDelta(item.delta)} t.o.v. vorige scan
+                        {item.delta > 0 ? "↑" : item.delta < 0 ? "↓" : "→"}
+                        {formatDelta(item.delta)}
                       </span>
                     </div>
                   </div>
                   <div className="mt-2 h-1.5 w-full rounded-full bg-slate-200">
                     <div
                       className="h-1.5 rounded-full bg-indigo-500"
-                      style={{ width: `${(item.value / 4) * 100}%` }}
+                      style={{ width: `${Math.max(0, Math.min(100, ((item.value - 1) / 4) * 100))}%` }}
                     />
                   </div>
-                  <p className="mt-1 text-[11px] text-slate-500">0 – 4 schaal uit peer-feedback.</p>
+                  <div className="mt-1 flex items-center justify-between text-[10px] text-slate-400">
+                    <span>1</span>
+                    <span>2</span>
+                    <span>3</span>
+                    <span>4</span>
+                    <span>5</span>
+                  </div>
                 </div>
               ))}
-            </div>
-          ) : (
-            <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50/60 p-6 text-center">
-              <p className="text-sm text-slate-600">
-                Nog geen peer-feedback ontvangen. OMZA scores worden hier getoond zodra je teamgenoten hun beoordeling hebben ingevuld.
-              </p>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-6 text-center">
+                <p className="text-sm text-slate-600">
+                  Nog geen peer-feedback ontvangen. OMZA scores worden hier getoond zodra je teamgenoten hun beoordeling hebben ingevuld.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* DOCENT CARDS SECTION - Teacher comments and evaluation */}
+          {(evaluationData.teacherComments || evaluationData.teacherGrade != null || evaluationData.teacherSuggestedGrade != null || evaluationData.teacherGroupGrade != null || evaluationData.teacherOmza) && (
+            <div className="mt-6">
+              <h3 className="text-base font-semibold text-slate-900 mb-3">Docentbeoordeling</h3>
+              <div className="grid gap-4 md:grid-cols-3">
+                {/* Teacher comments */}
+                {evaluationData.teacherComments && (
+                  <div className="md:col-span-2 rounded-xl border border-slate-100 bg-slate-50/70 p-3 flex flex-col">
+                    <div className="mb-1 flex items-center justify-between text-xs font-medium text-slate-500">
+                      <span>Opmerkingen van de docent</span>
+                      <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] uppercase tracking-wide text-indigo-600">
+                        Docent
+                      </span>
+                    </div>
+                    <p className="text-sm leading-relaxed text-slate-700">
+                      {evaluationData.teacherComments}
+                    </p>
+                  </div>
+                )}
+
+                {/* Docentbeoordeling cijfers card */}
+                {(evaluationData.teacherGrade != null || evaluationData.teacherSuggestedGrade != null || evaluationData.teacherOmza) && (
+                  <div className={`rounded-xl border border-slate-100 bg-slate-50/70 p-3 ${!evaluationData.teacherComments ? 'md:col-span-3' : ''}`}>
+                    <div className="flex items-center justify-between text-xs font-semibold text-slate-700 mb-2">
+                      <span>Docentbeoordeling</span>
+                    </div>
+                    
+                    {/* Display final grade (given or auto-generated) */}
+                    {(evaluationData.teacherGrade != null || evaluationData.teacherSuggestedGrade != null) && (
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wide text-slate-500">Eindcijfer</p>
+                        <p className="text-2xl font-semibold text-slate-900">
+                          {(evaluationData.teacherGrade ?? evaluationData.teacherSuggestedGrade)?.toFixed(1)}
+                        </p>
+                        {evaluationData.teacherGrade == null && evaluationData.teacherSuggestedGrade != null && (
+                          <p className="text-[10px] text-slate-400 mt-0.5">(automatisch berekend)</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Group grade if available */}
+                    {evaluationData.teacherGroupGrade != null && (
+                      <div className="mt-2 pt-2 border-t border-slate-200">
+                        <p className="text-[11px] text-slate-500">
+                          Groepscijfer: <span className="font-semibold text-slate-700">{evaluationData.teacherGroupGrade.toFixed(1)}</span>
+                        </p>
+                      </div>
+                    )}
+
+                    {evaluationData.teacherOmza && (
+                      <div className="mt-3 flex flex-wrap gap-1">
+                        {Object.entries(evaluationData.teacherOmza).map(([key, value]) => (
+                          <span
+                            key={key}
+                            className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] ring-1 ring-slate-200"
+                          >
+                            <span className="text-[10px] font-semibold text-slate-700 mr-1">{key}</span>
+                            <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full border text-[11px] shadow-sm ${getOmzaEmojiColorClasses(value)}`}>
+                              {getOmzaEmoji(value)}
+                            </span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </article>

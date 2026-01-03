@@ -23,6 +23,7 @@ from app.infra.db.models import (
     GroupMember,
     FeedbackSummary,
     Grade,
+    PublishedGrade,
     Project,
     ProjectTeam,
     ProjectTeamMember,
@@ -1116,9 +1117,29 @@ def get_my_peer_feedback_results(
             ai_summary = summary_record.summary_text
 
         # Get GCF and grade from Grade table - check both direct column and meta JSON field
+        # Also check PublishedGrade table first (takes precedence)
         gcf_score = None
         teacher_grade = None
         teacher_grade_comment = None
+        suggested_grade = None
+        group_grade = None
+        
+        # First check PublishedGrade table (published grades take precedence)
+        published_grade_record = (
+            db.query(PublishedGrade)
+            .filter(
+                PublishedGrade.school_id == user.school_id,
+                PublishedGrade.evaluation_id == ev.id,
+                PublishedGrade.user_id == user.id,
+            )
+            .first()
+        )
+        if published_grade_record and published_grade_record.grade is not None:
+            teacher_grade = float(published_grade_record.grade)
+            if published_grade_record.reason:
+                teacher_grade_comment = published_grade_record.reason
+        
+        # Then check Grade table for additional information
         grade_record = (
             db.query(Grade)
             .filter(
@@ -1138,14 +1159,34 @@ def get_my_peer_feedback_results(
                 if meta_gcf is not None:
                     gcf_score = float(meta_gcf)
             
-            # Get teacher grade (prefer published_grade, fallback to grade)
-            if grade_record.published_grade is not None:
-                teacher_grade = float(grade_record.published_grade)
-            elif grade_record.grade is not None:
-                teacher_grade = float(grade_record.grade)
+            # Get suggested (auto-generated) grade
+            if grade_record.suggested_grade is not None:
+                suggested_grade = float(grade_record.suggested_grade)
             
-            # Get teacher comment/reason
-            if grade_record.override_reason:
+            # Get group grade from meta field
+            if grade_record.meta and isinstance(grade_record.meta, dict):
+                meta_group_grade = grade_record.meta.get("group_grade")
+                if meta_group_grade is not None:
+                    group_grade = float(meta_group_grade)
+            
+            # Get teacher grade from Grade table only if not found in PublishedGrade
+            # Calculate final grade using the same logic as teacher grades page:
+            # 1. Override (grade field) if set
+            # 2. Group grade × GCF if group grade is set
+            # 3. Suggested grade as fallback
+            if teacher_grade is None:
+                if grade_record.grade is not None:
+                    # Override grade takes precedence
+                    teacher_grade = float(grade_record.grade)
+                elif group_grade is not None and gcf_score is not None:
+                    # Calculate: group grade × GCF
+                    teacher_grade = round(group_grade * gcf_score, 1)
+                elif suggested_grade is not None:
+                    # Fallback to suggested grade
+                    teacher_grade = suggested_grade
+            
+            # Get teacher comment/reason (only if not already set from PublishedGrade)
+            if not teacher_grade_comment and grade_record.override_reason:
                 teacher_grade_comment = grade_record.override_reason
 
         # Get teacher OMZA scores and comments from evaluation settings
@@ -1188,6 +1229,52 @@ def get_my_peer_feedback_results(
             if peer_scores_by_cat[k]:
                 trend[k] = [_calc_avg(peer_scores_by_cat[k])]
 
+        # Calculate omzaAverages with delta from previous evaluation
+        # Find previous evaluation for this student in the same course
+        prev_evaluation = (
+            db.query(Evaluation)
+            .join(Allocation, Allocation.evaluation_id == Evaluation.id)
+            .filter(
+                Evaluation.school_id == user.school_id,
+                Evaluation.course_id == ev.course_id,
+                Evaluation.id < ev.id,  # Earlier evaluation
+                Allocation.reviewee_id == user.id,
+                Evaluation.status.in_(["open", "closed"]),
+            )
+            .order_by(Evaluation.id.desc())
+            .first()
+        )
+
+        # Get previous scores if available
+        prev_scores_by_cat = {}
+        if prev_evaluation:
+            prev_scores_by_cat = _get_omza_scores_for_student(
+                db, prev_evaluation.id, user.id, is_self=False
+            )
+
+        # Build omzaAverages array with deltas
+        omza_averages = []
+        omza_labels_map = {
+            "organiseren": "Organiseren",
+            "meedoen": "Meedoen",
+            "zelfvertrouwen": "Zelfvertrouwen",
+            "autonomie": "Autonomie",
+        }
+        omza_keys_short = ["O", "M", "Z", "A"]
+        
+        for idx, k in enumerate(OMZA_KEYS):
+            current_avg = _calc_avg(peer_scores_by_cat[k])
+            prev_avg = _calc_avg(prev_scores_by_cat.get(k, []))
+            # Calculate delta if there's a previous evaluation, otherwise 0
+            delta = round(current_avg - prev_avg, 1) if prev_evaluation else 0.0
+            
+            omza_averages.append({
+                "key": omza_keys_short[idx],
+                "label": omza_labels_map[k],
+                "value": current_avg,
+                "delta": delta,
+            })
+
         result_item = {
             "id": f"ev-{ev.id}",
             "title": ev.title,
@@ -1204,7 +1291,11 @@ def get_my_peer_feedback_results(
             "teacherComments": teacher_comments,
             "teacherGrade": teacher_grade,
             "teacherGradeComment": teacher_grade_comment,
+            "teacherSuggestedGrade": suggested_grade,
+            "teacherGroupGrade": group_grade,
             "teacherOmza": teacher_omza_scores or None,
+            # OMZA averages with deltas
+            "omzaAverages": omza_averages,
         }
         results.append(result_item)
 
