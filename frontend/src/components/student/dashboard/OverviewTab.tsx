@@ -71,7 +71,10 @@ export function OverviewTab({
   const [expandedReflections, setExpandedReflections] = React.useState<Set<string | number>>(new Set());
   const [selectedScanId, setSelectedScanId] = React.useState<string | null>(null);
   const [enrichedEvaluations, setEnrichedEvaluations] = React.useState<EvaluationResult[]>(peerResults);
-  const [scanCompetencyData, setScanCompetencyData] = React.useState<OverviewCompetencyProfile[]>(competencyProfile);
+  
+  // Note: Student API doesn't provide per-scan category-level competency data
+  // The competency profile shown is aggregated/latest from the growth API
+  // The scan selector is kept for navigation purposes, but chart shows latest data only
 
   // Initialize selected scan to the most recent one
   React.useEffect(() => {
@@ -79,75 +82,6 @@ export function OverviewTab({
       setSelectedScanId(scans[0].id);
     }
   }, [scans, selectedScanId]);
-
-  // Fetch competency data when selected scan changes
-  React.useEffect(() => {
-    async function fetchScanCompetencyData() {
-      if (!selectedScanId) {
-        setScanCompetencyData(competencyProfile);
-        return;
-      }
-
-      try {
-        const { competencyService } = await import("@/services/competency.service");
-        const windowId = parseInt(selectedScanId);
-        
-        if (isNaN(windowId)) {
-          console.warn(`Invalid scan ID: ${selectedScanId}`);
-          setScanCompetencyData(competencyProfile);
-          return;
-        }
-
-        console.log(`Fetching competency data for scan/window ${windowId}...`);
-        const overview = await competencyService.getMyWindowOverview(windowId);
-        console.log('Overview data received:', overview);
-        
-        // Transform the overview scores to category averages
-        if (overview.scores && overview.scores.length > 0) {
-          console.log('Processing scores:', overview.scores.length, 'items');
-          
-          // Group scores by category
-          const categoryScores: Record<string, number[]> = {};
-          
-          overview.scores.forEach(score => {
-            const categoryName = score.category_name || score.category || 'Overig';
-            // Use the final score (prioritize teacher > peer > self)
-            const finalScore = score.teacher_score ?? score.peer_score ?? score.self_score;
-            
-            console.log(`Score: ${score.competency_name} | Category: ${categoryName} | Final: ${finalScore}`);
-            
-            if (finalScore !== undefined && finalScore !== null) {
-              if (!categoryScores[categoryName]) {
-                categoryScores[categoryName] = [];
-              }
-              categoryScores[categoryName].push(finalScore);
-            }
-          });
-          
-          console.log('Grouped category scores:', categoryScores);
-          
-          // Calculate averages per category
-          const transformedData: OverviewCompetencyProfile[] = Object.entries(categoryScores).map(([category, scores]) => ({
-            category,
-            value: scores.reduce((sum, s) => sum + s, 0) / scores.length,
-          }));
-          
-          console.log('Transformed data for chart:', transformedData);
-          setScanCompetencyData(transformedData);
-        } else {
-          console.warn('No scores in overview data, falling back to default');
-          // Fallback to default data if no scores
-          setScanCompetencyData(competencyProfile);
-        }
-      } catch (error) {
-        console.error(`Error fetching competency data for scan ${selectedScanId}:`, error);
-        // Fallback to default competency profile data
-        setScanCompetencyData(competencyProfile);
-      }
-    }
-
-    fetchScanCompetencyData();
-  }, [selectedScanId, competencyProfile]);
 
   // Fetch grade data for evaluations to get GCF and final grade
   React.useEffect(() => {
@@ -269,13 +203,14 @@ export function OverviewTab({
     ? (omzaScores.reduce((sum, s) => sum + s.value, 0) / omzaScores.length).toFixed(1)
     : "0.0";
 
-  // Competency profile data - uses scan-specific data when available
+  // Competency profile data - shows aggregated/latest scores
+  // Note: Per-scan historical category data not available in student API
   const competencyProfileData = React.useMemo(() => {
-    if (!scanCompetencyData || scanCompetencyData.length === 0) {
+    if (!competencyProfile || competencyProfile.length === 0) {
       return [];
     }
-    return scanCompetencyData;
-  }, [scanCompetencyData]);
+    return competencyProfile;
+  }, [competencyProfile]);
 
   // Toggle reflection expansion
   const toggleReflection = (id: string | number) => {
@@ -632,7 +567,7 @@ export function OverviewTab({
               <div>
                 <CardTitle className="text-base">Competentieprofiel</CardTitle>
                 <p className="text-sm text-slate-600">
-                  {scans.length > 0 ? "Selecteer een scan • schaal 1–5" : "Laatste scan • schaal 1–5"}
+                  Laatste scan • schaal 1–5
                 </p>
               </div>
               {scans.length > 1 && (
