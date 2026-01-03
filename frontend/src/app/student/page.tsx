@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, Suspense } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
 import { useStudentDashboard, useCurrentUser, useStudentOverview } from "@/hooks";
 import { useStudentProjectAssessments } from "@/hooks/useStudentProjectAssessments";
 import { usePeerFeedbackResults } from "@/hooks/usePeerFeedbackResults";
@@ -17,7 +17,7 @@ import { OverviewTab } from "@/components/student/dashboard/OverviewTab";
 import { CompetencyScanDashboardTab } from "@/components/student/dashboard/CompetencyScanDashboardTab";
 import { AttendanceTab } from "@/components/student/dashboard/AttendanceTab";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 
 function StudentDashboardContent() {
   const { dashboard, loading, error } = useStudentDashboard();
@@ -30,6 +30,7 @@ function StudentDashboardContent() {
   const { items: peerResults } = usePeerFeedbackResults();
   const { data: overviewData, isLoading: overviewLoading } = useStudentOverview();
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   // Tab state - check URL query parameter
   const tabFromUrl = searchParams.get("tab");
@@ -37,11 +38,17 @@ function StudentDashboardContent() {
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Update active tab when URL changes
-  useMemo(() => {
-    if (tabFromUrl && tabFromUrl !== activeTab) {
+  useEffect(() => {
+    if (tabFromUrl) {
       setActiveTab(tabFromUrl);
     }
   }, [tabFromUrl]);
+
+  // Handler to update both state and URL
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    router.push(`/student?tab=${value}`, { scroll: false });
+  };
 
   // Memoize open evaluations to avoid changing on every render
   const openEvaluations = useMemo(() => dashboard?.openEvaluations || [], [dashboard?.openEvaluations]);
@@ -53,11 +60,22 @@ function StudentDashboardContent() {
     return openEvaluations.filter((e) => e.title.toLowerCase().includes(q));
   }, [openEvaluations, searchQuery]);
 
-  // Filter project assessments by search query
+  // Filter project assessments by search query and status (only published)
   const filteredProjectAssessments = useMemo(() => {
+    // First filter by status - only show published assessments
+    const publishedAssessments = (projectAssessments || []).filter((p) => p.status === "published");
+    
+    // Then filter by search query
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return projectAssessments;
-    return projectAssessments.filter((p) => p.title.toLowerCase().includes(q));
+    if (!q) return publishedAssessments;
+    return publishedAssessments.filter((p) => p.title.toLowerCase().includes(q));
+  }, [projectAssessments, searchQuery]);
+
+  // Filter all project assessments by search query only (for Inleveren tab)
+  const filteredAllProjectAssessments = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return projectAssessments || [];
+    return (projectAssessments || []).filter((p) => p.title.toLowerCase().includes(q));
   }, [projectAssessments, searchQuery]);
 
   if (loading || userLoading) return <Loading />;
@@ -116,7 +134,7 @@ function StudentDashboardContent() {
 
         {/* Tabs */}
         <div className="mt-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <TabsList className="h-11 w-full justify-start gap-1 rounded-2xl bg-white p-1 shadow-sm sm:w-auto">
                 <TabsTrigger
@@ -273,14 +291,14 @@ function StudentDashboardContent() {
                   <Loading />
                 ) : projectError ? (
                   <ErrorMessage message={projectError} />
-                ) : filteredProjectAssessments.filter(a => a.project_id !== null && a.project_id !== undefined).length === 0 ? (
+                ) : filteredAllProjectAssessments.filter(a => a.project_id !== null && a.project_id !== undefined).length === 0 ? (
                   <div className="p-8 rounded-xl shadow-sm bg-slate-50 text-center">
                     <p className="text-slate-500">
                       {searchQuery ? "Geen projecten gevonden met deze zoekopdracht." : "Nog geen projecten beschikbaar om in te leveren."}
                     </p>
                   </div>
                 ) : (
-                  filteredProjectAssessments
+                  filteredAllProjectAssessments
                     .filter(assessment => assessment.project_id !== null && assessment.project_id !== undefined)
                     .map((assessment) => (
                       <SubmissionDashboardCard key={assessment.id} assessment={assessment} />
