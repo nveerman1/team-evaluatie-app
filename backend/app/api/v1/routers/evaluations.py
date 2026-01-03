@@ -1223,7 +1223,7 @@ def get_my_peer_feedback_results(
         
         for idx, k in enumerate(OMZA_KEYS):
             current_avg = _calc_avg(peer_scores_by_cat[k])
-            prev_avg = _calc_avg(prev_scores_by_cat.get(k, [])) if prev_scores_by_cat else 0.0
+            prev_avg = _calc_avg(prev_scores_by_cat.get(k, []))
             # Calculate delta if there's a previous evaluation, otherwise 0
             delta = round(current_avg - prev_avg, 1) if prev_evaluation else 0.0
             
