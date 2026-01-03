@@ -98,10 +98,14 @@ export function OverviewTab({
           return;
         }
 
+        console.log(`Fetching competency data for scan/window ${windowId}...`);
         const overview = await competencyService.getMyWindowOverview(windowId);
+        console.log('Overview data received:', overview);
         
         // Transform the overview scores to category averages
         if (overview.scores && overview.scores.length > 0) {
+          console.log('Processing scores:', overview.scores.length, 'items');
+          
           // Group scores by category
           const categoryScores: Record<string, number[]> = {};
           
@@ -109,6 +113,8 @@ export function OverviewTab({
             const categoryName = score.category_name || score.category || 'Overig';
             // Use the final score (prioritize teacher > peer > self)
             const finalScore = score.teacher_score ?? score.peer_score ?? score.self_score;
+            
+            console.log(`Score: ${score.competency_name} | Category: ${categoryName} | Final: ${finalScore}`);
             
             if (finalScore !== undefined && finalScore !== null) {
               if (!categoryScores[categoryName]) {
@@ -118,19 +124,23 @@ export function OverviewTab({
             }
           });
           
+          console.log('Grouped category scores:', categoryScores);
+          
           // Calculate averages per category
           const transformedData: OverviewCompetencyProfile[] = Object.entries(categoryScores).map(([category, scores]) => ({
             category,
             value: scores.reduce((sum, s) => sum + s, 0) / scores.length,
           }));
           
+          console.log('Transformed data for chart:', transformedData);
           setScanCompetencyData(transformedData);
         } else {
+          console.warn('No scores in overview data, falling back to default');
           // Fallback to default data if no scores
           setScanCompetencyData(competencyProfile);
         }
       } catch (error) {
-        console.warn(`Could not fetch competency data for scan ${selectedScanId}:`, error);
+        console.error(`Error fetching competency data for scan ${selectedScanId}:`, error);
         // Fallback to default competency profile data
         setScanCompetencyData(competencyProfile);
       }
