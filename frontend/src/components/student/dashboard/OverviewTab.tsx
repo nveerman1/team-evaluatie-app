@@ -71,6 +71,7 @@ export function OverviewTab({
   const [expandedReflections, setExpandedReflections] = React.useState<Set<string | number>>(new Set());
   const [selectedScanId, setSelectedScanId] = React.useState<string | null>(null);
   const [enrichedEvaluations, setEnrichedEvaluations] = React.useState<EvaluationResult[]>(peerResults);
+  const [scanCompetencyData, setScanCompetencyData] = React.useState<OverviewCompetencyProfile[]>(competencyProfile);
 
   // Initialize selected scan to the most recent one
   React.useEffect(() => {
@@ -78,6 +79,65 @@ export function OverviewTab({
       setSelectedScanId(scans[0].id);
     }
   }, [scans, selectedScanId]);
+
+  // Fetch competency data when selected scan changes
+  React.useEffect(() => {
+    async function fetchScanCompetencyData() {
+      if (!selectedScanId) {
+        setScanCompetencyData(competencyProfile);
+        return;
+      }
+
+      try {
+        const { competencyService } = await import("@/services/competency.service");
+        const windowId = parseInt(selectedScanId);
+        
+        if (isNaN(windowId)) {
+          console.warn(`Invalid scan ID: ${selectedScanId}`);
+          setScanCompetencyData(competencyProfile);
+          return;
+        }
+
+        const overview = await competencyService.getMyWindowOverview(windowId);
+        
+        // Transform the overview scores to category averages
+        if (overview.scores && overview.scores.length > 0) {
+          // Group scores by category
+          const categoryScores: Record<string, number[]> = {};
+          
+          overview.scores.forEach(score => {
+            const categoryName = score.category_name || score.category || 'Overig';
+            // Use the final score (prioritize teacher > peer > self)
+            const finalScore = score.teacher_score ?? score.peer_score ?? score.self_score;
+            
+            if (finalScore !== undefined && finalScore !== null) {
+              if (!categoryScores[categoryName]) {
+                categoryScores[categoryName] = [];
+              }
+              categoryScores[categoryName].push(finalScore);
+            }
+          });
+          
+          // Calculate averages per category
+          const transformedData: OverviewCompetencyProfile[] = Object.entries(categoryScores).map(([category, scores]) => ({
+            category,
+            value: scores.reduce((sum, s) => sum + s, 0) / scores.length,
+          }));
+          
+          setScanCompetencyData(transformedData);
+        } else {
+          // Fallback to default data if no scores
+          setScanCompetencyData(competencyProfile);
+        }
+      } catch (error) {
+        console.warn(`Could not fetch competency data for scan ${selectedScanId}:`, error);
+        // Fallback to default competency profile data
+        setScanCompetencyData(competencyProfile);
+      }
+    }
+
+    fetchScanCompetencyData();
+  }, [selectedScanId, competencyProfile]);
 
   // Fetch grade data for evaluations to get GCF and final grade
   React.useEffect(() => {
@@ -199,13 +259,13 @@ export function OverviewTab({
     ? (omzaScores.reduce((sum, s) => sum + s.value, 0) / omzaScores.length).toFixed(1)
     : "0.0";
 
-  // Competency profile data
+  // Competency profile data - uses scan-specific data when available
   const competencyProfileData = React.useMemo(() => {
-    if (!competencyProfile || competencyProfile.length === 0) {
+    if (!scanCompetencyData || scanCompetencyData.length === 0) {
       return [];
     }
-    return competencyProfile;
-  }, [competencyProfile]);
+    return scanCompetencyData;
+  }, [scanCompetencyData]);
 
   // Toggle reflection expansion
   const toggleReflection = (id: string | number) => {
