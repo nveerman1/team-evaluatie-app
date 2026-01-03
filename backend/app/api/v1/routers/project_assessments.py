@@ -22,6 +22,7 @@ from app.infra.db.models import (
     ProjectTeamMember,
     Project,
     Client,
+    ClientProjectLink,
 )
 from app.api.v1.schemas.project_assessments import (
     ProjectAssessmentCreate,
@@ -283,9 +284,11 @@ def list_project_assessments(
     client_name_map = {}
     project_ids_with_client = [r.project_id for r in rows if r.project_id is not None]
     if project_ids_with_client:
-        # Query projects with their associated clients
-        projects_with_clients = db.query(Project, Client).outerjoin(
-            Client, Project.client_id == Client.id
+        # Query projects with their associated clients through client_project_links
+        projects_with_clients = db.query(Project, Client).join(
+            ClientProjectLink, ClientProjectLink.project_id == Project.id
+        ).join(
+            Client, ClientProjectLink.client_id == Client.id
         ).filter(
             Project.id.in_(project_ids_with_client),
             Project.school_id == user.school_id,
