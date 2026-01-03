@@ -39,10 +39,10 @@ function StudentDashboardContent() {
 
   // Update active tab when URL changes
   useEffect(() => {
-    if (tabFromUrl && tabFromUrl !== activeTab) {
+    if (tabFromUrl) {
       setActiveTab(tabFromUrl);
     }
-  }, [tabFromUrl, activeTab]);
+  }, [tabFromUrl]);
 
   // Handler to update both state and URL
   const handleTabChange = (value: string) => {
