@@ -16,6 +16,7 @@ import type {
  */
 export function useStudentOverview() {
   const [data, setData] = useState<StudentOverviewData>({
+    scans: [],
     competencyProfile: [],
     learningGoals: [],
     reflections: [],
@@ -31,6 +32,9 @@ export function useStudentOverview() {
     try {
       // Fetch student growth data which includes competency profile, goals, and reflections
       const growthData = await studentService.getGrowthData();
+
+      // Keep scans list for selector
+      const scans = growthData.scans || [];
 
       // Transform competency profile from growth data
       const competencyProfile: OverviewCompetencyProfile[] = growthData.competency_profile.map(
@@ -183,6 +187,7 @@ export function useStudentOverview() {
       }
 
       setData({
+        scans,
         competencyProfile,
         learningGoals,
         reflections,

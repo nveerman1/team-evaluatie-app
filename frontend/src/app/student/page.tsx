@@ -314,6 +314,7 @@ function StudentDashboardContent() {
               ) : (
                 <OverviewTab 
                   peerResults={peerResults}
+                  scans={overviewData.scans}
                   competencyProfile={overviewData.competencyProfile}
                   learningGoals={overviewData.learningGoals}
                   reflections={overviewData.reflections}

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   ChevronRight,
+  ChevronDown,
   MessageSquare,
   Target,
   FileText,
@@ -16,6 +17,7 @@ import type {
   OverviewLearningGoal,
   OverviewReflection,
   OverviewProjectResult,
+  GrowthScanSummary,
 } from "@/dtos";
 import Link from "next/link";
 import {
@@ -25,39 +27,99 @@ import {
   PolarRadiusAxis,
   Radar,
   ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
 } from "recharts";
 
 type OverviewTabProps = {
   peerResults: EvaluationResult[];
+  scans?: GrowthScanSummary[];
   competencyProfile?: OverviewCompetencyProfile[];
   learningGoals?: OverviewLearningGoal[];
   reflections?: OverviewReflection[];
   projectResults?: OverviewProjectResult[];
 };
 
+function getScoreColor(score: number | null | undefined): string {
+  if (!score) return "bg-slate-100 text-slate-400";
+  if (score >= 8.0) return "bg-emerald-100 text-emerald-700";
+  if (score >= 7.0) return "bg-green-100 text-green-700";
+  if (score >= 6.0) return "bg-amber-100 text-amber-700";
+  if (score >= 5.5) return "bg-orange-100 text-orange-700";
+  return "bg-red-100 text-red-700";
+}
+
+function formatScore(score: number | null | undefined): string {
+  if (!score) return "-";
+  return score.toFixed(1);
+}
+
 export function OverviewTab({ 
   peerResults,
+  scans = [],
   competencyProfile = [],
   learningGoals = [],
   reflections = [],
   projectResults = []
 }: OverviewTabProps) {
-  // Get the latest evaluation for OMZA data (prefer closed, but use any if available)
+  const [expandedReflections, setExpandedReflections] = React.useState<Set<string | number>>(new Set());
+  const [selectedScanId, setSelectedScanId] = React.useState<string | null>(null);
+
+  // Initialize selected scan to the most recent one
+  React.useEffect(() => {
+    if (scans.length > 0 && !selectedScanId) {
+      setSelectedScanId(scans[0].id);
+    }
+  }, [scans, selectedScanId]);
+
+  // Get the latest evaluation for OMZA data summary stats
   const latestResult = React.useMemo(() => {
     if (peerResults.length === 0) return null;
-    
-    // First try to find closed evaluations
     const closedResults = peerResults.filter((r) => r.status === "closed");
     if (closedResults.length > 0) {
       return closedResults[0];
     }
-    
-    // If no closed evaluations, use the first available one
-    // (it might still have data even if not closed)
     return peerResults[0];
   }, [peerResults]);
 
-  // Calculate OMZA averages from the latest peer evaluation
+  // Calculate OMZA trend data from all peer evaluations
+  const omzaTrendData = React.useMemo(() => {
+    if (peerResults.length === 0) return [];
+    
+    const closedEvaluations = peerResults
+      .filter((r) => r.status === "closed" && r.omzaAverages && r.omzaAverages.length > 0)
+      .sort((a, b) => {
+        const dateA = new Date(a.deadlineISO || Date.now()).getTime();
+        const dateB = new Date(b.deadlineISO || Date.now()).getTime();
+        return dateA - dateB;
+      });
+    
+    return closedEvaluations.map((evaluation) => {
+      const omzaMap: Record<string, number> = {};
+      evaluation.omzaAverages?.forEach(avg => {
+        omzaMap[avg.label.toLowerCase()] = avg.value;
+      });
+      
+      const date = evaluation.deadlineISO ? new Date(evaluation.deadlineISO) : new Date();
+      const dateLabel = date.toLocaleDateString("nl-NL", { month: "short", day: "numeric" });
+      
+      return {
+        date: dateLabel,
+        evaluationTitle: evaluation.title,
+        organiseren: omzaMap['organiseren'] || 0,
+        meedoen: omzaMap['meedoen'] || 0,
+        zelfvertrouwen: omzaMap['zelfvertrouwen'] || 0,
+        autonomie: omzaMap['autonomie'] || 0,
+      };
+    });
+  }, [peerResults]);
+
+  // Calculate OMZA average from latest
   const omzaScores = React.useMemo(() => {
     if (!latestResult) return [];
     
@@ -69,7 +131,6 @@ export function OverviewTab({
       }));
     }
     
-    // Fallback: calculate from peers
     const keys = ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"] as const;
     const labels = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"];
     
@@ -88,33 +149,30 @@ export function OverviewTab({
     ? (omzaScores.reduce((sum, s) => sum + s.value, 0) / omzaScores.length).toFixed(1)
     : "0.0";
 
-  // Get teacher OMZA and comments from latest result
-  const teacherOmza = latestResult?.teacherOmza;
-  const teacherComment = latestResult?.teacherComments || latestResult?.teacherGradeComment;
-  const aiSummary = latestResult?.aiSummary;
-
-  // Map teacher OMZA scores (1-4 scale) to status
-  const mapTeacherScoreToStatus = (score?: number): OmzaTeacherStatus => {
-    if (!score) return "v";
-    if (score === 1) return "goed";
-    if (score === 2) return "v";
-    if (score === 3) return "letop";
-    return "urgent";
-  };
-
-  // Competency profile data for radar chart - use real data from API
+  // Competency profile data
   const competencyProfileData = React.useMemo(() => {
-    // If no data from API, return empty array
     if (!competencyProfile || competencyProfile.length === 0) {
       return [];
     }
-    
     return competencyProfile;
   }, [competencyProfile]);
 
+  // Toggle reflection expansion
+  const toggleReflection = (id: string | number) => {
+    setExpandedReflections(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
   return (
     <div className="space-y-4">
-      {/* Header block */}
+      {/* Header with stats */}
       <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
         <CardContent className="p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -148,84 +206,331 @@ export function OverviewTab({
         </CardContent>
       </Card>
 
-      {/* Top grid: OMZA + Radar */}
+      {/* 1) Project Results - Full Width */}
+      <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Projectresultaten</CardTitle>
+          <p className="text-sm text-slate-600">Overzicht van je projectbeoordelingen met scores per categorie.</p>
+        </CardHeader>
+        <CardContent>
+          {projectResults.length === 0 ? (
+            <p className="text-slate-500 text-center py-4">Geen projectresultaten gevonden</p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-200">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    <th className="px-4 py-3">Project</th>
+                    <th className="px-4 py-3">Opdrachtgever</th>
+                    <th className="px-4 py-3">Periode</th>
+                    <th className="px-4 py-3 text-center">Proces</th>
+                    <th className="px-4 py-3 text-center">Eindresultaat</th>
+                    <th className="px-4 py-3 text-center">Communicatie</th>
+                    <th className="px-4 py-3 text-center">Eindcijfer</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {projectResults.map((row) => (
+                    <tr key={row.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-slate-900">{row.project}</div>
+                        {row.meta && <div className="text-xs text-slate-600">{row.meta}</div>}
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">{row.opdrachtgever || "—"}</td>
+                      <td className="px-4 py-3 text-slate-700">{row.periode || "—"}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getScoreColor(row.proces)}`}>
+                          {formatScore(row.proces)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getScoreColor(row.eindresultaat)}`}>
+                          {formatScore(row.eindresultaat)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getScoreColor(row.communicatie)}`}>
+                          {formatScore(row.communicatie)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {row.eindcijfer ? (
+                          <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
+                            {row.eindcijfer.toFixed(1)}
+                          </span>
+                        ) : (
+                          <span className="text-slate-500">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 2) Evaluation Heatmap - Full Width */}
+      <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Evaluaties Overzicht</CardTitle>
+          <p className="text-sm text-slate-600">
+            Overzicht van al je peerevaluaties met peer-scores en docent-feedback.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {peerResults.length === 0 ? (
+            <p className="text-slate-500 text-center py-4">Geen evaluaties gevonden</p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-200">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    <th className="px-4 py-3">Evaluatie</th>
+                    <th className="px-2 py-3 text-center" title="Organiseren Peers">O Peers</th>
+                    <th className="px-2 py-3 text-center" title="Meedoen Peers">M Peers</th>
+                    <th className="px-2 py-3 text-center" title="Zelfvertrouwen Peers">Z Peers</th>
+                    <th className="px-2 py-3 text-center" title="Autonomie Peers">A Peers</th>
+                    <th className="px-2 py-3 text-center" title="Organiseren Docent">O Docent</th>
+                    <th className="px-2 py-3 text-center" title="Meedoen Docent">M Docent</th>
+                    <th className="px-2 py-3 text-center" title="Zelfvertrouwen Docent">Z Docent</th>
+                    <th className="px-2 py-3 text-center" title="Autonomie Docent">A Docent</th>
+                    <th className="px-2 py-3 text-center" title="Team-bijdrage factor">GCF</th>
+                    <th className="px-2 py-3 text-center">Cijfer</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {peerResults
+                    .filter((evaluation) => evaluation.status === "closed")
+                    .map((evaluation) => {
+                      // Calculate average peer scores
+                      const avgScores = {
+                        O: 0,
+                        M: 0,
+                        Z: 0,
+                        A: 0,
+                      };
+                      
+                      if (evaluation.omzaAverages && evaluation.omzaAverages.length > 0) {
+                        evaluation.omzaAverages.forEach(avg => {
+                          if (avg.key === 'O') avgScores.O = avg.value;
+                          if (avg.key === 'M') avgScores.M = avg.value;
+                          if (avg.key === 'Z') avgScores.Z = avg.value;
+                          if (avg.key === 'A') avgScores.A = avg.value;
+                        });
+                      }
+
+                      const getOmzaColor = (score: number | null | undefined): string => {
+                        if (!score) return "bg-slate-100 text-slate-400";
+                        if (score >= 4) return "bg-green-100 text-green-700";
+                        if (score >= 3) return "bg-blue-100 text-blue-700";
+                        return "bg-orange-100 text-orange-700";
+                      };
+
+                      const renderTeacherOmza = (score: number | undefined) => {
+                        if (!score) return <span className="text-slate-300">–</span>;
+                        
+                        if (score === 1) {
+                          return (
+                            <span 
+                              className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[10px] font-medium text-green-700" 
+                              title="Gaat goed"
+                            >
+                              🙂
+                            </span>
+                          );
+                        }
+                        if (score === 2) {
+                          return (
+                            <span 
+                              className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-green-500 bg-green-100 text-[10px] font-medium text-green-700" 
+                              title="Voldoet aan verwachting"
+                            >
+                              ✓
+                            </span>
+                          );
+                        }
+                        if (score === 3) {
+                          return (
+                            <span 
+                              className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-400 bg-amber-100 text-[10px] font-medium text-amber-700" 
+                              title="Let op: verbeterpunt"
+                            >
+                              !
+                            </span>
+                          );
+                        }
+                        if (score === 4) {
+                          return (
+                            <span 
+                              className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-rose-500 bg-rose-100 text-[10px] font-medium text-rose-700" 
+                              title="Urgent: direct bespreken"
+                            >
+                              !!
+                            </span>
+                          );
+                        }
+                        return <span className="text-slate-300">–</span>;
+                      };
+
+                      const formatDate = (dateStr?: string) => {
+                        if (!dateStr) return "—";
+                        const date = new Date(dateStr);
+                        return date.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" });
+                      };
+
+                      return (
+                        <tr key={evaluation.id} className="hover:bg-slate-50">
+                          <td className="px-4 py-3">
+                            <div className="font-semibold text-slate-900">{evaluation.title}</div>
+                            <div className="text-xs text-slate-600">{formatDate(evaluation.deadlineISO)}</div>
+                          </td>
+                          {/* Peer scores */}
+                          <td className="px-2 py-3 text-center">
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${getOmzaColor(avgScores.O)}`}>
+                              {avgScores.O ? avgScores.O.toFixed(1) : "-"}
+                            </span>
+                          </td>
+                          <td className="px-2 py-3 text-center">
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${getOmzaColor(avgScores.M)}`}>
+                              {avgScores.M ? avgScores.M.toFixed(1) : "-"}
+                            </span>
+                          </td>
+                          <td className="px-2 py-3 text-center">
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${getOmzaColor(avgScores.Z)}`}>
+                              {avgScores.Z ? avgScores.Z.toFixed(1) : "-"}
+                            </span>
+                          </td>
+                          <td className="px-2 py-3 text-center">
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${getOmzaColor(avgScores.A)}`}>
+                              {avgScores.A ? avgScores.A.toFixed(1) : "-"}
+                            </span>
+                          </td>
+                          {/* Teacher OMZA scores */}
+                          <td className="px-2 py-3 text-center">
+                            {renderTeacherOmza(evaluation.teacherOmza?.O)}
+                          </td>
+                          <td className="px-2 py-3 text-center">
+                            {renderTeacherOmza(evaluation.teacherOmza?.M)}
+                          </td>
+                          <td className="px-2 py-3 text-center">
+                            {renderTeacherOmza(evaluation.teacherOmza?.Z)}
+                          </td>
+                          <td className="px-2 py-3 text-center">
+                            {renderTeacherOmza(evaluation.teacherOmza?.A)}
+                          </td>
+                          {/* GCF and Grade */}
+                          <td className="px-2 py-3 text-center text-slate-700">
+                            {evaluation.gcfScore !== null && evaluation.gcfScore !== undefined 
+                              ? evaluation.gcfScore.toFixed(2) 
+                              : "—"}
+                          </td>
+                          <td className="px-2 py-3 text-center">
+                            {evaluation.teacherGrade ? (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+                                {evaluation.teacherGrade.toFixed(1)}
+                              </span>
+                            ) : (
+                              <span className="text-slate-500">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 3) OMZA Trend (left) + Competency Profile (right) - Two Columns */}
       <div className="grid gap-4 lg:grid-cols-2">
-        {/* OMZA Card */}
+        {/* OMZA Trend Chart */}
         <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
           <CardHeader className="pb-2">
-            <div className="flex items-center justify-between gap-3">
-              <CardTitle className="text-base">Peer-feedback (OMZA)</CardTitle>
-              <Button asChild variant="secondary" size="sm" className="rounded-xl">
-                <Link href="/student/results">
-                  Alle resultaten <ChevronRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-            <p className="text-sm text-slate-600">
-              Overzicht van je peer-feedback op Organiseren, Meedoen, Zelfvertrouwen en Autonomie.
-            </p>
+            <CardTitle className="text-base">OMZA Trend</CardTitle>
+            <p className="text-sm text-slate-600">Ontwikkeling van je peer-feedback scores over tijd.</p>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {omzaScores.length > 0 ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {omzaScores.map((s) => (
-                  <ScoreRow key={s.key} label={s.label} value={s.value} />
-                ))}
-              </div>
+          <CardContent>
+            {omzaTrendData.length === 0 ? (
+              <p className="text-slate-500 text-center py-4">Geen trend data beschikbaar</p>
             ) : (
-              <p className="text-sm text-slate-600">Nog geen peer-feedback beschikbaar.</p>
-            )}
-
-            {aiSummary && (
-              <div className="rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
-                {aiSummary}
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={omzaTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                    <YAxis domain={[1, 5]} ticks={[1, 2, 3, 4, 5]} />
+                    <Tooltip />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="organiseren"
+                      stroke="#3b82f6"
+                      strokeWidth={2}
+                      name="Organiseren"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="meedoen"
+                      stroke="#10b981"
+                      strokeWidth={2}
+                      name="Meedoen"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="zelfvertrouwen"
+                      stroke="#f59e0b"
+                      strokeWidth={2}
+                      name="Zelfvertrouwen"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="autonomie"
+                      stroke="#8b5cf6"
+                      strokeWidth={2}
+                      name="Autonomie"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             )}
-
-            {teacherOmza && (
-              <div className="flex flex-wrap items-center gap-3 text-sm">
-                <div className="text-xs font-semibold text-slate-500">Docent OMZA:</div>
-                <OmzaTeacherBadge letter="O" status={mapTeacherScoreToStatus(teacherOmza.O)} />
-                <OmzaTeacherBadge letter="M" status={mapTeacherScoreToStatus(teacherOmza.M)} />
-                <OmzaTeacherBadge letter="Z" status={mapTeacherScoreToStatus(teacherOmza.Z)} />
-                <OmzaTeacherBadge letter="A" status={mapTeacherScoreToStatus(teacherOmza.A)} />
-              </div>
-            )}
-
-            {teacherComment && (
-              <div className="rounded-xl bg-slate-50 p-3">
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <div className="text-sm font-semibold text-slate-900">Opmerkingen van de docent</div>
-                  <Badge className="rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">Docent</Badge>
-                </div>
-                <div className="text-sm text-slate-700">{teacherComment}</div>
-              </div>
-            )}
-
-            <div className="flex flex-wrap gap-2">
-              <Button asChild variant="secondary" className="rounded-xl">
-                <Link href="/student/results">
-                  Bekijk peer-feedback <ChevronRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
           </CardContent>
         </Card>
 
         {/* Competency Profile Radar */}
         <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Competentieprofiel</CardTitle>
-            <p className="text-sm text-slate-600">
-              Laatste scan • schaal 1–5
-            </p>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <CardTitle className="text-base">Competentieprofiel</CardTitle>
+                <p className="text-sm text-slate-600">
+                  {scans.length > 0 ? "Selecteer een scan • schaal 1–5" : "Laatste scan • schaal 1–5"}
+                </p>
+              </div>
+              {scans.length > 1 && (
+                <select
+                  value={selectedScanId || ""}
+                  onChange={(e) => setSelectedScanId(e.target.value)}
+                  className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  {scans.map((scan) => (
+                    <option key={scan.id} value={scan.id}>
+                      {scan.title}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {competencyProfileData.length > 0 ? (
               <>
-                <div className="h-72 w-full">
+                <div className="h-64 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart data={competencyProfileData} outerRadius="80%">
+                    <RadarChart data={competencyProfileData} outerRadius="70%">
                       <PolarGrid />
                       <PolarAngleAxis dataKey="category" tick={{ fontSize: 11 }} />
                       <PolarRadiusAxis angle={30} domain={[0, 5]} tickCount={6} />
@@ -240,9 +545,16 @@ export function OverviewTab({
                   </ResponsiveContainer>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {selectedScanId && (
+                    <Button asChild variant="default" className="rounded-xl">
+                      <Link href={`/student/competency/scan/${selectedScanId}`}>
+                        Bekijk deze scan <ChevronRight className="ml-1 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  )}
                   <Button asChild variant="secondary" className="rounded-xl">
                     <Link href="/student/competency/growth">
-                      Bekijk scans <ChevronRight className="ml-1 h-4 w-4" />
+                      Alle scans <ChevronRight className="ml-1 h-4 w-4" />
                     </Link>
                   </Button>
                 </div>
@@ -265,150 +577,106 @@ export function OverviewTab({
         </Card>
       </div>
 
-      {/* Learning Goals + Reflections */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="rounded-2xl border-slate-200 bg-white shadow-sm lg:col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Leerdoelen</CardTitle>
-            <p className="text-sm text-slate-600">Zie je actieve leerdoelen en wat je al hebt afgerond.</p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {learningGoals.length > 0 ? (
-              <>
-                {learningGoals.slice(0, 3).map((goal) => (
-                  <div key={goal.id} className="flex flex-col gap-2 rounded-xl bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold text-slate-900">{goal.title}</div>
-                      <div className="text-xs text-slate-600">
-                        {goal.since && `${goal.since}`}
-                        {goal.related && ` • ${goal.related}`}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status={goal.status} />
-                      <Button size="sm" variant="secondary" className="rounded-xl">
-                        Open <ChevronRight className="ml-1 h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                <div className="flex gap-2">
-                  <Button asChild variant="secondary" className="rounded-xl">
-                    <Link href="/student/competency/growth">
-                      Alle leerdoelen <ChevronRight className="ml-1 h-4 w-4" />
-                    </Link>
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <p className="text-sm text-slate-600">Nog geen leerdoelen ingesteld.</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl border-slate-200 bg-white shadow-sm lg:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Reflecties</CardTitle>
-            <p className="text-sm text-slate-600">Snel naar je reflecties.</p>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {reflections.length > 0 ? (
-              <>
-                {reflections.slice(0, 3).map((r) => (
-                  <button
-                    key={r.id}
-                    className="w-full rounded-xl bg-slate-50 p-3 text-left hover:bg-slate-100"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold text-slate-900">{r.title}</div>
-                        <div className="text-xs text-slate-600">{r.type} • {r.date}</div>
-                      </div>
-                      <ChevronRight className="mt-0.5 h-4 w-4 text-slate-400" />
-                    </div>
-                  </button>
-                ))}
-                <Button asChild variant="secondary" className="w-full rounded-xl">
-                  <Link href="/student/competency/growth">
-                    Alle reflecties <ChevronRight className="ml-1 h-4 w-4" />
-                  </Link>
-                </Button>
-              </>
-            ) : (
-              <p className="text-sm text-slate-600">Nog geen reflecties geschreven.</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Project Results Table */}
+      {/* 4) Learning Goals - Full Width Table */}
       <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
         <CardHeader className="pb-2">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <CardTitle className="text-base">Alle projectbeoordelingen</CardTitle>
-              <p className="text-sm text-slate-600">Vergelijk je projecten en open details per beoordeling.</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button variant="secondary" size="sm" className="rounded-xl">
-                Sorteren op nieuwste
-              </Button>
-              <Button variant="secondary" size="sm" className="rounded-xl">
-                Exporteren als PDF
-              </Button>
-            </div>
-          </div>
+          <CardTitle className="text-base">Leerdoelen</CardTitle>
+          <p className="text-sm text-slate-600">Overzicht van al je leerdoelen en hun status.</p>
         </CardHeader>
         <CardContent>
-          {projectResults.length > 0 ? (
+          {learningGoals.length === 0 ? (
+            <p className="text-slate-500 text-center py-4">Geen leerdoelen ingesteld.</p>
+          ) : (
             <div className="overflow-x-auto rounded-xl border border-slate-200">
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
-                    <th className="px-4 py-3">Project</th>
-                    <th className="px-4 py-3">Opdrachtgever</th>
-                    <th className="px-4 py-3">Periode</th>
-                    <th className="px-4 py-3">Eindcijfer</th>
-                    <th className="px-4 py-3">Proces</th>
-                    <th className="px-4 py-3">Eindresultaat</th>
-                    <th className="px-4 py-3">Communicatie</th>
-                    <th className="px-4 py-3 text-right">Acties</th>
+                    <th className="px-4 py-3">Leerdoel</th>
+                    <th className="px-4 py-3">Gerelateerde competenties</th>
+                    <th className="px-4 py-3 text-center">Status</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {projectResults.map((row) => (
-                    <tr key={row.id} className="border-t border-slate-200/70 hover:bg-slate-50 transition-colors">
+                <tbody className="divide-y divide-slate-200">
+                  {learningGoals.map((goal) => (
+                    <tr key={goal.id} className="hover:bg-slate-50">
                       <td className="px-4 py-3">
-                        <div className="font-semibold text-slate-900">{row.project}</div>
-                        <div className="text-xs text-slate-600">{row.meta}</div>
+                        <div className="font-semibold text-slate-900">{goal.title}</div>
+                        {goal.since && <div className="text-xs text-slate-600">{goal.since}</div>}
                       </td>
-                      <td className="px-4 py-3 text-slate-700">{row.opdrachtgever || "—"}</td>
-                      <td className="px-4 py-3 text-slate-700">{row.periode || "—"}</td>
-                      <td className="px-4 py-3">
-                        {row.eindcijfer ? (
-                          <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
-                            {row.eindcijfer.toFixed(1)}
-                          </span>
-                        ) : (
-                          <span className="text-slate-500">—</span>
-                        )}
+                      <td className="px-4 py-3 text-slate-700">
+                        {goal.related || "—"}
                       </td>
-                      <td className="px-4 py-3 text-slate-700">{row.proces ? `${row.proces.toFixed(1)} / 5` : "—"}</td>
-                      <td className="px-4 py-3 text-slate-700">{row.eindresultaat ? `${row.eindresultaat.toFixed(1)} / 5` : "—"}</td>
-                      <td className="px-4 py-3 text-slate-700">{row.communicatie ? `${row.communicatie.toFixed(1)} / 5` : "—"}</td>
-                      <td className="px-4 py-3 text-right">
-                        <Button size="sm" className="rounded-xl bg-slate-900 hover:bg-slate-800">
-                          Bekijk details
-                        </Button>
+                      <td className="px-4 py-3 text-center">
+                        <StatusBadge status={goal.status} />
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 5) Reflections - Full Width Table with Expand */}
+      <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Reflecties</CardTitle>
+          <p className="text-sm text-slate-600">Overzicht van al je reflecties. Klik om de volledige tekst te zien.</p>
+        </CardHeader>
+        <CardContent>
+          {reflections.length === 0 ? (
+            <p className="text-slate-500 text-center py-4">Nog geen reflecties geschreven.</p>
           ) : (
-            <div className="text-center py-8 text-sm text-slate-600">
-              Nog geen projectresultaten beschikbaar. Deze verschijnen zodra projecten zijn beoordeeld.
+            <div className="overflow-x-auto rounded-xl border border-slate-200">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    <th className="px-4 py-3">Titel</th>
+                    <th className="px-4 py-3">Type</th>
+                    <th className="px-4 py-3">Datum</th>
+                    <th className="px-4 py-3 w-10"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {reflections.map((reflection) => {
+                    const isExpanded = expandedReflections.has(reflection.id);
+                    return (
+                      <React.Fragment key={reflection.id}>
+                        <tr 
+                          className="hover:bg-slate-50 cursor-pointer"
+                          onClick={() => toggleReflection(reflection.id)}
+                        >
+                          <td className="px-4 py-3 font-semibold text-slate-900">
+                            {reflection.title}
+                          </td>
+                          <td className="px-4 py-3 text-slate-700">{reflection.type}</td>
+                          <td className="px-4 py-3 text-slate-700">{reflection.date}</td>
+                          <td className="px-4 py-3 text-slate-400">
+                            {isExpanded ? (
+                              <ChevronDown className="w-4 h-4" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4" />
+                            )}
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr className="bg-slate-50">
+                            <td colSpan={4} className="px-4 py-4">
+                              <div className="text-sm text-slate-700 whitespace-pre-wrap">
+                                {/* Note: reflection content would need to be added to DTO */}
+                                <em className="text-slate-500">
+                                  [Volledige reflectietekst zou hier getoond worden]
+                                </em>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </CardContent>
