@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, Suspense } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
 import { useStudentDashboard, useCurrentUser, useStudentOverview } from "@/hooks";
 import { useStudentProjectAssessments } from "@/hooks/useStudentProjectAssessments";
 import { usePeerFeedbackResults } from "@/hooks/usePeerFeedbackResults";
@@ -38,11 +38,11 @@ function StudentDashboardContent() {
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Update active tab when URL changes
-  useMemo(() => {
+  useEffect(() => {
     if (tabFromUrl && tabFromUrl !== activeTab) {
       setActiveTab(tabFromUrl);
     }
-  }, [tabFromUrl]);
+  }, [tabFromUrl, activeTab]);
 
   // Handler to update both state and URL
   const handleTabChange = (value: string) => {
@@ -63,7 +63,7 @@ function StudentDashboardContent() {
   // Filter project assessments by search query and status (only published)
   const filteredProjectAssessments = useMemo(() => {
     // First filter by status - only show published assessments
-    const publishedAssessments = projectAssessments.filter((p) => p.status === "published");
+    const publishedAssessments = (projectAssessments || []).filter((p) => p.status === "published");
     
     // Then filter by search query
     const q = searchQuery.trim().toLowerCase();
