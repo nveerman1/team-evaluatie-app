@@ -388,7 +388,7 @@ export default function OverzichtPage() {
           </div>
 
           {/* DOCENT CARDS SECTION - Teacher comments and evaluation */}
-          {(evaluationData.teacherComments || evaluationData.teacherGrade != null || evaluationData.teacherOmza) && (
+          {(evaluationData.teacherComments || evaluationData.teacherGrade != null || evaluationData.teacherSuggestedGrade != null || evaluationData.teacherGroupGrade != null || evaluationData.teacherOmza) && (
             <div className="mt-6">
               <h3 className="text-base font-semibold text-slate-900 mb-3">Docentbeoordeling</h3>
               <div className="grid gap-4 md:grid-cols-3">
