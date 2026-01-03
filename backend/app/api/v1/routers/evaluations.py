@@ -1159,20 +1159,31 @@ def get_my_peer_feedback_results(
                 if meta_gcf is not None:
                     gcf_score = float(meta_gcf)
             
-            # Get teacher grade from Grade table only if not found in PublishedGrade
-            if teacher_grade is None:
-                if grade_record.published_grade is not None:
-                    teacher_grade = float(grade_record.published_grade)
-                elif grade_record.grade is not None:
-                    teacher_grade = float(grade_record.grade)
-            
             # Get suggested (auto-generated) grade
             if grade_record.suggested_grade is not None:
                 suggested_grade = float(grade_record.suggested_grade)
             
-            # Get group grade
-            if grade_record.group_grade is not None:
-                group_grade = float(grade_record.group_grade)
+            # Get group grade from meta field
+            if grade_record.meta and isinstance(grade_record.meta, dict):
+                meta_group_grade = grade_record.meta.get("group_grade")
+                if meta_group_grade is not None:
+                    group_grade = float(meta_group_grade)
+            
+            # Get teacher grade from Grade table only if not found in PublishedGrade
+            # Calculate final grade using the same logic as teacher grades page:
+            # 1. Override (grade field) if set
+            # 2. Group grade × GCF if group grade is set
+            # 3. Suggested grade as fallback
+            if teacher_grade is None:
+                if grade_record.grade is not None:
+                    # Override grade takes precedence
+                    teacher_grade = float(grade_record.grade)
+                elif group_grade is not None and gcf_score is not None:
+                    # Calculate: group grade × GCF
+                    teacher_grade = round(group_grade * gcf_score, 1)
+                elif suggested_grade is not None:
+                    # Fallback to suggested grade
+                    teacher_grade = suggested_grade
             
             # Get teacher comment/reason (only if not already set from PublishedGrade)
             if not teacher_grade_comment and grade_record.override_reason:
