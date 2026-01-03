@@ -58,6 +58,7 @@ export function useStudentOverview() {
         title: refl.scan_title,
         type: "Competentiescan",
         date: refl.date,
+        text: refl.snippet, // Use snippet as reflection text
       }));
 
       // Fetch evaluation reflections separately (peer evaluation reflections)
@@ -78,6 +79,7 @@ export function useStudentOverview() {
                 title: evaluation.title,
                 type: "Peerevaluatie",
                 date: new Date(reflection.submitted_at).toLocaleDateString("nl-NL"),
+                text: reflection.text || undefined, // Include reflection text if available
               };
             }
           } catch {
@@ -151,7 +153,8 @@ export function useStudentOverview() {
             );
 
             // Extract specific categories (with normalized names)
-            const proces = normalizedAverages["proces"];
+            // Try multiple variations for each category
+            const proces = normalizedAverages["projectproces"] || normalizedAverages["proces"];
             const eindresultaat = normalizedAverages["eindresultaat"];
             const communicatie = normalizedAverages["communicatie"];
 

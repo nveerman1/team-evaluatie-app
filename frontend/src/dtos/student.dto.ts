@@ -226,6 +226,7 @@ export type OverviewReflection = {
   title: string;
   type: string;
   date: string;
+  text?: string; // Optional full reflection text
 };
 
 /**

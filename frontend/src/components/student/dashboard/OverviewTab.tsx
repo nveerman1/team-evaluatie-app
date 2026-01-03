@@ -424,12 +424,18 @@ export function OverviewTab({
                           <td className="px-2 py-3 text-center text-slate-700">
                             {evaluation.gcfScore !== null && evaluation.gcfScore !== undefined 
                               ? evaluation.gcfScore.toFixed(2) 
+                              : evaluation.teamContributionFactor !== null && evaluation.teamContributionFactor !== undefined
+                              ? evaluation.teamContributionFactor.toFixed(2)
                               : "—"}
                           </td>
                           <td className="px-2 py-3 text-center">
-                            {evaluation.teacherGrade ? (
+                            {evaluation.teacherGrade !== null && evaluation.teacherGrade !== undefined ? (
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
                                 {evaluation.teacherGrade.toFixed(1)}
+                              </span>
+                            ) : evaluation.teacherSuggestedGrade !== null && evaluation.teacherSuggestedGrade !== undefined ? (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                                {evaluation.teacherSuggestedGrade.toFixed(1)}
                               </span>
                             ) : (
                               <span className="text-slate-500">—</span>
@@ -599,8 +605,8 @@ export function OverviewTab({
                 <tbody className="divide-y divide-slate-200">
                   {learningGoals.map((goal) => (
                     <tr key={goal.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3">
-                        <div className="font-semibold text-slate-900">{goal.title}</div>
+                       <td className="px-4 py-3">
+                        <div className="text-slate-900">{goal.title}</div>
                         {goal.since && <div className="text-xs text-slate-600">{goal.since}</div>}
                       </td>
                       <td className="px-4 py-3 text-slate-700">
@@ -664,10 +670,13 @@ export function OverviewTab({
                           <tr className="bg-slate-50">
                             <td colSpan={4} className="px-4 py-4">
                               <div className="text-sm text-slate-700 whitespace-pre-wrap">
-                                {/* Note: reflection content would need to be added to DTO */}
-                                <em className="text-slate-500">
-                                  [Volledige reflectietekst zou hier getoond worden]
-                                </em>
+                                {reflection.text ? (
+                                  reflection.text
+                                ) : (
+                                  <em className="text-slate-500">
+                                    Geen reflectietekst beschikbaar
+                                  </em>
+                                )}
                               </div>
                             </td>
                           </tr>
