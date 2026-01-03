@@ -38,7 +38,7 @@ export default function LinkStudentToCourseModal({
     try {
       const response = await courseService.listCourses({
         page: 1,
-        per_page: 100,
+        per_page: 200, // Increased limit to accommodate schools with many courses
         is_active: true,
       });
       setCourses(response.courses);

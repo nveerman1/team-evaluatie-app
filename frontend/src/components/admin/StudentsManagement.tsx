@@ -53,7 +53,7 @@ const StudentsManagement = forwardRef((props, ref) => {
     try {
       const response = await courseService.listCourses({
         page: 1,
-        per_page: 100,
+        per_page: 200, // Increased limit to accommodate schools with many courses
         is_active: true,
       });
       setCourses(response.courses);
@@ -218,26 +218,25 @@ const StudentsManagement = forwardRef((props, ref) => {
 
   const handleBulkLinkToCourse = async (courseName: string) => {
     const idsToLink = Array.from(selectedStudentIds);
-    const errors: string[] = [];
     
-    // Link each student individually (backend doesn't have bulk endpoint yet)
-    for (const id of idsToLink) {
-      try {
-        await adminStudentService.updateStudent(id, {
+    // Link all students concurrently for better performance
+    const results = await Promise.allSettled(
+      idsToLink.map(id =>
+        adminStudentService.updateStudent(id, {
           course_name: courseName,
-        });
-      } catch (err) {
-        console.error(`Failed to link student ${id}:`, err);
-        errors.push(`Student ID ${id}`);
-      }
-    }
+        })
+      )
+    );
+    
+    // Count successes and failures
+    const failures = results.filter(r => r.status === 'rejected');
     
     // Clear selection and reload
     setSelectedStudentIds(new Set());
     await Promise.all([loadStudents(), loadKPIData()]);
     
-    if (errors.length > 0) {
-      throw new Error(`Kon ${errors.length} student(en) niet koppelen`);
+    if (failures.length > 0) {
+      throw new Error(`Kon ${failures.length} van ${idsToLink.length} student(en) niet koppelen`);
     }
   };
 
@@ -513,6 +512,11 @@ const StudentsManagement = forwardRef((props, ref) => {
                           <input
                             type="checkbox"
                             checked={selectedStudentIds.size === students.length && students.length > 0}
+                            ref={(el) => {
+                              if (el) {
+                                el.indeterminate = selectedStudentIds.size > 0 && selectedStudentIds.size < students.length;
+                              }
+                            }}
                             onChange={handleToggleSelectAll}
                             className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                           />
