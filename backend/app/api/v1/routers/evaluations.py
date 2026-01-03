@@ -1119,6 +1119,8 @@ def get_my_peer_feedback_results(
         gcf_score = None
         teacher_grade = None
         teacher_grade_comment = None
+        suggested_grade = None
+        group_grade = None
         grade_record = (
             db.query(Grade)
             .filter(
@@ -1143,6 +1145,14 @@ def get_my_peer_feedback_results(
                 teacher_grade = float(grade_record.published_grade)
             elif grade_record.grade is not None:
                 teacher_grade = float(grade_record.grade)
+            
+            # Get suggested (auto-generated) grade
+            if grade_record.suggested_grade is not None:
+                suggested_grade = float(grade_record.suggested_grade)
+            
+            # Get group grade
+            if grade_record.group_grade is not None:
+                group_grade = float(grade_record.group_grade)
             
             # Get teacher comment/reason
             if grade_record.override_reason:
@@ -1250,6 +1260,8 @@ def get_my_peer_feedback_results(
             "teacherComments": teacher_comments,
             "teacherGrade": teacher_grade,
             "teacherGradeComment": teacher_grade_comment,
+            "teacherSuggestedGrade": suggested_grade,
+            "teacherGroupGrade": group_grade,
             "teacherOmza": teacher_omza_scores or None,
             # OMZA averages with deltas
             "omzaAverages": omza_averages,

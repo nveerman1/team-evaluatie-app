@@ -334,9 +334,12 @@ export default function OverzichtPage() {
             </div>
           </div>
 
-          {/* OMZA-balken (peer-feedback) - PEER CARDS SECTION */}
-          {omzaAverages && omzaAverages.length > 0 ? (
-            <div className="mt-4 grid gap-3 md:grid-cols-4">
+          {/* PEER CARDS SECTION */}
+          <div className="mt-6">
+            <h3 className="text-base font-semibold text-slate-900 mb-3">Feedback Teamgenoten</h3>
+            {/* OMZA-balken (peer-feedback) */}
+            {omzaAverages && omzaAverages.length > 0 ? (
+              <div className="grid gap-3 md:grid-cols-4">
               {omzaAverages.map((item) => (
                 <div key={item.key} className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
                   <div className="flex items-center justify-between text-xs text-slate-500">
@@ -372,17 +375,17 @@ export default function OverzichtPage() {
                     <span>4</span>
                     <span>5</span>
                   </div>
-                  <p className="mt-1 text-[11px] text-slate-500">Schaal 1 – 5</p>
                 </div>
               ))}
-            </div>
-          ) : (
-            <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50/60 p-6 text-center">
-              <p className="text-sm text-slate-600">
-                Nog geen peer-feedback ontvangen. OMZA scores worden hier getoond zodra je teamgenoten hun beoordeling hebben ingevuld.
-              </p>
-            </div>
-          )}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-6 text-center">
+                <p className="text-sm text-slate-600">
+                  Nog geen peer-feedback ontvangen. OMZA scores worden hier getoond zodra je teamgenoten hun beoordeling hebben ingevuld.
+                </p>
+              </div>
+            )}
+          </div>
 
           {/* DOCENT CARDS SECTION - Teacher comments and evaluation */}
           {(evaluationData.teacherComments || evaluationData.teacherGrade != null || evaluationData.teacherOmza) && (
@@ -405,31 +408,36 @@ export default function OverzichtPage() {
                 )}
 
                 {/* Docentbeoordeling samenvatting */}
-                {(evaluationData.teacherGrade != null || evaluationData.teacherOmza) && (
+                {(evaluationData.teacherGrade != null || evaluationData.teacherSuggestedGrade != null || evaluationData.teacherOmza) && (
                   <div className={`rounded-xl border border-slate-100 bg-slate-50/70 p-3 ${!evaluationData.teacherComments ? 'md:col-span-3' : ''}`}>
                     <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                      <span>Docent-beoordeling</span>
-                      {evaluationData.teacherGrade != null && (
-                        <span className="text-[11px] font-normal text-slate-400">Sprintgemiddelde</span>
-                      )}
+                      <span>Cijfers</span>
                     </div>
-                    {evaluationData.teacherGrade != null && (
-                      <div className="mt-2 flex items-baseline justify-between">
-                        <div>
-                          <p className="text-[11px] uppercase tracking-wide text-slate-500">Eindcijfer</p>
-                          <p className="text-2xl font-semibold text-slate-900">
-                            {evaluationData.teacherGrade.toFixed(1)}
-                          </p>
-                        </div>
-                        {evaluationData.teacherGradeTrend && (
-                          <div className="text-right text-[11px] text-emerald-600">
-                            {evaluationData.teacherGradeTrend}
-                          </div>
+                    
+                    {/* Display final grade (given or auto-generated) */}
+                    {(evaluationData.teacherGrade != null || evaluationData.teacherSuggestedGrade != null) && (
+                      <div className="mt-2">
+                        <p className="text-[11px] uppercase tracking-wide text-slate-500">Eindcijfer</p>
+                        <p className="text-2xl font-semibold text-slate-900">
+                          {(evaluationData.teacherGrade ?? evaluationData.teacherSuggestedGrade)?.toFixed(1)}
+                        </p>
+                        {evaluationData.teacherGrade == null && evaluationData.teacherSuggestedGrade != null && (
+                          <p className="text-[10px] text-slate-400 mt-0.5">(automatisch berekend)</p>
                         )}
                       </div>
                     )}
+
+                    {/* Group grade if available */}
+                    {evaluationData.teacherGroupGrade != null && (
+                      <div className="mt-2 pt-2 border-t border-slate-200">
+                        <p className="text-[11px] text-slate-500">
+                          Groepscijfer: <span className="font-semibold text-slate-700">{evaluationData.teacherGroupGrade.toFixed(1)}</span>
+                        </p>
+                      </div>
+                    )}
+
                     {evaluationData.teacherOmza && (
-                      <div className={`flex flex-wrap gap-1 ${evaluationData.teacherGrade != null ? 'mt-3' : 'mt-2'}`}>
+                      <div className="mt-3 flex flex-wrap gap-1">
                         {Object.entries(evaluationData.teacherOmza).map(([key, value]) => (
                           <span
                             key={key}
