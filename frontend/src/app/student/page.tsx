@@ -17,7 +17,7 @@ import { OverviewTab } from "@/components/student/dashboard/OverviewTab";
 import { CompetencyScanDashboardTab } from "@/components/student/dashboard/CompetencyScanDashboardTab";
 import { AttendanceTab } from "@/components/student/dashboard/AttendanceTab";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 
 function StudentDashboardContent() {
   const { dashboard, loading, error } = useStudentDashboard();
@@ -30,6 +30,7 @@ function StudentDashboardContent() {
   const { items: peerResults } = usePeerFeedbackResults();
   const { data: overviewData, isLoading: overviewLoading } = useStudentOverview();
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   // Tab state - check URL query parameter
   const tabFromUrl = searchParams.get("tab");
@@ -43,6 +44,12 @@ function StudentDashboardContent() {
     }
   }, [tabFromUrl]);
 
+  // Handler to update both state and URL
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    router.push(`/student?tab=${value}`, { scroll: false });
+  };
+
   // Memoize open evaluations to avoid changing on every render
   const openEvaluations = useMemo(() => dashboard?.openEvaluations || [], [dashboard?.openEvaluations]);
 
@@ -53,11 +60,15 @@ function StudentDashboardContent() {
     return openEvaluations.filter((e) => e.title.toLowerCase().includes(q));
   }, [openEvaluations, searchQuery]);
 
-  // Filter project assessments by search query
+  // Filter project assessments by search query and status (only published)
   const filteredProjectAssessments = useMemo(() => {
+    // First filter by status - only show published assessments
+    const publishedAssessments = projectAssessments.filter((p) => p.status === "published");
+    
+    // Then filter by search query
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return projectAssessments;
-    return projectAssessments.filter((p) => p.title.toLowerCase().includes(q));
+    if (!q) return publishedAssessments;
+    return publishedAssessments.filter((p) => p.title.toLowerCase().includes(q));
   }, [projectAssessments, searchQuery]);
 
   if (loading || userLoading) return <Loading />;
@@ -116,7 +127,7 @@ function StudentDashboardContent() {
 
         {/* Tabs */}
         <div className="mt-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <TabsList className="h-11 w-full justify-start gap-1 rounded-2xl bg-white p-1 shadow-sm sm:w-auto">
                 <TabsTrigger
