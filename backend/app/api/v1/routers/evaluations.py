@@ -23,6 +23,7 @@ from app.infra.db.models import (
     GroupMember,
     FeedbackSummary,
     Grade,
+    PublishedGrade,
     Project,
     ProjectTeam,
     ProjectTeamMember,
@@ -1116,11 +1117,29 @@ def get_my_peer_feedback_results(
             ai_summary = summary_record.summary_text
 
         # Get GCF and grade from Grade table - check both direct column and meta JSON field
+        # Also check PublishedGrade table first (takes precedence)
         gcf_score = None
         teacher_grade = None
         teacher_grade_comment = None
         suggested_grade = None
         group_grade = None
+        
+        # First check PublishedGrade table (published grades take precedence)
+        published_grade_record = (
+            db.query(PublishedGrade)
+            .filter(
+                PublishedGrade.school_id == user.school_id,
+                PublishedGrade.evaluation_id == ev.id,
+                PublishedGrade.user_id == user.id,
+            )
+            .first()
+        )
+        if published_grade_record and published_grade_record.grade is not None:
+            teacher_grade = float(published_grade_record.grade)
+            if published_grade_record.reason:
+                teacher_grade_comment = published_grade_record.reason
+        
+        # Then check Grade table for additional information
         grade_record = (
             db.query(Grade)
             .filter(
@@ -1140,11 +1159,12 @@ def get_my_peer_feedback_results(
                 if meta_gcf is not None:
                     gcf_score = float(meta_gcf)
             
-            # Get teacher grade (prefer published_grade, fallback to grade)
-            if grade_record.published_grade is not None:
-                teacher_grade = float(grade_record.published_grade)
-            elif grade_record.grade is not None:
-                teacher_grade = float(grade_record.grade)
+            # Get teacher grade from Grade table only if not found in PublishedGrade
+            if teacher_grade is None:
+                if grade_record.published_grade is not None:
+                    teacher_grade = float(grade_record.published_grade)
+                elif grade_record.grade is not None:
+                    teacher_grade = float(grade_record.grade)
             
             # Get suggested (auto-generated) grade
             if grade_record.suggested_grade is not None:
@@ -1154,8 +1174,8 @@ def get_my_peer_feedback_results(
             if grade_record.group_grade is not None:
                 group_grade = float(grade_record.group_grade)
             
-            # Get teacher comment/reason
-            if grade_record.override_reason:
+            # Get teacher comment/reason (only if not already set from PublishedGrade)
+            if not teacher_grade_comment and grade_record.override_reason:
                 teacher_grade_comment = grade_record.override_reason
 
         # Get teacher OMZA scores and comments from evaluation settings
