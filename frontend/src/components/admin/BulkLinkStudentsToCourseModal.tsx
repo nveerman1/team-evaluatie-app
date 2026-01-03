@@ -61,6 +61,8 @@ export default function BulkLinkStudentsToCourseModal({
 
     try {
       await onLink(selectedCourseName);
+      // Close modal and clear form state after successful link
+      setSelectedCourseName("");
       onClose();
     } catch (err: any) {
       console.error("Failed to bulk link students to course:", err);

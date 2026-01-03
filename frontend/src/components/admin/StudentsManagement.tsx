@@ -110,7 +110,9 @@ const StudentsManagement = forwardRef((props, ref) => {
       
       // Apply "only unlinked" filter on frontend if needed
       if (onlyUnlinked) {
-        filteredStudents = filteredStudents.filter(s => !s.course_name);
+        filteredStudents = filteredStudents.filter(s => 
+          !s.course_name && (!s.course_enrollments || s.course_enrollments.length === 0)
+        );
       }
       
       setStudents(filteredStudents);
@@ -254,7 +256,9 @@ const StudentsManagement = forwardRef((props, ref) => {
 
   // Calculate KPIs from all students data
   const totalCount = totalStudents;
-  const unlinkedCount = allStudentsForKPIs.filter(s => s.has_logged_in && !s.course_name).length;
+  const unlinkedCount = allStudentsForKPIs.filter(s => 
+    s.has_logged_in && !s.course_name && (!s.course_enrollments || s.course_enrollments.length === 0)
+  ).length;
   const notLoggedInCount = allStudentsForKPIs.filter(s => !s.has_logged_in).length;
 
   const totalPages = Math.ceil(totalStudents / 25);
