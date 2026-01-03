@@ -16,6 +16,7 @@ import type {
  */
 export function useStudentOverview() {
   const [data, setData] = useState<StudentOverviewData>({
+    scans: [],
     competencyProfile: [],
     learningGoals: [],
     reflections: [],
@@ -31,6 +32,9 @@ export function useStudentOverview() {
     try {
       // Fetch student growth data which includes competency profile, goals, and reflections
       const growthData = await studentService.getGrowthData();
+
+      // Keep scans list for selector
+      const scans = growthData.scans || [];
 
       // Transform competency profile from growth data
       const competencyProfile: OverviewCompetencyProfile[] = growthData.competency_profile.map(
@@ -54,6 +58,7 @@ export function useStudentOverview() {
         title: refl.scan_title,
         type: "Competentiescan",
         date: refl.date,
+        text: refl.snippet, // Use snippet as reflection text
       }));
 
       // Fetch evaluation reflections separately (peer evaluation reflections)
@@ -74,6 +79,7 @@ export function useStudentOverview() {
                 title: evaluation.title,
                 type: "Peerevaluatie",
                 date: new Date(reflection.submitted_at).toLocaleDateString("nl-NL"),
+                text: reflection.text || undefined, // Include reflection text if available
               };
             }
           } catch {
@@ -110,16 +116,8 @@ export function useStudentOverview() {
           try {
             const details = await projectAssessmentService.getProjectAssessment(assessment.id);
             
-            // Get client info from project if available
-            let clientName = assessment.metadata_json?.client;
-            if (!clientName && assessment.project_id) {
-              try {
-                const project = await projectService.getProject(assessment.project_id);
-                clientName = project.client_organization || undefined;
-              } catch {
-                // Ignore if project fetch fails
-              }
-            }
+            // Get client name directly from the assessment list response (now includes client_name)
+            let clientName = (assessment as any).client_name || assessment.metadata_json?.client;
             
             // Calculate category averages from scores and criteria
             const categoryScores: Record<string, number[]> = {};
@@ -147,14 +145,25 @@ export function useStudentOverview() {
             );
 
             // Extract specific categories (with normalized names)
-            const proces = normalizedAverages["proces"];
-            const eindresultaat = normalizedAverages["eindresultaat"];
-            const communicatie = normalizedAverages["communicatie"];
+            // Try multiple variations for each category
+            const procesRaw = normalizedAverages["projectproces"] || normalizedAverages["proces"];
+            const eindresultaatRaw = normalizedAverages["eindresultaat"];
+            const communicatieRaw = normalizedAverages["communicatie"];
+
+            // Convert scores from 0-5 scale to 1-10 scale using formula: (score/5*9+1)
+            const convertScoreTo10 = (score: number | undefined): number | undefined => {
+              if (score === undefined || score === null) return undefined;
+              return (score / 5) * 9 + 1;
+            };
+
+            const proces = convertScoreTo10(procesRaw);
+            const eindresultaat = convertScoreTo10(eindresultaatRaw);
+            const communicatie = convertScoreTo10(communicatieRaw);
 
             return {
               id: assessment.id.toString(),
               project: assessment.title,
-              meta: assessment.group_name || undefined,
+              // meta: removed - no longer showing group_name as it's legacy data
               opdrachtgever: clientName,
               periode: assessment.published_at
                 ? new Date(assessment.published_at).toLocaleDateString("nl-NL", {
@@ -183,6 +192,7 @@ export function useStudentOverview() {
       }
 
       setData({
+        scans,
         competencyProfile,
         learningGoals,
         reflections,

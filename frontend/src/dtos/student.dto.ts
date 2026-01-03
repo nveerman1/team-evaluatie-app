@@ -226,6 +226,7 @@ export type OverviewReflection = {
   title: string;
   type: string;
   date: string;
+  text?: string; // Optional full reflection text
 };
 
 /**
@@ -255,6 +256,7 @@ export type OverviewCompetencyProfile = {
  * Complete overview data for the student dashboard
  */
 export type StudentOverviewData = {
+  scans: GrowthScanSummary[];
   competencyProfile: OverviewCompetencyProfile[];
   learningGoals: OverviewLearningGoal[];
   reflections: OverviewReflection[];

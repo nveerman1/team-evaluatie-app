@@ -20,3 +20,4 @@ export * from "./omza.service";
 export * from "./peer-feedback-results.service";
 export * from "./academic-year.service";
 export * from "./submission.service";
+export * from "./grades.service";
