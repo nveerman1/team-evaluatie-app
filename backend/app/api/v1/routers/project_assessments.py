@@ -21,6 +21,7 @@ from app.infra.db.models import (
     ProjectTeam,
     ProjectTeamMember,
     Project,
+    Client,
 )
 from app.api.v1.schemas.project_assessments import (
     ProjectAssessmentCreate,
@@ -278,6 +279,26 @@ def list_project_assessments(
                 if project and project.end_date:
                     project_end_date_map[r.id] = project.end_date.isoformat()
     
+    # Fetch client names for all assessments with projects
+    client_name_map = {}
+    project_ids_with_client = [r.project_id for r in rows if r.project_id is not None]
+    if project_ids_with_client:
+        # Query projects with their associated clients
+        projects_with_clients = db.query(Project, Client).outerjoin(
+            Client, Project.client_id == Client.id
+        ).filter(
+            Project.id.in_(project_ids_with_client),
+            Project.school_id == user.school_id,
+        ).all()
+        
+        # Build map from project_id to client name
+        project_to_client = {p.id: c.organization if c else None for p, c in projects_with_clients}
+        
+        # Map assessment_id to client_name
+        for r in rows:
+            if r.project_id and r.project_id in project_to_client:
+                client_name_map[r.id] = project_to_client[r.project_id]
+    
     items = []
     for r in rows:
         group_name, course_id_val = group_map.get(r.group_id, (None, None))
@@ -292,6 +313,7 @@ def list_project_assessments(
             "scores_count": score_counts.get(r.id, 0),
             "total_criteria": criteria_counts.get(r.id, 0),
             "updated_at": r.published_at if r.status == "published" else None,
+            "client_name": client_name_map.get(r.id),
         }
         
         # Add team_number and project_end_date for students

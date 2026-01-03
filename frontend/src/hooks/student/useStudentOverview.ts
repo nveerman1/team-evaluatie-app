@@ -116,23 +116,8 @@ export function useStudentOverview() {
           try {
             const details = await projectAssessmentService.getProjectAssessment(assessment.id);
             
-            // Get client info from project if available
-            let clientName = assessment.metadata_json?.client;
-            
-            // If not in metadata, try to fetch from project
-            if (!clientName && assessment.project_id) {
-              try {
-                const project = await projectService.getProject(assessment.project_id);
-                clientName = project.client_organization || undefined;
-              } catch (error) {
-                console.warn(`Could not fetch project ${assessment.project_id} for client info:`, error);
-              }
-            }
-            
-            // Also try the assessment's own client field if available
-            if (!clientName && (assessment as any).client_organization) {
-              clientName = (assessment as any).client_organization;
-            }
+            // Get client name directly from the assessment list response (now includes client_name)
+            let clientName = (assessment as any).client_name || assessment.metadata_json?.client;
             
             // Calculate category averages from scores and criteria
             const categoryScores: Record<string, number[]> = {};
