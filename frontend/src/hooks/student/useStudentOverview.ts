@@ -163,7 +163,7 @@ export function useStudentOverview() {
             return {
               id: assessment.id.toString(),
               project: assessment.title,
-              meta: assessment.group_name || undefined,
+              // meta: removed - no longer showing group_name as it's legacy data
               opdrachtgever: clientName,
               periode: assessment.published_at
                 ? new Date(assessment.published_at).toLocaleDateString("nl-NL", {

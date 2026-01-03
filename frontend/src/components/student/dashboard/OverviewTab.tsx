@@ -284,7 +284,6 @@ export function OverviewTab({
                     <tr key={row.id} className="hover:bg-slate-50">
                       <td className="px-4 py-3">
                         <div className="font-semibold text-slate-900">{row.project}</div>
-                        {row.meta && <div className="text-xs text-slate-600">{row.meta}</div>}
                       </td>
                       <td className="px-4 py-3 text-slate-700">{row.opdrachtgever || "—"}</td>
                       <td className="px-4 py-3 text-slate-700">{row.periode || "—"}</td>
