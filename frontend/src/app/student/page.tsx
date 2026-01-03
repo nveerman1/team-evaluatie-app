@@ -71,6 +71,13 @@ function StudentDashboardContent() {
     return publishedAssessments.filter((p) => p.title.toLowerCase().includes(q));
   }, [projectAssessments, searchQuery]);
 
+  // Filter all project assessments by search query only (for Inleveren tab)
+  const filteredAllProjectAssessments = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return projectAssessments || [];
+    return (projectAssessments || []).filter((p) => p.title.toLowerCase().includes(q));
+  }, [projectAssessments, searchQuery]);
+
   if (loading || userLoading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
   if (!dashboard) return <ErrorMessage message="Kon dashboard niet laden" />;
@@ -284,14 +291,14 @@ function StudentDashboardContent() {
                   <Loading />
                 ) : projectError ? (
                   <ErrorMessage message={projectError} />
-                ) : filteredProjectAssessments.filter(a => a.project_id !== null && a.project_id !== undefined).length === 0 ? (
+                ) : filteredAllProjectAssessments.filter(a => a.project_id !== null && a.project_id !== undefined).length === 0 ? (
                   <div className="p-8 rounded-xl shadow-sm bg-slate-50 text-center">
                     <p className="text-slate-500">
                       {searchQuery ? "Geen projecten gevonden met deze zoekopdracht." : "Nog geen projecten beschikbaar om in te leveren."}
                     </p>
                   </div>
                 ) : (
-                  filteredProjectAssessments
+                  filteredAllProjectAssessments
                     .filter(assessment => assessment.project_id !== null && assessment.project_id !== undefined)
                     .map((assessment) => (
                       <SubmissionDashboardCard key={assessment.id} assessment={assessment} />
