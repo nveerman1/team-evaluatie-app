@@ -283,63 +283,64 @@ export default function OverzichtPage() {
           </div>
 
           {/* Card content */}
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
-            {/* AI-samenvatting */}
-            <div className="flex flex-col gap-3 md:col-span-2">
-              {currentUserId && (
-                <AISummarySection
-                  evaluationId={evaluationId}
-                  studentId={currentUserId}
-                  fallbackSummary={evaluationData.aiSummary}
-                  useAsync={true}
-                />
-              )}
-            </div>
-
-            {/* Right column: Team-bijdrage */}
-            <div className="space-y-3">
-              {/* Team-bijdrage / correctiefactor (GCF) */}
-              {teamContributionFactor != null && (
-                <div className="rounded-xl border border-slate-100 bg-indigo-50/60 p-3">
-                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                    <span>Team-bijdrage</span>
-                    <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] uppercase tracking-wide text-indigo-600">
-                      Correctiefactor
-                    </span>
-                  </div>
-                  <div className="mt-2 flex items-baseline justify-between">
-                    <div>
-                      <p className="text-2xl font-semibold text-slate-900">
-                        {teamContributionFactor.toFixed(2)}
-                      </p>
-                      <p className="text-xs text-slate-500">Range 0,90 – 1,10</p>
-                    </div>
-                    <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-700">
-                      {teamContributionLabel}
-                    </span>
-                  </div>
-                  <div className="mt-2 h-1.5 w-full rounded-full bg-indigo-100">
-                    <div
-                      className="h-1.5 rounded-full bg-indigo-500"
-                      style={{
-                        width: `${Math.min(100, Math.max(0, (teamContributionFactor - 0.9) * 500))}%`,
-                      }}
-                    />
-                  </div>
-                  <p className="mt-1 text-[11px] text-slate-500">
-                    Factor waarmee de docent het groepscijfer corrigeert op basis van peer-feedback.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* PEER CARDS SECTION */}
+          {/* PEER CARDS SECTION - Feedback Teamgenoten */}
           <div className="mt-6">
             <h3 className="text-base font-semibold text-slate-900 mb-3">Feedback Teamgenoten</h3>
+            
+            <div className="grid gap-4 md:grid-cols-3">
+              {/* AI-samenvatting */}
+              <div className="flex flex-col gap-3 md:col-span-2">
+                {currentUserId && (
+                  <AISummarySection
+                    evaluationId={evaluationId}
+                    studentId={currentUserId}
+                    fallbackSummary={evaluationData.aiSummary}
+                    useAsync={true}
+                  />
+                )}
+              </div>
+
+              {/* Right column: Team-bijdrage */}
+              <div className="space-y-3">
+                {/* Team-bijdrage / correctiefactor (GCF) */}
+                {teamContributionFactor != null && (
+                  <div className="rounded-xl border border-slate-100 bg-indigo-50/60 p-3">
+                    <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                      <span>Team-bijdrage</span>
+                      <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] uppercase tracking-wide text-indigo-600">
+                        Correctiefactor
+                      </span>
+                    </div>
+                    <div className="mt-2 flex items-baseline justify-between">
+                      <div>
+                        <p className="text-2xl font-semibold text-slate-900">
+                          {teamContributionFactor.toFixed(2)}
+                        </p>
+                        <p className="text-xs text-slate-500">Range 0,90 – 1,10</p>
+                      </div>
+                      <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-700">
+                        {teamContributionLabel}
+                      </span>
+                    </div>
+                    <div className="mt-2 h-1.5 w-full rounded-full bg-indigo-100">
+                      <div
+                        className="h-1.5 rounded-full bg-indigo-500"
+                        style={{
+                          width: `${Math.min(100, Math.max(0, (teamContributionFactor - 0.9) * 500))}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      Factor waarmee de docent het groepscijfer corrigeert op basis van peer-feedback.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* OMZA-balken (peer-feedback) */}
             {omzaAverages && omzaAverages.length > 0 ? (
-              <div className="grid gap-3 md:grid-cols-4">
+              <div className="mt-4 grid gap-3 md:grid-cols-4">
               {omzaAverages.map((item) => (
                 <div key={item.key} className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
                   <div className="flex items-center justify-between text-xs text-slate-500">
@@ -407,16 +408,16 @@ export default function OverzichtPage() {
                   </div>
                 )}
 
-                {/* Docentbeoordeling samenvatting */}
+                {/* Docentbeoordeling cijfers card */}
                 {(evaluationData.teacherGrade != null || evaluationData.teacherSuggestedGrade != null || evaluationData.teacherOmza) && (
                   <div className={`rounded-xl border border-slate-100 bg-slate-50/70 p-3 ${!evaluationData.teacherComments ? 'md:col-span-3' : ''}`}>
-                    <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                      <span>Cijfers</span>
+                    <div className="flex items-center justify-between text-xs font-semibold text-slate-700 mb-2">
+                      <span>Docentbeoordeling</span>
                     </div>
                     
                     {/* Display final grade (given or auto-generated) */}
                     {(evaluationData.teacherGrade != null || evaluationData.teacherSuggestedGrade != null) && (
-                      <div className="mt-2">
+                      <div>
                         <p className="text-[11px] uppercase tracking-wide text-slate-500">Eindcijfer</p>
                         <p className="text-2xl font-semibold text-slate-900">
                           {(evaluationData.teacherGrade ?? evaluationData.teacherSuggestedGrade)?.toFixed(1)}
