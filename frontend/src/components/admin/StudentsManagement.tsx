@@ -284,7 +284,7 @@ const StudentsManagement = forwardRef((props, ref) => {
     }
     
     // 🟠 Ongekoppeld - logged in but no course
-    if (!student.course_name) {
+    if (!student.course_name && (!student.course_enrollments || student.course_enrollments.length === 0)) {
       return (
         <span className="inline-flex rounded-full border border-yellow-200 bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
           Ongekoppeld
