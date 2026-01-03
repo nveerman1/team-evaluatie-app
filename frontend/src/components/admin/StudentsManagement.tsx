@@ -11,6 +11,7 @@ import { courseService } from "@/services/course.service";
 import LinkStudentToCourseModal from "@/components/admin/LinkStudentToCourseModal";
 import BulkLinkStudentsToCourseModal from "@/components/admin/BulkLinkStudentsToCourseModal";
 import StudentCSVImportModal from "@/components/admin/StudentCSVImportModal";
+import { Link2, Power, PowerOff } from "lucide-react";
 
 const StudentsManagement = forwardRef((props, ref) => {
   // State
@@ -508,7 +509,7 @@ const StudentsManagement = forwardRef((props, ref) => {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-6 py-3 text-left">
+                        <th className="w-10 px-3 py-3 text-left">
                           <input
                             type="checkbox"
                             checked={selectedStudentIds.size === students.length && students.length > 0}
@@ -521,25 +522,22 @@ const StudentsManagement = forwardRef((props, ref) => {
                             className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                           />
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Naam
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Email
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Klas
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Koppelingen
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Status
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Laatste login
-                        </th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="w-20 px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Acties
                         </th>
                       </tr>
@@ -547,7 +545,7 @@ const StudentsManagement = forwardRef((props, ref) => {
                     <tbody className="bg-white divide-y divide-gray-200">
                       {students.map((student) => (
                         <tr key={student.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="w-10 px-3 py-3">
                             <input
                               type="checkbox"
                               checked={selectedStudentIds.has(student.id)}
@@ -555,20 +553,22 @@ const StudentsManagement = forwardRef((props, ref) => {
                               className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                             />
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">
+                          <td className="px-3 py-3">
+                            <div className="text-sm font-medium text-gray-900 truncate max-w-[150px]" title={student.name}>
                               {student.name}
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{student.email}</div>
+                          <td className="px-3 py-3">
+                            <div className="text-sm text-gray-900 truncate max-w-[180px]" title={student.email}>
+                              {student.email}
+                            </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 py-3 whitespace-nowrap">
                             <div className="text-sm text-gray-900">
                               {student.class_info || student.class_name || "—"}
                             </div>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-3 py-3">
                             {student.course_enrollments && student.course_enrollments.length > 0 ? (
                               <div className="flex flex-wrap gap-1">
                                 {student.course_enrollments.map((enrollment: any, idx: number) => (
@@ -590,25 +590,32 @@ const StudentsManagement = forwardRef((props, ref) => {
                               <span className="text-sm text-gray-400">—</span>
                             )}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-3 py-3 whitespace-nowrap">
                             {getStatusBadge(student)}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-500">—</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <div className="flex gap-2 justify-end">
+                          <td className="w-20 px-3 py-3">
+                            <div className="flex gap-1 justify-center">
                               <button
                                 onClick={() => handleLinkStudent(student)}
-                                className="text-blue-600 hover:text-blue-900"
+                                className="p-1.5 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded transition-colors"
+                                title="Koppelen"
                               >
-                                Koppelen
+                                <Link2 className="h-4 w-4" />
                               </button>
                               <button
                                 onClick={() => handleToggleStatus(student)}
-                                className="text-gray-600 hover:text-gray-900"
+                                className={`p-1.5 rounded transition-colors ${
+                                  student.status === "active" 
+                                    ? "text-gray-600 hover:text-gray-900 hover:bg-gray-100" 
+                                    : "text-green-600 hover:text-green-900 hover:bg-green-50"
+                                }`}
+                                title={student.status === "active" ? "Deactiveren" : "Activeren"}
                               >
-                                {student.status === "active" ? "Deactiveren" : "Activeren"}
+                                {student.status === "active" ? (
+                                  <PowerOff className="h-4 w-4" />
+                                ) : (
+                                  <Power className="h-4 w-4" />
+                                )}
                               </button>
                             </div>
                           </td>
