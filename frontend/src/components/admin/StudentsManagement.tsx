@@ -104,7 +104,9 @@ const StudentsManagement = forwardRef((props, ref) => {
         params.course = courseFilter;
       }
       
+      console.log('Loading students with params:', params);
       const response = await adminStudentService.listStudents(params);
+      console.log('Received', response.students.length, 'students from API');
       
       let filteredStudents = response.students;
       
@@ -113,6 +115,17 @@ const StudentsManagement = forwardRef((props, ref) => {
         filteredStudents = filteredStudents.filter(s => 
           !s.course_name && (!s.course_enrollments || s.course_enrollments.length === 0)
         );
+        console.log('After onlyUnlinked filter:', filteredStudents.length, 'students');
+      }
+      
+      // Log first few students for debugging
+      if (filteredStudents.length > 0) {
+        console.log('Sample student data:', filteredStudents.slice(0, 2).map(s => ({
+          id: s.id,
+          name: s.name,
+          course_name: s.course_name,
+          course_enrollments: s.course_enrollments
+        })));
       }
       
       setStudents(filteredStudents);
@@ -222,6 +235,8 @@ const StudentsManagement = forwardRef((props, ref) => {
   const handleBulkLinkToCourse = async (courseName: string) => {
     const idsToLink = Array.from(selectedStudentIds);
     
+    console.log('Starting bulk link for', idsToLink.length, 'students to course:', courseName);
+    
     // Link all students concurrently for better performance
     const results = await Promise.allSettled(
       idsToLink.map(id =>
@@ -233,10 +248,18 @@ const StudentsManagement = forwardRef((props, ref) => {
     
     // Count successes and failures
     const failures = results.filter(r => r.status === 'rejected');
+    const successes = results.filter(r => r.status === 'fulfilled');
+    
+    console.log('Bulk link completed:', successes.length, 'successes,', failures.length, 'failures');
+    
+    // Wait a bit to ensure backend DB changes are committed
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     // Clear selection and reload
     setSelectedStudentIds(new Set());
+    console.log('Reloading students data...');
     await Promise.all([loadStudents(), loadKPIData()]);
+    console.log('Students data reloaded');
     
     if (failures.length > 0) {
       throw new Error(`Kon ${failures.length} van ${idsToLink.length} student(en) niet koppelen`);
