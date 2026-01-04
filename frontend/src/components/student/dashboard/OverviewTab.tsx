@@ -579,20 +579,26 @@ export function OverviewTab({
                   {radarData ? radarData.scan_label : "Laatste scan"} • schaal 1–5
                 </p>
               </div>
-              {!scansLoading && !scansError && scanList && scanList.length > 1 && (
-                <select
-                  value={selectedScanId || ""}
-                  onChange={(e) => setSelectedScanId(e.target.value)}
-                  className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  aria-label="Selecteer scan"
-                >
-                  {scanList.map((scan) => (
-                    <option key={scan.id} value={scan.id}>
-                      {scan.title}
-                    </option>
-                  ))}
-                </select>
-              )}
+              <div className="flex items-center gap-2">
+                {scansError && (
+                  <span className="text-xs text-amber-600" title="Kon scans niet laden">⚠</span>
+                )}
+                {scanList && scanList.length > 1 && (
+                  <select
+                    value={selectedScanId || ""}
+                    onChange={(e) => setSelectedScanId(e.target.value)}
+                    className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    aria-label="Selecteer scan"
+                    disabled={scansLoading}
+                  >
+                    {scanList.map((scan) => (
+                      <option key={scan.id} value={scan.id}>
+                        {scan.title}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent>

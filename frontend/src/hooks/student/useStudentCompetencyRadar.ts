@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { fetchWithErrorHandling } from "@/lib/api";
 
 export interface ScanListItem {
   id: string;
@@ -40,12 +41,7 @@ export function useStudentCompetencyScans() {
       setError(null);
 
       try {
-        const response = await fetch("/api/v1/student/competency/scans", {
-          credentials: "include",
-        });
-        if (!response.ok) {
-          throw new Error("Failed to fetch scans");
-        }
+        const response = await fetchWithErrorHandling("/api/v1/student/competency/scans");
         const data = await response.json();
         if (isMounted) {
           setData(data);
@@ -93,15 +89,9 @@ export function useStudentCompetencyRadar(scanId: string | null) {
       setError(null);
 
       try {
-        const response = await fetch(
-          `/api/v1/student/competency/scans/${scanId}/radar`,
-          {
-            credentials: "include",
-          }
+        const response = await fetchWithErrorHandling(
+          `/api/v1/student/competency/scans/${scanId}/radar`
         );
-        if (!response.ok) {
-          throw new Error("Failed to fetch radar data");
-        }
         const data = await response.json();
         if (isMounted) {
           setData(data);
