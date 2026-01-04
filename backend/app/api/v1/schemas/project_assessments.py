@@ -56,6 +56,7 @@ class ProjectAssessmentListItem(ProjectAssessmentOut):
     updated_at: Optional[datetime] = None
     team_number: Optional[int] = None
     project_end_date: Optional[str] = None
+    client_name: Optional[str] = None
 
 
 class ProjectAssessmentListResponse(BaseModel):

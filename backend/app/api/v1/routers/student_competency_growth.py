@@ -14,7 +14,7 @@ from __future__ import annotations
 from typing import Dict, List, Optional
 from datetime import datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -132,6 +132,31 @@ class StudentGrowthData(BaseModel):
 
 class AISummaryResponse(BaseModel):
     ai_summary: str
+
+
+class ScanListItem(BaseModel):
+    """Scan summary for dropdown list"""
+    id: str
+    title: str
+    date: str
+    type: str  # start, tussen, eind, los
+
+
+class RadarCategoryScore(BaseModel):
+    """Category score for radar chart"""
+    category_id: int
+    category_name: str
+    average_score: float
+    count: int  # Number of competencies in this category
+
+
+class ScanRadarData(BaseModel):
+    """Complete radar data for a specific scan"""
+    scan_id: str
+    scan_label: str
+    created_at: str
+    categories: List[RadarCategoryScore]
+    overall_avg: Optional[float]
 
 
 router = APIRouter(prefix="/student/competency", tags=["student-competency-growth"])
@@ -629,3 +654,164 @@ def regenerate_growth_summary(
         new_summary = "Er is nog niet genoeg data om een samenvatting te genereren. Vul eerst een competentiescan in."
 
     return AISummaryResponse(ai_summary=new_summary)
+
+
+@router.get("/scans", response_model=List[ScanListItem])
+def get_student_competency_scans(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get list of all competency scans (windows) where the student has submitted scores.
+    Used for scan selector dropdown.
+    
+    Student-scoped: only returns scans for the authenticated user.
+    """
+    school_id = current_user.school_id
+    user_id = current_user.id
+
+    # Get all windows where student has submitted scores
+    window_ids_with_scores = (
+        db.query(CompetencySelfScore.window_id)
+        .filter(
+            CompetencySelfScore.user_id == user_id,
+            CompetencySelfScore.school_id == school_id,
+        )
+        .distinct()
+        .all()
+    )
+    window_ids = [wid for (wid,) in window_ids_with_scores]
+
+    # Get windows ordered by date (newest first)
+    windows = []
+    if window_ids:
+        windows = (
+            db.query(CompetencyWindow)
+            .filter(
+                CompetencyWindow.id.in_(window_ids),
+                CompetencyWindow.school_id == school_id,
+            )
+            .order_by(CompetencyWindow.start_date.desc())
+            .all()
+        )
+
+    # Build scan list
+    scans = []
+    for window in windows:
+        scans.append(
+            ScanListItem(
+                id=str(window.id),
+                title=window.title,
+                date=_format_date(window.start_date),
+                type=_determine_scan_type(window.title),
+            )
+        )
+
+    return scans
+
+
+@router.get("/scans/{scan_id}/radar", response_model=ScanRadarData)
+def get_scan_radar_data(
+    scan_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get category-aggregated radar chart data for a specific scan.
+    
+    Returns average scores per competency category for the selected scan.
+    Student-scoped: only returns data if the scan belongs to the authenticated user.
+    
+    Args:
+        scan_id: The competency window ID
+        
+    Returns:
+        Radar data with category names and average scores
+        
+    Raises:
+        404: If scan not found or doesn't belong to student
+    """
+    school_id = current_user.school_id
+    user_id = current_user.id
+
+    # Verify scan exists and belongs to student
+    window = db.get(CompetencyWindow, scan_id)
+    if not window or window.school_id != school_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Scan not found"
+        )
+    
+    # Verify student has scores for this scan (authorization check)
+    has_scores = (
+        db.query(CompetencySelfScore)
+        .filter(
+            CompetencySelfScore.window_id == scan_id,
+            CompetencySelfScore.user_id == user_id,
+            CompetencySelfScore.school_id == school_id,
+        )
+        .first()
+    )
+    
+    if not has_scores:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No scores found for this scan"
+        )
+
+    # Get scores aggregated by category for this scan
+    # Single query with proper joins to avoid N+1
+    results = (
+        db.execute(
+            select(
+                CompetencyCategory.id.label("category_id"),
+                CompetencyCategory.name.label("category_name"),
+                func.avg(CompetencySelfScore.score).label("avg_score"),
+                func.count(CompetencySelfScore.id).label("count"),
+            )
+            .select_from(CompetencySelfScore)
+            .join(Competency, Competency.id == CompetencySelfScore.competency_id)
+            .join(
+                CompetencyCategory, 
+                CompetencyCategory.id == Competency.category_id
+            )
+            .where(
+                CompetencySelfScore.window_id == scan_id,
+                CompetencySelfScore.user_id == user_id,
+                CompetencySelfScore.school_id == school_id,
+            )
+            .group_by(CompetencyCategory.id, CompetencyCategory.name)
+            .order_by(CompetencyCategory.name)
+        )
+        .all()
+    )
+
+    # Build category scores
+    categories = []
+    all_scores = []
+    
+    for category_id, category_name, avg_score, count in results:
+        if category_name and avg_score:
+            score_value = round(float(avg_score), 2)
+            categories.append(
+                RadarCategoryScore(
+                    category_id=category_id,
+                    category_name=category_name,
+                    average_score=score_value,
+                    count=count,
+                )
+            )
+            all_scores.append(score_value)
+
+    # Calculate overall average
+    overall_avg = None
+    if all_scores:
+        overall_avg = round(sum(all_scores) / len(all_scores), 2)
+
+    return ScanRadarData(
+        scan_id=str(scan_id),
+        scan_label=window.title,
+        created_at=_format_date(window.start_date),
+        categories=categories,
+        overall_avg=overall_avg,
+    )
