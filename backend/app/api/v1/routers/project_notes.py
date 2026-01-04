@@ -52,15 +52,11 @@ def _ensure_timezone_aware(dt: datetime) -> datetime:
 
 def _ensure_context_timezone_aware(context_dict: dict) -> dict:
     """Ensure context timestamps are timezone-aware."""
-    if "created_at" in context_dict and context_dict["created_at"]:
-        if isinstance(context_dict["created_at"], datetime):
-            context_dict["created_at"] = _ensure_timezone_aware(context_dict["created_at"])
-    if "updated_at" in context_dict and context_dict["updated_at"]:
-        if isinstance(context_dict["updated_at"], datetime):
-            context_dict["updated_at"] = _ensure_timezone_aware(context_dict["updated_at"])
-    if "closed_at" in context_dict and context_dict["closed_at"]:
-        if isinstance(context_dict["closed_at"], datetime):
-            context_dict["closed_at"] = _ensure_timezone_aware(context_dict["closed_at"])
+    timestamp_fields = ["created_at", "updated_at", "closed_at"]
+    for field in timestamp_fields:
+        if field in context_dict and context_dict[field]:
+            if isinstance(context_dict[field], datetime):
+                context_dict[field] = _ensure_timezone_aware(context_dict[field])
     return context_dict
 
 
@@ -160,7 +156,6 @@ async def list_contexts(
     results = []
     for context in contexts:
         context_dict = ProjectNotesContextOut.model_validate(context).model_dump()
-        
         # Ensure timestamps are timezone-aware
         context_dict = _ensure_context_timezone_aware(context_dict)
 
