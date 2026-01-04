@@ -12,10 +12,19 @@ When these naive datetimes are serialized to JSON and sent to the frontend:
 - This causes a 1-hour offset in timezones like CET (UTC+1)
 
 ## Solution
+
+### Part 1: Fix for New Records
 Changed the database models to use `datetime.now(timezone.utc)` instead, which creates **timezone-aware** datetime objects:
 - New format: `"2026-01-04T22:00:00+00:00"` (includes timezone info)
 - JavaScript correctly interprets this as UTC time
 - The browser automatically converts it to the user's local time for display
+
+### Part 2: Fix for Existing Records
+Added serialization helpers to ensure **existing** records with timezone-naive datetimes are converted to timezone-aware datetimes when returned by the API:
+- `_ensure_timezone_aware()`: Converts individual datetime objects
+- `_ensure_context_timezone_aware()`: Ensures all datetime fields in context dictionaries are timezone-aware
+
+This means **all** notes (both old and new) will now display with correct timestamps.
 
 ## Changes Made
 
@@ -51,6 +60,40 @@ Changed the database models to use `datetime.now(timezone.utc)` instead, which c
        nullable=False,
    )
    ```
+
+### File: `backend/app/api/v1/routers/project_notes.py`
+
+1. **Added import:**
+   ```python
+   from datetime import datetime, timezone
+   ```
+
+2. **Added helper functions:**
+   ```python
+   def _ensure_timezone_aware(dt: datetime) -> datetime:
+       """Ensure a datetime is timezone-aware, converting to UTC if naive."""
+       if dt.tzinfo is None:
+           return dt.replace(tzinfo=timezone.utc)
+       return dt
+
+   def _ensure_context_timezone_aware(context_dict: dict) -> dict:
+       """Ensure context timestamps are timezone-aware."""
+       # Converts created_at, updated_at, and closed_at if they exist
+       ...
+   ```
+
+3. **Updated `serialize_note()` function:**
+   ```python
+   "created_at": _ensure_timezone_aware(note.created_at),
+   "updated_at": _ensure_timezone_aware(note.updated_at),
+   ```
+
+4. **Updated all context serialization points:**
+   - `list_contexts()` - List all contexts
+   - `create_context()` - Create new context
+   - `get_context()` - Get context details
+   - `update_context()` - Update context
+   - `close_project_notes_context()` - Close context
 
 ## Technical Details
 
@@ -101,10 +144,16 @@ No changes needed! The frontend components already handle dates correctly:
 - `StudentNotesCard.tsx`
 
 ### Database Migration
-No migration needed. The change only affects **new records** created after this fix is deployed. Existing records will continue to work (though they may show incorrect times until they're updated).
+No migration needed. The changes work for both:
+- **New records**: Created with timezone-aware datetimes from the model defaults
+- **Existing records**: Converted to timezone-aware during API serialization
 
 ## Testing
-The fix was verified to produce timezone-aware datetimes that serialize correctly to JSON with the `+00:00` suffix, ensuring JavaScript will interpret them as UTC time.
+The fix was verified to:
+1. Produce timezone-aware datetimes for new records
+2. Convert existing timezone-naive datetimes to timezone-aware during serialization
+3. Serialize correctly to JSON with the `+00:00` suffix
+4. Allow JavaScript to interpret timestamps as UTC and display in local time
 
 ## Best Practices
 Going forward, always use `datetime.now(timezone.utc)` instead of `datetime.utcnow()` to create timezone-aware datetimes. Python 3.9+ even deprecates `datetime.utcnow()` in favor of timezone-aware alternatives.
