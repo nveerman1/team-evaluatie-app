@@ -54,6 +54,7 @@ from app.core.rbac import (
 from app.core.audit import log_action
 from app.infra.services.archive_guards import require_course_year_not_archived, require_project_year_not_archived
 from app.infra.services.project_team_service import ProjectTeamService
+from app.infra.services.task_generation_service import TaskGenerationService
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -1110,6 +1111,49 @@ def wizard_create_project(
             db.add(link)
             linked_clients.append(client_id)
 
+    # 7. Generate auto tasks for presentations (opdrachtgeverstaken)
+    # Extract presentation dates from project assessment configurations
+    tussen_datum = None
+    eind_datum = None
+    
+    if payload.evaluations.project_assessment_tussen and payload.evaluations.project_assessment_tussen.enabled:
+        if payload.evaluations.project_assessment_tussen.deadline:
+            tussen_datum = payload.evaluations.project_assessment_tussen.deadline.date()
+    
+    if payload.evaluations.project_assessment_eind and payload.evaluations.project_assessment_eind.enabled:
+        if payload.evaluations.project_assessment_eind.deadline:
+            eind_datum = payload.evaluations.project_assessment_eind.deadline.date()
+    
+    # Legacy support
+    if not eind_datum and payload.evaluations.project_assessment and payload.evaluations.project_assessment.enabled:
+        if payload.evaluations.project_assessment.deadline:
+            eind_datum = payload.evaluations.project_assessment.deadline.date()
+    
+    # Generate tasks if we have dates and clients
+    generated_tasks = []
+    if (tussen_datum or eind_datum) and linked_clients:
+        generated_tasks = TaskGenerationService.generate_presentation_tasks(
+            db=db,
+            project=project,
+            tussen_datum=tussen_datum,
+            eind_datum=eind_datum,
+            commit=False,  # Don't commit yet, will commit together with everything else
+        )
+        
+        # Add task entities to created_entities for reporting
+        for task in generated_tasks:
+            created_entities.append(WizardEntityOut(
+                type="task",
+                data={
+                    "id": task.id,
+                    "title": task.title,
+                    "type": task.type,
+                    "source": task.source,
+                    "due_date": task.due_date.isoformat() if task.due_date else None,
+                    "status": task.status,
+                }
+            ))
+
     # Commit all changes
     db.commit()
     db.refresh(project)
@@ -1127,6 +1171,7 @@ def wizard_create_project(
             "title": project.title,
             "entities_count": len(created_entities),
             "clients_count": len(linked_clients),
+            "tasks_count": len(generated_tasks),
             "has_note": note_context is not None,
             "warnings": warnings,
         },
