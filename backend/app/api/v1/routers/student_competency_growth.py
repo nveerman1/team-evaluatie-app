@@ -14,7 +14,7 @@ from __future__ import annotations
 from typing import Dict, List, Optional
 from datetime import datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
