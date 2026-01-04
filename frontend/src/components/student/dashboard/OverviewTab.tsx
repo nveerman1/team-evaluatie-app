@@ -606,10 +606,17 @@ export function OverviewTab({
                 <p className="text-sm text-slate-600">
                   Fout bij het laden van competentie data.
                 </p>
-                <div className="mt-3">
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                  {selectedScanId && (
+                    <Button asChild variant="default" className="rounded-xl">
+                      <Link href={`/student/competency/scan/${selectedScanId}`}>
+                        Bekijk deze scan <ChevronRight className="ml-1 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  )}
                   <Button asChild variant="secondary" className="rounded-xl">
                     <Link href="/student/competency/growth">
-                      Ga naar scans <ChevronRight className="ml-1 h-4 w-4" />
+                      Alle scans <ChevronRight className="ml-1 h-4 w-4" />
                     </Link>
                   </Button>
                 </div>
@@ -652,10 +659,17 @@ export function OverviewTab({
                 <p className="text-sm text-slate-600">
                   Nog geen competentiescan ingevuld. Vul eerst een scan in om je profiel te zien.
                 </p>
-                <div className="mt-3">
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                  {selectedScanId && (
+                    <Button asChild variant="default" className="rounded-xl">
+                      <Link href={`/student/competency/scan/${selectedScanId}`}>
+                        Bekijk deze scan <ChevronRight className="ml-1 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  )}
                   <Button asChild variant="secondary" className="rounded-xl">
                     <Link href="/student/competency/growth">
-                      Ga naar scans <ChevronRight className="ml-1 h-4 w-4" />
+                      Alle scans <ChevronRight className="ml-1 h-4 w-4" />
                     </Link>
                   </Button>
                 </div>
