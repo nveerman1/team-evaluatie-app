@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { evaluationService, projectService, competencyService } from "@/services";
+import { evaluationService, projectService, competencyService, taskService } from "@/services";
 import type { ProjectListItem } from "@/dtos/project.dto";
 import { Loading } from "@/components";
 import { formatDate } from "@/utils";
 
-type EventType = "project_start" | "project_end" | "peer_deadline_review" | "peer_deadline_reflection" | "competency_deadline" | "project_note" | "reminder";
+type EventType = "project_start" | "project_end" | "peer_deadline_review" | "peer_deadline_reflection" | "competency_deadline" | "project_note" | "reminder" | "task_opdrachtgever" | "task_docent" | "task_project";
 
 type CalendarEvent = {
   id: string;
@@ -38,6 +38,9 @@ const EVENT_ICONS: Record<EventType, string> = {
   competency_deadline: "🎯",
   project_note: "📋",
   reminder: "🔔",
+  task_opdrachtgever: "📧",
+  task_docent: "✅",
+  task_project: "📌",
 };
 
 const EVENT_LABELS: Record<EventType, string> = {
@@ -48,6 +51,9 @@ const EVENT_LABELS: Record<EventType, string> = {
   competency_deadline: "Competentiescan deadline",
   project_note: "Projectaantekening",
   reminder: "Reminder",
+  task_opdrachtgever: "Opdrachtgever taak",
+  task_docent: "Docent taak",
+  task_project: "Project taak",
 };
 
 export default function CalendarPage() {
@@ -69,15 +75,17 @@ export default function CalendarPage() {
   async function loadCalendarData() {
     setLoading(true);
     try {
-      const [evalsData, projectsData, windowsData] = await Promise.all([
+      const [evalsData, projectsData, windowsData, tasksData] = await Promise.all([
         evaluationService.getEvaluations({}),
         projectService.listProjects({ per_page: 100 }),
         competencyService.getWindows("open"),
+        taskService.listTasks({ status: "open", per_page: 100 }),
       ]);
 
       const evaluations = Array.isArray(evalsData) ? evalsData : [];
       const projectsList = projectsData?.items || [];
       const windows = Array.isArray(windowsData) ? windowsData : [];
+      const tasks = tasksData?.items || [];
 
       setProjects(projectsList);
 
@@ -178,6 +186,34 @@ export default function CalendarPage() {
             courseName: window.course_id ? `Course ${window.course_id}` : undefined,
             link: `/teacher/competencies/windows/${window.id}`,
             metadata: { windowId: window.id, courseId: window.course_id },
+          });
+        }
+      });
+
+      // Add task events
+      tasks.forEach((task) => {
+        if (task.due_date) {
+          const taskType = `task_${task.type}` as EventType;
+          const statusMap: Record<string, "not_started" | "in_progress" | "completed"> = {
+            open: "in_progress",
+            done: "completed",
+            dismissed: "completed",
+          };
+          
+          calendarEvents.push({
+            id: `task-${task.id}`,
+            title: task.title,
+            description: task.description || `${task.type} taak`,
+            date: new Date(task.due_date),
+            type: taskType,
+            status: statusMap[task.status] || "not_started",
+            projectName: task.project_name,
+            courseName: task.course_name,
+            link: `/teacher/tasks/kanban`, // Link to tasks kanban view
+            metadata: {
+              projectId: task.project_id,
+              courseId: undefined, // Tasks don't have direct course_id, use project's course
+            },
           });
         }
       });
