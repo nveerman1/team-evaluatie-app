@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, date
 from sqlalchemy import (
     String,
     Integer,
@@ -2994,7 +2994,7 @@ class Task(Base):
     # Basic info
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    due_date: Mapped[Optional[datetime]] = mapped_column(Date, nullable=True, index=True)
+    due_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True, index=True)
     
     # Status and type
     status: Mapped[str] = mapped_column(
@@ -3037,7 +3037,6 @@ class Task(Base):
     client: Mapped[Optional["Client"]] = relationship()
     
     __table_args__ = (
-        Index("ix_task_school", "school_id"),
         Index("ix_task_due_date", "due_date"),
         Index("ix_task_status", "status"),
         Index("ix_task_project", "project_id"),

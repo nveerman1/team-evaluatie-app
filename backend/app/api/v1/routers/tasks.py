@@ -122,15 +122,21 @@ def list_tasks(
         try:
             from_dt = datetime.fromisoformat(from_date).date()
             query = query.filter(Task.due_date >= from_dt)
-        except (ValueError, AttributeError):
-            pass
+        except (ValueError, AttributeError) as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid 'from' date format: {from_date}. Expected ISO format (YYYY-MM-DD)."
+            )
     
     if to_date:
         try:
             to_dt = datetime.fromisoformat(to_date).date()
             query = query.filter(Task.due_date <= to_dt)
-        except (ValueError, AttributeError):
-            pass
+        except (ValueError, AttributeError) as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid 'to' date format: {to_date}. Expected ISO format (YYYY-MM-DD)."
+            )
     
     if project_id:
         query = query.filter(Task.project_id == project_id)

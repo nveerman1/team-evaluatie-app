@@ -56,7 +56,6 @@ def upgrade():
     # Create indexes
     op.create_index(op.f("ix_tasks_id"), "tasks", ["id"], unique=False)
     op.create_index(op.f("ix_tasks_school_id"), "tasks", ["school_id"], unique=False)
-    op.create_index("ix_task_school", "tasks", ["school_id"], unique=False)
     op.create_index("ix_task_due_date", "tasks", ["due_date"], unique=False)
     op.create_index("ix_task_status", "tasks", ["status"], unique=False)
     op.create_index("ix_task_project", "tasks", ["project_id"], unique=False)
@@ -73,7 +72,6 @@ def downgrade():
     op.drop_index("ix_task_project", table_name="tasks")
     op.drop_index("ix_task_status", table_name="tasks")
     op.drop_index("ix_task_due_date", table_name="tasks")
-    op.drop_index("ix_task_school", table_name="tasks")
     op.drop_index(op.f("ix_tasks_school_id"), table_name="tasks")
     op.drop_index(op.f("ix_tasks_id"), table_name="tasks")
     

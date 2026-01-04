@@ -488,7 +488,7 @@ function ClientTasksContent() {
 
   const handleOpenMail = (task: Task) => {
     const mailtoLink = taskService.generateMailtoLink(task);
-    window.location.href = mailtoLink;
+    window.open(mailtoLink, "_self");
   };
 
   const handleMarkAsDone = async (taskId: number) => {
@@ -547,12 +547,15 @@ function ClientTasksContent() {
     return dueDate.toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
   };
 
+  // Calculate urgency threshold once (7 days from now)
+  const urgencyThreshold = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
   return (
     <>
       {tasks.map((task) => {
         const canEmail = task.email_to || task.client_email;
         const daysText = formatDueDate(task.due_date);
-        const isUrgent = task.due_date && new Date(task.due_date) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        const isUrgent = task.due_date && new Date(task.due_date) <= urgencyThreshold;
         
         return (
           <ListRow
