@@ -68,7 +68,7 @@ export function useStudentCompetencyScans() {
     };
   }, []);
 
-  return { data, isLoading, error };
+  return { data, isLoading, isError: error !== null, error };
 }
 
 /**
@@ -124,5 +124,5 @@ export function useStudentCompetencyRadar(scanId: string | null) {
     };
   }, [scanId]);
 
-  return { data, isLoading, error };
+  return { data, isLoading, isError: error !== null, error };
 }
