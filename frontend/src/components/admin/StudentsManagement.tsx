@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import {
   adminStudentService,
@@ -14,6 +14,11 @@ import StudentCSVImportModal from "@/components/admin/StudentCSVImportModal";
 import { Link2, Power, PowerOff } from "lucide-react";
 
 const StudentsManagement = forwardRef((props, ref) => {
+  // Debug: track renders
+  const renderCount = React.useRef(0);
+  renderCount.current++;
+  console.log('StudentsManagement render #', renderCount.current);
+
   // State
   const [students, setStudents] = useState<AdminStudent[]>([]);
   const [allStudentsForKPIs, setAllStudentsForKPIs] = useState<AdminStudent[]>([]);
@@ -30,7 +35,7 @@ const StudentsManagement = forwardRef((props, ref) => {
   // Modal states
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<AdminStudent | null>(null);
+  const [selectedStudent, setSelectedStudent | null>(null);
   
   // Bulk selection states
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<number>>(new Set());
@@ -120,16 +125,23 @@ const StudentsManagement = forwardRef((props, ref) => {
       
       // Log first few students for debugging
       if (filteredStudents.length > 0) {
-        console.log('Sample student data:', filteredStudents.slice(0, 2).map(s => ({
-          id: s.id,
-          name: s.name,
-          course_name: s.course_name,
-          course_enrollments: s.course_enrollments
-        })));
+        console.log('Sample student data (expanded):');
+        filteredStudents.slice(0, 3).forEach((s, idx) => {
+          console.log(`  Student ${idx + 1}:`, {
+            id: s.id,
+            name: s.name,
+            course_name: s.course_name,
+            course_enrollments: s.course_enrollments,
+            has_course_name: !!s.course_name,
+            has_course_enrollments: !!(s.course_enrollments && s.course_enrollments.length > 0)
+          });
+        });
       }
       
-      setStudents(filteredStudents);
+      // Force new array reference to ensure React detects the change
+      setStudents([...filteredStudents]);
       setTotalStudents(response.total);
+      console.log('State updated with', filteredStudents.length, 'students at', new Date().toISOString());
     } catch (err) {
       setError("Kon leerlingen niet laden");
       console.error(err);
