@@ -1,5 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
-import { studentService } from "@/services/student.service";
+"use client";
+
+import { useEffect, useState } from "react";
 
 export interface ScanListItem {
   id: string;
@@ -27,43 +28,101 @@ export interface ScanRadarData {
  * Hook to fetch list of student's competency scans
  */
 export function useStudentCompetencyScans() {
-  return useQuery<ScanListItem[]>({
-    queryKey: ["studentCompetencyScans"],
-    queryFn: async () => {
-      const response = await fetch("/api/v1/student/competency/scans", {
-        credentials: "include",
-      });
-      if (!response.ok) {
-        throw new Error("Failed to fetch scans");
+  const [data, setData] = useState<ScanListItem[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchScans = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/v1/student/competency/scans", {
+          credentials: "include",
+        });
+        if (!response.ok) {
+          throw new Error("Failed to fetch scans");
+        }
+        const data = await response.json();
+        if (isMounted) {
+          setData(data);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err instanceof Error ? err : new Error("Failed to fetch scans"));
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
-      return response.json();
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+    };
+
+    fetchScans();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  return { data, isLoading, error };
 }
 
 /**
  * Hook to fetch radar data for a specific scan
  */
 export function useStudentCompetencyRadar(scanId: string | null) {
-  return useQuery<ScanRadarData>({
-    queryKey: ["studentCompetencyRadar", scanId],
-    queryFn: async () => {
-      if (!scanId) {
-        throw new Error("Scan ID is required");
-      }
-      const response = await fetch(
-        `/api/v1/student/competency/scans/${scanId}/radar`,
-        {
-          credentials: "include",
+  const [data, setData] = useState<ScanRadarData | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    if (!scanId) {
+      setData(null);
+      setIsLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchRadarData = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch(
+          `/api/v1/student/competency/scans/${scanId}/radar`,
+          {
+            credentials: "include",
+          }
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch radar data");
         }
-      );
-      if (!response.ok) {
-        throw new Error("Failed to fetch radar data");
+        const data = await response.json();
+        if (isMounted) {
+          setData(data);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err instanceof Error ? err : new Error("Failed to fetch radar data"));
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
-      return response.json();
-    },
-    enabled: !!scanId, // Only fetch when scanId is provided
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+    };
+
+    fetchRadarData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [scanId]);
+
+  return { data, isLoading, error };
 }
