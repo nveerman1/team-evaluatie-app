@@ -35,7 +35,7 @@ const StudentsManagement = forwardRef((props, ref) => {
   // Modal states
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [selectedStudent, setSelectedStudent | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<AdminStudent | null>(null);
   
   // Bulk selection states
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<number>>(new Set());
