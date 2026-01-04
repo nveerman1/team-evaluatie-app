@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { evaluationService, projectAssessmentService, competencyService } from "@/services";
+import { evaluationService, projectAssessmentService, competencyService, taskService } from "@/services";
 import type { Evaluation } from "@/dtos/evaluation.dto";
 import type { ProjectAssessmentListItem } from "@/dtos/project-assessment.dto";
 import type { CompetencyWindow } from "@/dtos/competency.dto";
+import type { Task } from "@/dtos/task.dto";
 import { Loading } from "@/components";
 import { formatDate } from "@/utils";
 import { CollapsibleSection } from "@/components/teacher/CollapsibleSection";
@@ -18,6 +19,8 @@ export default function TeacherDashboard() {
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [projectAssessments, setProjectAssessments] = useState<ProjectAssessmentListItem[]>([]);
   const [competencyWindows, setCompetencyWindows] = useState<CompetencyWindow[]>([]);
+  const [openTasksCount, setOpenTasksCount] = useState<number>(0);
+  const [tasksHint, setTasksHint] = useState<string>("Opdrachtgeverstaken");
 
   // Tab states for collapsible sections
   const [taskTab, setTaskTab] = useState<"week" | "deadlines" | "clients">("week");
@@ -38,6 +41,30 @@ export default function TeacherDashboard() {
         // Load competency windows
         const windowsData = await competencyService.getWindows("open");
         setCompetencyWindows(Array.isArray(windowsData) ? windowsData : []);
+        
+        // Load open opdrachtgever tasks
+        try {
+          const tasksData = await taskService.listTasks({
+            type: "opdrachtgever",
+            status: "open",
+            per_page: 100, // Get all for count
+          });
+          setOpenTasksCount(tasksData?.total || 0);
+          
+          // Create hint with first few client names
+          if (tasksData?.items && tasksData.items.length > 0) {
+            const clientNames = tasksData.items
+              .map(t => t.client_name)
+              .filter((name): name is string => !!name)
+              .slice(0, 3);
+            if (clientNames.length > 0) {
+              setTasksHint(clientNames.join(", "));
+            }
+          }
+        } catch (taskError) {
+          console.error("Error loading tasks:", taskError);
+          // Don't fail the whole dashboard if tasks fail to load
+        }
       } catch (error) {
         console.error("Error loading dashboard data:", error);
       } finally {
@@ -171,8 +198,8 @@ export default function TeacherDashboard() {
       deadlinesThisWeek.length > 0
         ? `${reviewCount} review, ${reflectionCount} reflectie`
         : "Geen deadlines deze week",
-    clientTasks: 3, // Mock data - in real implementation, fetch from client service
-    clientTasksHint: "Greystar, Marine, Rijndam",
+    clientTasks: openTasksCount,
+    clientTasksHint: tasksHint,
     openScans: openScans,
     openScansHint:
       openScans > 0 ? `${openScans} competentiescan${openScans > 1 ? "s" : ""} actief` : "Geen open scans",
@@ -432,67 +459,149 @@ export default function TeacherDashboard() {
 
 // Client Tasks Content Component for the "Opdrachtgevers" tab
 function ClientTasksContent() {
-  const [reminders, setReminders] = useState([
-    {
-      id: "1",
-      title: "Tussenpresentatie Greystar (5V1)",
-      meta: "Uitnodiging mailen uiterlijk 25/2",
-      clientEmail: "sanne.devries@greystar.nl",
-      subject: "Uitnodiging tussenpresentatie 5V1",
-      body: "Beste Sanne,\n\nGraag nodigen wij u uit voor de tussenpresentatie van 5V1.\n\nMet vriendelijke groet,\nHet docententeam",
-    },
-    {
-      id: "2",
-      title: "Eindpresentatie Marine (4H2)",
-      meta: "Bevestigingsmail opdrachtgever",
-      clientEmail: "r.gans@mindef.nl",
-      subject: "Bevestiging eindpresentatie 4H2",
-      body: "Beste Richard,\n\nHierbij bevestigen wij de eindpresentatie van 4H2.\n\nMet vriendelijke groet,\nHet docententeam",
-    },
-    {
-      id: "3",
-      title: "Bedankmail Rijndam (3H1)",
-      meta: "Versturen na eindpresentaties",
-      clientEmail: "l.janssen@rijndam.nl",
-      subject: "Bedankt voor de samenwerking 3H1",
-      body: "Beste Lotte,\n\nHartelijk dank voor de prettige samenwerking met 3H1.\n\nMet vriendelijke groet,\nHet docententeam",
-    },
-  ]);
+  const [loading, setLoading] = useState(true);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleOpenMail = (reminder: (typeof reminders)[0]) => {
-    const mailtoLink = `mailto:${reminder.clientEmail}?subject=${encodeURIComponent(reminder.subject)}&body=${encodeURIComponent(reminder.body)}`;
-    window.open(mailtoLink, "_self");
+  useEffect(() => {
+    async function loadTasks() {
+      setLoading(true);
+      setError(null);
+      try {
+        // Get opdrachtgever tasks with status "open", sorted by due_date
+        const response = await taskService.listTasks({
+          type: "opdrachtgever",
+          status: "open",
+          per_page: 10,
+        });
+        setTasks(response.items || []);
+      } catch (err) {
+        console.error("Error loading tasks:", err);
+        setError("Kon taken niet laden");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadTasks();
+  }, []);
+
+  const handleOpenMail = (task: Task) => {
+    const mailtoLink = taskService.generateMailtoLink(task);
+    window.location.href = mailtoLink;
   };
 
-  const handleMarkAsDone = (reminderId: string) => {
-    setReminders(reminders.filter((r) => r.id !== reminderId));
+  const handleMarkAsDone = async (taskId: number) => {
+    try {
+      await taskService.completeTask(taskId);
+      // Remove task from list after marking as done
+      setTasks(tasks.filter((t) => t.id !== taskId));
+    } catch (err) {
+      console.error("Error marking task as done:", err);
+    }
   };
 
-  if (reminders.length === 0) {
-    return <p className="text-[13px] text-gray-400 py-4 text-center">Geen opdrachtgever-taken op dit moment.</p>;
+  if (loading) {
+    return (
+      <div className="py-4 text-center">
+        <p className="text-[13px] text-gray-400">Laden...</p>
+      </div>
+    );
   }
+
+  if (error) {
+    return (
+      <div className="py-4 text-center">
+        <p className="text-[13px] text-red-500">{error}</p>
+      </div>
+    );
+  }
+
+  if (tasks.length === 0) {
+    return (
+      <div className="py-4 text-center">
+        <p className="text-[13px] text-gray-400 mb-2">Geen opdrachtgever-taken op dit moment.</p>
+        <Link
+          href="/teacher/tasks/kanban"
+          className="text-[13px] text-blue-600 hover:underline"
+        >
+          Bekijk alle taken →
+        </Link>
+      </div>
+    );
+  }
+
+  // Format due date for display
+  const formatDueDate = (dueDateStr?: string): string => {
+    if (!dueDateStr) return "Geen deadline";
+    const dueDate = new Date(dueDateStr);
+    const today = new Date();
+    const diffTime = dueDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) return "Verlopen";
+    if (diffDays === 0) return "Vandaag";
+    if (diffDays === 1) return "Morgen";
+    if (diffDays <= 7) return `Over ${diffDays} dagen`;
+    
+    return dueDate.toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
+  };
 
   return (
     <>
-      {reminders.map((reminder) => (
-        <ListRow
-          key={reminder.id}
-          title={reminder.title}
-          meta={reminder.meta}
-          onClick={() => reminder.id === "3" ? handleMarkAsDone(reminder.id) : handleOpenMail(reminder)}
-          right={
-            reminder.id === "3" ? (
-              <span className="px-3 py-1 text-[11px] rounded-full border border-gray-200 bg-white text-gray-600">
-                Markeer als klaar
-              </span>
-            ) : (
-              <span className="px-3 py-1 text-[11px] rounded-full bg-blue-600 text-white">
-                Open in Outlook
-              </span>
-            )
-          }
-        />
-      ))}
+      {tasks.map((task) => {
+        const canEmail = task.email_to || task.client_email;
+        const daysText = formatDueDate(task.due_date);
+        const isUrgent = task.due_date && new Date(task.due_date) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        
+        return (
+          <ListRow
+            key={task.id}
+            title={task.title}
+            meta={`${task.client_name || "—"} • ${daysText}`}
+            onClick={canEmail ? () => handleOpenMail(task) : undefined}
+            right={
+              <div className="flex gap-2">
+                {canEmail && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenMail(task);
+                    }}
+                    className={`px-3 py-1 text-[11px] rounded-full ${
+                      isUrgent
+                        ? "bg-orange-600 text-white"
+                        : "bg-blue-600 text-white"
+                    }`}
+                  >
+                    Open in Outlook
+                  </button>
+                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleMarkAsDone(task.id);
+                  }}
+                  className="px-3 py-1 text-[11px] rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                >
+                  Klaar
+                </button>
+              </div>
+            }
+          />
+        );
+      })}
+      
+      {tasks.length >= 3 && (
+        <div className="pt-2 text-center">
+          <Link
+            href="/teacher/tasks/kanban"
+            className="text-[13px] text-blue-600 hover:underline"
+          >
+            Bekijk alle taken →
+          </Link>
+        </div>
+      )}
     </>
   );
 }
