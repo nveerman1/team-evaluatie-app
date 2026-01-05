@@ -150,16 +150,16 @@ function StudentDashboardContent() {
                   <Target className="mr-2 h-4 w-4" /> Competentiescan
                 </TabsTrigger>
                 <TabsTrigger
-                  value="projecten"
-                  className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
-                >
-                  <Trophy className="mr-2 h-4 w-4" /> Projectbeoordelingen
-                </TabsTrigger>
-                <TabsTrigger
                   value="inleveren"
                   className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
                 >
                   <Upload className="mr-2 h-4 w-4" /> Inleveren
+                </TabsTrigger>
+                <TabsTrigger
+                  value="projecten"
+                  className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
+                >
+                  <Trophy className="mr-2 h-4 w-4" /> Projectbeoordelingen
                 </TabsTrigger>
                 <TabsTrigger
                   value="overzicht"
