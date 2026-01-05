@@ -30,6 +30,7 @@ School
                  ├── CourseEnrollment (student enrollment)
                  │    └── Students
                  └── Project
+                      ├── Task (teacher tasks for client communication)
                       ├── Subproject (optional deelprojecten)
                       └── ProjectTeam
                            └── ProjectTeamMember
@@ -44,6 +45,7 @@ School
 - **Course**: Specific course offering linked to an academic year
 - **CourseEnrollment**: Links students to courses they are enrolled in
 - **Project**: Project within a course
+- **Task**: Teacher tasks for client communication and project follow-ups (auto-generated or manual)
 - **Subproject**: Optional sub-tasks/sections within a main project (deelprojecten)
 - **ProjectTeam**: Immutable team roster snapshot for a project
 - **ProjectTeamMember**: Individual student membership in a project team
@@ -582,6 +584,37 @@ Teachers are explicitly assigned to courses via the **TeacherCourse** junction t
 - `start_date`: Project start date
 - `end_date`: Project end date
 - **Unique constraint**: `(client_id, project_assessment_id)`
+
+### Task
+- `id`: Primary key
+- `school_id`: Foreign key to School
+- `title`: Task title (max 500 characters)
+- `description`: Detailed task description (nullable)
+- `due_date`: Task deadline (date, nullable)
+- `status`: Task status - "open" | "done" | "dismissed" (default: "open")
+- `type`: Task type - "opdrachtgever" | "docent" | "project" (default: "opdrachtgever")
+- `project_id`: Foreign key to Project (nullable, CASCADE on delete)
+- `client_id`: Foreign key to Client (nullable, SET NULL on delete)
+- `class_id`: Foreign key to Class (nullable, SET NULL on delete)
+- `auto_generated`: Boolean flag for auto-generated tasks (default: false)
+- `source`: Task source - "tussenpresentatie" | "eindpresentatie" | "manual" (default: "manual")
+- `email_to`: Email addresses for task (nullable, max 500 characters)
+- `email_cc`: CC email addresses (nullable, max 500 characters)
+- `completed_at`: Timestamp when task was marked as done (nullable)
+- `created_at`: Creation timestamp
+- `updated_at`: Last update timestamp
+- **Indexes**: 
+  - `school_id`
+  - `due_date`
+  - `status`
+  - `project_id`
+  - `client_id`
+  - `(school_id, status)` - composite for dashboard queries
+  - `auto_generated` - for filtering auto vs manual tasks
+- **Purpose**: Teacher task management for client communications, project follow-ups, and reminders
+- **Auto-generation**: Tasks are automatically created 21 days before tussenpresentatie and eindpresentatie dates when projects are created via wizard
+- **Smart updates**: Auto-generated tasks update when project dates change; manual tasks are preserved
+- **RBAC**: Only teachers and admins can manage tasks; students have no access
 
 ### ProjectTeam (New - Immutable Snapshots)
 - `id`: Primary key
@@ -2096,6 +2129,35 @@ Audit logs include:
 
 **Template Variables:**
 - `{contactpersoon}`, `{schooljaar}`, `{project_naam}`, `{datum}`, `{tijd}`, `{locatie}`, `{klas_naam}`, `{docent_naam}`, `{school_naam}`
+
+### Tasks API (`/api/v1/teacher/tasks`)
+
+- `GET /teacher/tasks` - List tasks with filters (teacher/admin only)
+  - Query params: `status` ("open"|"done"|"dismissed"), `type` ("opdrachtgever"|"docent"|"project"), `from` (ISO date), `to` (ISO date), `project_id`, `client_id`, `page`, `per_page`
+  - Returns: Paginated list with enriched context (project_name, client_name, class_name, course_name)
+  - Sort: `due_date ASC, created_at DESC`
+- `POST /teacher/tasks` - Create manual task (teacher/admin only)
+  - Body: `{title, description?, due_date?, status?, type?, project_id?, client_id?, class_id?, email_to?, email_cc?}`
+  - Sets: `auto_generated=false`, `source="manual"`
+- `PATCH /teacher/tasks/{task_id}` - Update task (teacher/admin only)
+  - Body: Partial task fields
+  - Automatic: Sets `completed_at` when status changes to "done"
+- `DELETE /teacher/tasks/{task_id}` - Delete task (teacher/admin only)
+  - Only manual tasks can be deleted; auto-generated tasks are deleted when project is deleted
+- `POST /teacher/tasks/{task_id}/complete` - Mark task as done (convenience endpoint)
+  - Sets: `status="done"`, `completed_at=now()`
+
+**Auto-generation:**
+- Tasks are automatically created when projects are created via wizard with `project_assessment_tussen` or `project_assessment_eind` deadlines
+- Tussenpresentatie task: `due_date = tussen_datum - 21 days`
+- Eindpresentatie task: `due_date = eind_datum - 21 days`
+- Auto-generated tasks are upserted (updated if they exist) when project dates change
+- Manual tasks are preserved during project updates
+
+**Integration:**
+- **Dashboard**: Tasks shown in "Opdrachtgevers" tab with "Open in Outlook" and "Klaar" buttons
+- **Calendar**: Tasks appear as calendar events with type-specific icons (📧 opdrachtgever, ✅ docent, 📌 project)
+- **Email**: `generateMailtoLink()` creates mailto links with task context (project, client, deadline, description)
 
 ### Academic Years API (`/api/v1/admin/academic-years`)
 

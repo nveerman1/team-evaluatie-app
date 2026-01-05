@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Optional, List
+from datetime import datetime, date
 from datetime import datetime, timezone
 from sqlalchemy import (
     String,
@@ -13,6 +14,7 @@ from sqlalchemy import (
     Float,
     Text,
     Date,
+    DateTime,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import sqlalchemy as sa
@@ -2974,4 +2976,72 @@ class AttendanceAggregate(Base):
 
     __table_args__ = (
         Index("ix_attendance_aggregates_user_id", "user_id"),
+    )
+
+
+class Task(Base):
+    """
+    Task - Teacher tasks including client-related tasks (opdrachtgeverstaken)
+    Auto-generated from project milestones or manually created by teachers
+    """
+
+    __tablename__ = "tasks"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = mapped_column(
+        ForeignKey("schools.id", ondelete="CASCADE"), index=True
+    )
+
+    # Basic info
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    due_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True, index=True)
+    
+    # Status and type
+    status: Mapped[str] = mapped_column(
+        String(30), default="open", nullable=False, index=True
+    )  # "open" | "done" | "dismissed"
+    
+    type: Mapped[str] = mapped_column(
+        String(30), default="opdrachtgever", nullable=False
+    )  # "opdrachtgever" | "docent" | "project"
+    
+    # Links
+    project_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    client_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("clients.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    class_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("classes.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    
+    # Auto-generation tracking
+    auto_generated: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    source: Mapped[str] = mapped_column(
+        String(50), default="manual", nullable=False
+    )  # "tussenpresentatie" | "eindpresentatie" | "manual"
+    
+    # Email integration (for mailto links)
+    email_to: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    email_cc: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    
+    # Completion tracking
+    completed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # Relationships
+    school: Mapped["School"] = relationship()
+    project: Mapped[Optional["Project"]] = relationship()
+    client: Mapped[Optional["Client"]] = relationship()
+    
+    __table_args__ = (
+        Index("ix_task_due_date", "due_date"),
+        Index("ix_task_status", "status"),
+        Index("ix_task_project", "project_id"),
+        Index("ix_task_client", "client_id"),
+        Index("ix_task_school_status", "school_id", "status"),
+        Index("ix_task_auto_generated", "auto_generated"),
     )
