@@ -1,10 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 import { Course, CourseCreate } from "@/dtos/course.dto";
 import { courseService } from "@/services/course.service";
 
 export default function CoursesPage() {
+  const { isAdmin, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,6 +21,13 @@ export default function CoursesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCourses, setTotalCourses] = useState(0);
+
+  // Redirect non-admins
+  useEffect(() => {
+    if (!authLoading && !isAdmin) {
+      router.push("/teacher");
+    }
+  }, [isAdmin, authLoading, router]);
 
   useEffect(() => {
     loadCourses();
@@ -66,6 +77,20 @@ export default function CoursesPage() {
       alert("Kon vak niet verwijderen");
     }
   };
+
+  // Show loading state while checking auth
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-100">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Don't render anything if not admin (will redirect)
+  if (!isAdmin) {
+    return null;
+  }
 
   return (
     <>
