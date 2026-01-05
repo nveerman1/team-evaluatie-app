@@ -14,11 +14,6 @@ import StudentCSVImportModal from "@/components/admin/StudentCSVImportModal";
 import { Link2, Power, PowerOff } from "lucide-react";
 
 const StudentsManagement = forwardRef((props, ref) => {
-  // Debug: track renders
-  const renderCount = React.useRef(0);
-  renderCount.current++;
-  console.log('StudentsManagement render #', renderCount.current);
-
   // State
   const [students, setStudents] = useState<AdminStudent[]>([]);
   const [allStudentsForKPIs, setAllStudentsForKPIs] = useState<AdminStudent[]>([]);
@@ -109,9 +104,7 @@ const StudentsManagement = forwardRef((props, ref) => {
         params.course = courseFilter;
       }
       
-      console.log('Loading students with params:', params);
       const response = await adminStudentService.listStudents(params);
-      console.log('Received', response.students.length, 'students from API');
       
       let filteredStudents = response.students;
       
@@ -120,28 +113,11 @@ const StudentsManagement = forwardRef((props, ref) => {
         filteredStudents = filteredStudents.filter(s => 
           !s.course_name && (!s.course_enrollments || s.course_enrollments.length === 0)
         );
-        console.log('After onlyUnlinked filter:', filteredStudents.length, 'students');
-      }
-      
-      // Log first few students for debugging
-      if (filteredStudents.length > 0) {
-        console.log('Sample student data (expanded):');
-        filteredStudents.slice(0, 3).forEach((s, idx) => {
-          console.log(`  Student ${idx + 1}:`, {
-            id: s.id,
-            name: s.name,
-            course_name: s.course_name,
-            course_enrollments: s.course_enrollments,
-            has_course_name: !!s.course_name,
-            has_course_enrollments: !!(s.course_enrollments && s.course_enrollments.length > 0)
-          });
-        });
       }
       
       // Force new array reference to ensure React detects the change
       setStudents([...filteredStudents]);
       setTotalStudents(response.total);
-      console.log('State updated with', filteredStudents.length, 'students at', new Date().toISOString());
     } catch (err) {
       setError("Kon leerlingen niet laden");
       console.error(err);
@@ -247,9 +223,6 @@ const StudentsManagement = forwardRef((props, ref) => {
   const handleBulkLinkToCourse = async (courseName: string) => {
     const idsToLink = Array.from(selectedStudentIds);
     
-    console.log('Starting bulk link for', idsToLink.length, 'students to course:', courseName);
-    console.log('Student IDs being linked:', idsToLink);
-    
     // Link all students concurrently for better performance
     const results = await Promise.allSettled(
       idsToLink.map(id =>
@@ -261,33 +234,10 @@ const StudentsManagement = forwardRef((props, ref) => {
     
     // Count successes and failures
     const failures = results.filter(r => r.status === 'rejected');
-    const successes = results.filter(r => r.status === 'fulfilled');
-    
-    console.log('Bulk link completed:', successes.length, 'successes,', failures.length, 'failures');
-    
-    // Wait a bit to ensure backend DB changes are committed
-    await new Promise(resolve => setTimeout(resolve, 500));
     
     // Clear selection and reload
     setSelectedStudentIds(new Set());
-    console.log('Reloading students data...');
     await Promise.all([loadStudents(), loadKPIData()]);
-    console.log('Students data reloaded');
-    
-    // After reload, log the updated students
-    console.log('Checking updated students...');
-    setTimeout(() => {
-      const updatedStudents = students.filter(s => idsToLink.includes(s.id));
-      console.log('Updated students after bulk link:');
-      updatedStudents.forEach(s => {
-        console.log(`  ${s.name} (ID: ${s.id}):`, {
-          course_name: s.course_name,
-          course_enrollments: s.course_enrollments,
-          has_course_name: !!s.course_name,
-          has_course_enrollments: !!(s.course_enrollments && s.course_enrollments.length > 0)
-        });
-      });
-    }, 100);
     
     if (failures.length > 0) {
       throw new Error(`Kon ${failures.length} van ${idsToLink.length} student(en) niet koppelen`);
