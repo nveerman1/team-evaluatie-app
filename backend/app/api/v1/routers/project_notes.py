@@ -9,6 +9,7 @@ to OMZA categories and competencies.
 
 from __future__ import annotations
 from typing import Optional, List
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -42,6 +43,23 @@ from app.core.audit import log_create, log_update, log_delete
 router = APIRouter(prefix="/project-notes", tags=["project-notes"])
 
 
+def _ensure_timezone_aware(dt: datetime) -> datetime:
+    """Ensure a datetime is timezone-aware, converting to UTC if naive."""
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def _ensure_context_timezone_aware(context_dict: dict) -> dict:
+    """Ensure context timestamps are timezone-aware."""
+    timestamp_fields = ["created_at", "updated_at", "closed_at"]
+    for field in timestamp_fields:
+        if field in context_dict and context_dict[field]:
+            if isinstance(context_dict[field], datetime):
+                context_dict[field] = _ensure_timezone_aware(context_dict[field])
+    return context_dict
+
+
 def serialize_note(note: ProjectNote, db: Session) -> dict:
     """Helper function to serialize a ProjectNote to dict with proper metadata handling"""
     note_dict = {
@@ -58,8 +76,8 @@ def serialize_note(note: ProjectNote, db: Session) -> dict:
         "is_portfolio_evidence": note.is_portfolio_evidence,
         "metadata": note.note_metadata,  # Map note_metadata to metadata
         "created_by": note.created_by,
-        "created_at": note.created_at,
-        "updated_at": note.updated_at,
+        "created_at": _ensure_timezone_aware(note.created_at),
+        "updated_at": _ensure_timezone_aware(note.updated_at),
     }
 
     # Add joined data
@@ -138,6 +156,8 @@ async def list_contexts(
     results = []
     for context in contexts:
         context_dict = ProjectNotesContextOut.model_validate(context).model_dump()
+        # Ensure timestamps are timezone-aware
+        context_dict = _ensure_context_timezone_aware(context_dict)
 
         # Add course name
         if context.course_id:
@@ -221,6 +241,7 @@ async def create_context(
 
     # Enrich response
     context_dict = ProjectNotesContextOut.model_validate(context).model_dump()
+    context_dict = _ensure_context_timezone_aware(context_dict)
     context_dict["created_by_name"] = current_user.name
     context_dict["note_count"] = 0
 
@@ -257,6 +278,7 @@ async def get_context(
 
     # Build basic response
     context_dict = ProjectNotesContextOut.model_validate(context).model_dump()
+    context_dict = _ensure_context_timezone_aware(context_dict)
 
     # Add course name
     if context.course_id:
@@ -426,6 +448,7 @@ async def update_context(
 
     # Enrich response
     context_dict = ProjectNotesContextOut.model_validate(context).model_dump()
+    context_dict = _ensure_context_timezone_aware(context_dict)
 
     if context.course_id:
         course = db.query(Course).filter(Course.id == context.course_id).first()
@@ -829,8 +852,8 @@ async def close_project_notes_context(
         evaluation_id=context.evaluation_id,
         project_team_id=context.project_team_id,
         status=context.status,
-        closed_at=context.closed_at,
+        closed_at=_ensure_timezone_aware(context.closed_at) if context.closed_at else None,
         created_by=context.created_by,
-        created_at=context.created_at,
-        updated_at=context.updated_at,
+        created_at=_ensure_timezone_aware(context.created_at),
+        updated_at=_ensure_timezone_aware(context.updated_at),
     )
