@@ -986,7 +986,14 @@ def list_windows(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List all competency windows, optionally filtered by status and/or course"""
+    """
+    List all competency windows.
+    
+    Access control:
+    - Students: see windows for courses they're enrolled in
+    - Teachers: see windows for courses they're assigned to
+    - Admins: see all windows in their school
+    """
     query = select(CompetencyWindow).where(
         CompetencyWindow.school_id == current_user.school_id
     )

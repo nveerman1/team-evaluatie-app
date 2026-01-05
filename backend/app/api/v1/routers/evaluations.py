@@ -246,6 +246,14 @@ def list_evaluations(
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
 ):
+    """
+    List evaluations.
+    
+    Access control:
+    - Students: see evaluations for courses they're enrolled in
+    - Teachers: see evaluations for courses they're assigned to
+    - Admins: see all evaluations in their school
+    """
     stmt = select(Evaluation).where(Evaluation.school_id == user.school_id)
 
     # If user is a student, only show evaluations for courses they're enrolled in

@@ -169,7 +169,14 @@ def list_project_assessments(
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
 ):
-    """List project assessments (teachers see assessments for their assigned courses, admins see all, students see only their team's assessments)"""
+    """
+    List project assessments.
+    
+    Access control:
+    - Admins: see all assessments in their school
+    - Teachers: see all assessments for courses they're assigned to (not just ones they created)
+    - Students: see assessments for teams they belong to
+    """
     stmt = select(ProjectAssessment).where(ProjectAssessment.school_id == user.school_id)
     
     if user.role == "admin":

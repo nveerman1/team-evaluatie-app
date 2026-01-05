@@ -157,7 +157,13 @@ async def list_contexts(
     course_id: Optional[int] = Query(None),
     class_name: Optional[str] = Query(None),
 ):
-    """List all project note contexts for the current teacher."""
+    """
+    List all project note contexts.
+    
+    Access control:
+    - Admins: see all contexts in their school
+    - Teachers: see all contexts for courses they're assigned to (enables collaboration)
+    """
     require_role(current_user, ["teacher", "admin"])
 
     query = db.query(ProjectNotesContext).filter(
