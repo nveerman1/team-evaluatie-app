@@ -213,7 +213,7 @@ def list_evaluations(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
     q: Optional[str] = Query(None, description="Zoek in titel"),
-    status_: Optional[str] = Query(
+    status: Optional[str] = Query(
         None, pattern="^(draft|open|closed)$", description="Filter op status"
     ),
     course_id: Optional[int] = Query(None, description="Filter op course_id"),
@@ -247,8 +247,8 @@ def list_evaluations(
 
     if q:
         stmt = stmt.where(Evaluation.title.ilike(f"%{q}%"))
-    if status_:
-        stmt = stmt.where(Evaluation.status == status_)
+    if status:
+        stmt = stmt.where(Evaluation.status == status)
     if course_id is not None:
         stmt = stmt.where(Evaluation.course_id == course_id)
     if evaluation_type:
