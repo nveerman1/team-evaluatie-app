@@ -70,6 +70,8 @@ export default function EditRubricPageInner() {
   // Multi-select dropdown state
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null);
 
   // Click outside handler for dropdown
   useEffect(() => {
@@ -231,6 +233,26 @@ export default function EditRubricPageInner() {
       return names.join(", ");
     }
     return `${names.length} criteria geselecteerd`;
+  };
+
+  // Calculate dropdown position
+  const updateDropdownPosition = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+      });
+    }
+  };
+
+  // Toggle dropdown with position calculation
+  const toggleDropdown = () => {
+    if (!isDropdownOpen) {
+      updateDropdownPosition();
+    }
+    setIsDropdownOpen(!isDropdownOpen);
   };
 
   const importSelectedCriteria = () => {
@@ -507,8 +529,9 @@ export default function EditRubricPageInner() {
                 ) : (
                   <div className="relative" ref={dropdownRef}>
                     <button
+                      ref={buttonRef}
                       type="button"
-                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      onClick={toggleDropdown}
                       className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-left flex justify-between items-center"
                     >
                       <span className={selectedCriteriaIds.length === 0 ? "text-gray-500" : ""}>
@@ -524,8 +547,15 @@ export default function EditRubricPageInner() {
                       </svg>
                     </button>
 
-                    {isDropdownOpen && (
-                      <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                    {isDropdownOpen && dropdownPosition && (
+                      <div 
+                        className="fixed z-[9999] bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto"
+                        style={{
+                          top: `${dropdownPosition.top + 4}px`,
+                          left: `${dropdownPosition.left}px`,
+                          width: `${dropdownPosition.width}px`,
+                        }}
+                      >
                         <div className="py-1">
                           {isPeerRubric ? (
                             // Peer criteria categories (OMZA)
