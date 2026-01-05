@@ -348,7 +348,7 @@ export default function CreateRubricPageInner() {
                 </button>
 
                 {isDropdownOpen && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                  <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto">
                     <div className="py-1">
                       {scope === "peer" ? (
                         // Peer criteria categories (OMZA)
