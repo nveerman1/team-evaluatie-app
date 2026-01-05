@@ -248,6 +248,7 @@ const StudentsManagement = forwardRef((props, ref) => {
     const idsToLink = Array.from(selectedStudentIds);
     
     console.log('Starting bulk link for', idsToLink.length, 'students to course:', courseName);
+    console.log('Student IDs being linked:', idsToLink);
     
     // Link all students concurrently for better performance
     const results = await Promise.allSettled(
@@ -272,6 +273,21 @@ const StudentsManagement = forwardRef((props, ref) => {
     console.log('Reloading students data...');
     await Promise.all([loadStudents(), loadKPIData()]);
     console.log('Students data reloaded');
+    
+    // After reload, log the updated students
+    console.log('Checking updated students...');
+    setTimeout(() => {
+      const updatedStudents = students.filter(s => idsToLink.includes(s.id));
+      console.log('Updated students after bulk link:');
+      updatedStudents.forEach(s => {
+        console.log(`  ${s.name} (ID: ${s.id}):`, {
+          course_name: s.course_name,
+          course_enrollments: s.course_enrollments,
+          has_course_name: !!s.course_name,
+          has_course_enrollments: !!(s.course_enrollments && s.course_enrollments.length > 0)
+        });
+      });
+    }, 100);
     
     if (failures.length > 0) {
       throw new Error(`Kon ${failures.length} van ${idsToLink.length} student(en) niet koppelen`);
