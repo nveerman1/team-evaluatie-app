@@ -624,7 +624,13 @@ const StudentsManagement = forwardRef((props, ref) => {
                             </div>
                           </td>
                           <td className="px-3 py-3">
-                            {student.course_enrollments && student.course_enrollments.length > 0 ? (
+                            {student.course_name ? (
+                              <div className="flex flex-wrap gap-1">
+                                <span className="inline-flex rounded-full border border-blue-100 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                                  {student.course_name}
+                                </span>
+                              </div>
+                            ) : student.course_enrollments && student.course_enrollments.length > 0 ? (
                               <div className="flex flex-wrap gap-1">
                                 {student.course_enrollments.map((enrollment: any, idx: number) => (
                                   <span 
@@ -634,12 +640,6 @@ const StudentsManagement = forwardRef((props, ref) => {
                                     {enrollment.subject_code ? `${enrollment.subject_code} · ` : ''}{enrollment.course_name}
                                   </span>
                                 ))}
-                              </div>
-                            ) : student.course_name ? (
-                              <div className="flex flex-wrap gap-1">
-                                <span className="inline-flex rounded-full border border-blue-100 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
-                                  {student.course_name}
-                                </span>
                               </div>
                             ) : (
                               <span className="text-sm text-gray-400">—</span>
