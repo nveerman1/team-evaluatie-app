@@ -50,7 +50,7 @@ def _get_teacher_course_ids(db: Session, user: User) -> list[int]:
     course_ids_query = select(TeacherCourse.course_id).where(
         TeacherCourse.school_id == user.school_id,
         TeacherCourse.teacher_id == user.id,
-        TeacherCourse.is_active == True,
+        TeacherCourse.is_active.is_(True),
     )
     result = db.execute(course_ids_query).scalars().all()
     return list(result)

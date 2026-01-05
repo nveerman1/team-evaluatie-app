@@ -1,7 +1,7 @@
 """
 Tests for teacher course filtering functionality
 
-Verifies that teachers can only see evaluations, project assessments, 
+Verifies that teachers can only see evaluations, project assessments,
 competency windows, and project notes for courses they are assigned to.
 """
 

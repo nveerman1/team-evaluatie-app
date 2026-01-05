@@ -65,7 +65,7 @@ def _get_teacher_course_ids(db: Session, user: User) -> list[int]:
     course_ids_query = select(TeacherCourse.course_id).where(
         TeacherCourse.school_id == user.school_id,
         TeacherCourse.teacher_id == user.id,
-        TeacherCourse.is_active == True,
+        TeacherCourse.is_active.is_(True),
     )
     result = db.execute(course_ids_query).scalars().all()
     return list(result)
@@ -186,17 +186,12 @@ def list_project_assessments(
         # Teachers see assessments for courses they're assigned to
         teacher_course_ids = _get_teacher_course_ids(db, user)
         if teacher_course_ids:
-            # Get groups that belong to these courses
-            course_groups = db.query(Group.id).filter(
+            # Use subquery for efficiency - filter by groups that belong to assigned courses
+            group_subquery = select(Group.id).where(
                 Group.school_id == user.school_id,
-                Group.course_id.in_(teacher_course_ids),
-            ).all()
-            course_group_ids = [g[0] for g in course_groups]
-            if course_group_ids:
-                stmt = stmt.where(ProjectAssessment.group_id.in_(course_group_ids))
-            else:
-                # No groups in assigned courses, return empty
-                return ProjectAssessmentListResponse(items=[], page=page, limit=limit, total=0)
+                Group.course_id.in_(teacher_course_ids)
+            ).scalar_subquery()
+            stmt = stmt.where(ProjectAssessment.group_id.in_(group_subquery))
         else:
             # Teacher has no assigned courses, return empty
             return ProjectAssessmentListResponse(items=[], page=page, limit=limit, total=0)

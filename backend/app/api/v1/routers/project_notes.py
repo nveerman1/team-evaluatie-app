@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.api.v1.deps import get_db, get_current_user
+from sqlalchemy import select, func
 from app.infra.db.models import (
     User,
     ProjectNotesContext,
@@ -46,8 +47,6 @@ router = APIRouter(prefix="/project-notes", tags=["project-notes"])
 
 def _get_teacher_course_ids(db: Session, user: User) -> list[int]:
     """Get all course IDs that a teacher is assigned to via teacher_courses"""
-    from sqlalchemy import select
-    
     if user.role == "admin":
         # Admins see everything, return empty list to indicate no filtering
         return []
@@ -57,7 +56,7 @@ def _get_teacher_course_ids(db: Session, user: User) -> list[int]:
     course_ids_query = select(TeacherCourse.course_id).where(
         TeacherCourse.school_id == user.school_id,
         TeacherCourse.teacher_id == user.id,
-        TeacherCourse.is_active == True,
+        TeacherCourse.is_active.is_(True),
     )
     result = db.execute(course_ids_query).scalars().all()
     return list(result)
