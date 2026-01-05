@@ -23,6 +23,7 @@ from app.infra.db.models import (
     Project,
     Client,
     ClientProjectLink,
+    TeacherCourse,
 )
 from app.api.v1.schemas.project_assessments import (
     ProjectAssessmentCreate,
@@ -51,6 +52,23 @@ from app.api.v1.schemas.project_assessments import (
 )
 
 router = APIRouter(prefix="/project-assessments", tags=["project-assessments"])
+
+
+def _get_teacher_course_ids(db: Session, user: User) -> list[int]:
+    """Get all course IDs that a teacher is assigned to via teacher_courses"""
+    if user.role == "admin":
+        # Admins see everything, return empty list to indicate no filtering
+        return []
+    if user.role != "teacher":
+        return []
+    
+    course_ids_query = select(TeacherCourse.course_id).where(
+        TeacherCourse.school_id == user.school_id,
+        TeacherCourse.teacher_id == user.id,
+        TeacherCourse.is_active == True,
+    )
+    result = db.execute(course_ids_query).scalars().all()
+    return list(result)
 
 
 def _get_ordered_criteria_query(db: Session, rubric_id: int, school_id: int):
@@ -151,12 +169,30 @@ def list_project_assessments(
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
 ):
-    """List project assessments (teachers/admins see all, students see only their group's published assessments)"""
+    """List project assessments (teachers see assessments for their assigned courses, admins see all, students see only their team's assessments)"""
     stmt = select(ProjectAssessment).where(ProjectAssessment.school_id == user.school_id)
     
-    if user.role in ("teacher", "admin"):
-        # Teachers and admins see all assessments they created
-        stmt = stmt.where(ProjectAssessment.teacher_id == user.id)
+    if user.role == "admin":
+        # Admins see all assessments in their school
+        pass
+    elif user.role == "teacher":
+        # Teachers see assessments for courses they're assigned to
+        teacher_course_ids = _get_teacher_course_ids(db, user)
+        if teacher_course_ids:
+            # Get groups that belong to these courses
+            course_groups = db.query(Group.id).filter(
+                Group.school_id == user.school_id,
+                Group.course_id.in_(teacher_course_ids),
+            ).all()
+            course_group_ids = [g[0] for g in course_groups]
+            if course_group_ids:
+                stmt = stmt.where(ProjectAssessment.group_id.in_(course_group_ids))
+            else:
+                # No groups in assigned courses, return empty
+                return ProjectAssessmentListResponse(items=[], page=page, limit=limit, total=0)
+        else:
+            # Teacher has no assigned courses, return empty
+            return ProjectAssessmentListResponse(items=[], page=page, limit=limit, total=0)
     else:
         # Students see all assessments for teams they are part of (regardless of status)
         # Get student's project teams
@@ -380,8 +416,13 @@ def get_project_assessment(
             student_info = db.query(User).filter(User.id == user.id).first()
             if student_info and student_info.team_number:
                 team_number = student_info.team_number
-    elif user.role in ("teacher", "admin") and pa.teacher_id != user.id:
-        raise HTTPException(status_code=403, detail="Not authorized to view this assessment")
+    elif user.role == "teacher":
+        # Teachers can view assessments for courses they're assigned to
+        group = db.query(Group).filter(Group.id == pa.group_id).first()
+        if group and group.course_id:
+            teacher_course_ids = _get_teacher_course_ids(db, user)
+            if teacher_course_ids and group.course_id not in teacher_course_ids:
+                raise HTTPException(status_code=403, detail="Not authorized to view this assessment")
     
     # Get rubric and criteria
     rubric = db.query(Rubric).filter(Rubric.id == pa.rubric_id).first()

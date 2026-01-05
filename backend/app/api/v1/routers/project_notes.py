@@ -25,6 +25,7 @@ from app.infra.db.models import (
     LearningObjective,
     ProjectTeam,
     ProjectTeamMember,
+    TeacherCourse,
 )
 from app.api.v1.schemas.project_notes import (
     ProjectNotesContextOut,
@@ -41,6 +42,25 @@ from app.core.rbac import require_role
 from app.core.audit import log_create, log_update, log_delete
 
 router = APIRouter(prefix="/project-notes", tags=["project-notes"])
+
+
+def _get_teacher_course_ids(db: Session, user: User) -> list[int]:
+    """Get all course IDs that a teacher is assigned to via teacher_courses"""
+    from sqlalchemy import select
+    
+    if user.role == "admin":
+        # Admins see everything, return empty list to indicate no filtering
+        return []
+    if user.role != "teacher":
+        return []
+    
+    course_ids_query = select(TeacherCourse.course_id).where(
+        TeacherCourse.school_id == user.school_id,
+        TeacherCourse.teacher_id == user.id,
+        TeacherCourse.is_active == True,
+    )
+    result = db.execute(course_ids_query).scalars().all()
+    return list(result)
 
 
 def _ensure_timezone_aware(dt: datetime) -> datetime:
@@ -142,8 +162,16 @@ async def list_contexts(
 
     query = db.query(ProjectNotesContext).filter(
         ProjectNotesContext.school_id == current_user.school_id,
-        ProjectNotesContext.created_by == current_user.id,
     )
+    
+    # Filter by teacher's assigned courses
+    if current_user.role == "teacher":
+        teacher_course_ids = _get_teacher_course_ids(db, current_user)
+        if teacher_course_ids:
+            query = query.filter(ProjectNotesContext.course_id.in_(teacher_course_ids))
+        else:
+            # Teacher has no assigned courses, return empty
+            return []
 
     if course_id:
         query = query.filter(ProjectNotesContext.course_id == course_id)
@@ -275,6 +303,15 @@ async def get_context(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Context not found",
         )
+    
+    # If user is a teacher (not admin), verify they have access to the context's course
+    if current_user.role == "teacher" and context.course_id:
+        teacher_course_ids = _get_teacher_course_ids(db, current_user)
+        if teacher_course_ids and context.course_id not in teacher_course_ids:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Context not found",
+            )
 
     # Build basic response
     context_dict = ProjectNotesContextOut.model_validate(context).model_dump()
