@@ -1,7 +1,8 @@
 "use client";
 
 import api from "@/lib/api";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useParams, useRouter } from "next/navigation";
 import RubricEditor, { type CriterionItem } from "@/components/teacher/RubricEditor";
 import { subjectService } from "@/services/subject.service";
@@ -69,22 +70,63 @@ export default function EditRubricPageInner() {
   
   // Multi-select dropdown state
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null);
 
-  // Click outside handler for dropdown
+  // Calculate dropdown position (fixed positioning uses viewport coords)
+  const updateDropdownPosition = useCallback(() => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 4, // NO window.scrollY for fixed positioning
+        left: rect.left,      // NO window.scrollX for fixed positioning
+        width: rect.width,
+      });
+    }
+  }, []);
+
+  // Click outside, escape, and reposition handlers for dropdown
   useEffect(() => {
+    if (!isDropdownOpen) return;
+
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      // Close only if click is outside both button and panel
+      if (
+        buttonRef.current && !buttonRef.current.contains(target) &&
+        panelRef.current && !panelRef.current.contains(target)
+      ) {
         setIsDropdownOpen(false);
       }
     };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    const handleScroll = () => {
+      updateDropdownPosition();
+    };
+
+    const handleResize = () => {
+      updateDropdownPosition();
+    };
+
     document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    window.addEventListener("scroll", handleScroll, true); // Capture phase for nested scrolls
+    window.addEventListener("resize", handleResize);
+
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("resize", handleResize);
     };
-  }, []);
+  }, [isDropdownOpen, updateDropdownPosition]);
 
   useEffect(() => {
     let mounted = true;
@@ -233,18 +275,6 @@ export default function EditRubricPageInner() {
       return names.join(", ");
     }
     return `${names.length} criteria geselecteerd`;
-  };
-
-  // Calculate dropdown position
-  const updateDropdownPosition = () => {
-    if (buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setDropdownPosition({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
-        width: rect.width,
-      });
-    }
   };
 
   // Toggle dropdown with position calculation
@@ -527,7 +557,7 @@ export default function EditRubricPageInner() {
                     Geen criteria templates gevonden voor dit vakgebied.
                   </div>
                 ) : (
-                  <div className="relative" ref={dropdownRef}>
+                  <>
                     <button
                       ref={buttonRef}
                       type="button"
@@ -547,11 +577,12 @@ export default function EditRubricPageInner() {
                       </svg>
                     </button>
 
-                    {isDropdownOpen && dropdownPosition && (
+                    {isDropdownOpen && dropdownPosition && createPortal(
                       <div 
+                        ref={panelRef}
                         className="fixed z-[9999] bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto"
                         style={{
-                          top: `${dropdownPosition.top + 4}px`,
+                          top: `${dropdownPosition.top}px`,
                           left: `${dropdownPosition.left}px`,
                           width: `${dropdownPosition.width}px`,
                         }}
@@ -628,9 +659,10 @@ export default function EditRubricPageInner() {
                             })
                           )}
                         </div>
-                      </div>
+                      </div>,
+                      document.body
                     )}
-                  </div>
+                  </>
                 )}
                 {selectedCriteriaIds.length > 0 && (
                   <p className="text-sm text-gray-600">

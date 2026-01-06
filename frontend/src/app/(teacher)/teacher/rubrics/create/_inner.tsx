@@ -1,7 +1,8 @@
 "use client";
 import api from "@/lib/api";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import type { RubricCreate } from "@/lib/rubric-types";
 import { subjectService } from "@/services/subject.service";
 import { courseService } from "@/services/course.service";
@@ -40,7 +41,21 @@ export default function CreateRubricPageInner() {
   
   // Multi-select dropdown state
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  // Calculate dropdown position (fixed positioning uses viewport coords)
+  const updateDropdownPosition = useCallback(() => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 4, // NO window.scrollY for fixed positioning
+        left: rect.left,      // NO window.scrollX for fixed positioning
+        width: rect.width,
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (scopeParam) {
@@ -48,18 +63,47 @@ export default function CreateRubricPageInner() {
     }
   }, [scopeParam]);
 
-  // Click outside handler for dropdown
+  // Click outside, escape, and reposition handlers for dropdown
   useEffect(() => {
+    if (!isDropdownOpen) return;
+
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      // Close only if click is outside both button and panel
+      if (
+        buttonRef.current && !buttonRef.current.contains(target) &&
+        panelRef.current && !panelRef.current.contains(target)
+      ) {
         setIsDropdownOpen(false);
       }
     };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    const handleScroll = () => {
+      updateDropdownPosition();
+    };
+
+    const handleResize = () => {
+      updateDropdownPosition();
+    };
+
     document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    window.addEventListener("scroll", handleScroll, true); // Capture phase for nested scrolls
+    window.addEventListener("resize", handleResize);
+
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("resize", handleResize);
     };
-  }, []);
+  }, [isDropdownOpen, updateDropdownPosition]);
 
   // Load subjects based on teacher's courses and auto-select first one
   useEffect(() => {
@@ -159,6 +203,14 @@ export default function CreateRubricPageInner() {
       return names.join(", ");
     }
     return `${names.length} criteria geselecteerd`;
+  };
+
+  // Toggle dropdown with position calculation
+  const toggleDropdown = () => {
+    if (!isDropdownOpen) {
+      updateDropdownPosition();
+    }
+    setIsDropdownOpen(!isDropdownOpen);
   };
 
   async function handleSubmit(e: React.FormEvent) {
@@ -328,10 +380,11 @@ export default function CreateRubricPageInner() {
                 Geen criteria templates gevonden voor dit vakgebied.
               </div>
             ) : (
-              <div className="relative" ref={dropdownRef}>
+              <>
                 <button
+                  ref={buttonRef}
                   type="button"
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  onClick={toggleDropdown}
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-left flex justify-between items-center"
                 >
                   <span className={selectedCriteriaIds.length === 0 ? "text-gray-500" : ""}>
@@ -347,8 +400,16 @@ export default function CreateRubricPageInner() {
                   </svg>
                 </button>
 
-                {isDropdownOpen && (
-                  <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                {isDropdownOpen && dropdownPosition && createPortal(
+                  <div 
+                    ref={panelRef}
+                    className="fixed z-[9999] bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto"
+                    style={{
+                      top: `${dropdownPosition.top}px`,
+                      left: `${dropdownPosition.left}px`,
+                      width: `${dropdownPosition.width}px`,
+                    }}
+                  >
                     <div className="py-1">
                       {scope === "peer" ? (
                         // Peer criteria categories (OMZA)
@@ -421,9 +482,10 @@ export default function CreateRubricPageInner() {
                         })
                       )}
                     </div>
-                  </div>
+                  </div>,
+                  document.body
                 )}
-              </div>
+              </>
             )}
             {selectedCriteriaIds.length > 0 && (
               <p className="text-sm text-gray-600">
