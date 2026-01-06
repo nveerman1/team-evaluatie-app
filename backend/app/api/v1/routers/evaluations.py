@@ -27,6 +27,7 @@ from app.infra.db.models import (
     Project,
     ProjectTeam,
     ProjectTeamMember,
+    TeacherCourse,
 )
 from app.api.v1.schemas.evaluations import (
     EvaluationCreate,
@@ -36,6 +37,23 @@ from app.api.v1.schemas.evaluations import (
 )
 
 router = APIRouter(prefix="/evaluations", tags=["evaluations"])
+
+
+def _get_teacher_course_ids(db: Session, user: User) -> list[int]:
+    """Get all course IDs that a teacher is assigned to via teacher_courses"""
+    if user.role == "admin":
+        # Admins see everything, return empty list to indicate no filtering
+        return []
+    if user.role != "teacher":
+        return []
+    
+    course_ids_query = select(TeacherCourse.course_id).where(
+        TeacherCourse.school_id == user.school_id,
+        TeacherCourse.teacher_id == user.id,
+        TeacherCourse.is_active.is_(True),
+    )
+    result = db.execute(course_ids_query).scalars().all()
+    return list(result)
 
 
 def _extract_deadlines(settings: Any) -> Optional[Dict[str, Any]]:
@@ -205,6 +223,13 @@ def get_evaluation(
     )
     if not ev:
         raise HTTPException(status_code=404, detail="Evaluation not found")
+    
+    # If user is a teacher (not admin), verify they have access to the evaluation's course
+    if user.role == "teacher" and ev.course_id:
+        teacher_course_ids = _get_teacher_course_ids(db, user)
+        if teacher_course_ids and ev.course_id not in teacher_course_ids:
+            raise HTTPException(status_code=404, detail="Evaluation not found")
+    
     return _to_out(ev)
 
 
@@ -221,6 +246,14 @@ def list_evaluations(
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
 ):
+    """
+    List evaluations.
+    
+    Access control:
+    - Students: see evaluations for courses they're enrolled in
+    - Teachers: see evaluations for courses they're assigned to
+    - Admins: see all evaluations in their school
+    """
     stmt = select(Evaluation).where(Evaluation.school_id == user.school_id)
 
     # If user is a student, only show evaluations for courses they're enrolled in
@@ -243,6 +276,15 @@ def list_evaluations(
             stmt = stmt.where(Evaluation.course_id.in_(course_ids))
         else:
             # Student has no courses, filter to impossible condition to return empty
+            stmt = stmt.where(Evaluation.id == -1)
+    
+    # If user is a teacher (not admin), only show evaluations for courses they're assigned to
+    elif user.role == "teacher":
+        teacher_course_ids = _get_teacher_course_ids(db, user)
+        if teacher_course_ids:
+            stmt = stmt.where(Evaluation.course_id.in_(teacher_course_ids))
+        else:
+            # Teacher has no assigned courses, return empty
             stmt = stmt.where(Evaluation.id == -1)
 
     if q:

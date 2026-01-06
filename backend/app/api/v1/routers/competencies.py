@@ -78,14 +78,17 @@ CATEGORY_UNIQUE_NAME_CONSTRAINT = "uq_competency_category_name_per_school"
 
 
 def _get_user_course_ids(db: Session, user: User) -> list[int]:
-    """Get all course IDs that a teacher is assigned to"""
-    if user.role not in ("teacher", "admin"):
+    """Get all course IDs that a teacher is assigned to via teacher_courses"""
+    if user.role == "admin":
+        # Admins see everything, return empty list to indicate no filtering
+        return []
+    if user.role != "teacher":
         return []
 
     course_ids_query = select(TeacherCourse.course_id).where(
         TeacherCourse.school_id == user.school_id,
         TeacherCourse.teacher_id == user.id,
-        TeacherCourse.is_active == True,
+        TeacherCourse.is_active.is_(True),
     )
     result = db.execute(course_ids_query).scalars().all()
     return list(result)
@@ -983,7 +986,14 @@ def list_windows(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List all competency windows, optionally filtered by status and/or course"""
+    """
+    List all competency windows.
+    
+    Access control:
+    - Students: see windows for courses they're enrolled in
+    - Teachers: see windows for courses they're assigned to
+    - Admins: see all windows in their school
+    """
     query = select(CompetencyWindow).where(
         CompetencyWindow.school_id == current_user.school_id
     )
@@ -1008,6 +1018,15 @@ def list_windows(
             query = query.where(CompetencyWindow.course_id.in_(course_ids))
         else:
             # Student has no courses, filter to impossible condition
+            query = query.where(CompetencyWindow.id == -1)
+    
+    # If user is a teacher (not admin), only show windows for courses they're assigned to
+    elif current_user.role == "teacher":
+        teacher_course_ids = _get_user_course_ids(db, current_user)
+        if teacher_course_ids:
+            query = query.where(CompetencyWindow.course_id.in_(teacher_course_ids))
+        else:
+            # Teacher has no assigned courses, return empty
             query = query.where(CompetencyWindow.id == -1)
 
     if status_filter:
@@ -1049,6 +1068,13 @@ def get_window(
     window = db.get(CompetencyWindow, window_id)
     if not window or window.school_id != current_user.school_id:
         raise HTTPException(status_code=404, detail="Window not found")
+    
+    # If user is a teacher (not admin), verify they have access to the window's course
+    if current_user.role == "teacher" and window.course_id:
+        teacher_course_ids = _get_user_course_ids(db, current_user)
+        if teacher_course_ids and window.course_id not in teacher_course_ids:
+            raise HTTPException(status_code=404, detail="Window not found")
+    
     return window
 
 

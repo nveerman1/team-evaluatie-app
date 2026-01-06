@@ -23,6 +23,7 @@ from app.infra.db.models import (
     Project,
     Client,
     ClientProjectLink,
+    TeacherCourse,
 )
 from app.api.v1.schemas.project_assessments import (
     ProjectAssessmentCreate,
@@ -51,6 +52,54 @@ from app.api.v1.schemas.project_assessments import (
 )
 
 router = APIRouter(prefix="/project-assessments", tags=["project-assessments"])
+
+
+def _get_teacher_course_ids(db: Session, user: User) -> list[int]:
+    """Get all course IDs that a teacher is assigned to via teacher_courses"""
+    if user.role == "admin":
+        # Admins see everything, return empty list to indicate no filtering
+        return []
+    if user.role != "teacher":
+        return []
+    
+    course_ids_query = select(TeacherCourse.course_id).where(
+        TeacherCourse.school_id == user.school_id,
+        TeacherCourse.teacher_id == user.id,
+        TeacherCourse.is_active.is_(True),
+    )
+    result = db.execute(course_ids_query).scalars().all()
+    return list(result)
+
+
+def _get_assessment_with_access_check(
+    db: Session, assessment_id: int, user: User
+) -> ProjectAssessment:
+    """
+    Get a project assessment and verify the user has access to it.
+    
+    - Admins: can access any assessment in their school
+    - Teachers: can access assessments for courses they're assigned to
+    - Others: raises 404
+    
+    Raises HTTPException(404) if not found or no access.
+    """
+    pa = db.query(ProjectAssessment).filter(
+        ProjectAssessment.id == assessment_id,
+        ProjectAssessment.school_id == user.school_id,
+    ).first()
+    
+    if not pa:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    
+    # Check access for teachers
+    if user.role == "teacher":
+        group = db.query(Group).filter(Group.id == pa.group_id).first()
+        if group and group.course_id:
+            teacher_course_ids = _get_teacher_course_ids(db, user)
+            if teacher_course_ids and group.course_id not in teacher_course_ids:
+                raise HTTPException(status_code=404, detail="Assessment not found")
+    
+    return pa
 
 
 def _get_ordered_criteria_query(db: Session, rubric_id: int, school_id: int):
@@ -151,12 +200,32 @@ def list_project_assessments(
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
 ):
-    """List project assessments (teachers/admins see all, students see only their group's published assessments)"""
+    """
+    List project assessments.
+    
+    Access control:
+    - Admins: see all assessments in their school
+    - Teachers: see all assessments for courses they're assigned to (not just ones they created)
+    - Students: see assessments for teams they belong to
+    """
     stmt = select(ProjectAssessment).where(ProjectAssessment.school_id == user.school_id)
     
-    if user.role in ("teacher", "admin"):
-        # Teachers and admins see all assessments they created
-        stmt = stmt.where(ProjectAssessment.teacher_id == user.id)
+    if user.role == "admin":
+        # Admins see all assessments in their school
+        pass
+    elif user.role == "teacher":
+        # Teachers see assessments for courses they're assigned to
+        teacher_course_ids = _get_teacher_course_ids(db, user)
+        if teacher_course_ids:
+            # Use subquery for efficiency - filter by groups that belong to assigned courses
+            group_subquery = select(Group.id).where(
+                Group.school_id == user.school_id,
+                Group.course_id.in_(teacher_course_ids)
+            ).scalar_subquery()
+            stmt = stmt.where(ProjectAssessment.group_id.in_(group_subquery))
+        else:
+            # Teacher has no assigned courses, return empty
+            return ProjectAssessmentListResponse(items=[], page=page, limit=limit, total=0)
     else:
         # Students see all assessments for teams they are part of (regardless of status)
         # Get student's project teams
@@ -380,8 +449,13 @@ def get_project_assessment(
             student_info = db.query(User).filter(User.id == user.id).first()
             if student_info and student_info.team_number:
                 team_number = student_info.team_number
-    elif user.role in ("teacher", "admin") and pa.teacher_id != user.id:
-        raise HTTPException(status_code=403, detail="Not authorized to view this assessment")
+    elif user.role == "teacher":
+        # Teachers can view assessments for courses they're assigned to
+        group = db.query(Group).filter(Group.id == pa.group_id).first()
+        if group and group.course_id:
+            teacher_course_ids = _get_teacher_course_ids(db, user)
+            if teacher_course_ids and group.course_id not in teacher_course_ids:
+                raise HTTPException(status_code=403, detail="Not authorized to view this assessment")
     
     # Get rubric and criteria
     rubric = db.query(Rubric).filter(Rubric.id == pa.rubric_id).first()
@@ -464,13 +538,7 @@ def update_project_assessment(
     if user.role not in ("teacher", "admin"):
         raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen beoordelingen bijwerken")
     
-    pa = db.query(ProjectAssessment).filter(
-        ProjectAssessment.id == assessment_id,
-        ProjectAssessment.school_id == user.school_id,
-        ProjectAssessment.teacher_id == user.id,
-    ).first()
-    if not pa:
-        raise HTTPException(status_code=404, detail="Assessment not found")
+    pa = _get_assessment_with_access_check(db, assessment_id, user)
     
     if payload.title is not None:
         pa.title = payload.title
@@ -510,13 +578,7 @@ def delete_project_assessment(
     if user.role not in ("teacher", "admin"):
         raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen beoordelingen verwijderen")
     
-    pa = db.query(ProjectAssessment).filter(
-        ProjectAssessment.id == assessment_id,
-        ProjectAssessment.school_id == user.school_id,
-        ProjectAssessment.teacher_id == user.id,
-    ).first()
-    if not pa:
-        raise HTTPException(status_code=404, detail="Assessment not found")
+    pa = _get_assessment_with_access_check(db, assessment_id, user)
     
     db.delete(pa)
     db.commit()
@@ -604,13 +666,7 @@ def get_assessment_teams_overview(
     if user.role not in ("teacher", "admin"):
         raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen team overzicht bekijken")
     
-    pa = db.query(ProjectAssessment).filter(
-        ProjectAssessment.id == assessment_id,
-        ProjectAssessment.school_id == user.school_id,
-        ProjectAssessment.teacher_id == user.id,
-    ).first()
-    if not pa:
-        raise HTTPException(status_code=404, detail="Assessment not found")
+    pa = _get_assessment_with_access_check(db, assessment_id, user)
     
     # Get rubric info
     rubric = db.query(Rubric).filter(Rubric.id == pa.rubric_id).first()
@@ -744,13 +800,7 @@ def get_assessment_reflections(
     if user.role not in ("teacher", "admin"):
         raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen reflecties bekijken")
     
-    pa = db.query(ProjectAssessment).filter(
-        ProjectAssessment.id == assessment_id,
-        ProjectAssessment.school_id == user.school_id,
-        ProjectAssessment.teacher_id == user.id,
-    ).first()
-    if not pa:
-        raise HTTPException(status_code=404, detail="Assessment not found")
+    pa = _get_assessment_with_access_check(db, assessment_id, user)
     
     # Get group name
     group = db.query(Group).filter(Group.id == pa.group_id).first()
@@ -801,13 +851,7 @@ def batch_create_update_scores(
     if user.role not in ("teacher", "admin"):
         raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen scores toevoegen")
     
-    pa = db.query(ProjectAssessment).filter(
-        ProjectAssessment.id == assessment_id,
-        ProjectAssessment.school_id == user.school_id,
-        ProjectAssessment.teacher_id == user.id,
-    ).first()
-    if not pa:
-        raise HTTPException(status_code=404, detail="Assessment not found")
+    pa = _get_assessment_with_access_check(db, assessment_id, user)
     
     result = []
     for score_data in payload.scores:
@@ -926,13 +970,7 @@ def get_assessment_scores_overview(
     if user.role not in ("teacher", "admin"):
         raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen score overzicht bekijken")
     
-    pa = db.query(ProjectAssessment).filter(
-        ProjectAssessment.id == assessment_id,
-        ProjectAssessment.school_id == user.school_id,
-        ProjectAssessment.teacher_id == user.id,
-    ).first()
-    if not pa:
-        raise HTTPException(status_code=404, detail="Assessment not found")
+    pa = _get_assessment_with_access_check(db, assessment_id, user)
     
     # Get rubric info
     rubric = db.query(Rubric).filter(Rubric.id == pa.rubric_id).first()
@@ -1134,13 +1172,7 @@ def get_assessment_students_overview(
     if user.role not in ("teacher", "admin"):
         raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen leerlingenoverzicht bekijken")
     
-    pa = db.query(ProjectAssessment).filter(
-        ProjectAssessment.id == assessment_id,
-        ProjectAssessment.school_id == user.school_id,
-        ProjectAssessment.teacher_id == user.id,
-    ).first()
-    if not pa:
-        raise HTTPException(status_code=404, detail="Assessment not found")
+    pa = _get_assessment_with_access_check(db, assessment_id, user)
     
     # Get rubric info
     rubric = db.query(Rubric).filter(Rubric.id == pa.rubric_id).first()
