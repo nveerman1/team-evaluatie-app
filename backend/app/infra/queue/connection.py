@@ -35,9 +35,12 @@ class RedisConnection:
                 decode_responses=False,
                 socket_keepalive=True,
                 socket_connect_timeout=5,
-                socket_timeout=300,  # 5 minute timeout for operations
+                socket_timeout=600,  # 10 minute timeout for operations (increased from 5 min)
+                health_check_interval=30,  # Periodic health checks every 30 seconds
+                retry_on_timeout=True,  # Automatically retry on timeout
             )
             logger.info(f"Redis connection established: {redis_url}")
+            logger.info(f"Redis connection settings: socket_timeout=600s, health_check_interval=30s, retry_on_timeout=True")
         return cls._instance
     
     @classmethod
