@@ -71,6 +71,37 @@ def _get_teacher_course_ids(db: Session, user: User) -> list[int]:
     return list(result)
 
 
+def _get_assessment_with_access_check(
+    db: Session, assessment_id: int, user: User
+) -> ProjectAssessment:
+    """
+    Get a project assessment and verify the user has access to it.
+    
+    - Admins: can access any assessment in their school
+    - Teachers: can access assessments for courses they're assigned to
+    - Others: raises 404
+    
+    Raises HTTPException(404) if not found or no access.
+    """
+    pa = db.query(ProjectAssessment).filter(
+        ProjectAssessment.id == assessment_id,
+        ProjectAssessment.school_id == user.school_id,
+    ).first()
+    
+    if not pa:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+    
+    # Check access for teachers
+    if user.role == "teacher":
+        group = db.query(Group).filter(Group.id == pa.group_id).first()
+        if group and group.course_id:
+            teacher_course_ids = _get_teacher_course_ids(db, user)
+            if teacher_course_ids and group.course_id not in teacher_course_ids:
+                raise HTTPException(status_code=404, detail="Assessment not found")
+    
+    return pa
+
+
 def _get_ordered_criteria_query(db: Session, rubric_id: int, school_id: int):
     """
     Helper function to get criteria query with consistent ordering.
@@ -507,13 +538,7 @@ def update_project_assessment(
     if user.role not in ("teacher", "admin"):
         raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen beoordelingen bijwerken")
     
-    pa = db.query(ProjectAssessment).filter(
-        ProjectAssessment.id == assessment_id,
-        ProjectAssessment.school_id == user.school_id,
-        ProjectAssessment.teacher_id == user.id,
-    ).first()
-    if not pa:
-        raise HTTPException(status_code=404, detail="Assessment not found")
+    pa = _get_assessment_with_access_check(db, assessment_id, user)
     
     if payload.title is not None:
         pa.title = payload.title
@@ -553,13 +578,7 @@ def delete_project_assessment(
     if user.role not in ("teacher", "admin"):
         raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen beoordelingen verwijderen")
     
-    pa = db.query(ProjectAssessment).filter(
-        ProjectAssessment.id == assessment_id,
-        ProjectAssessment.school_id == user.school_id,
-        ProjectAssessment.teacher_id == user.id,
-    ).first()
-    if not pa:
-        raise HTTPException(status_code=404, detail="Assessment not found")
+    pa = _get_assessment_with_access_check(db, assessment_id, user)
     
     db.delete(pa)
     db.commit()
@@ -647,13 +666,7 @@ def get_assessment_teams_overview(
     if user.role not in ("teacher", "admin"):
         raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen team overzicht bekijken")
     
-    pa = db.query(ProjectAssessment).filter(
-        ProjectAssessment.id == assessment_id,
-        ProjectAssessment.school_id == user.school_id,
-        ProjectAssessment.teacher_id == user.id,
-    ).first()
-    if not pa:
-        raise HTTPException(status_code=404, detail="Assessment not found")
+    pa = _get_assessment_with_access_check(db, assessment_id, user)
     
     # Get rubric info
     rubric = db.query(Rubric).filter(Rubric.id == pa.rubric_id).first()
@@ -787,13 +800,7 @@ def get_assessment_reflections(
     if user.role not in ("teacher", "admin"):
         raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen reflecties bekijken")
     
-    pa = db.query(ProjectAssessment).filter(
-        ProjectAssessment.id == assessment_id,
-        ProjectAssessment.school_id == user.school_id,
-        ProjectAssessment.teacher_id == user.id,
-    ).first()
-    if not pa:
-        raise HTTPException(status_code=404, detail="Assessment not found")
+    pa = _get_assessment_with_access_check(db, assessment_id, user)
     
     # Get group name
     group = db.query(Group).filter(Group.id == pa.group_id).first()
@@ -844,13 +851,7 @@ def batch_create_update_scores(
     if user.role not in ("teacher", "admin"):
         raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen scores toevoegen")
     
-    pa = db.query(ProjectAssessment).filter(
-        ProjectAssessment.id == assessment_id,
-        ProjectAssessment.school_id == user.school_id,
-        ProjectAssessment.teacher_id == user.id,
-    ).first()
-    if not pa:
-        raise HTTPException(status_code=404, detail="Assessment not found")
+    pa = _get_assessment_with_access_check(db, assessment_id, user)
     
     result = []
     for score_data in payload.scores:
@@ -969,13 +970,7 @@ def get_assessment_scores_overview(
     if user.role not in ("teacher", "admin"):
         raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen score overzicht bekijken")
     
-    pa = db.query(ProjectAssessment).filter(
-        ProjectAssessment.id == assessment_id,
-        ProjectAssessment.school_id == user.school_id,
-        ProjectAssessment.teacher_id == user.id,
-    ).first()
-    if not pa:
-        raise HTTPException(status_code=404, detail="Assessment not found")
+    pa = _get_assessment_with_access_check(db, assessment_id, user)
     
     # Get rubric info
     rubric = db.query(Rubric).filter(Rubric.id == pa.rubric_id).first()
@@ -1177,13 +1172,7 @@ def get_assessment_students_overview(
     if user.role not in ("teacher", "admin"):
         raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen leerlingenoverzicht bekijken")
     
-    pa = db.query(ProjectAssessment).filter(
-        ProjectAssessment.id == assessment_id,
-        ProjectAssessment.school_id == user.school_id,
-        ProjectAssessment.teacher_id == user.id,
-    ).first()
-    if not pa:
-        raise HTTPException(status_code=404, detail="Assessment not found")
+    pa = _get_assessment_with_access_check(db, assessment_id, user)
     
     # Get rubric info
     rubric = db.query(Rubric).filter(Rubric.id == pa.rubric_id).first()
