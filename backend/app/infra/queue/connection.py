@@ -10,6 +10,11 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Redis connection configuration
+REDIS_SOCKET_TIMEOUT = 600  # 10 minute timeout for operations
+REDIS_SOCKET_CONNECT_TIMEOUT = 5  # 5 second timeout for initial connection
+REDIS_HEALTH_CHECK_INTERVAL = 30  # Periodic health checks every 30 seconds
+
 
 class RedisConnection:
     """Singleton Redis connection manager."""
@@ -35,14 +40,15 @@ class RedisConnection:
                 redis_url,
                 decode_responses=False,
                 socket_keepalive=True,
-                socket_connect_timeout=5,
-                socket_timeout=600,  # 10 minute timeout for operations (increased from 5 min)
-                health_check_interval=30,  # Periodic health checks every 30 seconds
+                socket_connect_timeout=REDIS_SOCKET_CONNECT_TIMEOUT,
+                socket_timeout=REDIS_SOCKET_TIMEOUT,
+                health_check_interval=REDIS_HEALTH_CHECK_INTERVAL,
                 retry_on_timeout=True,  # Automatically retry on timeout
             )
             logger.info(f"Redis connection established: {redis_url}")
             logger.info(
-                "Redis connection settings: socket_timeout=600s, health_check_interval=30s, retry_on_timeout=True"
+                f"Redis connection settings: socket_timeout={REDIS_SOCKET_TIMEOUT}s, "
+                f"health_check_interval={REDIS_HEALTH_CHECK_INTERVAL}s, retry_on_timeout=True"
             )
         return cls._instance
 

@@ -31,7 +31,11 @@ backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
 from redis.exceptions import RedisError, ConnectionError, TimeoutError  # noqa: E402
-from app.infra.queue.connection import RedisConnection  # noqa: E402
+from app.infra.queue.connection import (  # noqa: E402
+    RedisConnection,
+    REDIS_SOCKET_TIMEOUT,
+    REDIS_HEALTH_CHECK_INTERVAL,
+)
 
 # Setup logging
 logging.basicConfig(
@@ -82,7 +86,8 @@ def main():
     redis_conn = RedisConnection.get_connection()
     logger.info("Redis connection established")
     logger.info(
-        "Connection settings: socket_timeout=600s, health_check_interval=30s, retry_on_timeout=True"
+        f"Connection settings: socket_timeout={REDIS_SOCKET_TIMEOUT}s, "
+        f"health_check_interval={REDIS_HEALTH_CHECK_INTERVAL}s, retry_on_timeout=True"
     )
     logger.info("")
 

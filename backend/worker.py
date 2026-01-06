@@ -21,13 +21,21 @@ sys.path.insert(0, str(backend_dir))
 
 from rq import Worker, Queue  # noqa: E402
 from redis.exceptions import RedisError, ConnectionError, TimeoutError  # noqa: E402
-from app.infra.queue.connection import RedisConnection  # noqa: E402
+from app.infra.queue.connection import (  # noqa: E402
+    RedisConnection,
+    REDIS_SOCKET_TIMEOUT,
+    REDIS_HEALTH_CHECK_INTERVAL,
+)
 
 # Setup logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+# Worker configuration
+MAX_WORKER_RESTART_ATTEMPTS = 100  # Maximum number of restart attempts before giving up
+RESTART_DELAY_SECONDS = 2  # Delay between restart attempts
 
 
 def main():
@@ -36,11 +44,8 @@ def main():
     logger.info("Auto-restart enabled for Redis connection failures")
 
     restart_count = 0
-    max_restart_attempts = (
-        100  # Prevent infinite restart loops in case of persistent issues
-    )
 
-    while restart_count < max_restart_attempts:
+    while restart_count < MAX_WORKER_RESTART_ATTEMPTS:
         try:
             # Get Redis connection (will create new one if previous was closed)
             redis_conn = RedisConnection.get_connection()
@@ -49,8 +54,10 @@ def main():
             if restart_count == 0:
                 logger.info("Redis connection parameters:")
                 logger.info("  - socket_keepalive: True")
-                logger.info("  - socket_timeout: 600s (10 minutes)")
-                logger.info("  - health_check_interval: 30s")
+                logger.info(f"  - socket_timeout: {REDIS_SOCKET_TIMEOUT}s")
+                logger.info(
+                    f"  - health_check_interval: {REDIS_HEALTH_CHECK_INTERVAL}s"
+                )
                 logger.info("  - retry_on_timeout: True")
 
             # Create queues with priority order (high to low)
@@ -94,14 +101,15 @@ def main():
             except Exception as close_err:
                 logger.warning(f"Error closing Redis connection: {close_err}")
 
-            if restart_count < max_restart_attempts:
+            if restart_count < MAX_WORKER_RESTART_ATTEMPTS:
                 logger.info(
-                    f"Restarting worker in 2 seconds... (attempt #{restart_count}/{max_restart_attempts})"
+                    f"Restarting worker in {RESTART_DELAY_SECONDS} seconds... "
+                    f"(attempt #{restart_count}/{MAX_WORKER_RESTART_ATTEMPTS})"
                 )
-                time.sleep(2)
+                time.sleep(RESTART_DELAY_SECONDS)
             else:
                 logger.error(
-                    f"Maximum restart attempts ({max_restart_attempts}) reached. Exiting."
+                    f"Maximum restart attempts ({MAX_WORKER_RESTART_ATTEMPTS}) reached. Exiting."
                 )
                 break
 
@@ -118,14 +126,15 @@ def main():
             except Exception as close_err:
                 logger.warning(f"Error closing Redis connection: {close_err}")
 
-            if restart_count < max_restart_attempts:
+            if restart_count < MAX_WORKER_RESTART_ATTEMPTS:
                 logger.info(
-                    f"Restarting worker in 2 seconds... (attempt #{restart_count}/{max_restart_attempts})"
+                    f"Restarting worker in {RESTART_DELAY_SECONDS} seconds... "
+                    f"(attempt #{restart_count}/{MAX_WORKER_RESTART_ATTEMPTS})"
                 )
-                time.sleep(2)
+                time.sleep(RESTART_DELAY_SECONDS)
             else:
                 logger.error(
-                    f"Maximum restart attempts ({max_restart_attempts}) reached. Exiting."
+                    f"Maximum restart attempts ({MAX_WORKER_RESTART_ATTEMPTS}) reached. Exiting."
                 )
                 break
 
