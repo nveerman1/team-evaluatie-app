@@ -205,6 +205,96 @@ export default function CreateRubricPageInner() {
     return `${names.length} criteria geselecteerd`;
   };
 
+  // Helper function to normalize category keys
+  const normalizeCategory = (value: string | null | undefined): string => {
+    return (value ?? "").trim().toLowerCase();
+  };
+
+  // Helper function to capitalize words for fallback labels
+  const capitalizeWords = (str: string): string => {
+    return str
+      .split(/[\s_-]+/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  };
+
+  // Dynamic grouping for peer criteria
+  const groupPeerCriteria = () => {
+    const grouped: Record<string, typeof peerCriteria> = {};
+    const knownKeys = ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"];
+    
+    peerCriteria.forEach((criterion) => {
+      const normalizedKey = normalizeCategory(criterion.omza_category);
+      const key = normalizedKey || "overig";
+      if (!grouped[key]) {
+        grouped[key] = [];
+      }
+      grouped[key].push(criterion);
+    });
+
+    // Sort groups: known keys first in order, then others alphabetically, then "overig"
+    const sortedKeys: string[] = [];
+    knownKeys.forEach(key => {
+      if (grouped[key]) sortedKeys.push(key);
+    });
+    Object.keys(grouped)
+      .filter(k => !knownKeys.includes(k) && k !== "overig")
+      .sort()
+      .forEach(k => sortedKeys.push(k));
+    if (grouped["overig"]) sortedKeys.push("overig");
+
+    return { grouped, sortedKeys };
+  };
+
+  // Dynamic grouping for project criteria
+  const groupProjectCriteria = () => {
+    const grouped: Record<string, typeof projectCriteria> = {};
+    const knownKeys = ["projectproces", "eindresultaat", "communicatie"];
+    
+    projectCriteria.forEach((criterion) => {
+      const normalizedKey = normalizeCategory(criterion.category);
+      const key = normalizedKey || "overig";
+      if (!grouped[key]) {
+        grouped[key] = [];
+      }
+      grouped[key].push(criterion);
+    });
+
+    // Sort groups: known keys first in order, then others alphabetically, then "overig"
+    const sortedKeys: string[] = [];
+    knownKeys.forEach(key => {
+      if (grouped[key]) sortedKeys.push(key);
+    });
+    Object.keys(grouped)
+      .filter(k => !knownKeys.includes(k) && k !== "overig")
+      .sort()
+      .forEach(k => sortedKeys.push(k));
+    if (grouped["overig"]) sortedKeys.push("overig");
+
+    return { grouped, sortedKeys };
+  };
+
+  // Get label for a category key
+  const getCategoryLabel = (key: string, isPeer: boolean): string => {
+    const peerLabels: Record<string, string> = {
+      "organiseren": "Organiseren",
+      "meedoen": "Meedoen",
+      "zelfvertrouwen": "Zelfvertrouwen",
+      "autonomie": "Autonomie",
+      "overig": "Overig",
+    };
+    
+    const projectLabels: Record<string, string> = {
+      "projectproces": "Projectproces",
+      "eindresultaat": "Eindresultaat",
+      "communicatie": "Communicatie",
+      "overig": "Overig",
+    };
+
+    const labels = isPeer ? peerLabels : projectLabels;
+    return labels[key] || capitalizeWords(key);
+  };
+
   // Toggle dropdown with position calculation
   const toggleDropdown = () => {
     if (!isDropdownOpen) {
@@ -411,25 +501,46 @@ export default function CreateRubricPageInner() {
                     }}
                   >
                     <div className="py-1">
-                      {scope === "peer" ? (
-                        // Peer criteria categories (OMZA)
-                        ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"].map((category) => {
-                          const categoryCriteria = peerCriteria.filter(c => c.omza_category.toLowerCase() === category);
-                          if (categoryCriteria.length === 0) return null;
+                      {(() => {
+                        if (scope === "peer") {
+                          const { grouped, sortedKeys } = groupPeerCriteria();
                           
-                          const categoryLabels: Record<string, string> = {
-                            organiseren: "Organiseren",
-                            meedoen: "Meedoen",
-                            zelfvertrouwen: "Zelfvertrouwen",
-                            autonomie: "Autonomie",
-                          };
+                          // Check if we have any items at all
+                          const totalItems = Object.values(grouped).reduce((sum, items) => sum + items.length, 0);
                           
-                          return (
-                            <div key={category}>
-                              <div className="px-3 py-1 bg-gray-100 text-xs font-semibold text-gray-600 uppercase">
-                                {categoryLabels[category]}
+                          if (totalItems === 0) {
+                            return (
+                              <div className="px-3 py-2 text-sm text-gray-500">
+                                Geen criteria beschikbaar
                               </div>
-                              {categoryCriteria.map((criterion) => (
+                            );
+                          }
+                          
+                          // If no groups were created (shouldn't happen), show all items without grouping
+                          if (sortedKeys.length === 0 && peerCriteria.length > 0) {
+                            return peerCriteria.map((criterion) => (
+                              <label
+                                key={criterion.id}
+                                className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedCriteriaIds.includes(criterion.id)}
+                                  onChange={() => handleCriterionToggle(criterion.id)}
+                                  className="mr-3 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <span className="text-sm">{criterion.title}</span>
+                              </label>
+                            ));
+                          }
+                          
+                          // Render grouped items
+                          return sortedKeys.map((key) => (
+                            <div key={key}>
+                              <div className="px-3 py-1 bg-gray-100 text-xs font-semibold text-gray-600 uppercase">
+                                {getCategoryLabel(key, true)}
+                              </div>
+                              {grouped[key].map((criterion) => (
                                 <label
                                   key={criterion.id}
                                   className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
@@ -444,26 +555,47 @@ export default function CreateRubricPageInner() {
                                 </label>
                               ))}
                             </div>
-                          );
-                        })
-                      ) : (
-                        // Project criteria categories
-                        ["projectproces", "eindresultaat", "communicatie"].map((category) => {
-                          const categoryCriteria = projectCriteria.filter(c => c.category.toLowerCase() === category);
-                          if (categoryCriteria.length === 0) return null;
+                          ));
+                        } else {
+                          // Project rubric
+                          const { grouped, sortedKeys } = groupProjectCriteria();
                           
-                          const categoryLabels: Record<string, string> = {
-                            projectproces: "Projectproces",
-                            eindresultaat: "Eindresultaat",
-                            communicatie: "Communicatie",
-                          };
+                          // Check if we have any items at all
+                          const totalItems = Object.values(grouped).reduce((sum, items) => sum + items.length, 0);
                           
-                          return (
-                            <div key={category}>
-                              <div className="px-3 py-1 bg-gray-100 text-xs font-semibold text-gray-600 uppercase">
-                                {categoryLabels[category]}
+                          if (totalItems === 0) {
+                            return (
+                              <div className="px-3 py-2 text-sm text-gray-500">
+                                Geen criteria beschikbaar
                               </div>
-                              {categoryCriteria.map((criterion) => (
+                            );
+                          }
+                          
+                          // If no groups were created (shouldn't happen), show all items without grouping
+                          if (sortedKeys.length === 0 && projectCriteria.length > 0) {
+                            return projectCriteria.map((criterion) => (
+                              <label
+                                key={criterion.id}
+                                className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedCriteriaIds.includes(criterion.id)}
+                                  onChange={() => handleCriterionToggle(criterion.id)}
+                                  className="mr-3 h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                                />
+                                <span className="text-sm">{criterion.title}</span>
+                              </label>
+                            ));
+                          }
+                          
+                          // Render grouped items
+                          return sortedKeys.map((key) => (
+                            <div key={key}>
+                              <div className="px-3 py-1 bg-gray-100 text-xs font-semibold text-gray-600 uppercase">
+                                {getCategoryLabel(key, false)}
+                              </div>
+                              {grouped[key].map((criterion) => (
                                 <label
                                   key={criterion.id}
                                   className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
@@ -478,9 +610,9 @@ export default function CreateRubricPageInner() {
                                 </label>
                               ))}
                             </div>
-                          );
-                        })
-                      )}
+                          ));
+                        }
+                      })()}
                     </div>
                   </div>,
                   document.body
