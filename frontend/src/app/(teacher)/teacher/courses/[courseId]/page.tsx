@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { use } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 import { Course, TeacherCourse, TeacherCourseCreate, CourseUpdate } from "@/dtos/course.dto";
 import { courseService } from "@/services/course.service";
 import AssignTeacherModal from "@/components/AssignTeacherModal";
@@ -13,6 +15,8 @@ export default function CourseDetailPage({
 }) {
   const resolvedParams = use(params);
   const courseId = parseInt(resolvedParams.courseId);
+  const { isAdmin, loading: authLoading } = useAuth();
+  const router = useRouter();
 
   const [course, setCourse] = useState<Course | null>(null);
   const [teachers, setTeachers] = useState<TeacherCourse[]>([]);
@@ -21,6 +25,13 @@ export default function CourseDetailPage({
   const [showEditForm, setShowEditForm] = useState(false);
   const [showAssignTeacherModal, setShowAssignTeacherModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"details" | "teachers">("details");
+
+  // Redirect non-admins
+  useEffect(() => {
+    if (!authLoading && !isAdmin) {
+      router.push("/teacher");
+    }
+  }, [isAdmin, authLoading, router]);
 
   useEffect(() => {
     loadCourse();
@@ -63,6 +74,20 @@ export default function CourseDetailPage({
       alert("Kon docent niet verwijderen");
     }
   };
+
+  // Show loading state while checking auth
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-100">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Don't render anything if not admin (will redirect)
+  if (!isAdmin) {
+    return null;
+  }
 
   if (loading) {
     return (

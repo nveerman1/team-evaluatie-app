@@ -15,7 +15,6 @@ import {
   Target,
   ClipboardList,
   FileStack,
-  BookOpen,
   UsersRound,
   Clock,
 } from "lucide-react";
@@ -102,7 +101,6 @@ export default function TeacherLayout({
                   Beheer
                 </div>
                 <div className="space-y-1">
-                  <NavItem href="/teacher/courses" label="Vakken beheren" icon={BookOpen} />
                   <NavItem href="/teacher/class-teams" label="Klas- & Teambeheer" icon={UsersRound} />
                   <NavItem href="/teacher/learning-objectives" label="Leerdoelen" icon={Target} />
                   <NavItem href="/teacher/rubrics" label="Rubrics" icon={ClipboardList} />
