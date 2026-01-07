@@ -196,10 +196,12 @@ def _calculate_project_score(db: Session, assessment_id: int, rubric_id: int, te
 def _calculate_peer_score(db: Session, evaluation_id: int, user_id: int) -> Optional[float]:
     """
     Get final peer evaluation grade for a student (Eindcijfer)
-    Returns the published grade from the Grade table (1-10 scale)
-    If no explicit grade is set, falls back to the suggested grade from meta
+    Priority order:
+    1. Direct override from Grade.grade field (cell override)
+    2. Group grade × GCF (Grade.group_grade × Grade.gcf)
+    3. Suggested grade (Grade.suggested_grade or from meta)
     """
-    # Try to get from PublishedGrade table first
+    # Try to get from PublishedGrade table first (published grades take precedence)
     published = db.query(PublishedGrade).filter(
         PublishedGrade.evaluation_id == evaluation_id,
         PublishedGrade.user_id == user_id
@@ -208,23 +210,46 @@ def _calculate_peer_score(db: Session, evaluation_id: int, user_id: int) -> Opti
     if published and published.grade is not None:
         return round(float(published.grade), 1)
     
-    # Otherwise try to get grade from Grade table (use 'grade' field, not 'published_grade')
+    # Get grade record from Grade table
     grade = db.query(Grade).filter(
         Grade.evaluation_id == evaluation_id,
         Grade.user_id == user_id
     ).first()
     
     if grade:
+        # Priority 1: Direct override in cell (Grade.grade)
         if grade.grade is not None:
             return round(float(grade.grade), 1)
-        # If no explicit grade is set, try to use the suggested grade from meta
+        
+        # Priority 2: Group grade × GCF
+        # Check both direct fields and meta for group_grade
+        group_grade = grade.group_grade
+        if group_grade is None and grade.meta and isinstance(grade.meta, dict):
+            group_grade = grade.meta.get('group_grade')
+        
+        gcf = grade.gcf
+        if gcf is None and grade.meta and isinstance(grade.meta, dict):
+            gcf = grade.meta.get('gcf')
+        
+        if group_grade is not None and gcf is not None:
+            try:
+                final_grade = float(group_grade) * float(gcf)
+                return round(final_grade, 1)
+            except (ValueError, TypeError):
+                pass
+        
+        # Priority 3: Suggested grade
+        # First try direct field
+        if grade.suggested_grade is not None:
+            return round(float(grade.suggested_grade), 1)
+        
+        # Fallback to meta.suggested for backwards compatibility
         if grade.meta and isinstance(grade.meta, dict):
             suggested = grade.meta.get('suggested')
             if suggested is not None:
                 try:
                     return round(float(suggested), 1)
                 except (ValueError, TypeError):
-                    # Invalid suggested grade value, skip it
                     pass
     
     return None
