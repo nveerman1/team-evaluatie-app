@@ -516,34 +516,17 @@ def get_student_progress(
         else:
             self_assessment_status = "not_started"
 
-        # Find valid teammates for this student (same course AND team_number)
-        # This matches the logic used in my_allocations endpoint
-        valid_teammate_ids = set()
-        if student.team_number is not None:
-            from app.api.v1.routers.allocations import _select_members_for_course
-
-            teammates = _select_members_for_course(
-                db,
-                school_id=user.school_id,
-                course_id=ev.course_id,
-                team_number=student.team_number,
-            )
-            valid_teammate_ids = set(teammates)
-            # Remove self from teammates
-            valid_teammate_ids.discard(student_id)
-
-        # Peer reviews given (as reviewer) - only count allocations for valid teammates
+        # Peer reviews given (as reviewer) - count ALL peer allocations
+        # This shows actual progress based on existing allocations,
+        # rather than theoretical expectations based on team membership
         peer_allocations_given = [
             a
             for a in allocations
             if a.reviewer_id == student_id
             and not a.is_self
-            and a.reviewee_id in valid_teammate_ids
         ]
         peer_reviews_given = 0
-        peer_reviews_given_expected = len(
-            valid_teammate_ids
-        )  # Expected is number of valid teammates
+        peer_reviews_given_expected = len(peer_allocations_given)  # Expected is number of allocations
         for alloc in peer_allocations_given:
             scores = (
                 db.query(Score)
@@ -555,18 +538,15 @@ def get_student_progress(
             if scores > 0:
                 peer_reviews_given += 1
 
-        # Peer reviews received (as reviewee) - only count allocations from valid teammates
+        # Peer reviews received (as reviewee) - count ALL peer allocations
         peer_allocations_received = [
             a
             for a in allocations
             if a.reviewee_id == student_id
             and not a.is_self
-            and a.reviewer_id in valid_teammate_ids
         ]
         peer_reviews_received = 0
-        peer_reviews_expected = len(
-            valid_teammate_ids
-        )  # Expected is number of valid teammates
+        peer_reviews_expected = len(peer_allocations_received)  # Expected is number of allocations
         for alloc in peer_allocations_received:
             scores = (
                 db.query(Score)
