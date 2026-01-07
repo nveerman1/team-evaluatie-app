@@ -273,7 +273,7 @@ export default function OMZAOverviewPage() {
   // Set notes panel width when opening focus mode
   useEffect(() => {
     if (focusMode && notesWidth === 0 && typeof window !== 'undefined') {
-      setNotesWidth(Math.floor(window.innerWidth * 0.5));
+      setNotesWidth(Math.floor(window.innerWidth * 0.4));
     }
   }, [focusMode, notesWidth]);
 
