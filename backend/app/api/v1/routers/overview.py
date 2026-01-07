@@ -12,6 +12,9 @@ from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
+# Grade calculation constants
+MAX_REASONABLE_GCF = 2.0  # GCF typically ranges from 0.5 to 1.5
+
 # Mapping from full Dutch category names to short abbreviations
 # This ensures frontend compatibility
 CATEGORY_NAME_TO_ABBREV = {
@@ -263,15 +266,13 @@ def _calculate_peer_score(db: Session, evaluation_id: int, user_id: int) -> Opti
                         f"evaluation_id={evaluation_id}, user_id={user_id}"
                     )
                     # Continue to next priority instead of returning invalid grade
-                elif gcf_float > 2.0:
-                    # Log suspiciously high GCF but still use it
-                    logger.warning(
-                        f"Unusually high gcf ({gcf_float}) for "
-                        f"evaluation_id={evaluation_id}, user_id={user_id}"
-                    )
-                    final_grade = group_grade_float * gcf_float
-                    return round(final_grade, 1)
                 else:
+                    # Log suspiciously high GCF but still use it
+                    if gcf_float > MAX_REASONABLE_GCF:
+                        logger.warning(
+                            f"Unusually high gcf ({gcf_float}) for "
+                            f"evaluation_id={evaluation_id}, user_id={user_id}"
+                        )
                     final_grade = group_grade_float * gcf_float
                     return round(final_grade, 1)
             except (ValueError, TypeError) as e:
