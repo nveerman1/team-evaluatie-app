@@ -193,6 +193,31 @@ def _calculate_project_score(db: Session, assessment_id: int, rubric_id: int, te
     return _score_to_grade(avg_score, rubric.scale_min, rubric.scale_max)
 
 
+def _get_grade_value(grade, field_name: str, meta_key: str = None) -> Optional[float]:
+    """
+    Helper to get a grade value from either direct field or meta dictionary.
+    
+    Args:
+        grade: Grade object
+        field_name: Name of the direct field attribute
+        meta_key: Key in the meta dictionary (defaults to field_name if not provided)
+    
+    Returns:
+        Float value or None
+    """
+    if meta_key is None:
+        meta_key = field_name
+    
+    # Try direct field first
+    value = getattr(grade, field_name, None)
+    
+    # Fallback to meta dictionary for backwards compatibility
+    if value is None and grade.meta and isinstance(grade.meta, dict):
+        value = grade.meta.get(meta_key)
+    
+    return value
+
+
 def _calculate_peer_score(db: Session, evaluation_id: int, user_id: int) -> Optional[float]:
     """
     Get final peer evaluation grade for a student (Eindcijfer)
@@ -222,35 +247,29 @@ def _calculate_peer_score(db: Session, evaluation_id: int, user_id: int) -> Opti
             return round(float(grade.grade), 1)
         
         # Priority 2: Group grade × GCF
-        # Check both direct fields and meta for group_grade
-        group_grade = grade.group_grade
-        if group_grade is None and grade.meta and isinstance(grade.meta, dict):
-            group_grade = grade.meta.get('group_grade')
-        
-        gcf = grade.gcf
-        if gcf is None and grade.meta and isinstance(grade.meta, dict):
-            gcf = grade.meta.get('gcf')
+        group_grade = _get_grade_value(grade, 'group_grade')
+        gcf = _get_grade_value(grade, 'gcf')
         
         if group_grade is not None and gcf is not None:
             try:
                 final_grade = float(group_grade) * float(gcf)
                 return round(final_grade, 1)
-            except (ValueError, TypeError):
-                pass
+            except (ValueError, TypeError) as e:
+                logger.warning(
+                    f"Invalid group_grade ({group_grade}) or gcf ({gcf}) for "
+                    f"evaluation_id={evaluation_id}, user_id={user_id}: {e}"
+                )
         
         # Priority 3: Suggested grade
-        # First try direct field
-        if grade.suggested_grade is not None:
-            return round(float(grade.suggested_grade), 1)
-        
-        # Fallback to meta.suggested for backwards compatibility
-        if grade.meta and isinstance(grade.meta, dict):
-            suggested = grade.meta.get('suggested')
-            if suggested is not None:
-                try:
-                    return round(float(suggested), 1)
-                except (ValueError, TypeError):
-                    pass
+        suggested_grade = _get_grade_value(grade, 'suggested_grade', 'suggested')
+        if suggested_grade is not None:
+            try:
+                return round(float(suggested_grade), 1)
+            except (ValueError, TypeError) as e:
+                logger.warning(
+                    f"Invalid suggested_grade ({suggested_grade}) for "
+                    f"evaluation_id={evaluation_id}, user_id={user_id}: {e}"
+                )
     
     return None
 
