@@ -13,7 +13,10 @@ from collections import defaultdict
 logger = logging.getLogger(__name__)
 
 # Grade calculation constants
-MAX_REASONABLE_GCF = 2.0  # GCF typically ranges from 0.5 to 1.5
+# GCF (Group Correction Factor) typically ranges from 0.5 to 1.5 in normal cases
+# We set the warning threshold higher (2.0) to allow for exceptional cases
+# while still logging potentially incorrect values for review
+MAX_REASONABLE_GCF = 2.0
 
 # Mapping from full Dutch category names to short abbreviations
 # This ensures frontend compatibility
@@ -259,7 +262,7 @@ def _calculate_peer_score(db: Session, evaluation_id: int, user_id: int) -> Opti
                 gcf_float = float(gcf)
                 
                 # Validate that values are reasonable for grade calculations
-                # GCF typically ranges from 0.5 to 1.5, group grades from 1 to 10
+                # Group grades typically range from 1 to 10, GCF from 0.5 to 1.5
                 if group_grade_float <= 0 or gcf_float <= 0:
                     logger.warning(
                         f"Non-positive group_grade ({group_grade_float}) or gcf ({gcf_float}) for "
@@ -267,7 +270,8 @@ def _calculate_peer_score(db: Session, evaluation_id: int, user_id: int) -> Opti
                     )
                     # Continue to next priority instead of returning invalid grade
                 else:
-                    # Log suspiciously high GCF but still use it
+                    # Log suspiciously high GCF (> 2.0) but still use it to preserve teacher flexibility
+                    # Teachers may have valid reasons for exceptional GCF values
                     if gcf_float > MAX_REASONABLE_GCF:
                         logger.warning(
                             f"Unusually high gcf ({gcf_float}) for "
