@@ -473,50 +473,55 @@ export default function LearningObjectivesInner() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-6 bg-white p-4 rounded-2xl border">
-        <div className="flex items-center gap-3">
-          <label className="text-sm font-medium">Zoeken:</label>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Titel of beschrijving..."
-            className="border rounded-lg px-3 py-2"
-          />
-        </div>
-        <div className="flex items-center gap-3">
-          <label className="text-sm font-medium">Domein:</label>
-          <input
-            type="text"
-            value={domainFilter}
-            onChange={(e) => setDomainFilter(e.target.value)}
-            placeholder="A, B, C, D, E..."
-            className="border rounded-lg px-3 py-2 w-32"
-          />
-        </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Zoek op titel of beschrijving..."
+          className="h-9 w-64 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+        <input
+          type="text"
+          value={domainFilter}
+          onChange={(e) => setDomainFilter(e.target.value)}
+          placeholder="Domein (A, B, C...)"
+          className="h-9 w-40 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+        {(searchQuery || domainFilter) && (
+          <button
+            onClick={() => {
+              setSearchQuery("");
+              setDomainFilter("");
+            }}
+            className="h-9 px-3 rounded-lg border border-gray-300 bg-white text-sm shadow-sm hover:bg-gray-50"
+          >
+            Reset
+          </button>
+        )}
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border overflow-hidden">
-        <table className="w-full">
+      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
+        <table className="w-full table-fixed">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="w-36 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Type
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Domein
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Nr
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Titel
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Fase
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+              <th className="w-44 px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
                 Acties
               </th>
             </tr>
@@ -530,7 +535,7 @@ export default function LearningObjectivesInner() {
                     ? "bg-cyan-50/30" 
                     : ""
               }`}>
-                <td className="px-6 py-4 text-sm">
+                <td className="w-36 px-4 py-3 text-sm">
                   {obj.is_template ? (
                     <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800">
                       🏛️ Centraal
@@ -545,10 +550,10 @@ export default function LearningObjectivesInner() {
                     </span>
                   )}
                 </td>
-                <td className="px-6 py-4 text-sm font-medium">{obj.domain || "-"}</td>
-                <td className="px-6 py-4 text-sm">{obj.order}</td>
-                <td className="px-6 py-4 text-sm">{obj.title}</td>
-                <td className="px-6 py-4 text-sm">
+                <td className="w-28 px-4 py-3 text-sm font-medium">{obj.domain || "-"}</td>
+                <td className="w-20 px-4 py-3 text-sm">{obj.order}</td>
+                <td className="px-4 py-3 text-sm">{obj.title}</td>
+                <td className="w-32 px-4 py-3 text-sm">
                   {obj.phase ? (
                     <span className={`px-2 py-1 rounded text-xs ${
                       obj.phase === "onderbouw" 
@@ -561,7 +566,7 @@ export default function LearningObjectivesInner() {
                     <span className="text-gray-400">-</span>
                   )}
                 </td>
-                <td className="px-6 py-4 text-sm text-right">
+                <td className="w-44 px-4 py-3 text-sm text-right">
                   {canModify(obj) ? (
                     <>
                       <button
