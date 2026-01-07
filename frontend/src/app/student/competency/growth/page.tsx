@@ -10,14 +10,14 @@ import type {
   GrowthGoal,
   GrowthReflection,
   GrowthCategoryScore,
+  GrowthCompetencyScore,
   StudentGrowthData,
   ScanListItem,
   RadarCategoryScore,
-  CompetencyCategory,
 } from "@/dtos";
 import Link from "next/link";
 import { studentStyles } from "@/styles/student-dashboard.styles";
-import { studentService, competencyService } from "@/services";
+import { studentService } from "@/services";
 
 // Helper function to get score badge styling
 function getScoreBadgeClass(score: number | null): string {
@@ -136,11 +136,11 @@ export default function GrowthPage() {
         {/* Main content when data is loaded */}
         {!isLoading && data && (
           <>
-            {/* 1. Competentieprofiel (radardiagram) */}
-            <CompetencyProfileSection profile={data.competency_profile} />
+            {/* 1. Competentieprofiel (radardiagram) with scan selector */}
+            <CompetencyProfileSection profile={data.competency_profile} scans={data.scans} />
 
-            {/* 2. Scores per competentie (with scan selector) */}
-            <CompetencyScoresSection />
+            {/* 2. Scores per competentie (table with scan selector) */}
+            <CompetencyScoresSection scores={data.competency_scores} scans={data.scans} />
 
             {/* 3. Leerdoelen tabel (updated to table format) */}
             <GoalsTableSection goals={data.goals} />
@@ -158,33 +158,38 @@ export default function GrowthPage() {
 
 function CompetencyProfileSection({
   profile,
+  scans,
 }: {
   profile: GrowthCategoryScore[];
+  scans: { id: string; title: string; date: string }[];
 }) {
-  const [categories, setCategories] = useState<CompetencyCategory[]>([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
-  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [selectedScanId, setSelectedScanId] = useState<string>("");
+  const [scanRadarData, setScanRadarData] = useState<RadarCategoryScore[] | null>(null);
+  const [loadingScan, setLoadingScan] = useState(false);
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchScanData = async () => {
+      if (!selectedScanId) {
+        setScanRadarData(null);
+        return;
+      }
       try {
-        const cats = await competencyService.getCategories();
-        setCategories(cats);
+        setLoadingScan(true);
+        const data = await studentService.getScanRadarData(selectedScanId);
+        setScanRadarData(data.categories);
       } catch (err) {
-        console.error("Failed to load categories:", err);
+        console.error("Failed to load scan data:", err);
+        setScanRadarData(null);
       } finally {
-        setLoadingCategories(false);
+        setLoadingScan(false);
       }
     };
-    fetchCategories();
-  }, []);
+    fetchScanData();
+  }, [selectedScanId]);
 
-  // Filter profile by selected category
-  const filteredProfile = selectedCategoryId
-    ? profile.filter((cat) => {
-        const category = categories.find((c) => c.name === cat.name);
-        return category && category.id === selectedCategoryId;
-      })
+  // Use scan data if selected, otherwise use overall profile
+  const displayProfile = selectedScanId && scanRadarData
+    ? scanRadarData.map(cat => ({ name: cat.category_name, value: cat.average_score }))
     : profile;
 
   if (!profile || profile.length === 0) {
@@ -208,8 +213,7 @@ function CompetencyProfileSection({
             Competentieprofiel
           </h2>
           <p className={studentStyles.typography.infoTextSmall + " mt-1"}>
-            Jouw gemiddelde niveau per competentiecategorie, op basis van
-            meerdere scans.
+            Jouw gemiddelde niveau per competentiecategorie{selectedScanId ? " voor de geselecteerde scan" : ", op basis van meerdere scans"}.
           </p>
         </div>
         <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
@@ -217,121 +221,108 @@ function CompetencyProfileSection({
         </span>
       </div>
 
-      {/* Category filter dropdown */}
-      {!loadingCategories && categories.length > 0 && (
+      {/* Scan selector dropdown */}
+      {scans && scans.length > 0 && (
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-slate-700">
-            Filter categorie:
+            Selecteer scan:
           </label>
           <select
-            value={selectedCategoryId || ""}
-            onChange={(e) =>
-              setSelectedCategoryId(e.target.value ? Number(e.target.value) : null)
-            }
-            className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+            value={selectedScanId}
+            onChange={(e) => setSelectedScanId(e.target.value)}
+            className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm flex-1 max-w-md"
           >
-            <option value="">Alle categorieën</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
+            <option value="">Alle scans (gemiddeld)</option>
+            {scans.map((scan) => (
+              <option key={scan.id} value={scan.id}>
+                {scan.title} ({scan.date})
               </option>
             ))}
           </select>
         </div>
       )}
 
-      <div className="grid gap-6 md:grid-cols-3 items-start">
-        {/* Radar chart */}
-        <div className="md:col-span-2 flex items-center justify-center">
-          <CompetencyRadarChart
-            items={filteredProfile.map((cat) => ({
-              name: cat.name,
-              value: cat.value,
-            }))}
-            size={256}
-            maxValue={5}
-          />
+      {loadingScan ? (
+        <div className="text-center py-8 text-sm text-slate-500">
+          Scan data laden...
         </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-3 items-start">
+          {/* Radar chart */}
+          <div className="md:col-span-2 flex items-center justify-center">
+            <CompetencyRadarChart
+              items={displayProfile.map((cat) => ({
+                name: cat.name,
+                value: cat.value,
+              }))}
+              size={256}
+              maxValue={5}
+            />
+          </div>
 
-        {/* Legend + explanation */}
-        <div className="space-y-2 text-xs text-slate-600">
-          <p className="font-medium text-slate-800 mb-1">
-            Competentiecategorieën
-          </p>
-          <ul className="space-y-1">
-            {filteredProfile.map((cat, index) => (
-              <li
-                key={cat.name}
-                className="flex items-center justify-between gap-2"
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full"
-                    style={{
-                      backgroundColor:
-                        CATEGORY_COLORS[index % CATEGORY_COLORS.length],
-                    }}
-                  />
-                  <span>{cat.name}</span>
-                </div>
-                <span className="text-slate-700 font-medium">
-                  {cat.value.toFixed(1)}
-                </span>
-              </li>
-            ))}
-          </ul>
+          {/* Legend + explanation */}
+          <div className="space-y-2 text-xs text-slate-600">
+            <p className="font-medium text-slate-800 mb-1">
+              Competentiecategorieën
+            </p>
+            <ul className="space-y-1">
+              {displayProfile.map((cat, index) => (
+                <li
+                  key={cat.name}
+                  className="flex items-center justify-between gap-2"
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{
+                        backgroundColor:
+                          CATEGORY_COLORS[index % CATEGORY_COLORS.length],
+                      }}
+                    />
+                    <span>{cat.name}</span>
+                  </div>
+                  <span className="text-slate-700 font-medium">
+                    {cat.value.toFixed(1)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }
 
-// New section for competency scores table with scan selector
-function CompetencyScoresSection() {
-  const [scans, setScans] = useState<ScanListItem[]>([]);
+// Competency scores table with scan filter
+function CompetencyScoresSection({ 
+  scores,
+  scans,
+}: { 
+  scores: GrowthCompetencyScore[];
+  scans: { id: string; title: string; date: string }[];
+}) {
   const [selectedScanId, setSelectedScanId] = useState<string>("");
-  const [scanData, setScanData] = useState<RadarCategoryScore[] | null>(null);
-  const [loadingScans, setLoadingScans] = useState(true);
-  const [loadingScanData, setLoadingScanData] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchScans = async () => {
-      try {
-        setLoadingScans(true);
-        const scansList = await studentService.getCompetencyScans();
-        setScans(scansList);
-      } catch (err) {
-        console.error("Failed to load scans:", err);
-        setError("Kon scans niet laden");
-      } finally {
-        setLoadingScans(false);
-      }
-    };
-    fetchScans();
-  }, []);
+  if (!scores || scores.length === 0) {
+    return (
+      <section className={studentStyles.cards.infoCard.container}>
+        <div className={studentStyles.cards.infoCard.content}>
+          <h2 className={studentStyles.typography.sectionTitle}>
+            Scores per competentie
+          </h2>
+          <p className={studentStyles.typography.infoText}>
+            Nog geen competentiescores beschikbaar.
+          </p>
+        </div>
+      </section>
+    );
+  }
 
-  useEffect(() => {
-    const fetchScanData = async () => {
-      if (!selectedScanId) {
-        setScanData(null);
-        return;
-      }
-      try {
-        setLoadingScanData(true);
-        setError(null);
-        const data = await studentService.getScanRadarData(selectedScanId);
-        setScanData(data.categories);
-      } catch (err) {
-        console.error("Failed to load scan data:", err);
-        setError("Kon scan data niet laden");
-        setScanData(null);
-      } finally {
-        setLoadingScanData(false);
-      }
-    };
-    fetchScanData();
-  }, [selectedScanId]);
+  // Filter scores by selected scan
+  const filteredScores = selectedScanId
+    ? scores.filter(score => score.window_id === parseInt(selectedScanId))
+    : scores;
 
   return (
     <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -340,29 +331,23 @@ function CompetencyScoresSection() {
           Scores per competentie
         </h2>
         <p className={studentStyles.typography.infoTextSmall + " mt-1"}>
-          Selecteer een scan om de scores per competentiecategorie te zien
+          {selectedScanId ? "Scores voor de geselecteerde scan" : "De meest recente score per competentie over alle scans"}
         </p>
       </div>
       
-      <div className="px-5 py-4">
-        {/* Scan selector dropdown */}
-        {loadingScans ? (
-          <div className="text-sm text-slate-500">Scans laden...</div>
-        ) : scans.length === 0 ? (
-          <div className="text-sm text-slate-500">
-            Nog geen competentiescans beschikbaar.
-          </div>
-        ) : (
+      {/* Scan filter dropdown */}
+      {scans && scans.length > 0 && (
+        <div className="px-5 py-4 border-b border-slate-200 bg-white">
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-slate-700">
-              Selecteer scan:
+              Filter op scan:
             </label>
             <select
               value={selectedScanId}
               onChange={(e) => setSelectedScanId(e.target.value)}
               className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm flex-1 max-w-md"
             >
-              <option value="">-- Kies een scan --</option>
+              <option value="">Alle scans</option>
               {scans.map((scan) => (
                 <option key={scan.id} value={scan.id}>
                   {scan.title} ({scan.date})
@@ -370,62 +355,58 @@ function CompetencyScoresSection() {
               ))}
             </select>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Error message */}
-        {error && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        {/* Loading state */}
-        {loadingScanData && (
-          <div className="mt-4 text-center text-sm text-slate-500">
-            Scan data laden...
-          </div>
-        )}
-
-        {/* Table with scan data */}
-        {!loadingScanData && selectedScanId && scanData && scanData.length > 0 && (
-          <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-slate-50">
-                <tr className="text-left text-xs font-semibold tracking-wide text-slate-600">
-                  <th className="px-5 py-3">Categorie</th>
-                  <th className="px-4 py-3 text-center">Gemiddelde Score</th>
-                  <th className="px-4 py-3 text-center">Aantal Competenties</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {scanData.map((category) => (
-                  <tr key={category.category_id} className="hover:bg-slate-50">
-                    <td className="px-5 py-3 text-slate-800 font-medium">
-                      {category.category_name}
-                    </td>
-                    <td className="px-4 py-3 text-center">
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead className="bg-slate-50">
+            <tr className="text-left text-xs font-semibold tracking-wide text-slate-600">
+              <th className="px-5 py-3">Categorie</th>
+              <th className="px-5 py-3">Competentie</th>
+              <th className="px-4 py-3 text-center">Score</th>
+              <th className="px-4 py-3">Scan</th>
+              <th className="px-4 py-3">Datum</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {filteredScores.length > 0 ? (
+              filteredScores.map((score) => (
+                <tr key={score.competency_id} className="hover:bg-slate-50">
+                  <td className="px-5 py-3 text-slate-600">
+                    {score.category_name || "—"}
+                  </td>
+                  <td className="px-5 py-3 text-slate-800 font-medium">
+                    {score.competency_name}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {score.most_recent_score !== null ? (
                       <span
-                        className={`inline-flex px-2.5 py-1 rounded-md text-sm font-medium ${getScoreBadgeClass(category.average_score)}`}
+                        className={`inline-flex px-2.5 py-1 rounded-md text-sm font-medium ${getScoreBadgeClass(score.most_recent_score)}`}
                       >
-                        {category.average_score.toFixed(1)}
+                        {score.most_recent_score.toFixed(1)}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 text-center text-slate-600">
-                      {category.count}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Empty state when scan is selected but no data */}
-        {!loadingScanData && selectedScanId && (!scanData || scanData.length === 0) && !error && (
-          <div className="mt-4 p-4 bg-slate-50 rounded-lg text-center text-sm text-slate-500">
-            Geen data beschikbaar voor deze scan.
-          </div>
-        )}
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {score.window_title || "—"}
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {score.scan_date || "—"}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={5} className="px-5 py-8 text-center text-slate-500">
+                  Geen scores gevonden voor deze scan.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </section>
   );
@@ -508,6 +489,8 @@ function ReflectionsSection({
 }: {
   reflections: GrowthReflection[];
 }) {
+  const [expandedReflectionId, setExpandedReflectionId] = useState<string | null>(null);
+
   if (!reflections || reflections.length === 0) {
     return (
       <section className={studentStyles.cards.infoCard.container}>
@@ -530,34 +513,36 @@ function ReflectionsSection({
         Reflecties over mijn groei
       </h2>
       <div className="space-y-4">
-        {reflections.map((ref, idx) => (
-          <div key={ref.id} className="flex gap-3">
-            <div className="flex flex-col items-center">
-              <div className="w-2 h-2 rounded-full bg-indigo-500 mt-1" />
-              {idx < reflections.length - 1 && (
-                <div className="w-px flex-1 bg-slate-200 mt-1" />
-              )}
+        {reflections.map((ref, idx) => {
+          const isExpanded = expandedReflectionId === ref.id;
+          return (
+            <div key={ref.id} className="flex gap-3">
+              <div className="flex flex-col items-center">
+                <div className="w-2 h-2 rounded-full bg-indigo-500 mt-1" />
+                {idx < reflections.length - 1 && (
+                  <div className="w-px flex-1 bg-slate-200 mt-1" />
+                )}
+              </div>
+              <div className="flex-1 space-y-1">
+                <p className="text-xs text-slate-500">{ref.date}</p>
+                <p className="text-sm font-medium text-slate-900">
+                  {ref.scan_title}
+                </p>
+                <p className={`text-xs text-slate-600 ${isExpanded ? '' : 'line-clamp-2'}`}>
+                  {ref.snippet}
+                </p>
+                <button
+                  className="mt-1 text-xs font-medium text-indigo-600 hover:underline"
+                  onClick={() => {
+                    setExpandedReflectionId(isExpanded ? null : ref.id);
+                  }}
+                >
+                  {isExpanded ? "Verberg reflectie" : "Open volledige reflectie"}
+                </button>
+              </div>
             </div>
-            <div className="flex-1 space-y-1">
-              <p className="text-xs text-slate-500">{ref.date}</p>
-              <p className="text-sm font-medium text-slate-900">
-                {ref.scan_title}
-              </p>
-              <p className="text-xs text-slate-600 line-clamp-2">
-                {ref.snippet}
-              </p>
-              <button
-                className="mt-1 text-xs font-medium text-indigo-600 hover:underline"
-                onClick={() => {
-                  // TODO: Implement full reflection view
-                  alert("Volledige reflectie weergave komt binnenkort.");
-                }}
-              >
-                Open volledige reflectie
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
