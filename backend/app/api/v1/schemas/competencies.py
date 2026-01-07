@@ -415,7 +415,7 @@ class CompetencyReflectionBulkCreate(BaseModel):
 
 
 class CompetencyReflectionItemCreate(BaseModel):
-    """Individual reflection item for bulk submission"""
+    """Individual reflection item for bulk submission - inherits from base without window_id"""
     goal_id: int
     text: str
     goal_achieved: Optional[bool] = None

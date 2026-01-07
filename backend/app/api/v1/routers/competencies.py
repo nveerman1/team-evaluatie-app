@@ -1358,7 +1358,7 @@ def create_reflections_bulk(
     ).scalars().all()
 
     if len(goals) != len(goal_ids):
-        raise HTTPException(status_code=404, detail="One or more goals not found or do not belong to you")
+        raise HTTPException(status_code=400, detail="Invalid goals specified")
 
     results = []
     for refl_data in data.reflections:

@@ -105,15 +105,18 @@ export default function ReflectionPage() {
   };
 
   const getReflectionStatus = (goalId: number): string => {
-    const draft = drafts[goalId];
     const existing = existingReflections.find((r) => r.goal_id === goalId);
+    const draft = drafts[goalId];
     
+    // Check submitted status first (highest priority)
     if (existing && existing.submitted_at) {
       return "Ingediend";
     }
+    // Then check for draft content
     if (draft?.isDirty || (draft?.text && draft.text.trim().length > 0)) {
       return "Concept";
     }
+    // Default to empty
     return "Leeg";
   };
 
@@ -157,9 +160,11 @@ export default function ReflectionPage() {
 
       await competencyService.createReflectionsBulk(bulkData);
 
-      setSuccessMessage(
-        `${reflectionsToSubmit.length} reflectie${reflectionsToSubmit.length > 1 ? "s" : ""} succesvol opgeslagen!`
-      );
+      const count = reflectionsToSubmit.length;
+      const message = count === 1 
+        ? "1 reflectie succesvol opgeslagen!" 
+        : `${count} reflecties succesvol opgeslagen!`;
+      setSuccessMessage(message);
       
       // Mark all submitted drafts as not dirty
       setDrafts((prev) => {
