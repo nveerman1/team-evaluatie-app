@@ -303,6 +303,28 @@ function CompetencyScoresSection({
   scans: { id: string; title: string; date: string }[];
 }) {
   const [selectedScanId, setSelectedScanId] = useState<string>("");
+  const [scanScores, setScanScores] = useState<GrowthCompetencyScore[] | null>(null);
+  const [loadingScores, setLoadingScores] = useState(false);
+
+  useEffect(() => {
+    const fetchScanScores = async () => {
+      if (!selectedScanId) {
+        setScanScores(null);
+        return;
+      }
+      try {
+        setLoadingScores(true);
+        const data = await studentService.getScanCompetencyScores(selectedScanId);
+        setScanScores(data);
+      } catch (err) {
+        console.error("Failed to load scan scores:", err);
+        setScanScores([]);
+      } finally {
+        setLoadingScores(false);
+      }
+    };
+    fetchScanScores();
+  }, [selectedScanId]);
 
   if (!scores || scores.length === 0) {
     return (
@@ -319,10 +341,8 @@ function CompetencyScoresSection({
     );
   }
 
-  // Filter scores by selected scan
-  const filteredScores = selectedScanId
-    ? scores.filter(score => score.window_id === parseInt(selectedScanId))
-    : scores;
+  // Use scan-specific scores if available, otherwise use overall scores
+  const displayScores = selectedScanId && scanScores !== null ? scanScores : scores;
 
   return (
     <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -347,7 +367,7 @@ function CompetencyScoresSection({
               onChange={(e) => setSelectedScanId(e.target.value)}
               className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm flex-1 max-w-md"
             >
-              <option value="">Alle scans</option>
+              <option value="">Alle scans (meest recent)</option>
               {scans.map((scan) => (
                 <option key={scan.id} value={scan.id}>
                   {scan.title} ({scan.date})
@@ -358,56 +378,62 @@ function CompetencyScoresSection({
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead className="bg-slate-50">
-            <tr className="text-left text-xs font-semibold tracking-wide text-slate-600">
-              <th className="px-5 py-3">Categorie</th>
-              <th className="px-5 py-3">Competentie</th>
-              <th className="px-4 py-3 text-center">Score</th>
-              <th className="px-4 py-3">Scan</th>
-              <th className="px-4 py-3">Datum</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {filteredScores.length > 0 ? (
-              filteredScores.map((score) => (
-                <tr key={score.competency_id} className="hover:bg-slate-50">
-                  <td className="px-5 py-3 text-slate-600">
-                    {score.category_name || "—"}
-                  </td>
-                  <td className="px-5 py-3 text-slate-800 font-medium">
-                    {score.competency_name}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    {score.most_recent_score !== null ? (
-                      <span
-                        className={`inline-flex px-2.5 py-1 rounded-md text-sm font-medium ${getScoreBadgeClass(score.most_recent_score)}`}
-                      >
-                        {score.most_recent_score.toFixed(1)}
-                      </span>
-                    ) : (
-                      <span className="text-slate-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {score.window_title || "—"}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {score.scan_date || "—"}
+      {loadingScores ? (
+        <div className="px-5 py-8 text-center text-sm text-slate-500">
+          Scores laden...
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-slate-50">
+              <tr className="text-left text-xs font-semibold tracking-wide text-slate-600">
+                <th className="px-5 py-3">Categorie</th>
+                <th className="px-5 py-3">Competentie</th>
+                <th className="px-4 py-3 text-center">Score</th>
+                <th className="px-4 py-3">Scan</th>
+                <th className="px-4 py-3">Datum</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {displayScores.length > 0 ? (
+                displayScores.map((score) => (
+                  <tr key={`${score.competency_id}-${score.window_id}`} className="hover:bg-slate-50">
+                    <td className="px-5 py-3 text-slate-600">
+                      {score.category_name || "—"}
+                    </td>
+                    <td className="px-5 py-3 text-slate-800 font-medium">
+                      {score.competency_name}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {score.most_recent_score !== null ? (
+                        <span
+                          className={`inline-flex px-2.5 py-1 rounded-md text-sm font-medium ${getScoreBadgeClass(score.most_recent_score)}`}
+                        >
+                          {score.most_recent_score.toFixed(1)}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {score.window_title || "—"}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {score.scan_date || "—"}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="px-5 py-8 text-center text-slate-500">
+                    Geen scores gevonden voor deze scan.
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={5} className="px-5 py-8 text-center text-slate-500">
-                  Geen scores gevonden voor deze scan.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }
@@ -528,8 +554,8 @@ function ReflectionsSection({
                 <p className="text-sm font-medium text-slate-900">
                   {ref.scan_title}
                 </p>
-                <p className={`text-xs text-slate-600 ${isExpanded ? '' : 'line-clamp-2'}`}>
-                  {ref.snippet}
+                <p className="text-xs text-slate-600 whitespace-pre-wrap">
+                  {isExpanded ? ref.full_text : ref.snippet}
                 </p>
                 <button
                   className="mt-1 text-xs font-medium text-indigo-600 hover:underline"

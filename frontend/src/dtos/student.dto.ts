@@ -178,6 +178,7 @@ export type GrowthReflection = {
   date: string;
   scan_title: string;
   snippet: string;
+  full_text: string;
 };
 
 /**

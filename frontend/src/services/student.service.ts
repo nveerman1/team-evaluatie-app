@@ -10,6 +10,7 @@ import {
   StudentGrowthData,
   ScanListItem,
   ScanRadarData,
+  GrowthCompetencyScore,
 } from "@/dtos";
 
 export const studentService = {
@@ -389,6 +390,16 @@ export const studentService = {
   async getScanRadarData(scanId: string): Promise<ScanRadarData> {
     const { data } = await api.get<ScanRadarData>(
       `/student/competency/scans/${scanId}/radar`
+    );
+    return data;
+  },
+
+  /**
+   * Get individual competency scores for a specific scan
+   */
+  async getScanCompetencyScores(scanId: string): Promise<GrowthCompetencyScore[]> {
+    const { data } = await api.get<GrowthCompetencyScore[]>(
+      `/student/competency/scans/${scanId}/competencies`
     );
     return data;
   },
