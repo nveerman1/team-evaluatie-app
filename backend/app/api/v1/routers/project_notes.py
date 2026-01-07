@@ -117,16 +117,16 @@ def serialize_note(note: ProjectNote, db: Session) -> dict:
             if project_team and project_team.team_number:
                 note_dict["team_name"] = f"Team {project_team.team_number}"
             else:
-                # No project_team found - use generic team label
-                note_dict["team_name"] = f"Team (ID {note.team_id})"
+                # No project_team found - use team_id directly
+                note_dict["team_name"] = f"Team {note.team_id}"
         else:
             # No project_id in context - try to extract team_number from Group's team_number field
             team = db.query(Group).filter(Group.id == note.team_id).first()
             if team and team.team_number:
                 note_dict["team_name"] = f"Team {team.team_number}"
             else:
-                # Fallback to generic label if no team_number available
-                note_dict["team_name"] = f"Team (ID {note.team_id})"
+                # Fallback to team_id directly
+                note_dict["team_name"] = f"Team {note.team_id}"
     else:
         note_dict["team_name"] = None
 
