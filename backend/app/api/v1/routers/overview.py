@@ -12,6 +12,12 @@ from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
+# Grade calculation constants
+# GCF (Group Correction Factor) typically ranges from 0.5 to 1.5 in normal cases
+# We set the warning threshold higher (2.0) to allow for exceptional cases
+# while still logging potentially incorrect values for review
+MAX_REASONABLE_GCF = 2.0
+
 # Mapping from full Dutch category names to short abbreviations
 # This ensures frontend compatibility
 CATEGORY_NAME_TO_ABBREV = {
@@ -193,13 +199,40 @@ def _calculate_project_score(db: Session, assessment_id: int, rubric_id: int, te
     return _score_to_grade(avg_score, rubric.scale_min, rubric.scale_max)
 
 
+def _get_grade_value(grade: Grade, field_name: str, meta_key: str = None) -> Optional[float]:
+    """
+    Helper to get a grade value from either direct field or meta dictionary.
+    
+    Args:
+        grade: Grade object
+        field_name: Name of the direct field attribute
+        meta_key: Key in the meta dictionary (defaults to field_name if not provided)
+    
+    Returns:
+        Float value or None
+    """
+    if meta_key is None:
+        meta_key = field_name
+    
+    # Try direct field first
+    value = getattr(grade, field_name, None)
+    
+    # Fallback to meta dictionary for backwards compatibility
+    if value is None and grade.meta and isinstance(grade.meta, dict):
+        value = grade.meta.get(meta_key)
+    
+    return value
+
+
 def _calculate_peer_score(db: Session, evaluation_id: int, user_id: int) -> Optional[float]:
     """
     Get final peer evaluation grade for a student (Eindcijfer)
-    Returns the published grade from the Grade table (1-10 scale)
-    If no explicit grade is set, falls back to the suggested grade from meta
+    Priority order:
+    1. Direct override from Grade.grade field (cell override)
+    2. Group grade × GCF (Grade.group_grade × Grade.gcf)
+    3. Suggested grade (Grade.suggested_grade or from meta)
     """
-    # Try to get from PublishedGrade table first
+    # Try to get from PublishedGrade table first (published grades take precedence)
     published = db.query(PublishedGrade).filter(
         PublishedGrade.evaluation_id == evaluation_id,
         PublishedGrade.user_id == user_id
@@ -208,24 +241,60 @@ def _calculate_peer_score(db: Session, evaluation_id: int, user_id: int) -> Opti
     if published and published.grade is not None:
         return round(float(published.grade), 1)
     
-    # Otherwise try to get grade from Grade table (use 'grade' field, not 'published_grade')
+    # Get grade record from Grade table
     grade = db.query(Grade).filter(
         Grade.evaluation_id == evaluation_id,
         Grade.user_id == user_id
     ).first()
     
     if grade:
+        # Priority 1: Direct override in cell (Grade.grade)
         if grade.grade is not None:
             return round(float(grade.grade), 1)
-        # If no explicit grade is set, try to use the suggested grade from meta
-        if grade.meta and isinstance(grade.meta, dict):
-            suggested = grade.meta.get('suggested')
-            if suggested is not None:
-                try:
-                    return round(float(suggested), 1)
-                except (ValueError, TypeError):
-                    # Invalid suggested grade value, skip it
-                    pass
+        
+        # Priority 2: Group grade × GCF
+        group_grade = _get_grade_value(grade, 'group_grade')
+        gcf = _get_grade_value(grade, 'gcf')
+        
+        if group_grade is not None and gcf is not None:
+            try:
+                group_grade_float = float(group_grade)
+                gcf_float = float(gcf)
+                
+                # Validate that values are reasonable for grade calculations
+                # Group grades typically range from 1 to 10, GCF from 0.5 to 1.5
+                if group_grade_float <= 0 or gcf_float <= 0:
+                    logger.warning(
+                        f"Non-positive group_grade ({group_grade_float}) or gcf ({gcf_float}) for "
+                        f"evaluation_id={evaluation_id}, user_id={user_id}"
+                    )
+                    # Continue to next priority instead of returning invalid grade
+                else:
+                    # Log suspiciously high GCF (> 2.0) but still use it to preserve teacher flexibility
+                    # Teachers may have valid reasons for exceptional GCF values
+                    if gcf_float > MAX_REASONABLE_GCF:
+                        logger.warning(
+                            f"Unusually high gcf ({gcf_float}) for "
+                            f"evaluation_id={evaluation_id}, user_id={user_id}"
+                        )
+                    final_grade = group_grade_float * gcf_float
+                    return round(final_grade, 1)
+            except (ValueError, TypeError) as e:
+                logger.warning(
+                    f"Invalid group_grade ({group_grade}) or gcf ({gcf}) for "
+                    f"evaluation_id={evaluation_id}, user_id={user_id}: {e}"
+                )
+        
+        # Priority 3: Suggested grade
+        suggested_grade = _get_grade_value(grade, 'suggested_grade', 'suggested')
+        if suggested_grade is not None:
+            try:
+                return round(float(suggested_grade), 1)
+            except (ValueError, TypeError) as e:
+                logger.warning(
+                    f"Invalid suggested_grade ({suggested_grade}) for "
+                    f"evaluation_id={evaluation_id}, user_id={user_id}: {e}"
+                )
     
     return None
 
