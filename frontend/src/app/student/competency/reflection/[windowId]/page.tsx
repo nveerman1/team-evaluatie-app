@@ -7,10 +7,19 @@ import type {
   CompetencyWindow,
   CompetencyGoal,
   CompetencyReflection,
-  CompetencyReflectionCreate,
+  CompetencyReflectionBulkCreate,
 } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
 import { studentStyles } from "@/styles/student-dashboard.styles";
+
+// Draft state for a single goal's reflection
+type GoalReflectionDraft = {
+  goalId: number;
+  text: string;
+  goalAchieved?: boolean;
+  evidence: string;
+  isDirty: boolean;
+};
 
 export default function ReflectionPage() {
   const router = useRouter();
@@ -19,15 +28,14 @@ export default function ReflectionPage() {
 
   const [window, setWindow] = useState<CompetencyWindow | null>(null);
   const [goals, setGoals] = useState<CompetencyGoal[]>([]);
-  const [existingReflection, setExistingReflection] =
-    useState<CompetencyReflection | null>(null);
-  const [formData, setFormData] = useState<CompetencyReflectionCreate>({
-    window_id: windowId,
-    text: "",
-    goal_id: undefined,
-    goal_achieved: undefined,
-    evidence: "",
-  });
+  const [existingReflections, setExistingReflections] = useState<CompetencyReflection[]>([]);
+  
+  // Active goal being edited
+  const [activeGoalId, setActiveGoalId] = useState<number | null>(null);
+  
+  // Draft reflections keyed by goal ID
+  const [drafts, setDrafts] = useState<Record<number, GoalReflectionDraft>>({});
+  
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,18 +57,27 @@ export default function ReflectionPage() {
 
       setWindow(win);
       setGoals(windowGoals);
+      setExistingReflections(reflections);
 
-      // Pre-populate if reflection exists
-      if (reflections.length > 0) {
-        const reflection = reflections[0];
-        setExistingReflection(reflection);
-        setFormData({
-          window_id: windowId,
-          text: reflection.text,
-          goal_id: reflection.goal_id || undefined,
-          goal_achieved: reflection.goal_achieved ?? undefined,
-          evidence: reflection.evidence || "",
-        });
+      // Initialize drafts from existing reflections
+      const initialDrafts: Record<number, GoalReflectionDraft> = {};
+      
+      for (const goal of windowGoals) {
+        const existingReflection = reflections.find((r) => r.goal_id === goal.id);
+        initialDrafts[goal.id] = {
+          goalId: goal.id,
+          text: existingReflection?.text || "",
+          goalAchieved: existingReflection?.goal_achieved,
+          evidence: existingReflection?.evidence || "",
+          isDirty: false,
+        };
+      }
+
+      setDrafts(initialDrafts);
+
+      // Set active goal to first goal by default
+      if (windowGoals.length > 0) {
+        setActiveGoalId(windowGoals[0].id);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load data");
@@ -69,11 +86,61 @@ export default function ReflectionPage() {
     }
   };
 
+  const handleGoalSelect = (goalId: number) => {
+    setActiveGoalId(goalId);
+    setError(null);
+  };
+
+  const updateDraft = (field: keyof GoalReflectionDraft, value: any) => {
+    if (activeGoalId === null) return;
+    
+    setDrafts((prev) => ({
+      ...prev,
+      [activeGoalId]: {
+        ...prev[activeGoalId],
+        [field]: value,
+        isDirty: true,
+      },
+    }));
+  };
+
+  const getReflectionStatus = (goalId: number): string => {
+    const existing = existingReflections.find((r) => r.goal_id === goalId);
+    const draft = drafts[goalId];
+    
+    // Check submitted status first (highest priority)
+    if (existing && existing.submitted_at) {
+      return "Ingediend";
+    }
+    // Then check for draft content
+    if (draft?.isDirty || (draft?.text && draft.text.trim().length > 0)) {
+      return "Concept";
+    }
+    // Default to empty
+    return "Leeg";
+  };
+
+  const getStatusColor = (status: string): string => {
+    switch (status) {
+      case "Ingediend":
+        return "bg-emerald-100 text-emerald-700 border-emerald-200";
+      case "Concept":
+        return "bg-amber-100 text-amber-700 border-amber-200";
+      default:
+        return "bg-slate-100 text-slate-600 border-slate-200";
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.text.trim()) {
-      setError("Reflectie tekst is verplicht");
+    // Gather all drafts that have content
+    const reflectionsToSubmit = Object.values(drafts).filter(
+      (draft) => draft.text.trim().length > 0
+    );
+
+    if (reflectionsToSubmit.length === 0) {
+      setError("Vul minimaal één reflectie in voordat je indient");
       return;
     }
 
@@ -81,14 +148,38 @@ export default function ReflectionPage() {
       setSubmitting(true);
       setError(null);
 
-      await competencyService.createReflection(formData);
+      const bulkData: CompetencyReflectionBulkCreate = {
+        window_id: windowId,
+        reflections: reflectionsToSubmit.map((draft) => ({
+          goal_id: draft.goalId,
+          text: draft.text,
+          goal_achieved: draft.goalAchieved,
+          evidence: draft.evidence,
+        })),
+      };
 
-      setSuccessMessage("Reflectie succesvol opgeslagen!");
+      await competencyService.createReflectionsBulk(bulkData);
+
+      const count = reflectionsToSubmit.length;
+      const message = count === 1 
+        ? "1 reflectie succesvol opgeslagen!" 
+        : `${count} reflecties succesvol opgeslagen!`;
+      setSuccessMessage(message);
+      
+      // Mark all submitted drafts as not dirty
+      setDrafts((prev) => {
+        const updated = { ...prev };
+        reflectionsToSubmit.forEach((draft) => {
+          updated[draft.goalId] = { ...draft, isDirty: false };
+        });
+        return updated;
+      });
+
       setTimeout(() => {
         router.push("/student");
       }, 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save reflection");
+      setError(err instanceof Error ? err.message : "Failed to save reflections");
     } finally {
       setSubmitting(false);
     }
@@ -98,15 +189,47 @@ export default function ReflectionPage() {
   if (error && !window) return <ErrorMessage message={error} />;
   if (!window) return <ErrorMessage message="Window not found" />;
 
+  if (goals.length === 0) {
+    return (
+      <div className={studentStyles.layout.pageContainer}>
+        <div className={studentStyles.header.container}>
+          <header className={studentStyles.header.wrapper}>
+            <div className={studentStyles.header.titleSection}>
+              <h1 className={studentStyles.header.title}>Reflectie Schrijven</h1>
+              <p className={studentStyles.header.subtitle}>
+                Reflecteer op je competentieontwikkeling tijdens {window.title}
+              </p>
+            </div>
+          </header>
+        </div>
+        <main className={studentStyles.layout.contentWrapper}>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-center">
+            <p className="text-slate-600">
+              Je hebt nog geen leerdoelen ingesteld voor deze periode. Stel eerst
+              leerdoelen in voordat je een reflectie kunt schrijven.
+            </p>
+            <button
+              onClick={() => router.push("/student")}
+              className={studentStyles.buttons.primary + " mt-4 px-6 py-2 text-white"}
+            >
+              Terug naar Dashboard
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  const activeDraft = activeGoalId ? drafts[activeGoalId] : null;
+  const activeGoal = goals.find((g) => g.id === activeGoalId);
+
   return (
     <div className={studentStyles.layout.pageContainer}>
       {/* Header */}
       <div className={studentStyles.header.container}>
         <header className={studentStyles.header.wrapper}>
           <div className={studentStyles.header.titleSection}>
-            <h1 className={studentStyles.header.title}>
-              Reflectie Schrijven
-            </h1>
+            <h1 className={studentStyles.header.title}>Reflectie Schrijven</h1>
             <p className={studentStyles.header.subtitle}>
               Reflecteer op je competentieontwikkeling tijdens {window.title}
             </p>
@@ -116,7 +239,6 @@ export default function ReflectionPage() {
 
       {/* Main Content */}
       <main className={studentStyles.layout.contentWrapper + " space-y-6"}>
-
         {successMessage && (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-700">
             {successMessage}
@@ -129,182 +251,168 @@ export default function ReflectionPage() {
           </div>
         )}
 
-        {existingReflection && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-            <p className="text-sm text-amber-700">
-              ⚠️ Je hebt al een reflectie voor deze periode. Let op: het indienen
-              van een nieuwe reflectie kan de oude vervangen.
-            </p>
-          </div>
-        )}
-
-        {/* Show goals if any */}
-        {goals.length > 0 && (
-          <div className="rounded-2xl border border-slate-200 bg-indigo-50 p-5 shadow-sm">
-          <h3 className={studentStyles.typography.cardTitle + " mb-3"}>Jouw Leerdoelen</h3>
+        {/* Learning Goals List */}
+        <div className="rounded-2xl border border-slate-200 bg-indigo-50 p-5 shadow-sm">
+          <h3 className={studentStyles.typography.cardTitle + " mb-3"}>
+            Jouw Leerdoelen
+          </h3>
           <div className="space-y-2">
-            {goals.map((goal) => (
-              <div
-                key={goal.id}
-                className="rounded-xl border border-indigo-200 bg-white p-3"
-              >
-                <p className="font-medium text-slate-900">{goal.goal_text}</p>
-                {goal.success_criteria && (
-                  <p className={studentStyles.typography.infoText + " mt-1"}>
-                    Criterium: {goal.success_criteria}
-                  </p>
-                )}
-              </div>
-              ))}
-            </div>
+            {goals.map((goal) => {
+              const status = getReflectionStatus(goal.id);
+              const isActive = goal.id === activeGoalId;
+              return (
+                <div
+                  key={goal.id}
+                  onClick={() => handleGoalSelect(goal.id)}
+                  className={`cursor-pointer rounded-xl border p-3 transition-all ${
+                    isActive
+                      ? "border-indigo-500 bg-white ring-2 ring-indigo-500"
+                      : "border-indigo-200 bg-white hover:border-indigo-400"
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className="font-medium text-slate-900">
+                        {goal.goal_text}
+                      </p>
+                      {goal.success_criteria && (
+                        <p className={studentStyles.typography.infoText + " mt-1"}>
+                          Criterium: {goal.success_criteria}
+                        </p>
+                      )}
+                    </div>
+                    <span
+                      className={`ml-3 rounded-lg border px-3 py-1 text-xs font-medium ${getStatusColor(
+                        status
+                      )}`}
+                    >
+                      {status}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        )}
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          {/* Goal Selection */}
-          {goals.length > 0 && (
-            <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">
-                Gerelateerd Leerdoel (optioneel)
-              </label>
-              <select
-                value={formData.goal_id || ""}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    goal_id: e.target.value ? Number(e.target.value) : undefined,
-                  })
+        {/* Reflection Form */}
+        {activeDraft && activeGoal && (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="mb-4 border-b border-slate-200 pb-3">
+                <h3 className="text-lg font-semibold text-slate-900">
+                  Reflectie voor: {activeGoal.goal_text}
+                </h3>
+              </div>
+
+              {/* Goal Achieved */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Heb je je leerdoel behaald?
+                </label>
+                <div className="flex gap-4">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name={`goal_achieved_${activeGoalId}`}
+                      checked={activeDraft.goalAchieved === true}
+                      onChange={() => updateDraft("goalAchieved", true)}
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-slate-700">Ja</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name={`goal_achieved_${activeGoalId}`}
+                      checked={activeDraft.goalAchieved === false}
+                      onChange={() => updateDraft("goalAchieved", false)}
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-slate-700">Nee</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name={`goal_achieved_${activeGoalId}`}
+                      checked={activeDraft.goalAchieved === undefined}
+                      onChange={() => updateDraft("goalAchieved", undefined)}
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-slate-700">Gedeeltelijk</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Reflection Text */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Reflectie <span className="text-rose-600">*</span>
+                </label>
+                <textarea
+                  value={activeDraft.text}
+                  onChange={(e) => updateDraft("text", e.target.value)}
+                  placeholder="Reflecteer op je competentieontwikkeling. Wat ging goed? Wat kan beter? Wat heb je geleerd?"
+                  rows={8}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <p className={studentStyles.typography.infoTextSmall + " mt-1"}>
+                  Minimaal 50 woorden aanbevolen
+                </p>
+              </div>
+
+              {/* Evidence */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Bewijs/Voorbeelden (optioneel)
+                </label>
+                <textarea
+                  value={activeDraft.evidence}
+                  onChange={(e) => updateDraft("evidence", e.target.value)}
+                  placeholder="Beschrijf concrete voorbeelden of bewijs van je ontwikkeling..."
+                  rows={4}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              {/* Tips */}
+              <div className="rounded-xl bg-indigo-50 p-4">
+                <h3 className="mb-2 text-sm font-semibold text-slate-900">
+                  💡 Tips voor een goede reflectie:
+                </h3>
+                <ul className="list-inside list-disc space-y-1 text-sm text-slate-700">
+                  <li>Wees eerlijk en kritisch over je eigen ontwikkeling</li>
+                  <li>Geef concrete voorbeelden van situaties</li>
+                  <li>Beschrijf wat je hebt geleerd en waarom</li>
+                  <li>Kijk vooruit: wat neem je mee naar volgende keer?</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => router.push("/student")}
+                className={studentStyles.buttons.secondary + " border px-6 py-2"}
+              >
+                Annuleren
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className={
+                  studentStyles.buttons.primary +
+                  " px-6 py-2 text-white disabled:opacity-50"
                 }
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
-                <option value="">Selecteer een leerdoel</option>
-                {goals.map((goal) => (
-                  <option key={goal.id} value={goal.id}>
-                    {goal.goal_text.length > 80
-                      ? goal.goal_text.substring(0, 80) + '...'
-                      : goal.goal_text}
-                  </option>
-                ))}
-              </select>
+                {submitting
+                  ? "Opslaan..."
+                  : "Alle Reflecties Indienen"}
+              </button>
             </div>
-          )}
-
-          {/* Goal Achieved */}
-          {formData.goal_id && (
-            <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">
-                Heb je je leerdoel behaald?
-              </label>
-              <div className="flex gap-4">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="goal_achieved"
-                    checked={formData.goal_achieved === true}
-                    onChange={() =>
-                      setFormData({ ...formData, goal_achieved: true })
-                    }
-                    className="mr-2"
-                  />
-                  <span className="text-sm text-slate-700">Ja</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="goal_achieved"
-                    checked={formData.goal_achieved === false}
-                    onChange={() =>
-                      setFormData({ ...formData, goal_achieved: false })
-                    }
-                    className="mr-2"
-                  />
-                  <span className="text-sm text-slate-700">Nee</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="goal_achieved"
-                    checked={formData.goal_achieved === undefined}
-                    onChange={() =>
-                      setFormData({ ...formData, goal_achieved: undefined })
-                    }
-                    className="mr-2"
-                  />
-                  <span className="text-sm text-slate-700">Gedeeltelijk</span>
-                </label>
-              </div>
-            </div>
-          )}
-
-          {/* Reflection Text */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">
-              Reflectie <span className="text-rose-600">*</span>
-            </label>
-            <textarea
-              value={formData.text}
-              onChange={(e) =>
-                setFormData({ ...formData, text: e.target.value })
-              }
-              placeholder="Reflecteer op je competentieontwikkeling. Wat ging goed? Wat kan beter? Wat heb je geleerd?"
-              rows={8}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-            />
-            <p className={studentStyles.typography.infoTextSmall + " mt-1"}>
-              Minimaal 50 woorden aanbevolen
-            </p>
-          </div>
-
-          {/* Evidence */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">
-              Bewijs/Voorbeelden (optioneel)
-            </label>
-            <textarea
-              value={formData.evidence}
-              onChange={(e) =>
-                setFormData({ ...formData, evidence: e.target.value })
-              }
-              placeholder="Beschrijf concrete voorbeelden of bewijs van je ontwikkeling..."
-              rows={4}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-
-          {/* Tips */}
-          <div className="rounded-xl bg-indigo-50 p-4">
-            <h3 className="mb-2 text-sm font-semibold text-slate-900">
-              💡 Tips voor een goede reflectie:
-            </h3>
-            <ul className="list-inside list-disc space-y-1 text-sm text-slate-700">
-              <li>Wees eerlijk en kritisch over je eigen ontwikkeling</li>
-              <li>Geef concrete voorbeelden van situaties</li>
-              <li>Beschrijf wat je hebt geleerd en waarom</li>
-              <li>Kijk vooruit: wat neem je mee naar volgende keer?</li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Submit Button */}
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => router.push("/student")}
-              className={studentStyles.buttons.secondary + " border px-6 py-2"}
-            >
-              Annuleren
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className={studentStyles.buttons.primary + " px-6 py-2 text-white disabled:opacity-50"}
-            >
-              {submitting ? "Opslaan..." : "Reflectie Indienen"}
-            </button>
-          </div>
-        </form>
+          </form>
+        )}
       </main>
     </div>
   );

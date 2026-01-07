@@ -25,6 +25,7 @@ import type {
   CompetencyGoalUpdate,
   CompetencyReflection,
   CompetencyReflectionCreate,
+  CompetencyReflectionBulkCreate,
   CompetencyTeacherObservation,
   CompetencyTeacherObservationCreate,
   StudentCompetencyOverview,
@@ -256,6 +257,13 @@ export const competencyService = {
     data: CompetencyReflectionCreate
   ): Promise<CompetencyReflection> {
     const response = await api.post("/competencies/reflections/", data);
+    return response.data;
+  },
+
+  async createReflectionsBulk(
+    data: CompetencyReflectionBulkCreate
+  ): Promise<CompetencyReflection[]> {
+    const response = await api.post("/competencies/reflections/bulk", data);
     return response.data;
   },
 
