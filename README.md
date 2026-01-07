@@ -263,7 +263,58 @@ pip-audit
 
 ## Deployment
 
-See deployment documentation in `ops/` directory.
+### Production Deployment
+
+Complete guide for deploying to a TransIP VPS with Docker Compose, Nginx, and SSL.
+
+**Quick Start:**
+
+```bash
+# 1. Setup VPS with Docker
+# 2. Clone repository
+git clone https://github.com/nveerman1/team-evaluatie-app.git
+cd team-evaluatie-app
+
+# 3. Configure environment
+cp .env.prod.example .env.prod
+# Edit .env.prod with your settings
+
+# 4. Deploy
+docker compose -f ops/docker/compose.prod.yml up -d
+
+# 5. Setup SSL (after DNS is configured)
+docker compose -f ops/docker/compose.prod.yml run --rm certbot certonly ...
+```
+
+**Documentation:**
+
+- 📘 [Production Deployment Guide](docs/PRODUCTION_DEPLOYMENT.md) - Complete deployment runbook
+- 🔧 [Operations Guide](docs/OPERATIONS.md) - Day-to-day operations and maintenance
+- 🔄 [Rollback Procedures](docs/ROLLBACK.md) - Emergency rollback guide
+- 🔒 [Security Hardening](docs/SECURITY_HARDENING.md) - Security best practices
+
+**Architecture:**
+
+- **Frontend**: Next.js (standalone) behind Nginx
+- **Backend**: FastAPI with Gunicorn + Uvicorn workers
+- **Database**: PostgreSQL 16 with automated backups
+- **Cache/Queue**: Redis 7 for RQ worker jobs
+- **Reverse Proxy**: Nginx with SSL/TLS (Let's Encrypt)
+- **Container Orchestration**: Docker Compose
+
+**Key Features:**
+
+- ✅ Multi-stage Docker builds for optimal image size
+- ✅ Health checks and automatic restarts
+- ✅ Resource limits and monitoring
+- ✅ Automated database backups with rotation
+- ✅ SSL/HTTPS with auto-renewal (Certbot)
+- ✅ Security headers and rate limiting
+- ✅ Automated deployment scripts
+- ✅ GitHub Actions CI/CD pipeline
+- ✅ Comprehensive logging and monitoring
+
+See [docs/PRODUCTION_DEPLOYMENT.md](docs/PRODUCTION_DEPLOYMENT.md) for detailed instructions.
 
 ## Contributing
 
