@@ -1,0 +1,366 @@
+# =============================================================================
+# Docker Compose - Production Configuration
+# =============================================================================
+# 
+# This file defines the production deployment architecture for the Team 
+# Evaluatie App on a single VPS.
+#
+# Services:
+# - db: PostgreSQL database
+# - redis: Redis for job queue and caching
+# - backend: FastAPI application
+# - worker: RQ worker for async jobs
+# - frontend: Next.js application
+# - nginx: Reverse proxy with SSL termination
+#
+# Prerequisites:
+# - Copy .env.prod.example to .env.prod and fill in all values
+# - Ensure domain DNS points to this server
+# - Run Certbot to obtain SSL certificates (see docs/PRODUCTION_DEPLOYMENT.md)
+#
+# Usage:
+#   docker compose -f ops/docker/compose.prod.yml up -d
+#   docker compose -f ops/docker/compose.prod.yml logs -f
+#   docker compose -f ops/docker/compose.prod.yml down
+#
+# =============================================================================
+
+version: '3.8'
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  certbot-certs:
+    driver: local
+  certbot-www:
+    driver: local
+
+services:
+  # ===========================================================================
+  # PostgreSQL Database
+  # ===========================================================================
+  db:
+    image: postgres:16-alpine
+    container_name: tea_db
+    restart: unless-stopped
+    
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tea}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-tea_production}
+      # PostgreSQL performance tuning
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=en_US.UTF-8"
+    
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # Backup directory (mount host directory for backups)
+      - ${BACKUP_DIR:-./backups}:/backups
+    
+    networks:
+      - app-network
+    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tea} -d ${POSTGRES_DB:-tea_production}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    
+    # Security: Don't expose port to host in production
+    # Only accessible within Docker network
+    # ports:
+    #   - "5432:5432"
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # ===========================================================================
+  # Redis (Job Queue & Caching)
+  # ===========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: tea_redis
+    restart: unless-stopped
+    
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    
+    volumes:
+      - redis-data:/data
+    
+    networks:
+      - app-network
+    
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    
+    # Security: Don't expose port to host
+    # ports:
+    #   - "6379:6379"
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # ===========================================================================
+  # FastAPI Backend
+  # ===========================================================================
+  backend:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    image: tea-backend:${IMAGE_TAG:-latest}
+    container_name: tea_backend
+    restart: unless-stopped
+    
+    env_file:
+      - ../../.env.prod
+    
+    environment:
+      # Override/ensure critical settings
+      NODE_ENV: production
+      APP_ENV: production
+      # Database connection (use service name as host)
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-tea}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-tea_production}
+      # Redis connection (use service name as host)
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+    
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    
+    networks:
+      - app-network
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Internal port only (accessed via nginx)
+    # ports:
+    #   - "8000:8000"
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    
+    # Log configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ===========================================================================
+  # RQ Worker (Async Job Processing)
+  # ===========================================================================
+  worker:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    image: tea-backend:${IMAGE_TAG:-latest}
+    container_name: tea_worker
+    restart: unless-stopped
+    
+    # Override CMD to run worker instead of API
+    command: ["python", "worker.py"]
+    
+    env_file:
+      - ../../.env.prod
+    
+    environment:
+      NODE_ENV: production
+      APP_ENV: production
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-tea}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-tea_production}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+    
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    
+    networks:
+      - app-network
+    
+    # No healthcheck needed for worker (monitored via Redis queue)
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ===========================================================================
+  # Next.js Frontend
+  # ===========================================================================
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    image: tea-frontend:${IMAGE_TAG:-latest}
+    container_name: tea_frontend
+    restart: unless-stopped
+    
+    environment:
+      NODE_ENV: production
+      # API URL (internal network) - nginx will handle external routing
+      NEXT_PUBLIC_API_URL: ${FRONTEND_URL}/api/v1
+    
+    depends_on:
+      backend:
+        condition: service_healthy
+    
+    networks:
+      - app-network
+    
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    # Internal port only (accessed via nginx)
+    # ports:
+    #   - "3000:3000"
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ===========================================================================
+  # Nginx Reverse Proxy
+  # ===========================================================================
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: tea_nginx
+    restart: unless-stopped
+    
+    ports:
+      - "80:80"
+      - "443:443"
+    
+    volumes:
+      # Nginx configuration
+      - ../../ops/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../../ops/nginx/ssl.conf:/etc/nginx/ssl.conf:ro
+      - ../../ops/nginx/site.conf:/etc/nginx/conf.d/default.conf:ro
+      # SSL certificates (managed by Certbot)
+      - certbot-certs:/etc/letsencrypt:ro
+      - certbot-www:/var/www/certbot:ro
+      # Custom error pages (optional)
+      # - ../../ops/nginx/html:/usr/share/nginx/html:ro
+    
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    
+    networks:
+      - app-network
+    
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # ===========================================================================
+  # Certbot (SSL Certificate Management)
+  # ===========================================================================
+  # Run once to obtain certificates, then use cron for renewal
+  # Usage: docker compose -f compose.prod.yml run --rm certbot certonly --webroot ...
+  certbot:
+    image: certbot/certbot:latest
+    container_name: tea_certbot
+    
+    volumes:
+      - certbot-certs:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    
+    # Don't start automatically (run manually)
+    entrypoint: ""
+    command: /bin/sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot; sleep 12h & wait $${!}; done"
+    
+    # Uncomment for auto-renewal daemon
+    # restart: unless-stopped
+    
+    networks:
+      - app-network
