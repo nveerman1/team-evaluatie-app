@@ -856,7 +856,7 @@ export const competencyMonitorService = {
         weakestCategory: null,
         scans: [], // Would need historical data
         learningGoals: data.goals || [],
-        reflections: data.reflection ? [data.reflection] : [],
+        reflections: data.reflections || [],
       };
     } catch (error) {
       console.error("Failed to fetch student detail:", error);
