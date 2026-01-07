@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from fastapi import APIRouter
+from app.api.middleware.security_headers import SecurityHeadersMiddleware
+from app.api.middleware.rate_limit import RateLimitMiddleware
 
 from app.api.v1.routers import rubrics as rubrics_router
 from app.api.v1.routers import evaluations as evaluations_router
@@ -50,13 +52,20 @@ from app.integrations.somtoday import router as somtoday_router
 
 app = FastAPI()
 
+# Security headers (apply first)
+app.add_middleware(SecurityHeadersMiddleware)
+
+# Rate limiting (apply before CORS)
+app.add_middleware(RateLimitMiddleware)
+
+# CORS configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*", "X-User-Email", "Content-Type"],
-    expose_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-User-Email"],
+    expose_headers=["Content-Type", "X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
 )
 
 

@@ -89,7 +89,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             "/redoc",
             "/openapi.json",
             "/health",
-            "/api/v1/auth/login",
         ]
         return any(path.startswith(skip_path) for skip_path in skip_paths)
     
@@ -114,6 +113,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         Returns:
             Tuple of (max_requests, window_seconds)
         """
+        # Auth endpoints: 5 requests per minute (prevent brute force)
+        if "/auth/" in path and not path.endswith("/me"):
+            return 5, 60
+        
+        # Public external endpoints: 10 requests per minute
+        if "/public/" in path or "/external-assessments/" in path or "/external/invites" in path:
+            return 10, 60
+        
         # Queue endpoints: 10 requests per minute
         if "/queue" in path or "/jobs" in path:
             return 10, 60

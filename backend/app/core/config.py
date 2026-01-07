@@ -12,9 +12,40 @@ class Settings(BaseSettings):
     NODE_ENV: str = "development"  # "development" | "production" | "test"
 
     # Security / JWT
-    SECRET_KEY: str = "CHANGE_ME"  # overschrijven via env
+    SECRET_KEY: str = "CHANGE_ME_IN_PRODUCTION"  # overschrijven via env
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     JWT_ALGORITHM: str = "HS256"
+    
+    @field_validator("SECRET_KEY", mode="after")
+    @classmethod
+    def validate_secret_key(cls, v):
+        """Validate SECRET_KEY is not using default in production"""
+        import os
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Check if we're in production
+        node_env = os.getenv("NODE_ENV", "development")
+        if node_env == "production" and v == "CHANGE_ME_IN_PRODUCTION":
+            logger.error(
+                "CRITICAL SECURITY ERROR: SECRET_KEY is set to default value in production. "
+                "You MUST set a strong random SECRET_KEY via environment variable. "
+                "Generate one with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
+            )
+            raise ValueError(
+                "SECRET_KEY must be set to a secure random value in production. "
+                "Set the SECRET_KEY environment variable."
+            )
+        
+        # Warn if key is too short (should be at least 32 characters)
+        if len(v) < 32:
+            logger.warning(
+                f"SECRET_KEY is only {len(v)} characters. "
+                "For security, use at least 32 characters. "
+                "Generate a strong key with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
+            )
+        
+        return v
 
     # Azure AD OAuth Configuration
     AZURE_AD_CLIENT_ID: str = ""
@@ -41,10 +72,28 @@ class Settings(BaseSettings):
     BACKEND_URL: str = "http://localhost:8000"
 
     # Cookie settings
-    COOKIE_SECURE: bool = False  # Set to True in production
+    COOKIE_SECURE: bool = Field(default=False)  # MUST be True in production with HTTPS
     COOKIE_DOMAIN: str = ""  # e.g., ".technasiummbh.nl" in production
     COOKIE_SAMESITE: str = "Lax"  # Allow OAuth redirects
     COOKIE_MAX_AGE: int = 604800  # 7 days in seconds
+    
+    @field_validator("COOKIE_SECURE", mode="after")
+    @classmethod
+    def validate_cookie_secure(cls, v, info):
+        """Warn if COOKIE_SECURE is False in production"""
+        import os
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        node_env = os.getenv("NODE_ENV", "development")
+        if node_env == "production" and not v:
+            logger.warning(
+                "SECURITY WARNING: COOKIE_SECURE is False in production. "
+                "Cookies will be sent over unencrypted HTTP connections. "
+                "Set COOKIE_SECURE=true in environment variables when using HTTPS."
+            )
+        
+        return v
 
     # pydantic-settings v2 configuratie
     model_config = SettingsConfigDict(
