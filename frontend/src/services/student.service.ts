@@ -8,6 +8,8 @@ import {
   Criterion,
   ScoreItem,
   StudentGrowthData,
+  ScanListItem,
+  ScanRadarData,
 } from "@/dtos";
 
 export const studentService = {
@@ -367,6 +369,26 @@ export const studentService = {
   async regenerateGrowthSummary(): Promise<{ ai_summary: string }> {
     const { data } = await api.post<{ ai_summary: string }>(
       "/student/competency/growth/summary"
+    );
+    return data;
+  },
+
+  /**
+   * Get list of all competency scans (windows) where the student has submitted scores
+   */
+  async getCompetencyScans(): Promise<ScanListItem[]> {
+    const { data } = await api.get<ScanListItem[]>(
+      "/student/competency/scans"
+    );
+    return data;
+  },
+
+  /**
+   * Get category-aggregated radar chart data for a specific scan
+   */
+  async getScanRadarData(scanId: string): Promise<ScanRadarData> {
+    const { data } = await api.get<ScanRadarData>(
+      `/student/competency/scans/${scanId}/radar`
     );
     return data;
   },

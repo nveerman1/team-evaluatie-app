@@ -262,3 +262,36 @@ export type StudentOverviewData = {
   reflections: OverviewReflection[];
   projectResults: OverviewProjectResult[];
 };
+
+// ============ Scan Selector DTOs ============
+
+/**
+ * Scan summary for dropdown list
+ */
+export type ScanListItem = {
+  id: string;
+  title: string;
+  date: string;
+  type: string; // start, tussen, eind, los
+};
+
+/**
+ * Category score for radar chart
+ */
+export type RadarCategoryScore = {
+  category_id: number;
+  category_name: string;
+  average_score: number;
+  count: number; // Number of competencies in this category
+};
+
+/**
+ * Complete radar data for a specific scan
+ */
+export type ScanRadarData = {
+  scan_id: string;
+  scan_label: string;
+  created_at: string;
+  categories: RadarCategoryScore[];
+  overall_avg: number | null;
+};
