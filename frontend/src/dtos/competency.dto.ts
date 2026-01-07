@@ -315,7 +315,7 @@ export interface StudentCompetencyOverview {
   user_name: string;
   scores: CompetencyScore[];
   goals: CompetencyGoal[];
-  reflection?: CompetencyReflection;
+  reflections?: CompetencyReflection[];  // Changed from single reflection to array
 }
 
 export interface ClassHeatmapRow {

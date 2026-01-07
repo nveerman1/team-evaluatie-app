@@ -1587,13 +1587,13 @@ def get_my_window_overview(
         .all()
     )
 
-    # Get reflection
-    reflection = db.execute(
+    # Get reflections (now returns a list)
+    reflections = db.execute(
         select(CompetencyReflection).where(
             CompetencyReflection.window_id == window_id,
             CompetencyReflection.user_id == current_user.id,
         )
-    ).scalar_one_or_none()
+    ).scalars().all()
 
     return StudentCompetencyOverview(
         window_id=window_id,
@@ -1601,7 +1601,7 @@ def get_my_window_overview(
         user_name=current_user.name,
         scores=scores,
         goals=goals,
-        reflection=reflection,
+        reflections=list(reflections),
     )
 
 
@@ -1772,13 +1772,13 @@ def get_student_window_overview(
         .all()
     )
 
-    # Get reflection
-    reflection = db.execute(
+    # Get reflections (now returns a list)
+    reflections = db.execute(
         select(CompetencyReflection).where(
             CompetencyReflection.window_id == window_id,
             CompetencyReflection.user_id == user_id,
         )
-    ).scalar_one_or_none()
+    ).scalars().all()
 
     return StudentCompetencyOverview(
         window_id=window_id,
@@ -1786,7 +1786,7 @@ def get_student_window_overview(
         user_name=student.name,
         scores=scores,
         goals=goals,
-        reflection=reflection,
+        reflections=list(reflections),
     )
 
 

@@ -447,7 +447,7 @@ class StudentCompetencyOverview(BaseModel):
     user_name: str
     scores: List[CompetencyScore]
     goals: List[CompetencyGoalOut]
-    reflection: Optional[CompetencyReflectionOut] = None
+    reflections: List[CompetencyReflectionOut] = []  # Changed from single reflection to list
 
 
 class ClassHeatmapRow(BaseModel):
@@ -500,7 +500,7 @@ class TeacherReflectionItem(BaseModel):
     user_name: str
     class_name: Optional[str] = None
     text: str
-    goal_id: Optional[int] = None
+    goal_id: int  # Now required since all reflections must have a goal
     goal_text: Optional[str] = None
     goal_achieved: Optional[bool] = None
     evidence: Optional[str] = None
