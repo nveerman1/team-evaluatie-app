@@ -54,6 +54,24 @@ const SectionsManagement = forwardRef((props, ref) => {
     await loadSubjects();
   };
 
+  const handleDeleteSubject = async (subjectId: number) => {
+    if (
+      !confirm(
+        "Weet je zeker dat je deze sectie wilt verwijderen? Dit is een soft delete en kan ongedaan gemaakt worden."
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await subjectService.deleteSubject(subjectId);
+      await loadSubjects();
+    } catch (err) {
+      console.error("Failed to delete subject:", err);
+      alert("Kon sectie niet verwijderen");
+    }
+  };
+
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
     handleCreate: () => setShowCreateModal(true),
@@ -194,12 +212,20 @@ const SectionsManagement = forwardRef((props, ref) => {
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <Link
-                            href={`/teacher/admin/subjects/${subject.id}`}
-                            className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                          >
-                            Details
-                          </Link>
+                          <div className="flex items-center justify-end gap-2">
+                            <Link
+                              href={`/teacher/admin/subjects/${subject.id}`}
+                              className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                              Details
+                            </Link>
+                            <button
+                              onClick={() => handleDeleteSubject(subject.id)}
+                              className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-gray-50"
+                            >
+                              Verwijderen
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
