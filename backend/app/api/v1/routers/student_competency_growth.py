@@ -109,6 +109,7 @@ class GrowthReflection(BaseModel):
     date: str
     scan_title: str
     snippet: str
+    full_text: str
 
 
 class GrowthCompetencyScore(BaseModel):
@@ -615,6 +616,7 @@ def get_student_growth_data(
                 date=_format_date(reflection.submitted_at),
                 scan_title=window.title,
                 snippet=snippet,
+                full_text=text,
             )
         )
 
@@ -815,3 +817,92 @@ def get_scan_radar_data(
         categories=categories,
         overall_avg=overall_avg,
     )
+
+
+@router.get("/scans/{scan_id}/competencies", response_model=List[GrowthCompetencyScore])
+def get_scan_competency_scores(
+    scan_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get individual competency scores for a specific scan.
+    
+    Returns all competency scores for the selected scan/window.
+    Student-scoped: only returns data if the scan belongs to the authenticated user.
+    
+    Args:
+        scan_id: The competency window ID
+        
+    Returns:
+        List of competency scores with category, name, score, and scan info
+        
+    Raises:
+        404: If scan not found or doesn't belong to student
+    """
+    school_id = current_user.school_id
+    user_id = current_user.id
+
+    # Verify scan exists and belongs to student
+    window = db.get(CompetencyWindow, scan_id)
+    if not window or window.school_id != school_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Scan not found"
+        )
+    
+    # Get all competency scores for this scan
+    results = (
+        db.execute(
+            select(
+                CompetencySelfScore.competency_id,
+                CompetencySelfScore.score,
+                Competency.name,
+                CompetencyCategory.name.label("category_name"),
+            )
+            .select_from(CompetencySelfScore)
+            .join(Competency, Competency.id == CompetencySelfScore.competency_id)
+            .outerjoin(
+                CompetencyCategory, CompetencyCategory.id == Competency.category_id
+            )
+            .where(
+                CompetencySelfScore.window_id == scan_id,
+                CompetencySelfScore.user_id == user_id,
+                CompetencySelfScore.school_id == school_id,
+            )
+            .order_by(
+                CompetencyCategory.name,
+                Competency.name,
+            )
+        )
+        .all()
+    )
+    
+    if not results:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No scores found for this scan"
+        )
+
+    # Build competency scores list
+    scores = []
+    for competency_id, score, competency_name, category_name in results:
+        # Safely convert score to float
+        try:
+            score_value = round(float(score), 1) if score is not None else None
+        except (ValueError, TypeError):
+            score_value = None
+        
+        scores.append(
+            GrowthCompetencyScore(
+                competency_id=competency_id,
+                competency_name=competency_name,
+                category_name=category_name,
+                most_recent_score=score_value,
+                window_id=scan_id,
+                window_title=window.title,
+                scan_date=_format_date(window.start_date),
+            )
+        )
+    
+    return scores

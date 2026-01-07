@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useStudentGrowth } from "@/hooks";
 import {
   CompetencyRadarChart,
@@ -12,108 +12,12 @@ import type {
   GrowthCategoryScore,
   GrowthCompetencyScore,
   StudentGrowthData,
+  ScanListItem,
+  RadarCategoryScore,
 } from "@/dtos";
 import Link from "next/link";
 import { studentStyles } from "@/styles/student-dashboard.styles";
-
-// Development mock data - used when API is unavailable
-const DEV_MOCK_DATA: StudentGrowthData = {
-  scans: [
-    {
-      id: "1",
-      title: "Startscan Q1 2024",
-      date: "30-09-2024",
-      type: "start",
-      omza: { organiseren: 2.8, meedoen: 3.2, zelfvertrouwen: 2.5, autonomie: 2.7 },
-      gcf: 3.0,
-      has_reflection: true,
-      goals_linked: 1,
-    },
-    {
-      id: "2",
-      title: "Test externen",
-      date: "09-11-2024",
-      type: "los",
-      omza: { organiseren: 3.1, meedoen: 3.6, zelfvertrouwen: 3.2, autonomie: 3.0 },
-      gcf: 3.5,
-      has_reflection: true,
-      goals_linked: 2,
-    },
-    {
-      id: "3",
-      title: "Tussenscan Q2 2024",
-      date: "15-12-2024",
-      type: "tussen",
-      omza: { organiseren: 3.4, meedoen: 3.8, zelfvertrouwen: 3.5, autonomie: 3.3 },
-      gcf: 3.8,
-      has_reflection: false,
-      goals_linked: 2,
-    },
-  ],
-  competency_profile: [
-    { name: "Samenwerken", value: 3.7 },
-    { name: "Plannen & Organiseren", value: 3.1 },
-    { name: "Creatief denken & probleemoplossen", value: 3.9 },
-    { name: "Technische vaardigheden", value: 3.5 },
-    { name: "Communicatie & Presenteren", value: 3.3 },
-    { name: "Reflectie & Professionele houding", value: 3.2 },
-  ],
-  competency_scores: [
-    { competency_id: 1, competency_name: "Effectief samenwerken in teams", category_name: "Samenwerken", most_recent_score: 3.8, window_id: 3, window_title: "Tussenscan Q2 2024", scan_date: "15-12-2024" },
-    { competency_id: 2, competency_name: "Actief bijdragen aan groepsdiscussies", category_name: "Samenwerken", most_recent_score: 3.6, window_id: 3, window_title: "Tussenscan Q2 2024", scan_date: "15-12-2024" },
-    { competency_id: 3, competency_name: "Taken plannen en organiseren", category_name: "Plannen & Organiseren", most_recent_score: 3.2, window_id: 3, window_title: "Tussenscan Q2 2024", scan_date: "15-12-2024" },
-    { competency_id: 4, competency_name: "Tijdmanagement", category_name: "Plannen & Organiseren", most_recent_score: 3.0, window_id: 2, window_title: "Test externen", scan_date: "09-11-2024" },
-    { competency_id: 5, competency_name: "Creatieve oplossingen bedenken", category_name: "Creatief denken & probleemoplossen", most_recent_score: 4.0, window_id: 3, window_title: "Tussenscan Q2 2024", scan_date: "15-12-2024" },
-    { competency_id: 6, competency_name: "Problemen analyseren", category_name: "Creatief denken & probleemoplossen", most_recent_score: 3.8, window_id: 3, window_title: "Tussenscan Q2 2024", scan_date: "15-12-2024" },
-    { competency_id: 7, competency_name: "Programmeren", category_name: "Technische vaardigheden", most_recent_score: 3.7, window_id: 3, window_title: "Tussenscan Q2 2024", scan_date: "15-12-2024" },
-    { competency_id: 8, competency_name: "Technische documentatie", category_name: "Technische vaardigheden", most_recent_score: 3.3, window_id: 2, window_title: "Test externen", scan_date: "09-11-2024" },
-    { competency_id: 9, competency_name: "Presenteren aan publiek", category_name: "Communicatie & Presenteren", most_recent_score: 3.4, window_id: 3, window_title: "Tussenscan Q2 2024", scan_date: "15-12-2024" },
-    { competency_id: 10, competency_name: "Schriftelijke communicatie", category_name: "Communicatie & Presenteren", most_recent_score: 3.2, window_id: 2, window_title: "Test externen", scan_date: "09-11-2024" },
-    { competency_id: 11, competency_name: "Reflecteren op eigen werk", category_name: "Reflectie & Professionele houding", most_recent_score: 3.3, window_id: 3, window_title: "Tussenscan Q2 2024", scan_date: "15-12-2024" },
-    { competency_id: 12, competency_name: "Professioneel gedrag", category_name: "Reflectie & Professionele houding", most_recent_score: 3.1, window_id: 2, window_title: "Test externen", scan_date: "09-11-2024" },
-  ],
-  goals: [
-    {
-      id: "g1",
-      title: "Ik plan mijn werk in kleine stappen",
-      status: "active",
-      related_competencies: ["Plannen & Organiseren", "Reflectie & Professionele houding"],
-      progress: 65,
-    },
-    {
-      id: "g2",
-      title: "Ik durf vaker mijn idee te delen in het team",
-      status: "active",
-      related_competencies: ["Samenwerken", "Communicatie & Presenteren"],
-      progress: 40,
-    },
-    {
-      id: "g3",
-      title: "Ik vraag gericht feedback op mijn tussenproducten",
-      status: "completed",
-      related_competencies: ["Samenwerken", "Reflectie & Professionele houding"],
-      progress: 100,
-    },
-  ],
-  reflections: [
-    {
-      id: "r1",
-      date: "09-11-2024",
-      scan_title: "Test externen",
-      snippet:
-        "Ik merk dat samenwerken met externen mij helpt om duidelijker te communiceren en beter te plannen...",
-    },
-    {
-      id: "r2",
-      date: "30-09-2024",
-      scan_title: "Startscan Q1 2024",
-      snippet:
-        "Bij de startscan zie ik dat plannen en organiseren nog een ontwikkelpunt is. Ik wil tijdens dit project beter bijhouden wat ik af heb...",
-    },
-  ],
-  ai_summary:
-    "Je laat de meeste groei zien in Samenwerken en Creatief denken: je neemt vaker initiatief in je team en onderzoekt meerdere oplossingen. Plannen & Organiseren blijft nog een aandachtspunt; je geeft zelf aan dat je planning niet altijd haalbaar is. Een passend leerdoel is: \"Ik plan mijn werk in kleinere stappen en controleer aan het einde van het blok wat af is.\" Probeer in je volgende reflectie concreet op te schrijven wat je anders hebt aangepakt.",
-};
+import { studentService } from "@/services";
 
 // Helper function to get score badge styling
 function getScoreBadgeClass(score: number | null): string {
@@ -139,14 +43,11 @@ function CardSkeleton({ className = "" }: { className?: string }) {
 }
 
 export default function GrowthPage() {
-  const { data: apiData, isLoading, error, regenerateSummary, isRegenerating } =
+  const { data, isLoading, error, regenerateSummary, isRegenerating } =
     useStudentGrowth();
 
-  // Use mock data when API fails (for development/preview)
-  const data = apiData || (error ? DEV_MOCK_DATA : null);
-
   // Show empty state if no data
-  if (!isLoading && !error && !data) {
+  if (!isLoading && !data) {
     return (
       <div className={studentStyles.layout.pageContainer}>
         <div className={studentStyles.header.container}>
@@ -163,7 +64,7 @@ export default function GrowthPage() {
         <main className={studentStyles.layout.contentWrapper}>
           <div className="p-8 border border-slate-200 rounded-2xl bg-slate-50 text-center">
             <p className="text-slate-500">
-              Nog geen groei-data beschikbaar. Maak eerst een competentiescan.
+              {error ? `Fout: ${error}` : "Nog geen groei-data beschikbaar. Maak eerst een competentiescan."}
             </p>
             <Link
               href="/student"
@@ -216,13 +117,6 @@ export default function GrowthPage() {
 
       {/* Content */}
       <div className={studentStyles.layout.contentWrapper + " space-y-6"}>
-        {/* Dev mode indicator when using mock data */}
-        {error && !apiData && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 text-xs text-amber-700">
-            ⚠️ Voorbeeldmodus: Backend niet beschikbaar, mockdata wordt getoond.
-          </div>
-        )}
-
         {/* Loading skeleton */}
         {isLoading && (
           <div className="space-y-6">
@@ -242,24 +136,17 @@ export default function GrowthPage() {
         {/* Main content when data is loaded */}
         {!isLoading && data && (
           <>
-            {/* 1. Competentieprofiel (radardiagram) */}
-            <CompetencyProfileSection profile={data.competency_profile} />
+            {/* 1. Competentieprofiel (radardiagram) with scan selector */}
+            <CompetencyProfileSection profile={data.competency_profile} scans={data.scans} />
 
-            {/* 2. Scores per competentie (new table) */}
-            <CompetencyScoresSection scores={data.competency_scores} />
+            {/* 2. Scores per competentie (table with scan selector) */}
+            <CompetencyScoresSection scores={data.competency_scores} scans={data.scans} />
 
             {/* 3. Leerdoelen tabel (updated to table format) */}
             <GoalsTableSection goals={data.goals} />
 
             {/* 4. Reflections */}
             <ReflectionsSection reflections={data.reflections} />
-
-            {/* 5. AI Summary */}
-            <AISummarySection
-              summary={data.ai_summary}
-              onRegenerate={regenerateSummary}
-              isRegenerating={isRegenerating}
-            />
           </>
         )}
       </div>
@@ -271,9 +158,40 @@ export default function GrowthPage() {
 
 function CompetencyProfileSection({
   profile,
+  scans,
 }: {
   profile: GrowthCategoryScore[];
+  scans: { id: string; title: string; date: string }[];
 }) {
+  const [selectedScanId, setSelectedScanId] = useState<string>("");
+  const [scanRadarData, setScanRadarData] = useState<RadarCategoryScore[] | null>(null);
+  const [loadingScan, setLoadingScan] = useState(false);
+
+  useEffect(() => {
+    const fetchScanData = async () => {
+      if (!selectedScanId) {
+        setScanRadarData(null);
+        return;
+      }
+      try {
+        setLoadingScan(true);
+        const data = await studentService.getScanRadarData(selectedScanId);
+        setScanRadarData(data.categories);
+      } catch (err) {
+        console.error("Failed to load scan data:", err);
+        setScanRadarData(null);
+      } finally {
+        setLoadingScan(false);
+      }
+    };
+    fetchScanData();
+  }, [selectedScanId]);
+
+  // Use scan data if selected, otherwise use overall profile
+  const displayProfile = selectedScanId && scanRadarData
+    ? scanRadarData.map(cat => ({ name: cat.category_name, value: cat.average_score }))
+    : profile;
+
   if (!profile || profile.length === 0) {
     return (
       <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
@@ -295,8 +213,7 @@ function CompetencyProfileSection({
             Competentieprofiel
           </h2>
           <p className={studentStyles.typography.infoTextSmall + " mt-1"}>
-            Jouw gemiddelde niveau per competentiecategorie, op basis van
-            meerdere scans.
+            Jouw gemiddelde niveau per competentiecategorie{selectedScanId ? " voor de geselecteerde scan" : ", op basis van meerdere scans"}.
           </p>
         </div>
         <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
@@ -304,54 +221,111 @@ function CompetencyProfileSection({
         </span>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3 items-start">
-        {/* Radar chart */}
-        <div className="md:col-span-2 flex items-center justify-center">
-          <CompetencyRadarChart
-            items={profile.map((cat) => ({
-              name: cat.name,
-              value: cat.value,
-            }))}
-            size={256}
-            maxValue={5}
-          />
-        </div>
-
-        {/* Legend + explanation */}
-        <div className="space-y-2 text-xs text-slate-600">
-          <p className="font-medium text-slate-800 mb-1">
-            Competentiecategorieën
-          </p>
-          <ul className="space-y-1">
-            {profile.map((cat, index) => (
-              <li
-                key={cat.name}
-                className="flex items-center justify-between gap-2"
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full"
-                    style={{
-                      backgroundColor:
-                        CATEGORY_COLORS[index % CATEGORY_COLORS.length],
-                    }}
-                  />
-                  <span>{cat.name}</span>
-                </div>
-                <span className="text-slate-700 font-medium">
-                  {cat.value.toFixed(1)}
-                </span>
-              </li>
+      {/* Scan selector dropdown */}
+      {scans && scans.length > 0 && (
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-slate-700">
+            Selecteer scan:
+          </label>
+          <select
+            value={selectedScanId}
+            onChange={(e) => setSelectedScanId(e.target.value)}
+            className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm flex-1 max-w-md"
+          >
+            <option value="">Alle scans (gemiddeld)</option>
+            {scans.map((scan) => (
+              <option key={scan.id} value={scan.id}>
+                {scan.title} ({scan.date})
+              </option>
             ))}
-          </ul>
+          </select>
         </div>
-      </div>
+      )}
+
+      {loadingScan ? (
+        <div className="text-center py-8 text-sm text-slate-500">
+          Scan data laden...
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-3 items-start">
+          {/* Radar chart */}
+          <div className="md:col-span-2 flex items-center justify-center">
+            <CompetencyRadarChart
+              items={displayProfile.map((cat) => ({
+                name: cat.name,
+                value: cat.value,
+              }))}
+              size={256}
+              maxValue={5}
+            />
+          </div>
+
+          {/* Legend + explanation */}
+          <div className="space-y-2 text-xs text-slate-600">
+            <p className="font-medium text-slate-800 mb-1">
+              Competentiecategorieën
+            </p>
+            <ul className="space-y-1">
+              {displayProfile.map((cat, index) => (
+                <li
+                  key={cat.name}
+                  className="flex items-center justify-between gap-2"
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{
+                        backgroundColor:
+                          CATEGORY_COLORS[index % CATEGORY_COLORS.length],
+                      }}
+                    />
+                    <span>{cat.name}</span>
+                  </div>
+                  <span className="text-slate-700 font-medium">
+                    {cat.value.toFixed(1)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
 
-// New section for competency scores table
-function CompetencyScoresSection({ scores }: { scores: GrowthCompetencyScore[] }) {
+// Competency scores table with scan filter
+function CompetencyScoresSection({ 
+  scores,
+  scans,
+}: { 
+  scores: GrowthCompetencyScore[];
+  scans: { id: string; title: string; date: string }[];
+}) {
+  const [selectedScanId, setSelectedScanId] = useState<string>("");
+  const [scanScores, setScanScores] = useState<GrowthCompetencyScore[] | null>(null);
+  const [loadingScores, setLoadingScores] = useState(false);
+
+  useEffect(() => {
+    const fetchScanScores = async () => {
+      if (!selectedScanId) {
+        setScanScores(null);
+        return;
+      }
+      try {
+        setLoadingScores(true);
+        const data = await studentService.getScanCompetencyScores(selectedScanId);
+        setScanScores(data);
+      } catch (err) {
+        console.error("Failed to load scan scores:", err);
+        setScanScores([]);
+      } finally {
+        setLoadingScores(false);
+      }
+    };
+    fetchScanScores();
+  }, [selectedScanId]);
+
   if (!scores || scores.length === 0) {
     return (
       <section className={studentStyles.cards.infoCard.container}>
@@ -367,6 +341,9 @@ function CompetencyScoresSection({ scores }: { scores: GrowthCompetencyScore[] }
     );
   }
 
+  // Use scan-specific scores if available, otherwise use overall scores
+  const displayScores = selectedScanId && scanScores !== null ? scanScores : scores;
+
   return (
     <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
       <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
@@ -374,51 +351,89 @@ function CompetencyScoresSection({ scores }: { scores: GrowthCompetencyScore[] }
           Scores per competentie
         </h2>
         <p className={studentStyles.typography.infoTextSmall + " mt-1"}>
-          De meest recente score per competentie over alle scans
+          {selectedScanId ? "Scores voor de geselecteerde scan" : "De meest recente score per competentie over alle scans"}
         </p>
       </div>
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead className="bg-slate-50">
-            <tr className="text-left text-xs font-semibold tracking-wide text-slate-600">
-              <th className="px-5 py-3">Categorie</th>
-              <th className="px-5 py-3">Competentie</th>
-              <th className="px-4 py-3 text-center">Score</th>
-              <th className="px-4 py-3">Scan</th>
-              <th className="px-4 py-3">Datum</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {scores.map((score) => (
-              <tr key={score.competency_id} className="hover:bg-slate-50">
-                <td className="px-5 py-3 text-slate-600">
-                  {score.category_name || "—"}
-                </td>
-                <td className="px-5 py-3 text-slate-800 font-medium">
-                  {score.competency_name}
-                </td>
-                <td className="px-4 py-3 text-center">
-                  {score.most_recent_score !== null ? (
-                    <span
-                      className={`inline-flex px-2.5 py-1 rounded-md text-sm font-medium ${getScoreBadgeClass(score.most_recent_score)}`}
-                    >
-                      {score.most_recent_score.toFixed(1)}
-                    </span>
-                  ) : (
-                    <span className="text-slate-400">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-slate-600">
-                  {score.window_title || "—"}
-                </td>
-                <td className="px-4 py-3 text-slate-600">
-                  {score.scan_date || "—"}
-                </td>
+      
+      {/* Scan filter dropdown */}
+      {scans && scans.length > 0 && (
+        <div className="px-5 py-4 border-b border-slate-200 bg-white">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-slate-700">
+              Filter op scan:
+            </label>
+            <select
+              value={selectedScanId}
+              onChange={(e) => setSelectedScanId(e.target.value)}
+              className="px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm flex-1 max-w-md"
+            >
+              <option value="">Alle scans (meest recent)</option>
+              {scans.map((scan) => (
+                <option key={scan.id} value={scan.id}>
+                  {scan.title} ({scan.date})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
+      {loadingScores ? (
+        <div className="px-5 py-8 text-center text-sm text-slate-500">
+          Scores laden...
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-slate-50">
+              <tr className="text-left text-xs font-semibold tracking-wide text-slate-600">
+                <th className="px-5 py-3">Categorie</th>
+                <th className="px-5 py-3">Competentie</th>
+                <th className="px-4 py-3 text-center">Score</th>
+                <th className="px-4 py-3">Scan</th>
+                <th className="px-4 py-3">Datum</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {displayScores.length > 0 ? (
+                displayScores.map((score) => (
+                  <tr key={`${score.competency_id}-${score.window_id}`} className="hover:bg-slate-50">
+                    <td className="px-5 py-3 text-slate-600">
+                      {score.category_name || "—"}
+                    </td>
+                    <td className="px-5 py-3 text-slate-800 font-medium">
+                      {score.competency_name}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {score.most_recent_score !== null ? (
+                        <span
+                          className={`inline-flex px-2.5 py-1 rounded-md text-sm font-medium ${getScoreBadgeClass(score.most_recent_score)}`}
+                        >
+                          {score.most_recent_score.toFixed(1)}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {score.window_title || "—"}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {score.scan_date || "—"}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="px-5 py-8 text-center text-slate-500">
+                    Geen scores gevonden voor deze scan.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }
@@ -440,22 +455,13 @@ function GoalsTableSection({ goals }: { goals: GrowthGoal[] }) {
 
   return (
     <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+      <div className="px-5 py-4 border-b border-slate-200 bg-slate-50">
         <div>
           <h2 className={studentStyles.typography.sectionTitle}>Leerdoelen</h2>
           <p className={studentStyles.typography.infoTextSmall + " mt-1"}>
             Al je leerdoelen over alle scans
           </p>
         </div>
-        <button
-          className="rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-          onClick={() => {
-            // TODO: Implement new goal creation
-            alert("Nieuw leerdoel instellen komt binnenkort.");
-          }}
-        >
-          Nieuw leerdoel
-        </button>
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
@@ -464,7 +470,6 @@ function GoalsTableSection({ goals }: { goals: GrowthGoal[] }) {
               <th className="px-5 py-3">Leerdoel</th>
               <th className="px-5 py-3">Gerelateerde competenties</th>
               <th className="px-4 py-3 text-center">Status</th>
-              <th className="px-4 py-3 text-center">Voortgang</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -496,19 +501,6 @@ function GoalsTableSection({ goals }: { goals: GrowthGoal[] }) {
                     {goal.status === "active" ? "Actief" : "Behaald"}
                   </span>
                 </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
-                      <div
-                        className="h-2 rounded-full bg-indigo-500"
-                        style={{ width: `${goal.progress}%` }}
-                      />
-                    </div>
-                    <span className="text-xs text-slate-600 w-10 text-right">
-                      {goal.progress}%
-                    </span>
-                  </div>
-                </td>
               </tr>
             ))}
           </tbody>
@@ -518,83 +510,13 @@ function GoalsTableSection({ goals }: { goals: GrowthGoal[] }) {
   );
 }
 
-function GoalsSection({ goals }: { goals: GrowthGoal[] }) {
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">Leerdoelen</h2>
-        <button
-          className="rounded-lg border border-gray-200 bg-white px-3.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-          onClick={() => {
-            // TODO: Implement new goal creation
-            alert("Nieuw leerdoel instellen komt binnenkort.");
-          }}
-        >
-          Nieuw leerdoel instellen
-        </button>
-      </div>
-      {!goals || goals.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6 text-center">
-          <p className="text-sm text-gray-500">
-            Je hebt nog geen leerdoelen ingesteld.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {goals.map((goal) => (
-            <div
-              key={goal.id}
-              className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4 space-y-2"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="font-semibold text-gray-900 text-sm">
-                  {goal.title}
-                </h3>
-                <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
-                    goal.status === "active"
-                      ? "bg-blue-50 text-blue-700 border border-blue-100"
-                      : "bg-green-50 text-green-700 border border-green-100"
-                  }`}
-                >
-                  {goal.status === "active" ? "Actief" : "Behaald"}
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-1.5 text-[11px] text-gray-600">
-                {goal.related_competencies.map((c) => (
-                  <span
-                    key={c}
-                    className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700"
-                  >
-                    {c}
-                  </span>
-                ))}
-              </div>
-              <div className="mt-2">
-                <div className="flex items-center justify-between text-[11px] text-gray-500 mb-1">
-                  <span>Voortgang</span>
-                  <span>{goal.progress}%</span>
-                </div>
-                <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                  <div
-                    className="h-1.5 rounded-full bg-blue-500"
-                    style={{ width: `${goal.progress}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function ReflectionsSection({
   reflections,
 }: {
   reflections: GrowthReflection[];
 }) {
+  const [expandedReflectionId, setExpandedReflectionId] = useState<string | null>(null);
+
   if (!reflections || reflections.length === 0) {
     return (
       <section className={studentStyles.cards.infoCard.container}>
@@ -617,87 +539,37 @@ function ReflectionsSection({
         Reflecties over mijn groei
       </h2>
       <div className="space-y-4">
-        {reflections.map((ref, idx) => (
-          <div key={ref.id} className="flex gap-3">
-            <div className="flex flex-col items-center">
-              <div className="w-2 h-2 rounded-full bg-indigo-500 mt-1" />
-              {idx < reflections.length - 1 && (
-                <div className="w-px flex-1 bg-slate-200 mt-1" />
-              )}
+        {reflections.map((ref, idx) => {
+          const isExpanded = expandedReflectionId === ref.id;
+          return (
+            <div key={ref.id} className="flex gap-3">
+              <div className="flex flex-col items-center">
+                <div className="w-2 h-2 rounded-full bg-indigo-500 mt-1" />
+                {idx < reflections.length - 1 && (
+                  <div className="w-px flex-1 bg-slate-200 mt-1" />
+                )}
+              </div>
+              <div className="flex-1 space-y-1">
+                <p className="text-xs text-slate-500">{ref.date}</p>
+                <p className="text-sm font-medium text-slate-900">
+                  {ref.scan_title}
+                </p>
+                <p className="text-xs text-slate-600 whitespace-pre-wrap">
+                  {isExpanded ? ref.full_text : ref.snippet}
+                </p>
+                <button
+                  className="mt-1 text-xs font-medium text-indigo-600 hover:underline"
+                  onClick={() => {
+                    setExpandedReflectionId(isExpanded ? null : ref.id);
+                  }}
+                >
+                  {isExpanded ? "Verberg reflectie" : "Open volledige reflectie"}
+                </button>
+              </div>
             </div>
-            <div className="flex-1 space-y-1">
-              <p className="text-xs text-slate-500">{ref.date}</p>
-              <p className="text-sm font-medium text-slate-900">
-                {ref.scan_title}
-              </p>
-              <p className="text-xs text-slate-600 line-clamp-2">
-                {ref.snippet}
-              </p>
-              <button
-                className="mt-1 text-xs font-medium text-indigo-600 hover:underline"
-                onClick={() => {
-                  // TODO: Implement full reflection view
-                  alert("Volledige reflectie weergave komt binnenkort.");
-                }}
-              >
-                Open volledige reflectie
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
-    </section>
-  );
-}
-
-function AISummarySection({
-  summary,
-  onRegenerate,
-  isRegenerating,
-}: {
-  summary: string | null;
-  onRegenerate: () => void;
-  isRegenerating: boolean;
-}) {
-  return (
-    <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div>
-          <h2 className={studentStyles.typography.sectionTitle}>
-            AI-samenvatting van jouw groei
-          </h2>
-          <p className={studentStyles.typography.infoTextSmall}>
-            Op basis van jouw scans, leerdoelen en reflecties.
-          </p>
-        </div>
-        <button
-          className="rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          onClick={onRegenerate}
-          disabled={isRegenerating}
-        >
-          {isRegenerating ? "Genereren..." : "Samenvatting opnieuw genereren"}
-        </button>
-      </div>
-
-      {isRegenerating ? (
-        <div className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-6 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600" />
-          <span className="ml-3 text-sm text-slate-600">
-            Samenvatting wordt gegenereerd...
-          </span>
-        </div>
-      ) : summary ? (
-        <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-sm text-indigo-900">
-          <p>{summary}</p>
-        </div>
-      ) : (
-        <div className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-4 text-center">
-          <p className="text-sm text-slate-500">
-            Er is nog geen AI-samenvatting beschikbaar. Klik op de knop om er
-            een te genereren.
-          </p>
-        </div>
-      )}
     </section>
   );
 }
