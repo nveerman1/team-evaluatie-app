@@ -117,13 +117,16 @@ def serialize_note(note: ProjectNote, db: Session) -> dict:
             if project_team and project_team.team_number:
                 note_dict["team_name"] = f"Team {project_team.team_number}"
             else:
-                # Fallback to legacy team name if no project_team found
-                team = db.query(Group).filter(Group.id == note.team_id).first()
-                note_dict["team_name"] = team.name if team else None
+                # No project_team found - use team_id directly
+                note_dict["team_name"] = f"Team {note.team_id}"
         else:
-            # Fallback to legacy team name if no project_id
+            # No project_id in context - try to extract team_number from Group's team_number field
             team = db.query(Group).filter(Group.id == note.team_id).first()
-            note_dict["team_name"] = team.name if team else None
+            if team and team.team_number:
+                note_dict["team_name"] = f"Team {team.team_number}"
+            else:
+                # Fallback to team_id directly
+                note_dict["team_name"] = f"Team {note.team_id}"
     else:
         note_dict["team_name"] = None
 
