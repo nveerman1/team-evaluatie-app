@@ -849,7 +849,7 @@ function DocentfeedbackTab({ parentFilters }: { parentFilters: PeerOverviewFilte
         bVal = new Date(bVal).getTime();
       }
       
-      if (typeof aVal === 'string') {
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
         aVal = aVal.toLowerCase();
         bVal = bVal.toLowerCase();
       }
@@ -1068,7 +1068,7 @@ function ReflectiesTab({ parentFilters }: { parentFilters: PeerOverviewFilters }
         return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
       }
       
-      if (typeof aVal === 'string') {
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
         aVal = aVal.toLowerCase();
         bVal = bVal.toLowerCase();
       }
