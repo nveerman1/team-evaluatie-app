@@ -380,7 +380,7 @@ class CompetencyGoalOut(CompetencyGoalBase):
 
 class CompetencyReflectionBase(BaseModel):
     text: str
-    goal_id: Optional[int] = None
+    goal_id: int  # Now required since reflections must be tied to goals
     goal_achieved: Optional[bool] = None
     evidence: Optional[str] = None
 
@@ -391,7 +391,6 @@ class CompetencyReflectionCreate(CompetencyReflectionBase):
 
 class CompetencyReflectionUpdate(BaseModel):
     text: Optional[str] = None
-    goal_id: Optional[int] = None
     goal_achieved: Optional[bool] = None
     evidence: Optional[str] = None
 
@@ -407,6 +406,20 @@ class CompetencyReflectionOut(CompetencyReflectionBase):
 
     class Config:
         from_attributes = True
+
+
+class CompetencyReflectionBulkCreate(BaseModel):
+    """Schema for submitting multiple reflections at once"""
+    window_id: int
+    reflections: List["CompetencyReflectionItemCreate"]
+
+
+class CompetencyReflectionItemCreate(BaseModel):
+    """Individual reflection item for bulk submission"""
+    goal_id: int
+    text: str
+    goal_achieved: Optional[bool] = None
+    evidence: Optional[str] = None
 
 
 # ============ Aggregate/Overview Schemas ============

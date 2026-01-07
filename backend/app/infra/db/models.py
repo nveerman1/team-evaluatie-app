@@ -1313,6 +1313,7 @@ class CompetencyGoal(Base):
 class CompetencyReflection(Base):
     """
     Student reflection on competency growth in a window
+    Now supports multiple reflections per window - one per learning goal
     """
 
     __tablename__ = "competency_reflections"
@@ -1326,8 +1327,8 @@ class CompetencyReflection(Base):
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    goal_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("competency_goals.id", ondelete="SET NULL"), nullable=True
+    goal_id: Mapped[int] = mapped_column(
+        ForeignKey("competency_goals.id", ondelete="CASCADE"), nullable=False
     )
 
     text: Mapped[str] = mapped_column(Text, nullable=False)
@@ -1336,7 +1337,7 @@ class CompetencyReflection(Base):
     submitted_at: Mapped[Optional[datetime]] = mapped_column()
 
     __table_args__ = (
-        UniqueConstraint("window_id", "user_id", name="uq_competency_reflection_once"),
+        UniqueConstraint("window_id", "user_id", "goal_id", name="uq_competency_reflection_per_goal"),
         Index("ix_competency_reflection_window_user", "window_id", "user_id"),
     )
 

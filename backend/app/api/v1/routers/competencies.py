@@ -55,6 +55,7 @@ from app.api.v1.schemas.competencies import (
     CompetencyGoalOut,
     CompetencyReflectionCreate,
     CompetencyReflectionOut,
+    CompetencyReflectionBulkCreate,
     ClassHeatmap,
     ClassHeatmapRow,
     CompetencyScore,
@@ -1283,23 +1284,28 @@ def create_reflection(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Create a reflection for a window"""
+    """Create or update a reflection for a specific goal in a window"""
     window = db.get(CompetencyWindow, data.window_id)
     if not window or window.school_id != current_user.school_id:
         raise HTTPException(status_code=404, detail="Window not found")
 
-    # Check if reflection already exists
+    # Verify the goal exists and belongs to the user
+    goal = db.get(CompetencyGoal, data.goal_id)
+    if not goal or goal.user_id != current_user.id or goal.window_id != data.window_id:
+        raise HTTPException(status_code=404, detail="Goal not found or does not belong to you")
+
+    # Check if reflection already exists for this goal
     existing = db.execute(
         select(CompetencyReflection).where(
             CompetencyReflection.window_id == data.window_id,
             CompetencyReflection.user_id == current_user.id,
+            CompetencyReflection.goal_id == data.goal_id,
         )
     ).scalar_one_or_none()
 
     if existing:
         # Update existing reflection
         existing.text = data.text
-        existing.goal_id = data.goal_id
         existing.goal_achieved = data.goal_achieved
         existing.evidence = data.evidence
         existing.submitted_at = datetime.utcnow()
@@ -1321,6 +1327,77 @@ def create_reflection(
     db.commit()
     db.refresh(reflection)
     return reflection
+
+
+@router.post(
+    "/reflections/bulk",
+    response_model=List[CompetencyReflectionOut],
+    status_code=status.HTTP_200_OK,
+)
+def create_reflections_bulk(
+    data: CompetencyReflectionBulkCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Submit multiple reflections at once (one per goal)"""
+    window = db.get(CompetencyWindow, data.window_id)
+    if not window or window.school_id != current_user.school_id:
+        raise HTTPException(status_code=404, detail="Window not found")
+
+    if not data.reflections:
+        raise HTTPException(status_code=400, detail="No reflections provided")
+
+    # Verify all goals exist and belong to the user
+    goal_ids = [r.goal_id for r in data.reflections]
+    goals = db.execute(
+        select(CompetencyGoal).where(
+            CompetencyGoal.id.in_(goal_ids),
+            CompetencyGoal.user_id == current_user.id,
+            CompetencyGoal.window_id == data.window_id,
+        )
+    ).scalars().all()
+
+    if len(goals) != len(goal_ids):
+        raise HTTPException(status_code=404, detail="One or more goals not found or do not belong to you")
+
+    results = []
+    for refl_data in data.reflections:
+        # Check if reflection already exists for this goal
+        existing = db.execute(
+            select(CompetencyReflection).where(
+                CompetencyReflection.window_id == data.window_id,
+                CompetencyReflection.user_id == current_user.id,
+                CompetencyReflection.goal_id == refl_data.goal_id,
+            )
+        ).scalar_one_or_none()
+
+        if existing:
+            # Update existing reflection
+            existing.text = refl_data.text
+            existing.goal_achieved = refl_data.goal_achieved
+            existing.evidence = refl_data.evidence
+            existing.submitted_at = datetime.utcnow()
+            results.append(existing)
+        else:
+            # Create new reflection
+            reflection = CompetencyReflection(
+                school_id=current_user.school_id,
+                window_id=data.window_id,
+                user_id=current_user.id,
+                text=refl_data.text,
+                goal_id=refl_data.goal_id,
+                goal_achieved=refl_data.goal_achieved,
+                evidence=refl_data.evidence,
+                submitted_at=datetime.utcnow(),
+            )
+            db.add(reflection)
+            results.append(reflection)
+
+    db.commit()
+    for r in results:
+        db.refresh(r)
+    
+    return results
 
 
 @router.get("/reflections/", response_model=List[CompetencyReflectionOut])
