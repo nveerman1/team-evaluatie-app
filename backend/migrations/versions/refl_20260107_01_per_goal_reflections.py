@@ -1,7 +1,7 @@
 """per goal reflections
 
 Revision ID: refl_20260107_01
-Revises: xyz789abc012
+Revises: task_20250104_01
 Create Date: 2026-01-07 08:30:00.000000
 
 Changes the competency_reflections table to allow multiple reflections per window,
@@ -13,7 +13,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision = "refl_20260107_01"
-down_revision = "xyz789abc012"
+down_revision = "task_20250104_01"
 branch_labels = None
 depends_on = None
 
