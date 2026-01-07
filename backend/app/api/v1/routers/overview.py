@@ -193,7 +193,7 @@ def _calculate_project_score(db: Session, assessment_id: int, rubric_id: int, te
     return _score_to_grade(avg_score, rubric.scale_min, rubric.scale_max)
 
 
-def _get_grade_value(grade, field_name: str, meta_key: str = None) -> Optional[float]:
+def _get_grade_value(grade: Grade, field_name: str, meta_key: str = None) -> Optional[float]:
     """
     Helper to get a grade value from either direct field or meta dictionary.
     
@@ -252,8 +252,28 @@ def _calculate_peer_score(db: Session, evaluation_id: int, user_id: int) -> Opti
         
         if group_grade is not None and gcf is not None:
             try:
-                final_grade = float(group_grade) * float(gcf)
-                return round(final_grade, 1)
+                group_grade_float = float(group_grade)
+                gcf_float = float(gcf)
+                
+                # Validate that values are reasonable for grade calculations
+                # GCF typically ranges from 0.5 to 1.5, group grades from 1 to 10
+                if group_grade_float <= 0 or gcf_float <= 0:
+                    logger.warning(
+                        f"Non-positive group_grade ({group_grade_float}) or gcf ({gcf_float}) for "
+                        f"evaluation_id={evaluation_id}, user_id={user_id}"
+                    )
+                    # Continue to next priority instead of returning invalid grade
+                elif gcf_float > 2.0:
+                    # Log suspiciously high GCF but still use it
+                    logger.warning(
+                        f"Unusually high gcf ({gcf_float}) for "
+                        f"evaluation_id={evaluation_id}, user_id={user_id}"
+                    )
+                    final_grade = group_grade_float * gcf_float
+                    return round(final_grade, 1)
+                else:
+                    final_grade = group_grade_float * gcf_float
+                    return round(final_grade, 1)
             except (ValueError, TypeError) as e:
                 logger.warning(
                     f"Invalid group_grade ({group_grade}) or gcf ({gcf}) for "
