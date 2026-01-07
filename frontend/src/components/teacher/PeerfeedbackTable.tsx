@@ -81,7 +81,7 @@ export function PeerfeedbackTable({ filters, searchQuery = "", typeFilter = "all
       }
       
       // Handle string sorting
-      if (typeof aVal === 'string') {
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
         aVal = aVal.toLowerCase();
         bVal = bVal.toLowerCase();
       }
