@@ -51,6 +51,7 @@ Zie [docs/architecture.md](docs/architecture.md#project-based-team-management) v
 ### AI Feedback Summaries
 Automatisch gegenereerde samenvattingen van peer-feedback met:
 - **Asynchrone verwerking** met RQ (Redis Queue) voor schaalbaarheid
+- **Robuuste worker** met automatische herstart bij verbindingsproblemen
 - Ollama voor lokale LLM verwerking
 - Volledige anonimisering van namen en PII
 - Caching voor efficiëntie
@@ -59,6 +60,8 @@ Automatisch gegenereerde samenvattingen van peer-feedback met:
 - Retry mechanisme bij fouten
 
 📚 Zie [docs/ASYNC_SUMMARY_GENERATION.md](docs/ASYNC_SUMMARY_GENERATION.md) voor gedetailleerde setup instructies.
+
+📚 Zie [docs/REDIS_WORKER_STABILITY.md](docs/REDIS_WORKER_STABILITY.md) voor worker troubleshooting en monitoring.
 
 Voorbereiding voor integratie met Somtoday:
 - OAuth2 authenticatie
@@ -187,6 +190,7 @@ Use Azure AD (Office 365) authentication. See [AZURE_AD_SETUP.md](AZURE_AD_SETUP
 - [Architecture](docs/architecture.md) - Multi-tenant architecture, data model, RBAC
 - [Migration Notes](MIGRATION_NOTES.md) - Database migration guide
 - [Feedback Summary](docs/FEEDBACK_SUMMARY.md) - AI feedback configuration
+- [Redis Worker Stability](docs/REDIS_WORKER_STABILITY.md) - RQ worker connection troubleshooting and monitoring
 - [API Documentation](http://localhost:8000/docs) - Interactive API docs (when running)
 
 ## API Endpoints
