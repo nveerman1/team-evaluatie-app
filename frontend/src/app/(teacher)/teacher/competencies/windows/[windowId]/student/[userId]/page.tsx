@@ -425,53 +425,69 @@ export default function StudentDetailPage() {
         </div>
       )}
 
-      {/* Reflection */}
-      {overview.reflection && (
+      {/* Reflections */}
+      {overview.reflections && overview.reflections.length > 0 && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Reflectie</h2>
-          <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg space-y-3">
-            <div>
-              <p className="text-slate-700 whitespace-pre-wrap">
-                {overview.reflection.text}
-              </p>
-            </div>
-            
-            {overview.reflection.goal_achieved !== null && (
-              <div className="pt-3 border-t border-indigo-200">
-                <span className="text-sm text-slate-600">Doel behaald: </span>
-                <span
-                  className={`text-sm font-semibold ${
-                    overview.reflection.goal_achieved
-                      ? "text-green-600"
-                      : "text-red-600"
-                  }`}
-                >
-                  {overview.reflection.goal_achieved ? "Ja" : "Nee"}
-                </span>
-              </div>
-            )}
-            
-            {overview.reflection.evidence && (
-              <div className="pt-3 border-t border-indigo-200">
-                <p className="text-sm text-slate-600 mb-1">
-                  <span className="font-medium">Bewijs/Voorbeelden:</span>
-                </p>
-                <p className="text-sm text-slate-700">
-                  {overview.reflection.evidence}
-                </p>
-              </div>
-            )}
-            
-            {overview.reflection.submitted_at && (
-              <div className="pt-3 border-t border-indigo-200">
-                <p className="text-xs text-slate-500">
-                  Ingediend op:{" "}
-                  {new Date(overview.reflection.submitted_at).toLocaleDateString(
-                    "nl-NL"
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">
+            {overview.reflections.length === 1 ? "Reflectie" : "Reflecties"}
+          </h2>
+          <div className="space-y-4">
+            {overview.reflections.map((reflection, index) => {
+              const goal = overview.goals.find(g => g.id === reflection.goal_id);
+              const reflectionsCount = overview.reflections?.length || 0;
+              return (
+                <div key={reflection.id} className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg space-y-3">
+                  {reflectionsCount > 1 && (
+                    <div className="font-medium text-slate-700 text-sm">
+                      Reflectie {index + 1}
+                      {goal && ` - ${goal.goal_text.substring(0, 50)}${goal.goal_text.length > 50 ? '...' : ''}`}
+                    </div>
                   )}
-                </p>
-              </div>
-            )}
+                  <div>
+                    <p className="text-slate-700 whitespace-pre-wrap">
+                      {reflection.text}
+                    </p>
+                  </div>
+                  
+                  {reflection.goal_achieved !== null && reflection.goal_achieved !== undefined && (
+                    <div className="pt-3 border-t border-indigo-200">
+                      <span className="text-sm text-slate-600">Doel behaald: </span>
+                      <span
+                        className={`text-sm font-semibold ${
+                          reflection.goal_achieved
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {reflection.goal_achieved ? "Ja" : "Nee"}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {reflection.evidence && (
+                    <div className="pt-3 border-t border-indigo-200">
+                      <p className="text-sm text-slate-600 mb-1">
+                        <span className="font-medium">Bewijs/Voorbeelden:</span>
+                      </p>
+                      <p className="text-sm text-slate-700">
+                        {reflection.evidence}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {reflection.submitted_at && (
+                    <div className="pt-3 border-t border-indigo-200">
+                      <p className="text-xs text-slate-500">
+                        Ingediend op:{" "}
+                        {new Date(reflection.submitted_at).toLocaleDateString(
+                          "nl-NL"
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -479,7 +495,7 @@ export default function StudentDetailPage() {
       {/* No data message */}
       {overview.scores.every((s) => s.self_score === null && s.external_score === null) &&
         overview.goals.length === 0 &&
-        !overview.reflection && (
+        (!overview.reflections || overview.reflections.length === 0) && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center">
             <p className="text-slate-500">
               Deze leerling heeft nog geen competentiedata ingevoerd voor dit venster.

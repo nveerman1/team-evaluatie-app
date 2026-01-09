@@ -79,7 +79,13 @@ export function ProjectNotesPanel({
   });
 
   // Get unique team names for filter dropdown
-  const uniqueTeams = Array.from(new Set(notes.map(note => note.team_name).filter(Boolean))).sort();
+  const uniqueTeams = Array.from(
+    new Set(
+      notes
+        .map(note => note.team_name)
+        .filter((team): team is string => Boolean(team))
+    )
+  ).sort();
 
   // Handle resize
   const handleMouseDown = (e: React.MouseEvent) => {
