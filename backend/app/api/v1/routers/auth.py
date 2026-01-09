@@ -131,16 +131,10 @@ def azure_callback(
         f"school_id={school_id}, role={user.role}"
     )
 
-    # Determine redirect URL based on user role
-    # Use environment variable with fallback
+    # Redirect to frontend OAuth callback page
+    # The frontend will handle fetching user data and redirecting to the appropriate page
     frontend_url = settings.FRONTEND_URL
-    if user.role == "teacher":
-        redirect_path = "/teacher"
-    elif user.role == "student":
-        redirect_path = "/student"
-    else:
-        redirect_path = "/"
-    
+    redirect_path = "/auth/callback"
     redirect_url = f"{frontend_url}{redirect_path}"
 
     # Create response with redirect
