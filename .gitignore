@@ -41,3 +41,4 @@ backend/.venv/
 *.Zone.Identifier
 # Backup files
 *.bak
+frontend/.pnpm-store/
