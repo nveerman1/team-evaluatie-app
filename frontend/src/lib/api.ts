@@ -25,9 +25,17 @@ export class ApiAuthError extends Error {
 }
 
 // Base URL: gebruik env als die is gezet, anders fallback
+const raw = process.env.NEXT_PUBLIC_API_URL?.trim();
+
 export const baseURL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ||
-  "http://localhost:8000/api/v1";
+  raw?.replace(/\/+$/, "") ??
+  (process.env.NODE_ENV !== "production"
+    ? "http://localhost:8000/api/v1"
+    : undefined);
+
+if (process.env.NODE_ENV === "production" && !baseURL) {
+  throw new Error("NEXT_PUBLIC_API_URL is not set (production build)");
+}
 
 const instance = axios.create({
   baseURL,
