@@ -32,6 +32,12 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Build arg coming from docker compose build.args
+ARG NEXT_PUBLIC_API_URL
+
+# Make it available to Next.js at build time
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 
@@ -42,6 +48,9 @@ COPY . .
 # Next.js needs these at build time for static optimization
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=production
+
+# (optional but very useful) fail fast if not set
+RUN test -n "$NEXT_PUBLIC_API_URL" || (echo "NEXT_PUBLIC_API_URL is missing" && exit 1)
 
 # Build Next.js application
 RUN \

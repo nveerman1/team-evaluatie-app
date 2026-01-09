@@ -76,16 +76,6 @@ services:
     # Only accessible within Docker network
     # ports:
     #   - "5432:5432"
-    
-    # Resource limits
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
 
   # ===========================================================================
   # Redis (Job Queue & Caching)
@@ -110,7 +100,7 @@ services:
       - app-network
     
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$REDIS_PASSWORD\" --raw PING | grep -q PONG"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -119,15 +109,6 @@ services:
     # Security: Don't expose port to host
     # ports:
     #   - "6379:6379"
-    
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 1G
-        reservations:
-          cpus: '0.25'
-          memory: 256M
 
   # ===========================================================================
   # FastAPI Backend
@@ -171,16 +152,7 @@ services:
     # Internal port only (accessed via nginx)
     # ports:
     #   - "8000:8000"
-    
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
-    
+
     # Log configuration
     logging:
       driver: "json-file"
@@ -222,16 +194,12 @@ services:
     networks:
       - app-network
     
-    # No healthcheck needed for worker (monitored via Redis queue)
-    
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os,redis; redis.Redis.from_url(os.environ['REDIS_URL']).ping()\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     
     logging:
       driver: "json-file"
@@ -246,6 +214,8 @@ services:
     build:
       context: ../../frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     image: tea-frontend:${IMAGE_TAG:-latest}
     container_name: tea_frontend
     restart: unless-stopped
@@ -254,6 +224,8 @@ services:
       NODE_ENV: production
       # API URL (internal network) - nginx will handle external routing
       NEXT_PUBLIC_API_URL: ${FRONTEND_URL}/api/v1
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
     
     depends_on:
       backend:
@@ -263,30 +235,25 @@ services:
       - app-network
     
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     
     # Internal port only (accessed via nginx)
     # ports:
     #   - "3000:3000"
-    
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 1G
-        reservations:
-          cpus: '0.25'
-          memory: 256M
     
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
+
+    mem_limit: 2g
+    cpus: "1.0"
+    pids_limit: 4096
 
   # ===========================================================================
   # Nginx Reverse Proxy
