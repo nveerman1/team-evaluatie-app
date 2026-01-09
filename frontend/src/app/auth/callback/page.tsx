@@ -13,7 +13,15 @@ export default function AuthCallbackPage() {
     // Only redirect once we have a user and haven't redirected yet
     if (!loading && user && !hasRedirected) {
       setHasRedirected(true);
-      router.push("/");
+      
+      // Redirect based on user role
+      if (user.role === "teacher") {
+        router.push("/teacher");
+      } else if (user.role === "student") {
+        router.push("/student");
+      } else {
+        router.push("/");
+      }
     }
   }, [user, loading, hasRedirected, router]);
 
