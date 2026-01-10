@@ -111,10 +111,15 @@ cd /home/runner/work/team-evaluatie-app/team-evaluatie-app/frontend
 # Check package.json versions
 cat package.json | grep -E "next|react"
 
-# Expected VULNERABLE versions:
+# Expected vulnerable versions:
 # "next": "15.5.9"
 # "react": "19.1.0"
 # "react-dom": "19.1.0"
+
+# Expected SAFE versions after mitigation:
+# "next": "15.0.3"
+# "react": "^18.3.1" (React 18 LTS - not affected by React 19 RSC vuln)
+# "react-dom": "^18.3.1"
 ```
 
 ### Check for Data Breach

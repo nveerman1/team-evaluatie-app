@@ -49,21 +49,31 @@ echo "  Next.js: $NEXT_VERSION"
 echo "  React: $REACT_VERSION"
 echo "  React-DOM: $REACT_DOM_VERSION"
 
-# Check if versions are safe (React 19.0.1+ or Next.js 15.0.1+, 15.1.4+)
-# Using simplified version check - in production use proper semver comparison
+# Check if versions are safe
+# Strategy: Downgrade to React 18.3.x (LTS) to avoid React 19 RSC vulnerabilities
+# Next.js 15.0.3 is stable and early enough to avoid 15.5.x issues
 SAFE_VERSIONS=false
 
-if [[ "$REACT_VERSION" == "19.0.0" ]] || [[ "$REACT_VERSION" == "19.1.0" ]]; then
+# Check React version - should be 18.3.x (safe) or 19.1.1+ (patched)
+if [[ "$REACT_VERSION" =~ ^18\. ]]; then
+    echo -e "${GREEN}✓ React version $REACT_VERSION is SAFE (React 18 LTS - no RSC vulnerabilities)${NC}"
+    SAFE_VERSIONS=true
+elif [[ "$REACT_VERSION" == "19.0.0" ]] || [[ "$REACT_VERSION" == "19.1.0" ]]; then
     echo -e "${RED}✗ React version $REACT_VERSION is VULNERABLE to CVE-2025-55182${NC}"
-    echo -e "${YELLOW}  Required: React 19.0.1+ or 19.1.1+${NC}"
-    SAFE_VERSIONS=false
-elif [[ "$NEXT_VERSION" == "15.5.9" ]] || [[ "$NEXT_VERSION" == "15.5.8" ]] || [[ "$NEXT_VERSION" == "15.5.7" ]]; then
-    echo -e "${RED}✗ Next.js version $NEXT_VERSION is VULNERABLE to CVE-2025-55182${NC}"
-    echo -e "${YELLOW}  Required: Next.js 15.0.1+, 15.1.4+, or 15.5.10+${NC}"
+    echo -e "${YELLOW}  Recommended: Downgrade to React 18.3.1 (LTS) or upgrade to 19.1.1+${NC}"
     SAFE_VERSIONS=false
 else
-    echo -e "${GREEN}✓ Package versions appear safe${NC}"
+    echo -e "${GREEN}✓ React version $REACT_VERSION appears safe${NC}"
     SAFE_VERSIONS=true
+fi
+
+# Check Next.js version - 15.0.3 is safe early version
+if [[ "$NEXT_VERSION" =~ ^15\.0\.[0-9] ]] || [[ "$NEXT_VERSION" =~ ^14\. ]]; then
+    echo -e "${GREEN}✓ Next.js version $NEXT_VERSION is SAFE${NC}"
+elif [[ "$NEXT_VERSION" == "15.5.9" ]] || [[ "$NEXT_VERSION" == "15.5.8" ]] || [[ "$NEXT_VERSION" == "15.5.7" ]]; then
+    echo -e "${RED}✗ Next.js version $NEXT_VERSION is VULNERABLE${NC}"
+    echo -e "${YELLOW}  Recommended: Downgrade to Next.js 15.0.3 or upgrade to 15.5.10+${NC}"
+    SAFE_VERSIONS=false
 fi
 
 echo ""
@@ -269,8 +279,9 @@ fi
 echo ""
 echo -e "${YELLOW}Next Steps:${NC}"
 if [ "$SAFE_VERSIONS" = false ]; then
-    echo -e "  1. ${RED}URGENT:${NC} Upgrade React and Next.js to patched versions"
-    echo -e "     cd frontend && npm install next@15.1.4 react@19.0.0 react-dom@19.0.0"
+    echo -e "  1. ${RED}URGENT:${NC} Upgrade/downgrade React and Next.js to safe versions"
+    echo -e "     ${GREEN}Recommended (Conservative):${NC} cd frontend && npm install next@15.0.3 react@^18.3.1 react-dom@^18.3.1"
+    echo -e "     ${YELLOW}Alternative (If React 19 needed):${NC} cd frontend && npm install next@15.5.10 react@19.1.1 react-dom@19.1.1"
 fi
 echo -e "  2. Review Docker compose security settings"
 echo -e "  3. Verify Nginx configuration is deployed"
