@@ -212,7 +212,7 @@ class TestAzureCallbackCookie:
         assert "location" in response.headers
         redirect_url = response.headers["location"]
         assert settings.FRONTEND_URL in redirect_url
-        assert "dashboard" in redirect_url
+        assert "/auth/callback" in redirect_url
 
         # Check that Set-Cookie header is present
         set_cookie_header = response.headers.get("set-cookie")
