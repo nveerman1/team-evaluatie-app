@@ -75,11 +75,16 @@ async def get_current_user(
     
     # No valid authentication method found
     if not token:
-        # Block dev-login attempts in production
+        # SECURITY: Block and alert on dev-login attempts in production
         if settings.NODE_ENV != "development" and x_user_email:
-            logger.warning(
-                "Dev-login attempted in non-development environment. "
-                f"NODE_ENV={settings.NODE_ENV}. Use Azure AD authentication instead."
+            logger.error(
+                f"SECURITY ALERT: X-User-Email header detected in production environment! "
+                f"Attempted email: {x_user_email}, "
+                f"IP: {request.client.host if request.client else 'unknown'}, "
+                f"User-Agent: {request.headers.get('user-agent', 'unknown')}, "
+                f"NODE_ENV={settings.NODE_ENV}. "
+                f"This may indicate an authentication bypass attempt. "
+                f"Use Azure AD authentication instead."
             )
         
         raise HTTPException(
