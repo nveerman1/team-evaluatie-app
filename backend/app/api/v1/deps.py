@@ -229,8 +229,12 @@ async def get_current_user_prod(
 
 
 # Export the correct dependency based on NODE_ENV
-# In production, X-User-Email header is not even in the function signature
+# Production is the explicit default for security
+# Only use dev mode when explicitly set to "development"
 if settings.NODE_ENV == "development":
     get_current_user = get_current_user_dev
+    logger.info("Using development authentication (X-User-Email header enabled)")
 else:
     get_current_user = get_current_user_prod
+    logger.info(f"Using production authentication (NODE_ENV={settings.NODE_ENV})")
+
