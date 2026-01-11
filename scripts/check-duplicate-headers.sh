@@ -9,6 +9,12 @@
 # Usage:
 #   ./scripts/check-duplicate-headers.sh
 #
+# Environment Variables:
+#   BASE_URL - Base URL for external checks (default: https://app.technasiummbh.nl)
+#
+# Example:
+#   BASE_URL=https://staging.example.com ./scripts/check-duplicate-headers.sh
+#
 # Requirements:
 #   - Docker containers must be running
 #   - curl must be available
@@ -16,6 +22,9 @@
 # =============================================================================
 
 set -e
+
+# Configuration
+BASE_URL="${BASE_URL:-https://app.technasiummbh.nl}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -106,8 +115,8 @@ check_nginx_config() {
     echo ""
     
     for header in "${HEADERS[@]}"; do
-        # Count add_header directives for this header
-        count=$(grep -i "add_header\s\+${header}" /tmp/nginx-config.txt | wc -l)
+        # Count add_header directives for this header (use -E for extended regex)
+        count=$(grep -iE "add_header[[:space:]]+${header}" /tmp/nginx-config.txt | wc -l)
         
         if [ "$count" -eq 0 ]; then
             echo -e "  ${YELLOW}⚠${NC}  ${header}: Not set in nginx"
@@ -139,7 +148,7 @@ check_nginx_config
 
 # Check 1: External HTTPS endpoint (through nginx)
 echo "------------------------------------------------------------------------"
-if check_headers "https://app.technasiummbh.nl/api/v1/auth/me" "External HTTPS (via Nginx)" false ""; then
+if check_headers "${BASE_URL}/api/v1/auth/me" "External HTTPS API (via Nginx)" false ""; then
     :
 else
     all_passed=false
@@ -147,7 +156,7 @@ fi
 
 # Check 2: External HTTPS endpoint - health check
 echo "------------------------------------------------------------------------"
-if check_headers "https://app.technasiummbh.nl/health" "External HTTPS Health Check (via Nginx)" false ""; then
+if check_headers "${BASE_URL}/health" "External HTTPS Health Check (via Nginx)" false ""; then
     :
 else
     all_passed=false

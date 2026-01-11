@@ -1,4 +1,6 @@
 # app/core/config.py
+import os
+import logging
 from typing import List
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import AnyUrl, field_validator, Field
@@ -25,8 +27,6 @@ class Settings(BaseSettings):
     @classmethod
     def default_backend_headers_by_env(cls, v, info):
         """Default to False in production (nginx handles headers), True in dev"""
-        import os
-        import logging
         logger = logging.getLogger(__name__)
         
         node_env = os.getenv("NODE_ENV", "development")
@@ -51,8 +51,6 @@ class Settings(BaseSettings):
     @classmethod
     def validate_secret_key(cls, v):
         """Validate SECRET_KEY is not using default in production"""
-        import os
-        import logging
         logger = logging.getLogger(__name__)
         
         # Check if we're in production
@@ -112,8 +110,6 @@ class Settings(BaseSettings):
     @classmethod
     def validate_cookie_secure(cls, v, info):
         """Warn if COOKIE_SECURE is False in production"""
-        import os
-        import logging
         logger = logging.getLogger(__name__)
         
         node_env = os.getenv("NODE_ENV", "development")
@@ -179,8 +175,6 @@ class Settings(BaseSettings):
         """Validate NODE_ENV is one of the allowed values"""
         allowed = ["development", "production", "test"]
         if v not in allowed:
-            import logging
-
             logger = logging.getLogger(__name__)
             logger.warning(
                 f"Invalid NODE_ENV='{v}'. Must be one of {allowed}. "
