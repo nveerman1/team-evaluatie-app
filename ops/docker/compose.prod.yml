@@ -28,8 +28,12 @@
 version: '3.8'
 
 networks:
-  app-network:
+  public:
     driver: bridge
+    internal: false
+  private:
+    driver: bridge
+    internal: true
 
 volumes:
   postgres-data:
@@ -39,6 +43,8 @@ volumes:
   certbot-certs:
     driver: local
   certbot-www:
+    driver: local
+  nginx-logs:
     driver: local
 
 services:
@@ -63,7 +69,7 @@ services:
       - ${BACKUP_DIR:-./backups}:/backups
     
     networks:
-      - app-network
+      - private
     
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tea} -d ${POSTGRES_DB:-tea_production}"]
@@ -76,6 +82,29 @@ services:
     # Only accessible within Docker network
     # ports:
     #   - "5432:5432"
+    
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    
+    # Resource limits
+    mem_limit: 2g
+    mem_reservation: 512m
+    cpus: "1.5"
+    pids_limit: 512
+    
+    ulimits:
+      nofile:
+        soft: 1024
+        hard: 2048
 
   # ===========================================================================
   # Redis (Job Queue & Caching)
@@ -97,7 +126,7 @@ services:
       - redis-data:/data
     
     networks:
-      - app-network
+      - private
     
     healthcheck:
       test: ["CMD-SHELL", "redis-cli -a \"$REDIS_PASSWORD\" --raw PING | grep -q PONG"]
@@ -109,6 +138,23 @@ services:
     # Security: Don't expose port to host
     # ports:
     #   - "6379:6379"
+    
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    
+    # Resource limits
+    mem_limit: 768m
+    mem_reservation: 256m
+    cpus: "0.5"
+    pids_limit: 128
+    
+    ulimits:
+      nofile:
+        soft: 2048
+        hard: 4096
 
   # ===========================================================================
   # FastAPI Backend
@@ -140,7 +186,8 @@ services:
         condition: service_healthy
     
     networks:
-      - app-network
+      - private
+      - public
     
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -175,6 +222,11 @@ services:
     mem_reservation: 256m
     cpus: "1.0"
     pids_limit: 256
+    
+    ulimits:
+      nofile:
+        soft: 2048
+        hard: 4096
 
   # ===========================================================================
   # RQ Worker (Async Job Processing)
@@ -208,7 +260,7 @@ services:
         condition: service_healthy
     
     networks:
-      - app-network
+      - private
     
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import os,redis; redis.Redis.from_url(os.environ['REDIS_URL']).ping()\""]
@@ -222,6 +274,23 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    
+    # Resource limits
+    mem_limit: 512m
+    mem_reservation: 128m
+    cpus: "0.5"
+    pids_limit: 128
+    
+    ulimits:
+      nofile:
+        soft: 1024
+        hard: 2048
 
   # ===========================================================================
   # Next.js Frontend
@@ -248,7 +317,7 @@ services:
         condition: service_healthy
     
     networks:
-      - app-network
+      - public
     
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ >/dev/null 2>&1 || exit 1"]
@@ -279,11 +348,17 @@ services:
       - /tmp:rw,noexec,nosuid,nodev,noatime,size=100m
       - /app/.next/cache:rw,noexec,nosuid,nodev,noatime,size=50m
     
-    # Tightened resource limits to prevent resource exhaustion attacks
-    mem_limit: 1536m  # Reduced from 2g
+    # Resource limits optimized for Next.js SSR workload
+    # Higher memory for React rendering and caching
+    mem_limit: 1536m
     mem_reservation: 512m
-    cpus: "0.75"  # Reduced from 1.0
-    pids_limit: 512  # Significantly reduced from 4096 to limit process spawning
+    cpus: "0.75"
+    pids_limit: 512  # Limited to prevent process spawning attacks
+    
+    ulimits:
+      nofile:
+        soft: 2048
+        hard: 4096
 
   # ===========================================================================
   # Nginx Reverse Proxy
@@ -305,6 +380,8 @@ services:
       # SSL certificates (managed by Certbot)
       - certbot-certs:/etc/letsencrypt:ro
       - certbot-www:/var/www/certbot:ro
+      # Nginx logs (for fail2ban and monitoring)
+      - nginx-logs:/var/log/nginx
       # Custom error pages (optional)
       # - ../../ops/nginx/html:/usr/share/nginx/html:ro
     
@@ -315,7 +392,7 @@ services:
         condition: service_healthy
     
     networks:
-      - app-network
+      - public
     
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
@@ -328,16 +405,32 @@ services:
       resources:
         limits:
           cpus: '0.5'
-          memory: 256M
+          memory: 512M
         reservations:
           cpus: '0.1'
-          memory: 64M
+          memory: 128M
+    
+    ulimits:
+      nofile:
+        soft: 4096
+        hard: 8192
     
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "5"
+    
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+      - CHOWN
+      - SETGID
+      - SETUID
 
   # ===========================================================================
   # Certbot (SSL Certificate Management)
@@ -360,4 +453,4 @@ services:
     # restart: unless-stopped
     
     networks:
-      - app-network
+      - public
