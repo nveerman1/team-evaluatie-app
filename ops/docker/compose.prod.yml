@@ -348,11 +348,12 @@ services:
       - /tmp:rw,noexec,nosuid,nodev,noatime,size=100m
       - /app/.next/cache:rw,noexec,nosuid,nodev,noatime,size=50m
     
-    # Tightened resource limits to prevent resource exhaustion attacks
-    mem_limit: 1536m  # Reduced from 2g
+    # Resource limits optimized for Next.js SSR workload
+    # Higher memory for React rendering and caching
+    mem_limit: 1536m
     mem_reservation: 512m
-    cpus: "0.75"  # Reduced from 1.0
-    pids_limit: 512  # Significantly reduced from 4096 to limit process spawning
+    cpus: "0.75"
+    pids_limit: 512  # Limited to prevent process spawning attacks
     
     ulimits:
       nofile:
