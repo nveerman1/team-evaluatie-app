@@ -187,8 +187,8 @@ def seed_peer_evaluation_templates(conn, school_id: int, subject_id: int):
     """
     Seed peer evaluation criterion templates from peer_criteria.json.
     
-    Uses INSERT ... ON CONFLICT to ensure idempotency based on
-    (school_id, subject_id, omza_category, title).
+    Checks for existing templates before inserting to ensure idempotency
+    based on (school_id, subject_id, omza_category, title).
     """
     data = _load_json("peer_criteria.json")
     criteria = data.get("criteria", [])
@@ -201,12 +201,34 @@ def seed_peer_evaluation_templates(conn, school_id: int, subject_id: int):
         level_descriptors = crit.get("level_descriptors", {})
         lo_codes = crit.get("learning_objective_codes", [])
         
+        # Check if template already exists
+        result = conn.execute(
+            sa.text("""
+                SELECT id FROM peer_evaluation_criterion_templates
+                WHERE school_id = :school_id
+                  AND subject_id = :subject_id
+                  AND omza_category = :omza_category
+                  AND title = :title
+            """),
+            {
+                "school_id": school_id,
+                "subject_id": subject_id,
+                "omza_category": omza_category,
+                "title": title
+            }
+        )
+        existing = result.fetchone()
+        
+        if existing:
+            # Template already exists, skip
+            continue
+        
         # Resolve learning objective IDs
         learning_objective_ids = resolve_learning_objective_ids(
             conn, school_id, subject_id, lo_codes
         )
         
-        # Insert or skip if exists
+        # Insert new template
         conn.execute(
             sa.text("""
                 INSERT INTO peer_evaluation_criterion_templates (
@@ -233,7 +255,6 @@ def seed_peer_evaluation_templates(conn, school_id: int, subject_id: int):
                     CURRENT_TIMESTAMP,
                     CURRENT_TIMESTAMP
                 )
-                ON CONFLICT DO NOTHING
             """),
             {
                 "school_id": school_id,
@@ -253,8 +274,8 @@ def seed_project_assessment_templates(conn, school_id: int, subject_id: int):
     Seed project assessment criterion templates from
     project_assessment_criteria_vwo_bovenbouw.json.
     
-    Uses INSERT ... ON CONFLICT to ensure idempotency based on
-    (school_id, subject_id, category, title, target_level).
+    Checks for existing templates before inserting to ensure idempotency
+    based on (school_id, subject_id, category, title, target_level).
     """
     data = _load_json("project_assessment_criteria_vwo_bovenbouw.json")
     criteria = data.get("project_assessment_criteria", [])
@@ -267,12 +288,36 @@ def seed_project_assessment_templates(conn, school_id: int, subject_id: int):
         level_descriptors = crit.get("level_descriptors", {})
         lo_codes = crit.get("learning_objectives", [])
         
+        # Check if template already exists
+        result = conn.execute(
+            sa.text("""
+                SELECT id FROM project_assessment_criterion_templates
+                WHERE school_id = :school_id
+                  AND subject_id = :subject_id
+                  AND category = :category
+                  AND title = :title
+                  AND target_level = :target_level
+            """),
+            {
+                "school_id": school_id,
+                "subject_id": subject_id,
+                "category": category,
+                "title": title,
+                "target_level": target_level
+            }
+        )
+        existing = result.fetchone()
+        
+        if existing:
+            # Template already exists, skip
+            continue
+        
         # Resolve learning objective IDs
         learning_objective_ids = resolve_learning_objective_ids(
             conn, school_id, subject_id, lo_codes
         )
         
-        # Insert or skip if exists
+        # Insert new template
         conn.execute(
             sa.text("""
                 INSERT INTO project_assessment_criterion_templates (
@@ -299,7 +344,6 @@ def seed_project_assessment_templates(conn, school_id: int, subject_id: int):
                     CURRENT_TIMESTAMP,
                     CURRENT_TIMESTAMP
                 )
-                ON CONFLICT DO NOTHING
             """),
             {
                 "school_id": school_id,
