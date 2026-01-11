@@ -40,7 +40,6 @@ from alembic import op
 import sqlalchemy as sa
 import json
 from pathlib import Path
-from typing import Optional
 
 # revision identifiers, used by Alembic.
 revision = "seed_20260111_01"
@@ -685,7 +684,7 @@ Het projectteam"""
                         :type,
                         :subject,
                         :body,
-                        '{}',
+                        CAST(:variables_allowed AS jsonb),
                         TRUE,
                         CURRENT_TIMESTAMP,
                         CURRENT_TIMESTAMP
@@ -697,7 +696,8 @@ Het projectteam"""
                     "name": template["name"],
                     "type": template["type"],
                     "subject": template["subject"],
-                    "body": template["body"]
+                    "body": template["body"],
+                    "variables_allowed": json.dumps({})
                 }
             )
 
