@@ -22,7 +22,7 @@ def get_db():
         db.close()
 
 
-async def get_current_user(
+async def get_current_user_dev(
     request: Request,
     db: Session = Depends(get_db),
     x_user_email: str | None = Header(default=None, alias="X-User-Email"),
@@ -138,3 +138,99 @@ async def get_current_user(
         )
     
     return user
+
+
+async def get_current_user_prod(
+    request: Request,
+    db: Session = Depends(get_db),
+    access_token_cookie: str | None = Cookie(default=None, alias="access_token"),
+    bearer_token: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> User:
+    """
+    Production authentication dependency - NO X-User-Email header support.
+    
+    Supports:
+    - HttpOnly cookie (access_token) - preferred method
+    - Bearer token in Authorization header - fallback for API clients
+    
+    Security:
+    - X-User-Email header is completely removed from signature
+    - JWT tokens are validated and decoded
+    - User must not be archived (archived=False)
+    - School ID must match the token claim
+    """
+    
+    # PRODUCTION: Use cookie or bearer token ONLY
+    token = None
+    
+    # Priority 1: Cookie-based authentication (preferred)
+    if access_token_cookie:
+        token = access_token_cookie
+        logger.debug("Authentication via HttpOnly cookie")
+    
+    # Priority 2: Bearer token (fallback for API clients)
+    elif bearer_token:
+        token = bearer_token.credentials
+        logger.debug("Authentication via Bearer token")
+    
+    # No valid authentication method found
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated. Please log in.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Decode and validate JWT
+    payload = decode_access_token(token)
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Extract user email from token
+    email = payload.get("sub")
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload",
+        )
+    
+    # Get user from database
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+        )
+    
+    # Validate user is not archived
+    if user.archived:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is archived",
+        )
+    
+    # Validate school_id matches token claim (if present in token)
+    token_school_id = payload.get("school_id")
+    if token_school_id is not None and user.school_id != token_school_id:
+        logger.warning(
+            f"School ID mismatch for user {user.email}: "
+            f"token={token_school_id}, user={user.school_id}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="School ID mismatch",
+        )
+    
+    return user
+
+
+# Export the correct dependency based on NODE_ENV
+# In production, X-User-Email header is not even in the function signature
+if settings.NODE_ENV == "development":
+    get_current_user = get_current_user_dev
+else:
+    get_current_user = get_current_user_prod
