@@ -274,9 +274,10 @@ services:
       - ALL
     cap_add:
       - NET_BIND_SERVICE  # Only for binding to port 3000
+    read_only: true
     tmpfs:
-      - /tmp:rw,noexec,nosuid,size=100m
-    # Note: Cannot use read_only:true because Next.js needs writable .next directory
+      - /tmp:rw,noexec,nosuid,nodev,noatime,size=100m
+      - /app/.next/cache:rw,noexec,nosuid,nodev,noatime,size=50m
     
     # Tightened resource limits to prevent resource exhaustion attacks
     mem_limit: 1536m  # Reduced from 2g
