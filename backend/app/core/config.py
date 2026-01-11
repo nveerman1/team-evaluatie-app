@@ -1,4 +1,6 @@
 # app/core/config.py
+import os
+import logging
 from typing import List
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import AnyUrl, field_validator, Field
@@ -15,15 +17,42 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "CHANGE_ME_IN_PRODUCTION"  # overschrijven via env
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     JWT_ALGORITHM: str = "HS256"
-    
+
+    # Security Headers Control
+    # In production, Nginx should handle security headers (single source of truth)
+    # In development, backend can set headers for testing without nginx
+    ENABLE_BACKEND_SECURITY_HEADERS: bool = Field(default=True)
+
+    @field_validator("ENABLE_BACKEND_SECURITY_HEADERS", mode="after")
+    @classmethod
+    def default_backend_headers_by_env(cls, v, info):
+        """Default to False in production (nginx handles headers), True in dev"""
+        logger = logging.getLogger(__name__)
+
+        node_env = os.getenv("NODE_ENV", "development")
+        # If explicitly set via env var, respect it
+        if os.getenv("ENABLE_BACKEND_SECURITY_HEADERS") is not None:
+            return v
+
+        # Otherwise, default based on environment
+        if node_env == "production":
+            logger.info(
+                "Production environment detected: Backend security headers disabled. "
+                "Nginx will handle all security headers to avoid duplicates."
+            )
+            return False
+        else:
+            logger.info(
+                f"{node_env} environment: Backend security headers enabled for testing."
+            )
+            return True
+
     @field_validator("SECRET_KEY", mode="after")
     @classmethod
     def validate_secret_key(cls, v):
         """Validate SECRET_KEY is not using default in production"""
-        import os
-        import logging
         logger = logging.getLogger(__name__)
-        
+
         # Check if we're in production
         node_env = os.getenv("NODE_ENV", "development")
         if node_env == "production" and v == "CHANGE_ME_IN_PRODUCTION":
@@ -36,7 +65,7 @@ class Settings(BaseSettings):
                 "SECRET_KEY must be set to a secure random value in production. "
                 "Set the SECRET_KEY environment variable."
             )
-        
+
         # Warn if key is too short (should be at least 32 characters)
         if len(v) < 32:
             logger.warning(
@@ -44,7 +73,7 @@ class Settings(BaseSettings):
                 "For security, use at least 32 characters. "
                 "Generate a strong key with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
             )
-        
+
         return v
 
     # Azure AD OAuth Configuration
@@ -76,15 +105,13 @@ class Settings(BaseSettings):
     COOKIE_DOMAIN: str = ""  # e.g., ".technasiummbh.nl" in production
     COOKIE_SAMESITE: str = "Lax"  # Allow OAuth redirects
     COOKIE_MAX_AGE: int = 604800  # 7 days in seconds
-    
+
     @field_validator("COOKIE_SECURE", mode="after")
     @classmethod
     def validate_cookie_secure(cls, v, info):
         """Warn if COOKIE_SECURE is False in production"""
-        import os
-        import logging
         logger = logging.getLogger(__name__)
-        
+
         node_env = os.getenv("NODE_ENV", "development")
         if node_env == "production" and not v:
             logger.warning(
@@ -92,7 +119,7 @@ class Settings(BaseSettings):
                 "Cookies will be sent over unencrypted HTTP connections. "
                 "Set COOKIE_SECURE=true in environment variables when using HTTPS."
             )
-        
+
         return v
 
     # pydantic-settings v2 configuratie
@@ -148,8 +175,6 @@ class Settings(BaseSettings):
         """Validate NODE_ENV is one of the allowed values"""
         allowed = ["development", "production", "test"]
         if v not in allowed:
-            import logging
-
             logger = logging.getLogger(__name__)
             logger.warning(
                 f"Invalid NODE_ENV='{v}'. Must be one of {allowed}. "
