@@ -1,4 +1,5 @@
 """Security headers middleware for FastAPI."""
+
 from __future__ import annotations
 
 import logging
@@ -13,12 +14,12 @@ logger = logging.getLogger(__name__)
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """
     Middleware to add security headers to all responses.
-    
+
     In production, this middleware is disabled by default (ENABLE_BACKEND_SECURITY_HEADERS=false)
     because Nginx handles all security headers at the edge to avoid duplicates.
-    
+
     In development, this middleware can be enabled for testing without nginx.
-    
+
     Headers added (when enabled):
     - X-Content-Type-Options: Prevents MIME sniffing
     - X-Frame-Options: Prevents clickjacking
@@ -28,7 +29,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     - Content-Security-Policy: Reduces XSS risk
     - Permissions-Policy: Controls browser features
     """
-    
+
     async def dispatch(
         self,
         request: Request,
@@ -36,25 +37,23 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     ) -> Response:
         """Add security headers to response if enabled."""
         response = await call_next(request)
-        
+
         # In production, nginx handles security headers to avoid duplicates
         if not settings.ENABLE_BACKEND_SECURITY_HEADERS:
             return response
-        
+
         # Development mode: Add headers for testing without nginx
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        
+
         # Content-Security-Policy for API
         # Note: Frontend (Next.js) should set its own CSP
         response.headers["Content-Security-Policy"] = (
-            "default-src 'none'; "
-            "frame-ancestors 'none'; "
-            "base-uri 'self'"
+            "default-src 'none'; " "frame-ancestors 'none'; " "base-uri 'self'"
         )
-        
+
         # Permissions-Policy (formerly Feature-Policy)
         response.headers["Permissions-Policy"] = (
             "geolocation=(), "
@@ -66,7 +65,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "gyroscope=(), "
             "accelerometer=()"
         )
-        
+
         # HSTS (HTTP Strict Transport Security) - only in production with HTTPS
         if settings.COOKIE_SECURE:
             # max-age=31536000 = 1 year
@@ -75,5 +74,5 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             response.headers["Strict-Transport-Security"] = (
                 "max-age=31536000; includeSubDomains; preload"
             )
-        
+
         return response
