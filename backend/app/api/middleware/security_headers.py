@@ -14,7 +14,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """
     Middleware to add security headers to all responses.
     
-    Headers added:
+    In production, this middleware is disabled by default (ENABLE_BACKEND_SECURITY_HEADERS=false)
+    because Nginx handles all security headers at the edge to avoid duplicates.
+    
+    In development, this middleware can be enabled for testing without nginx.
+    
+    Headers added (when enabled):
     - X-Content-Type-Options: Prevents MIME sniffing
     - X-Frame-Options: Prevents clickjacking
     - X-XSS-Protection: Legacy XSS protection
@@ -29,10 +34,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         request: Request,
         call_next: Callable,
     ) -> Response:
-        """Add security headers to response."""
+        """Add security headers to response if enabled."""
         response = await call_next(request)
         
-        # Always add these headers
+        # In production, nginx handles security headers to avoid duplicates
+        if not settings.ENABLE_BACKEND_SECURITY_HEADERS:
+            return response
+        
+        # Development mode: Add headers for testing without nginx
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"

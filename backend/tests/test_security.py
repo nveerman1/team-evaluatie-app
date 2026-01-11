@@ -12,36 +12,47 @@ from unittest.mock import MagicMock
 
 
 def test_security_headers_middleware():
-    """Test that security headers are added to responses"""
-    app = FastAPI()
-    app.add_middleware(SecurityHeadersMiddleware)
+    """Test that security headers are added to responses when enabled"""
+    from app.core.config import settings
     
-    @app.get("/test")
-    def test_route():
-        return {"message": "test"}
+    # Ensure headers are enabled for testing
+    original_enabled = settings.ENABLE_BACKEND_SECURITY_HEADERS
+    settings.ENABLE_BACKEND_SECURITY_HEADERS = True
     
-    client = TestClient(app)
-    response = client.get("/test")
-    
-    # Check that all security headers are present
-    assert response.headers["X-Content-Type-Options"] == "nosniff"
-    assert response.headers["X-Frame-Options"] == "DENY"
-    assert response.headers["X-XSS-Protection"] == "1; mode=block"
-    assert response.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
-    assert "Content-Security-Policy" in response.headers
-    assert "Permissions-Policy" in response.headers
-    
-    # HSTS should NOT be present in test (COOKIE_SECURE=False by default)
-    assert "Strict-Transport-Security" not in response.headers
+    try:
+        app = FastAPI()
+        app.add_middleware(SecurityHeadersMiddleware)
+        
+        @app.get("/test")
+        def test_route():
+            return {"message": "test"}
+        
+        client = TestClient(app)
+        response = client.get("/test")
+        
+        # Check that all security headers are present
+        assert response.headers["X-Content-Type-Options"] == "nosniff"
+        assert response.headers["X-Frame-Options"] == "DENY"
+        assert response.headers["X-XSS-Protection"] == "1; mode=block"
+        assert response.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
+        assert "Content-Security-Policy" in response.headers
+        assert "Permissions-Policy" in response.headers
+        
+        # HSTS should NOT be present in test (COOKIE_SECURE=False by default)
+        assert "Strict-Transport-Security" not in response.headers
+    finally:
+        settings.ENABLE_BACKEND_SECURITY_HEADERS = original_enabled
 
 
 def test_security_headers_with_https():
     """Test that HSTS is added when COOKIE_SECURE is True"""
     from app.core.config import settings
     
-    # Temporarily set COOKIE_SECURE to True
+    # Temporarily set COOKIE_SECURE to True and enable headers
     original_secure = settings.COOKIE_SECURE
+    original_enabled = settings.ENABLE_BACKEND_SECURITY_HEADERS
     settings.COOKIE_SECURE = True
+    settings.ENABLE_BACKEND_SECURITY_HEADERS = True
     
     try:
         app = FastAPI()
@@ -62,6 +73,75 @@ def test_security_headers_with_https():
         assert "preload" in hsts
     finally:
         settings.COOKIE_SECURE = original_secure
+        settings.ENABLE_BACKEND_SECURITY_HEADERS = original_enabled
+
+
+def test_security_headers_disabled_in_production():
+    """Test that security headers are not added when disabled (production mode)"""
+    from app.core.config import settings
+    
+    # Disable headers (simulating production where nginx handles them)
+    original_enabled = settings.ENABLE_BACKEND_SECURITY_HEADERS
+    settings.ENABLE_BACKEND_SECURITY_HEADERS = False
+    
+    try:
+        app = FastAPI()
+        app.add_middleware(SecurityHeadersMiddleware)
+        
+        @app.get("/test")
+        def test_route():
+            return {"message": "test"}
+        
+        client = TestClient(app)
+        response = client.get("/test")
+        
+        # Headers should NOT be present when middleware is disabled
+        assert "X-Content-Type-Options" not in response.headers
+        assert "X-Frame-Options" not in response.headers
+        assert "X-XSS-Protection" not in response.headers
+        assert "Referrer-Policy" not in response.headers
+        assert "Content-Security-Policy" not in response.headers
+        assert "Permissions-Policy" not in response.headers
+        assert "Strict-Transport-Security" not in response.headers
+    finally:
+        settings.ENABLE_BACKEND_SECURITY_HEADERS = original_enabled
+
+
+def test_backend_headers_default_to_false_in_production():
+    """Test that ENABLE_BACKEND_SECURITY_HEADERS defaults to False in production"""
+    import os
+    from app.core.config import Settings
+    
+    # Set production environment without explicit ENABLE_BACKEND_SECURITY_HEADERS
+    os.environ["NODE_ENV"] = "production"
+    os.environ["SECRET_KEY"] = "test-secret-key-at-least-32-characters-long-for-testing"
+    # Explicitly remove the flag if it exists
+    os.environ.pop("ENABLE_BACKEND_SECURITY_HEADERS", None)
+    
+    try:
+        settings = Settings()
+        # Should default to False in production
+        assert settings.ENABLE_BACKEND_SECURITY_HEADERS is False
+    finally:
+        os.environ["NODE_ENV"] = "development"
+        os.environ.pop("SECRET_KEY", None)
+
+
+def test_backend_headers_default_to_true_in_development():
+    """Test that ENABLE_BACKEND_SECURITY_HEADERS defaults to True in development"""
+    import os
+    from app.core.config import Settings
+    
+    # Set development environment without explicit ENABLE_BACKEND_SECURITY_HEADERS
+    os.environ["NODE_ENV"] = "development"
+    os.environ.pop("ENABLE_BACKEND_SECURITY_HEADERS", None)
+    
+    try:
+        settings = Settings()
+        # Should default to True in development
+        assert settings.ENABLE_BACKEND_SECURITY_HEADERS is True
+    finally:
+        os.environ["NODE_ENV"] = "development"
 
 
 def test_rate_limiting_allows_normal_traffic():

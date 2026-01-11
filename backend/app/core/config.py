@@ -16,6 +16,37 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     JWT_ALGORITHM: str = "HS256"
     
+    # Security Headers Control
+    # In production, Nginx should handle security headers (single source of truth)
+    # In development, backend can set headers for testing without nginx
+    ENABLE_BACKEND_SECURITY_HEADERS: bool = Field(default=True)
+    
+    @field_validator("ENABLE_BACKEND_SECURITY_HEADERS", mode="after")
+    @classmethod
+    def default_backend_headers_by_env(cls, v, info):
+        """Default to False in production (nginx handles headers), True in dev"""
+        import os
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        node_env = os.getenv("NODE_ENV", "development")
+        # If explicitly set via env var, respect it
+        if os.getenv("ENABLE_BACKEND_SECURITY_HEADERS") is not None:
+            return v
+        
+        # Otherwise, default based on environment
+        if node_env == "production":
+            logger.info(
+                "Production environment detected: Backend security headers disabled. "
+                "Nginx will handle all security headers to avoid duplicates."
+            )
+            return False
+        else:
+            logger.info(
+                f"{node_env} environment: Backend security headers enabled for testing."
+            )
+            return True
+    
     @field_validator("SECRET_KEY", mode="after")
     @classmethod
     def validate_secret_key(cls, v):
