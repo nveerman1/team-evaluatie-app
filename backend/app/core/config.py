@@ -123,8 +123,11 @@ class Settings(BaseSettings):
     # Infra
     DATABASE_URL: str = "postgresql+psycopg2://app:app@localhost:5432/tea"
 
-    # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    # CORS - Store as string to avoid JSON parsing issues
+    cors_origins_str: str = Field(
+        default="http://localhost:3000,http://127.0.0.1:3000",
+        validation_alias="CORS_ORIGINS"
+    )
 
     # Frontend & Backend URLs
     FRONTEND_URL: str = "http://localhost:3000"
@@ -162,6 +165,13 @@ class Settings(BaseSettings):
 
     # Computed properties that return lists
     @property
+    def CORS_ORIGINS(self) -> List[str]:
+        """Parse CORS_ORIGINS from comma-separated string to list"""
+        if not self.cors_origins_str or self.cors_origins_str.strip() == "":
+            return ["http://localhost:3000", "http://127.0.0.1:3000"]
+        return [s.strip() for s in self.cors_origins_str.split(",") if s.strip()]
+
+    @property
     def AZURE_AD_SCOPES(self) -> List[str]:
         """Parse AZURE_AD_SCOPES from comma-separated string to list"""
         if not self.azure_ad_scopes_str or self.azure_ad_scopes_str.strip() == "":
@@ -179,15 +189,6 @@ class Settings(BaseSettings):
         return [
             d.strip() for d in self.azure_ad_allowed_domains_str.split(",") if d.strip()
         ]
-
-    # Handige parsing: sta toe dat CORS_ORIGINS als komma-gescheiden string in env staat
-    @field_validator("CORS_ORIGINS", mode="before")
-    @classmethod
-    def split_cors(cls, v):
-        if isinstance(v, str):
-            # Voorbeeld: "http://localhost:3000,https://example.com"
-            return [item.strip() for item in v.split(",") if item.strip()]
-        return v
 
     @field_validator("AZURE_AD_AUTHORITY", mode="before")
     @classmethod
