@@ -225,7 +225,7 @@ def seed_competencies(conn, school_id: int, subject_id: int):
     }
     
     # Track category_key -> category_id mapping
-    category_ids: dict[str, int] = {}
+    category_ids = {}
     
     # 1. Seed categories
     for cat in categories:
@@ -286,6 +286,11 @@ def seed_competencies(conn, school_id: int, subject_id: int):
     for comp in competencies:
         category_key = comp["category_key"]
         category_id = category_ids.get(category_key)
+        
+        # Skip if category doesn't exist (should not happen with valid data)
+        if category_id is None:
+            continue
+        
         name = comp["name"]
         code = comp.get("code", "")
         phase = comp.get("phase")
