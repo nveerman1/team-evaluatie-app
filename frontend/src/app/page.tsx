@@ -6,6 +6,8 @@ import { authService } from "@/services/auth.service";
 export default function Home() {
   const [email, setEmail] = useState("");
   const [devLoginEnabled, setDevLoginEnabled] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -28,17 +30,25 @@ export default function Home() {
     authService.redirectToAzureLogin(schoolId, returnTo);
   };
 
-  const handleDevLogin = () => {
-    if (!devLoginEnabled || !email) return;
+  const handleDevLogin = async () => {
+    if (!devLoginEnabled || !email || isLoggingIn) return;
     
-    // Save email to localStorage for next time
-    localStorage.setItem("x_user_email", email);
+    setIsLoggingIn(true);
+    setError(null);
     
-    // Get returnTo from URL params if present
-    const returnTo = searchParams.get("returnTo") || undefined;
-    
-    // Redirect to dev-login endpoint
-    authService.devLogin(email, returnTo);
+    try {
+      // Save email to localStorage for next time
+      localStorage.setItem("x_user_email", email);
+      
+      // Get returnTo from URL params if present
+      const returnTo = searchParams.get("returnTo") || undefined;
+      
+      // Call dev-login with fetch (POST) - this will redirect on success
+      await authService.devLogin(email, returnTo);
+    } catch (err) {
+      setIsLoggingIn(false);
+      setError(err instanceof Error ? err.message : "Login failed");
+    }
   };
 
   return (
@@ -72,6 +82,12 @@ export default function Home() {
             Voer een email in en klik op "Dev Login".
           </div>
           
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded text-sm">
+              <strong>Error:</strong> {error}
+            </div>
+          )}
+          
           <input
             className="w-full border rounded px-3 py-2"
             placeholder="student1@example.com of docent@example.com"
@@ -80,13 +96,19 @@ export default function Home() {
             onKeyDown={(e) => {
               if (e.key === "Enter") handleDevLogin();
             }}
+            disabled={isLoggingIn}
           />
           <button
-            className="px-4 py-2 rounded-xl bg-yellow-600 text-white hover:bg-yellow-700 w-full"
+            type="button"
+            className={`px-4 py-2 rounded-xl w-full ${
+              isLoggingIn
+                ? "bg-yellow-400 cursor-wait"
+                : "bg-yellow-600 hover:bg-yellow-700"
+            } text-white`}
             onClick={handleDevLogin}
-            disabled={!email}
+            disabled={!email || isLoggingIn}
           >
-            Dev Login
+            {isLoggingIn ? "Inloggen..." : "Dev Login"}
           </button>
           
           <p className="text-xs text-gray-600">
