@@ -1,9 +1,9 @@
 "use client";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { authService } from "@/services/auth.service";
 
-export default function Home() {
+function LoginForm() {
   const [email, setEmail] = useState("");
   const [devLoginEnabled, setDevLoginEnabled] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -123,5 +123,20 @@ export default function Home() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <main className="p-6 max-w-xl mx-auto space-y-4">
+        <h1 className="text-2xl font-bold">Team Evaluatie App</h1>
+        <div className="p-4 border rounded-xl bg-gray-50 text-center">
+          Laden...
+        </div>
+      </main>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
