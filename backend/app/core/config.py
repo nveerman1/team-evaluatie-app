@@ -18,6 +18,36 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     JWT_ALGORITHM: str = "HS256"
 
+    # Dev-login Control
+    # In development, allow X-User-Email header for easy testing
+    # In production, this MUST be False - only Azure AD authentication
+    ENABLE_DEV_LOGIN: bool = Field(default=False)
+
+    @field_validator("ENABLE_DEV_LOGIN", mode="after")
+    @classmethod
+    def validate_dev_login(cls, v, info):
+        """Ensure dev-login is not enabled in production"""
+        logger = logging.getLogger(__name__)
+
+        node_env = os.getenv("NODE_ENV", "development")
+        # Explicitly set via env var takes precedence
+        if os.getenv("ENABLE_DEV_LOGIN") is not None:
+            if node_env == "production" and v:
+                logger.error(
+                    "SECURITY ERROR: ENABLE_DEV_LOGIN is True in production! "
+                    "This is a security risk. Dev-login will be disabled."
+                )
+                return False
+            return v
+
+        # Default based on environment
+        if node_env == "development":
+            logger.info("Development environment: Dev-login enabled by default")
+            return True
+        else:
+            logger.info(f"{node_env} environment: Dev-login disabled")
+            return False
+
     # Security Headers Control
     # In production, Nginx should handle security headers (single source of truth)
     # In development, backend can set headers for testing without nginx

@@ -18,7 +18,9 @@ import {
   UsersRound,
   Clock,
 } from "lucide-react";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { get_role_home_path } from "@/lib/role-utils";
 
 type LayoutContextType = {
   sidebarCollapsed: boolean;
@@ -37,8 +39,35 @@ export default function TeacherLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isAdmin } = useAuth();
+  const { user, role, isAdmin, loading } = useAuth();
+  const router = useRouter();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Role-based access control
+  useEffect(() => {
+    if (!loading && user && role) {
+      // Only teachers and admins can access teacher routes
+      if (role !== "teacher" && role !== "admin") {
+        // Redirect to correct home for their role
+        const correctPath = get_role_home_path(role);
+        router.replace(correctPath);
+      }
+    }
+  }, [user, role, loading, router]);
+
+  // Show loading while checking auth
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Don't render if wrong role (will redirect)
+  if (!user || (role !== "teacher" && role !== "admin")) {
+    return null;
+  }
 
   return (
     <LayoutContext.Provider value={{ sidebarCollapsed, setSidebarCollapsed }}>

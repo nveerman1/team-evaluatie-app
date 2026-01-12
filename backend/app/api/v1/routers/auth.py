@@ -11,6 +11,7 @@ from app.infra.db.models import User, School
 from app.core.azure_ad import azure_ad_authenticator
 from app.core.security import create_access_token
 from app.core.config import settings
+from app.core.redirect_validator import validate_return_to, get_role_home_path
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,7 @@ def read_current_user(current_user: User = Depends(get_current_user)):
 @router.get("/azure")
 def azure_login(
     school_id: int = Query(..., description="School ID for multi-tenant support"),
+    return_to: str | None = Query(None, description="Optional return URL after login"),
 ):
     """
     Initiate Azure AD OAuth authentication flow.
@@ -38,6 +40,7 @@ def azure_login(
 
     Args:
         school_id: School ID to associate the user with after authentication
+        return_to: Optional relative path to redirect to after login (e.g., /teacher/rubrics)
     """
     if not azure_ad_authenticator.enabled:
         raise HTTPException(
@@ -46,12 +49,21 @@ def azure_login(
             "AZURE_AD_TENANT_ID, and AZURE_AD_CLIENT_SECRET environment variables.",
         )
 
-    # Generate state for CSRF protection, include school_id
-    state = f"{school_id}:{secrets.token_urlsafe(32)}"
+    # Validate returnTo if provided
+    validated_return_to = validate_return_to(return_to) if return_to else None
+
+    # Generate state for CSRF protection, include school_id and optional returnTo
+    if validated_return_to:
+        state = f"{school_id}:{validated_return_to}:{secrets.token_urlsafe(32)}"
+    else:
+        state = f"{school_id}::{secrets.token_urlsafe(32)}"
 
     result = azure_ad_authenticator.get_authorization_url(state=state)
 
-    logger.info(f"Initiating Azure AD login for school_id={school_id}")
+    logger.info(
+        f"Initiating Azure AD login for school_id={school_id}, "
+        f"returnTo={validated_return_to or 'none'}"
+    )
 
     return RedirectResponse(url=result["auth_url"])
 
@@ -84,11 +96,15 @@ def azure_callback(
             detail="Azure AD authentication is not configured",
         )
 
-    # Extract school_id from state
+    # Extract school_id and returnTo from state
     try:
-        school_id_str, _ = state.split(":", 1)
+        parts = state.split(":", 2)  # Split into max 3 parts
+        school_id_str = parts[0]
+        return_to = parts[1] if len(parts) > 1 and parts[1] else None
+        # parts[2] would be the random token (not needed)
+        
         school_id = int(school_id_str)
-    except (ValueError, AttributeError):
+    except (ValueError, AttributeError, IndexError):
         logger.error(f"Invalid state parameter: {state}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid state parameter"
@@ -131,10 +147,21 @@ def azure_callback(
         f"school_id={school_id}, role={user.role}"
     )
 
-    # Redirect to frontend OAuth callback page
-    # The frontend will handle fetching user data and redirecting to the appropriate page
+    # Determine redirect path
     frontend_url = settings.FRONTEND_URL
-    redirect_path = "/auth/callback"
+    
+    # Validate returnTo if present
+    validated_return_to = validate_return_to(return_to) if return_to else None
+    
+    if validated_return_to:
+        # User had a specific destination in mind
+        redirect_path = validated_return_to
+        logger.info(f"Redirecting to returnTo: {redirect_path}")
+    else:
+        # Redirect to role-specific home
+        redirect_path = get_role_home_path(user.role)
+        logger.info(f"Redirecting to role home: {redirect_path} (role={user.role})")
+    
     redirect_url = f"{frontend_url}{redirect_path}"
 
     # Create response with redirect
@@ -185,3 +212,92 @@ def logout(response: Response):
     logger.info("User logged out, cookie cleared")
     
     return {"message": "Successfully logged out"}
+
+
+@router.post("/dev-login")
+def dev_login(
+    email: str = Query(..., description="User email for dev-login"),
+    return_to: str | None = Query(None, description="Optional return URL after login"),
+    db: Session = Depends(get_db),
+):
+    """
+    Development-only login endpoint for easy testing.
+    
+    This endpoint is ONLY available when ENABLE_DEV_LOGIN=true.
+    In production (ENABLE_DEV_LOGIN=false), this returns 404.
+    
+    Args:
+        email: User email to login as
+        return_to: Optional relative path to redirect to after login
+        
+    Returns:
+        Redirect to role-specific home or returnTo with cookie set
+    """
+    # SECURITY: Return 404 (not 403) to not leak endpoint existence
+    if not settings.ENABLE_DEV_LOGIN:
+        logger.warning(
+            f"Dev-login attempt blocked - ENABLE_DEV_LOGIN=false. "
+            f"Attempted email: {email}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Not found"
+        )
+    
+    logger.warning(
+        f"Dev-login used for email: {email}. "
+        "This endpoint should ONLY be used in local development!"
+    )
+    
+    # Find user
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found"
+        )
+    
+    # Check if user is archived
+    if user.archived:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is archived"
+        )
+    
+    # Create JWT token
+    jwt_token = create_access_token(
+        sub=user.email, role=user.role, school_id=user.school_id
+    )
+    
+    # Determine redirect path
+    frontend_url = settings.FRONTEND_URL
+    validated_return_to = validate_return_to(return_to) if return_to else None
+    
+    if validated_return_to:
+        redirect_path = validated_return_to
+    else:
+        redirect_path = get_role_home_path(user.role)
+    
+    redirect_url = f"{frontend_url}{redirect_path}"
+    
+    # Create response with redirect
+    response = RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
+    
+    # Set HttpOnly cookie
+    response.set_cookie(
+        key="access_token",
+        value=jwt_token,
+        httponly=True,
+        secure=settings.COOKIE_SECURE,
+        samesite=settings.COOKIE_SAMESITE,
+        max_age=settings.COOKIE_MAX_AGE,
+        path="/",
+        domain=settings.COOKIE_DOMAIN if settings.COOKIE_DOMAIN else None,
+    )
+    
+    logger.info(
+        f"Dev-login successful for {user.email} (role={user.role}), "
+        f"redirecting to {redirect_path}"
+    )
+    
+    return response

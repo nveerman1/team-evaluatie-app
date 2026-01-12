@@ -9,11 +9,40 @@ Een multi-tenant webapplicatie voor peer evaluaties, projectbeoordelingen en com
 ### Authentication & Security
 - **Multi-method Authentication**:
   - **Azure AD (Office 365)**: Production authentication using Microsoft OAuth
-  - **Dev-login**: Development-only authentication (automatically disabled in production)
+  - **Dev-login**: Development-only authentication (controlled via environment flags)
 - **Role-Based Access Control (RBAC)**: Admin, teacher and student rollen met granulaire toegangscontrole
 - **JWT with Claims**: Tokens include role and school_id for efficient authorization
 - **School-scoped Access**: All data isolated per school (multi-tenant)
 - **Audit logging**: Alle muterende acties worden gelogd voor compliance
+
+#### Dev-login Configuration
+
+Dev-login provides an easy way to test as different users in local development. It is **completely disabled in production** for security.
+
+**Backend** (in `.env`):
+```bash
+ENABLE_DEV_LOGIN=true  # Enable in development, false in production
+```
+
+**Frontend** (in `.env.local`):
+```bash
+NEXT_PUBLIC_ENABLE_DEV_LOGIN=true  # Show dev-login UI in development
+```
+
+**Security Notes**:
+- In production, set both flags to `false` (or omit them)
+- The backend endpoint returns 404 when disabled (doesn't leak existence)
+- The frontend UI is hidden when disabled
+- Dev-login is blocked by nginx X-User-Email header stripping in production
+
+**Local Testing**:
+1. Start backend: `cd backend && uvicorn app.main:app --reload`
+2. Start frontend: `cd frontend && npm run dev`
+3. Navigate to http://localhost:3000
+4. Use dev-login with test emails:
+   - `admin@school.nl` → redirects to `/teacher`
+   - `docent@school.nl` → redirects to `/teacher`
+   - `student1@school.nl` → redirects to `/student`
 
 See [AZURE_AD_SETUP.md](AZURE_AD_SETUP.md) for detailed authentication configuration.
 

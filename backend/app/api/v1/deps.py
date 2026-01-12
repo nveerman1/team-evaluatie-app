@@ -46,8 +46,8 @@ async def get_current_user_dev(
     - School ID must match the token claim
     """
     
-    # DEVELOPMENT: Allow X-User-Email header ONLY in development mode
-    if settings.NODE_ENV == "development" and x_user_email:
+    # DEVELOPMENT: Allow X-User-Email header ONLY when explicitly enabled
+    if settings.ENABLE_DEV_LOGIN and x_user_email:
         logger.warning(
             f"Dev-login used for user: {x_user_email}. "
             "This authentication method should only be used in local development."
@@ -75,14 +75,14 @@ async def get_current_user_dev(
     
     # No valid authentication method found
     if not token:
-        # SECURITY: Block and alert on dev-login attempts in production
-        if settings.NODE_ENV != "development" and x_user_email:
+        # SECURITY: Block and alert on dev-login attempts when disabled
+        if not settings.ENABLE_DEV_LOGIN and x_user_email:
             logger.error(
-                f"SECURITY ALERT: X-User-Email header detected in production environment! "
+                f"SECURITY ALERT: X-User-Email header detected but ENABLE_DEV_LOGIN=False! "
                 f"Attempted email: {x_user_email}, "
                 f"IP: {request.client.host if request.client else 'unknown'}, "
                 f"User-Agent: {request.headers.get('user-agent', 'unknown')}, "
-                f"NODE_ENV={settings.NODE_ENV}. "
+                f"ENABLE_DEV_LOGIN={settings.ENABLE_DEV_LOGIN}. "
                 f"This may indicate an authentication bypass attempt. "
                 f"Use Azure AD authentication instead."
             )
@@ -228,13 +228,13 @@ async def get_current_user_prod(
     return user
 
 
-# Export the correct dependency based on NODE_ENV
+# Export the correct dependency based on ENABLE_DEV_LOGIN
 # Production is the explicit default for security
-# Only use dev mode when explicitly set to "development"
-if settings.NODE_ENV == "development":
+# Only use dev mode when explicitly enabled
+if settings.ENABLE_DEV_LOGIN:
     get_current_user = get_current_user_dev
     logger.info("Using development authentication (X-User-Email header enabled)")
 else:
     get_current_user = get_current_user_prod
-    logger.info(f"Using production authentication (NODE_ENV={settings.NODE_ENV})")
+    logger.info("Using production authentication (dev-login disabled)")
 

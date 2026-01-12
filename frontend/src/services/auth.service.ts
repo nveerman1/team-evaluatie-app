@@ -20,7 +20,22 @@ export const authService = {
   /**
    * Redirect to Azure AD login
    */
-  redirectToAzureLogin(schoolId: number): void {
-    window.location.href = `${baseURL}/auth/azure?school_id=${schoolId}`;
+  redirectToAzureLogin(schoolId: number, returnTo?: string): void {
+    let url = `${baseURL}/auth/azure?school_id=${schoolId}`;
+    if (returnTo) {
+      url += `&return_to=${encodeURIComponent(returnTo)}`;
+    }
+    window.location.href = url;
+  },
+
+  /**
+   * Development-only login (requires ENABLE_DEV_LOGIN=true on backend)
+   */
+  devLogin(email: string, returnTo?: string): void {
+    let url = `${baseURL}/auth/dev-login?email=${encodeURIComponent(email)}`;
+    if (returnTo) {
+      url += `&return_to=${encodeURIComponent(returnTo)}`;
+    }
+    window.location.href = url;
   },
 };
