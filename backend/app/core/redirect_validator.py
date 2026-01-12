@@ -63,6 +63,9 @@ def get_role_home_path(role: str) -> str:
     """
     Get the home path for a given user role.
     
+    NOTE: This logic is duplicated in frontend/src/lib/role-utils.ts.
+    Both implementations must stay synchronized.
+    
     Args:
         role: User role (admin, teacher, student)
         

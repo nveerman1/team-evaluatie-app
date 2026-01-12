@@ -4,6 +4,8 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 import secrets
 import logging
+import base64
+import json
 
 from app.api.v1.deps import get_current_user, get_db
 from app.api.v1.schemas.auth import UserRead
@@ -53,10 +55,13 @@ def azure_login(
     validated_return_to = validate_return_to(return_to) if return_to else None
 
     # Generate state for CSRF protection, include school_id and optional returnTo
-    if validated_return_to:
-        state = f"{school_id}:{validated_return_to}:{secrets.token_urlsafe(32)}"
-    else:
-        state = f"{school_id}::{secrets.token_urlsafe(32)}"
+    # Use base64-encoded JSON to avoid parsing issues with colons in URLs
+    state_data = {
+        "school_id": school_id,
+        "return_to": validated_return_to,
+        "token": secrets.token_urlsafe(32)
+    }
+    state = base64.urlsafe_b64encode(json.dumps(state_data).encode()).decode()
 
     result = azure_ad_authenticator.get_authorization_url(state=state)
 
@@ -97,15 +102,14 @@ def azure_callback(
         )
 
     # Extract school_id and returnTo from state
+    # State is base64-encoded JSON for robust parsing
     try:
-        parts = state.split(":", 2)  # Split into max 3 parts
-        school_id_str = parts[0]
-        return_to = parts[1] if len(parts) > 1 and parts[1] else None
-        # parts[2] would be the random token (not needed)
-        
-        school_id = int(school_id_str)
-    except (ValueError, AttributeError, IndexError):
-        logger.error(f"Invalid state parameter: {state}")
+        state_json = base64.urlsafe_b64decode(state.encode()).decode()
+        state_data = json.loads(state_json)
+        school_id = int(state_data["school_id"])
+        return_to = state_data.get("return_to")
+    except (ValueError, KeyError, json.JSONDecodeError, Exception) as e:
+        logger.error(f"Invalid state parameter: {state}, error: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid state parameter"
         )

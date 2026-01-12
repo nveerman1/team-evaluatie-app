@@ -12,6 +12,10 @@ import type { NextRequest } from "next/server";
  * Role-based redirect (student trying to access /teacher) is handled
  * server-side in layouts after checking actual user role from API.
  */
+
+// Login page path - centralized constant
+const LOGIN_PATH = "/";
+
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   
@@ -29,7 +33,7 @@ export function middleware(request: NextRequest) {
     const returnTo = encodeURIComponent(`${pathname}${search}`);
     
     // Redirect to login with returnTo parameter
-    const loginUrl = new URL("/", request.url);
+    const loginUrl = new URL(LOGIN_PATH, request.url);
     loginUrl.searchParams.set("returnTo", returnTo);
     
     return NextResponse.redirect(loginUrl);
