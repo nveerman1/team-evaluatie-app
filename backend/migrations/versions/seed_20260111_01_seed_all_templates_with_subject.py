@@ -791,6 +791,9 @@ def seed_competency_templates_with_subject(conn, school_id: int, subject_id: int
     
     CompetencyTemplate.subject_id is optional (nullable), but we want to set it
     for better organization. This only updates templates that don't have a subject_id yet.
+    
+    Note: competency_templates table does not have an is_template column as the table
+    itself is inherently for templates.
     """
     conn.execute(
         sa.text("""
@@ -799,7 +802,6 @@ def seed_competency_templates_with_subject(conn, school_id: int, subject_id: int
                 updated_at = CURRENT_TIMESTAMP
             WHERE school_id = :school_id
               AND subject_id IS NULL
-              AND is_template = TRUE
         """),
         {
             "school_id": school_id,
