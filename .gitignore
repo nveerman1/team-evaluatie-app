@@ -18,6 +18,7 @@ out/
 # OS
 .DS_Store
 Thumbs.db
+.vscode/
 # Python
 backend/.env
 backend/venv/
@@ -42,3 +43,10 @@ backend/.venv/
 # Backup files
 *.bak
 frontend/.pnpm-store/
+/var/backups/
+/backups/
+/runs/
+/archives/
+*.sql
+*.sql.gz
+*.tar.gz
