@@ -81,7 +81,7 @@ export const authService = {
       // Redirect to returnTo or role-specific home
       if (returnTo) {
         // returnTo should already be a proper path like "/teacher"
-        // Use router.push equivalent for client-side navigation
+        // Full page navigation to ensure clean state
         window.location.href = returnTo;
       } else {
         const homePath = get_role_home_path(user.role);

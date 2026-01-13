@@ -22,14 +22,8 @@ function LoginForm() {
   
   const handleAzureLogin = () => {
     // Get returnTo from URL params if present
-    // searchParams.get() returns the decoded value, so decode it again if needed
-    const returnToParam = searchParams.get("returnTo");
-    let returnTo: string | undefined = undefined;
-    
-    if (returnToParam) {
-      // Decode the returnTo parameter (may be encoded like %2Fteacher)
-      returnTo = decodeURIComponent(returnToParam);
-    }
+    // searchParams.get() returns the URL-decoded value automatically
+    const returnTo = searchParams.get("returnTo") || undefined;
     
     // For Azure AD login, redirect to backend OAuth endpoint
     // Default to school_id=1 for demo, in production this should be selected
@@ -48,15 +42,8 @@ function LoginForm() {
       localStorage.setItem("x_user_email", email);
       
       // Get returnTo from URL params if present
-      // searchParams.get() returns the decoded value, so we need to decode it again
-      // if it's still URL-encoded (e.g., "%2Fteacher" -> "/teacher")
-      const returnToParam = searchParams.get("returnTo");
-      let returnTo: string | undefined = undefined;
-      
-      if (returnToParam) {
-        // Decode the returnTo parameter (may be encoded like %2Fteacher)
-        returnTo = decodeURIComponent(returnToParam);
-      }
+      // searchParams.get() returns the URL-decoded value automatically
+      const returnTo = searchParams.get("returnTo") || undefined;
       
       // Call dev-login with fetch (POST) - this will redirect on success
       await authService.devLogin(email, returnTo);
