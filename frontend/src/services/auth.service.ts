@@ -1,4 +1,4 @@
-import api, { baseURL, fetchWithErrorHandling } from "@/lib/api";
+import api, { baseURL } from "@/lib/api";
 import { User } from "@/dtos/user.dto";
 import { get_role_home_path } from "@/lib/role-utils";
 
@@ -41,14 +41,34 @@ export const authService = {
     }
 
     try {
-      // POST request to dev-login endpoint using fetchWithErrorHandling for better error messages
-      // Backend sets HttpOnly cookie and returns redirect, but we handle it manually
-      await fetchWithErrorHandling(url, {
+      // POST request to dev-login endpoint
+      // Backend sets HttpOnly cookie and returns 302 redirect, but we handle it manually
+      // Use redirect: 'manual' to prevent automatic following of redirects
+      const response = await fetch(url, {
         method: "POST",
         credentials: "include", // Important: include cookies in request/response
+        redirect: "manual", // Don't follow redirects automatically
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
       });
 
-      // Fetch current user to determine role
+      // Backend returns 302 redirect on success, which is what we expect
+      // The cookie is already set at this point
+      if (!response.ok && response.status !== 302 && response.type !== 'opaqueredirect') {
+        let errorBody = '';
+        try {
+          const text = await response.text();
+          const json = JSON.parse(text);
+          errorBody = json.detail || text;
+        } catch {
+          errorBody = 'Login failed';
+        }
+        throw new Error(errorBody);
+      }
+
+      // Fetch current user to determine role (using the cookie that was just set)
       const userResponse = await api.get<User>("/auth/me");
       const user = userResponse.data;
 
