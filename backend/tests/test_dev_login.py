@@ -6,7 +6,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 from app.main import app
-from app.core.redirect_validator import validate_return_to, get_role_home_path
+from app.core.redirect_validator import normalize_and_validate_return_to, validate_return_to, get_role_home_path
 
 
 @pytest.fixture
@@ -52,8 +52,54 @@ def test_student():
 class TestRedirectValidator:
     """Test redirect URL validation to prevent open redirect attacks"""
 
-    def test_validate_return_to_valid_paths(self):
+    def test_normalize_and_validate_valid_paths(self):
         """Test that valid relative paths are accepted"""
+        assert normalize_and_validate_return_to("/teacher") == "/teacher"
+        assert normalize_and_validate_return_to("/teacher/rubrics") == "/teacher/rubrics"
+        assert normalize_and_validate_return_to("/student") == "/student"
+        assert normalize_and_validate_return_to("/student/projects") == "/student/projects"
+        assert normalize_and_validate_return_to("/") == "/"
+
+    def test_normalize_and_validate_url_encoded(self):
+        """Test that URL-encoded paths are decoded and accepted"""
+        # Single encoding
+        assert normalize_and_validate_return_to("%2Fteacher") == "/teacher"
+        assert normalize_and_validate_return_to("%2Fstudent") == "/student"
+        assert normalize_and_validate_return_to("%2Fteacher%2Frubrics") == "/teacher/rubrics"
+        
+        # Double encoding
+        assert normalize_and_validate_return_to("%252Fteacher") == "/teacher"
+        assert normalize_and_validate_return_to("%252Fstudent") == "/student"
+
+    def test_normalize_and_validate_with_query_params(self):
+        """Test that paths with query params are accepted"""
+        assert normalize_and_validate_return_to("/teacher?tab=rubrics") == "/teacher?tab=rubrics"
+        assert normalize_and_validate_return_to("/student/project/123?view=details") == "/student/project/123?view=details"
+        # URL-encoded query params
+        assert normalize_and_validate_return_to("%2Fteacher%3Ftab%3Drubrics") == "/teacher?tab=rubrics"
+
+    def test_normalize_and_validate_rejects_absolute_urls(self):
+        """Test that absolute URLs are rejected"""
+        assert normalize_and_validate_return_to("https://evil.com") is None
+        assert normalize_and_validate_return_to("http://evil.com/phishing") is None
+        assert normalize_and_validate_return_to("https://example.com/teacher") is None
+
+    def test_normalize_and_validate_rejects_protocol_relative(self):
+        """Test that protocol-relative URLs are rejected"""
+        assert normalize_and_validate_return_to("//evil.com") is None
+        assert normalize_and_validate_return_to("//evil.com/teacher") is None
+
+    def test_normalize_and_validate_rejects_javascript(self):
+        """Test that javascript: URLs are rejected"""
+        assert normalize_and_validate_return_to("javascript:alert(1)") is None
+        assert normalize_and_validate_return_to("javascript:void(0)") is None
+
+    def test_normalize_and_validate_rejects_data_urls(self):
+        """Test that data: URLs are rejected"""
+        assert normalize_and_validate_return_to("data:text/html,<script>alert(1)</script>") is None
+
+    def test_validate_return_to_valid_paths(self):
+        """Test backward compatibility - validate_return_to delegates to normalize_and_validate_return_to"""
         assert validate_return_to("/teacher") == "/teacher"
         assert validate_return_to("/teacher/rubrics") == "/teacher/rubrics"
         assert validate_return_to("/student") == "/student"

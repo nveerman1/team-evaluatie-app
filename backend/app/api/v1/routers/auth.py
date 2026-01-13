@@ -13,7 +13,7 @@ from app.infra.db.models import User, School
 from app.core.azure_ad import azure_ad_authenticator
 from app.core.security import create_access_token
 from app.core.config import settings
-from app.core.redirect_validator import validate_return_to, get_role_home_path
+from app.core.redirect_validator import normalize_and_validate_return_to, get_role_home_path
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ def azure_login(
         )
 
     # Validate returnTo if provided
-    validated_return_to = validate_return_to(return_to) if return_to else None
+    validated_return_to = normalize_and_validate_return_to(return_to) if return_to else None
 
     # Generate state for CSRF protection, include school_id and optional returnTo
     # Use base64-encoded JSON to avoid parsing issues with colons in URLs
@@ -275,7 +275,7 @@ def dev_login(
     
     # Determine redirect path
     frontend_url = settings.FRONTEND_URL
-    validated_return_to = validate_return_to(return_to) if return_to else None
+    validated_return_to = normalize_and_validate_return_to(return_to) if return_to else None
     
     if validated_return_to:
         redirect_path = validated_return_to
