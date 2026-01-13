@@ -80,7 +80,9 @@ export const authService = {
 
       // Redirect to returnTo or role-specific home
       if (returnTo) {
-        window.location.href = returnTo;
+        // Decode the returnTo URL in case it's encoded (e.g., %2Fteacher -> /teacher)
+        const decodedPath = decodeURIComponent(returnTo);
+        window.location.href = decodedPath;
       } else {
         const homePath = get_role_home_path(user.role);
         window.location.href = homePath;
