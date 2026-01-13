@@ -54,9 +54,15 @@ export const authService = {
         },
       });
 
-      // Backend returns 302 redirect on success, which is what we expect
-      // The cookie is already set at this point
-      if (!response.ok && response.status !== 302 && response.type !== 'opaqueredirect') {
+      // With redirect: 'manual', a 302 response becomes an opaque redirect
+      // - response.type will be 'opaqueredirect'
+      // - response.ok will be false
+      // - response.status will be 0 (not 302!)
+      // We accept this as success since the cookie is already set
+      const isRedirect = response.type === 'opaqueredirect';
+      const isSuccess = response.ok || isRedirect;
+
+      if (!isSuccess) {
         let errorBody = '';
         try {
           const text = await response.text();
