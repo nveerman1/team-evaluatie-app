@@ -142,18 +142,27 @@ class Settings(BaseSettings):
     @field_validator("COOKIE_SECURE", mode="after")
     @classmethod
     def validate_cookie_secure(cls, v, info):
-        """Warn if COOKIE_SECURE is False in production"""
+        """Set COOKIE_SECURE based on environment if not explicitly set"""
         logger = logging.getLogger(__name__)
 
         node_env = os.getenv("NODE_ENV", "development")
-        if node_env == "production" and not v:
-            logger.warning(
-                "SECURITY WARNING: COOKIE_SECURE is False in production. "
-                "Cookies will be sent over unencrypted HTTP connections. "
-                "Set COOKIE_SECURE=true in environment variables when using HTTPS."
-            )
-
-        return v
+        
+        # If explicitly set via env var, respect it
+        if os.getenv("COOKIE_SECURE") is not None:
+            if node_env == "production" and not v:
+                logger.warning(
+                    "SECURITY WARNING: COOKIE_SECURE is explicitly False in production. "
+                    "Cookies will be sent over unencrypted HTTP connections."
+                )
+            return v
+        
+        # Otherwise, default based on environment
+        if node_env == "production":
+            logger.info("Production environment: COOKIE_SECURE=True (default)")
+            return True
+        else:
+            logger.info(f"{node_env} environment: COOKIE_SECURE=False (allows HTTP)")
+            return False
 
     # pydantic-settings v2 configuratie
     model_config = SettingsConfigDict(

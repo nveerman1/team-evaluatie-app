@@ -30,11 +30,12 @@ export function middleware(request: NextRequest) {
   // If accessing a protected route without authentication
   if (isProtectedRoute && !accessToken) {
     // Build returnTo URL (preserve pathname and search)
-    const returnTo = encodeURIComponent(`${pathname}${search}`);
+    // Don't manually encode - URLSearchParams handles encoding properly
+    const returnToPath = `${pathname}${search}`;
     
     // Redirect to login with returnTo parameter
     const loginUrl = new URL(LOGIN_PATH, request.url);
-    loginUrl.searchParams.set("returnTo", returnTo);
+    loginUrl.searchParams.set("returnTo", returnToPath);
     
     return NextResponse.redirect(loginUrl);
   }

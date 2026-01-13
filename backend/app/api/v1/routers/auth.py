@@ -155,7 +155,7 @@ def azure_callback(
     frontend_url = settings.FRONTEND_URL
     
     # Validate returnTo if present
-    validated_return_to = validate_return_to(return_to) if return_to else None
+    validated_return_to = normalize_and_validate_return_to(return_to) if return_to else None
     
     if validated_return_to:
         # User had a specific destination in mind
