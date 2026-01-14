@@ -101,7 +101,7 @@ export default function ProjectNotesDetailPage({
       link.download = filename;
       link.click();
       // Revoke the object URL to prevent memory leaks
-      setTimeout(() => URL.revokeObjectURL(url), 100);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (error) {
       console.error('Failed to export notes:', error);
       alert('Fout bij exporteren. Probeer het opnieuw.');
