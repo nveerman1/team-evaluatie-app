@@ -50,7 +50,15 @@ from app.api.v1.routers import tasks as tasks_router
 from app.integrations.somtoday import router as somtoday_router
 
 
-app = FastAPI()
+# Disable API documentation in production for security
+# Swagger UI has historical vulnerabilities (CVE-2023-27322, CVE-2022-31677)
+# Exposing API structure aids attackers in reconnaissance
+app = FastAPI(
+    title="Team Evaluatie App",
+    docs_url=None if settings.NODE_ENV == "production" else "/docs",
+    redoc_url=None if settings.NODE_ENV == "production" else "/redoc",
+    openapi_url=None if settings.NODE_ENV == "production" else "/openapi.json",
+)
 
 # Security headers (apply first)
 app.add_middleware(SecurityHeadersMiddleware)

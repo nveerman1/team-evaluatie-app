@@ -129,5 +129,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if "/batch" in path:
             return 5, 60
         
+        # File upload endpoints: 5 requests per minute (DoS prevention)
+        if ("/import" in path and path.endswith(".csv")) or "/upload" in path:
+            return 5, 60
+        
         # Default: 100 requests per minute
         return 100, 60
