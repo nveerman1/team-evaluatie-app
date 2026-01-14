@@ -43,9 +43,11 @@ jobs:
 
       - name: Generate CycloneDX SBOM (from installed env)
         run: |
-          backend/.venv/bin/python -m cyclonedx_py environment --of json -o backend-sbom.json
+          backend/.venv/bin/python -m cyclonedx_py environment --of json -o backend.cdx.json
+
 
       - name: OSV scan SBOM
         run: |
           docker run --rm -v "$PWD:/src" ghcr.io/google/osv-scanner:latest \
-            scan --sbom /src/backend-sbom.json
+            scan -L /src/backend.cdx.json
+
