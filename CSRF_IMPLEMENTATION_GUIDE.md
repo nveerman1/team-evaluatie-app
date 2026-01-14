@@ -253,14 +253,17 @@ COOKIE_SECURE=true
 
 ## Troubleshooting
 
-### Issue: "CSRF validation failed" for legitimate requests
+### Issue: "CSRF validation failed" for all requests after deployment
 
-**Cause**: Origin/Referer header doesn't match allowlist
+**Cause**: No trusted origins configured (`FRONTEND_URL` and `CORS_ORIGINS` are empty)
 
 **Solution**:
-1. Check `FRONTEND_URL` and `CORS_ORIGINS` settings
-2. Ensure no typos in URLs (http vs https, trailing slashes)
-3. Verify frontend is sending correct headers
+1. Check `FRONTEND_URL` is set in environment variables
+2. Check `CORS_ORIGINS` is set in environment variables
+3. Default values should be sufficient for local development
+4. Production must have these configured
+
+**Note**: The middleware fails secure by default - if no origins are configured, all state-changing requests will be blocked. This is intentional to prevent accidental deployment without proper configuration.
 
 ### Issue: OAuth login broken
 
