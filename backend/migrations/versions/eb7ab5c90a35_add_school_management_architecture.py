@@ -208,7 +208,8 @@ def upgrade() -> None:
 
     # Get all distinct school_id, year combinations from courses
     conn.execute(
-        text("""
+        text(
+            """
         INSERT INTO academic_years (school_id, label, start_date, end_date, created_at, updated_at)
         SELECT DISTINCT
             c.school_id,
@@ -232,12 +233,14 @@ def upgrade() -> None:
             WHERE ay.school_id = c.school_id
         )
         ON CONFLICT (school_id, label) DO NOTHING
-    """)
+    """
+        )
     )
 
     # Also ensure every school has at least the default 2024-2025 academic year
     conn.execute(
-        text("""
+        text(
+            """
         INSERT INTO academic_years (school_id, label, start_date, end_date, created_at, updated_at)
         SELECT 
             s.id,
@@ -252,12 +255,14 @@ def upgrade() -> None:
             WHERE ay.school_id = s.id
         )
         ON CONFLICT (school_id, label) DO NOTHING
-    """)
+    """
+        )
     )
 
     # Link courses to academic years based on their year field
     conn.execute(
-        text("""
+        text(
+            """
         UPDATE courses c
         SET academic_year_id = ay.id
         FROM academic_years ay
@@ -267,13 +272,15 @@ def upgrade() -> None:
               (c.year IS NOT NULL AND ay.label = c.year::text || '-' || (c.year + 1)::text)
               OR (c.year IS NULL AND ay.label = '2024-2025')
           )
-    """)
+    """
+        )
     )
 
     # Migrate existing User.class_name to Class + StudentClassMembership
     # First, create classes from distinct class_name values
     conn.execute(
-        text("""
+        text(
+            """
         INSERT INTO classes (school_id, academic_year_id, name, created_at, updated_at)
         SELECT DISTINCT
             u.school_id,
@@ -292,12 +299,14 @@ def upgrade() -> None:
           AND u.class_name != ''
           AND u.role = 'student'
         ON CONFLICT (school_id, academic_year_id, name) DO NOTHING
-    """)
+    """
+        )
     )
 
     # Create student class memberships
     conn.execute(
-        text("""
+        text(
+            """
         INSERT INTO student_class_memberships (student_id, class_id, academic_year_id, created_at, updated_at)
         SELECT DISTINCT
             u.id as student_id,
@@ -311,13 +320,15 @@ def upgrade() -> None:
           AND u.class_name != ''
           AND u.role = 'student'
         ON CONFLICT (student_id, academic_year_id) DO NOTHING
-    """)
+    """
+        )
     )
 
     # Migrate existing group memberships to course enrollments
     # This creates enrollments based on group_members -> groups -> courses
     conn.execute(
-        text("""
+        text(
+            """
         INSERT INTO course_enrollments (course_id, student_id, active, created_at, updated_at)
         SELECT DISTINCT
             g.course_id,
@@ -330,7 +341,8 @@ def upgrade() -> None:
         WHERE g.course_id IS NOT NULL
           AND gm.active IS true
         ON CONFLICT (course_id, student_id) DO NOTHING
-    """)
+    """
+        )
     )
 
 

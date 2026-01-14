@@ -145,9 +145,7 @@ def seed_competency_scans_with_scores():
         scan3_competencies = (
             competencies[20:30]
             if len(competencies) >= 30
-            else competencies[-10:]
-            if len(competencies) >= 10
-            else competencies
+            else competencies[-10:] if len(competencies) >= 10 else competencies
         )
 
         windows_data = [
@@ -462,9 +460,11 @@ def seed_competency_scans_with_scores():
                         goal_id=goal_id,
                         text=random.choice(reflection_templates),
                         goal_achieved=goal_achieved,
-                        evidence=random.choice(evidence_templates)
-                        if random.random() < 0.7
-                        else None,
+                        evidence=(
+                            random.choice(evidence_templates)
+                            if random.random() < 0.7
+                            else None
+                        ),
                         submitted_at=window.end_date
                         - timedelta(days=random.randint(0, 3)),
                     )

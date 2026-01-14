@@ -19,7 +19,8 @@ depends_on = None
 def upgrade():
     # Backfill order values for existing criteria based on their current ID order
     # This ensures existing rubrics maintain their current display order
-    op.execute("""
+    op.execute(
+        """
         WITH ordered_criteria AS (
             SELECT 
                 id,
@@ -32,7 +33,8 @@ def upgrade():
         SET "order" = oc.row_num
         FROM ordered_criteria oc
         WHERE rc.id = oc.id
-    """)
+    """
+    )
 
 
 def downgrade():

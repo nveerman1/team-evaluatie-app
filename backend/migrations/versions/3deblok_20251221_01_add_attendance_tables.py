@@ -156,7 +156,8 @@ def upgrade() -> None:
     )
 
     # Create view: open_sessions
-    op.execute("""
+    op.execute(
+        """
         CREATE VIEW open_sessions AS
         SELECT 
             ae.id,
@@ -172,10 +173,12 @@ def upgrade() -> None:
         JOIN users u ON ae.user_id = u.id
         LEFT JOIN projects p ON ae.project_id = p.id
         WHERE ae.check_out IS NULL AND ae.is_external = false;
-    """)
+    """
+    )
 
     # Create function: compute_user_attendance_totals
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION compute_user_attendance_totals(p_user_id INTEGER)
         RETURNS TABLE(
             total_school_seconds INTEGER,
@@ -209,7 +212,8 @@ def upgrade() -> None:
                 ROUND(((school_secs + external_secs)::NUMERIC / (75 * 60)), 1);
         END;
         $$ LANGUAGE plpgsql;
-    """)
+    """
+    )
 
 
 def downgrade() -> None:

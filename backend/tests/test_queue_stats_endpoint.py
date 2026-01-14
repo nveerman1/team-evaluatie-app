@@ -23,15 +23,15 @@ class TestQueueStatsEndpoint:
 
     def test_summary_generation_job_model_has_updated_at(self):
         """Test that SummaryGenerationJob model has updated_at field."""
-        assert hasattr(SummaryGenerationJob, "updated_at"), (
-            "SummaryGenerationJob should have updated_at field inherited from Base"
-        )
+        assert hasattr(
+            SummaryGenerationJob, "updated_at"
+        ), "SummaryGenerationJob should have updated_at field inherited from Base"
 
     def test_summary_generation_job_model_has_created_at(self):
         """Test that SummaryGenerationJob model has created_at field."""
-        assert hasattr(SummaryGenerationJob, "created_at"), (
-            "SummaryGenerationJob should have created_at field inherited from Base"
-        )
+        assert hasattr(
+            SummaryGenerationJob, "created_at"
+        ), "SummaryGenerationJob should have created_at field inherited from Base"
 
     def test_summary_generation_job_can_be_instantiated(self):
         """Test that SummaryGenerationJob can be created."""
@@ -175,20 +175,20 @@ class TestRegressionPrevention:
         """Verify SummaryGenerationJob properly inherits from Base."""
         from app.infra.db.base import Base
 
-        assert issubclass(SummaryGenerationJob, Base), (
-            "SummaryGenerationJob should inherit from Base"
-        )
+        assert issubclass(
+            SummaryGenerationJob, Base
+        ), "SummaryGenerationJob should inherit from Base"
 
     def test_scheduled_job_has_timestamp_fields(self):
         """Verify ScheduledJob also has proper timestamp fields."""
         from app.infra.db.models import ScheduledJob
 
-        assert hasattr(ScheduledJob, "created_at"), (
-            "ScheduledJob should have created_at"
-        )
-        assert hasattr(ScheduledJob, "updated_at"), (
-            "ScheduledJob should have updated_at"
-        )
+        assert hasattr(
+            ScheduledJob, "created_at"
+        ), "ScheduledJob should have created_at"
+        assert hasattr(
+            ScheduledJob, "updated_at"
+        ), "ScheduledJob should have updated_at"
 
 
 if __name__ == "__main__":

@@ -287,9 +287,11 @@ def get_at_risk_clients(
 
     # Sort by last active date (oldest first)
     at_risk_clients.sort(
-        key=lambda x: x["last_project_date"].replace(tzinfo=None)
-        if x["last_project_date"] and x["last_project_date"].tzinfo
-        else (x["last_project_date"] if x["last_project_date"] else datetime.min)
+        key=lambda x: (
+            x["last_project_date"].replace(tzinfo=None)
+            if x["last_project_date"] and x["last_project_date"].tzinfo
+            else (x["last_project_date"] if x["last_project_date"] else datetime.min)
+        )
     )
 
     total = len(at_risk_clients)
@@ -948,12 +950,16 @@ def export_clients_csv(
                 client.sector or "",
                 ", ".join(client.tags) if client.tags else "",
                 "Ja" if client.active else "Nee",
-                client.created_at.strftime("%Y-%m-%d %H:%M")
-                if client.created_at
-                else "",
-                client.updated_at.strftime("%Y-%m-%d %H:%M")
-                if client.updated_at
-                else "",
+                (
+                    client.created_at.strftime("%Y-%m-%d %H:%M")
+                    if client.created_at
+                    else ""
+                ),
+                (
+                    client.updated_at.strftime("%Y-%m-%d %H:%M")
+                    if client.updated_at
+                    else ""
+                ),
             ]
         )
 

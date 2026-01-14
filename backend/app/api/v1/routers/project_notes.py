@@ -900,9 +900,9 @@ async def close_project_notes_context(
         evaluation_id=context.evaluation_id,
         project_team_id=context.project_team_id,
         status=context.status,
-        closed_at=_ensure_timezone_aware(context.closed_at)
-        if context.closed_at
-        else None,
+        closed_at=(
+            _ensure_timezone_aware(context.closed_at) if context.closed_at else None
+        ),
         created_by=context.created_by,
         created_at=_ensure_timezone_aware(context.created_at),
         updated_at=_ensure_timezone_aware(context.updated_at),

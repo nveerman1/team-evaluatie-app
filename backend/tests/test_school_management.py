@@ -139,9 +139,9 @@ class TestStudentClassMembership:
             for arg in table_args
             if hasattr(arg, "__class__")
         )
-        assert has_unique_constraint, (
-            "StudentClassMembership should have a unique constraint"
-        )
+        assert (
+            has_unique_constraint
+        ), "StudentClassMembership should have a unique constraint"
 
 
 class TestCourseEnrollment:

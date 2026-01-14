@@ -500,7 +500,9 @@ class TestCopyCoursesAndEnrollments:
             [],  # No target students initially
             [],  # No enrollments
         ]
-        mock_db.query.return_value.filter.return_value.distinct.return_value.all.return_value = []
+        mock_db.query.return_value.filter.return_value.distinct.return_value.all.return_value = (
+            []
+        )
 
         created_courses = []
 
@@ -560,7 +562,9 @@ class TestCopyCoursesAndEnrollments:
             source_courses,
             source_enrollments,
         ]
-        mock_db.query.return_value.filter.return_value.distinct.return_value.all.return_value = target_students
+        mock_db.query.return_value.filter.return_value.distinct.return_value.all.return_value = (
+            target_students
+        )
         mock_db.query.return_value.filter.return_value.first.return_value = (
             None  # No existing
         )
@@ -619,7 +623,9 @@ class TestCopyCoursesAndEnrollments:
             source_courses,
             source_enrollments,
         ]
-        mock_db.query.return_value.filter.return_value.distinct.return_value.all.return_value = target_students
+        mock_db.query.return_value.filter.return_value.distinct.return_value.all.return_value = (
+            target_students
+        )
         # First enrollment exists, second doesn't
         mock_db.query.return_value.filter.return_value.first.side_effect = [
             existing_enrollment,

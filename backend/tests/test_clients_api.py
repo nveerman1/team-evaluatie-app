@@ -49,8 +49,12 @@ class TestClientsEndpoints:
         query_mock.all.return_value = [mock_client]
 
         db.query.return_value = query_mock
-        db.query.return_value.join.return_value.filter.return_value.scalar.return_value = 0
-        db.query.return_value.join.return_value.filter.return_value.order_by.return_value.first.return_value = None
+        db.query.return_value.join.return_value.filter.return_value.scalar.return_value = (
+            0
+        )
+        db.query.return_value.join.return_value.filter.return_value.order_by.return_value.first.return_value = (
+            None
+        )
 
         # Call with explicit page and per_page arguments to avoid Query objects
         result = list_clients(db=db, user=user, page=1, per_page=20)

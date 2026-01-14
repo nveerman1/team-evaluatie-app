@@ -83,9 +83,11 @@ def _to_out_criterion(c: RubricCriterion) -> CriterionOut:
         "weight": float(c.weight),
         "descriptors": _ensure5(c.descriptors),  # <-- altijd 5 niveaus naar buiten
         "category": getattr(c, "category", None),
-        "learning_objective_ids": [lo.id for lo in c.learning_objectives]
-        if hasattr(c, "learning_objectives") and c.learning_objectives
-        else [],
+        "learning_objective_ids": (
+            [lo.id for lo in c.learning_objectives]
+            if hasattr(c, "learning_objectives") and c.learning_objectives
+            else []
+        ),
         "competency_id": getattr(c, "competency_id", None),
     }
     if hasattr(c, "order"):

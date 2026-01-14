@@ -258,12 +258,14 @@ def upgrade():
         for cat_data in CATEGORIES:
             # Insert category (skip if already exists)
             result = conn.execute(
-                sa.text("""
+                sa.text(
+                    """
                     INSERT INTO competency_categories (school_id, name, description, color, icon, order_index)
                     VALUES (:school_id, :name, :description, :color, :icon, :order_index)
                     ON CONFLICT (school_id, name) DO NOTHING
                     RETURNING id
-                """),
+                """
+                ),
                 {
                     "school_id": school_id,
                     "name": cat_data["name"],
@@ -280,10 +282,12 @@ def upgrade():
             else:
                 # Category already exists, get its ID
                 existing = conn.execute(
-                    sa.text("""
+                    sa.text(
+                        """
                         SELECT id FROM competency_categories 
                         WHERE school_id = :school_id AND name = :name
-                    """),
+                    """
+                    ),
                     {"school_id": school_id, "name": cat_data["name"]},
                 ).fetchone()
                 category_id = existing[0] if existing else None
@@ -295,14 +299,16 @@ def upgrade():
             for comp_data in cat_data["competencies"]:
                 # Insert or update competency
                 comp_result = conn.execute(
-                    sa.text("""
+                    sa.text(
+                        """
                         INSERT INTO competencies (school_id, category_id, name, description, "order", active)
                         VALUES (:school_id, :category_id, :name, :description, :order, true)
                         ON CONFLICT (school_id, name) DO UPDATE SET
                             category_id = COALESCE(competencies.category_id, EXCLUDED.category_id),
                             description = COALESCE(NULLIF(competencies.description, ''), EXCLUDED.description)
                         RETURNING id
-                    """),
+                    """
+                    ),
                     {
                         "school_id": school_id,
                         "category_id": category_id,
@@ -318,10 +324,12 @@ def upgrade():
                 else:
                     # Competency already exists, get its ID
                     existing_comp = conn.execute(
-                        sa.text("""
+                        sa.text(
+                            """
                             SELECT id FROM competencies 
                             WHERE school_id = :school_id AND name = :name
-                        """),
+                        """
+                        ),
                         {"school_id": school_id, "name": comp_data["name"]},
                     ).fetchone()
                     competency_id = existing_comp[0] if existing_comp else None
@@ -332,12 +340,14 @@ def upgrade():
                 # Insert 5 rubric levels for this competency (1-5)
                 for level in range(1, 6):
                     conn.execute(
-                        sa.text("""
+                        sa.text(
+                            """
                             INSERT INTO competency_rubric_levels 
                                 (school_id, competency_id, level, label, description)
                             VALUES (:school_id, :competency_id, :level, :label, :description)
                             ON CONFLICT (competency_id, level) DO NOTHING
-                        """),
+                        """
+                        ),
                         {
                             "school_id": school_id,
                             "competency_id": competency_id,
@@ -357,12 +367,14 @@ def downgrade():
 
     # First, delete all rubric levels for competencies that have a category
     conn.execute(
-        sa.text("""
+        sa.text(
+            """
             DELETE FROM competency_rubric_levels 
             WHERE competency_id IN (
                 SELECT id FROM competencies WHERE category_id IS NOT NULL
             )
-        """)
+        """
+        )
     )
 
     # Set category_id to NULL for all competencies (preserves the competencies)

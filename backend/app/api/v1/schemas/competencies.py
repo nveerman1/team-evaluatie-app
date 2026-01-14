@@ -471,9 +471,9 @@ class StudentCompetencyOverview(BaseModel):
     user_name: str
     scores: List[CompetencyScore]
     goals: List[CompetencyGoalOut]
-    reflections: List[
-        CompetencyReflectionOut
-    ] = []  # Changed from single reflection to list
+    reflections: List[CompetencyReflectionOut] = (
+        []
+    )  # Changed from single reflection to list
 
 
 class ClassHeatmapRow(BaseModel):

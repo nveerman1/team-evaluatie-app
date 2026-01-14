@@ -552,11 +552,11 @@ def get_project_external_status(
                         team_number=project_team.team_number,
                         team_name=team_name,
                         members=member_names,
-                        external_evaluator=ExternalEvaluatorOut.model_validate(
-                            evaluator
-                        )
-                        if evaluator
-                        else None,
+                        external_evaluator=(
+                            ExternalEvaluatorOut.model_validate(evaluator)
+                            if evaluator
+                            else None
+                        ),
                         status=link.status,
                         invitation_sent=(link.status != "NOT_INVITED"),
                         submitted_at=link.submitted_at,
@@ -651,9 +651,11 @@ def get_project_external_status(
                     team_number=team_num,
                     team_name=team_name,
                     members=member_names,
-                    external_evaluator=ExternalEvaluatorOut.model_validate(evaluator)
-                    if evaluator
-                    else None,
+                    external_evaluator=(
+                        ExternalEvaluatorOut.model_validate(evaluator)
+                        if evaluator
+                        else None
+                    ),
                     status=link.status,
                     invitation_sent=(link.status != "NOT_INVITED"),
                     submitted_at=link.submitted_at,

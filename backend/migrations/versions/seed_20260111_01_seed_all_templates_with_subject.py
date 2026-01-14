@@ -71,11 +71,13 @@ def get_or_create_subject(conn, school_id: int) -> int:
     """
     # Try to find existing O&O subject
     result = conn.execute(
-        sa.text("""
+        sa.text(
+            """
             SELECT id FROM subjects
             WHERE school_id = :school_id
             AND code = :code
-        """),
+        """
+        ),
         {"school_id": school_id, "code": "O&O"},
     )
     row = result.fetchone()
@@ -85,12 +87,14 @@ def get_or_create_subject(conn, school_id: int) -> int:
 
     # Create new O&O subject
     result = conn.execute(
-        sa.text("""
+        sa.text(
+            """
             INSERT INTO subjects (school_id, code, name, is_active, created_at, updated_at)
             VALUES (:school_id, :code, :name, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             ON CONFLICT (school_id, code) DO NOTHING
             RETURNING id
-        """),
+        """
+        ),
         {"school_id": school_id, "code": "O&O", "name": "Onderzoek & Ontwerpen"},
     )
     row = result.fetchone()
@@ -100,11 +104,13 @@ def get_or_create_subject(conn, school_id: int) -> int:
 
     # If ON CONFLICT prevented insertion, query again
     result = conn.execute(
-        sa.text("""
+        sa.text(
+            """
             SELECT id FROM subjects
             WHERE school_id = :school_id
             AND code = :code
-        """),
+        """
+        ),
         {"school_id": school_id, "code": "O&O"},
     )
     return result.scalar_one()
@@ -128,13 +134,15 @@ def resolve_learning_objective_ids(
 
         # Try exact match first (for codes like "OB2.1")
         result = conn.execute(
-            sa.text("""
+            sa.text(
+                """
                 SELECT id FROM learning_objectives
                 WHERE school_id = :school_id
                   AND subject_id = :subject_id
                   AND is_template = TRUE
                   AND metadata_json->>'code' = :code
-            """),
+            """
+            ),
             {"school_id": school_id, "subject_id": subject_id, "code": lo_code_str},
         )
         row = result.fetchone()
@@ -152,14 +160,16 @@ def resolve_learning_objective_ids(
             code_value = lo_code_str[1:]
 
             result = conn.execute(
-                sa.text("""
+                sa.text(
+                    """
                     SELECT id FROM learning_objectives
                     WHERE school_id = :school_id
                       AND subject_id = :subject_id
                       AND is_template = TRUE
                       AND metadata_json->>'code' = :code
                       AND domain = :domain
-                """),
+                """
+                ),
                 {
                     "school_id": school_id,
                     "subject_id": subject_id,
@@ -194,13 +204,15 @@ def seed_peer_evaluation_templates(conn, school_id: int, subject_id: int):
 
         # Check if template already exists
         result = conn.execute(
-            sa.text("""
+            sa.text(
+                """
                 SELECT id FROM peer_evaluation_criterion_templates
                 WHERE school_id = :school_id
                   AND subject_id = :subject_id
                   AND omza_category = :omza_category
                   AND title = :title
-            """),
+            """
+            ),
             {
                 "school_id": school_id,
                 "subject_id": subject_id,
@@ -221,7 +233,8 @@ def seed_peer_evaluation_templates(conn, school_id: int, subject_id: int):
 
         # Insert new template
         conn.execute(
-            sa.text("""
+            sa.text(
+                """
                 INSERT INTO peer_evaluation_criterion_templates (
                     school_id,
                     subject_id,
@@ -246,7 +259,8 @@ def seed_peer_evaluation_templates(conn, school_id: int, subject_id: int):
                     CURRENT_TIMESTAMP,
                     CURRENT_TIMESTAMP
                 )
-            """),
+            """
+            ),
             {
                 "school_id": school_id,
                 "subject_id": subject_id,
@@ -281,14 +295,16 @@ def seed_project_assessment_templates(conn, school_id: int, subject_id: int):
 
         # Check if template already exists
         result = conn.execute(
-            sa.text("""
+            sa.text(
+                """
                 SELECT id FROM project_assessment_criterion_templates
                 WHERE school_id = :school_id
                   AND subject_id = :subject_id
                   AND category = :category
                   AND title = :title
                   AND target_level = :target_level
-            """),
+            """
+            ),
             {
                 "school_id": school_id,
                 "subject_id": subject_id,
@@ -310,7 +326,8 @@ def seed_project_assessment_templates(conn, school_id: int, subject_id: int):
 
         # Insert new template
         conn.execute(
-            sa.text("""
+            sa.text(
+                """
                 INSERT INTO project_assessment_criterion_templates (
                     school_id,
                     subject_id,
@@ -335,7 +352,8 @@ def seed_project_assessment_templates(conn, school_id: int, subject_id: int):
                     CURRENT_TIMESTAMP,
                     CURRENT_TIMESTAMP
                 )
-            """),
+            """
+            ),
             {
                 "school_id": school_id,
                 "subject_id": subject_id,
@@ -471,13 +489,15 @@ def seed_project_rubric_templates(conn, school_id: int, subject_id: int):
     for rubric in rubrics:
         # Check if rubric already exists
         result = conn.execute(
-            sa.text("""
+            sa.text(
+                """
                 SELECT id FROM project_rubric_templates
                 WHERE school_id = :school_id
                   AND subject_id = :subject_id
                   AND name = :name
                   AND level = :level
-            """),
+            """
+            ),
             {
                 "school_id": school_id,
                 "subject_id": subject_id,
@@ -493,7 +513,8 @@ def seed_project_rubric_templates(conn, school_id: int, subject_id: int):
 
         # Insert rubric
         result = conn.execute(
-            sa.text("""
+            sa.text(
+                """
                 INSERT INTO project_rubric_templates (
                     school_id,
                     subject_id,
@@ -511,7 +532,8 @@ def seed_project_rubric_templates(conn, school_id: int, subject_id: int):
                     CURRENT_TIMESTAMP
                 )
                 RETURNING id
-            """),
+            """
+            ),
             {
                 "school_id": school_id,
                 "subject_id": subject_id,
@@ -524,7 +546,8 @@ def seed_project_rubric_templates(conn, school_id: int, subject_id: int):
         # Insert criteria for this rubric
         for criterion in rubric["criteria"]:
             conn.execute(
-                sa.text("""
+                sa.text(
+                    """
                     INSERT INTO project_rubric_criterion_templates (
                         school_id,
                         rubric_template_id,
@@ -547,7 +570,8 @@ def seed_project_rubric_templates(conn, school_id: int, subject_id: int):
                         CURRENT_TIMESTAMP,
                         CURRENT_TIMESTAMP
                     )
-                """),
+                """
+                ),
                 {
                     "school_id": school_id,
                     "rubric_template_id": rubric_id,
@@ -638,12 +662,14 @@ Het projectteam""",
     for template in templates:
         # Check if template already exists
         result = conn.execute(
-            sa.text("""
+            sa.text(
+                """
                 SELECT id FROM mail_templates
                 WHERE school_id = :school_id
                   AND subject_id = :subject_id
                   AND type = :type
-            """),
+            """
+            ),
             {
                 "school_id": school_id,
                 "subject_id": subject_id,
@@ -655,7 +681,8 @@ Het projectteam""",
         if not existing:
             # Insert template
             conn.execute(
-                sa.text("""
+                sa.text(
+                    """
                     INSERT INTO mail_templates (
                         school_id,
                         subject_id,
@@ -680,7 +707,8 @@ Het projectteam""",
                         CURRENT_TIMESTAMP,
                         CURRENT_TIMESTAMP
                     )
-                """),
+                """
+                ),
                 {
                     "school_id": school_id,
                     "subject_id": subject_id,
@@ -746,13 +774,15 @@ def seed_standard_remarks(conn, school_id: int, subject_id: int):
     for idx, remark in enumerate(remarks):
         # Check if remark already exists
         result = conn.execute(
-            sa.text("""
+            sa.text(
+                """
                 SELECT id FROM standard_remarks
                 WHERE school_id = :school_id
                   AND subject_id = :subject_id
                   AND type = :type
                   AND text = :text
-            """),
+            """
+            ),
             {
                 "school_id": school_id,
                 "subject_id": subject_id,
@@ -765,7 +795,8 @@ def seed_standard_remarks(conn, school_id: int, subject_id: int):
         if not existing:
             # Insert remark
             conn.execute(
-                sa.text("""
+                sa.text(
+                    """
                     INSERT INTO standard_remarks (
                         school_id,
                         subject_id,
@@ -786,7 +817,8 @@ def seed_standard_remarks(conn, school_id: int, subject_id: int):
                         CURRENT_TIMESTAMP,
                         CURRENT_TIMESTAMP
                     )
-                """),
+                """
+                ),
                 {
                     "school_id": school_id,
                     "subject_id": subject_id,
@@ -809,13 +841,15 @@ def seed_competency_templates_with_subject(conn, school_id: int, subject_id: int
     itself is inherently for templates.
     """
     conn.execute(
-        sa.text("""
+        sa.text(
+            """
             UPDATE competency_templates
             SET subject_id = :subject_id,
                 updated_at = CURRENT_TIMESTAMP
             WHERE school_id = :school_id
               AND subject_id IS NULL
-        """),
+        """
+        ),
         {"school_id": school_id, "subject_id": subject_id},
     )
 

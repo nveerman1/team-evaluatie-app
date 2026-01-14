@@ -866,7 +866,8 @@ def get_attendance_overview(
         student_ids = (
             db.query(CourseEnrollment.student_id)
             .filter(
-                CourseEnrollment.course_id == course_id, CourseEnrollment.active.is_(True)
+                CourseEnrollment.course_id == course_id,
+                CourseEnrollment.active.is_(True),
             )
             .subquery()
         )
@@ -1317,16 +1318,29 @@ def get_stats_weekly(
             func.date_trunc("week", AttendanceEvent.check_in).label("week_start"),
             func.sum(
                 case(
-                    (AttendanceEvent.is_external.is_(False), 
-                     func.extract("epoch", AttendanceEvent.check_out - AttendanceEvent.check_in)),
-                    else_=0
+                    (
+                        AttendanceEvent.is_external.is_(False),
+                        func.extract(
+                            "epoch",
+                            AttendanceEvent.check_out - AttendanceEvent.check_in,
+                        ),
+                    ),
+                    else_=0,
                 )
             ).label("school_seconds"),
             func.sum(
                 case(
-                    (and_(AttendanceEvent.is_external.is_(True), AttendanceEvent.approval_status == "approved"),
-                     func.extract("epoch", AttendanceEvent.check_out - AttendanceEvent.check_in)),
-                    else_=0
+                    (
+                        and_(
+                            AttendanceEvent.is_external.is_(True),
+                            AttendanceEvent.approval_status == "approved",
+                        ),
+                        func.extract(
+                            "epoch",
+                            AttendanceEvent.check_out - AttendanceEvent.check_in,
+                        ),
+                    ),
+                    else_=0,
                 )
             ).label("extern_seconds"),
         )
@@ -1492,7 +1506,9 @@ def get_stats_heatmap(
         .filter(
             User.school_id == current_user.school_id,
             AttendanceEvent.is_external.is_(False),
-            func.extract("dow", AttendanceEvent.check_in).between(1, 5),  # Monday-Friday
+            func.extract("dow", AttendanceEvent.check_in).between(
+                1, 5
+            ),  # Monday-Friday
             func.extract("hour", AttendanceEvent.check_in).between(8, 18),
         )
     )
@@ -1833,8 +1849,8 @@ def get_stats_top_bottom(
                 AttendanceEvent.is_external.is_(False),
                 and_(
                     AttendanceEvent.is_external.is_(True),
-                    AttendanceEvent.approval_status == "approved"
-                )
+                    AttendanceEvent.approval_status == "approved",
+                ),
             ),
         )
     )

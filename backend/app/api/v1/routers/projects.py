@@ -892,9 +892,11 @@ def wizard_create_project(
                 evaluation_type="peer",
                 status="draft",
                 settings={
-                    "deadline": peer_config.deadline.isoformat()
-                    if peer_config.deadline
-                    else None
+                    "deadline": (
+                        peer_config.deadline.isoformat()
+                        if peer_config.deadline
+                        else None
+                    )
                 },
             )
             db.add(eval_tussen)
@@ -908,9 +910,11 @@ def wizard_create_project(
                         "title": eval_tussen.title,
                         "evaluation_type": eval_tussen.evaluation_type,
                         "status": eval_tussen.status,
-                        "deadline": peer_config.deadline.isoformat()
-                        if peer_config.deadline
-                        else None,
+                        "deadline": (
+                            peer_config.deadline.isoformat()
+                            if peer_config.deadline
+                            else None
+                        ),
                     },
                 )
             )
@@ -935,9 +939,11 @@ def wizard_create_project(
                 evaluation_type="peer",
                 status="draft",
                 settings={
-                    "deadline": peer_config.deadline.isoformat()
-                    if peer_config.deadline
-                    else None
+                    "deadline": (
+                        peer_config.deadline.isoformat()
+                        if peer_config.deadline
+                        else None
+                    )
                 },
             )
             db.add(eval_eind)
@@ -951,9 +957,11 @@ def wizard_create_project(
                         "title": eval_eind.title,
                         "evaluation_type": eval_eind.evaluation_type,
                         "status": eval_eind.status,
-                        "deadline": peer_config.deadline.isoformat()
-                        if peer_config.deadline
-                        else None,
+                        "deadline": (
+                            peer_config.deadline.isoformat()
+                            if peer_config.deadline
+                            else None
+                        ),
                     },
                 )
             )
@@ -1048,9 +1056,11 @@ def wizard_create_project(
                     version=pa_config.version or version_suffix,
                     status="draft",
                     metadata_json={
-                        "deadline": pa_config.deadline.isoformat()
-                        if pa_config.deadline
-                        else None,
+                        "deadline": (
+                            pa_config.deadline.isoformat()
+                            if pa_config.deadline
+                            else None
+                        ),
                     },
                 )
                 db.add(assessment)
@@ -1069,9 +1079,11 @@ def wizard_create_project(
                             "rubric_id": assessment.rubric_id,
                             "version": assessment.version,
                             "status": assessment.status,
-                            "deadline": pa_config.deadline.isoformat()
-                            if pa_config.deadline
-                            else None,
+                            "deadline": (
+                                pa_config.deadline.isoformat()
+                                if pa_config.deadline
+                                else None
+                            ),
                         },
                     )
                 )
@@ -1142,9 +1154,11 @@ def wizard_create_project(
             settings={
                 "project_id": project.id,
                 "competency_ids": valid_competency_ids,
-                "deadline": (cs_config.deadline or cs_config.end_date).isoformat()
-                if (cs_config.deadline or cs_config.end_date)
-                else None,
+                "deadline": (
+                    (cs_config.deadline or cs_config.end_date).isoformat()
+                    if (cs_config.deadline or cs_config.end_date)
+                    else None
+                ),
             },
         )
         db.add(window)
@@ -1156,15 +1170,19 @@ def wizard_create_project(
                 data={
                     "id": window.id,
                     "title": window.title,
-                    "start_date": cs_config.start_date.isoformat()
-                    if cs_config.start_date
-                    else None,
-                    "end_date": cs_config.end_date.isoformat()
-                    if cs_config.end_date
-                    else None,
-                    "deadline": (cs_config.deadline or cs_config.end_date).isoformat()
-                    if (cs_config.deadline or cs_config.end_date)
-                    else None,
+                    "start_date": (
+                        cs_config.start_date.isoformat()
+                        if cs_config.start_date
+                        else None
+                    ),
+                    "end_date": (
+                        cs_config.end_date.isoformat() if cs_config.end_date else None
+                    ),
+                    "deadline": (
+                        (cs_config.deadline or cs_config.end_date).isoformat()
+                        if (cs_config.deadline or cs_config.end_date)
+                        else None
+                    ),
                     "status": window.status,
                     "competency_ids": valid_competency_ids,
                 },
@@ -1256,9 +1274,9 @@ def wizard_create_project(
                         "title": task.title,
                         "type": task.type,
                         "source": task.source,
-                        "due_date": task.due_date.isoformat()
-                        if task.due_date
-                        else None,
+                        "due_date": (
+                            task.due_date.isoformat() if task.due_date else None
+                        ),
                         "status": task.status,
                     },
                 )

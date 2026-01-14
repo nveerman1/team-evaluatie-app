@@ -168,12 +168,16 @@ class SchedulerService:
             List of ScheduledJob instances
         """
         now = datetime.utcnow()
-        
-        jobs = self.db.query(ScheduledJob).filter(
-            ScheduledJob.enabled.is_(True),
-            ScheduledJob.next_run_at <= now,
-        ).all()
-        
+
+        jobs = (
+            self.db.query(ScheduledJob)
+            .filter(
+                ScheduledJob.enabled.is_(True),
+                ScheduledJob.next_run_at <= now,
+            )
+            .all()
+        )
+
         return jobs
 
     def execute_scheduled_job(self, job: ScheduledJob) -> bool:

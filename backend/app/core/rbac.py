@@ -97,24 +97,31 @@ def can_access_course(db: Session, user: User, course_id: int) -> bool:
 
     # Teacher: check TeacherCourse mapping
     if user.role == "teacher":
-        teacher_course = db.query(TeacherCourse).filter(
-            TeacherCourse.teacher_id == user.id,
-            TeacherCourse.course_id == course_id,
-            TeacherCourse.is_active.is_(True)
-        ).first()
+        teacher_course = (
+            db.query(TeacherCourse)
+            .filter(
+                TeacherCourse.teacher_id == user.id,
+                TeacherCourse.course_id == course_id,
+                TeacherCourse.is_active.is_(True),
+            )
+            .first()
+        )
         return teacher_course is not None
 
     # Student: check if they're in any group for this course
     if user.role == "student":
         from app.infra.db.models import Group, GroupMember
-        
-        member = db.query(GroupMember).join(
-            Group, Group.id == GroupMember.group_id
-        ).filter(
-            GroupMember.user_id == user.id,
-            Group.course_id == course_id,
-            GroupMember.active.is_(True)
-        ).first()
+
+        member = (
+            db.query(GroupMember)
+            .join(Group, Group.id == GroupMember.group_id)
+            .filter(
+                GroupMember.user_id == user.id,
+                Group.course_id == course_id,
+                GroupMember.active.is_(True),
+            )
+            .first()
+        )
         return member is not None
 
     return False
@@ -224,30 +231,35 @@ def get_accessible_course_ids(db: Session, user: User) -> List[int]:
 
     # Admin can access all courses in their school
     if user.role == "admin":
-        courses = db.query(Course.id).filter(
-            Course.school_id == user.school_id,
-            Course.is_active.is_(True)
-        ).all()
+        courses = (
+            db.query(Course.id)
+            .filter(Course.school_id == user.school_id, Course.is_active.is_(True))
+            .all()
+        )
         return [c.id for c in courses]
 
     # Teacher: get courses they teach
     if user.role == "teacher":
-        teacher_courses = db.query(TeacherCourse.course_id).filter(
-            TeacherCourse.teacher_id == user.id,
-            TeacherCourse.is_active.is_(True)
-        ).all()
+        teacher_courses = (
+            db.query(TeacherCourse.course_id)
+            .filter(
+                TeacherCourse.teacher_id == user.id, TeacherCourse.is_active.is_(True)
+            )
+            .all()
+        )
         return [tc.course_id for tc in teacher_courses]
 
     # Student: get courses from their groups
     if user.role == "student":
         from app.infra.db.models import Group, GroupMember
-        
-        courses = db.query(Group.course_id).join(
-            GroupMember, GroupMember.group_id == Group.id
-        ).filter(
-            GroupMember.user_id == user.id,
-            GroupMember.active.is_(True)
-        ).distinct().all()
+
+        courses = (
+            db.query(Group.course_id)
+            .join(GroupMember, GroupMember.group_id == Group.id)
+            .filter(GroupMember.user_id == user.id, GroupMember.active.is_(True))
+            .distinct()
+            .all()
+        )
         return [c.course_id for c in courses]
 
     return []

@@ -33,17 +33,20 @@ def upgrade():
 
     # Backfill team_number from linked groups where available
     # Extract team number from display_name_at_time for others
-    op.execute("""
+    op.execute(
+        """
         UPDATE project_teams pt
         SET team_number = g.team_number
         FROM groups g
         WHERE pt.team_id = g.id
         AND g.team_number IS NOT NULL
-    """)
+    """
+    )
 
     # For teams without a linked group, try to extract number from display_name_at_time
     # Matches patterns like "Team 1", "Team 2", etc.
-    op.execute("""
+    op.execute(
+        """
         UPDATE project_teams
         SET team_number = CAST(
             substring(display_name_at_time from '\\d+')
@@ -51,7 +54,8 @@ def upgrade():
         )
         WHERE team_number IS NULL
         AND display_name_at_time ~ '\\d+'
-    """)
+    """
+    )
 
 
 def downgrade():

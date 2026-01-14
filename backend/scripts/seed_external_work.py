@@ -137,9 +137,11 @@ def seed_external_work():
                 approval_status=data["status"],
                 source="manual",
                 created_by=admin_user.id if admin_user else None,
-                approved_by=admin_user.id
-                if data["status"] == "approved" and admin_user
-                else None,
+                approved_by=(
+                    admin_user.id
+                    if data["status"] == "approved" and admin_user
+                    else None
+                ),
                 approved_at=datetime.now() if data["status"] == "approved" else None,
             )
             db.add(event)

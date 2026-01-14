@@ -378,9 +378,9 @@ def test_dev_login_disabled_in_production():
     os.environ["SECRET_KEY"] = "test-secret-key-at-least-32-characters-long"
 
     test_settings = Settings()
-    assert test_settings.NODE_ENV == "production", (
-        "Invalid NODE_ENV should default to production"
-    )
+    assert (
+        test_settings.NODE_ENV == "production"
+    ), "Invalid NODE_ENV should default to production"
 
     # Clean up
     os.environ["NODE_ENV"] = original_env

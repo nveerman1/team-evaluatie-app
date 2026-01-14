@@ -1256,9 +1256,11 @@ def get_my_peer_feedback_results(
         if reflection_record and reflection_record.text:
             reflection_data = {
                 "text": reflection_record.text,
-                "submittedAt": reflection_record.submitted_at.isoformat()
-                if reflection_record.submitted_at
-                else None,
+                "submittedAt": (
+                    reflection_record.submitted_at.isoformat()
+                    if reflection_record.submitted_at
+                    else None
+                ),
             }
 
         # Build trend data (historical averages)

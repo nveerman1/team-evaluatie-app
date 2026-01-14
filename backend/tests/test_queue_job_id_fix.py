@@ -33,9 +33,9 @@ class TestJobIdFix:
         assert "student_id" in params
 
         # Task should NOT expect job_id as a parameter (it gets it from RQ context)
-        assert "job_id" not in params, (
-            "job_id should NOT be in task parameters (it's retrieved from RQ context)"
-        )
+        assert (
+            "job_id" not in params
+        ), "job_id should NOT be in task parameters (it's retrieved from RQ context)"
 
     @patch("app.infra.queue.tasks.get_current_job")
     @patch("app.infra.queue.tasks.SessionLocal")

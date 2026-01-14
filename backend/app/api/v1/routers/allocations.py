@@ -332,9 +332,7 @@ def my_allocations(
 
         # Create self-allocation if missing
         if not has_self:
-            _ensure_allocation(
-                db, school_id, evaluation_id, user.id, user.id, True
-            )
+            _ensure_allocation(db, school_id, evaluation_id, user.id, user.id, True)
             needs_commit = True
 
         # Create peer allocations for valid teammates not yet allocated
