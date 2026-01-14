@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
@@ -59,7 +60,7 @@ def azure_login(
     state_data = {
         "school_id": school_id,
         "return_to": validated_return_to,
-        "token": secrets.token_urlsafe(32)
+        "token": secrets.token_urlsafe(32),
     }
     state = base64.urlsafe_b64encode(json.dumps(state_data).encode()).decode()
 
@@ -142,9 +143,7 @@ def azure_callback(
     user = azure_ad_authenticator.provision_or_update_user(db, profile, school_id)
 
     # Create JWT token with role claim
-    jwt_token = create_access_token(
-        sub=user.email, role=user.role, school_id=user.school_id
-    )
+    jwt_token = create_access_token(sub=user.email, role=user.role, school_id=user.school_id)
 
     logger.info(
         f"Azure AD authentication successful for user {user.email}, "
@@ -153,38 +152,40 @@ def azure_callback(
 
     # Determine redirect path
     frontend_url = settings.FRONTEND_URL
-    
+
     # Validate returnTo if present
     validated_return_to = normalize_and_validate_return_to(return_to) if return_to else None
-    
+
     if validated_return_to:
-        # User had a specific destination in mind
         redirect_path = validated_return_to
         logger.info(f"Redirecting to returnTo: {redirect_path}")
     else:
-        # Redirect to role-specific home
         redirect_path = get_role_home_path(user.role)
         logger.info(f"Redirecting to role home: {redirect_path} (role={user.role})")
-    
+
     redirect_url = f"{frontend_url}{redirect_path}"
 
     # Create response with redirect
     response = RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
-    
+
     # Set HttpOnly cookie with JWT token
-    response.set_cookie(
+    cookie_kwargs = dict(
         key="access_token",
         value=jwt_token,
         httponly=True,
-        secure=settings.COOKIE_SECURE,  # True in production
-        samesite=settings.COOKIE_SAMESITE,  # "Lax" allows OAuth redirects
-        max_age=settings.COOKIE_MAX_AGE,  # 7 days
+        max_age=604800,
         path="/",
-        domain=settings.COOKIE_DOMAIN if settings.COOKIE_DOMAIN else None,
+        samesite="lax",
     )
-    
+
+    # Only set domain if configured (prod); on localhost omit Domain entirely
+    if getattr(settings, "COOKIE_DOMAIN", None):
+        cookie_kwargs["domain"] = settings.COOKIE_DOMAIN
+
+    response.set_cookie(**cookie_kwargs)
+
     logger.info(f"Authentication cookie set for user {user.email}, redirecting to {redirect_url}")
-    
+
     return response
 
 
@@ -192,29 +193,31 @@ def azure_callback(
 def logout(response: Response):
     """
     Logout the current user by clearing the authentication cookie.
-    
+
     This endpoint:
     1. Clears the access_token cookie by setting it to expire
     2. Returns a success message
-    
+
     Returns:
         Success message confirming logout
     """
-    # Clear the cookie by setting it to expire in the past
-    response.set_cookie(
+    cookie_kwargs = dict(
         key="access_token",
         value="",
         httponly=True,
-        secure=settings.COOKIE_SECURE,
-        samesite=settings.COOKIE_SAMESITE,
-        max_age=0,  # Expire immediately
-        expires=0,  # Also set expires to epoch
+        max_age=0,
         path="/",
-        domain=settings.COOKIE_DOMAIN if settings.COOKIE_DOMAIN else None,
+        samesite="lax",
     )
-    
+
+    # Only include domain if configured (must match how it was set)
+    if getattr(settings, "COOKIE_DOMAIN", None):
+        cookie_kwargs["domain"] = settings.COOKIE_DOMAIN
+
+    response.set_cookie(**cookie_kwargs)
+
     logger.info("User logged out, cookie cleared")
-    
+
     return {"message": "Successfully logged out"}
 
 
@@ -226,14 +229,14 @@ def dev_login(
 ):
     """
     Development-only login endpoint for easy testing.
-    
+
     This endpoint is ONLY available when ENABLE_DEV_LOGIN=true.
     In production (ENABLE_DEV_LOGIN=false), this returns 404.
-    
+
     Args:
         email: User email to login as
         return_to: Optional relative path to redirect to after login
-        
+
     Returns:
         Redirect to role-specific home or returnTo with cookie set
     """
@@ -243,65 +246,61 @@ def dev_login(
             f"Dev-login attempt blocked - ENABLE_DEV_LOGIN=false. "
             f"Attempted email: {email}"
         )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Not found"
-        )
-    
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
     logger.warning(
         f"Dev-login used for email: {email}. "
         "This endpoint should ONLY be used in local development!"
     )
-    
+
     # Find user
     user = db.query(User).filter(User.email == email).first()
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found"
-        )
-    
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+
     # Check if user is archived
     if user.archived:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is archived"
+            detail="User account is archived",
         )
-    
+
     # Create JWT token
-    jwt_token = create_access_token(
-        sub=user.email, role=user.role, school_id=user.school_id
-    )
-    
+    jwt_token = create_access_token(sub=user.email, role=user.role, school_id=user.school_id)
+
     # Determine redirect path
     frontend_url = settings.FRONTEND_URL
     validated_return_to = normalize_and_validate_return_to(return_to) if return_to else None
-    
+
     if validated_return_to:
         redirect_path = validated_return_to
     else:
         redirect_path = get_role_home_path(user.role)
-    
+
     redirect_url = f"{frontend_url}{redirect_path}"
-    
+
     # Create response with redirect
     response = RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
-    
+
     # Set HttpOnly cookie
-    response.set_cookie(
+    cookie_kwargs = dict(
         key="access_token",
         value=jwt_token,
         httponly=True,
-        secure=settings.COOKIE_SECURE,
-        samesite=settings.COOKIE_SAMESITE,
-        max_age=settings.COOKIE_MAX_AGE,
+        max_age=604800,
         path="/",
-        domain=settings.COOKIE_DOMAIN if settings.COOKIE_DOMAIN else None,
+        samesite="lax",
     )
-    
+
+    # Only set domain if configured (prod); on localhost omit Domain entirely
+    if getattr(settings, "COOKIE_DOMAIN", None):
+        cookie_kwargs["domain"] = settings.COOKIE_DOMAIN
+
+    response.set_cookie(**cookie_kwargs)
+
     logger.info(
         f"Dev-login successful for {user.email} (role={user.role}), "
         f"redirecting to {redirect_path}"
     )
-    
+
     return response
