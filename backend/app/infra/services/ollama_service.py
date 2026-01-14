@@ -6,11 +6,15 @@ import logging
 import re
 import time
 from typing import Optional
+from urllib.parse import urlparse
 
 import requests
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+# Allowed Ollama hosts (SSRF prevention)
+ALLOWED_OLLAMA_HOSTS = ["localhost", "127.0.0.1", "::1", "ollama"]
 
 
 class OllamaService:
@@ -23,7 +27,8 @@ class OllamaService:
         timeout: float | None = None,
     ):
         # Haal uit Pydantic settings (die .env leest)
-        self.base_url = base_url or str(settings.OLLAMA_BASE_URL)
+        raw_url = base_url or str(settings.OLLAMA_BASE_URL)
+        self.base_url = self._validate_ollama_url(raw_url)
         self.model = model or settings.OLLAMA_MODEL
         self.timeout = float(
             timeout if timeout is not None else settings.OLLAMA_TIMEOUT
@@ -32,6 +37,46 @@ class OllamaService:
         logger.info(
             f"OllamaService: url={self.base_url}, model={self.model}, timeout={self.timeout}s"
         )
+
+    @staticmethod
+    def _validate_ollama_url(url: str) -> str:
+        """
+        Validate Ollama URL to prevent SSRF attacks.
+        Only allow localhost and explicit container names.
+        
+        Args:
+            url: The Ollama URL to validate
+            
+        Returns:
+            Validated URL
+            
+        Raises:
+            ValueError: If URL is not on allowlist
+        """
+        try:
+            parsed = urlparse(url)
+            hostname = parsed.hostname or ""
+            scheme = parsed.scheme or ""
+            
+            # Enforce HTTP/HTTPS only (prevent file://, ftp://, etc.)
+            if scheme not in ["http", "https"]:
+                raise ValueError(
+                    f"Ollama URL must use HTTP or HTTPS protocol. "
+                    f"This prevents protocol smuggling attacks."
+                )
+            
+            # Check if hostname is on allowlist
+            if hostname.lower() not in ALLOWED_OLLAMA_HOSTS:
+                raise ValueError(
+                    f"Ollama host not allowed. Only localhost and internal services are permitted. "
+                    f"This prevents SSRF attacks."
+                )
+            
+            logger.info(f"Ollama URL validated: {url}")
+            return url
+        except Exception as e:
+            logger.error(f"Ollama URL validation failed: {e}")
+            raise ValueError(f"Invalid Ollama URL: {e}")
 
     # ----------------------------
     # Public API
