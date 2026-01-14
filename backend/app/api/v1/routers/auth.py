@@ -182,6 +182,7 @@ def azure_callback(
         key="access_token",
         value=jwt_token,
         httponly=True,
+        secure=settings.COOKIE_SECURE,  # SECURITY: Require HTTPS in production
         max_age=604800,
         path="/",
         samesite="lax",
@@ -216,6 +217,7 @@ def logout(response: Response):
         key="access_token",
         value="",
         httponly=True,
+        secure=settings.COOKIE_SECURE,  # SECURITY: Must match login cookie attributes
         max_age=0,
         path="/",
         samesite="lax",
@@ -304,6 +306,7 @@ def dev_login(
         key="access_token",
         value=jwt_token,
         httponly=True,
+        secure=settings.COOKIE_SECURE,  # SECURITY: Require HTTPS in production
         max_age=604800,
         path="/",
         samesite="lax",
