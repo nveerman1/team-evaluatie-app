@@ -292,10 +292,16 @@ def seed_competency_scans_with_scores():
             if use_extreme_scores:
                 # Divide students into groups for extreme score patterns
                 num_students = len(students)
-                third = num_students // 3
-                low_score_students = students[:third]
-                high_score_students = students[third : third * 2]
-                growth_students = students[third * 2 :]
+                if num_students >= 3:
+                    third = max(1, num_students // 3)
+                    low_score_students = students[:third]
+                    high_score_students = students[third : third * 2]
+                    growth_students = students[third * 2 :]
+                else:
+                    # For fewer than 3 students, distribute as evenly as possible
+                    low_score_students = students[:1] if num_students >= 1 else []
+                    high_score_students = students[1:2] if num_students >= 2 else []
+                    growth_students = students[2:] if num_students >= 3 else []
                 # Track previous scores for growth calculation
                 previous_scores_by_student = {}
             else:
