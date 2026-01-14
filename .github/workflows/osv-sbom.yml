@@ -38,8 +38,8 @@ jobs:
           python -m venv backend/.venv
           source backend/.venv/bin/activate
           python -m pip install -U pip
-          pip install -r backend/requirements.txt
-          pip install cyclonedx-bom
+          python -m pip install -r backend/requirements.txt
+          python -m pip install cyclonedx-bom
 
       - name: Generate CycloneDX SBOM (from installed env)
         run: |
