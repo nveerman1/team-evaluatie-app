@@ -10,6 +10,7 @@ import csv
 from io import StringIO, TextIOWrapper
 
 from app.api.v1.deps import get_db, get_current_user
+from app.api.v1.utils.csv_sanitization import sanitize_csv_value
 from app.infra.db.models import (
     User, 
     StudentClassMembership, 
@@ -24,6 +25,10 @@ router = APIRouter(prefix="/admin/students", tags=["admin-students"])
 
 SortKey = Literal["name", "class_name", "team_number", "course_name"]
 Dir = Literal["asc", "desc"]
+
+# CSV import limits (DoS protection)
+MAX_CSV_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+MAX_CSV_ROWS = 10000  # Maximum number of rows to process
 
 
 def _enrich_student_with_class_and_courses(db: Session, student_id: int, school_id: int) -> Dict[str, Any]:
@@ -503,13 +508,13 @@ def export_students_csv(
     for r in rows:
         writer.writerow(
             [
-                r.id,
-                r.name or "",
-                r.email,
-                r.class_name or "",
-                r.course_name or "",
-                "" if r.team_number is None else r.team_number,
-                "inactive" if r.archived else "active",
+                sanitize_csv_value(r.id),
+                sanitize_csv_value(r.name or ""),
+                sanitize_csv_value(r.email),
+                sanitize_csv_value(r.class_name or ""),
+                sanitize_csv_value(r.course_name or ""),
+                sanitize_csv_value("" if r.team_number is None else r.team_number),
+                sanitize_csv_value("inactive" if r.archived else "active"),
             ]
         )
     output.seek(0)
@@ -543,6 +548,17 @@ def import_students_csv(
         raise HTTPException(
             status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Niet ingelogd"
         )
+    
+    # Check file size to prevent DoS attacks
+    file.file.seek(0, 2)  # Seek to end of file
+    file_size = file.file.tell()
+    file.file.seek(0)  # Reset to beginning
+    
+    if file_size > MAX_CSV_FILE_SIZE:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail=f"File too large. Maximum size is {MAX_CSV_FILE_SIZE // (1024 * 1024)}MB",
+        )
 
     # CSV lezen
     try:
@@ -556,6 +572,13 @@ def import_students_csv(
     errors: List[Dict[str, Any]] = []
 
     for i, row in enumerate(reader, start=2):  # start=2 vanwege header op regel 1
+        # Check row count limit to prevent DoS attacks
+        if i > MAX_CSV_ROWS + 1:  # +1 for header row
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail=f"Too many rows in CSV. Maximum is {MAX_CSV_ROWS} rows",
+            )
+        
         try:
             name = (row.get("name") or "").strip()
             email = (row.get("email") or "").strip().lower()

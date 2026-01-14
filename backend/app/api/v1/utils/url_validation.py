@@ -1,8 +1,10 @@
 """
-URL validation utilities for submission feature
-Validates that URLs are safe SharePoint/OneDrive links
+URL validation utilities for submission feature and webhook URLs
+Validates that URLs are safe SharePoint/OneDrive links and prevents SSRF attacks
 """
 import re
+import socket
+import ipaddress
 from urllib.parse import urlparse
 from typing import Tuple
 
@@ -68,3 +70,60 @@ def validate_sharepoint_url(url: str) -> Tuple[bool, str]:
             return True, ""
     
     return False, f"Only SharePoint/OneDrive URLs are allowed (e.g., *.sharepoint.com, 1drv.ms)"
+
+
+def validate_webhook_url(url: str) -> Tuple[bool, str]:
+    """
+    Validate webhook URL and prevent SSRF attacks.
+    Blocks internal IP ranges and ensures HTTPS is used.
+    
+    Args:
+        url: The webhook URL to validate
+        
+    Returns:
+        Tuple of (is_valid: bool, error_message: str)
+    """
+    if not url or not url.strip():
+        return False, "Webhook URL cannot be empty"
+    
+    url = url.strip()
+    
+    # Parse URL
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return False, "Invalid webhook URL format"
+    
+    # Must use HTTPS (prevent cleartext credential leakage)
+    if parsed.scheme != 'https':
+        return False, "Webhook URL must use HTTPS"
+    
+    # Check hostname
+    hostname = parsed.hostname
+    if not hostname:
+        return False, "Invalid webhook URL: no hostname found"
+    
+    # Resolve hostname to IP address
+    try:
+        ip_str = socket.gethostbyname(hostname)
+        ip_obj = ipaddress.ip_address(ip_str)
+    except (socket.gaierror, ValueError) as e:
+        return False, f"Cannot resolve webhook hostname: {str(e)}"
+    
+    # Block private/internal IP ranges (SSRF prevention)
+    if ip_obj.is_private:
+        return False, "Webhook URL resolves to private IP address (blocked for security)"
+    
+    # Block loopback addresses (127.0.0.0/8, ::1)
+    if ip_obj.is_loopback:
+        return False, "Webhook URL resolves to loopback address (blocked for security)"
+    
+    # Block link-local addresses (169.254.0.0/16 for IPv4, fe80::/10 for IPv6)
+    if ip_obj.is_link_local:
+        return False, "Webhook URL resolves to link-local address (blocked for security)"
+    
+    # Block multicast and reserved addresses
+    if ip_obj.is_multicast or ip_obj.is_reserved:
+        return False, "Webhook URL resolves to multicast/reserved address (blocked for security)"
+    
+    return True, ""
