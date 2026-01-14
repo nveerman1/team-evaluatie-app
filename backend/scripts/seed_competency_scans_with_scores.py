@@ -301,7 +301,7 @@ def seed_competency_scans_with_scores():
                     # For fewer than 3 students, distribute as evenly as possible
                     low_score_students = students[:1] if num_students >= 1 else []
                     high_score_students = students[1:2] if num_students >= 2 else []
-                    growth_students = students[2:] if num_students >= 3 else []
+                    growth_students = []  # No third group if fewer than 3 students
                 # Track previous scores for growth calculation
                 previous_scores_by_student = {}
             else:
