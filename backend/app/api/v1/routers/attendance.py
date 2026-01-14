@@ -596,7 +596,7 @@ def bulk_approve_external_work(
 def get_my_attendance(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    project_id: Optional[int] = Query(None, description="Filter by project ID"),
+    project_id: Optional[int] = Query(None, description="Filter by project ID", ge=1),
 ):
     """
     Get current user's attendance totals and recent events

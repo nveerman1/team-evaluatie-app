@@ -25,7 +25,12 @@ import {
   Calendar,
 } from "lucide-react";
 import { studentStyles } from "@/styles/student-dashboard.styles";
-import { attendanceService, type AttendanceEvent, type AttendanceTotals, type Project } from "@/services/attendance.service";
+import { 
+  attendanceService, 
+  type AttendanceEvent, 
+  type AttendanceTotals, 
+  type Project 
+} from "@/services/attendance.service";
 
 type PeriodFilter = "week" | "maand" | "alles";
 
@@ -171,7 +176,7 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
       setLoading(true);
       
       // Prepare params for totals request
-      const totalsParams = projectFilter ? { project_id: parseInt(projectFilter) } : undefined;
+      const totalsParams = projectFilter ? { project_id: parseInt(projectFilter, 10) } : undefined;
       
       // Fetch totals
       const totalsData = await attendanceService.getMyAttendance(totalsParams);
@@ -386,8 +391,7 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
                     }
                   }
                 } catch (error) {
-                  // Ignore date parsing errors
-                  console.warn('Error parsing project dates:', error);
+                  // Silently ignore date parsing errors
                 }
                 return (
                   <option key={project.id} value={project.id}>
