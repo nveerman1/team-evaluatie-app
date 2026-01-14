@@ -44,7 +44,7 @@ jobs:
       - name: Generate CycloneDX SBOM (from installed env)
         run: |
           source backend/.venv/bin/activate
-          cyclonedx-py environment --format json --output backend-sbom.json
+          cyclonedx-bom environment --format json --output backend-sbom.json
 
       - name: OSV scan SBOM
         run: |
