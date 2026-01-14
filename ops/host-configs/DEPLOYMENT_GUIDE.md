@@ -92,17 +92,17 @@ sed -i 's/NODE_ENV=.*/NODE_ENV=production/' .env.prod
 **Verify Ollama Configuration (if using AI features):**
 
 ```bash
-# Ollama URL must use localhost/127.0.0.1/ollama hostname only
+# Ollama URL must use allowed hostnames only (SSRF prevention)
 grep OLLAMA_BASE_URL .env.prod
 
-# Valid examples:
+# Valid examples (allowed hostnames: localhost, 127.0.0.1, ::1, ollama):
 # OLLAMA_BASE_URL=http://localhost:11434
 # OLLAMA_BASE_URL=http://127.0.0.1:11434
-# OLLAMA_BASE_URL=http://ollama:11434
+# OLLAMA_BASE_URL=http://ollama:11434  # Docker service name
 
 # Invalid (will be blocked by SSRF protection):
-# OLLAMA_BASE_URL=http://10.0.0.5:11434
-# OLLAMA_BASE_URL=http://example.com:11434
+# OLLAMA_BASE_URL=http://10.0.0.5:11434  # Private IP not allowed
+# OLLAMA_BASE_URL=http://example.com:11434  # External hostname not allowed
 ```
 
 ### 2.1 Update Nginx Configuration
@@ -358,14 +358,14 @@ curl -I https://app.technasiummbh.nl/api/v1/health 2>&1 | grep -i "x-frame-optio
 
 ```bash
 # Check CSP for frontend (should be strict in production)
-curl -I https://app.technasiummbh.nl/ 2>&1 | grep -i "content-security-policy"
+curl -sI https://app.technasiummbh.nl/ | grep -i "content-security-policy"
 
 # Expected (production): Should NOT contain 'unsafe-eval' for script-src
 # Should contain: script-src 'self' 'wasm-unsafe-eval'
 # Should contain: style-src 'self' 'unsafe-inline' (required for Tailwind CSS-in-JS)
 
 # Check CSP for backend API
-curl -I https://app.technasiummbh.nl/api/v1/health 2>&1 | grep -i "content-security-policy"
+curl -sI https://app.technasiummbh.nl/api/v1/health | grep -i "content-security-policy"
 ```
 
 ### 4.5 Verify API Documentation Disabled
