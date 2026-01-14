@@ -20,7 +20,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Fix updated_at column in scheduled_jobs table to match Base class definition.
-    
+
     The column was created as nullable without server_default, but should have
     server_default=NOW() and onupdate=NOW() to match the Base class definition.
     """
@@ -28,7 +28,7 @@ def upgrade() -> None:
     op.execute(
         "UPDATE scheduled_jobs SET updated_at = created_at WHERE updated_at IS NULL"
     )
-    
+
     # Alter column to add server_default and make it NOT NULL
     op.alter_column(
         "scheduled_jobs",

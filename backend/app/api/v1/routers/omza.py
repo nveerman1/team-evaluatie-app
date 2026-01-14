@@ -13,14 +13,11 @@ from __future__ import annotations
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import (
     User,
     Evaluation,
-    Score,
-    Allocation,
     RubricCriterion,
     Rubric,
     ProjectTeam,
@@ -97,7 +94,7 @@ async def get_omza_data(
     # Map full category names to short codes for consistency
     category_name_to_code = {
         "Organiseren": "O",
-        "Meedoen": "M", 
+        "Meedoen": "M",
         "Zelfvertrouwen": "Z",
         "Autonomie": "A",
         # Also handle lowercase
@@ -106,7 +103,7 @@ async def get_omza_data(
         "zelfvertrouwen": "Z",
         "autonomie": "A",
     }
-    
+
     categories = {}
     for criterion in criteria:
         if criterion.category:
@@ -118,13 +115,13 @@ async def get_omza_data(
 
     # Get all active students from the course
     from app.infra.db.models import Group, GroupMember
-    
+
     if not evaluation.course_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Evaluation must be linked to a course",
         )
-    
+
     # Get all students in the course via group membership
     students = (
         db.query(User)
@@ -152,7 +149,7 @@ async def get_omza_data(
             )
             .all()
         )
-        
+
         for team in project_teams:
             members = (
                 db.query(ProjectTeamMember)
@@ -164,26 +161,26 @@ async def get_omza_data(
 
     # Build student data
     student_data_list = []
-    
+
     # Use batch scoring for efficiency
     student_ids = [s.id for s in students]
     batch_scores = compute_weighted_omza_scores_batch(db, evaluation_id, student_ids)
-    
+
     # Collect all unique category names from the batch scores
     all_categories = set()
     for student_scores in batch_scores.values():
         all_categories.update(student_scores.keys())
-    
+
     for student in students:
         # Get weighted scores from batch calculation
         omza_scores = batch_scores.get(student.id, {})
-        
+
         category_scores = {}
         # Use actual category names from the rubric (not hardcoded O/M/Z/A)
         for category in omza_scores.keys():
             peer_avg = omza_scores.get(category, {}).get("peer")
             self_avg = omza_scores.get(category, {}).get("self")
-            
+
             # Teacher score (stored in settings for now - we'll use a dedicated table later)
             # For MVP, we'll store teacher scores in evaluation settings
             # Try both full category name and abbreviated first letter
@@ -220,7 +217,7 @@ async def get_omza_data(
             team_number = user_team_map.get(student.id, None)
         else:
             team_number = student.team_number
-        
+
         student_data_list.append(
             OmzaStudentData(
                 student_id=student.id,
@@ -237,8 +234,10 @@ async def get_omza_data(
     category_order = ["O", "M", "Z", "A"]
     categories_list = [cat for cat in category_order if cat in all_categories]
     # Add any other categories that might exist
-    categories_list.extend([cat for cat in sorted(all_categories) if cat not in category_order])
-    
+    categories_list.extend(
+        [cat for cat in sorted(all_categories) if cat not in category_order]
+    )
+
     return OmzaDataResponse(
         evaluation_id=evaluation_id,
         students=student_data_list,
@@ -302,7 +301,11 @@ async def save_teacher_score(
 
     db.commit()
 
-    return {"message": "Teacher score saved", "student_id": data.student_id, "category": data.category}
+    return {
+        "message": "Teacher score saved",
+        "student_id": data.student_id,
+        "category": data.category,
+    }
 
 
 @router.post("/evaluations/{evaluation_id}/teacher-comment")
@@ -363,7 +366,10 @@ async def save_teacher_comment(
     return {"message": "Teacher comment saved", "student_id": data.student_id}
 
 
-@router.get("/evaluations/{evaluation_id}/standard-comments", response_model=List[StandardCommentOut])
+@router.get(
+    "/evaluations/{evaluation_id}/standard-comments",
+    response_model=List[StandardCommentOut],
+)
 async def get_standard_comments(
     evaluation_id: int,
     db: Session = Depends(get_db),
@@ -376,7 +382,7 @@ async def get_standard_comments(
     with evaluation-specific comments stored in evaluation settings.
     """
     require_role(current_user, ["teacher", "admin"])
-    
+
     from app.infra.db.models import StandardRemark
 
     # Get evaluation
@@ -396,7 +402,7 @@ async def get_standard_comments(
 
     results = []
     seen_texts = set()  # Track texts to avoid duplicates
-    
+
     # First, fetch template-based standard remarks for OMZA type
     # OMZA remarks are about behavior (Organiseren, Meedoen, Zelfvertrouwen, Autonomie)
     # and are generally school-wide, not subject-specific, so we don't filter by subject
@@ -404,12 +410,14 @@ async def get_standard_comments(
         StandardRemark.school_id == current_user.school_id,
         StandardRemark.type == "omza",
     )
-    
+
     if category:
         template_query = template_query.filter(StandardRemark.category == category)
-    
-    template_remarks = template_query.order_by(StandardRemark.order, StandardRemark.id).all()
-    
+
+    template_remarks = template_query.order_by(
+        StandardRemark.order, StandardRemark.id
+    ).all()
+
     # Add template remarks first (prefixed with "template_")
     for remark in template_remarks:
         results.append(
@@ -448,25 +456,28 @@ async def get_standard_comments(
             "Wacht af en toont weinig initiatief.",
         ],
     }
-    
+
     # Get standard comments from evaluation settings
     if evaluation.settings is None:
         evaluation.settings = {}
-    
+
     if "omza_standard_comments" not in evaluation.settings:
         evaluation.settings["omza_standard_comments"] = default_comments
         from sqlalchemy.orm.attributes import flag_modified
+
         flag_modified(evaluation, "settings")
         db.commit()
-    
+
     standard_comments = evaluation.settings.get("omza_standard_comments", {})
 
     # Ensure categories are in the correct order: O, M, Z, A
     category_order = ["O", "M", "Z", "A"]
     ordered_categories = [cat for cat in category_order if cat in standard_comments]
     # Add any other categories that might exist
-    ordered_categories.extend([cat for cat in standard_comments.keys() if cat not in category_order])
-    
+    ordered_categories.extend(
+        [cat for cat in standard_comments.keys() if cat not in category_order]
+    )
+
     # Add evaluation-specific comments (prefixed with category_index)
     for cat in ordered_categories:
         if category and cat != category:
@@ -487,7 +498,9 @@ async def get_standard_comments(
     return results
 
 
-@router.post("/evaluations/{evaluation_id}/standard-comments", response_model=StandardCommentOut)
+@router.post(
+    "/evaluations/{evaluation_id}/standard-comments", response_model=StandardCommentOut
+)
 async def add_standard_comment(
     evaluation_id: int,
     data: StandardCommentCreate,
@@ -566,7 +579,7 @@ async def delete_standard_comment(
     Template-based comments must be deleted from the templates admin page.
     """
     require_role(current_user, ["teacher", "admin"])
-    
+
     # Template-based comments cannot be deleted from here
     if comment_id.startswith("template_"):
         raise HTTPException(

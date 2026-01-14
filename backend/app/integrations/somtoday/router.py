@@ -6,7 +6,7 @@ Placeholder endpoints for Somtoday integration
 
 from __future__ import annotations
 from typing import Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
@@ -69,14 +69,14 @@ def get_somtoday_status(
 ):
     """
     Get Somtoday connection status for current school
-    
+
     Only admins can check connection status
     """
     require_role(user, ["admin"])
-    
+
     # TODO: Check if school has Somtoday credentials configured
     # TODO: Test connection with stored credentials
-    
+
     return SomtodayConnectionStatus(
         connected=False,
         error="Somtoday integration not yet configured. Please contact support.",
@@ -91,15 +91,15 @@ def start_oauth_flow(
 ):
     """
     Start OAuth2 authorization flow with Somtoday
-    
+
     Only admins can authorize Somtoday connection
     """
     require_role(user, ["admin"])
-    
+
     # TODO: Generate state token and store in session/database
     # TODO: Use SomtodayClient to generate authorization URL
     # TODO: Redirect user to Somtoday authorization page
-    
+
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
         detail="OAuth2 authorization not yet implemented",
@@ -115,7 +115,7 @@ def oauth_callback(
 ):
     """
     OAuth2 callback from Somtoday
-    
+
     Exchanges authorization code for access token
     """
     if error:
@@ -123,18 +123,18 @@ def oauth_callback(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Authorization failed: {error}",
         )
-    
+
     if not code or not state:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Missing code or state parameter",
         )
-    
+
     # TODO: Verify state token
     # TODO: Exchange code for access token using SomtodayClient
     # TODO: Store tokens securely in database
     # TODO: Redirect user to success page
-    
+
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
         detail="OAuth2 callback not yet implemented",
@@ -149,17 +149,17 @@ async def import_classes(
 ):
     """
     Import classes from Somtoday as Groups
-    
+
     Only admins and teachers can import classes
     """
     require_role(user, ["admin", "teacher"])
-    
+
     # TODO: Get access token for school
     # TODO: Fetch classes from Somtoday API
     # TODO: Map classes to Group model using mappers
     # TODO: Create/update groups in database
     # TODO: Return import results
-    
+
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
         detail="Class import not yet implemented",
@@ -174,19 +174,19 @@ async def import_students(
 ):
     """
     Import students from Somtoday
-    
+
     Creates User records and optionally adds them to groups
     Only admins and teachers can import students
     """
     require_role(user, ["admin", "teacher"])
-    
+
     # TODO: Get access token for school
     # TODO: Fetch students from Somtoday API (optionally filtered by class)
     # TODO: Match existing users by email or leerlingnummer
     # TODO: Create new users or update existing ones
     # TODO: If create_groups=True, add students to appropriate groups
     # TODO: Return detailed import results
-    
+
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
         detail="Student import not yet implemented. "
@@ -202,19 +202,19 @@ async def export_grades(
 ):
     """
     Export grades to Somtoday
-    
+
     Requires write permissions (somtoday.write.grades scope)
     Only admins and teachers can export grades
     """
     require_role(user, ["admin", "teacher"])
-    
+
     # TODO: Check if user has write permissions
     # TODO: Get access token for school with write scope
     # TODO: Fetch grades for specified evaluation
     # TODO: Map grades to Somtoday format using mappers
     # TODO: Export grades via Somtoday API
     # TODO: Return export results
-    
+
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
         detail="Grade export not yet implemented. "
@@ -229,15 +229,15 @@ def disconnect_somtoday(
 ):
     """
     Disconnect Somtoday integration
-    
+
     Removes stored credentials and tokens
     Only admins can disconnect
     """
     require_role(user, ["admin"])
-    
+
     # TODO: Remove stored tokens from database
     # TODO: Revoke tokens with Somtoday if possible
-    
+
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
         detail="Disconnect not yet implemented",

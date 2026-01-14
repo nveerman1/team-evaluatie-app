@@ -60,7 +60,9 @@ class ProjectTeamCreate(BaseModel):
     """Schema for creating a project team"""
 
     team_id: Optional[int] = None  # Optional link to existing group
-    team_name: Optional[str] = Field(None, min_length=1, max_length=200)  # Or provide a name
+    team_name: Optional[str] = Field(
+        None, min_length=1, max_length=200
+    )  # Or provide a name
 
 
 class ProjectTeamOut(ProjectTeamBase):
@@ -116,16 +118,16 @@ class CloneProjectTeamsResponse(BaseModel):
 
 class ProjectStudentOut(BaseModel):
     """Schema for student with project-specific team information"""
-    
+
     id: int
     name: str
     email: str
     class_name: Optional[str] = None
     status: str  # "active" or "inactive"
-    
+
     # Project-specific team information
     project_team_id: Optional[int] = None
     project_team_name: Optional[str] = None  # From display_name_at_time
     project_team_number: Optional[int] = None  # Extracted from team name or group
-    
+
     model_config = ConfigDict(from_attributes=True)

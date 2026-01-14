@@ -32,26 +32,28 @@ def list_user_rfid_cards(
     if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only teachers and admins can view RFID cards"
+            detail="Only teachers and admins can view RFID cards",
         )
-    
+
     # Verify user belongs to same school
-    user = db.query(User).filter(
-        User.id == user_id,
-        User.school_id == current_user.school_id
-    ).first()
-    
+    user = (
+        db.query(User)
+        .filter(User.id == user_id, User.school_id == current_user.school_id)
+        .first()
+    )
+
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
-    
+
     cards = db.query(RFIDCard).filter(RFIDCard.user_id == user_id).all()
     return [RFIDCardOut.model_validate(card) for card in cards]
 
 
-@router.post("/{user_id}", response_model=RFIDCardOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{user_id}", response_model=RFIDCardOut, status_code=status.HTTP_201_CREATED
+)
 def create_rfid_card(
     user_id: int,
     card_create: RFIDCardCreate,
@@ -64,42 +66,42 @@ def create_rfid_card(
     if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only teachers and admins can create RFID cards"
+            detail="Only teachers and admins can create RFID cards",
         )
-    
+
     # Verify user belongs to same school
-    user = db.query(User).filter(
-        User.id == user_id,
-        User.school_id == current_user.school_id
-    ).first()
-    
+    user = (
+        db.query(User)
+        .filter(User.id == user_id, User.school_id == current_user.school_id)
+        .first()
+    )
+
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
-    
+
     # Check if UID already exists
     existing_card = db.query(RFIDCard).filter(RFIDCard.uid == card_create.uid).first()
     if existing_card:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"RFID card with UID {card_create.uid} already exists"
+            detail=f"RFID card with UID {card_create.uid} already exists",
         )
-    
+
     # Create new card
     new_card = RFIDCard(
         user_id=user_id,
         uid=card_create.uid,
         label=card_create.label,
         is_active=card_create.is_active,
-        created_by=current_user.id
+        created_by=current_user.id,
     )
-    
+
     db.add(new_card)
     db.commit()
     db.refresh(new_card)
-    
+
     return RFIDCardOut.model_validate(new_card)
 
 
@@ -116,29 +118,30 @@ def update_rfid_card(
     if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only teachers and admins can update RFID cards"
+            detail="Only teachers and admins can update RFID cards",
         )
-    
+
     # Find card and verify user belongs to same school
-    card = db.query(RFIDCard).join(User).filter(
-        RFIDCard.id == card_id,
-        User.school_id == current_user.school_id
-    ).first()
-    
+    card = (
+        db.query(RFIDCard)
+        .join(User)
+        .filter(RFIDCard.id == card_id, User.school_id == current_user.school_id)
+        .first()
+    )
+
     if not card:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="RFID card not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="RFID card not found"
         )
-    
+
     # Apply updates
     update_data = card_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(card, field, value)
-    
+
     db.commit()
     db.refresh(card)
-    
+
     return RFIDCardOut.model_validate(card)
 
 
@@ -154,20 +157,21 @@ def delete_rfid_card(
     if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only teachers and admins can delete RFID cards"
+            detail="Only teachers and admins can delete RFID cards",
         )
-    
+
     # Find card and verify user belongs to same school
-    card = db.query(RFIDCard).join(User).filter(
-        RFIDCard.id == card_id,
-        User.school_id == current_user.school_id
-    ).first()
-    
+    card = (
+        db.query(RFIDCard)
+        .join(User)
+        .filter(RFIDCard.id == card_id, User.school_id == current_user.school_id)
+        .first()
+    )
+
     if not card:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="RFID card not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="RFID card not found"
         )
-    
+
     db.delete(card)
     db.commit()

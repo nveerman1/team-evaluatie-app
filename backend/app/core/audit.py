@@ -23,7 +23,7 @@ def log_action(
 ) -> None:
     """
     Log an audit event
-    
+
     Args:
         db: Database session
         user: User performing the action (can be None for system actions)
@@ -36,7 +36,7 @@ def log_action(
     school_id = user.school_id if user else None
     user_id = user.id if user else None
     user_email = user.email if user else None
-    
+
     # Extract IP and user agent from request
     ip_address = None
     user_agent = None
@@ -47,9 +47,9 @@ def log_action(
             ip_address = forwarded_for.split(",")[0].strip()
         else:
             ip_address = request.client.host if request.client else None
-        
+
         user_agent = request.headers.get("User-Agent")
-    
+
     audit_entry = AuditLog(
         school_id=school_id,
         user_id=user_id,
@@ -61,7 +61,7 @@ def log_action(
         ip_address=ip_address,
         user_agent=user_agent,
     )
-    
+
     db.add(audit_entry)
     # Note: caller should commit the transaction
 

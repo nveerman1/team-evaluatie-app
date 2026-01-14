@@ -30,12 +30,6 @@ from app.core.config import settings
 from app.infra.db.models import (
     ProjectTeam,
     ProjectTeamMember,
-    Evaluation,
-    ProjectAssessment,
-    ProjectNotesContext,
-    Group,
-    GroupMember,
-    Allocation,
 )
 
 
@@ -100,7 +94,9 @@ def backfill_project_teams(db: Session) -> None:
     print(f"  Found {len(eval_combinations)} evaluation-group combinations")
 
     # ========== Step 2: Find all distinct (project_id, group_id) from project_assessments ==========
-    print("\n[2/6] Finding distinct project-group combinations from project assessments...")
+    print(
+        "\n[2/6] Finding distinct project-group combinations from project assessments..."
+    )
 
     assessment_query = text("""
         SELECT DISTINCT
@@ -125,13 +121,15 @@ def backfill_project_teams(db: Session) -> None:
     print("\n[3/6] Creating project_team records...")
 
     # Collect all unique (project_id, group_id, school_id) combinations
-    all_combinations = defaultdict(lambda: {
-        "group_name": None,
-        "earliest_date": None,
-        "school_id": None,
-        "eval_ids": [],
-        "assessment_ids": [],
-    })
+    all_combinations = defaultdict(
+        lambda: {
+            "group_name": None,
+            "earliest_date": None,
+            "school_id": None,
+            "eval_ids": [],
+            "assessment_ids": [],
+        }
+    )
 
     for row in eval_combinations:
         key = (row.project_id, row.group_id)
@@ -185,9 +183,7 @@ def backfill_project_teams(db: Session) -> None:
             FROM group_members gm
             WHERE gm.group_id = :group_id AND gm.active = true
         """)
-        members = db.execute(
-            members_query, {"group_id": group_id}
-        ).fetchall()
+        members = db.execute(members_query, {"group_id": group_id}).fetchall()
 
         # If no group members found, try to infer from evaluation allocations
         if not members and combo["eval_ids"]:
@@ -211,8 +207,12 @@ def backfill_project_teams(db: Session) -> None:
             team_member = ProjectTeamMember(
                 school_id=combo["school_id"],
                 project_team_id=project_team.id,
-                user_id=member.user_id if hasattr(member, "user_id") else member["user_id"],
-                role=member.role_in_team if hasattr(member, "role_in_team") else member.get("role_in_team"),
+                user_id=member.user_id
+                if hasattr(member, "user_id")
+                else member["user_id"],
+                role=member.role_in_team
+                if hasattr(member, "role_in_team")
+                else member.get("role_in_team"),
                 created_at=combo["earliest_date"] or datetime.now(timezone.utc),
             )
             db.add(team_member)

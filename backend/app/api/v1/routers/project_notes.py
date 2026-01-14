@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.api.v1.deps import get_db, get_current_user
-from sqlalchemy import select, func
+from sqlalchemy import select
 from app.infra.db.models import (
     User,
     ProjectNotesContext,
@@ -52,7 +52,7 @@ def _get_teacher_course_ids(db: Session, user: User) -> list[int]:
         return []
     if user.role != "teacher":
         return []
-    
+
     course_ids_query = select(TeacherCourse.course_id).where(
         TeacherCourse.school_id == user.school_id,
         TeacherCourse.teacher_id == user.id,
@@ -102,15 +102,19 @@ def serialize_note(note: ProjectNote, db: Session) -> dict:
     # Add joined data
     if note.team_id:
         # Get the context to find the project_id
-        context = db.query(ProjectNotesContext).filter(ProjectNotesContext.id == note.context_id).first()
-        
+        context = (
+            db.query(ProjectNotesContext)
+            .filter(ProjectNotesContext.id == note.context_id)
+            .first()
+        )
+
         # Try to get team_number from project_teams table
         if context and context.project_id:
             project_team = (
                 db.query(ProjectTeam)
                 .filter(
                     ProjectTeam.team_id == note.team_id,
-                    ProjectTeam.project_id == context.project_id
+                    ProjectTeam.project_id == context.project_id,
                 )
                 .first()
             )
@@ -161,7 +165,7 @@ async def list_contexts(
 ):
     """
     List all project note contexts.
-    
+
     Access control:
     - Admins: see all contexts in their school
     - Teachers: see all contexts for courses they're assigned to (enables collaboration)
@@ -171,7 +175,7 @@ async def list_contexts(
     query = db.query(ProjectNotesContext).filter(
         ProjectNotesContext.school_id == current_user.school_id,
     )
-    
+
     # Filter by teacher's assigned courses
     if current_user.role == "teacher":
         teacher_course_ids = _get_teacher_course_ids(db, current_user)
@@ -311,7 +315,7 @@ async def get_context(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Context not found",
         )
-    
+
     # If user is a teacher (not admin), verify they have access to the context's course
     if current_user.role == "teacher" and context.course_id:
         teacher_course_ids = _get_teacher_course_ids(db, current_user)
@@ -374,7 +378,7 @@ async def get_context(
                 )
                 .all()
             )
-            
+
             for team in project_teams:
                 members = (
                     db.query(ProjectTeamMember)
@@ -389,7 +393,7 @@ async def get_context(
         # If no project_id, use user.team_number
         teams_dict = {}
         students_without_team = []
-        
+
         for student in all_students:
             if context.project_id:
                 team_num = user_team_map.get(student.id, None)
@@ -429,7 +433,7 @@ async def get_context(
                         team_name=f"Team {team_num}",
                     )
                 )
-        
+
         # Add students without teams
         for student in students_without_team:
             students.append(
@@ -843,15 +847,15 @@ async def close_project_notes_context(
 ):
     """
     Close a project notes context and mark it as archived
-    
+
     Sets status to 'closed' and records closed_at timestamp.
     This action is idempotent - calling it multiple times has the same effect.
     Once closed, the project_team members become read-only.
     """
     from datetime import datetime, timezone as tz
-    
+
     require_role(current_user, ["teacher", "admin"])
-    
+
     # Get context
     context = (
         db.query(ProjectNotesContext)
@@ -861,18 +865,17 @@ async def close_project_notes_context(
         )
         .first()
     )
-    
+
     if not context:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Context not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Context not found"
         )
-    
+
     # Update status and closed_at if not already closed
     if context.status != "closed":
         context.status = "closed"
         context.closed_at = datetime.now(tz.utc)
-        
+
         # Log action
         log_update(
             db=db,
@@ -881,10 +884,10 @@ async def close_project_notes_context(
             entity_id=context_id,
             details={"action": "close", "closed_at": context.closed_at.isoformat()},
         )
-    
+
     db.commit()
     db.refresh(context)
-    
+
     # Format output
     return ProjectNotesContextOut(
         id=context.id,
@@ -897,7 +900,9 @@ async def close_project_notes_context(
         evaluation_id=context.evaluation_id,
         project_team_id=context.project_team_id,
         status=context.status,
-        closed_at=_ensure_timezone_aware(context.closed_at) if context.closed_at else None,
+        closed_at=_ensure_timezone_aware(context.closed_at)
+        if context.closed_at
+        else None,
         created_by=context.created_by,
         created_at=_ensure_timezone_aware(context.created_at),
         updated_at=_ensure_timezone_aware(context.updated_at),

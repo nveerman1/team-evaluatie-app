@@ -4,10 +4,10 @@
 
 from __future__ import annotations
 from typing import Optional
-from datetime import datetime, timedelta, date, timezone
+from datetime import datetime, timedelta, timezone
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_, case
 
 from app.api.v1.deps import get_db, get_current_user
@@ -15,7 +15,6 @@ from app.infra.db.models import (
     User,
     RFIDCard,
     AttendanceEvent,
-    AttendanceAggregate,
     Project,
     CourseEnrollment,
     Course,
@@ -24,11 +23,9 @@ from app.api.v1.schemas.attendance import (
     RFIDScanRequest,
     RFIDScanResponse,
     AttendanceEventOut,
-    AttendanceEventCreate,
     AttendanceEventUpdate,
     AttendanceEventListOut,
     ExternalWorkCreate,
-    ExternalWorkApprove,
     ExternalWorkReject,
     BulkDeleteRequest,
     BulkApproveRequest,
@@ -45,7 +42,6 @@ from app.api.v1.schemas.attendance import (
     TopBottomData,
     EngagementStudent,
 )
-from app.core.rbac import require_role
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/attendance", tags=["attendance"])
@@ -1165,7 +1161,7 @@ def list_courses_for_filters(
 def _parse_period(period: str) -> tuple[Optional[datetime], Optional[datetime]]:
     """Parse period parameter to date range"""
     now = datetime.now(timezone.utc)
-    
+
     if period == "4w":
         start_date = now - timedelta(weeks=4)
         return start_date, now
@@ -1205,9 +1201,11 @@ def get_stats_summary(
         db.query(
             func.coalesce(
                 func.sum(
-                    func.extract("epoch", AttendanceEvent.check_out - AttendanceEvent.check_in)
+                    func.extract(
+                        "epoch", AttendanceEvent.check_out - AttendanceEvent.check_in
+                    )
                 ),
-                0
+                0,
             )
         )
         .select_from(AttendanceEvent)
@@ -1224,9 +1222,11 @@ def get_stats_summary(
         db.query(
             func.coalesce(
                 func.sum(
-                    func.extract("epoch", AttendanceEvent.check_out - AttendanceEvent.check_in)
+                    func.extract(
+                        "epoch", AttendanceEvent.check_out - AttendanceEvent.check_in
+                    )
                 ),
-                0
+                0,
             )
         )
         .select_from(AttendanceEvent)
@@ -1317,16 +1317,29 @@ def get_stats_weekly(
             func.date_trunc("week", AttendanceEvent.check_in).label("week_start"),
             func.sum(
                 case(
-                    (AttendanceEvent.is_external == False, 
-                     func.extract("epoch", AttendanceEvent.check_out - AttendanceEvent.check_in)),
-                    else_=0
+                    (
+                        AttendanceEvent.is_external == False,
+                        func.extract(
+                            "epoch",
+                            AttendanceEvent.check_out - AttendanceEvent.check_in,
+                        ),
+                    ),
+                    else_=0,
                 )
             ).label("school_seconds"),
             func.sum(
                 case(
-                    (and_(AttendanceEvent.is_external == True, AttendanceEvent.approval_status == "approved"),
-                     func.extract("epoch", AttendanceEvent.check_out - AttendanceEvent.check_in)),
-                    else_=0
+                    (
+                        and_(
+                            AttendanceEvent.is_external == True,
+                            AttendanceEvent.approval_status == "approved",
+                        ),
+                        func.extract(
+                            "epoch",
+                            AttendanceEvent.check_out - AttendanceEvent.check_in,
+                        ),
+                    ),
+                    else_=0,
                 )
             ).label("extern_seconds"),
         )
@@ -1466,27 +1479,35 @@ def get_stats_heatmap(
     # Query to get data for heatmap
     # We need to find all unique students present during each hour/weekday combo
     # This requires checking if check_in <= hour_start AND (check_out IS NULL OR check_out > hour_start)
-    
+
     # For simplicity, we'll aggregate by extracting weekday and hour from check_in
     # and count unique students, then average across the period
     query = (
         db.query(
-            func.extract("dow", AttendanceEvent.check_in).label("weekday"),  # 0=Sunday, 1=Monday, etc.
+            func.extract("dow", AttendanceEvent.check_in).label(
+                "weekday"
+            ),  # 0=Sunday, 1=Monday, etc.
             func.extract("hour", AttendanceEvent.check_in).label("hour"),
-            func.count(func.distinct(
-                func.concat(
-                    func.date(AttendanceEvent.check_in),
-                    "-",
-                    AttendanceEvent.user_id
+            func.count(
+                func.distinct(
+                    func.concat(
+                        func.date(AttendanceEvent.check_in),
+                        "-",
+                        AttendanceEvent.user_id,
+                    )
                 )
-            )).label("student_hours"),
-            func.count(func.distinct(func.date(AttendanceEvent.check_in))).label("day_count"),
+            ).label("student_hours"),
+            func.count(func.distinct(func.date(AttendanceEvent.check_in))).label(
+                "day_count"
+            ),
         )
         .join(User, AttendanceEvent.user_id == User.id)
         .filter(
             User.school_id == current_user.school_id,
             AttendanceEvent.is_external == False,
-            func.extract("dow", AttendanceEvent.check_in).between(1, 5),  # Monday-Friday
+            func.extract("dow", AttendanceEvent.check_in).between(
+                1, 5
+            ),  # Monday-Friday
             func.extract("hour", AttendanceEvent.check_in).between(8, 18),
         )
     )
@@ -1514,15 +1535,15 @@ def get_stats_heatmap(
     # Process results into heatmap cells
     cells = []
     weekday_labels = ["ma", "di", "wo", "do", "vr"]
-    
+
     for row in results:
         # Convert PostgreSQL dow (1=Monday, 5=Friday) to our 0-based index
         weekday_idx = int(row.weekday) - 1  # 1->0, 2->1, etc.
         hour = int(row.hour)
-        
+
         # Calculate average students per occurrence of this weekday/hour
         avg_students = round(float(row.student_hours) / max(float(row.day_count), 1), 1)
-        
+
         cells.append(
             HeatmapCell(
                 weekday=weekday_idx,
@@ -1563,13 +1584,15 @@ def get_stats_signals(
 
     # Signal 1: High external, low school
     extern_low_school = []
-    
+
     # Build subquery for external minutes
     extern_subq = (
         db.query(
             User.id.label("user_id"),
             func.sum(
-                func.extract("epoch", AttendanceEvent.check_out - AttendanceEvent.check_in)
+                func.extract(
+                    "epoch", AttendanceEvent.check_out - AttendanceEvent.check_in
+                )
             ).label("extern_seconds"),
         )
         .join(AttendanceEvent, AttendanceEvent.user_id == User.id)
@@ -1580,13 +1603,15 @@ def get_stats_signals(
             AttendanceEvent.check_out.isnot(None),
         )
     )
-    
+
     # Build subquery for school minutes
     school_subq = (
         db.query(
             User.id.label("user_id"),
             func.sum(
-                func.extract("epoch", AttendanceEvent.check_out - AttendanceEvent.check_in)
+                func.extract(
+                    "epoch", AttendanceEvent.check_out - AttendanceEvent.check_in
+                )
             ).label("school_seconds"),
         )
         .join(AttendanceEvent, AttendanceEvent.user_id == User.id)
@@ -1596,7 +1621,7 @@ def get_stats_signals(
             AttendanceEvent.check_out.isnot(None),
         )
     )
-    
+
     # Apply filters to subqueries
     if start_date:
         extern_subq = extern_subq.filter(AttendanceEvent.check_in >= start_date)
@@ -1607,10 +1632,10 @@ def get_stats_signals(
     if project_id:
         extern_subq = extern_subq.filter(AttendanceEvent.project_id == project_id)
         school_subq = school_subq.filter(AttendanceEvent.project_id == project_id)
-    
+
     extern_subq = extern_subq.group_by(User.id).subquery()
     school_subq = school_subq.group_by(User.id).subquery()
-    
+
     # Main query joining subqueries
     query = (
         db.query(
@@ -1623,20 +1648,20 @@ def get_stats_signals(
         .outerjoin(school_subq, User.id == school_subq.c.user_id)
         .filter(User.school_id == current_user.school_id)
     )
-    
+
     if course_id:
-        query = query.join(CourseEnrollment, CourseEnrollment.student_id == User.id).filter(
-            CourseEnrollment.course_id == course_id
-        )
-    
+        query = query.join(
+            CourseEnrollment, CourseEnrollment.student_id == User.id
+        ).filter(CourseEnrollment.course_id == course_id)
+
     results = query.all()
-    
+
     for row in results:
         extern_secs = float(row.extern_seconds or 0)
         school_secs = float(row.school_seconds or 0)
         extern_hours = extern_secs / 3600
         school_blocks = school_secs / (75 * 60)
-        
+
         if extern_hours >= MIN_EXTERN_HOURS and school_blocks <= MAX_SCHOOL_BLOCKS:
             # Get user's course
             user_course = (
@@ -1646,7 +1671,7 @@ def get_stats_signals(
                 .first()
             )
             course_name = user_course[0] if user_course else None
-            
+
             extern_low_school.append(
                 StudentSignal(
                     student_id=row.id,
@@ -1661,7 +1686,7 @@ def get_stats_signals(
 
     # Signal 2: Many pending external work registrations
     many_pending = []
-    
+
     pending_query = (
         db.query(
             User.id,
@@ -1675,7 +1700,7 @@ def get_stats_signals(
             AttendanceEvent.approval_status == "pending",
         )
     )
-    
+
     if start_date:
         pending_query = pending_query.filter(AttendanceEvent.check_in >= start_date)
     if end_date:
@@ -1686,13 +1711,13 @@ def get_stats_signals(
         ).filter(CourseEnrollment.course_id == course_id)
     if project_id:
         pending_query = pending_query.filter(AttendanceEvent.project_id == project_id)
-    
+
     pending_query = pending_query.group_by(User.id, User.name).having(
         func.count(AttendanceEvent.id) >= MIN_PENDING_COUNT
     )
-    
+
     pending_results = pending_query.all()
-    
+
     for row in pending_results:
         # Get user's course
         user_course = (
@@ -1702,7 +1727,7 @@ def get_stats_signals(
             .first()
         )
         course_name = user_course[0] if user_course else None
-        
+
         many_pending.append(
             StudentSignal(
                 student_id=row.id,
@@ -1711,16 +1736,16 @@ def get_stats_signals(
                 value_text=f"pending {row.pending_count}",
             )
         )
-    
+
     # Limit to top 5
     many_pending = many_pending[:5]
 
     # Signal 3: Long open check-ins
     long_open = []
-    
+
     now = datetime.now(timezone.utc)
     threshold_time = now - timedelta(hours=LONG_OPEN_HOURS)
-    
+
     open_query = (
         db.query(
             User.id,
@@ -1735,16 +1760,16 @@ def get_stats_signals(
             AttendanceEvent.check_in <= threshold_time,
         )
     )
-    
+
     if course_id:
         open_query = open_query.join(
             CourseEnrollment, CourseEnrollment.student_id == AttendanceEvent.user_id
         ).filter(CourseEnrollment.course_id == course_id)
     if project_id:
         open_query = open_query.filter(AttendanceEvent.project_id == project_id)
-    
+
     open_results = open_query.all()
-    
+
     for row in open_results:
         # Get user's course
         user_course = (
@@ -1754,10 +1779,10 @@ def get_stats_signals(
             .first()
         )
         course_name = user_course[0] if user_course else None
-        
+
         # Format check-in time
         check_in_str = row.check_in.strftime("%d-%m %H:%M")
-        
+
         long_open.append(
             StudentSignal(
                 student_id=row.id,
@@ -1766,7 +1791,7 @@ def get_stats_signals(
                 value_text=f"open sinds {check_in_str}",
             )
         )
-    
+
     # Limit to top 5
     long_open = long_open[:5]
 
@@ -1810,7 +1835,9 @@ def get_stats_top_bottom(
             User.id,
             User.name,
             func.sum(
-                func.extract("epoch", AttendanceEvent.check_out - AttendanceEvent.check_in)
+                func.extract(
+                    "epoch", AttendanceEvent.check_out - AttendanceEvent.check_in
+                )
             ).label("total_seconds"),
         )
         .join(AttendanceEvent, AttendanceEvent.user_id == User.id)
@@ -1821,8 +1848,8 @@ def get_stats_top_bottom(
                 AttendanceEvent.is_external == False,
                 and_(
                     AttendanceEvent.is_external == True,
-                    AttendanceEvent.approval_status == "approved"
-                )
+                    AttendanceEvent.approval_status == "approved",
+                ),
             ),
         )
     )
@@ -1852,7 +1879,7 @@ def get_stats_top_bottom(
     for row in results:
         total_secs = float(row.total_seconds or 0)
         total_blocks = round(total_secs / (75 * 60), 2)
-        
+
         # Get user's course
         user_course = (
             db.query(Course.name)
@@ -1861,7 +1888,7 @@ def get_stats_top_bottom(
             .first()
         )
         course_name = user_course[0] if user_course else None
-        
+
         engagement_list.append(
             EngagementStudent(
                 student_id=row.id,

@@ -51,7 +51,7 @@ def get_dashboard_kpi(
     current_year = datetime.utcnow().year
     last_year = current_year - 1
     one_year_ago = datetime.utcnow() - timedelta(days=365)
-    
+
     # Active clients
     active_clients = (
         db.query(func.count(Client.id))
@@ -59,7 +59,7 @@ def get_dashboard_kpi(
         .scalar()
         or 0
     )
-    
+
     # Projects this year
     projects_this_year = (
         db.query(func.count(ClientProjectLink.id.distinct()))
@@ -72,7 +72,7 @@ def get_dashboard_kpi(
         .scalar()
         or 0
     )
-    
+
     # At-risk clients (no project in last year)
     # Get all clients
     all_clients = (
@@ -80,7 +80,7 @@ def get_dashboard_kpi(
         .filter(Client.school_id == user.school_id, Client.active.is_(True))
         .all()
     )
-    
+
     at_risk_count = 0
     for (client_id,) in all_clients:
         # Check if client has any project in the last year
@@ -95,7 +95,7 @@ def get_dashboard_kpi(
         )
         if not last_project:
             at_risk_count += 1
-    
+
     # Active clients from last year
     active_clients_last_year = (
         db.query(func.count(Client.id))
@@ -107,9 +107,9 @@ def get_dashboard_kpi(
         .scalar()
         or 0
     )
-    
+
     change_from_last_year = active_clients - active_clients_last_year
-    
+
     return DashboardKPIOut(
         active_clients=active_clients,
         projects_this_year=projects_this_year,
@@ -134,7 +134,7 @@ def get_new_clients(
         .scalar()
         or 0
     )
-    
+
     # Get recent clients ordered by creation date
     clients = (
         db.query(Client)
@@ -143,7 +143,7 @@ def get_new_clients(
         .limit(limit)
         .all()
     )
-    
+
     items = [
         ClientInsightItem(
             id=client.id,
@@ -153,7 +153,7 @@ def get_new_clients(
         )
         for client in clients
     ]
-    
+
     return ClientInsightListOut(
         items=items,
         total=total,
@@ -186,7 +186,7 @@ def get_top_collaborations(
         .limit(limit)
         .all()
     )
-    
+
     # Get total count of clients with at least one project
     total = (
         db.query(func.count(func.distinct(Client.id)))
@@ -195,9 +195,15 @@ def get_top_collaborations(
         .scalar()
         or 0
     )
-    
+
     items = []
-    for client_id, organization, sector, project_count, first_project in client_project_counts:
+    for (
+        client_id,
+        organization,
+        sector,
+        project_count,
+        first_project,
+    ) in client_project_counts:
         # Calculate years active
         years_active = 0
         if first_project:
@@ -206,7 +212,7 @@ def get_top_collaborations(
             if first_project.tzinfo is not None:
                 first_project_naive = first_project.replace(tzinfo=None)
             years_active = max(1, (datetime.utcnow() - first_project_naive).days // 365)
-        
+
         items.append(
             ClientInsightItem(
                 id=client_id,
@@ -216,7 +222,7 @@ def get_top_collaborations(
                 years_active=years_active,
             )
         )
-    
+
     return ClientInsightListOut(
         items=items,
         total=total,
@@ -234,14 +240,14 @@ def get_at_risk_clients(
     Get clients at risk of dropping out (no projects in > 1 year)
     """
     one_year_ago = datetime.utcnow() - timedelta(days=365)
-    
+
     # Get all active clients
     all_clients = (
         db.query(Client)
         .filter(Client.school_id == user.school_id, Client.active.is_(True))
         .all()
     )
-    
+
     at_risk_clients = []
     for client in all_clients:
         # Get the most recent project
@@ -252,36 +258,44 @@ def get_at_risk_clients(
             .order_by(desc(Project.created_at))
             .first()
         )
-        
+
         # Check if last project is more than a year ago (or no projects at all)
         if not last_project:
-            at_risk_clients.append({
-                "client": client,
-                "last_active": None,
-                "last_project_date": None,
-            })
+            at_risk_clients.append(
+                {
+                    "client": client,
+                    "last_active": None,
+                    "last_project_date": None,
+                }
+            )
         else:
             # Handle timezone-aware datetime comparison
             project_created_at = last_project.project.created_at
             if project_created_at.tzinfo is not None:
                 # Make timezone-naive for comparison
                 project_created_at = project_created_at.replace(tzinfo=None)
-            
+
             if project_created_at < one_year_ago:
-                at_risk_clients.append({
-                    "client": client,
-                    "last_active": last_project.project.created_at.strftime("%Y-%m-%d"),
-                    "last_project_date": last_project.project.created_at,
-                })
-    
+                at_risk_clients.append(
+                    {
+                        "client": client,
+                        "last_active": last_project.project.created_at.strftime(
+                            "%Y-%m-%d"
+                        ),
+                        "last_project_date": last_project.project.created_at,
+                    }
+                )
+
     # Sort by last active date (oldest first)
     at_risk_clients.sort(
-        key=lambda x: x["last_project_date"].replace(tzinfo=None) if x["last_project_date"] and x["last_project_date"].tzinfo else (x["last_project_date"] if x["last_project_date"] else datetime.min)
+        key=lambda x: x["last_project_date"].replace(tzinfo=None)
+        if x["last_project_date"] and x["last_project_date"].tzinfo
+        else (x["last_project_date"] if x["last_project_date"] else datetime.min)
     )
-    
+
     total = len(at_risk_clients)
     at_risk_clients = at_risk_clients[:limit]
-    
+
     items = [
         ClientInsightItem(
             id=item["client"].id,
@@ -291,7 +305,7 @@ def get_at_risk_clients(
         )
         for item in at_risk_clients
     ]
-    
+
     return ClientInsightListOut(
         items=items,
         total=total,
@@ -299,7 +313,9 @@ def get_at_risk_clients(
     )
 
 
-@router.get("/dashboard/recent-communications", response_model=RecentCommunicationListOut)
+@router.get(
+    "/dashboard/recent-communications", response_model=RecentCommunicationListOut
+)
 def get_recent_communications(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
@@ -317,7 +333,7 @@ def get_recent_communications(
         .limit(limit)
         .all()
     )
-    
+
     items = [
         RecentCommunicationItem(
             id=log.id,
@@ -329,7 +345,7 @@ def get_recent_communications(
         )
         for log, client in logs
     ]
-    
+
     total = (
         db.query(func.count(ClientLog.id))
         .join(Client, ClientLog.client_id == Client.id)
@@ -337,7 +353,7 @@ def get_recent_communications(
         .scalar()
         or 0
     )
-    
+
     return RecentCommunicationListOut(
         items=items,
         total=total,
@@ -356,10 +372,10 @@ def get_upcoming_reminders(
     reminders_data = ReminderService.generate_reminders(
         db, user.school_id, days_ahead=days_ahead
     )
-    
+
     # Convert to ReminderOut schema
     items = [ReminderOut(**reminder) for reminder in reminders_data]
-    
+
     return ReminderListOut(items=items, total=len(items))
 
 
@@ -379,22 +395,22 @@ def list_clients(
     """
     # Base query - filter by school
     query = db.query(Client).filter(Client.school_id == user.school_id)
-    
+
     # Filter by level
     if level and level != "Alle":
         query = query.filter(Client.level == level)
-    
+
     # Filter by status (active/inactive)
     if status:
         if status == "Actief":
             query = query.filter(Client.active.is_(True))
         elif status == "Inactief":
             query = query.filter(Client.active.is_(False))
-    
+
     # Filter by tags (if tags is provided, filter clients that have this tag)
     if tags:
         query = query.filter(Client.tags.contains([tags]))
-    
+
     # Search filter
     if search:
         search_filter = or_(
@@ -402,19 +418,19 @@ def list_clients(
             Client.contact_name.ilike(f"%{search}%"),
         )
         query = query.filter(search_filter)
-    
+
     # Count total before pagination
     total = query.count()
-    
+
     # Apply pagination
     query = query.offset((page - 1) * per_page).limit(per_page)
-    
+
     # Get clients
     clients = query.all()
-    
+
     # Calculate computed fields for each client
     current_year = datetime.now().year
-    
+
     items = []
     for client in clients:
         # Count projects this year
@@ -428,7 +444,7 @@ def list_clients(
             .scalar()
             or 0
         )
-        
+
         # Get last active date (most recent project end_date or created_at)
         last_project = (
             db.query(ClientProjectLink)
@@ -437,16 +453,16 @@ def list_clients(
             .order_by(desc(Project.created_at))
             .first()
         )
-        
+
         last_active = None
         if last_project:
             last_active = (
                 last_project.end_date or last_project.project.created_at
             ).strftime("%Y-%m-%d")
-        
+
         # Determine status based on activity
         status_value = "Actief" if client.active else "Inactief"
-        
+
         items.append(
             ClientListItem(
                 id=client.id,
@@ -462,10 +478,10 @@ def list_clients(
                 status=status_value,
             )
         )
-    
+
     # Calculate pages
     pages = (total + per_page - 1) // per_page if total > 0 else 0
-    
+
     return ClientListOut(
         items=items,
         total=total,
@@ -489,13 +505,13 @@ def get_client(
         .filter(Client.id == client_id, Client.school_id == user.school_id)
         .first()
     )
-    
+
     if not client:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Client not found",
         )
-    
+
     return client
 
 
@@ -514,32 +530,34 @@ def get_client_projects(
         .filter(Client.id == client_id, Client.school_id == user.school_id)
         .first()
     )
-    
+
     if not client:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Client not found",
         )
-    
+
     # Get all project links for this client
     project_links = (
         db.query(ClientProjectLink)
         .filter(ClientProjectLink.client_id == client_id)
         .all()
     )
-    
+
     # Format project data
     items = []
     for link in project_links:
         project = link.project
-        items.append({
-            "id": project.id,
-            "title": project.title,
-            "role": link.role,
-            "start_date": link.start_date.isoformat() if link.start_date else None,
-            "end_date": link.end_date.isoformat() if link.end_date else None,
-        })
-    
+        items.append(
+            {
+                "id": project.id,
+                "title": project.title,
+                "role": link.role,
+                "start_date": link.start_date.isoformat() if link.start_date else None,
+                "end_date": link.end_date.isoformat() if link.end_date else None,
+            }
+        )
+
     return {
         "items": items,
         "total": len(items),
@@ -563,26 +581,26 @@ def link_project_to_client(
         .filter(Client.id == client_id, Client.school_id == user.school_id)
         .first()
     )
-    
+
     if not client:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Client not found",
         )
-    
+
     # Verify project exists and belongs to user's school
     project = (
         db.query(Project)
         .filter(Project.id == project_id, Project.school_id == user.school_id)
         .first()
     )
-    
+
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found",
         )
-    
+
     # Check if link already exists
     existing_link = (
         db.query(ClientProjectLink)
@@ -592,13 +610,13 @@ def link_project_to_client(
         )
         .first()
     )
-    
+
     if existing_link:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Project is already linked to this client",
         )
-    
+
     # Create new link
     new_link = ClientProjectLink(
         client_id=client_id,
@@ -607,11 +625,11 @@ def link_project_to_client(
         start_date=project.start_date,
         end_date=project.end_date,
     )
-    
+
     db.add(new_link)
     db.commit()
     db.refresh(new_link)
-    
+
     return {
         "id": new_link.id,
         "client_id": client_id,
@@ -620,7 +638,9 @@ def link_project_to_client(
     }
 
 
-@router.delete("/{client_id}/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{client_id}/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT
+)
 def unlink_project_from_client(
     client_id: int,
     project_id: int,
@@ -636,13 +656,13 @@ def unlink_project_from_client(
         .filter(Client.id == client_id, Client.school_id == user.school_id)
         .first()
     )
-    
+
     if not client:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Client not found",
         )
-    
+
     # Find and delete the link
     link = (
         db.query(ClientProjectLink)
@@ -652,13 +672,13 @@ def unlink_project_from_client(
         )
         .first()
     )
-    
+
     if not link:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project link not found",
         )
-    
+
     db.delete(link)
     db.commit()
 
@@ -678,13 +698,13 @@ def get_client_log(
         .filter(Client.id == client_id, Client.school_id == user.school_id)
         .first()
     )
-    
+
     if not client:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Client not found",
         )
-    
+
     # Get log entries ordered by most recent first
     logs = (
         db.query(ClientLog)
@@ -692,18 +712,20 @@ def get_client_log(
         .order_by(desc(ClientLog.created_at))
         .all()
     )
-    
+
     # Add author names to log entries
     items = []
     for log in logs:
         log_out = ClientLogOut.model_validate(log)
         log_out.author_name = log.author.name if log.author else "Unknown"
         items.append(log_out)
-    
+
     return ClientLogListOut(items=items, total=len(items))
 
 
-@router.post("/{client_id}/log", response_model=ClientLogOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{client_id}/log", response_model=ClientLogOut, status_code=status.HTTP_201_CREATED
+)
 def create_log_entry(
     client_id: int,
     log_entry: ClientLogCreate,
@@ -719,13 +741,13 @@ def create_log_entry(
         .filter(Client.id == client_id, Client.school_id == user.school_id)
         .first()
     )
-    
+
     if not client:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Client not found",
         )
-    
+
     # Create new log entry
     new_log = ClientLog(
         client_id=client_id,
@@ -733,15 +755,15 @@ def create_log_entry(
         log_type=log_entry.log_type,
         text=log_entry.text,
     )
-    
+
     db.add(new_log)
     db.commit()
     db.refresh(new_log)
-    
+
     # Add author name to response
     log_out = ClientLogOut.model_validate(new_log)
     log_out.author_name = user.name
-    
+
     return log_out
 
 
@@ -760,7 +782,7 @@ def create_client(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only teachers and admins can create clients",
         )
-    
+
     # Create new client
     new_client = Client(
         school_id=user.school_id,
@@ -773,11 +795,11 @@ def create_client(
         tags=client_data.tags or [],
         active=client_data.active,
     )
-    
+
     db.add(new_client)
     db.commit()
     db.refresh(new_client)
-    
+
     return new_client
 
 
@@ -797,28 +819,28 @@ def update_client(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only teachers and admins can update clients",
         )
-    
+
     # Get client
     client = (
         db.query(Client)
         .filter(Client.id == client_id, Client.school_id == user.school_id)
         .first()
     )
-    
+
     if not client:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Client not found",
         )
-    
+
     # Update fields that are provided
     update_data = client_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(client, field, value)
-    
+
     db.commit()
     db.refresh(client)
-    
+
     return client
 
 
@@ -837,23 +859,23 @@ def delete_client(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admins can delete clients",
         )
-    
+
     # Get client
     client = (
         db.query(Client)
         .filter(Client.id == client_id, Client.school_id == user.school_id)
         .first()
     )
-    
+
     if not client:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Client not found",
         )
-    
+
     db.delete(client)
     db.commit()
-    
+
     return None
 
 
@@ -871,68 +893,76 @@ def export_clients_csv(
     """
     # Build query with same filters as list endpoint
     query = db.query(Client).filter(Client.school_id == user.school_id)
-    
+
     if level and level != "Alle":
         query = query.filter(Client.level == level)
-    
+
     if status:
         if status == "Actief":
             query = query.filter(Client.active.is_(True))
         elif status == "Inactief":
             query = query.filter(Client.active.is_(False))
-    
+
     if tags:
         query = query.filter(Client.tags.contains([tags]))
-    
+
     if search:
         search_filter = or_(
             Client.organization.ilike(f"%{search}%"),
             Client.contact_name.ilike(f"%{search}%"),
         )
         query = query.filter(search_filter)
-    
+
     clients = query.all()
-    
+
     # Create CSV in memory
     output = StringIO()
     writer = csv.writer(output)
-    
+
     # Write header
-    writer.writerow([
-        "ID",
-        "Organisatie",
-        "Contactpersoon",
-        "Email",
-        "Telefoon",
-        "Niveau",
-        "Sector",
-        "Tags",
-        "Actief",
-        "Aangemaakt",
-        "Laatst bijgewerkt",
-    ])
-    
+    writer.writerow(
+        [
+            "ID",
+            "Organisatie",
+            "Contactpersoon",
+            "Email",
+            "Telefoon",
+            "Niveau",
+            "Sector",
+            "Tags",
+            "Actief",
+            "Aangemaakt",
+            "Laatst bijgewerkt",
+        ]
+    )
+
     # Write data
     for client in clients:
-        writer.writerow([
-            client.id,
-            client.organization,
-            client.contact_name or "",
-            client.email or "",
-            client.phone or "",
-            client.level or "",
-            client.sector or "",
-            ", ".join(client.tags) if client.tags else "",
-            "Ja" if client.active else "Nee",
-            client.created_at.strftime("%Y-%m-%d %H:%M") if client.created_at else "",
-            client.updated_at.strftime("%Y-%m-%d %H:%M") if client.updated_at else "",
-        ])
-    
+        writer.writerow(
+            [
+                client.id,
+                client.organization,
+                client.contact_name or "",
+                client.email or "",
+                client.phone or "",
+                client.level or "",
+                client.sector or "",
+                ", ".join(client.tags) if client.tags else "",
+                "Ja" if client.active else "Nee",
+                client.created_at.strftime("%Y-%m-%d %H:%M")
+                if client.created_at
+                else "",
+                client.updated_at.strftime("%Y-%m-%d %H:%M")
+                if client.updated_at
+                else "",
+            ]
+        )
+
     # Prepare response
     output.seek(0)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"opdrachtgevers_{timestamp}.csv"
-    
+
     return StreamingResponse(
         iter([output.getvalue()]),
         media_type="text/csv",
@@ -949,7 +979,7 @@ def list_email_templates(
     List all available email templates
     """
     templates = EmailTemplateService.list_templates()
-    
+
     # Format for response
     template_list = [
         {
@@ -960,7 +990,7 @@ def list_email_templates(
         }
         for key, template in templates.items()
     ]
-    
+
     return {"templates": template_list}
 
 
@@ -975,11 +1005,11 @@ def render_email_template(
     Render an email template with provided variables
     """
     rendered = EmailTemplateService.render_template(template_key, variables)
-    
+
     if not rendered:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Template not found",
         )
-    
+
     return rendered

@@ -104,15 +104,13 @@ Met vriendelijke groet,
         return EmailTemplateService.TEMPLATES
 
     @staticmethod
-    def substitute_variables(
-        template_text: str, variables: Dict[str, Any]
-    ) -> str:
+    def substitute_variables(template_text: str, variables: Dict[str, Any]) -> str:
         """
         Substitute variables in template text
         Variables are in the format {variable_name}
         """
         result = template_text
-        
+
         # Replace all variables
         for key, value in variables.items():
             placeholder = f"{{{key}}}"
@@ -120,7 +118,7 @@ Met vriendelijke groet,
                 # Convert value to string, handle None
                 str_value = str(value) if value is not None else ""
                 result = result.replace(placeholder, str_value)
-        
+
         return result
 
     @staticmethod
@@ -164,5 +162,5 @@ Met vriendelijke groet,
 
         subject_vars = EmailTemplateService.extract_variables(template["subject"])
         body_vars = EmailTemplateService.extract_variables(template["body"])
-        
+
         return list(set(subject_vars + body_vars))

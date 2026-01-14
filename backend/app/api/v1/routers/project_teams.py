@@ -14,7 +14,6 @@ from app.api.v1.schemas.project_teams import (
     ProjectTeamMemberOut,
     ProjectStudentOut,
     BulkAddMembersRequest,
-    CloneProjectTeamsRequest,
     CloneProjectTeamsResponse,
 )
 from app.infra.db.models import User, Project, ProjectTeam, ProjectTeamMember
@@ -88,9 +87,7 @@ def create_project_team(
     return _format_project_team_output(project_team, db)
 
 
-@router.post(
-    "/{project_team_id}/members", response_model=List[ProjectTeamMemberOut]
-)
+@router.post("/{project_team_id}/members", response_model=List[ProjectTeamMemberOut])
 def add_project_team_members(
     project_team_id: int,
     data: BulkAddMembersRequest,
@@ -187,7 +184,7 @@ def get_project_students(
 ):
     """
     Get all students for a project with their project-specific team information
-    
+
     Returns students with team_number from project_teams table (project-specific).
     """
     # Validate project access
@@ -202,9 +199,7 @@ def get_project_students(
         )
 
     # Query all students who are members of project teams in this project
-    from sqlalchemy import func
-    from app.infra.db.models import GroupMember, Group
-    
+
     # Get all unique students from project team members
     students_data = (
         db.query(
@@ -227,7 +222,7 @@ def get_project_students(
         .order_by(User.name)
         .all()
     )
-    
+
     # Format output
     result = []
     for row in students_data:
@@ -243,7 +238,7 @@ def get_project_students(
                 project_team_number=row.team_number,
             )
         )
-    
+
     return result
 
 
@@ -286,16 +281,16 @@ def update_project_student_teams(
 ):
     """
     Update team assignments for students in a project
-    
+
     Assigns students to project teams by team number.
     Expects a list of updates: [{"student_id": int, "team_number": int | None}, ...]
-    
+
     - If team_number is provided: Creates/updates ProjectTeam and ProjectTeamMember
     - If team_number is None: Removes student from all project teams
     """
     # Require teacher or admin role
     require_role(user, ["teacher", "admin"])
-    
+
     # Validate project access
     project = (
         db.query(Project)
@@ -306,25 +301,29 @@ def update_project_student_teams(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
         )
-    
+
     # Process updates
     for update in updates:
         student_id = update.get("student_id")
         team_number = update.get("team_number")
-        
+
         if not student_id:
             continue
-        
+
         # Validate student exists
-        student = db.query(User).filter(
-            User.id == student_id,
-            User.school_id == user.school_id,
-            User.role == "student"
-        ).first()
-        
+        student = (
+            db.query(User)
+            .filter(
+                User.id == student_id,
+                User.school_id == user.school_id,
+                User.role == "student",
+            )
+            .first()
+        )
+
         if not student:
             continue
-            
+
         # Find existing project team membership for this student
         existing_member = (
             db.query(ProjectTeamMember)
@@ -336,7 +335,7 @@ def update_project_student_teams(
             )
             .first()
         )
-        
+
         if team_number is None:
             # Remove from project team
             if existing_member:
@@ -353,7 +352,7 @@ def update_project_student_teams(
                 )
                 .first()
             )
-            
+
             if not project_team:
                 # Create new project team
                 project_team = ProjectTeam(
@@ -365,7 +364,7 @@ def update_project_student_teams(
                 )
                 db.add(project_team)
                 db.flush()  # Get the ID
-            
+
             if existing_member:
                 # Move to different team
                 if existing_member.project_team_id != project_team.id:
@@ -378,9 +377,9 @@ def update_project_student_teams(
                     user_id=student_id,
                 )
                 db.add(new_member)
-    
+
     db.commit()
-    
+
     return {"status": "success", "updated": len(updates)}
 
 
@@ -435,11 +434,13 @@ def clone_project_teams(
 # ========== Helper functions ==========
 
 
-def _format_project_team_output(project_team: ProjectTeam, db: Session) -> ProjectTeamOut:
+def _format_project_team_output(
+    project_team: ProjectTeam, db: Session
+) -> ProjectTeamOut:
     """Format ProjectTeam for API output"""
     # Determine if team is locked (has evaluations/assessments)
     is_locked = ProjectTeamService._is_project_team_locked(db, project_team.id)
-    
+
     return ProjectTeamOut(
         id=project_team.id,
         school_id=project_team.school_id,
@@ -462,7 +463,7 @@ def _format_member_output(member: ProjectTeamMember) -> ProjectTeamMemberOut:
     user_status = "active"
     if not member.user or member.user.archived:
         user_status = "inactive"
-    
+
     return ProjectTeamMemberOut(
         id=member.id,
         project_team_id=member.project_team_id,

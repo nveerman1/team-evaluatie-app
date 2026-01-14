@@ -478,7 +478,7 @@ def export_students_csv(
     ]
     for s in items:
         lines.append(
-            f'{s.id},{s.name},{s.email},{s.class_name or ""},{s.team_id or ""},{s.team_name or ""},{s.team_number or ""},{s.course_id or ""},{s.course_name or ""},{s.status}'
+            f"{s.id},{s.name},{s.email},{s.class_name or ''},{s.team_id or ''},{s.team_name or ''},{s.team_number or ''},{s.course_id or ''},{s.course_name or ''},{s.status}"
         )
     return PlainTextResponse(
         content="\n".join(lines),

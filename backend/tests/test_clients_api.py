@@ -47,14 +47,14 @@ class TestClientsEndpoints:
         query_mock.offset.return_value = query_mock
         query_mock.limit.return_value = query_mock
         query_mock.all.return_value = [mock_client]
-        
+
         db.query.return_value = query_mock
         db.query.return_value.join.return_value.filter.return_value.scalar.return_value = 0
         db.query.return_value.join.return_value.filter.return_value.order_by.return_value.first.return_value = None
 
         # Call with explicit page and per_page arguments to avoid Query objects
         result = list_clients(db=db, user=user, page=1, per_page=20)
-        
+
         assert result.total >= 0
         assert isinstance(result.items, list)
 
@@ -92,7 +92,7 @@ class TestClientsEndpoints:
 
         with pytest.raises(HTTPException) as exc_info:
             get_client(client_id=99999, db=db, user=user)
-        
+
         assert exc_info.value.status_code == 404
 
     def test_create_client_success_for_teacher(self):
@@ -109,7 +109,7 @@ class TestClientsEndpoints:
         )
 
         create_client(client_data=client_data, db=db, user=user)
-        
+
         assert db.add.called
         assert db.commit.called
 
@@ -127,7 +127,7 @@ class TestClientsEndpoints:
 
         with pytest.raises(HTTPException) as exc_info:
             create_client(client_data=client_data, db=db, user=user)
-        
+
         assert exc_info.value.status_code == 403
 
     def test_update_client_success(self):
@@ -148,9 +148,9 @@ class TestClientsEndpoints:
         db.query.return_value = query_mock
 
         update_data = ClientUpdate(organization="Updated Name")
-        
+
         update_client(client_id=1, client_data=update_data, db=db, user=user)
-        
+
         assert db.commit.called
 
 
@@ -186,7 +186,7 @@ class TestClientLogEndpoints:
         db.query.return_value = query_mock
 
         result = get_client_log(client_id=1, db=db, user=user)
-        
+
         assert result.total >= 0
         assert isinstance(result.items, list)
 
@@ -212,7 +212,7 @@ class TestClientLogEndpoints:
         def mock_refresh(obj):
             obj.id = 1
             obj.created_at = datetime.now()
-        
+
         db.refresh = mock_refresh
 
         log_data = ClientLogCreate(
@@ -221,7 +221,7 @@ class TestClientLogEndpoints:
         )
 
         result = create_log_entry(client_id=1, log_entry=log_data, db=db, user=user)
-        
+
         assert db.add.called
         assert db.commit.called
         assert result.author_name == "Test User"
@@ -245,7 +245,7 @@ class TestClientLogEndpoints:
 
         with pytest.raises(HTTPException) as exc_info:
             create_log_entry(client_id=99999, log_entry=log_data, db=db, user=user)
-        
+
         assert exc_info.value.status_code == 404
 
 

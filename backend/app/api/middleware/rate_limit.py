@@ -1,4 +1,5 @@
 """Rate limiting middleware for FastAPI."""
+
 from __future__ import annotations
 
 import logging
@@ -13,23 +14,23 @@ logger = logging.getLogger(__name__)
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
     Middleware for rate limiting API requests.
-    
+
     Configuration:
     - API endpoints: 100 requests per minute per user
     - Queue endpoints: 10 requests per minute per user
     """
-    
+
     def __init__(self, app, rate_limiter: RateLimiter = None):
         """
         Initialize middleware.
-        
+
         Args:
             app: FastAPI application
             rate_limiter: RateLimiter instance (optional)
         """
         super().__init__(app)
         self.rate_limiter = rate_limiter or RateLimiter()
-    
+
     async def dispatch(
         self,
         request: Request,
@@ -37,24 +38,24 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     ) -> Response:
         """
         Process request with rate limiting.
-        
+
         Args:
             request: HTTP request
             call_next: Next middleware/handler
-            
+
         Returns:
             HTTP response
         """
         # Skip rate limiting for certain paths
         if self._should_skip_rate_limit(request.url.path):
             return await call_next(request)
-        
+
         # Get user identifier (use IP if no user)
         user_id = self._get_user_identifier(request)
-        
+
         # Determine rate limit based on endpoint
         max_requests, window_seconds = self._get_rate_limit(request.url.path)
-        
+
         # Check rate limit
         rate_key = f"{user_id}:{request.url.path}"
         is_allowed, retry_after = self.rate_limiter.is_allowed(
@@ -62,7 +63,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             max_requests,
             window_seconds,
         )
-        
+
         if not is_allowed:
             logger.warning(f"Rate limit exceeded for {rate_key}")
             raise HTTPException(
@@ -70,18 +71,20 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 detail=f"Rate limit exceeded. Retry after {retry_after} seconds.",
                 headers={"Retry-After": str(retry_after)},
             )
-        
+
         # Process request
         response = await call_next(request)
-        
+
         # Add rate limit headers
         usage = self.rate_limiter.get_usage(rate_key, window_seconds)
         response.headers["X-RateLimit-Limit"] = str(max_requests)
-        response.headers["X-RateLimit-Remaining"] = str(max(0, max_requests - usage["current_count"]))
+        response.headers["X-RateLimit-Remaining"] = str(
+            max(0, max_requests - usage["current_count"])
+        )
         response.headers["X-RateLimit-Reset"] = str(window_seconds)
-        
+
         return response
-    
+
     def _should_skip_rate_limit(self, path: str) -> bool:
         """Check if path should skip rate limiting."""
         skip_paths = [
@@ -91,7 +94,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             "/health",
         ]
         return any(path.startswith(skip_path) for skip_path in skip_paths)
-    
+
     def _get_user_identifier(self, request: Request) -> str:
         """Get user identifier for rate limiting."""
         # Try to get user ID from request state (set by auth middleware)
@@ -101,37 +104,41 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             user_id = getattr(user, "id", None)
             if user_id is not None:  # Handles user ID 0 correctly
                 return f"user:{user_id}"
-        
+
         # Fallback to IP address
         client_ip = request.client.host if request.client else "unknown"
         return f"ip:{client_ip}"
-    
+
     def _get_rate_limit(self, path: str) -> tuple[int, int]:
         """
         Get rate limit for endpoint.
-        
+
         Returns:
             Tuple of (max_requests, window_seconds)
         """
         # Auth endpoints: 5 requests per minute (prevent brute force)
         if "/auth/" in path and not path.endswith("/me"):
             return 5, 60
-        
+
         # Public external endpoints: 10 requests per minute
-        if "/public/" in path or "/external-assessments/" in path or "/external/invites" in path:
+        if (
+            "/public/" in path
+            or "/external-assessments/" in path
+            or "/external/invites" in path
+        ):
             return 10, 60
-        
+
         # Queue endpoints: 10 requests per minute
         if "/queue" in path or "/jobs" in path:
             return 10, 60
-        
+
         # Batch endpoints: 5 requests per minute
         if "/batch" in path:
             return 5, 60
-        
+
         # File upload endpoints: 5 requests per minute (DoS prevention)
         if ("/import" in path and path.endswith(".csv")) or "/upload" in path:
             return 5, 60
-        
+
         # Default: 100 requests per minute
         return 100, 60

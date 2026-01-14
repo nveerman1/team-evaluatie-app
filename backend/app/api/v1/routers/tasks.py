@@ -7,7 +7,6 @@ from typing import Optional
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_, and_
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import (
@@ -58,33 +57,33 @@ def _enrich_task_output(task: Task, db: Session) -> dict:
         "client_email": None,
         "course_name": None,
     }
-    
+
     # Enrich with project info
     if task.project_id:
         project = db.query(Project).filter(Project.id == task.project_id).first()
         if project:
             result["project_name"] = project.title
             result["class_name"] = project.class_name
-            
+
             # Get course name if available
             if project.course_id:
                 course = db.query(Course).filter(Course.id == project.course_id).first()
                 if course:
                     result["course_name"] = course.name
-    
+
     # Enrich with client info
     if task.client_id:
         client = db.query(Client).filter(Client.id == task.client_id).first()
         if client:
             result["client_name"] = client.organization
             result["client_email"] = client.email
-    
+
     # Enrich with class info
     if task.class_id:
         class_obj = db.query(Class).filter(Class.id == task.class_id).first()
         if class_obj:
             result["class_name"] = class_obj.name
-    
+
     return result
 
 
@@ -94,10 +93,18 @@ def list_tasks(
     user: User = Depends(get_current_user),
     page: int = Query(1, ge=1),
     per_page: int = Query(30, ge=1, le=100),
-    status: Optional[str] = Query(None, description="Filter by status: open, done, dismissed"),
-    type: Optional[str] = Query(None, description="Filter by type: opdrachtgever, docent, project"),
-    from_date: Optional[str] = Query(None, alias="from", description="Filter tasks due from date (ISO format)"),
-    to_date: Optional[str] = Query(None, alias="to", description="Filter tasks due to date (ISO format)"),
+    status: Optional[str] = Query(
+        None, description="Filter by status: open, done, dismissed"
+    ),
+    type: Optional[str] = Query(
+        None, description="Filter by type: opdrachtgever, docent, project"
+    ),
+    from_date: Optional[str] = Query(
+        None, alias="from", description="Filter tasks due from date (ISO format)"
+    ),
+    to_date: Optional[str] = Query(
+        None, alias="to", description="Filter tasks due to date (ISO format)"
+    ),
     project_id: Optional[int] = Query(None, description="Filter by project ID"),
     client_id: Optional[int] = Query(None, description="Filter by client ID"),
 ):
@@ -107,56 +114,56 @@ def list_tasks(
     Teachers and admins only.
     """
     require_role(user, ["admin", "teacher"])
-    
+
     # Base query - filter by school
     query = scope_query_by_school(db.query(Task), Task, user)
-    
+
     # Apply filters
     if status:
         query = query.filter(Task.status == status)
-    
+
     if type:
         query = query.filter(Task.type == type)
-    
+
     if from_date:
         try:
             from_dt = datetime.fromisoformat(from_date).date()
             query = query.filter(Task.due_date >= from_dt)
-        except (ValueError, AttributeError) as e:
+        except (ValueError, AttributeError):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid 'from' date format: {from_date}. Expected ISO format (YYYY-MM-DD)."
+                detail=f"Invalid 'from' date format: {from_date}. Expected ISO format (YYYY-MM-DD).",
             )
-    
+
     if to_date:
         try:
             to_dt = datetime.fromisoformat(to_date).date()
             query = query.filter(Task.due_date <= to_dt)
-        except (ValueError, AttributeError) as e:
+        except (ValueError, AttributeError):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid 'to' date format: {to_date}. Expected ISO format (YYYY-MM-DD)."
+                detail=f"Invalid 'to' date format: {to_date}. Expected ISO format (YYYY-MM-DD).",
             )
-    
+
     if project_id:
         query = query.filter(Task.project_id == project_id)
-    
+
     if client_id:
         query = query.filter(Task.client_id == client_id)
-    
+
     # Count total before pagination
     total = query.count()
-    
+
     # Sort by due_date ascending (nulls last)
     query = query.order_by(Task.due_date.asc().nullslast(), Task.created_at.desc())
-    
+
     # Paginate
     offset = (page - 1) * per_page
     tasks = query.offset(offset).limit(per_page).all()
-    
+
     # Enrich tasks with context
     enriched_tasks = [TaskOut(**_enrich_task_output(task, db)) for task in tasks]
-    
+
     return TaskListOut(
         items=enriched_tasks,
         total=total,
@@ -177,12 +184,14 @@ def create_task(
     Teachers and admins only.
     """
     require_role(user, ["admin", "teacher"])
-    
+
     # Validate project exists and belongs to school
     if payload.project_id:
         project = (
             db.query(Project)
-            .filter(Project.id == payload.project_id, Project.school_id == user.school_id)
+            .filter(
+                Project.id == payload.project_id, Project.school_id == user.school_id
+            )
             .first()
         )
         if not project:
@@ -190,7 +199,7 @@ def create_task(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Project not found or doesn't belong to your school",
             )
-    
+
     # Validate client exists and belongs to school
     if payload.client_id:
         client = (
@@ -203,7 +212,7 @@ def create_task(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Client not found or doesn't belong to your school",
             )
-    
+
     # Create task
     task = Task(
         school_id=user.school_id,
@@ -220,11 +229,11 @@ def create_task(
         auto_generated=False,
         source="manual",
     )
-    
+
     db.add(task)
     db.commit()
     db.refresh(task)
-    
+
     # Audit log
     log_action(
         db=db,
@@ -234,7 +243,7 @@ def create_task(
         resource_id=task.id,
         details={"title": task.title, "type": task.type},
     )
-    
+
     # Return enriched task
     return TaskOut(**_enrich_task_output(task, db))
 
@@ -251,7 +260,7 @@ def update_task(
     Teachers and admins only.
     """
     require_role(user, ["admin", "teacher"])
-    
+
     # Get task
     task = (
         db.query(Task)
@@ -263,24 +272,24 @@ def update_task(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found",
         )
-    
+
     # Update fields
     update_data = payload.model_dump(exclude_unset=True)
-    
+
     # Special handling for status changes
     if "status" in update_data:
         if update_data["status"] == "done" and task.status != "done":
             task.completed_at = datetime.now(timezone.utc)
         elif update_data["status"] != "done" and task.status == "done":
             task.completed_at = None
-    
+
     # Apply updates
     for field, value in update_data.items():
         setattr(task, field, value)
-    
+
     db.commit()
     db.refresh(task)
-    
+
     # Audit log
     log_action(
         db=db,
@@ -290,7 +299,7 @@ def update_task(
         resource_id=task.id,
         details={"updated_fields": list(update_data.keys())},
     )
-    
+
     # Return enriched task
     return TaskOut(**_enrich_task_output(task, db))
 
@@ -307,7 +316,7 @@ def delete_task(
     Teachers and admins only.
     """
     require_role(user, ["admin", "teacher"])
-    
+
     # Get task
     task = (
         db.query(Task)
@@ -319,7 +328,7 @@ def delete_task(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found",
         )
-    
+
     # Audit log before deletion
     log_action(
         db=db,
@@ -333,10 +342,10 @@ def delete_task(
             "auto_generated": task.auto_generated,
         },
     )
-    
+
     db.delete(task)
     db.commit()
-    
+
     return None
 
 
@@ -351,7 +360,7 @@ def complete_task(
     Teachers and admins only.
     """
     require_role(user, ["admin", "teacher"])
-    
+
     # Get task
     task = (
         db.query(Task)
@@ -363,14 +372,14 @@ def complete_task(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found",
         )
-    
+
     # Mark as done
     task.status = "done"
     task.completed_at = datetime.now(timezone.utc)
-    
+
     db.commit()
     db.refresh(task)
-    
+
     # Audit log
     log_action(
         db=db,
@@ -380,6 +389,6 @@ def complete_task(
         resource_id=task.id,
         details={"title": task.title},
     )
-    
+
     # Return enriched task
     return TaskOut(**_enrich_task_output(task, db))

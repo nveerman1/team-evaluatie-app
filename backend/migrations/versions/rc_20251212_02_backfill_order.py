@@ -5,13 +5,13 @@ Revises: rc_20251212_order
 Create Date: 2025-12-12 20:08:00.000000
 
 """
+
 from alembic import op
-import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'rc_20251212_backfill'
-down_revision = 'rc_20251212_order'
+revision = "rc_20251212_backfill"
+down_revision = "rc_20251212_order"
 branch_labels = None
 depends_on = None
 

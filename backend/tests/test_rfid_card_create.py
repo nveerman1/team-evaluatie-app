@@ -2,10 +2,7 @@
 Tests for RFID card creation API endpoint
 """
 
-import pytest
-from unittest.mock import Mock
-from app.api.v1.schemas.attendance import RFIDCardCreate, RFIDCardOut
-from app.infra.db.models import User, RFIDCard
+from app.api.v1.schemas.attendance import RFIDCardCreate
 
 
 class TestRFIDCardCreateSchema:
@@ -18,7 +15,7 @@ class TestRFIDCardCreateSchema:
             "label": "Test Card",
             "is_active": True,
         }
-        
+
         card = RFIDCardCreate(**card_data)
         assert card.uid == "1234567890"
         assert card.label == "Test Card"
@@ -29,7 +26,7 @@ class TestRFIDCardCreateSchema:
         card_data = {
             "uid": "1234567890",
         }
-        
+
         card = RFIDCardCreate(**card_data)
         assert card.uid == "1234567890"
         assert card.label is None
@@ -41,11 +38,11 @@ class TestRFIDCardCreateSchema:
             "uid": "1234567890",
             "label": "Main Card",
         }
-        
+
         # Should not raise validation error
         card = RFIDCardCreate(**card_data)
         assert card.uid == "1234567890"
-        assert not hasattr(card, 'user_id')
+        assert not hasattr(card, "user_id")
 
 
 class TestRFIDCardEndpoint:
@@ -53,23 +50,20 @@ class TestRFIDCardEndpoint:
 
     def test_create_card_accepts_request_without_user_id_in_body(self):
         """Test that the endpoint accepts request without user_id in body (gets it from URL)"""
-        from app.api.v1.routers.rfid import create_rfid_card
-        
+
         # This test verifies that the schema and endpoint work together correctly
         # The key point is that RFIDCardCreate does not require user_id in body
-        
+
         # Create request body (without user_id) - this should not raise validation error
         card_create = RFIDCardCreate(
-            uid="1234567890",
-            label="Test Card",
-            is_active=True
+            uid="1234567890", label="Test Card", is_active=True
         )
-        
+
         # Verify the card_create object was created successfully
         assert card_create.uid == "1234567890"
         assert card_create.label == "Test Card"
         assert card_create.is_active is True
-        assert not hasattr(card_create, 'user_id')
-        
+        assert not hasattr(card_create, "user_id")
+
         # This confirms the fix: user_id comes from URL path parameter,
         # not from the request body

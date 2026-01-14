@@ -15,7 +15,6 @@ Create Date: 2025-11-12 10:00:00.000000
 from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "mt_20251112_01"
@@ -35,16 +34,14 @@ def upgrade() -> None:
         "courses",
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default="true"),
     )
-    
+
     # Add unique constraint on (school_id, code)
     op.create_unique_constraint(
         "uq_course_code_per_school", "courses", ["school_id", "code"]
     )
-    
+
     # Add index on (school_id, is_active)
-    op.create_index(
-        "ix_course_school_active", "courses", ["school_id", "is_active"]
-    )
+    op.create_index("ix_course_school_active", "courses", ["school_id", "is_active"])
 
     # ========== TeacherCourse junction table ==========
     op.create_table(
@@ -59,9 +56,7 @@ def upgrade() -> None:
             nullable=False,
             server_default="teacher",
         ),
-        sa.Column(
-            "is_active", sa.Boolean(), nullable=False, server_default="true"
-        ),
+        sa.Column("is_active", sa.Boolean(), nullable=False, server_default="true"),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -74,12 +69,8 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=False,
         ),
-        sa.ForeignKeyConstraint(
-            ["course_id"], ["courses.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["teacher_id"], ["users.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["course_id"], ["courses.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["teacher_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("teacher_id", "course_id", name="uq_teacher_course_once"),
     )
@@ -107,7 +98,7 @@ def upgrade() -> None:
             server_default="peer",
         ),
     )
-    
+
     # Add indexes for evaluation_type
     op.create_index("ix_eval_type", "evaluations", ["evaluation_type"])
     op.create_index(
@@ -139,9 +130,7 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=False,
         ),
-        sa.ForeignKeyConstraint(
-            ["user_id"], ["users.id"], ondelete="SET NULL"
-        ),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_audit_logs_id"), "audit_logs", ["id"], unique=False)

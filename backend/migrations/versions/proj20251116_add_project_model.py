@@ -8,7 +8,6 @@ Create Date: 2025-11-16 10:30:00.000000
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 
 # revision identifiers, used by Alembic.
@@ -31,7 +30,9 @@ def upgrade():
         sa.Column("class_name", sa.String(length=50), nullable=True),
         sa.Column("start_date", sa.Date(), nullable=True),
         sa.Column("end_date", sa.Date(), nullable=True),
-        sa.Column("status", sa.String(length=30), nullable=False, server_default="concept"),
+        sa.Column(
+            "status", sa.String(length=30), nullable=False, server_default="concept"
+        ),
         sa.Column("created_by_id", sa.Integer(), nullable=False),
         sa.Column(
             "created_at",
@@ -63,9 +64,7 @@ def upgrade():
         "evaluations",
         sa.Column("project_id", sa.Integer(), nullable=True),
     )
-    op.create_index(
-        "ix_eval_project", "evaluations", ["project_id"], unique=False
-    )
+    op.create_index("ix_eval_project", "evaluations", ["project_id"], unique=False)
     op.create_foreign_key(
         "fk_evaluations_project_id_projects",
         "evaluations",
@@ -101,28 +100,26 @@ def upgrade():
         "client_project_links",
         sa.Column("project_id", sa.Integer(), nullable=True),
     )
-    
+
     # Step 2: Drop old constraints and indexes
-    op.drop_constraint(
-        "uq_client_project_once", "client_project_links", type_="unique"
-    )
+    op.drop_constraint("uq_client_project_once", "client_project_links", type_="unique")
     op.drop_index("ix_client_project_project", table_name="client_project_links")
     op.drop_constraint(
         "client_project_links_project_assessment_id_fkey",
         "client_project_links",
         type_="foreignkey",
     )
-    
+
     # Step 3: Drop old column (data migration would happen here if needed)
     op.drop_column("client_project_links", "project_assessment_id")
-    
+
     # Step 4: Make project_id non-nullable now that old column is gone
     op.alter_column(
         "client_project_links",
         "project_id",
         nullable=False,
     )
-    
+
     # Step 5: Add new constraints and indexes
     op.create_foreign_key(
         "fk_client_project_links_project_id_projects",
@@ -138,7 +135,10 @@ def upgrade():
         ["client_id", "project_id"],
     )
     op.create_index(
-        "ix_client_project_project", "client_project_links", ["project_id"], unique=False
+        "ix_client_project_project",
+        "client_project_links",
+        ["project_id"],
+        unique=False,
     )
 
     # Update start_date and end_date column types from DateTime to Date
@@ -176,27 +176,25 @@ def downgrade():
     )
 
     op.drop_index("ix_client_project_project", table_name="client_project_links")
-    op.drop_constraint(
-        "uq_client_project_once", "client_project_links", type_="unique"
-    )
+    op.drop_constraint("uq_client_project_once", "client_project_links", type_="unique")
     op.drop_constraint(
         "fk_client_project_links_project_id_projects",
         "client_project_links",
         type_="foreignkey",
     )
-    
+
     op.add_column(
         "client_project_links",
         sa.Column("project_assessment_id", sa.Integer(), nullable=True),
     )
     op.drop_column("client_project_links", "project_id")
-    
+
     op.alter_column(
         "client_project_links",
         "project_assessment_id",
         nullable=False,
     )
-    
+
     op.create_foreign_key(
         "client_project_links_project_assessment_id_fkey",
         "client_project_links",

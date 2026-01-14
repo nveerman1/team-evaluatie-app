@@ -43,9 +43,15 @@ def upgrade() -> None:
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("target_level", sa.String(20), nullable=True, index=True),
         sa.Column("level_descriptors", sa.JSON(), nullable=False, server_default="{}"),
-        sa.Column("learning_objective_ids", sa.JSON(), nullable=False, server_default="[]"),
-        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "learning_objective_ids", sa.JSON(), nullable=False, server_default="[]"
+        ),
+        sa.Column(
+            "created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now()
+        ),
     )
 
     # Create indexes

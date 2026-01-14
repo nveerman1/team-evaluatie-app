@@ -11,7 +11,9 @@ from pydantic import BaseModel, Field
 class AcademicYearBase(BaseModel):
     """Base academic year schema"""
 
-    label: str = Field(..., min_length=1, max_length=50, description="e.g., '2025-2026'")
+    label: str = Field(
+        ..., min_length=1, max_length=50, description="e.g., '2025-2026'"
+    )
     start_date: date = Field(..., description="Start date of the academic year")
     end_date: date = Field(..., description="End date of the academic year")
 

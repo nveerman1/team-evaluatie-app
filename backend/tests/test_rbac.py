@@ -18,7 +18,7 @@ def test_require_role_admin():
     user = Mock(spec=User)
     user.role = "admin"
     user.school_id = 1
-    
+
     # Should not raise
     require_role(user, ["admin"])
     require_role(user, ["admin", "teacher"])
@@ -29,7 +29,7 @@ def test_require_role_teacher():
     user = Mock(spec=User)
     user.role = "teacher"
     user.school_id = 1
-    
+
     # Should not raise
     require_role(user, ["teacher"])
     require_role(user, ["admin", "teacher"])
@@ -40,10 +40,10 @@ def test_require_role_student_denied():
     user = Mock(spec=User)
     user.role = "student"
     user.school_id = 1
-    
+
     with pytest.raises(RBACError) as exc_info:
         require_role(user, ["admin", "teacher"])
-    
+
     assert "Insufficient permissions" in str(exc_info.value.detail)
 
 
@@ -51,7 +51,7 @@ def test_require_role_no_user():
     """Test that None user raises error"""
     with pytest.raises(RBACError) as exc_info:
         require_role(None, ["admin"])
-    
+
     assert "Authentication required" in str(exc_info.value.detail)
 
 
@@ -59,7 +59,7 @@ def test_ensure_school_access_valid():
     """Test that user from same school can access"""
     user = Mock(spec=User)
     user.school_id = 1
-    
+
     # Should not raise
     ensure_school_access(user, 1)
 
@@ -68,10 +68,10 @@ def test_ensure_school_access_denied():
     """Test that user from different school is denied"""
     user = Mock(spec=User)
     user.school_id = 1
-    
+
     with pytest.raises(RBACError) as exc_info:
         ensure_school_access(user, 2)
-    
+
     assert "school mismatch" in str(exc_info.value.detail)
 
 
@@ -88,14 +88,14 @@ def test_can_access_course_admin():
     user.role = "admin"
     user.school_id = 1
     user.id = 1
-    
+
     course = Mock(spec=Course)
     course.id = 1
     course.school_id = 1
-    
+
     # Mock query to return course
     db.query.return_value.filter.return_value.first.return_value = course
-    
+
     assert can_access_course(db, user, 1) is True
 
 
@@ -106,10 +106,10 @@ def test_can_access_course_wrong_school():
     user.role = "admin"
     user.school_id = 1
     user.id = 1
-    
+
     # Mock query to return None (course not in same school)
     db.query.return_value.filter.return_value.first.return_value = None
-    
+
     assert can_access_course(db, user, 99) is False
 
 
@@ -120,19 +120,19 @@ def test_can_access_course_teacher_assigned():
     user.role = "teacher"
     user.school_id = 1
     user.id = 1
-    
+
     course = Mock(spec=Course)
     course.id = 1
     course.school_id = 1
-    
+
     teacher_course = Mock(spec=TeacherCourse)
-    
+
     # Mock queries
     db.query.return_value.filter.return_value.first.side_effect = [
         course,  # First call returns course
         teacher_course,  # Second call returns teacher_course
     ]
-    
+
     assert can_access_course(db, user, 1) is True
 
 
@@ -143,17 +143,17 @@ def test_can_access_course_teacher_not_assigned():
     user.role = "teacher"
     user.school_id = 1
     user.id = 1
-    
+
     course = Mock(spec=Course)
     course.id = 1
     course.school_id = 1
-    
+
     # Mock queries
     db.query.return_value.filter.return_value.first.side_effect = [
         course,  # First call returns course
         None,  # Second call returns None (not assigned)
     ]
-    
+
     assert can_access_course(db, user, 1) is False
 
 

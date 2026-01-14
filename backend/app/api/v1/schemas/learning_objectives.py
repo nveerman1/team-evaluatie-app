@@ -14,17 +14,18 @@ ObjectiveType = Literal["template", "teacher"]
 class LearningObjectiveCreate(BaseModel):
     """
     Create a learning objective.
-    
+
     For central/template objectives (admin):
     - is_template=True
     - subject_id is required
     - teacher_id should be None
-    
+
     For teacher-specific objectives:
     - is_template=False (default)
     - teacher_id is set automatically from current user
     - course_id is optional
     """
+
     domain: Optional[str] = None
     title: str
     description: Optional[str] = None
@@ -81,6 +82,7 @@ class LearningObjectiveListResponse(BaseModel):
 
 class LearningObjectiveImportItem(BaseModel):
     """Single item for CSV import"""
+
     domain: Optional[str] = None
     title: str
     description: Optional[str] = None
@@ -116,6 +118,7 @@ class StudentLearningObjectiveProgress(BaseModel):
 
 class StudentLearningObjectiveOverview(BaseModel):
     """Overview of all learning objectives for a student"""
+
     user_id: int
     user_name: str
     class_name: Optional[str]
@@ -124,5 +127,6 @@ class StudentLearningObjectiveOverview(BaseModel):
 
 class LearningObjectiveOverviewResponse(BaseModel):
     """Overview response for teacher dashboard"""
+
     students: List[StudentLearningObjectiveOverview]
     filters: Dict[str, Any] = Field(default_factory=dict)

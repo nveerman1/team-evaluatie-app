@@ -7,7 +7,6 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, and_
 from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_db, get_current_user
@@ -34,15 +33,18 @@ from app.core.security import generate_external_token
 from app.core.rbac import require_role
 
 router = APIRouter(
-    prefix="/projects/external-management",
-    tags=["external-assessments-management"]
+    prefix="/projects/external-management", tags=["external-assessments-management"]
 )
 
 
 # ============ External Evaluator CRUD ============
 
 
-@router.post("/evaluators", response_model=ExternalEvaluatorOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/evaluators",
+    response_model=ExternalEvaluatorOut,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_external_evaluator(
     payload: ExternalEvaluatorCreate,
     db: Session = Depends(get_db),
@@ -53,28 +55,32 @@ def create_external_evaluator(
     Checks if evaluator with same email already exists for this school.
     """
     require_role(user, ["teacher", "admin"])
-    
+
     # Check if evaluator already exists for this school + email
-    existing = db.query(ExternalEvaluator).filter(
-        ExternalEvaluator.school_id == user.school_id,
-        ExternalEvaluator.email == payload.email,
-    ).first()
-    
+    existing = (
+        db.query(ExternalEvaluator)
+        .filter(
+            ExternalEvaluator.school_id == user.school_id,
+            ExternalEvaluator.email == payload.email,
+        )
+        .first()
+    )
+
     if existing:
         # Return existing evaluator
         return ExternalEvaluatorOut.model_validate(existing)
-    
+
     evaluator = ExternalEvaluator(
         school_id=user.school_id,
         name=payload.name,
         email=payload.email,
         organisation=payload.organisation,
     )
-    
+
     db.add(evaluator)
     db.commit()
     db.refresh(evaluator)
-    
+
     return ExternalEvaluatorOut.model_validate(evaluator)
 
 
@@ -85,11 +91,14 @@ def list_external_evaluators(
 ):
     """List all external evaluators for the school (teacher/admin only)"""
     require_role(user, ["teacher", "admin"])
-    
-    evaluators = db.query(ExternalEvaluator).filter(
-        ExternalEvaluator.school_id == user.school_id
-    ).order_by(ExternalEvaluator.name).all()
-    
+
+    evaluators = (
+        db.query(ExternalEvaluator)
+        .filter(ExternalEvaluator.school_id == user.school_id)
+        .order_by(ExternalEvaluator.name)
+        .all()
+    )
+
     return [ExternalEvaluatorOut.model_validate(e) for e in evaluators]
 
 
@@ -101,15 +110,19 @@ def get_external_evaluator(
 ):
     """Get a specific external evaluator (teacher/admin only)"""
     require_role(user, ["teacher", "admin"])
-    
-    evaluator = db.query(ExternalEvaluator).filter(
-        ExternalEvaluator.id == evaluator_id,
-        ExternalEvaluator.school_id == user.school_id,
-    ).first()
-    
+
+    evaluator = (
+        db.query(ExternalEvaluator)
+        .filter(
+            ExternalEvaluator.id == evaluator_id,
+            ExternalEvaluator.school_id == user.school_id,
+        )
+        .first()
+    )
+
     if not evaluator:
         raise HTTPException(status_code=404, detail="External evaluator not found")
-    
+
     return ExternalEvaluatorOut.model_validate(evaluator)
 
 
@@ -122,15 +135,19 @@ def update_external_evaluator(
 ):
     """Update an external evaluator (teacher/admin only)"""
     require_role(user, ["teacher", "admin"])
-    
-    evaluator = db.query(ExternalEvaluator).filter(
-        ExternalEvaluator.id == evaluator_id,
-        ExternalEvaluator.school_id == user.school_id,
-    ).first()
-    
+
+    evaluator = (
+        db.query(ExternalEvaluator)
+        .filter(
+            ExternalEvaluator.id == evaluator_id,
+            ExternalEvaluator.school_id == user.school_id,
+        )
+        .first()
+    )
+
     if not evaluator:
         raise HTTPException(status_code=404, detail="External evaluator not found")
-    
+
     # Update fields
     if payload.name is not None:
         evaluator.name = payload.name
@@ -138,12 +155,12 @@ def update_external_evaluator(
         evaluator.email = payload.email
     if payload.organisation is not None:
         evaluator.organisation = payload.organisation
-    
+
     evaluator.updated_at = datetime.utcnow()
-    
+
     db.commit()
     db.refresh(evaluator)
-    
+
     return ExternalEvaluatorOut.model_validate(evaluator)
 
 
@@ -161,31 +178,38 @@ def create_bulk_invitations(
     Supports both PER_TEAM and ALL_TEAMS modes.
     """
     require_role(user, ["teacher", "admin"])
-    
+
     if payload.mode == "PER_TEAM":
         if not payload.per_team_configs:
             raise HTTPException(
-                status_code=400,
-                detail="per_team_configs required for PER_TEAM mode"
+                status_code=400, detail="per_team_configs required for PER_TEAM mode"
             )
-        
+
         created_links = []
         for config in payload.per_team_configs:
             # Verify group exists and belongs to this school
-            group = db.query(Group).filter(
-                Group.id == config.group_id,
-                Group.school_id == user.school_id,
-            ).first()
-            
+            group = (
+                db.query(Group)
+                .filter(
+                    Group.id == config.group_id,
+                    Group.school_id == user.school_id,
+                )
+                .first()
+            )
+
             if not group:
                 continue  # Skip invalid groups
-            
+
             # Get or create evaluator
-            evaluator = db.query(ExternalEvaluator).filter(
-                ExternalEvaluator.school_id == user.school_id,
-                ExternalEvaluator.email == config.evaluator_email,
-            ).first()
-            
+            evaluator = (
+                db.query(ExternalEvaluator)
+                .filter(
+                    ExternalEvaluator.school_id == user.school_id,
+                    ExternalEvaluator.email == config.evaluator_email,
+                )
+                .first()
+            )
+
             if not evaluator:
                 evaluator = ExternalEvaluator(
                     school_id=user.school_id,
@@ -195,15 +219,19 @@ def create_bulk_invitations(
                 )
                 db.add(evaluator)
                 db.flush()
-            
+
             # Check if link already exists for this assessment + group + team_number
-            existing_link = db.query(ProjectTeamExternal).filter(
-                ProjectTeamExternal.assessment_id == payload.assessment_id,
-                ProjectTeamExternal.group_id == config.group_id,
-                ProjectTeamExternal.team_number == config.team_number,
-                ProjectTeamExternal.external_evaluator_id == evaluator.id,
-            ).first()
-            
+            existing_link = (
+                db.query(ProjectTeamExternal)
+                .filter(
+                    ProjectTeamExternal.assessment_id == payload.assessment_id,
+                    ProjectTeamExternal.group_id == config.group_id,
+                    ProjectTeamExternal.team_number == config.team_number,
+                    ProjectTeamExternal.external_evaluator_id == evaluator.id,
+                )
+                .first()
+            )
+
             if existing_link:
                 # Update status if needed
                 if existing_link.status == "NOT_INVITED":
@@ -211,7 +239,7 @@ def create_bulk_invitations(
                     existing_link.invited_at = datetime.utcnow()
                 created_links.append(existing_link)
                 continue
-            
+
             # Create new link with unique token
             token = generate_external_token()
             link = ProjectTeamExternal(
@@ -227,9 +255,9 @@ def create_bulk_invitations(
             )
             db.add(link)
             created_links.append(link)
-        
+
         db.commit()
-        
+
         return {
             "success": True,
             "message": f"Created {len(created_links)} invitation(s)",
@@ -237,22 +265,25 @@ def create_bulk_invitations(
                 ProjectTeamExternalOut.model_validate(link) for link in created_links
             ],
         }
-    
+
     elif payload.mode == "ALL_TEAMS":
         if not payload.all_teams_config:
             raise HTTPException(
-                status_code=400,
-                detail="all_teams_config required for ALL_TEAMS mode"
+                status_code=400, detail="all_teams_config required for ALL_TEAMS mode"
             )
-        
+
         config = payload.all_teams_config
-        
+
         # Get or create evaluator
-        evaluator = db.query(ExternalEvaluator).filter(
-            ExternalEvaluator.school_id == user.school_id,
-            ExternalEvaluator.email == config.evaluator_email,
-        ).first()
-        
+        evaluator = (
+            db.query(ExternalEvaluator)
+            .filter(
+                ExternalEvaluator.school_id == user.school_id,
+                ExternalEvaluator.email == config.evaluator_email,
+            )
+            .first()
+        )
+
         if not evaluator:
             evaluator = ExternalEvaluator(
                 school_id=user.school_id,
@@ -262,29 +293,37 @@ def create_bulk_invitations(
             )
             db.add(evaluator)
             db.flush()
-        
+
         # Generate one token for all teams
         token = generate_external_token()
         created_links = []
-        
+
         for team_info in config.teams:
             # Verify group exists
-            group = db.query(Group).filter(
-                Group.id == team_info.group_id,
-                Group.school_id == user.school_id,
-            ).first()
-            
+            group = (
+                db.query(Group)
+                .filter(
+                    Group.id == team_info.group_id,
+                    Group.school_id == user.school_id,
+                )
+                .first()
+            )
+
             if not group:
                 continue
-            
+
             # Check if link already exists for this assessment + group + team_number
-            existing_link = db.query(ProjectTeamExternal).filter(
-                ProjectTeamExternal.assessment_id == payload.assessment_id,
-                ProjectTeamExternal.group_id == team_info.group_id,
-                ProjectTeamExternal.team_number == team_info.team_number,
-                ProjectTeamExternal.external_evaluator_id == evaluator.id,
-            ).first()
-            
+            existing_link = (
+                db.query(ProjectTeamExternal)
+                .filter(
+                    ProjectTeamExternal.assessment_id == payload.assessment_id,
+                    ProjectTeamExternal.group_id == team_info.group_id,
+                    ProjectTeamExternal.team_number == team_info.team_number,
+                    ProjectTeamExternal.external_evaluator_id == evaluator.id,
+                )
+                .first()
+            )
+
             if existing_link:
                 # Update status if needed
                 if existing_link.status == "NOT_INVITED":
@@ -294,7 +333,7 @@ def create_bulk_invitations(
                     existing_link.invitation_token = token
                 created_links.append(existing_link)
                 continue
-            
+
             # Create new link with shared token
             link = ProjectTeamExternal(
                 school_id=user.school_id,
@@ -309,9 +348,9 @@ def create_bulk_invitations(
             )
             db.add(link)
             created_links.append(link)
-        
+
         db.commit()
-        
+
         return {
             "success": True,
             "message": f"Created {len(created_links)} invitation(s) with shared token",
@@ -320,15 +359,17 @@ def create_bulk_invitations(
                 ProjectTeamExternalOut.model_validate(link) for link in created_links
             ],
         }
-    
+
     else:
         raise HTTPException(
-            status_code=400,
-            detail="Invalid mode. Must be PER_TEAM or ALL_TEAMS"
+            status_code=400, detail="Invalid mode. Must be PER_TEAM or ALL_TEAMS"
         )
 
 
-@router.get("/projects/{project_id}/external-status", response_model=List[ExternalAssessmentStatus])
+@router.get(
+    "/projects/{project_id}/external-status",
+    response_model=List[ExternalAssessmentStatus],
+)
 def get_project_external_status(
     project_id: int,
     assessment_id: Optional[int] = None,
@@ -339,117 +380,169 @@ def get_project_external_status(
     Get external assessment status for all teams in a project.
     Teams are identified by project_teams.team_number.
     External invitations are filtered by assessment_id to scope to specific assessments.
-    
+
     Args:
         project_id: The project ID
         assessment_id: Optional assessment_id to filter external invitations for a specific assessment
     """
     require_role(user, ["teacher", "admin"])
-    
+
     # Verify project exists and belongs to school
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.school_id == user.school_id,
-    ).first()
-    
+    project = (
+        db.query(Project)
+        .filter(
+            Project.id == project_id,
+            Project.school_id == user.school_id,
+        )
+        .first()
+    )
+
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    
+
     if not project.course_id:
         return []
-    
+
     # Get all groups in this course (for matching external invitations)
-    course_groups = db.query(Group).filter(
-        Group.course_id == project.course_id,
-        Group.school_id == user.school_id,
-    ).all()
-    
+    course_groups = (
+        db.query(Group)
+        .filter(
+            Group.course_id == project.course_id,
+            Group.school_id == user.school_id,
+        )
+        .all()
+    )
+
     if not course_groups:
         return []
-    
+
     course_group_ids = [g.id for g in course_groups]
-    
+
     # If assessment_id is provided, filter to only that assessment
     if assessment_id:
         # Verify assessment exists and belongs to this project/school
-        assessment = db.query(ProjectAssessment).filter(
-            ProjectAssessment.id == assessment_id,
-            ProjectAssessment.project_id == project_id,
-            ProjectAssessment.school_id == user.school_id,
-        ).first()
-        
+        assessment = (
+            db.query(ProjectAssessment)
+            .filter(
+                ProjectAssessment.id == assessment_id,
+                ProjectAssessment.project_id == project_id,
+                ProjectAssessment.school_id == user.school_id,
+            )
+            .first()
+        )
+
         if not assessment:
-            raise HTTPException(status_code=400, detail="Assessment not found or doesn't belong to this project")
-    
+            raise HTTPException(
+                status_code=400,
+                detail="Assessment not found or doesn't belong to this project",
+            )
+
     # Check if there are ANY external invitations for the specified assessment
     # If not, return empty to avoid showing invitations from other assessments
     if assessment_id:
-        has_external_invitations = db.query(ProjectTeamExternal).filter(
-            ProjectTeamExternal.assessment_id == assessment_id,
-            ProjectTeamExternal.school_id == user.school_id,
-        ).first() is not None
+        has_external_invitations = (
+            db.query(ProjectTeamExternal)
+            .filter(
+                ProjectTeamExternal.assessment_id == assessment_id,
+                ProjectTeamExternal.school_id == user.school_id,
+            )
+            .first()
+            is not None
+        )
     else:
         # No assessment filter, check for any invitations in course groups
-        has_external_invitations = db.query(ProjectTeamExternal).filter(
-            ProjectTeamExternal.group_id.in_(course_group_ids),
-            ProjectTeamExternal.school_id == user.school_id,
-        ).first() is not None
-    
+        has_external_invitations = (
+            db.query(ProjectTeamExternal)
+            .filter(
+                ProjectTeamExternal.group_id.in_(course_group_ids),
+                ProjectTeamExternal.school_id == user.school_id,
+            )
+            .first()
+            is not None
+        )
+
     if not has_external_invitations:
         return []
-    
+
     # Try to get project teams first
-    project_teams = db.query(ProjectTeam).filter(
-        ProjectTeam.project_id == project_id,
-        ProjectTeam.school_id == user.school_id,
-    ).all()
-    
+    project_teams = (
+        db.query(ProjectTeam)
+        .filter(
+            ProjectTeam.project_id == project_id,
+            ProjectTeam.school_id == user.school_id,
+        )
+        .all()
+    )
+
     status_list = []
-    
+
     # If project teams exist, use them
     if project_teams:
         for project_team in project_teams:
             # Skip teams without team_number as external invitations use team_number for identification
             if project_team.team_number is None:
                 continue
-            
+
             # Get team members from project_team_members
-            team_members_records = db.query(User).join(
-                ProjectTeamMember, ProjectTeamMember.user_id == User.id
-            ).filter(
-                ProjectTeamMember.project_team_id == project_team.id,
-                ProjectTeamMember.school_id == user.school_id,
-            ).all()
-            
+            team_members_records = (
+                db.query(User)
+                .join(ProjectTeamMember, ProjectTeamMember.user_id == User.id)
+                .filter(
+                    ProjectTeamMember.project_team_id == project_team.id,
+                    ProjectTeamMember.school_id == user.school_id,
+                )
+                .all()
+            )
+
             # Build list of member names
             member_names = ", ".join([u.name or u.email for u in team_members_records])
             team_name = f"Team {project_team.team_number}"
-            
+
             # Get external link if exists for this team
             # Filter by assessment_id if provided, otherwise by group_id
             if assessment_id:
                 # Filter by specific assessment
-                link = db.query(ProjectTeamExternal).filter(
-                    ProjectTeamExternal.assessment_id == assessment_id,
-                    ProjectTeamExternal.team_number == project_team.team_number,
-                ).first()
+                link = (
+                    db.query(ProjectTeamExternal)
+                    .filter(
+                        ProjectTeamExternal.assessment_id == assessment_id,
+                        ProjectTeamExternal.team_number == project_team.team_number,
+                    )
+                    .first()
+                )
             elif project_team.team_id:
                 # Fallback: match by group_id when no assessment_id
-                link = db.query(ProjectTeamExternal).filter(
-                    ProjectTeamExternal.group_id == project_team.team_id,
-                    ProjectTeamExternal.team_number == project_team.team_number,
-                ).first()
+                link = (
+                    db.query(ProjectTeamExternal)
+                    .filter(
+                        ProjectTeamExternal.group_id == project_team.team_id,
+                        ProjectTeamExternal.team_number == project_team.team_number,
+                    )
+                    .first()
+                )
             else:
                 # Search across all course groups
-                link = db.query(ProjectTeamExternal).filter(
-                    ProjectTeamExternal.group_id.in_(course_group_ids),
-                    ProjectTeamExternal.team_number == project_team.team_number,
-                ).first()
-            
+                link = (
+                    db.query(ProjectTeamExternal)
+                    .filter(
+                        ProjectTeamExternal.group_id.in_(course_group_ids),
+                        ProjectTeamExternal.team_number == project_team.team_number,
+                    )
+                    .first()
+                )
+
             # Determine the group_id to use for the response
             # Use the external link's group_id if it exists, otherwise use team_id or first course group
-            response_group_id = link.group_id if link else (project_team.team_id or course_group_ids[0] if course_group_ids else 0)
-            
+            response_group_id = (
+                link.group_id
+                if link
+                else (
+                    project_team.team_id or course_group_ids[0]
+                    if course_group_ids
+                    else 0
+                )
+            )
+
             # Include all teams that have team_number
             if link:
                 evaluator = db.get(ExternalEvaluator, link.external_evaluator_id)
@@ -459,7 +552,11 @@ def get_project_external_status(
                         team_number=project_team.team_number,
                         team_name=team_name,
                         members=member_names,
-                        external_evaluator=ExternalEvaluatorOut.model_validate(evaluator) if evaluator else None,
+                        external_evaluator=ExternalEvaluatorOut.model_validate(
+                            evaluator
+                        )
+                        if evaluator
+                        else None,
                         status=link.status,
                         invitation_sent=(link.status != "NOT_INVITED"),
                         submitted_at=link.submitted_at,
@@ -484,49 +581,69 @@ def get_project_external_status(
     else:
         # Fallback: No project teams exist yet, get teams from external invitations
         # This ensures external invitations show up even if project teams haven't been created
-        
+
         # Get all external invitations for this assessment or course groups
         if assessment_id:
-            external_links = db.query(ProjectTeamExternal).filter(
-                ProjectTeamExternal.assessment_id == assessment_id,
-                ProjectTeamExternal.school_id == user.school_id,
-            ).all()
+            external_links = (
+                db.query(ProjectTeamExternal)
+                .filter(
+                    ProjectTeamExternal.assessment_id == assessment_id,
+                    ProjectTeamExternal.school_id == user.school_id,
+                )
+                .all()
+            )
         else:
-            external_links = db.query(ProjectTeamExternal).filter(
-                ProjectTeamExternal.group_id.in_(course_group_ids),
-                ProjectTeamExternal.school_id == user.school_id,
-            ).all()
-        
+            external_links = (
+                db.query(ProjectTeamExternal)
+                .filter(
+                    ProjectTeamExternal.group_id.in_(course_group_ids),
+                    ProjectTeamExternal.school_id == user.school_id,
+                )
+                .all()
+            )
+
         for link in external_links:
             # For each external link, try to get team member info
             team_num = link.team_number
             if team_num is None:
                 continue
-            
+
             # Try to find team members from project teams first, fall back to group members
             team_members_records = []
-            
+
             # Check if there's a project team (even if not linked to this project yet)
-            potential_team = db.query(ProjectTeam).filter(
-                ProjectTeam.team_number == team_num,
-                ProjectTeam.school_id == user.school_id,
-            ).filter(
-                (ProjectTeam.project_id == project_id) |
-                (ProjectTeam.team_id.in_(course_group_ids))
-            ).first()
-            
+            potential_team = (
+                db.query(ProjectTeam)
+                .filter(
+                    ProjectTeam.team_number == team_num,
+                    ProjectTeam.school_id == user.school_id,
+                )
+                .filter(
+                    (ProjectTeam.project_id == project_id)
+                    | (ProjectTeam.team_id.in_(course_group_ids))
+                )
+                .first()
+            )
+
             if potential_team:
-                team_members_records = db.query(User).join(
-                    ProjectTeamMember, ProjectTeamMember.user_id == User.id
-                ).filter(
-                    ProjectTeamMember.project_team_id == potential_team.id,
-                    ProjectTeamMember.school_id == user.school_id,
-                ).all()
-            
+                team_members_records = (
+                    db.query(User)
+                    .join(ProjectTeamMember, ProjectTeamMember.user_id == User.id)
+                    .filter(
+                        ProjectTeamMember.project_team_id == potential_team.id,
+                        ProjectTeamMember.school_id == user.school_id,
+                    )
+                    .all()
+                )
+
             # Build member names
-            member_names = ", ".join([u.name or u.email for u in team_members_records]) if team_members_records else ""
+            member_names = (
+                ", ".join([u.name or u.email for u in team_members_records])
+                if team_members_records
+                else ""
+            )
             team_name = f"Team {team_num}"
-            
+
             evaluator = db.get(ExternalEvaluator, link.external_evaluator_id)
             status_list.append(
                 ExternalAssessmentStatus(
@@ -534,14 +651,16 @@ def get_project_external_status(
                     team_number=team_num,
                     team_name=team_name,
                     members=member_names,
-                    external_evaluator=ExternalEvaluatorOut.model_validate(evaluator) if evaluator else None,
+                    external_evaluator=ExternalEvaluatorOut.model_validate(evaluator)
+                    if evaluator
+                    else None,
                     status=link.status,
                     invitation_sent=(link.status != "NOT_INVITED"),
                     submitted_at=link.submitted_at,
                     updated_at=link.updated_at,
                 )
             )
-    
+
     return status_list
 
 
@@ -555,26 +674,37 @@ def get_external_advisory_detail(
     """
     Get external advisory assessment detail for a specific team.
     Returns the rubric scores and general comment from the external evaluator.
-    
+
     Args:
         group_id: The group/course ID
         team_number: The team number within the group (recommended for proper team identification
                      when multiple teams exist in the same group)
     """
-    from app.infra.db.models import ProjectAssessment, ProjectAssessmentScore, RubricCriterion
-    from app.api.v1.schemas.external_assessments import ExternalAdvisoryScoreOut, ExternalAdvisoryDetail
-    
+    from app.infra.db.models import (
+        ProjectAssessment,
+        ProjectAssessmentScore,
+        RubricCriterion,
+    )
+    from app.api.v1.schemas.external_assessments import (
+        ExternalAdvisoryScoreOut,
+        ExternalAdvisoryDetail,
+    )
+
     require_role(user, ["teacher", "admin"])
-    
+
     # Verify group exists and belongs to school
-    group = db.query(Group).filter(
-        Group.id == group_id,
-        Group.school_id == user.school_id,
-    ).first()
-    
+    group = (
+        db.query(Group)
+        .filter(
+            Group.id == group_id,
+            Group.school_id == user.school_id,
+        )
+        .first()
+    )
+
     if not group:
         raise HTTPException(status_code=404, detail="Team not found")
-    
+
     # Get external link - filter by both group_id and team_number
     link_query = db.query(ProjectTeamExternal).filter(
         ProjectTeamExternal.group_id == group_id,
@@ -582,37 +712,49 @@ def get_external_advisory_detail(
     if team_number is not None:
         link_query = link_query.filter(ProjectTeamExternal.team_number == team_number)
     link = link_query.first()
-    
+
     if not link:
-        detail_msg = f"No external evaluator linked to team {team_number}" if team_number is not None else "No external evaluator linked to this group"
+        detail_msg = (
+            f"No external evaluator linked to team {team_number}"
+            if team_number is not None
+            else "No external evaluator linked to this group"
+        )
         raise HTTPException(status_code=404, detail=detail_msg)
-    
+
     # Get external evaluator
     evaluator = db.get(ExternalEvaluator, link.external_evaluator_id)
     if not evaluator:
         raise HTTPException(status_code=404, detail="External evaluator not found")
-    
+
     # Get external assessment
-    assessment = db.query(ProjectAssessment).filter(
-        ProjectAssessment.group_id == group_id,
-        ProjectAssessment.external_evaluator_id == link.external_evaluator_id,
-        ProjectAssessment.role == "EXTERNAL",
-    ).first()
-    
+    assessment = (
+        db.query(ProjectAssessment)
+        .filter(
+            ProjectAssessment.group_id == group_id,
+            ProjectAssessment.external_evaluator_id == link.external_evaluator_id,
+            ProjectAssessment.role == "EXTERNAL",
+        )
+        .first()
+    )
+
     if not assessment:
-        raise HTTPException(status_code=404, detail="No external assessment found for this team")
-    
+        raise HTTPException(
+            status_code=404, detail="No external assessment found for this team"
+        )
+
     # Get rubric
     rubric = db.get(Rubric, assessment.rubric_id)
     if not rubric:
         raise HTTPException(status_code=404, detail="Rubric not found")
-    
+
     # Get scores with criterion info
     # Note: Scores are associated with the assessment which is already scoped to the evaluator/team
-    scores = db.query(ProjectAssessmentScore).filter(
-        ProjectAssessmentScore.assessment_id == assessment.id
-    ).all()
-    
+    scores = (
+        db.query(ProjectAssessmentScore)
+        .filter(ProjectAssessmentScore.assessment_id == assessment.id)
+        .all()
+    )
+
     score_outputs = []
     for score in scores:
         criterion = db.get(RubricCriterion, score.criterion_id)
@@ -625,15 +767,15 @@ def get_external_advisory_detail(
                 comment=score.comment,
             )
         )
-    
+
     # Get general comment from metadata
     general_comment = None
     if assessment.metadata_json:
         general_comment = assessment.metadata_json.get("general_comment")
-    
+
     # Construct team name - use "Team X" format when team_number is provided, otherwise use group name
     team_display_name = f"Team {team_number}" if team_number is not None else group.name
-    
+
     return ExternalAdvisoryDetail(
         team_id=group_id,
         team_name=team_display_name,

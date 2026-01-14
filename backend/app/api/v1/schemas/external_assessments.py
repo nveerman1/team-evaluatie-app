@@ -3,7 +3,7 @@ Schemas for External Assessments API
 """
 
 from __future__ import annotations
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict
 from datetime import datetime
 from pydantic import BaseModel, Field, EmailStr, ConfigDict
 
@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field, EmailStr, ConfigDict
 
 class ExternalEvaluatorBase(BaseModel):
     """Base schema for external evaluator"""
+
     name: str = Field(..., min_length=1, max_length=200)
     email: EmailStr
     organisation: Optional[str] = Field(None, max_length=200)
@@ -20,11 +21,13 @@ class ExternalEvaluatorBase(BaseModel):
 
 class ExternalEvaluatorCreate(ExternalEvaluatorBase):
     """Schema for creating an external evaluator"""
+
     pass
 
 
 class ExternalEvaluatorUpdate(BaseModel):
     """Schema for updating an external evaluator"""
+
     name: Optional[str] = Field(None, min_length=1, max_length=200)
     email: Optional[EmailStr] = None
     organisation: Optional[str] = Field(None, max_length=200)
@@ -32,6 +35,7 @@ class ExternalEvaluatorUpdate(BaseModel):
 
 class ExternalEvaluatorOut(ExternalEvaluatorBase):
     """Schema for external evaluator output"""
+
     id: int
     school_id: int
     created_at: datetime
@@ -45,6 +49,7 @@ class ExternalEvaluatorOut(ExternalEvaluatorBase):
 
 class ProjectTeamExternalBase(BaseModel):
     """Base schema for project team external link"""
+
     group_id: int
     external_evaluator_id: int
     project_id: Optional[int] = None
@@ -53,11 +58,13 @@ class ProjectTeamExternalBase(BaseModel):
 
 class ProjectTeamExternalCreate(ProjectTeamExternalBase):
     """Schema for creating a project team external link"""
+
     pass
 
 
 class ProjectTeamExternalOut(ProjectTeamExternalBase):
     """Schema for project team external output"""
+
     id: int
     school_id: int
     invitation_token: str
@@ -77,6 +84,7 @@ class ProjectTeamExternalOut(ProjectTeamExternalBase):
 
 class ExternalAssessmentTeamInfo(BaseModel):
     """Info about a team for external assessment"""
+
     team_id: int
     team_name: str
     team_number: Optional[int] = None
@@ -90,6 +98,7 @@ class ExternalAssessmentTeamInfo(BaseModel):
 
 class ExternalAssessmentTokenInfo(BaseModel):
     """Information returned when resolving an external assessment token"""
+
     token: str
     external_evaluator: ExternalEvaluatorOut
     teams: List[ExternalAssessmentTeamInfo]
@@ -103,6 +112,7 @@ class ExternalAssessmentTokenInfo(BaseModel):
 
 class RubricCriterionForExternal(BaseModel):
     """Rubric criterion for external assessment"""
+
     id: int
     name: str
     weight: float
@@ -112,6 +122,7 @@ class RubricCriterionForExternal(BaseModel):
 
 class RubricForExternal(BaseModel):
     """Rubric structure for external assessment"""
+
     id: int
     title: str
     description: Optional[str]
@@ -122,6 +133,7 @@ class RubricForExternal(BaseModel):
 
 class ExternalAssessmentScoreOut(BaseModel):
     """Existing score for external assessment"""
+
     criterion_id: int
     score: int
     comment: Optional[str]
@@ -129,6 +141,7 @@ class ExternalAssessmentScoreOut(BaseModel):
 
 class ExternalAssessmentDetail(BaseModel):
     """Detail view for external assessment of a specific team"""
+
     team_id: int
     team_name: str
     team_number: Optional[int] = None
@@ -146,6 +159,7 @@ class ExternalAssessmentDetail(BaseModel):
 
 class ExternalAssessmentScoreSubmit(BaseModel):
     """Score submission for one criterion"""
+
     criterion_id: int
     score: int = Field(..., ge=1, le=5)
     comment: Optional[str] = None
@@ -153,6 +167,7 @@ class ExternalAssessmentScoreSubmit(BaseModel):
 
 class ExternalAssessmentSubmit(BaseModel):
     """Submission for external assessment"""
+
     scores: List[ExternalAssessmentScoreSubmit]
     general_comment: Optional[str] = None
     submit: bool = False  # If True, marks as final submission
@@ -160,6 +175,7 @@ class ExternalAssessmentSubmit(BaseModel):
 
 class ExternalAssessmentSubmitResponse(BaseModel):
     """Response after submission"""
+
     success: bool
     message: str
     status: str  # IN_PROGRESS | SUBMITTED
@@ -170,12 +186,14 @@ class ExternalAssessmentSubmitResponse(BaseModel):
 
 class ExternalAssessmentConfigBase(BaseModel):
     """Base configuration for external assessment on a project"""
+
     mode: str  # NONE | PER_TEAM | ALL_TEAMS
     rubric_id: Optional[int] = None
 
 
 class ExternalAssessmentPerTeamConfig(BaseModel):
     """Configuration for per-team external assessment"""
+
     group_id: int
     team_number: int  # Team number within the group
     evaluator_name: str
@@ -185,12 +203,14 @@ class ExternalAssessmentPerTeamConfig(BaseModel):
 
 class TeamIdentifier(BaseModel):
     """Identifies a team by group_id and team_number"""
+
     group_id: int
     team_number: int
 
 
 class ExternalAssessmentAllTeamsConfig(BaseModel):
     """Configuration for all-teams external assessment"""
+
     evaluator_name: str
     evaluator_email: EmailStr
     evaluator_organisation: Optional[str] = None
@@ -200,6 +220,7 @@ class ExternalAssessmentAllTeamsConfig(BaseModel):
 
 class BulkInviteRequest(BaseModel):
     """Request to send invitations in bulk"""
+
     mode: str  # PER_TEAM | ALL_TEAMS
     assessment_id: Optional[int] = None  # Assessment ID to associate invitations with
     per_team_configs: Optional[List[ExternalAssessmentPerTeamConfig]] = None
@@ -208,6 +229,7 @@ class BulkInviteRequest(BaseModel):
 
 class ExternalAssessmentStatus(BaseModel):
     """Status of external assessment for a team"""
+
     team_id: int  # This is the group_id for backward compatibility
     team_number: int  # The actual team number within the group
     team_name: str
@@ -221,6 +243,7 @@ class ExternalAssessmentStatus(BaseModel):
 
 class ExternalAdvisoryScoreOut(BaseModel):
     """Score from external advisory assessment"""
+
     criterion_id: int
     criterion_name: str
     category: Optional[str]
@@ -230,6 +253,7 @@ class ExternalAdvisoryScoreOut(BaseModel):
 
 class ExternalAdvisoryDetail(BaseModel):
     """Full external advisory assessment detail for a team (teacher view)"""
+
     team_id: int
     team_name: str
     external_evaluator: ExternalEvaluatorOut

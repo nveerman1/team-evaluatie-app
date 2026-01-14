@@ -17,7 +17,9 @@ class CourseBase(BaseModel):
     level: Optional[str] = Field(
         None, max_length=50, description="e.g., 'onderbouw', 'bovenbouw'"
     )
-    year: Optional[int] = Field(None, ge=2020, le=2100, description="Deprecated: use academic_year_id")
+    year: Optional[int] = Field(
+        None, ge=2020, le=2100, description="Deprecated: use academic_year_id"
+    )
     description: Optional[str] = None
     subject_id: Optional[int] = Field(None, description="Optional FK to Subject")
     academic_year_id: Optional[int] = Field(None, description="FK to AcademicYear")
@@ -91,20 +93,20 @@ class TeacherCourseOut(BaseModel):
 
 class CourseStudentOut(BaseModel):
     """Schema for student in a course"""
-    
+
     id: int
     name: str
     email: str
     class_name: Optional[str] = None
     team_number: Optional[int] = None
-    
+
     class Config:
         from_attributes = True
 
 
 class CourseStudentCreate(BaseModel):
     """Schema for adding a student to a course"""
-    
+
     name: str = Field(..., min_length=1, max_length=200)
     email: str = Field(..., min_length=1, max_length=200)
     class_name: Optional[str] = Field(None, max_length=50)
@@ -113,12 +115,12 @@ class CourseStudentCreate(BaseModel):
 
 class StudentTeamUpdate(BaseModel):
     """Schema for updating a single student's team"""
-    
+
     student_id: int
     team_number: Optional[int] = None
 
 
 class BulkStudentTeamUpdate(BaseModel):
     """Schema for bulk updating student team assignments"""
-    
+
     updates: List[StudentTeamUpdate]

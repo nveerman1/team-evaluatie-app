@@ -10,6 +10,7 @@ This worker processes jobs from multiple queues with priority support:
 - ai-summaries (normal priority)
 - ai-summaries-low (low priority)
 """
+
 import sys
 import time
 import logging

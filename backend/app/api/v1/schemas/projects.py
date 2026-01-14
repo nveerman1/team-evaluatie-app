@@ -19,7 +19,9 @@ class ProjectBase(BaseModel):
     slug: Optional[str] = Field(None, max_length=100)
     description: Optional[str] = None
     class_name: Optional[str] = Field(None, max_length=50)
-    period: Optional[str] = Field(None, max_length=10, description="Period: P1, P2, P3, or P4")
+    period: Optional[str] = Field(
+        None, max_length=10, description="Period: P1, P2, P3, or P4"
+    )
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     status: str = Field(default="concept", max_length=30)
@@ -226,7 +228,7 @@ class EvaluationConfig(BaseModel):
     # Project assessments (creates ProjectAssessment records)
     project_assessment_tussen: Optional[ProjectAssessmentConfig] = None
     project_assessment_eind: Optional[ProjectAssessmentConfig] = None
-    
+
     # Legacy support (deprecated, use project_assessment_tussen or project_assessment_eind instead)
     project_assessment: Optional[ProjectAssessmentConfig] = None
 
@@ -309,8 +311,12 @@ class RunningProjectKPIOut(BaseModel):
     """Schema for running projects KPI statistics"""
 
     running_projects: int = Field(..., description="Total running projects count")
-    active_clients_now: int = Field(..., description="Number of unique active clients in running projects")
-    upcoming_moments: int = Field(..., description="Number of upcoming presentations/moments")
+    active_clients_now: int = Field(
+        ..., description="Number of unique active clients in running projects"
+    )
+    upcoming_moments: int = Field(
+        ..., description="Number of upcoming presentations/moments"
+    )
 
 
 class RunningProjectItem(BaseModel):
@@ -321,23 +327,25 @@ class RunningProjectItem(BaseModel):
     project_title: str
     project_status: str
     course_name: Optional[str] = None
-    
+
     # Client info
     client_id: Optional[int] = None
     client_organization: Optional[str] = None
     client_email: Optional[str] = None
-    
+
     # Team info
     class_name: Optional[str] = None
     team_number: Optional[int] = None
     student_names: List[str] = Field(default_factory=list)
-    
+
     # Period
     start_date: Optional[date] = None
     end_date: Optional[date] = None
-    
+
     # Next moment
-    next_moment_type: Optional[str] = None  # "Tussenpresentatie", "Eindpresentatie", "Contactmoment"
+    next_moment_type: Optional[str] = (
+        None  # "Tussenpresentatie", "Eindpresentatie", "Contactmoment"
+    )
     next_moment_date: Optional[date] = None
 
     model_config = ConfigDict(from_attributes=True)

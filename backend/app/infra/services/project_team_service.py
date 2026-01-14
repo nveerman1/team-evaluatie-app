@@ -4,7 +4,6 @@ Service layer for Project Teams
 
 from typing import Optional, List, Tuple
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_, func
 from fastapi import HTTPException, status
 
 from app.infra.db.models import (
@@ -47,9 +46,11 @@ class ProjectTeamService:
             Created ProjectTeam instance
         """
         # Validate project exists
-        project = db.query(Project).filter(
-            Project.id == project_id, Project.school_id == school_id
-        ).first()
+        project = (
+            db.query(Project)
+            .filter(Project.id == project_id, Project.school_id == school_id)
+            .first()
+        )
         if not project:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -59,9 +60,11 @@ class ProjectTeamService:
         # Get display name
         display_name = team_name
         if team_id:
-            group = db.query(Group).filter(
-                Group.id == team_id, Group.school_id == school_id
-            ).first()
+            group = (
+                db.query(Group)
+                .filter(Group.id == team_id, Group.school_id == school_id)
+                .first()
+            )
             if not group:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -286,12 +289,16 @@ class ProjectTeamService:
             Tuple of (teams_cloned, members_cloned, new_project_team_ids)
         """
         # Validate both projects exist
-        source_project = db.query(Project).filter(
-            Project.id == source_project_id, Project.school_id == school_id
-        ).first()
-        target_project = db.query(Project).filter(
-            Project.id == target_project_id, Project.school_id == school_id
-        ).first()
+        source_project = (
+            db.query(Project)
+            .filter(Project.id == source_project_id, Project.school_id == school_id)
+            .first()
+        )
+        target_project = (
+            db.query(Project)
+            .filter(Project.id == target_project_id, Project.school_id == school_id)
+            .first()
+        )
 
         if not source_project:
             raise HTTPException(

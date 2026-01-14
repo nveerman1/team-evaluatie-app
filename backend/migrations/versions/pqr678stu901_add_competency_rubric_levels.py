@@ -37,11 +37,19 @@ def upgrade():
             nullable=False,
         ),
         sa.PrimaryKeyConstraint("id"),
-        sa.ForeignKeyConstraint(["competency_id"], ["competencies.id"], ondelete="CASCADE"),
-        sa.UniqueConstraint("competency_id", "level", name="uq_rubric_level_per_competency"),
+        sa.ForeignKeyConstraint(
+            ["competency_id"], ["competencies.id"], ondelete="CASCADE"
+        ),
+        sa.UniqueConstraint(
+            "competency_id", "level", name="uq_rubric_level_per_competency"
+        ),
     )
-    op.create_index("ix_competency_rubric_levels_id", "competency_rubric_levels", ["id"])
-    op.create_index("ix_rubric_level_competency", "competency_rubric_levels", ["competency_id"])
+    op.create_index(
+        "ix_competency_rubric_levels_id", "competency_rubric_levels", ["id"]
+    )
+    op.create_index(
+        "ix_rubric_level_competency", "competency_rubric_levels", ["competency_id"]
+    )
 
 
 def downgrade():

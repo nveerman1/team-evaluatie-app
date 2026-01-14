@@ -25,13 +25,15 @@ def upgrade() -> None:
         "summary_generation_jobs",
         sa.Column("progress", sa.Integer(), nullable=False, server_default="0"),
     )
-    
+
     # Add priority support
     op.add_column(
         "summary_generation_jobs",
-        sa.Column("priority", sa.String(length=20), nullable=False, server_default="normal"),
+        sa.Column(
+            "priority", sa.String(length=20), nullable=False, server_default="normal"
+        ),
     )
-    
+
     # Add retry support
     op.add_column(
         "summary_generation_jobs",
@@ -45,7 +47,7 @@ def upgrade() -> None:
         "summary_generation_jobs",
         sa.Column("next_retry_at", sa.DateTime(), nullable=True),
     )
-    
+
     # Add cancellation support
     op.add_column(
         "summary_generation_jobs",
@@ -55,7 +57,7 @@ def upgrade() -> None:
         "summary_generation_jobs",
         sa.Column("cancelled_by", sa.Integer(), nullable=True),
     )
-    
+
     # Add webhook support
     op.add_column(
         "summary_generation_jobs",
@@ -63,30 +65,46 @@ def upgrade() -> None:
     )
     op.add_column(
         "summary_generation_jobs",
-        sa.Column("webhook_delivered", sa.Boolean(), nullable=False, server_default="false"),
+        sa.Column(
+            "webhook_delivered", sa.Boolean(), nullable=False, server_default="false"
+        ),
     )
     op.add_column(
         "summary_generation_jobs",
         sa.Column("webhook_attempts", sa.Integer(), nullable=False, server_default="0"),
     )
-    
+
     # Add queue name for multi-queue support
     op.add_column(
         "summary_generation_jobs",
-        sa.Column("queue_name", sa.String(length=100), nullable=False, server_default="ai-summaries"),
+        sa.Column(
+            "queue_name",
+            sa.String(length=100),
+            nullable=False,
+            server_default="ai-summaries",
+        ),
     )
-    
+
     # Add task type for generic queue support
     op.add_column(
         "summary_generation_jobs",
-        sa.Column("task_type", sa.String(length=100), nullable=False, server_default="generate_summary"),
+        sa.Column(
+            "task_type",
+            sa.String(length=100),
+            nullable=False,
+            server_default="generate_summary",
+        ),
     )
-    
+
     # Create indexes for new fields
-    op.create_index("ix_summary_job_priority", "summary_generation_jobs", ["priority", "created_at"])
+    op.create_index(
+        "ix_summary_job_priority", "summary_generation_jobs", ["priority", "created_at"]
+    )
     op.create_index("ix_summary_job_queue", "summary_generation_jobs", ["queue_name"])
-    op.create_index("ix_summary_job_next_retry", "summary_generation_jobs", ["next_retry_at"])
-    
+    op.create_index(
+        "ix_summary_job_next_retry", "summary_generation_jobs", ["next_retry_at"]
+    )
+
     # Create scheduled_jobs table for cron-like scheduling
     op.create_table(
         "scheduled_jobs",
@@ -96,7 +114,9 @@ def upgrade() -> None:
         sa.Column("task_type", sa.String(length=100), nullable=False),
         sa.Column("queue_name", sa.String(length=100), nullable=False),
         sa.Column("cron_expression", sa.String(length=100), nullable=False),
-        sa.Column("task_params", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column(
+            "task_params", postgresql.JSONB(astext_type=sa.Text()), nullable=True
+        ),
         sa.Column("enabled", sa.Boolean(), nullable=False, server_default="true"),
         sa.Column("last_run_at", sa.DateTime(), nullable=True),
         sa.Column("next_run_at", sa.DateTime(), nullable=True),
@@ -106,7 +126,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["created_by"], ["users.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
     )
-    
+
     op.create_index("ix_scheduled_jobs_id", "scheduled_jobs", ["id"])
     op.create_index("ix_scheduled_jobs_school_id", "scheduled_jobs", ["school_id"])
     op.create_index("ix_scheduled_jobs_enabled", "scheduled_jobs", ["enabled"])
@@ -120,12 +140,12 @@ def downgrade() -> None:
     op.drop_index("ix_scheduled_jobs_school_id", table_name="scheduled_jobs")
     op.drop_index("ix_scheduled_jobs_id", table_name="scheduled_jobs")
     op.drop_table("scheduled_jobs")
-    
+
     # Drop indexes
     op.drop_index("ix_summary_job_next_retry", table_name="summary_generation_jobs")
     op.drop_index("ix_summary_job_queue", table_name="summary_generation_jobs")
     op.drop_index("ix_summary_job_priority", table_name="summary_generation_jobs")
-    
+
     # Drop columns
     op.drop_column("summary_generation_jobs", "task_type")
     op.drop_column("summary_generation_jobs", "queue_name")

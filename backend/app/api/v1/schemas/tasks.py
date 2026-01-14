@@ -18,7 +18,9 @@ class TaskBase(BaseModel):
     description: Optional[str] = None
     due_date: Optional[date] = None
     status: str = Field(default="open", max_length=30)  # "open" | "done" | "dismissed"
-    type: str = Field(default="opdrachtgever", max_length=30)  # "opdrachtgever" | "docent" | "project"
+    type: str = Field(
+        default="opdrachtgever", max_length=30
+    )  # "opdrachtgever" | "docent" | "project"
     project_id: Optional[int] = None
     client_id: Optional[int] = None
     class_id: Optional[int] = None
@@ -58,7 +60,7 @@ class TaskOut(TaskBase):
     completed_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime
-    
+
     # Enriched context from joins
     project_name: Optional[str] = None
     class_name: Optional[str] = None
@@ -80,5 +82,5 @@ class TaskListOut(BaseModel):
 
 class TaskCompleteRequest(BaseModel):
     """Schema for marking a task as complete"""
-    
+
     pass  # No body needed, just POST to complete endpoint

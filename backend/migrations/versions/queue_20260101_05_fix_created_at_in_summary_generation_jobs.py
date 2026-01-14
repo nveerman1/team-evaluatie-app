@@ -20,7 +20,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Fix created_at column in summary_generation_jobs table to match Base class definition.
-    
+
     The column was created without server_default, but should have
     server_default=NOW() and timezone support to match the Base class definition.
     """

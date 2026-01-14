@@ -83,7 +83,9 @@ def _to_out_criterion(c: RubricCriterion) -> CriterionOut:
         "weight": float(c.weight),
         "descriptors": _ensure5(c.descriptors),  # <-- altijd 5 niveaus naar buiten
         "category": getattr(c, "category", None),
-        "learning_objective_ids": [lo.id for lo in c.learning_objectives] if hasattr(c, "learning_objectives") and c.learning_objectives else [],
+        "learning_objective_ids": [lo.id for lo in c.learning_objectives]
+        if hasattr(c, "learning_objectives") and c.learning_objectives
+        else [],
         "competency_id": getattr(c, "competency_id", None),
     }
     if hasattr(c, "order"):
@@ -102,28 +104,32 @@ def _sync_learning_objectives(
     Removes old associations and adds new ones.
     """
     # Remove existing associations
-    existing = db.execute(
-        select(RubricCriterionLearningObjective)
-        .where(RubricCriterionLearningObjective.criterion_id == criterion.id)
-    ).scalars().all()
-    
+    existing = (
+        db.execute(
+            select(RubricCriterionLearningObjective).where(
+                RubricCriterionLearningObjective.criterion_id == criterion.id
+            )
+        )
+        .scalars()
+        .all()
+    )
+
     for assoc in existing:
         db.delete(assoc)
-    
+
     # Flush deletes before inserting new associations to avoid unique constraint violation
     db.flush()
-    
+
     # Add new associations
     for lo_id in learning_objective_ids:
         # Verify learning objective exists and belongs to the same school
         lo = db.execute(
-            select(LearningObjective)
-            .where(
+            select(LearningObjective).where(
                 LearningObjective.id == lo_id,
                 LearningObjective.school_id == school_id,
             )
         ).scalar_one_or_none()
-        
+
         if lo:
             assoc = RubricCriterionLearningObjective(
                 school_id=school_id,
@@ -387,11 +393,11 @@ def add_criterion(
     _apply_order(c, payload.order)
     db.add(c)
     db.flush()  # Get ID before syncing learning objectives
-    
+
     # Sync learning objectives
     if payload.learning_objective_ids:
         _sync_learning_objectives(db, c, payload.learning_objective_ids, user.school_id)
-    
+
     db.commit()
     db.refresh(c)
     # Eagerly load learning_objectives relationship
@@ -428,16 +434,18 @@ def update_criterion(
     # Allow updating category to None (clearing it) or to a new value
     # We check if the field was provided in the request using model_dump
     update_data = payload.model_dump(exclude_unset=True)
-    if 'category' in update_data:
+    if "category" in update_data:
         c.category = payload.category
-    if 'competency_id' in update_data:
+    if "competency_id" in update_data:
         c.competency_id = payload.competency_id
     if payload.order is not None:
         _apply_order(c, payload.order)
-    
+
     # Sync learning objectives if provided
-    if 'learning_objective_ids' in update_data:
-        _sync_learning_objectives(db, c, payload.learning_objective_ids or [], user.school_id)
+    if "learning_objective_ids" in update_data:
+        _sync_learning_objectives(
+            db, c, payload.learning_objective_ids or [], user.school_id
+        )
 
     db.add(c)
     db.commit()
@@ -495,18 +503,22 @@ def batch_upsert_criteria(
     # Collect IDs from payload to determine which criteria to keep
     # Note: payload.items can be None or empty list - this is valid (deletes all criteria)
     payload_ids = {item.id for item in payload.items if item.id is not None}
-    
+
     # Delete criteria that are not in the payload (i.e., were removed in the frontend)
     # Foreign key constraints with CASCADE will automatically delete related records
-    existing_criteria = db.query(RubricCriterion).filter(
-        RubricCriterion.school_id == user.school_id,
-        RubricCriterion.rubric_id == rubric_id,
-    ).all()
-    
+    existing_criteria = (
+        db.query(RubricCriterion)
+        .filter(
+            RubricCriterion.school_id == user.school_id,
+            RubricCriterion.rubric_id == rubric_id,
+        )
+        .all()
+    )
+
     for existing in existing_criteria:
         if existing.id not in payload_ids:
             db.delete(existing)
-    
+
     db.flush()  # Flush deletes before processing upserts
 
     out: List[RubricCriterion] = []
@@ -535,7 +547,9 @@ def batch_upsert_criteria(
             db.add(c)
             db.flush()
             # Sync learning objectives
-            _sync_learning_objectives(db, c, item.learning_objective_ids or [], user.school_id)
+            _sync_learning_objectives(
+                db, c, item.learning_objective_ids or [], user.school_id
+            )
             out.append(c)
         else:
             c = RubricCriterion(
@@ -551,7 +565,9 @@ def batch_upsert_criteria(
             db.add(c)
             db.flush()  # id verkrijgen
             # Sync learning objectives
-            _sync_learning_objectives(db, c, item.learning_objective_ids or [], user.school_id)
+            _sync_learning_objectives(
+                db, c, item.learning_objective_ids or [], user.school_id
+            )
             out.append(c)
 
     db.commit()

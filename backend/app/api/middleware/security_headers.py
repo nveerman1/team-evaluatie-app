@@ -27,7 +27,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
        - Validates state-changing requests (POST, PUT, PATCH, DELETE)
        - Exempts OAuth callback routes
        - Returns HTTP 403 on validation failure
-    
+
     2. Security Headers (when ENABLE_BACKEND_SECURITY_HEADERS=true):
        - X-Content-Type-Options: Prevents MIME sniffing
        - X-Frame-Options: Prevents clickjacking
@@ -44,7 +44,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         "/api/v1/auth/azure/callback",  # Azure AD OAuth callback
         "/api/v1/auth/azure",  # Azure AD OAuth initiation
     ]
-    
+
     # Regex pattern to match any future OAuth callback routes
     # Matches: /api/v1/auth/*/callback
     CSRF_EXEMPT_PATTERN = re.compile(r"^/api/v1/auth/[^/]+/callback$")
@@ -58,24 +58,24 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Check exact matches
         if path in self.CSRF_EXEMPT_PATHS:
             return True
-        
+
         # Check pattern matches (e.g., /api/v1/auth/*/callback)
         if self.CSRF_EXEMPT_PATTERN.match(path):
             return True
-        
+
         return False
 
     def _get_trusted_origins(self) -> list[str]:
         """Get list of trusted origins for CSRF validation."""
         origins = []
-        
+
         # Add FRONTEND_URL if configured
         if settings.FRONTEND_URL:
             origins.append(settings.FRONTEND_URL)
-        
+
         # Add CORS_ORIGINS
         origins.extend(settings.CORS_ORIGINS)
-        
+
         # Normalize origins: ensure no trailing slashes
         return [origin.rstrip("/") for origin in origins if origin]
 
@@ -94,12 +94,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     def _validate_origin_or_referer(self, request: Request) -> bool:
         """
         Validate that the request originates from a trusted source.
-        
+
         Checks Origin header first (more reliable), falls back to Referer.
         Returns True if validation passes, False otherwise.
         """
         trusted_origins = self._get_trusted_origins()
-        
+
         if not trusted_origins:
             # SECURITY: Fail secure when no origins configured
             # In a properly configured system, FRONTEND_URL and/or CORS_ORIGINS should be set
@@ -154,7 +154,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     ) -> Response:
         """
         Process request with CSRF validation and add security headers to response.
-        
+
         CSRF validation happens BEFORE request is processed.
         Security headers are added AFTER response is generated.
         """
@@ -171,7 +171,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                         content="CSRF validation failed: Origin or Referer header does not match trusted origins",
                         status_code=403,
                     )
-                logger.debug(f"CSRF validation passed for {request.method} {request.url.path}")
+                logger.debug(
+                    f"CSRF validation passed for {request.method} {request.url.path}"
+                )
             else:
                 logger.debug(f"CSRF check skipped for exempt path: {request.url.path}")
 
@@ -191,7 +193,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Content-Security-Policy for API
         # Note: Frontend (Next.js) should set its own CSP
         response.headers["Content-Security-Policy"] = (
-            "default-src 'none'; " "frame-ancestors 'none'; " "base-uri 'self'"
+            "default-src 'none'; frame-ancestors 'none'; base-uri 'self'"
         )
 
         # Permissions-Policy (formerly Feature-Policy)

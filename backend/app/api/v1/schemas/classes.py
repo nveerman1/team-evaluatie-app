@@ -11,7 +11,9 @@ from pydantic import BaseModel, Field
 class ClassBase(BaseModel):
     """Base class schema"""
 
-    name: str = Field(..., min_length=1, max_length=50, description="e.g., 'G2a', 'A3b'")
+    name: str = Field(
+        ..., min_length=1, max_length=50, description="e.g., 'G2a', 'A3b'"
+    )
 
 
 class ClassCreate(ClassBase):
@@ -60,4 +62,6 @@ class BulkClassCreate(BaseModel):
     """Schema for bulk creating classes"""
 
     academic_year_id: int
-    class_names: List[str] = Field(..., min_items=1, description="List of class names to create")
+    class_names: List[str] = Field(
+        ..., min_items=1, description="List of class names to create"
+    )

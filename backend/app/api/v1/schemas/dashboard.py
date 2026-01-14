@@ -75,4 +75,3 @@ class StudentProgressKPIs(BaseModel):
     self_reviews_completed: int
     peer_reviews_total: int
     reflections_completed: int
-

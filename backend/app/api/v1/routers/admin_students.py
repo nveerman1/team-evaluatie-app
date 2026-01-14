@@ -12,9 +12,9 @@ from io import StringIO, TextIOWrapper
 from app.api.v1.deps import get_db, get_current_user
 from app.api.v1.utils.csv_sanitization import sanitize_csv_value
 from app.infra.db.models import (
-    User, 
-    StudentClassMembership, 
-    Class, 
+    User,
+    StudentClassMembership,
+    Class,
     AcademicYear,
     CourseEnrollment,
     Course,
@@ -31,7 +31,9 @@ MAX_CSV_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 MAX_CSV_ROWS = 10000  # Maximum number of rows to process
 
 
-def _enrich_student_with_class_and_courses(db: Session, student_id: int, school_id: int) -> Dict[str, Any]:
+def _enrich_student_with_class_and_courses(
+    db: Session, student_id: int, school_id: int
+) -> Dict[str, Any]:
     """
     Enrich student data with class info and course enrollments.
     Returns dict with 'class_info' and 'course_enrollments'.
@@ -40,7 +42,7 @@ def _enrich_student_with_class_and_courses(db: Session, student_id: int, school_
         "class_info": None,
         "course_enrollments": [],
     }
-    
+
     # Get student's class membership (most recent academic year)
     membership = (
         db.query(StudentClassMembership)
@@ -50,12 +52,12 @@ def _enrich_student_with_class_and_courses(db: Session, student_id: int, school_
         .order_by(AcademicYear.start_date.desc())
         .first()
     )
-    
+
     if membership:
         class_obj = membership.class_
         academic_year = membership.academic_year
         result["class_info"] = f"{class_obj.name} ({academic_year.label})"
-    
+
     # Get student's course enrollments
     enrollments = (
         db.query(CourseEnrollment)
@@ -68,15 +70,17 @@ def _enrich_student_with_class_and_courses(db: Session, student_id: int, school_
         )
         .all()
     )
-    
+
     for enrollment in enrollments:
         course = enrollment.course
-        result["course_enrollments"].append({
-            "course_id": course.id,
-            "course_name": course.name,
-            "subject_code": course.subject.code if course.subject else None,
-        })
-    
+        result["course_enrollments"].append(
+            {
+                "course_id": course.id,
+                "course_name": course.name,
+                "subject_code": course.subject.code if course.subject else None,
+            }
+        )
+
     return result
 
 
@@ -140,7 +144,11 @@ def _course_name_subquery(db: Session, school_id: int):
         )
         .join(Team, Team.id == TM.group_id)
         .join(Course, Course.id == Team.course_id)
-        .filter(TM.school_id == school_id, Course.school_id == school_id, TM.active.is_(True))
+        .filter(
+            TM.school_id == school_id,
+            Course.school_id == school_id,
+            TM.active.is_(True),
+        )
         .group_by(TM.user_id)
         .subquery()
     )
@@ -210,13 +218,11 @@ def _set_user_course_membership(
     existing = (
         db.query(TM)
         .filter(
-            TM.school_id == school_id,
-            TM.user_id == user_id,
-            TM.group_id == team.id
+            TM.school_id == school_id, TM.user_id == user_id, TM.group_id == team.id
         )
         .first()
     )
-    
+
     if existing:
         # reactivate bestaande membership
         existing.active = True
@@ -225,7 +231,6 @@ def _set_user_course_membership(
         # add nieuwe membership
         new_m = TM(school_id=school_id, group_id=team.id, user_id=user_id, active=True)
         db.add(new_m)
-
 
 
 # ---------- routes ----------
@@ -280,11 +285,15 @@ def list_admin_students(
     for r in rows:
         # Determine if user has logged in
         # User has logged in if they have a password_hash (local) or auth_provider is not 'local'
-        has_logged_in = bool(r.password_hash) or (r.auth_provider and r.auth_provider != "local")
-        
+        has_logged_in = bool(r.password_hash) or (
+            r.auth_provider and r.auth_provider != "local"
+        )
+
         # Enrich with class and course info
-        enrichment = _enrich_student_with_class_and_courses(db, r.id, current_user.school_id)
-        
+        enrichment = _enrich_student_with_class_and_courses(
+            db, r.id, current_user.school_id
+        )
+
         out.append(
             {
                 "id": r.id,
@@ -548,12 +557,12 @@ def import_students_csv(
         raise HTTPException(
             status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Niet ingelogd"
         )
-    
+
     # Check file size to prevent DoS attacks
     file.file.seek(0, 2)  # Seek to end of file
     file_size = file.file.tell()
     file.file.seek(0)  # Reset to beginning
-    
+
     if file_size > MAX_CSV_FILE_SIZE:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
@@ -578,7 +587,7 @@ def import_students_csv(
                 status_code=http_status.HTTP_400_BAD_REQUEST,
                 detail=f"Too many rows in CSV. Maximum is {MAX_CSV_ROWS} rows",
             )
-        
+
         try:
             name = (row.get("name") or "").strip()
             email = (row.get("email") or "").strip().lower()

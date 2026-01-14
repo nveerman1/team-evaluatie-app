@@ -7,7 +7,6 @@ Create Date: 2025-01-04 22:00:00.000000
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import ARRAY
 
 revision = "task_20250104_01"
 down_revision = "queue_20260101_05"
@@ -24,13 +23,21 @@ def upgrade():
         sa.Column("title", sa.String(length=500), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("due_date", sa.Date(), nullable=True),
-        sa.Column("status", sa.String(length=30), nullable=False, server_default="open"),
-        sa.Column("type", sa.String(length=30), nullable=False, server_default="opdrachtgever"),
+        sa.Column(
+            "status", sa.String(length=30), nullable=False, server_default="open"
+        ),
+        sa.Column(
+            "type", sa.String(length=30), nullable=False, server_default="opdrachtgever"
+        ),
         sa.Column("project_id", sa.Integer(), nullable=True),
         sa.Column("client_id", sa.Integer(), nullable=True),
         sa.Column("class_id", sa.Integer(), nullable=True),
-        sa.Column("auto_generated", sa.Boolean(), nullable=False, server_default="false"),
-        sa.Column("source", sa.String(length=50), nullable=False, server_default="manual"),
+        sa.Column(
+            "auto_generated", sa.Boolean(), nullable=False, server_default="false"
+        ),
+        sa.Column(
+            "source", sa.String(length=50), nullable=False, server_default="manual"
+        ),
         sa.Column("email_to", sa.String(length=500), nullable=True),
         sa.Column("email_cc", sa.String(length=500), nullable=True),
         sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
@@ -52,7 +59,7 @@ def upgrade():
         sa.ForeignKeyConstraint(["class_id"], ["classes.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
     )
-    
+
     # Create indexes
     op.create_index(op.f("ix_tasks_id"), "tasks", ["id"], unique=False)
     op.create_index(op.f("ix_tasks_school_id"), "tasks", ["school_id"], unique=False)
@@ -60,7 +67,9 @@ def upgrade():
     op.create_index("ix_task_status", "tasks", ["status"], unique=False)
     op.create_index("ix_task_project", "tasks", ["project_id"], unique=False)
     op.create_index("ix_task_client", "tasks", ["client_id"], unique=False)
-    op.create_index("ix_task_school_status", "tasks", ["school_id", "status"], unique=False)
+    op.create_index(
+        "ix_task_school_status", "tasks", ["school_id", "status"], unique=False
+    )
     op.create_index("ix_task_auto_generated", "tasks", ["auto_generated"], unique=False)
 
 
@@ -74,6 +83,6 @@ def downgrade():
     op.drop_index("ix_task_due_date", table_name="tasks")
     op.drop_index(op.f("ix_tasks_school_id"), table_name="tasks")
     op.drop_index(op.f("ix_tasks_id"), table_name="tasks")
-    
+
     # Drop table
     op.drop_table("tasks")

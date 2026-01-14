@@ -32,25 +32,28 @@ def list_academic_years(
     current_user: User = Depends(get_current_user),
 ):
     """List academic years for the current user's school"""
-    
+
     # Require admin role
     if current_user.role not in ["admin", "teacher"]:
         raise HTTPException(status_code=403, detail="Insufficient permissions")
-    
+
     school_id = current_user.school_id
-    
+
     # Get total count
-    total = db.query(func.count(AcademicYear.id)).filter(
-        AcademicYear.school_id == school_id
-    ).scalar() or 0
-    
+    total = (
+        db.query(func.count(AcademicYear.id))
+        .filter(AcademicYear.school_id == school_id)
+        .scalar()
+        or 0
+    )
+
     # Get paginated results
     query = db.query(AcademicYear).filter(AcademicYear.school_id == school_id)
     query = query.order_by(AcademicYear.start_date.desc())
     query = query.offset((page - 1) * per_page).limit(per_page)
-    
+
     academic_years = query.all()
-    
+
     return AcademicYearListOut(
         academic_years=[AcademicYearOut.model_validate(ay) for ay in academic_years],
         total=total,
@@ -66,25 +69,29 @@ def create_academic_year(
     current_user: User = Depends(get_current_user),
 ):
     """Create a new academic year"""
-    
+
     # Require admin role
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin role required")
-    
+
     school_id = current_user.school_id
-    
+
     # Check if academic year with same label already exists
-    existing = db.query(AcademicYear).filter(
-        AcademicYear.school_id == school_id,
-        AcademicYear.label == data.label,
-    ).first()
-    
+    existing = (
+        db.query(AcademicYear)
+        .filter(
+            AcademicYear.school_id == school_id,
+            AcademicYear.label == data.label,
+        )
+        .first()
+    )
+
     if existing:
         raise HTTPException(
             status_code=400,
-            detail=f"Academic year with label '{data.label}' already exists"
+            detail=f"Academic year with label '{data.label}' already exists",
         )
-    
+
     # Create academic year
     academic_year = AcademicYear(
         school_id=school_id,
@@ -92,11 +99,11 @@ def create_academic_year(
         start_date=data.start_date,
         end_date=data.end_date,
     )
-    
+
     db.add(academic_year)
     db.commit()
     db.refresh(academic_year)
-    
+
     return AcademicYearOut.model_validate(academic_year)
 
 
@@ -107,15 +114,19 @@ def get_academic_year(
     current_user: User = Depends(get_current_user),
 ):
     """Get a specific academic year"""
-    
-    academic_year = db.query(AcademicYear).filter(
-        AcademicYear.id == academic_year_id,
-        AcademicYear.school_id == current_user.school_id,
-    ).first()
-    
+
+    academic_year = (
+        db.query(AcademicYear)
+        .filter(
+            AcademicYear.id == academic_year_id,
+            AcademicYear.school_id == current_user.school_id,
+        )
+        .first()
+    )
+
     if not academic_year:
         raise HTTPException(status_code=404, detail="Academic year not found")
-    
+
     return AcademicYearOut.model_validate(academic_year)
 
 
@@ -127,27 +138,31 @@ def update_academic_year(
     current_user: User = Depends(get_current_user),
 ):
     """Update an academic year"""
-    
+
     # Require admin role
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin role required")
-    
-    academic_year = db.query(AcademicYear).filter(
-        AcademicYear.id == academic_year_id,
-        AcademicYear.school_id == current_user.school_id,
-    ).first()
-    
+
+    academic_year = (
+        db.query(AcademicYear)
+        .filter(
+            AcademicYear.id == academic_year_id,
+            AcademicYear.school_id == current_user.school_id,
+        )
+        .first()
+    )
+
     if not academic_year:
         raise HTTPException(status_code=404, detail="Academic year not found")
-    
+
     # Update fields
     update_data = data.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(academic_year, key, value)
-    
+
     db.commit()
     db.refresh(academic_year)
-    
+
     return AcademicYearOut.model_validate(academic_year)
 
 
@@ -158,28 +173,34 @@ def delete_academic_year(
     current_user: User = Depends(get_current_user),
 ):
     """Delete an academic year (only if no related data exists)"""
-    
+
     # Require admin role
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin role required")
-    
-    academic_year = db.query(AcademicYear).filter(
-        AcademicYear.id == academic_year_id,
-        AcademicYear.school_id == current_user.school_id,
-    ).first()
-    
+
+    academic_year = (
+        db.query(AcademicYear)
+        .filter(
+            AcademicYear.id == academic_year_id,
+            AcademicYear.school_id == current_user.school_id,
+        )
+        .first()
+    )
+
     if not academic_year:
         raise HTTPException(status_code=404, detail="Academic year not found")
-    
+
     # Note: Cascade delete will handle related classes, memberships, courses
     # This might not be desirable in production - consider soft delete instead
     db.delete(academic_year)
     db.commit()
-    
+
     return {"status": "deleted", "id": academic_year_id}
 
 
-@router.post("/{source_year_id}/transition", response_model=AcademicYearTransitionResult)
+@router.post(
+    "/{source_year_id}/transition", response_model=AcademicYearTransitionResult
+)
 def transition_academic_year(
     source_year_id: int,
     data: AcademicYearTransitionRequest,
@@ -188,18 +209,18 @@ def transition_academic_year(
 ):
     """
     Transition students and classes to a new academic year
-    
+
     This endpoint performs a bulk year transition:
     1. Validates source and target academic years
     2. Creates new classes in the target year based on the class mapping
     3. Copies student class memberships to the new classes
     4. Optionally copies courses and course enrollments
-    
+
     All operations are performed in a single transaction.
     If any error occurs, the entire transition is rolled back.
-    
+
     Historical data (old memberships, enrollments, projects, teams) remains intact.
-    
+
     # TODO: Frontend wizard integration
     # This endpoint is designed to be used with a frontend wizard that:
     # - Lists available academic years
@@ -209,13 +230,13 @@ def transition_academic_year(
     # - Shows preview of what will be created
     # - Displays results after transition
     """
-    
+
     # Require admin role
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin role required")
-    
+
     school_id = current_user.school_id
-    
+
     try:
         # Execute transition within a transaction
         result = AcademicYearTransitionService.execute_transition(
@@ -226,18 +247,18 @@ def transition_academic_year(
             class_mapping=data.class_mapping,
             copy_course_enrollments=data.copy_course_enrollments,
         )
-        
+
         # Commit the transaction
         db.commit()
-        
+
         logger.info(
             f"Academic year transition completed successfully: "
             f"source={source_year_id}, target={data.target_academic_year_id}, "
             f"school={school_id}, result={result}"
         )
-        
+
         return AcademicYearTransitionResult(**result)
-        
+
     except HTTPException:
         # Re-raise HTTP exceptions (validation errors)
         db.rollback()
@@ -263,43 +284,47 @@ def archive_academic_year(
 ):
     """
     Archive an academic year - makes it read-only
-    
+
     Once archived, no mutations (POST/PATCH/DELETE) are allowed on:
     - Classes in this year
     - Courses in this year
     - Course enrollments
     - Projects (via courses)
     - Evaluations (via projects)
-    
+
     Read operations (GET) remain allowed.
     Archiving cannot be undone.
     """
-    
+
     # Require admin role
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin role required")
-    
-    academic_year = db.query(AcademicYear).filter(
-        AcademicYear.id == academic_year_id,
-        AcademicYear.school_id == current_user.school_id,
-    ).first()
-    
+
+    academic_year = (
+        db.query(AcademicYear)
+        .filter(
+            AcademicYear.id == academic_year_id,
+            AcademicYear.school_id == current_user.school_id,
+        )
+        .first()
+    )
+
     if not academic_year:
         raise HTTPException(status_code=404, detail="Academic year not found")
-    
+
     if academic_year.is_archived:
         raise HTTPException(status_code=400, detail="Academic year is already archived")
-    
+
     # Archive the year
     academic_year.is_archived = True
     academic_year.archived_at = datetime.now(timezone.utc)
-    
+
     db.commit()
     db.refresh(academic_year)
-    
+
     logger.info(
         f"Academic year archived: id={academic_year_id}, "
         f"label={academic_year.label}, school={current_user.school_id}"
     )
-    
+
     return AcademicYearOut.model_validate(academic_year)

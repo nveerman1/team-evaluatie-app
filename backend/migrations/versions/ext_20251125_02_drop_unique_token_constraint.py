@@ -9,7 +9,6 @@ This is needed to support the "ALL_TEAMS" mode where multiple teams share the sa
 """
 
 from alembic import op
-import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "ext_20251125_02"
@@ -21,7 +20,7 @@ depends_on = None
 def upgrade():
     # Drop the unique index on invitation_token
     op.drop_index("ix_project_team_external_token", table_name="project_team_externals")
-    
+
     # Create a non-unique index for lookup performance
     op.create_index(
         "ix_project_team_external_token",
@@ -34,7 +33,7 @@ def upgrade():
 def downgrade():
     # Drop the non-unique index
     op.drop_index("ix_project_team_external_token", table_name="project_team_externals")
-    
+
     # Recreate the unique index
     op.create_index(
         "ix_project_team_external_token",

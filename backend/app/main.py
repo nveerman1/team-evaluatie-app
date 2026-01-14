@@ -38,7 +38,9 @@ from app.api.v1.routers import projects as projects_router
 from app.api.v1.routers import project_teams as project_teams_router
 from app.api.v1.routers import omza as omza_router
 from app.api.v1.routers import templates as templates_router
-from app.api.v1.routers import student_competency_growth as student_competency_growth_router
+from app.api.v1.routers import (
+    student_competency_growth as student_competency_growth_router,
+)
 from app.api.v1.routers import academic_years as academic_years_router
 from app.api.v1.routers import classes as classes_router
 from app.api.v1.routers import course_enrollments as course_enrollments_router
@@ -73,7 +75,12 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "X-User-Email"],
-    expose_headers=["Content-Type", "X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
+    expose_headers=[
+        "Content-Type",
+        "X-RateLimit-Limit",
+        "X-RateLimit-Remaining",
+        "X-RateLimit-Reset",
+    ],
 )
 
 

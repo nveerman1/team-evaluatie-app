@@ -4,7 +4,7 @@ from pydantic import BaseModel, EmailStr
 
 class CourseEnrollmentInfo(BaseModel):
     """Info about a student's course enrollment"""
-    
+
     course_id: int
     course_name: str
     subject_code: Optional[str] = None

@@ -228,7 +228,8 @@ def auto_allocate(
     if payload.team_number is None and not target_group_ids:
         # geen expliciete scope → per group alloceren
         group_ids_in_course = [
-            gid for (gid,) in db.query(Group.id)
+            gid
+            for (gid,) in db.query(Group.id)
             .filter(Group.school_id == school_id, Group.course_id == ev.course_id)
             .all()
         ]
@@ -307,14 +308,14 @@ def my_allocations(
 
     has_self = any(alloc.is_self for alloc, _ in rows)
     has_access = _has_access_to_evaluation(db, evaluation_id, user.id)
-    
+
     # Compute valid teammate IDs for filtering and creating allocations
     valid_teammate_ids = set()
     if has_access:
         school_id = getattr(ev, "school_id", None) or getattr(user, "school_id", None)
         if school_id is None:
             raise HTTPException(500, "school_id ontbreekt op evaluatie/gebruiker")
-        
+
         # Find teammates with same course AND same team_number
         # Use User.team_number as the source of truth for team membership
         if user.team_number is not None:
@@ -324,23 +325,25 @@ def my_allocations(
                 course_id=ev.course_id,
                 team_number=user.team_number,
             )
-            
+
             valid_teammate_ids = set(teammates)
-        
+
         needs_commit = False
-        
+
         # Create self-allocation if missing
         if not has_self:
             self_alloc = _ensure_allocation(
                 db, school_id, evaluation_id, user.id, user.id, True
             )
             needs_commit = True
-        
+
         # Create peer allocations for valid teammates not yet allocated
         if valid_teammate_ids:
             # Get existing peer allocation reviewee IDs to avoid duplicates
-            existing_reviewee_ids = {alloc.reviewee_id for alloc, _ in rows if not alloc.is_self}
-            
+            existing_reviewee_ids = {
+                alloc.reviewee_id for alloc, _ in rows if not alloc.is_self
+            }
+
             # Create peer allocations for teammates not yet allocated
             for teammate_id in valid_teammate_ids:
                 if teammate_id != user.id and teammate_id not in existing_reviewee_ids:
@@ -348,16 +351,17 @@ def my_allocations(
                         db, school_id, evaluation_id, user.id, teammate_id, False
                     )
                     needs_commit = True
-        
+
         # Commit all changes and re-fetch if anything was created
         if needs_commit:
             db.commit()
             rows = _fetch_allocation_rows(db, evaluation_id, user.id)
-    
+
     # Filter rows: keep self-allocation and peer allocations for valid teammates only
     # This filters out any old allocations that don't match the current team criteria
     filtered_rows = [
-        (alloc, reviewee) for alloc, reviewee in rows
+        (alloc, reviewee)
+        for alloc, reviewee in rows
         if alloc.is_self or alloc.reviewee_id in valid_teammate_ids
     ]
 

@@ -22,7 +22,6 @@ Create Date: 2025-11-19 10:30:00.000000
 from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "tmpl_20251119_01"
@@ -103,7 +102,9 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["subject_id"], ["subjects.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_project_rubric_templates_id", "project_rubric_templates", ["id"])
+    op.create_index(
+        "ix_project_rubric_templates_id", "project_rubric_templates", ["id"]
+    )
     op.create_index(
         "ix_project_rubric_template_school", "project_rubric_templates", ["school_id"]
     )
@@ -490,7 +491,9 @@ def downgrade() -> None:
     op.drop_index(
         "ix_project_rubric_template_school", table_name="project_rubric_templates"
     )
-    op.drop_index("ix_project_rubric_templates_id", table_name="project_rubric_templates")
+    op.drop_index(
+        "ix_project_rubric_templates_id", table_name="project_rubric_templates"
+    )
     op.drop_table("project_rubric_templates")
 
     # Peer Evaluation Criterion Templates

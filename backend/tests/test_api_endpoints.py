@@ -3,9 +3,9 @@ Tests for new API endpoints (students, users)
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, patch
 from fastapi import HTTPException
-from app.infra.db.models import User, Course, Group, GroupMember, Evaluation
+from app.infra.db.models import User
 from app.api.v1.routers.courses import list_course_students, bulk_update_student_teams
 from app.api.v1.routers.users import search_users
 
@@ -122,7 +122,6 @@ class TestSchemaValidation:
         """Test BulkStudentTeamUpdate schema validation"""
         from app.api.v1.schemas.courses import (
             BulkStudentTeamUpdate,
-            StudentTeamUpdate,
         )
 
         update_data = {

@@ -557,7 +557,7 @@ async def import_teachers_csv(
             status_code=http_status.HTTP_400_BAD_REQUEST,
             detail="File must be a CSV",
         )
-    
+
     # Check file size to prevent DoS attacks
     content = await file.read()
     if len(content) > MAX_CSV_FILE_SIZE:
@@ -587,14 +587,14 @@ async def import_teachers_csv(
         row_num = 1
         for row in reader:
             row_num += 1
-            
+
             # Check row count limit to prevent DoS attacks
             if row_num > MAX_CSV_ROWS + 1:  # +1 for header row
                 raise HTTPException(
                     status_code=http_status.HTTP_400_BAD_REQUEST,
                     detail=f"Too many rows in CSV. Maximum is {MAX_CSV_ROWS} rows",
                 )
-            
+
             try:
                 name = row.get("name", "").strip()
                 email = row.get("email", "").strip().lower()

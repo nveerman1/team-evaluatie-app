@@ -7,7 +7,13 @@ from typing import List, Dict, Any
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 
-from app.infra.db.models import Client, ClientProjectLink, Project, ProjectAssessment, Group
+from app.infra.db.models import (
+    Client,
+    ClientProjectLink,
+    Project,
+    ProjectAssessment,
+    Group,
+)
 
 
 class ReminderService:
@@ -21,12 +27,12 @@ class ReminderService:
     ) -> List[Dict[str, Any]]:
         """
         Generate upcoming reminders for client communications
-        
+
         Args:
             db: Database session
             school_id: School ID to filter by
             days_ahead: How many days ahead to look for reminders
-            
+
         Returns:
             List of reminder dictionaries
         """
@@ -52,7 +58,7 @@ class ReminderService:
             # For now, skip links without assessments as reminders are assessment-specific
             project = link.project
             client = link.client
-            
+
             # Try to find a related ProjectAssessment (this is a simplified approach)
             # In reality, a Project can have multiple assessments
             assessment = (
@@ -64,7 +70,7 @@ class ReminderService:
                 )
                 .first()
             )
-            
+
             # Skip if no assessment found
             if not assessment:
                 continue
@@ -75,7 +81,7 @@ class ReminderService:
 
             # Generate reminders based on project version/phase
             version = assessment.version or ""
-            
+
             # Reminder for tussenpresentatie (midterm presentation)
             if "tussen" in version.lower() or version == "midterm":
                 # Check if assessment was published recently (within last 2 weeks)
@@ -84,16 +90,18 @@ class ReminderService:
                     if 0 <= days_since_publish <= 14:
                         reminder_date = assessment.published_at + timedelta(days=7)
                         if now <= reminder_date <= future_date:
-                            reminders.append({
-                                "id": f"reminder-mid-{link.id}",
-                                "text": f"Uitnodiging tussenpresentatie versturen aan {client.organization} ({class_name})",
-                                "client_name": client.organization,
-                                "client_email": client.email,
-                                "client_id": client.id,
-                                "due_date": reminder_date.strftime("%Y-%m-%d"),
-                                "template": "tussenpresentatie",
-                                "project_title": assessment.title,
-                            })
+                            reminders.append(
+                                {
+                                    "id": f"reminder-mid-{link.id}",
+                                    "text": f"Uitnodiging tussenpresentatie versturen aan {client.organization} ({class_name})",
+                                    "client_name": client.organization,
+                                    "client_email": client.email,
+                                    "client_id": client.id,
+                                    "due_date": reminder_date.strftime("%Y-%m-%d"),
+                                    "template": "tussenpresentatie",
+                                    "project_title": assessment.title,
+                                }
+                            )
 
             # Reminder for eindpresentatie (final presentation)
             elif "eind" in version.lower() or version == "final":
@@ -103,30 +111,34 @@ class ReminderService:
                     if 0 <= days_since_publish <= 14:
                         reminder_date = assessment.published_at + timedelta(days=7)
                         if now <= reminder_date <= future_date:
-                            reminders.append({
-                                "id": f"reminder-final-{link.id}",
-                                "text": f"Uitnodiging eindpresentatie versturen aan {client.organization} ({class_name})",
-                                "client_name": client.organization,
-                                "client_email": client.email,
-                                "client_id": client.id,
-                                "due_date": reminder_date.strftime("%Y-%m-%d"),
-                                "template": "eindpresentatie",
-                                "project_title": assessment.title,
-                            })
-                        
+                            reminders.append(
+                                {
+                                    "id": f"reminder-final-{link.id}",
+                                    "text": f"Uitnodiging eindpresentatie versturen aan {client.organization} ({class_name})",
+                                    "client_name": client.organization,
+                                    "client_email": client.email,
+                                    "client_id": client.id,
+                                    "due_date": reminder_date.strftime("%Y-%m-%d"),
+                                    "template": "eindpresentatie",
+                                    "project_title": assessment.title,
+                                }
+                            )
+
                         # Also add bedankmail reminder (2 weeks after final presentation)
                         bedank_date = assessment.published_at + timedelta(days=21)
                         if now <= bedank_date <= future_date:
-                            reminders.append({
-                                "id": f"reminder-thanks-{link.id}",
-                                "text": f"Bedankmail versturen aan {client.organization} ({class_name})",
-                                "client_name": client.organization,
-                                "client_email": client.email,
-                                "client_id": client.id,
-                                "due_date": bedank_date.strftime("%Y-%m-%d"),
-                                "template": "bedankmail",
-                                "project_title": assessment.title,
-                            })
+                            reminders.append(
+                                {
+                                    "id": f"reminder-thanks-{link.id}",
+                                    "text": f"Bedankmail versturen aan {client.organization} ({class_name})",
+                                    "client_name": client.organization,
+                                    "client_email": client.email,
+                                    "client_id": client.id,
+                                    "due_date": bedank_date.strftime("%Y-%m-%d"),
+                                    "template": "bedankmail",
+                                    "project_title": assessment.title,
+                                }
+                            )
 
         # Check for clients with projects ending soon (based on end_date)
         ending_soon = (
@@ -145,20 +157,22 @@ class ReminderService:
         for link in ending_soon:
             client = link.client
             project = link.project
-            
+
             # Only add if not already in reminders
             reminder_id = f"reminder-ending-{link.id}"
             if not any(r["id"] == reminder_id for r in reminders):
-                reminders.append({
-                    "id": reminder_id,
-                    "text": f"Project eindigt binnenkort: {client.organization} - {project.title}",
-                    "client_name": client.organization,
-                    "client_email": client.email,
-                    "client_id": client.id,
-                    "due_date": link.end_date.strftime("%Y-%m-%d"),
-                    "template": "bedankmail",
-                    "project_title": project.title,
-                })
+                reminders.append(
+                    {
+                        "id": reminder_id,
+                        "text": f"Project eindigt binnenkort: {client.organization} - {project.title}",
+                        "client_name": client.organization,
+                        "client_email": client.email,
+                        "client_id": client.id,
+                        "due_date": link.end_date.strftime("%Y-%m-%d"),
+                        "template": "bedankmail",
+                        "project_title": project.title,
+                    }
+                )
 
         # Sort reminders by due date
         reminders.sort(key=lambda r: r["due_date"])

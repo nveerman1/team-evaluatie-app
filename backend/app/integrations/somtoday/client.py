@@ -43,7 +43,7 @@ class SomtodayToken(BaseModel):
 class SomtodayClient:
     """
     OAuth2 client for Somtoday API
-    
+
     Usage:
         config = SomtodayConfig(
             client_id="your_client_id",
@@ -51,13 +51,13 @@ class SomtodayClient:
             redirect_uri="http://localhost:8000/api/v1/integrations/somtoday/callback"
         )
         client = SomtodayClient(config)
-        
+
         # Get authorization URL
         auth_url = client.get_authorization_url(state="random_state")
-        
+
         # Exchange code for token
         token = await client.exchange_code_for_token(code="auth_code")
-        
+
         # Make API requests
         classes = await client.get_classes(token.access_token)
     """
@@ -69,10 +69,10 @@ class SomtodayClient:
     def get_authorization_url(self, state: str) -> str:
         """
         Generate OAuth2 authorization URL
-        
+
         Args:
             state: Random state for CSRF protection
-            
+
         Returns:
             Authorization URL to redirect user to
         """
@@ -83,17 +83,17 @@ class SomtodayClient:
             "scope": " ".join(self.config.scopes),
             "state": state,
         }
-        
+
         query_string = "&".join(f"{k}={v}" for k, v in params.items())
         return f"{self.config.authorization_url}?{query_string}"
 
     async def exchange_code_for_token(self, code: str) -> SomtodayToken:
         """
         Exchange authorization code for access token
-        
+
         Args:
             code: Authorization code from callback
-            
+
         Returns:
             SomtodayToken with access token and refresh token
         """
@@ -104,24 +104,24 @@ class SomtodayClient:
             "client_id": self.config.client_id,
             "client_secret": self.config.client_secret,
         }
-        
+
         response = await self.http_client.post(self.config.token_url, data=data)
         response.raise_for_status()
-        
+
         token_data = response.json()
         token_data["expires_at"] = datetime.utcnow() + timedelta(
             seconds=token_data["expires_in"]
         )
-        
+
         return SomtodayToken(**token_data)
 
     async def refresh_token(self, refresh_token: str) -> SomtodayToken:
         """
         Refresh an expired access token
-        
+
         Args:
             refresh_token: Refresh token from previous authentication
-            
+
         Returns:
             New SomtodayToken with updated access token
         """
@@ -131,34 +131,34 @@ class SomtodayClient:
             "client_id": self.config.client_id,
             "client_secret": self.config.client_secret,
         }
-        
+
         response = await self.http_client.post(self.config.token_url, data=data)
         response.raise_for_status()
-        
+
         token_data = response.json()
         token_data["expires_at"] = datetime.utcnow() + timedelta(
             seconds=token_data["expires_in"]
         )
-        
+
         return SomtodayToken(**token_data)
 
     async def get_classes(self, access_token: str) -> List[Dict[str, Any]]:
         """
         Get list of classes from Somtoday
-        
+
         Args:
             access_token: Valid access token
-            
+
         Returns:
             List of class objects
         """
         headers = {"Authorization": f"Bearer {access_token}"}
-        
+
         response = await self.http_client.get(
             f"{self.config.api_base_url}/v1/classes", headers=headers
         )
         response.raise_for_status()
-        
+
         return response.json().get("data", [])
 
     async def get_students(
@@ -166,23 +166,23 @@ class SomtodayClient:
     ) -> List[Dict[str, Any]]:
         """
         Get list of students from Somtoday
-        
+
         Args:
             access_token: Valid access token
             class_id: Optional filter by class ID
-            
+
         Returns:
             List of student objects
         """
         headers = {"Authorization": f"Bearer {access_token}"}
-        
+
         url = f"{self.config.api_base_url}/v1/students"
         if class_id:
             url += f"?class_id={class_id}"
-        
+
         response = await self.http_client.get(url, headers=headers)
         response.raise_for_status()
-        
+
         return response.json().get("data", [])
 
     async def export_grades(
@@ -190,13 +190,13 @@ class SomtodayClient:
     ) -> Dict[str, Any]:
         """
         Export grades to Somtoday
-        
+
         Note: Requires write permissions (somtoday.write.grades scope)
-        
+
         Args:
             access_token: Valid access token with write permissions
             grades: List of grade objects to export
-            
+
         Returns:
             Export response
         """
@@ -204,14 +204,14 @@ class SomtodayClient:
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json",
         }
-        
+
         response = await self.http_client.post(
             f"{self.config.api_base_url}/v1/grades",
             headers=headers,
             json={"grades": grades},
         )
         response.raise_for_status()
-        
+
         return response.json()
 
     async def close(self):

@@ -248,13 +248,13 @@ def upgrade():
     Uses ON CONFLICT to ensure idempotency - can be run multiple times safely.
     """
     conn = op.get_bind()
-    
+
     # Get all school IDs
     schools = conn.execute(sa.text("SELECT id FROM schools")).fetchall()
-    
+
     for school in schools:
         school_id = school[0]
-        
+
         for cat_data in CATEGORIES:
             # Insert category (skip if already exists)
             result = conn.execute(
@@ -273,7 +273,7 @@ def upgrade():
                     "order_index": cat_data["order_index"],
                 },
             )
-            
+
             row = result.fetchone()
             if row:
                 category_id = row[0]
@@ -287,10 +287,10 @@ def upgrade():
                     {"school_id": school_id, "name": cat_data["name"]},
                 ).fetchone()
                 category_id = existing[0] if existing else None
-                
+
             if not category_id:
                 continue
-                
+
             # Insert competencies for this category
             for comp_data in cat_data["competencies"]:
                 # Insert or update competency
@@ -311,7 +311,7 @@ def upgrade():
                         "order": comp_data["order"],
                     },
                 )
-                
+
                 comp_row = comp_result.fetchone()
                 if comp_row:
                     competency_id = comp_row[0]
@@ -325,10 +325,10 @@ def upgrade():
                         {"school_id": school_id, "name": comp_data["name"]},
                     ).fetchone()
                     competency_id = existing_comp[0] if existing_comp else None
-                    
+
                 if not competency_id:
                     continue
-                    
+
                 # Insert 5 rubric levels for this competency (1-5)
                 for level in range(1, 6):
                     conn.execute(
@@ -354,7 +354,7 @@ def downgrade():
     Order: rubric_levels -> competencies (set category_id NULL) -> categories
     """
     conn = op.get_bind()
-    
+
     # First, delete all rubric levels for competencies that have a category
     conn.execute(
         sa.text("""
@@ -364,11 +364,13 @@ def downgrade():
             )
         """)
     )
-    
+
     # Set category_id to NULL for all competencies (preserves the competencies)
     conn.execute(
-        sa.text("UPDATE competencies SET category_id = NULL WHERE category_id IS NOT NULL")
+        sa.text(
+            "UPDATE competencies SET category_id = NULL WHERE category_id IS NOT NULL"
+        )
     )
-    
+
     # Delete all categories
     conn.execute(sa.text("DELETE FROM competency_categories"))

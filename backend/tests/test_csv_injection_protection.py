@@ -2,7 +2,6 @@
 Tests for CSV injection protection
 """
 
-import pytest
 from app.api.v1.utils.csv_sanitization import sanitize_csv_value
 
 
@@ -66,12 +65,18 @@ class TestCSVSanitization:
         """Test with realistic CSV injection attack payloads"""
         # Remote code execution attempts
         assert sanitize_csv_value("=cmd|' /C calc'!A0") == "'=cmd|' /C calc'!A0"
-        assert sanitize_csv_value("=HYPERLINK(\"http://evil.com\",\"Click here\")") == "'=HYPERLINK(\"http://evil.com\",\"Click here\")"
-        
+        assert (
+            sanitize_csv_value('=HYPERLINK("http://evil.com","Click here")')
+            == '\'=HYPERLINK("http://evil.com","Click here")'
+        )
+
         # DDE (Dynamic Data Exchange) attacks
         assert sanitize_csv_value("=2+5+cmd|'/c calc'!A1") == "'=2+5+cmd|'/c calc'!A1"
-        assert sanitize_csv_value("@SUM(1+1)*cmd|'/c calc'!A1") == "'@SUM(1+1)*cmd|'/c calc'!A1"
-        
+        assert (
+            sanitize_csv_value("@SUM(1+1)*cmd|'/c calc'!A1")
+            == "'@SUM(1+1)*cmd|'/c calc'!A1"
+        )
+
         # Common attack patterns
         assert sanitize_csv_value("-2+3+cmd|'/c calc'!A1") == "'-2+3+cmd|'/c calc'!A1"
         assert sanitize_csv_value("+2+3+cmd|'/c calc'!A1") == "'+2+3+cmd|'/c calc'!A1"
@@ -94,11 +99,13 @@ class TestCSVExportSanitization:
     def test_teachers_export_imports_sanitization(self):
         """Test that teachers export module imports sanitization function"""
         from app.api.v1.routers import teachers
+
         # Check that the sanitize_csv_value function is imported
-        assert hasattr(teachers, 'sanitize_csv_value')
+        assert hasattr(teachers, "sanitize_csv_value")
 
     def test_admin_students_export_imports_sanitization(self):
         """Test that admin_students export module imports sanitization function"""
         from app.api.v1.routers import admin_students
+
         # Check that the sanitize_csv_value function is imported
-        assert hasattr(admin_students, 'sanitize_csv_value')
+        assert hasattr(admin_students, "sanitize_csv_value")

@@ -6,7 +6,6 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
-from datetime import datetime, timezone
 
 from app.main import app
 from app.core.security import create_access_token
@@ -29,7 +28,7 @@ def mock_db():
 def test_user():
     """Create a test user object"""
     from app.infra.db.models import User
-    
+
     user = User(
         id=1,
         email="test@example.com",
@@ -49,7 +48,7 @@ class TestCookieAuthentication:
         """Test /auth/me endpoint with valid cookie"""
         # Set NODE_ENV to production to test cookie auth
         monkeypatch.setattr(settings, "NODE_ENV", "production")
-        
+
         # Create a valid JWT token
         token = create_access_token(
             sub=test_user.email,
@@ -61,13 +60,12 @@ class TestCookieAuthentication:
         with patch("app.api.v1.deps.SessionLocal") as mock_session:
             mock_db = MagicMock()
             mock_session.return_value = mock_db
-            mock_db.query.return_value.filter.return_value.first.return_value = test_user
+            mock_db.query.return_value.filter.return_value.first.return_value = (
+                test_user
+            )
 
             # Make request with cookie
-            response = client.get(
-                "/api/v1/auth/me",
-                cookies={"access_token": token}
-            )
+            response = client.get("/api/v1/auth/me", cookies={"access_token": token})
 
             assert response.status_code == 200
             data = response.json()
@@ -78,7 +76,7 @@ class TestCookieAuthentication:
         """Test /auth/me endpoint with bearer token (fallback)"""
         # Set NODE_ENV to production
         monkeypatch.setattr(settings, "NODE_ENV", "production")
-        
+
         # Create a valid JWT token
         token = create_access_token(
             sub=test_user.email,
@@ -90,12 +88,13 @@ class TestCookieAuthentication:
         with patch("app.api.v1.deps.SessionLocal") as mock_session:
             mock_db = MagicMock()
             mock_session.return_value = mock_db
-            mock_db.query.return_value.filter.return_value.first.return_value = test_user
+            mock_db.query.return_value.filter.return_value.first.return_value = (
+                test_user
+            )
 
             # Make request with Authorization header
             response = client.get(
-                "/api/v1/auth/me",
-                headers={"Authorization": f"Bearer {token}"}
+                "/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"}
             )
 
             assert response.status_code == 200
@@ -117,8 +116,7 @@ class TestCookieAuthentication:
         monkeypatch.setattr(settings, "NODE_ENV", "production")
 
         response = client.get(
-            "/api/v1/auth/me",
-            cookies={"access_token": "invalid-token"}
+            "/api/v1/auth/me", cookies={"access_token": "invalid-token"}
         )
         assert response.status_code == 401
         assert "invalid" in response.json()["detail"].lower()
@@ -127,10 +125,10 @@ class TestCookieAuthentication:
         """Test /auth/me endpoint with archived user"""
         # Set NODE_ENV to production
         monkeypatch.setattr(settings, "NODE_ENV", "production")
-        
+
         # Make user archived
         test_user.archived = True
-        
+
         # Create a valid JWT token
         token = create_access_token(
             sub=test_user.email,
@@ -142,13 +140,12 @@ class TestCookieAuthentication:
         with patch("app.api.v1.deps.SessionLocal") as mock_session:
             mock_db = MagicMock()
             mock_session.return_value = mock_db
-            mock_db.query.return_value.filter.return_value.first.return_value = test_user
+            mock_db.query.return_value.filter.return_value.first.return_value = (
+                test_user
+            )
 
             # Make request with cookie
-            response = client.get(
-                "/api/v1/auth/me",
-                cookies={"access_token": token}
-            )
+            response = client.get("/api/v1/auth/me", cookies={"access_token": token})
 
             assert response.status_code == 403
             assert "archived" in response.json()["detail"].lower()
@@ -160,10 +157,10 @@ class TestLogoutEndpoint:
     def test_logout_clears_cookie(self, client):
         """Test that logout endpoint clears the cookie"""
         response = client.post("/api/v1/auth/logout")
-        
+
         assert response.status_code == 200
         assert response.json()["message"] == "Successfully logged out"
-        
+
         # Check that Set-Cookie header is present
         set_cookie_header = response.headers.get("set-cookie")
         assert set_cookie_header is not None
@@ -177,7 +174,9 @@ class TestAzureCallbackCookie:
     @pytest.mark.skip(reason="Requires database setup - integration test")
     @patch("app.infra.db.session.SessionLocal")
     @patch("app.api.v1.routers.auth.azure_ad_authenticator")
-    def test_azure_callback_sets_cookie(self, mock_authenticator, mock_session_local, client, test_user):
+    def test_azure_callback_sets_cookie(
+        self, mock_authenticator, mock_session_local, client, test_user
+    ):
         """Test that Azure callback sets HttpOnly cookie and redirects"""
         # Mock Azure AD authenticator
         mock_authenticator.enabled = True
@@ -193,21 +192,22 @@ class TestAzureCallbackCookie:
         # Mock database session
         mock_db = MagicMock()
         mock_session_local.return_value = mock_db
-        
+
         # Mock school lookup
         from app.infra.db.models import School
+
         mock_school = School(id=1, name="Test School")
         mock_db.query.return_value.filter.return_value.first.return_value = mock_school
 
         # Make callback request
         response = client.get(
             "/api/v1/auth/azure/callback?code=test-code&state=1:test-state",
-            follow_redirects=False
+            follow_redirects=False,
         )
 
         # Should redirect
         assert response.status_code == 302
-        
+
         # Should have redirect location
         assert "location" in response.headers
         redirect_url = response.headers["location"]
@@ -233,8 +233,7 @@ class TestDevLoginProduction:
 
         # Try to access with X-User-Email header
         response = client.get(
-            "/api/v1/auth/me",
-            headers={"X-User-Email": "test@example.com"}
+            "/api/v1/auth/me", headers={"X-User-Email": "test@example.com"}
         )
 
         # Should fail authentication
@@ -249,12 +248,13 @@ class TestDevLoginProduction:
         with patch("app.api.v1.deps.SessionLocal") as mock_session:
             mock_db = MagicMock()
             mock_session.return_value = mock_db
-            mock_db.query.return_value.filter.return_value.first.return_value = test_user
+            mock_db.query.return_value.filter.return_value.first.return_value = (
+                test_user
+            )
 
             # Try to access with X-User-Email header
             response = client.get(
-                "/api/v1/auth/me",
-                headers={"X-User-Email": test_user.email}
+                "/api/v1/auth/me", headers={"X-User-Email": test_user.email}
             )
 
             # Should succeed
@@ -270,7 +270,7 @@ class TestSchoolIDValidation:
         """Test that mismatched school_id is rejected"""
         # Set NODE_ENV to production
         monkeypatch.setattr(settings, "NODE_ENV", "production")
-        
+
         # Create token with different school_id
         token = create_access_token(
             sub=test_user.email,
@@ -282,13 +282,12 @@ class TestSchoolIDValidation:
         with patch("app.api.v1.deps.SessionLocal") as mock_session:
             mock_db = MagicMock()
             mock_session.return_value = mock_db
-            mock_db.query.return_value.filter.return_value.first.return_value = test_user
+            mock_db.query.return_value.filter.return_value.first.return_value = (
+                test_user
+            )
 
             # Make request with cookie
-            response = client.get(
-                "/api/v1/auth/me",
-                cookies={"access_token": token}
-            )
+            response = client.get("/api/v1/auth/me", cookies={"access_token": token})
 
             assert response.status_code == 403
             assert "school" in response.json()["detail"].lower()
@@ -297,7 +296,7 @@ class TestSchoolIDValidation:
         """Test that tokens without school_id claim are allowed"""
         # Set NODE_ENV to production
         monkeypatch.setattr(settings, "NODE_ENV", "production")
-        
+
         # Create token without school_id
         token = create_access_token(
             sub=test_user.email,
@@ -308,13 +307,12 @@ class TestSchoolIDValidation:
         with patch("app.api.v1.deps.SessionLocal") as mock_session:
             mock_db = MagicMock()
             mock_session.return_value = mock_db
-            mock_db.query.return_value.filter.return_value.first.return_value = test_user
+            mock_db.query.return_value.filter.return_value.first.return_value = (
+                test_user
+            )
 
             # Make request with cookie
-            response = client.get(
-                "/api/v1/auth/me",
-                cookies={"access_token": token}
-            )
+            response = client.get("/api/v1/auth/me", cookies={"access_token": token})
 
             # Should succeed - no school_id validation if not in token
             assert response.status_code == 200

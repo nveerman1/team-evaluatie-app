@@ -1,9 +1,9 @@
 """Background tasks for queue processing."""
+
 from __future__ import annotations
 
 import logging
 import time
-from typing import Optional
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy import text
@@ -46,40 +46,46 @@ def generate_ai_summary_task(
 ) -> dict:
     """
     Background task to generate AI summary for a student's peer feedback.
-    
+
     Args:
         school_id: School ID for multi-tenant isolation
         evaluation_id: Evaluation ID
         student_id: Student ID
-        
+
     Returns:
         dict with status and summary information
-        
+
     Note:
         The job_id is retrieved from RQ's current job context, not passed as a parameter.
         This is because RQ's enqueue() pops job_id from kwargs to use it for the RQ Job ID.
     """
     db = SessionLocal()
     start_time = time.time()
-    
+
     # Get job_id from RQ job context
     current_job = get_current_job()
     job_id = current_job.id if current_job else None
-    
+
     if not job_id:
-        raise ValueError("Could not retrieve job_id from RQ context. Task must be run via RQ worker.")
-    
+        raise ValueError(
+            "Could not retrieve job_id from RQ context. Task must be run via RQ worker."
+        )
+
     try:
-        logger.info(f"[Job {job_id}] Starting AI summary generation for student {student_id} in evaluation {evaluation_id}")
-        
+        logger.info(
+            f"[Job {job_id}] Starting AI summary generation for student {student_id} in evaluation {evaluation_id}"
+        )
+
         # Update job status to processing
-        job = db.query(SummaryGenerationJob).filter(
-            SummaryGenerationJob.job_id == job_id
-        ).first()
-        
+        job = (
+            db.query(SummaryGenerationJob)
+            .filter(SummaryGenerationJob.job_id == job_id)
+            .first()
+        )
+
         if not job:
             raise ValueError(f"Job {job_id} not found")
-        
+
         # Check if job was cancelled
         if job.status == "cancelled":
             logger.info(f"Job {job_id} was cancelled, skipping")
@@ -88,12 +94,12 @@ def generate_ai_summary_task(
                 "student_id": student_id,
                 "evaluation_id": evaluation_id,
             }
-        
+
         job.status = "processing"
         job.started_at = db.execute(text("SELECT NOW()")).scalar()
         job.progress = 10
         db.commit()
-        
+
         # Verify evaluation exists
         ev = (
             db.query(Evaluation)
@@ -102,9 +108,9 @@ def generate_ai_summary_task(
         )
         if not ev:
             raise ValueError(f"Evaluation {evaluation_id} not found")
-        
+
         _update_job_progress(db, job, 20)
-        
+
         # Verify student exists
         student = (
             db.query(User)
@@ -113,13 +119,13 @@ def generate_ai_summary_task(
         )
         if not student:
             raise ValueError(f"Student {student_id} not found")
-        
+
         _update_job_progress(db, job, 30)
-        
+
         # Get peer feedback comments
         U_from = aliased(User)
         U_to = aliased(User)
-        
+
         feedback_rows = (
             db.query(Score.comment, U_from.name)
             .join(Allocation, Allocation.id == Score.allocation_id)
@@ -135,12 +141,12 @@ def generate_ai_summary_task(
             )
             .all()
         )
-        
+
         _update_job_progress(db, job, 40)
-        
+
         comments = [row.comment for row in feedback_rows if row.comment]
         reviewer_names = [row.name for row in feedback_rows if row.name]
-        
+
         if not comments:
             # No feedback yet
             summary_text = "Je hebt nog geen peer-feedback ontvangen. Zodra je teamgenoten hun beoordelingen hebben ingeleverd, verschijnt hier een samenvatting."
@@ -148,16 +154,16 @@ def generate_ai_summary_task(
         else:
             # Anonymize comments
             _update_job_progress(db, job, 50)
-            
+
             all_names = reviewer_names + [student.name]
             anonymizer = AnonymizationService()
             anonymized_comments = anonymizer.anonymize_comments(comments, all_names)
-            
+
             if not anonymized_comments:
                 anonymized_comments = comments
-            
+
             _update_job_progress(db, job, 60)
-            
+
             # Try AI generation
             ollama = OllamaService()
             try:
@@ -169,9 +175,9 @@ def generate_ai_summary_task(
             except Exception as e:
                 logger.error(f"Exception during AI generation: {type(e).__name__}: {e}")
                 ai_summary = None
-            
+
             _update_job_progress(db, job, 80)
-            
+
             if ai_summary:
                 summary_text = ai_summary
                 method = "ai"
@@ -179,20 +185,20 @@ def generate_ai_summary_task(
                 # Fallback to rule-based summary
                 summary_text = ollama.create_fallback_summary(anonymized_comments)
                 method = "fallback"
-            
+
             # Compute hash and cache the summary
             feedback_hash = _compute_feedback_hash(comments)
-            
+
             # Delete old summary if exists
             db.query(FeedbackSummary).filter(
                 FeedbackSummary.evaluation_id == evaluation_id,
                 FeedbackSummary.student_id == student_id,
             ).delete()
-            
+
             _update_job_progress(db, job, 90)
-            
+
             duration_ms = int((time.time() - start_time) * 1000)
-            
+
             new_summary = FeedbackSummary(
                 school_id=school_id,
                 evaluation_id=evaluation_id,
@@ -204,7 +210,7 @@ def generate_ai_summary_task(
             )
             db.add(new_summary)
             db.commit()
-        
+
         # Update job status to completed
         job.status = "completed"
         job.completed_at = db.execute(text("SELECT NOW()")).scalar()
@@ -215,7 +221,7 @@ def generate_ai_summary_task(
             "feedback_count": len(comments),
         }
         db.commit()
-        
+
         # Send webhook if configured
         if job.webhook_url:
             webhook_service = WebhookService()
@@ -230,10 +236,12 @@ def generate_ai_summary_task(
             job.webhook_delivered = success
             job.webhook_attempts += 1
             db.commit()
-        
+
         duration = time.time() - start_time
-        logger.info(f"[Job {job_id}] AI summary generated successfully in {duration:.2f}s for student {student_id}")
-        
+        logger.info(
+            f"[Job {job_id}] AI summary generated successfully in {duration:.2f}s for student {student_id}"
+        )
+
         return {
             "status": "completed",
             "student_id": student_id,
@@ -243,11 +251,14 @@ def generate_ai_summary_task(
             "feedback_count": len(comments),
             "duration_ms": int(duration * 1000),
         }
-        
+
     except Exception as e:
         duration = time.time() - start_time
-        logger.error(f"[Job {job_id}] Failed to generate AI summary for student {student_id}: {e}", exc_info=True)
-        
+        logger.error(
+            f"[Job {job_id}] Failed to generate AI summary for student {student_id}: {e}",
+            exc_info=True,
+        )
+
         # Check if we should retry
         if job and job.retry_count < job.max_retries:
             # Schedule retry with exponential backoff
@@ -257,17 +268,20 @@ def generate_ai_summary_task(
             # Examples: retry 1 = 2^1*60 = 120s = 2min
             #          retry 2 = 2^2*60 = 240s = 4min
             #          retry 3 = 2^3*60 = 480s = 8min
-            backoff_seconds = min(2 ** job.retry_count * 60, 1800)
+            backoff_seconds = min(2**job.retry_count * 60, 1800)
             job.next_retry_at = datetime.utcnow() + timedelta(seconds=backoff_seconds)
             job.status = "queued"  # Back to queued for retry
             job.error_message = f"Retry {job.retry_count}/{job.max_retries}: {str(e)}"
             db.commit()
-            
-            logger.info(f"[Job {job_id}] Scheduling retry {job.retry_count}/{job.max_retries} in {backoff_seconds}s")
-            
+
+            logger.info(
+                f"[Job {job_id}] Scheduling retry {job.retry_count}/{job.max_retries} in {backoff_seconds}s"
+            )
+
             # Re-enqueue the job with delay
             # Note: job_id is passed as RQ parameter, not task argument
             from app.infra.queue.connection import get_queue
+
             queue = get_queue(job.queue_name)
             queue.enqueue_in(
                 timedelta(seconds=backoff_seconds),
@@ -277,7 +291,7 @@ def generate_ai_summary_task(
                 student_id=student_id,
                 job_id=job_id,  # RQ parameter, not task argument
             )
-            
+
             return {
                 "status": "retry_scheduled",
                 "student_id": student_id,
@@ -285,14 +299,14 @@ def generate_ai_summary_task(
                 "retry_count": job.retry_count,
                 "next_retry_at": job.next_retry_at.isoformat(),
             }
-        
+
         # Update job status to failed
         if job:
             job.status = "failed"
             job.completed_at = db.execute(text("SELECT NOW()")).scalar()
             job.error_message = str(e)
             db.commit()
-            
+
             # Send webhook if configured
             if job.webhook_url:
                 webhook_service = WebhookService()
@@ -307,7 +321,7 @@ def generate_ai_summary_task(
                 job.webhook_delivered = success
                 job.webhook_attempts += 1
                 db.commit()
-        
+
         return {
             "status": "failed",
             "student_id": student_id,
@@ -315,7 +329,7 @@ def generate_ai_summary_task(
             "error": str(e),
             "duration_ms": int(duration * 1000),
         }
-        
+
     finally:
         db.close()
 
@@ -327,24 +341,24 @@ def batch_generate_summaries_task(
 ) -> dict:
     """
     Generate summaries for multiple students in batch.
-    
+
     This is a coordinator task that enqueues individual jobs for each student.
     It doesn't track itself in the database, so it doesn't need to retrieve
     its own job_id from RQ context.
-    
+
     Args:
         school_id: School ID
         evaluation_id: Evaluation ID
         student_ids: List of student IDs
-        
+
     Returns:
         dict with batch processing results
     """
     from app.infra.queue.connection import get_queue
-    
-    queue = get_queue('ai-summaries')
+
+    queue = get_queue("ai-summaries")
     results = []
-    
+
     for student_id in student_ids:
         try:
             # Queue individual job for each student
@@ -354,23 +368,27 @@ def batch_generate_summaries_task(
                 evaluation_id=evaluation_id,
                 student_id=student_id,
                 job_id=f"summary-{evaluation_id}-{student_id}-{int(time.time())}",
-                job_timeout='10m',
+                job_timeout="10m",
                 result_ttl=86400,  # Keep results for 24 hours
                 failure_ttl=86400,
             )
-            results.append({
-                "student_id": student_id,
-                "job_id": job.id,
-                "status": "queued",
-            })
+            results.append(
+                {
+                    "student_id": student_id,
+                    "job_id": job.id,
+                    "status": "queued",
+                }
+            )
         except Exception as e:
             logger.error(f"Failed to queue job for student {student_id}: {e}")
-            results.append({
-                "student_id": student_id,
-                "status": "failed",
-                "error": str(e),
-            })
-    
+            results.append(
+                {
+                    "student_id": student_id,
+                    "status": "failed",
+                    "error": str(e),
+                }
+            )
+
     return {
         "status": "completed",
         "evaluation_id": evaluation_id,

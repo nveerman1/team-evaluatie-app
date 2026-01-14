@@ -137,6 +137,7 @@ class AISummaryResponse(BaseModel):
 
 class ScanListItem(BaseModel):
     """Scan summary for dropdown list"""
+
     id: str
     title: str
     date: str
@@ -145,6 +146,7 @@ class ScanListItem(BaseModel):
 
 class RadarCategoryScore(BaseModel):
     """Category score for radar chart"""
+
     category_id: int
     category_name: str
     average_score: float
@@ -153,6 +155,7 @@ class RadarCategoryScore(BaseModel):
 
 class ScanRadarData(BaseModel):
     """Complete radar data for a specific scan"""
+
     scan_id: str
     scan_label: str
     created_at: str
@@ -203,18 +206,15 @@ def _calculate_omza_scores(
     Maps competency categories to OMZA domains.
     """
     # Get all self scores for this window and user
-    self_scores = (
-        db.execute(
-            select(CompetencySelfScore, Competency)
-            .join(Competency, Competency.id == CompetencySelfScore.competency_id)
-            .where(
-                CompetencySelfScore.window_id == window_id,
-                CompetencySelfScore.user_id == user_id,
-                CompetencySelfScore.school_id == school_id,
-            )
+    self_scores = db.execute(
+        select(CompetencySelfScore, Competency)
+        .join(Competency, Competency.id == CompetencySelfScore.competency_id)
+        .where(
+            CompetencySelfScore.window_id == window_id,
+            CompetencySelfScore.user_id == user_id,
+            CompetencySelfScore.school_id == school_id,
         )
-        .all()
-    )
+    ).all()
 
     # Aggregate scores by OMZA domain
     omza_scores: Dict[str, List[float]] = {
@@ -258,26 +258,21 @@ def _calculate_competency_profile(
     Returns average scores per competency category.
     """
     # Get all self scores for this user grouped by category
-    results = (
-        db.execute(
-            select(
-                CompetencyCategory.name,
-                func.avg(CompetencySelfScore.score).label("avg_score"),
-            )
-            .select_from(CompetencySelfScore)
-            .join(Competency, Competency.id == CompetencySelfScore.competency_id)
-            .join(
-                CompetencyCategory, CompetencyCategory.id == Competency.category_id
-            )
-            .where(
-                CompetencySelfScore.user_id == user_id,
-                CompetencySelfScore.school_id == school_id,
-            )
-            .group_by(CompetencyCategory.name)
-            .order_by(CompetencyCategory.name)
+    results = db.execute(
+        select(
+            CompetencyCategory.name,
+            func.avg(CompetencySelfScore.score).label("avg_score"),
         )
-        .all()
-    )
+        .select_from(CompetencySelfScore)
+        .join(Competency, Competency.id == CompetencySelfScore.competency_id)
+        .join(CompetencyCategory, CompetencyCategory.id == Competency.category_id)
+        .where(
+            CompetencySelfScore.user_id == user_id,
+            CompetencySelfScore.school_id == school_id,
+        )
+        .group_by(CompetencyCategory.name)
+        .order_by(CompetencyCategory.name)
+    ).all()
 
     profile = []
     for name, avg_score in results:
@@ -302,34 +297,29 @@ def _calculate_competency_scores(
     """
     # Get all competencies the student has scored, with their most recent score
     # Group by competency and get the latest window
-    results = (
-        db.execute(
-            select(
-                CompetencySelfScore.competency_id,
-                CompetencySelfScore.window_id,
-                CompetencySelfScore.score,
-                Competency.name,
-                CompetencyCategory.name.label("category_name"),
-                CompetencyWindow.title,
-                CompetencyWindow.start_date,
-            )
-            .select_from(CompetencySelfScore)
-            .join(Competency, Competency.id == CompetencySelfScore.competency_id)
-            .outerjoin(
-                CompetencyCategory, CompetencyCategory.id == Competency.category_id
-            )
-            .join(CompetencyWindow, CompetencyWindow.id == CompetencySelfScore.window_id)
-            .where(
-                CompetencySelfScore.user_id == user_id,
-                CompetencySelfScore.school_id == school_id,
-            )
-            .order_by(
-                CompetencySelfScore.competency_id,
-                CompetencyWindow.start_date.desc(),
-            )
+    results = db.execute(
+        select(
+            CompetencySelfScore.competency_id,
+            CompetencySelfScore.window_id,
+            CompetencySelfScore.score,
+            Competency.name,
+            CompetencyCategory.name.label("category_name"),
+            CompetencyWindow.title,
+            CompetencyWindow.start_date,
         )
-        .all()
-    )
+        .select_from(CompetencySelfScore)
+        .join(Competency, Competency.id == CompetencySelfScore.competency_id)
+        .outerjoin(CompetencyCategory, CompetencyCategory.id == Competency.category_id)
+        .join(CompetencyWindow, CompetencyWindow.id == CompetencySelfScore.window_id)
+        .where(
+            CompetencySelfScore.user_id == user_id,
+            CompetencySelfScore.school_id == school_id,
+        )
+        .order_by(
+            CompetencySelfScore.competency_id,
+            CompetencyWindow.start_date.desc(),
+        )
+    ).all()
 
     # Get the most recent score for each competency
     competency_scores = {}
@@ -350,7 +340,7 @@ def _calculate_competency_scores(
             except (ValueError, TypeError):
                 # Log error and use None if conversion fails
                 recent_score = None
-            
+
             competency_scores[competency_id] = GrowthCompetencyScore(
                 competency_id=competency_id,
                 competency_name=competency_name,
@@ -427,8 +417,7 @@ def _generate_ai_summary(
 
     if weakest and weakest != strongest:
         parts.append(
-            f"{weakest.name} is nog een aandachtspunt "
-            f"(gemiddeld {weakest.value:.1f})."
+            f"{weakest.name} is nog een aandachtspunt (gemiddeld {weakest.value:.1f})."
         )
 
     if active_goals > 0:
@@ -460,7 +449,7 @@ def get_student_growth_data(
     """
     Get comprehensive growth data for the current student.
     Returns scan history, competency profile, goals, reflections, and AI summary.
-    
+
     This endpoint returns data for the authenticated user regardless of role.
     Teachers/admins can use this to preview the student experience.
     """
@@ -534,7 +523,9 @@ def get_student_growth_data(
         )
 
         # Calculate GCF (Group Contribution Factor) - simplified average
-        gcf = (omza.organiseren + omza.meedoen + omza.zelfvertrouwen + omza.autonomie) / 4
+        gcf = (
+            omza.organiseren + omza.meedoen + omza.zelfvertrouwen + omza.autonomie
+        ) / 4
 
         scans.append(
             GrowthScanSummary(
@@ -666,7 +657,7 @@ def get_student_competency_scans(
     """
     Get list of all competency scans (windows) where the student has submitted scores.
     Used for scan selector dropdown.
-    
+
     Student-scoped: only returns scans for the authenticated user.
     """
     school_id = current_user.school_id
@@ -720,16 +711,16 @@ def get_scan_radar_data(
 ):
     """
     Get category-aggregated radar chart data for a specific scan.
-    
+
     Returns average scores per competency category for the selected scan.
     Student-scoped: only returns data if the scan belongs to the authenticated user.
-    
+
     Args:
         scan_id: The competency window ID
-        
+
     Returns:
         Radar data with category names and average scores
-        
+
     Raises:
         404: If scan not found or doesn't belong to student
     """
@@ -740,10 +731,9 @@ def get_scan_radar_data(
     window = db.get(CompetencyWindow, scan_id)
     if not window or window.school_id != school_id:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Scan not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found"
         )
-    
+
     # Verify student has scores for this scan (authorization check)
     has_scores = (
         db.query(CompetencySelfScore)
@@ -754,44 +744,38 @@ def get_scan_radar_data(
         )
         .first()
     )
-    
+
     if not has_scores:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No scores found for this scan"
+            detail="No scores found for this scan",
         )
 
     # Get scores aggregated by category for this scan
     # Single query with proper joins to avoid N+1
-    results = (
-        db.execute(
-            select(
-                CompetencyCategory.id.label("category_id"),
-                CompetencyCategory.name.label("category_name"),
-                func.avg(CompetencySelfScore.score).label("avg_score"),
-                func.count(CompetencySelfScore.id).label("count"),
-            )
-            .select_from(CompetencySelfScore)
-            .join(Competency, Competency.id == CompetencySelfScore.competency_id)
-            .join(
-                CompetencyCategory, 
-                CompetencyCategory.id == Competency.category_id
-            )
-            .where(
-                CompetencySelfScore.window_id == scan_id,
-                CompetencySelfScore.user_id == user_id,
-                CompetencySelfScore.school_id == school_id,
-            )
-            .group_by(CompetencyCategory.id, CompetencyCategory.name)
-            .order_by(CompetencyCategory.name)
+    results = db.execute(
+        select(
+            CompetencyCategory.id.label("category_id"),
+            CompetencyCategory.name.label("category_name"),
+            func.avg(CompetencySelfScore.score).label("avg_score"),
+            func.count(CompetencySelfScore.id).label("count"),
         )
-        .all()
-    )
+        .select_from(CompetencySelfScore)
+        .join(Competency, Competency.id == CompetencySelfScore.competency_id)
+        .join(CompetencyCategory, CompetencyCategory.id == Competency.category_id)
+        .where(
+            CompetencySelfScore.window_id == scan_id,
+            CompetencySelfScore.user_id == user_id,
+            CompetencySelfScore.school_id == school_id,
+        )
+        .group_by(CompetencyCategory.id, CompetencyCategory.name)
+        .order_by(CompetencyCategory.name)
+    ).all()
 
     # Build category scores
     categories = []
     all_scores = []
-    
+
     for category_id, category_name, avg_score, count in results:
         if category_name and avg_score:
             score_value = round(float(avg_score), 2)
@@ -827,16 +811,16 @@ def get_scan_competency_scores(
 ):
     """
     Get individual competency scores for a specific scan.
-    
+
     Returns all competency scores for the selected scan/window.
     Student-scoped: only returns data if the scan belongs to the authenticated user.
-    
+
     Args:
         scan_id: The competency window ID
-        
+
     Returns:
         List of competency scores with category, name, score, and scan info
-        
+
     Raises:
         404: If scan not found or doesn't belong to student
     """
@@ -847,41 +831,35 @@ def get_scan_competency_scores(
     window = db.get(CompetencyWindow, scan_id)
     if not window or window.school_id != school_id:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Scan not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found"
         )
-    
+
     # Get all competency scores for this scan
-    results = (
-        db.execute(
-            select(
-                CompetencySelfScore.competency_id,
-                CompetencySelfScore.score,
-                Competency.name,
-                CompetencyCategory.name.label("category_name"),
-            )
-            .select_from(CompetencySelfScore)
-            .join(Competency, Competency.id == CompetencySelfScore.competency_id)
-            .outerjoin(
-                CompetencyCategory, CompetencyCategory.id == Competency.category_id
-            )
-            .where(
-                CompetencySelfScore.window_id == scan_id,
-                CompetencySelfScore.user_id == user_id,
-                CompetencySelfScore.school_id == school_id,
-            )
-            .order_by(
-                CompetencyCategory.name,
-                Competency.name,
-            )
+    results = db.execute(
+        select(
+            CompetencySelfScore.competency_id,
+            CompetencySelfScore.score,
+            Competency.name,
+            CompetencyCategory.name.label("category_name"),
         )
-        .all()
-    )
-    
+        .select_from(CompetencySelfScore)
+        .join(Competency, Competency.id == CompetencySelfScore.competency_id)
+        .outerjoin(CompetencyCategory, CompetencyCategory.id == Competency.category_id)
+        .where(
+            CompetencySelfScore.window_id == scan_id,
+            CompetencySelfScore.user_id == user_id,
+            CompetencySelfScore.school_id == school_id,
+        )
+        .order_by(
+            CompetencyCategory.name,
+            Competency.name,
+        )
+    ).all()
+
     if not results:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No scores found for this scan"
+            detail="No scores found for this scan",
         )
 
     # Build competency scores list
@@ -892,7 +870,7 @@ def get_scan_competency_scores(
             score_value = round(float(score), 1) if score is not None else None
         except (ValueError, TypeError):
             score_value = None
-        
+
         scores.append(
             GrowthCompetencyScore(
                 competency_id=competency_id,
@@ -904,5 +882,5 @@ def get_scan_competency_scores(
                 scan_date=_format_date(window.start_date),
             )
         )
-    
+
     return scores

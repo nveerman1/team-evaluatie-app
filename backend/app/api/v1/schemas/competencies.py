@@ -1,6 +1,7 @@
 """
 Pydantic schemas for Competency Monitor
 """
+
 from __future__ import annotations
 from datetime import datetime
 from typing import Optional, List, Dict, Any, Literal
@@ -63,17 +64,18 @@ class CompetencyBase(BaseModel):
 class CompetencyCreate(BaseModel):
     """
     Create a competency.
-    
+
     For central/template competencies (admin):
     - is_template=True
     - subject_id is optional but recommended
     - teacher_id should be None
-    
+
     For teacher-specific competencies:
     - is_template=False (default)
     - teacher_id is set automatically from current user
     - course_id is optional (enables sharing with colleagues)
     """
+
     name: str = Field(..., max_length=200)
     description: Optional[str] = None
     category: Optional[str] = Field(None, max_length=100)  # Legacy field
@@ -82,7 +84,9 @@ class CompetencyCreate(BaseModel):
     course_id: Optional[int] = None  # For teacher-specific competencies (sharing)
     is_template: bool = False  # True = central/admin managed, False = teacher-specific
     phase: Optional[str] = Field(None, max_length=20)  # "onderbouw" | "bovenbouw"
-    level_descriptors: Dict[str, str] = Field(default_factory=dict)  # Dict of level -> description
+    level_descriptors: Dict[str, str] = Field(
+        default_factory=dict
+    )  # Dict of level -> description
     order: int = 0
     active: bool = True
     scale_min: int = 1
@@ -114,28 +118,37 @@ class CompetencyUpdate(BaseModel):
 
 class CompetencyReorderItem(BaseModel):
     """A single item in a reorder request"""
+
     id: int
     order_index: int
 
 
 class CompetencyReorderRequest(BaseModel):
     """Request to reorder competencies within a category"""
+
     category_id: int
     items: List[CompetencyReorderItem]
 
 
 class CompetencyOut(CompetencyBase):
     """Output schema for competency with two-tier metadata"""
+
     id: int
     school_id: int
     subject_id: Optional[int] = None  # For template/central competencies
     teacher_id: Optional[int] = None  # For teacher-specific competencies
     course_id: Optional[int] = None  # For teacher-specific competencies (sharing)
     is_template: bool = False  # True = central/admin managed, False = teacher-specific
-    competency_type: CompetencyType = "central"  # Computed: "central", "teacher", or "shared"
+    competency_type: CompetencyType = (
+        "central"  # Computed: "central", "teacher", or "shared"
+    )
     category_name: Optional[str] = None  # Category name for display
-    category_description: Optional[str] = None  # Category description for inline display
-    level_descriptors: Dict[str, str] = Field(default_factory=dict)  # Dict of level -> description
+    category_description: Optional[str] = (
+        None  # Category description for inline display
+    )
+    level_descriptors: Dict[str, str] = Field(
+        default_factory=dict
+    )  # Dict of level -> description
     created_at: datetime
     updated_at: datetime
 
@@ -145,6 +158,7 @@ class CompetencyOut(CompetencyBase):
 
 class CompetencyListResponse(BaseModel):
     """Paginated list response for competencies"""
+
     items: List[CompetencyOut]
     page: int
     limit: int
@@ -153,6 +167,7 @@ class CompetencyListResponse(BaseModel):
 
 class CompetencyWithCategoryOut(CompetencyOut):
     """Competency with embedded category info"""
+
     competency_category: Optional[CompetencyCategoryOut] = None
 
 
@@ -161,6 +176,7 @@ class CompetencyWithCategoryOut(CompetencyOut):
 
 class CompetencyTreeItem(BaseModel):
     """A competency within a category tree"""
+
     id: int
     name: str
     description: Optional[str] = None
@@ -170,6 +186,7 @@ class CompetencyTreeItem(BaseModel):
 
 class CompetencyCategoryTreeItem(BaseModel):
     """A category with its competencies"""
+
     id: int
     name: str
     description: Optional[str] = None
@@ -181,6 +198,7 @@ class CompetencyCategoryTreeItem(BaseModel):
 
 class CompetencyTree(BaseModel):
     """Full tree of categories with their competencies"""
+
     categories: List[CompetencyCategoryTreeItem] = Field(default_factory=list)
 
 
@@ -410,12 +428,14 @@ class CompetencyReflectionOut(CompetencyReflectionBase):
 
 class CompetencyReflectionBulkCreate(BaseModel):
     """Schema for submitting multiple reflections at once"""
+
     window_id: int
     reflections: List["CompetencyReflectionItemCreate"]
 
 
 class CompetencyReflectionItemCreate(BaseModel):
     """Individual reflection item for bulk submission - inherits from base without window_id"""
+
     goal_id: int
     text: str
     goal_achieved: Optional[bool] = None
@@ -427,11 +447,14 @@ class CompetencyReflectionItemCreate(BaseModel):
 
 class CompetencyScore(BaseModel):
     """Aggregated score for one competency in one window"""
+
     competency_id: int
     competency_name: str
     category_name: Optional[str] = None
     self_score: Optional[float] = None
-    self_level_description: Optional[str] = None  # Rubric level description for self score
+    self_level_description: Optional[str] = (
+        None  # Rubric level description for self score
+    )
     peer_score: Optional[float] = None
     teacher_score: Optional[float] = None
     external_score: Optional[float] = None
@@ -442,16 +465,20 @@ class CompetencyScore(BaseModel):
 
 class StudentCompetencyOverview(BaseModel):
     """Overview for one student in one window"""
+
     window_id: int
     user_id: int
     user_name: str
     scores: List[CompetencyScore]
     goals: List[CompetencyGoalOut]
-    reflections: List[CompetencyReflectionOut] = []  # Changed from single reflection to list
+    reflections: List[
+        CompetencyReflectionOut
+    ] = []  # Changed from single reflection to list
 
 
 class ClassHeatmapRow(BaseModel):
     """One row in the class heatmap (one student)"""
+
     user_id: int
     user_name: str
     class_name: Optional[str] = None
@@ -461,6 +488,7 @@ class ClassHeatmapRow(BaseModel):
 
 class ClassHeatmap(BaseModel):
     """Full class heatmap for a window"""
+
     window_id: int
     window_title: str
     competencies: List[CompetencyOut]
@@ -472,6 +500,7 @@ class ClassHeatmap(BaseModel):
 
 class TeacherGoalItem(BaseModel):
     """Goal item with student info for teacher view"""
+
     id: int
     user_id: int
     user_name: str
@@ -488,6 +517,7 @@ class TeacherGoalItem(BaseModel):
 
 class TeacherGoalsList(BaseModel):
     """List of goals for teacher view"""
+
     window_id: int
     window_title: str
     items: List[TeacherGoalItem]
@@ -495,6 +525,7 @@ class TeacherGoalsList(BaseModel):
 
 class TeacherReflectionItem(BaseModel):
     """Reflection item with student info for teacher view"""
+
     id: int
     user_id: int
     user_name: str
@@ -510,6 +541,7 @@ class TeacherReflectionItem(BaseModel):
 
 class TeacherReflectionsList(BaseModel):
     """List of reflections for teacher view"""
+
     window_id: int
     window_title: str
     items: List[TeacherReflectionItem]
@@ -517,6 +549,7 @@ class TeacherReflectionsList(BaseModel):
 
 class StudentGrowthCard(BaseModel):
     """Student's growth card across multiple windows"""
+
     user_id: int
     user_name: str
     windows: List[StudentCompetencyOverview]
@@ -528,16 +561,20 @@ class StudentGrowthCard(BaseModel):
 
 class ExternalInviteCreate(BaseModel):
     """Create external invite(s)"""
+
     window_id: int
     subject_user_id: int
     emails: List[str] = Field(..., min_length=1, max_length=10)
     external_name: Optional[str] = Field(None, max_length=200)
     external_organization: Optional[str] = Field(None, max_length=200)
-    competency_ids: Optional[List[int]] = None  # If None or empty, all competencies are included
+    competency_ids: Optional[List[int]] = (
+        None  # If None or empty, all competencies are included
+    )
 
 
 class ExternalInviteOut(BaseModel):
     """External invite details"""
+
     id: int
     school_id: int
     window_id: int
@@ -560,6 +597,7 @@ class ExternalInviteOut(BaseModel):
 
 class ExternalInvitePublicInfo(BaseModel):
     """Public info shown to external reviewer (minimal context)"""
+
     window_title: str
     subject_name: str  # Full, partial or masked based on settings
     competencies: List[CompetencyOut]
@@ -570,6 +608,7 @@ class ExternalInvitePublicInfo(BaseModel):
 
 class ExternalScoreItem(BaseModel):
     """Individual score item for external submission"""
+
     competency_id: int
     score: int = Field(..., ge=1, le=5)
     comment: Optional[str] = None
@@ -577,6 +616,7 @@ class ExternalScoreItem(BaseModel):
 
 class ExternalScoreSubmit(BaseModel):
     """External score submission"""
+
     token: str
     scores: List[ExternalScoreItem]
     reviewer_name: Optional[str] = Field(None, max_length=200)
@@ -586,6 +626,7 @@ class ExternalScoreSubmit(BaseModel):
 
 class ExternalScoreOut(BaseModel):
     """External score details"""
+
     id: int
     school_id: int
     invite_id: int
@@ -607,14 +648,18 @@ class ExternalScoreOut(BaseModel):
 
 class StudentScanScore(BaseModel):
     """Student's scores for one scan"""
+
     scan_id: int
     scan_label: str
     scan_date: str
-    category_scores: Dict[int, Optional[float]]  # category_id -> score (average of competencies in that category)
+    category_scores: Dict[
+        int, Optional[float]
+    ]  # category_id -> score (average of competencies in that category)
 
 
 class StudentHistoricalScores(BaseModel):
     """Historical scores for a student across multiple scans"""
+
     student_id: int
     student_name: str
     class_name: Optional[str] = None

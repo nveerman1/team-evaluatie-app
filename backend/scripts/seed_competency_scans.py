@@ -2,14 +2,14 @@
 Seed script for competency scans (CompetencyWindow) test data
 
 Creates sample competency scans (windows) with associated competencies for testing.
-This script creates multiple windows (e.g., Startscan, Midscan, Eindscan) with 
+This script creates multiple windows (e.g., Startscan, Midscan, Eindscan) with
 selected competencies from the database.
 
 Usage:
     python scripts/seed_competency_scans.py [school_id]
-    
+
     school_id: Optional. The ID of the school to add competency scans to (default: 1)
-    
+
 Examples:
     python scripts/seed_competency_scans.py        # Adds to school_id=1
     python scripts/seed_competency_scans.py 2      # Adds to school_id=2
@@ -24,21 +24,21 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from datetime import datetime, timedelta
 
 from app.infra.db.session import SessionLocal
-from app.infra.db.models import School, User, Competency, CompetencyWindow, Course
+from app.infra.db.models import School, Competency, CompetencyWindow, Course
 
 
 def seed_competency_scans(target_school_id=1):
     """Seed competency scans test data
-    
+
     Args:
         target_school_id: The school ID to add competency scans to (default: 1)
     """
     print("=" * 60)
     print("SEEDING COMPETENCY SCANS TEST DATA")
     print("=" * 60)
-    
+
     db = SessionLocal()
-    
+
     try:
         # Get the target school
         school = db.query(School).filter(School.id == target_school_id).first()
@@ -52,40 +52,45 @@ def seed_competency_scans(target_school_id=1):
             else:
                 print("  No schools found in database.")
             return
-        
+
         print(f"✓ Using school: {school.name} (ID: {school.id})")
-        
+
         # Get competencies from this school
-        competencies = db.query(Competency).filter(
-            Competency.school_id == school.id
-        ).order_by(Competency.order).all()
-        
+        competencies = (
+            db.query(Competency)
+            .filter(Competency.school_id == school.id)
+            .order_by(Competency.order)
+            .all()
+        )
+
         if not competencies:
             print("❌ Error: No competencies found in this school.")
             print("  Please run the competency seed migration first.")
             print("  Migration: alembic upgrade head")
             return
-        
+
         print(f"✓ Found {len(competencies)} competencies in the database")
-        
+
         # Get a course if available (optional)
         course = db.query(Course).filter(Course.school_id == school.id).first()
         course_id = course.id if course else None
         if course:
             print(f"✓ Found course: {course.name} (ID: {course.id})")
-        
+
         # Define competency scan windows to create
         now = datetime.now()
-        
+
         # Select different subsets of competencies for each window
         # Note: competencies are ordered by their 'order' field from the database.
         # With the default template, this results in competencies grouped by category:
         # 1-5: Samenwerken, 6-10: Plannen & Organiseren, 11-15: Creatief denken,
         # 16-20: Technische vaardigheden, 21-25: Communicatie, 26-30: Reflectie
-        
+
         # Startscan: First 10 competencies (collaboration and planning focus)
-        startscan_competencies = competencies[:10] if len(competencies) >= 10 else competencies
-        
+        startscan_competencies = (
+            competencies[:10] if len(competencies) >= 10 else competencies
+        )
+
         # Midscan: Second group of 10 competencies (creative thinking and technical skills focus)
         if len(competencies) >= 20:
             midscan_competencies = competencies[10:20]
@@ -93,18 +98,20 @@ def seed_competency_scans(target_school_id=1):
             midscan_competencies = competencies[10:]
         else:
             midscan_competencies = competencies  # Use all if less than 10
-        
+
         # Eindscan: Third group of 10 competencies (communication and reflection focus)
         if len(competencies) >= 30:
             eindscan_competencies = competencies[20:30]
         elif len(competencies) > 20:
             eindscan_competencies = competencies[20:]
         else:
-            eindscan_competencies = competencies[-10:] if len(competencies) >= 10 else competencies
-        
+            eindscan_competencies = (
+                competencies[-10:] if len(competencies) >= 10 else competencies
+            )
+
         # For Q1 scan: use all competencies
         q1_competencies = competencies
-        
+
         windows_data = [
             {
                 "title": "Startscan Periode 1",
@@ -155,27 +162,31 @@ def seed_competency_scans(target_school_id=1):
                 "require_reflection": False,
             },
         ]
-        
+
         print("\n" + "-" * 60)
         print("Creating competency scan windows:")
         print("-" * 60)
-        
+
         created_windows = []
         for window_data in windows_data:
             # Check if window already exists
-            existing = db.query(CompetencyWindow).filter(
-                CompetencyWindow.school_id == school.id,
-                CompetencyWindow.title == window_data["title"]
-            ).first()
-            
+            existing = (
+                db.query(CompetencyWindow)
+                .filter(
+                    CompetencyWindow.school_id == school.id,
+                    CompetencyWindow.title == window_data["title"],
+                )
+                .first()
+            )
+
             if existing:
                 print(f"⚠ Window already exists: {window_data['title']}")
                 created_windows.append(existing)
                 continue
-            
+
             # Get competency IDs
             competency_ids = [c.id for c in window_data["competencies"]]
-            
+
             # Create the window
             window = CompetencyWindow(
                 school_id=school.id,
@@ -194,11 +205,11 @@ def seed_competency_scans(target_school_id=1):
                     # Store deadline in settings for compatibility with wizard-created windows
                     # In this case, deadline matches end_date (students must complete by window end)
                     "deadline": window_data["end_date"].isoformat(),
-                }
+                },
             )
             db.add(window)
             db.flush()
-            
+
             print(f"✓ Created window: {window.title}")
             print(f"  - Status: {window.status}")
             print(f"  - Class names: {', '.join(window.class_names)}")
@@ -208,11 +219,11 @@ def seed_competency_scans(target_school_id=1):
             print(f"  - Require self-score: {window.require_self_score}")
             print(f"  - Require goal: {window.require_goal}")
             print(f"  - Require reflection: {window.require_reflection}")
-            
+
             created_windows.append(window)
-        
+
         db.commit()
-        
+
         print("\n" + "=" * 60)
         print("COMPETENCY SCANS TEST DATA SEEDED SUCCESSFULLY")
         print("=" * 60)
@@ -221,12 +232,15 @@ def seed_competency_scans(target_school_id=1):
         for window in created_windows:
             comp_count = len(window.settings.get("competency_ids", []))
             print(f"  - {window.title}")
-            print(f"    Status: {window.status}, Competencies: {comp_count}, Classes: {', '.join(window.class_names)}")
+            print(
+                f"    Status: {window.status}, Competencies: {comp_count}, Classes: {', '.join(window.class_names)}"
+            )
         print("\n" + "=" * 60)
-        
+
     except Exception as e:
         print(f"\n❌ Error: {e}")
         import traceback
+
         traceback.print_exc()
         db.rollback()
         raise
@@ -241,7 +255,9 @@ if __name__ == "__main__":
         try:
             school_id = int(sys.argv[1])
         except ValueError:
-            print(f"❌ Error: Invalid school_id '{sys.argv[1]}'. Please provide a valid integer (e.g., 1, 2, 3).")
+            print(
+                f"❌ Error: Invalid school_id '{sys.argv[1]}'. Please provide a valid integer (e.g., 1, 2, 3)."
+            )
             sys.exit(1)
-    
+
     seed_competency_scans(school_id)

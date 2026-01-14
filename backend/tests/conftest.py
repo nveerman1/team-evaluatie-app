@@ -4,6 +4,7 @@ Pytest configuration file.
 This file is automatically loaded by pytest and ensures that the backend
 directory is in the Python path so that imports work correctly.
 """
+
 import sys
 from pathlib import Path
 

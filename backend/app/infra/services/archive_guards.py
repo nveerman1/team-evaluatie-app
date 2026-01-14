@@ -12,30 +12,29 @@ from app.infra.db.models import AcademicYear, Course, Project
 def require_year_not_archived(db: Session, year_id: int) -> None:
     """
     Check if an academic year is archived and raise 403 if it is.
-    
+
     Args:
         db: Database session
         year_id: Academic year ID to check
-        
+
     Raises:
         HTTPException: 403 if the year is archived
     """
     year = db.query(AcademicYear).filter(AcademicYear.id == year_id).first()
     if year and year.is_archived:
         raise HTTPException(
-            status_code=403,
-            detail="Academisch jaar is gearchiveerd (alleen-lezen)."
+            status_code=403, detail="Academisch jaar is gearchiveerd (alleen-lezen)."
         )
 
 
 def require_course_year_not_archived(db: Session, course_id: int) -> None:
     """
     Check if the academic year of a course is archived and raise 403 if it is.
-    
+
     Args:
         db: Database session
         course_id: Course ID to check
-        
+
     Raises:
         HTTPException: 403 if the course's academic year is archived
     """
@@ -47,11 +46,11 @@ def require_course_year_not_archived(db: Session, course_id: int) -> None:
 def require_project_year_not_archived(db: Session, project_id: int) -> None:
     """
     Check if the academic year of a project (via its course) is archived and raise 403 if it is.
-    
+
     Args:
         db: Database session
         project_id: Project ID to check
-        
+
     Raises:
         HTTPException: 403 if the project's academic year is archived
     """

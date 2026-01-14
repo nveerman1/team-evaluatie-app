@@ -21,7 +21,13 @@ def clamp(x: float, lo: float, hi: float) -> float:
 
 # Probeer group/evaluation te importeren; val veilig terug als de modellen anders heten/ontbreken
 try:
-    from app.infra.db.models import GroupMember, Group, Evaluation, ProjectTeam, ProjectTeamMember
+    from app.infra.db.models import (
+        GroupMember,
+        Group,
+        Evaluation,
+        ProjectTeam,
+        ProjectTeamMember,
+    )
 
     HAS_GROUP_MODELS = True
 except Exception:
@@ -133,16 +139,16 @@ def preview_grades(
     if Evaluation and ProjectTeam and ProjectTeamMember:
         try:
             evaluation = db.get(Evaluation, evaluation_id)
-            if evaluation and getattr(evaluation, 'project_id', None):
+            if evaluation and getattr(evaluation, "project_id", None):
                 project_teams = (
                     db.query(ProjectTeam)
                     .filter(
                         ProjectTeam.project_id == evaluation.project_id,
-                        ProjectTeam.school_id == getattr(evaluation, 'school_id', None),
+                        ProjectTeam.school_id == getattr(evaluation, "school_id", None),
                     )
                     .all()
                 )
-                
+
                 for team in project_teams:
                     members = (
                         db.query(ProjectTeamMember)
@@ -181,7 +187,7 @@ def preview_grades(
             if isinstance(settings, dict):
                 min_cf = float(settings.get("min_cf", 0.6))
                 max_cf = float(settings.get("max_cf", 1.4))
-            
+
             rub = db.get(Rubric, getattr(ev, "rubric_id", None))
             if rub:
                 if hasattr(rub, "scale_min"):
@@ -298,7 +304,11 @@ def preview_grades(
         # Gebruik verbeterde formule: (percentage / 100) * 9 + 1
         # Dit geeft realistischere cijfers: 60% → 6.4, 80% → 8.2, 100% → 10.0
         P = ((avg_score / 100.0) * 9 + 1) if avg_score > 0 else None
-        S = ((self_pct / 100.0) * 9 + 1) if (self_pct is not None and self_pct > 0) else None
+        S = (
+            ((self_pct / 100.0) * 9 + 1)
+            if (self_pct is not None and self_pct > 0)
+            else None
+        )
 
         if P is not None and S is not None:
             # 75% peer, 25% self: gebalanceerd en robuust
@@ -318,15 +328,19 @@ def preview_grades(
             suggested_val = None
 
         # afronden en begrenzen (alleen als er een waarde is)
-        suggested = clamp(round(suggested_val, 1), 1.0, 10.0) if suggested_val is not None else None
+        suggested = (
+            clamp(round(suggested_val, 1), 1.0, 10.0)
+            if suggested_val is not None
+            else None
+        )
 
         # If evaluation has a project, only use project teams (don't fallback to user.team_number)
         # If no project, use user.team_number
-        if evaluation and getattr(evaluation, 'project_id', None):
+        if evaluation and getattr(evaluation, "project_id", None):
             team_num = project_team_map.get(u.id, None)
         else:
             team_num = getattr(u, "team_number", None)
-        
+
         items.append(
             GradePreviewItem(
                 user_id=u.id,

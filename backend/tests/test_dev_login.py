@@ -6,7 +6,11 @@ import pytest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 from app.main import app
-from app.core.redirect_validator import normalize_and_validate_return_to, validate_return_to, get_role_home_path
+from app.core.redirect_validator import (
+    normalize_and_validate_return_to,
+    validate_return_to,
+    get_role_home_path,
+)
 
 
 @pytest.fixture
@@ -19,7 +23,7 @@ def client():
 def test_user():
     """Create a test teacher user object"""
     from app.infra.db.models import User
-    
+
     user = User(
         id=1,
         email="teacher@example.com",
@@ -36,7 +40,7 @@ def test_user():
 def test_student():
     """Create a test student user object"""
     from app.infra.db.models import User
-    
+
     user = User(
         id=2,
         email="student@example.com",
@@ -55,9 +59,13 @@ class TestRedirectValidator:
     def test_normalize_and_validate_valid_paths(self):
         """Test that valid relative paths are accepted"""
         assert normalize_and_validate_return_to("/teacher") == "/teacher"
-        assert normalize_and_validate_return_to("/teacher/rubrics") == "/teacher/rubrics"
+        assert (
+            normalize_and_validate_return_to("/teacher/rubrics") == "/teacher/rubrics"
+        )
         assert normalize_and_validate_return_to("/student") == "/student"
-        assert normalize_and_validate_return_to("/student/projects") == "/student/projects"
+        assert (
+            normalize_and_validate_return_to("/student/projects") == "/student/projects"
+        )
         assert normalize_and_validate_return_to("/") == "/"
 
     def test_normalize_and_validate_url_encoded(self):
@@ -65,18 +73,30 @@ class TestRedirectValidator:
         # Single encoding
         assert normalize_and_validate_return_to("%2Fteacher") == "/teacher"
         assert normalize_and_validate_return_to("%2Fstudent") == "/student"
-        assert normalize_and_validate_return_to("%2Fteacher%2Frubrics") == "/teacher/rubrics"
-        
+        assert (
+            normalize_and_validate_return_to("%2Fteacher%2Frubrics")
+            == "/teacher/rubrics"
+        )
+
         # Double encoding
         assert normalize_and_validate_return_to("%252Fteacher") == "/teacher"
         assert normalize_and_validate_return_to("%252Fstudent") == "/student"
 
     def test_normalize_and_validate_with_query_params(self):
         """Test that paths with query params are accepted"""
-        assert normalize_and_validate_return_to("/teacher?tab=rubrics") == "/teacher?tab=rubrics"
-        assert normalize_and_validate_return_to("/student/project/123?view=details") == "/student/project/123?view=details"
+        assert (
+            normalize_and_validate_return_to("/teacher?tab=rubrics")
+            == "/teacher?tab=rubrics"
+        )
+        assert (
+            normalize_and_validate_return_to("/student/project/123?view=details")
+            == "/student/project/123?view=details"
+        )
         # URL-encoded query params
-        assert normalize_and_validate_return_to("%2Fteacher%3Ftab%3Drubrics") == "/teacher?tab=rubrics"
+        assert (
+            normalize_and_validate_return_to("%2Fteacher%3Ftab%3Drubrics")
+            == "/teacher?tab=rubrics"
+        )
 
     def test_normalize_and_validate_rejects_absolute_urls(self):
         """Test that absolute URLs are rejected"""
@@ -96,7 +116,10 @@ class TestRedirectValidator:
 
     def test_normalize_and_validate_rejects_data_urls(self):
         """Test that data: URLs are rejected"""
-        assert normalize_and_validate_return_to("data:text/html,<script>alert(1)</script>") is None
+        assert (
+            normalize_and_validate_return_to("data:text/html,<script>alert(1)</script>")
+            is None
+        )
 
     def test_validate_return_to_valid_paths(self):
         """Test backward compatibility - validate_return_to delegates to normalize_and_validate_return_to"""
@@ -109,7 +132,10 @@ class TestRedirectValidator:
     def test_validate_return_to_with_query_params(self):
         """Test that paths with query params are accepted"""
         assert validate_return_to("/teacher?tab=rubrics") == "/teacher?tab=rubrics"
-        assert validate_return_to("/student/project/123?view=details") == "/student/project/123?view=details"
+        assert (
+            validate_return_to("/student/project/123?view=details")
+            == "/student/project/123?view=details"
+        )
 
     def test_validate_return_to_rejects_absolute_urls(self):
         """Test that absolute URLs are rejected"""
@@ -176,13 +202,15 @@ class TestDevLoginEndpoint:
         with patch("app.api.v1.routers.auth.get_db") as mock_get_db:
             mock_db = MagicMock()
             mock_get_db.return_value = mock_db
-            mock_db.query.return_value.filter.return_value.first.return_value = test_user
+            mock_db.query.return_value.filter.return_value.first.return_value = (
+                test_user
+            )
 
             response = client.post(
                 f"/api/v1/auth/dev-login?email={test_user.email}",
-                follow_redirects=False
+                follow_redirects=False,
             )
-            
+
             # Should return 404, not 403 (don't leak endpoint existence)
             assert response.status_code == 404
 
@@ -197,20 +225,24 @@ class TestDevLoginEndpoint:
         with patch("app.api.v1.routers.auth.get_db") as mock_get_db:
             mock_db = MagicMock()
             mock_get_db.return_value = mock_db
-            mock_db.query.return_value.filter.return_value.first.return_value = test_user
+            mock_db.query.return_value.filter.return_value.first.return_value = (
+                test_user
+            )
 
             response = client.post(
                 f"/api/v1/auth/dev-login?email={test_user.email}",
-                follow_redirects=False
+                follow_redirects=False,
             )
-            
+
             # Should redirect
             assert response.status_code in [302, 303, 307]
-            
+
             # Should have set cookie
             assert "access_token" in response.cookies
 
-    def test_dev_login_redirects_to_role_home(self, client, test_user, test_student, monkeypatch):
+    def test_dev_login_redirects_to_role_home(
+        self, client, test_user, test_student, monkeypatch
+    ):
         """Test that dev-login redirects to correct role home"""
         from app.core.config import settings
 
@@ -220,20 +252,24 @@ class TestDevLoginEndpoint:
         with patch("app.api.v1.routers.auth.get_db") as mock_get_db:
             mock_db = MagicMock()
             mock_get_db.return_value = mock_db
-            
+
             # Test teacher redirect
-            mock_db.query.return_value.filter.return_value.first.return_value = test_user
+            mock_db.query.return_value.filter.return_value.first.return_value = (
+                test_user
+            )
             response = client.post(
                 f"/api/v1/auth/dev-login?email={test_user.email}",
-                follow_redirects=False
+                follow_redirects=False,
             )
             assert "/teacher" in response.headers["location"]
 
             # Test student redirect
-            mock_db.query.return_value.filter.return_value.first.return_value = test_student
+            mock_db.query.return_value.filter.return_value.first.return_value = (
+                test_student
+            )
             response = client.post(
                 f"/api/v1/auth/dev-login?email={test_student.email}",
-                follow_redirects=False
+                follow_redirects=False,
             )
             assert "/student" in response.headers["location"]
 
@@ -246,17 +282,21 @@ class TestDevLoginEndpoint:
         with patch("app.api.v1.routers.auth.get_db") as mock_get_db:
             mock_db = MagicMock()
             mock_get_db.return_value = mock_db
-            mock_db.query.return_value.filter.return_value.first.return_value = test_user
+            mock_db.query.return_value.filter.return_value.first.return_value = (
+                test_user
+            )
 
             response = client.post(
                 f"/api/v1/auth/dev-login?email={test_user.email}&return_to=/teacher/rubrics",
-                follow_redirects=False
+                follow_redirects=False,
             )
-            
+
             # Should redirect to returnTo
             assert "/teacher/rubrics" in response.headers["location"]
 
-    def test_dev_login_rejects_malicious_return_to(self, client, test_user, monkeypatch):
+    def test_dev_login_rejects_malicious_return_to(
+        self, client, test_user, monkeypatch
+    ):
         """Test that dev-login rejects malicious returnTo"""
         from app.core.config import settings
 
@@ -265,14 +305,16 @@ class TestDevLoginEndpoint:
         with patch("app.api.v1.routers.auth.get_db") as mock_get_db:
             mock_db = MagicMock()
             mock_get_db.return_value = mock_db
-            mock_db.query.return_value.filter.return_value.first.return_value = test_user
+            mock_db.query.return_value.filter.return_value.first.return_value = (
+                test_user
+            )
 
             # Try with absolute URL
             response = client.post(
                 f"/api/v1/auth/dev-login?email={test_user.email}&return_to=https://evil.com",
-                follow_redirects=False
+                follow_redirects=False,
             )
-            
+
             # Should redirect to role home, not the malicious URL
             location = response.headers["location"]
             assert "evil.com" not in location
@@ -291,8 +333,8 @@ class TestDevLoginEndpoint:
 
             response = client.post(
                 "/api/v1/auth/dev-login?email=nonexistent@example.com",
-                follow_redirects=False
+                follow_redirects=False,
             )
-            
+
             # Should return 401
             assert response.status_code == 401

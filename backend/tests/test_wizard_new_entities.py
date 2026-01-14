@@ -25,21 +25,21 @@ from app.api.v1.schemas.projects import (
 def setup_mock_db():
     """Helper to setup a mock database with proper side effects"""
     db = Mock()
-    
+
     # Mock db.add to set attributes on the added object
     def mock_add(obj):
         if isinstance(obj, Project):
             obj.id = 1
             obj.created_at = datetime.now()
             obj.updated_at = datetime.now()
-        elif hasattr(obj, 'id') and obj.id is None:
+        elif hasattr(obj, "id") and obj.id is None:
             obj.id = 1
-    
+
     db.add = Mock(side_effect=mock_add)
     db.flush = Mock()
     db.commit = Mock()
     db.refresh = Mock()
-    
+
     return db
 
 
@@ -61,13 +61,13 @@ class TestWizardPeerEvaluations:
         def query_side_effect(model):
             query_mock = Mock()
             query_mock.filter = Mock(return_value=query_mock)
-            
+
             if model == Rubric:
                 query_mock.first = Mock(return_value=mock_rubric)
             else:
                 query_mock.first = Mock(return_value=None)
                 query_mock.all = Mock(return_value=[])
-            
+
             return query_mock
 
         db.query = Mock(side_effect=query_side_effect)
@@ -80,18 +80,18 @@ class TestWizardPeerEvaluations:
             ),
             evaluations=EvaluationConfig(
                 peer_tussen=PeerEvaluationConfig(
-                    enabled=True,
-                    deadline=deadline,
-                    title_suffix="tussentijds"
+                    enabled=True, deadline=deadline, title_suffix="tussentijds"
                 )
             ),
         )
 
         with patch("app.api.v1.routers.projects.require_role"):
-            with patch("app.api.v1.routers.projects.can_access_course", return_value=True):
+            with patch(
+                "app.api.v1.routers.projects.can_access_course", return_value=True
+            ):
                 with patch("app.api.v1.routers.projects.log_action"):
                     result = wizard_create_project(payload=payload, db=db, user=user)
-                    
+
                     # Verify entities were created
                     assert len(result.entities) == 1
                     assert result.entities[0].type == "peer"
@@ -113,7 +113,7 @@ class TestWizardProjectAssessments:
         mock_group1 = Mock(spec=Group)
         mock_group1.id = 1
         mock_group1.name = "Team 1"
-        
+
         mock_group2 = Mock(spec=Group)
         mock_group2.id = 2
         mock_group2.name = "Team 2"
@@ -121,13 +121,13 @@ class TestWizardProjectAssessments:
         def query_side_effect(model):
             query_mock = Mock()
             query_mock.filter = Mock(return_value=query_mock)
-            
+
             if model == Group:
                 query_mock.all = Mock(return_value=[mock_group1, mock_group2])
             else:
                 query_mock.first = Mock(return_value=None)
                 query_mock.all = Mock(return_value=[])
-            
+
             return query_mock
 
         db.query = Mock(side_effect=query_side_effect)
@@ -139,22 +139,22 @@ class TestWizardProjectAssessments:
             ),
             evaluations=EvaluationConfig(
                 project_assessment=ProjectAssessmentConfig(
-                    enabled=True,
-                    rubric_id=5,
-                    version="tussentijds"
+                    enabled=True, rubric_id=5, version="tussentijds"
                 )
             ),
         )
 
         with patch("app.api.v1.routers.projects.require_role"):
-            with patch("app.api.v1.routers.projects.can_access_course", return_value=True):
+            with patch(
+                "app.api.v1.routers.projects.can_access_course", return_value=True
+            ):
                 with patch("app.api.v1.routers.projects.log_action"):
                     result = wizard_create_project(payload=payload, db=db, user=user)
-                    
+
                     # Should create 2 ProjectAssessment records (one per group)
                     assert len(result.entities) == 2
                     assert all(e.type == "project_assessment" for e in result.entities)
-                    
+
                     # Check group IDs
                     group_ids = [e.data["group_id"] for e in result.entities]
                     assert 1 in group_ids
@@ -173,7 +173,7 @@ class TestWizardProjectAssessments:
             query_mock.filter = Mock(return_value=query_mock)
             query_mock.first = Mock(return_value=None)
             query_mock.all = Mock(return_value=[])  # No groups
-            
+
             return query_mock
 
         db.query = Mock(side_effect=query_side_effect)
@@ -192,16 +192,20 @@ class TestWizardProjectAssessments:
         )
 
         with patch("app.api.v1.routers.projects.require_role"):
-            with patch("app.api.v1.routers.projects.can_access_course", return_value=True):
+            with patch(
+                "app.api.v1.routers.projects.can_access_course", return_value=True
+            ):
                 with patch("app.api.v1.routers.projects.log_action"):
                     result = wizard_create_project(payload=payload, db=db, user=user)
-                    
+
                     # Should have warning about no groups
                     assert len(result.warnings) > 0
                     assert any("no groups" in w.lower() for w in result.warnings)
-                    
+
                     # Should not create any project assessments
-                    assert not any(e.type == "project_assessment" for e in result.entities)
+                    assert not any(
+                        e.type == "project_assessment" for e in result.entities
+                    )
 
 
 class TestWizardCompetencyScans:
@@ -224,13 +228,13 @@ class TestWizardCompetencyScans:
         def query_side_effect(model):
             query_mock = Mock()
             query_mock.filter = Mock(return_value=query_mock)
-            
+
             if model == Competency:
                 query_mock.all = Mock(return_value=[mock_comp1, mock_comp2])
             else:
                 query_mock.first = Mock(return_value=None)
                 query_mock.all = Mock(return_value=[])
-            
+
             return query_mock
 
         db.query = Mock(side_effect=query_side_effect)
@@ -249,16 +253,18 @@ class TestWizardCompetencyScans:
                     start_date=start,
                     end_date=end,
                     competency_ids=[1, 2],
-                    title="Q1 Competentiescan"
+                    title="Q1 Competentiescan",
                 )
             ),
         )
 
         with patch("app.api.v1.routers.projects.require_role"):
-            with patch("app.api.v1.routers.projects.can_access_course", return_value=True):
+            with patch(
+                "app.api.v1.routers.projects.can_access_course", return_value=True
+            ):
                 with patch("app.api.v1.routers.projects.log_action"):
                     result = wizard_create_project(payload=payload, db=db, user=user)
-                    
+
                     # Should create 1 CompetencyWindow
                     assert len(result.entities) == 1
                     assert result.entities[0].type == "competency_scan"
@@ -281,14 +287,14 @@ class TestWizardCompetencyScans:
         def query_side_effect(model):
             query_mock = Mock()
             query_mock.filter = Mock(return_value=query_mock)
-            
+
             if model == Competency:
                 # Only return one competency even though two were requested
                 query_mock.all = Mock(return_value=[mock_comp1])
             else:
                 query_mock.first = Mock(return_value=None)
                 query_mock.all = Mock(return_value=[])
-            
+
             return query_mock
 
         db.query = Mock(side_effect=query_side_effect)
@@ -309,10 +315,12 @@ class TestWizardCompetencyScans:
         )
 
         with patch("app.api.v1.routers.projects.require_role"):
-            with patch("app.api.v1.routers.projects.can_access_course", return_value=True):
+            with patch(
+                "app.api.v1.routers.projects.can_access_course", return_value=True
+            ):
                 with patch("app.api.v1.routers.projects.log_action"):
                     result = wizard_create_project(payload=payload, db=db, user=user)
-                    
+
                     # Should have warning about invalid IDs
                     assert len(result.warnings) > 0
                     assert any("invalid" in w.lower() for w in result.warnings)
@@ -332,18 +340,18 @@ class TestWizardMixedEntities:
         # Mock rubric, groups, and competencies
         mock_rubric = Mock(spec=Rubric)
         mock_rubric.id = 1
-        
+
         mock_group = Mock(spec=Group)
         mock_group.id = 1
         mock_group.name = "Team 1"
-        
+
         mock_comp = Mock(spec=Competency)
         mock_comp.id = 1
 
         def query_side_effect(model):
             query_mock = Mock()
             query_mock.filter = Mock(return_value=query_mock)
-            
+
             if model == Rubric:
                 query_mock.first = Mock(return_value=mock_rubric)
             elif model == Group:
@@ -353,7 +361,7 @@ class TestWizardMixedEntities:
             else:
                 query_mock.first = Mock(return_value=None)
                 query_mock.all = Mock(return_value=[])
-            
+
             return query_mock
 
         db.query = Mock(side_effect=query_side_effect)
@@ -365,8 +373,7 @@ class TestWizardMixedEntities:
             ),
             evaluations=EvaluationConfig(
                 peer_tussen=PeerEvaluationConfig(
-                    enabled=True,
-                    title_suffix="tussentijds"
+                    enabled=True, title_suffix="tussentijds"
                 ),
                 project_assessment=ProjectAssessmentConfig(
                     enabled=True,
@@ -377,18 +384,20 @@ class TestWizardMixedEntities:
                     start_date=datetime(2025, 1, 1),
                     end_date=datetime(2025, 6, 30),
                     competency_ids=[1],
-                )
+                ),
             ),
         )
 
         with patch("app.api.v1.routers.projects.require_role"):
-            with patch("app.api.v1.routers.projects.can_access_course", return_value=True):
+            with patch(
+                "app.api.v1.routers.projects.can_access_course", return_value=True
+            ):
                 with patch("app.api.v1.routers.projects.log_action"):
                     result = wizard_create_project(payload=payload, db=db, user=user)
-                    
+
                     # Should create 3 entities
                     assert len(result.entities) == 3
-                    
+
                     # Check types
                     types = [e.type for e in result.entities]
                     assert "peer" in types

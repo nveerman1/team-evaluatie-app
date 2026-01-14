@@ -9,9 +9,15 @@ from typing import Optional, Dict, List
 class OmzaCategoryScore(BaseModel):
     """Scores for a single OMZA category (peer, self, and teacher)"""
 
-    peer_avg: Optional[float] = Field(None, description="Average peer score for this category")
-    self_avg: Optional[float] = Field(None, description="Average self score for this category")
-    teacher_score: Optional[float] = Field(None, description="Teacher score for this category")
+    peer_avg: Optional[float] = Field(
+        None, description="Average peer score for this category"
+    )
+    self_avg: Optional[float] = Field(
+        None, description="Average self score for this category"
+    )
+    teacher_score: Optional[float] = Field(
+        None, description="Teacher score for this category"
+    )
 
 
 class OmzaStudentData(BaseModel):
@@ -25,7 +31,9 @@ class OmzaStudentData(BaseModel):
         default_factory=dict,
         description="Map of category name to scores (e.g., {'O': {...}, 'M': {...}})",
     )
-    teacher_comment: Optional[str] = Field(None, description="Teacher's general comment for this student")
+    teacher_comment: Optional[str] = Field(
+        None, description="Teacher's general comment for this student"
+    )
 
 
 class OmzaDataResponse(BaseModel):

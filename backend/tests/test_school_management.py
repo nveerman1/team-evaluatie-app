@@ -4,7 +4,6 @@ Tests for School Management Architecture - Academic Years, Classes, Course Enrol
 
 import pytest
 from datetime import date
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.infra.db.models import (
@@ -76,8 +75,9 @@ class TestAcademicYear:
         # Verify the model has the unique constraint defined
         table_args = AcademicYear.__table_args__
         has_unique_constraint = any(
-            hasattr(arg, '__class__') and 'UniqueConstraint' in arg.__class__.__name__
-            for arg in table_args if hasattr(arg, '__class__')
+            hasattr(arg, "__class__") and "UniqueConstraint" in arg.__class__.__name__
+            for arg in table_args
+            if hasattr(arg, "__class__")
         )
         assert has_unique_constraint, "AcademicYear should have a unique constraint"
 
@@ -101,8 +101,9 @@ class TestClass:
         # Verify the model has the unique constraint defined
         table_args = Class.__table_args__
         has_unique_constraint = any(
-            hasattr(arg, '__class__') and 'UniqueConstraint' in arg.__class__.__name__
-            for arg in table_args if hasattr(arg, '__class__')
+            hasattr(arg, "__class__") and "UniqueConstraint" in arg.__class__.__name__
+            for arg in table_args
+            if hasattr(arg, "__class__")
         )
         assert has_unique_constraint, "Class should have a unique constraint"
 
@@ -118,13 +119,13 @@ class TestStudentClassMembership:
             academic_year_id=test_academic_year.id,
             name="G2a",
         )
-        
+
         membership = StudentClassMembership(
             student_id=test_student.id,
             class_id=cls.id,
             academic_year_id=test_academic_year.id,
         )
-        
+
         assert membership.student_id == test_student.id
         assert membership.class_id == cls.id
         assert membership.academic_year_id == test_academic_year.id
@@ -134,10 +135,13 @@ class TestStudentClassMembership:
         # Verify the model has the unique constraint defined
         table_args = StudentClassMembership.__table_args__
         has_unique_constraint = any(
-            hasattr(arg, '__class__') and 'UniqueConstraint' in arg.__class__.__name__
-            for arg in table_args if hasattr(arg, '__class__')
+            hasattr(arg, "__class__") and "UniqueConstraint" in arg.__class__.__name__
+            for arg in table_args
+            if hasattr(arg, "__class__")
         )
-        assert has_unique_constraint, "StudentClassMembership should have a unique constraint"
+        assert has_unique_constraint, (
+            "StudentClassMembership should have a unique constraint"
+        )
 
 
 class TestCourseEnrollment:
@@ -151,13 +155,13 @@ class TestCourseEnrollment:
             academic_year_id=test_academic_year.id,
             name="Nederlands",
         )
-        
+
         enrollment = CourseEnrollment(
             course_id=course.id,
             student_id=test_student.id,
             active=True,
         )
-        
+
         assert enrollment.course_id == course.id
         assert enrollment.student_id == test_student.id
         assert enrollment.active is True
@@ -167,8 +171,9 @@ class TestCourseEnrollment:
         # Verify the model has the unique constraint defined
         table_args = CourseEnrollment.__table_args__
         has_unique_constraint = any(
-            hasattr(arg, '__class__') and 'UniqueConstraint' in arg.__class__.__name__
-            for arg in table_args if hasattr(arg, '__class__')
+            hasattr(arg, "__class__") and "UniqueConstraint" in arg.__class__.__name__
+            for arg in table_args
+            if hasattr(arg, "__class__")
         )
         assert has_unique_constraint, "CourseEnrollment should have a unique constraint"
 
@@ -192,7 +197,7 @@ class TestCourseAcademicYear:
             academic_year_id=test_academic_year.id,
             name="Biologie",
         )
-        
+
         assert course.school_id == test_school.id
         assert course.academic_year_id == test_academic_year.id
         assert course.name == "Biologie"
@@ -203,5 +208,5 @@ class TestCourseAcademicYear:
             school_id=test_school.id,
             name="History Course",
         )
-        
+
         assert course.academic_year_id is None

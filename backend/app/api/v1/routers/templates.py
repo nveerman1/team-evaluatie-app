@@ -99,7 +99,7 @@ def list_peer_criteria_templates(
         query = query.filter(
             or_(
                 PeerEvaluationCriterionTemplate.target_level.is_(None),
-                PeerEvaluationCriterionTemplate.target_level == target_level
+                PeerEvaluationCriterionTemplate.target_level == target_level,
             )
         )
 
@@ -277,7 +277,9 @@ def delete_peer_criterion_template(
 # ============ Project Assessment Criterion Templates ============
 
 
-@router.get("/project-rubric-criteria", response_model=ProjectAssessmentCriterionTemplateListOut)
+@router.get(
+    "/project-rubric-criteria", response_model=ProjectAssessmentCriterionTemplateListOut
+)
 def list_project_assessment_criteria_templates(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
@@ -295,17 +297,17 @@ def list_project_assessment_criteria_templates(
     )
 
     if subject_id:
-        query = query.filter(ProjectAssessmentCriterionTemplate.subject_id == subject_id)
-    if category:
         query = query.filter(
-            ProjectAssessmentCriterionTemplate.category == category
+            ProjectAssessmentCriterionTemplate.subject_id == subject_id
         )
+    if category:
+        query = query.filter(ProjectAssessmentCriterionTemplate.category == category)
     if target_level:
         # Show criteria with target_level = NULL OR target_level = specified level
         query = query.filter(
             or_(
                 ProjectAssessmentCriterionTemplate.target_level.is_(None),
-                ProjectAssessmentCriterionTemplate.target_level == target_level
+                ProjectAssessmentCriterionTemplate.target_level == target_level,
             )
         )
 
@@ -370,7 +372,8 @@ def create_project_assessment_criterion_template(
 
 
 @router.get(
-    "/project-rubric-criteria/{template_id}", response_model=ProjectAssessmentCriterionTemplateOut
+    "/project-rubric-criteria/{template_id}",
+    response_model=ProjectAssessmentCriterionTemplateOut,
 )
 def get_project_assessment_criterion_template(
     template_id: int,
@@ -398,7 +401,8 @@ def get_project_assessment_criterion_template(
 
 
 @router.patch(
-    "/project-rubric-criteria/{template_id}", response_model=ProjectAssessmentCriterionTemplateOut
+    "/project-rubric-criteria/{template_id}",
+    response_model=ProjectAssessmentCriterionTemplateOut,
 )
 def update_project_assessment_criterion_template(
     template_id: int,
@@ -443,7 +447,9 @@ def update_project_assessment_criterion_template(
     return ProjectAssessmentCriterionTemplateOut.model_validate(template)
 
 
-@router.delete("/project-rubric-criteria/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/project-rubric-criteria/{template_id}", status_code=status.HTTP_204_NO_CONTENT
+)
 def delete_project_assessment_criterion_template(
     template_id: int,
     db: Session = Depends(get_db),

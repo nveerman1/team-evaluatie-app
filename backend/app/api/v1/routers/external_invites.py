@@ -23,7 +23,6 @@ from app.api.v1.schemas.competencies import (
     ExternalInviteOut,
     ExternalInvitePublicInfo,
     ExternalScoreSubmit,
-    ExternalScoreOut,
     CompetencyOut,
 )
 from app.core.security import generate_external_token, hash_token
@@ -45,7 +44,11 @@ def get_window_setting(window: CompetencyWindow, key: str, default):
 # ============ Invite Management (Authenticated) ============
 
 
-@router.post("/invites", response_model=List[ExternalInviteOut], status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/invites",
+    response_model=List[ExternalInviteOut],
+    status_code=status.HTTP_201_CREATED,
+)
 def create_invites(
     data: ExternalInviteCreate,
     db: Session = Depends(get_db),
@@ -111,15 +114,15 @@ def create_invites(
         Competency.school_id == current_user.school_id,
         Competency.active == True,
     )
-    
+
     # Filter by selected competencies if specified
     if data.competency_ids:
         competencies_query = competencies_query.where(
             Competency.id.in_(data.competency_ids)
         )
-    
+
     competencies = db.execute(competencies_query).scalars().all()
-    
+
     # Validate that at least one competency is selected
     if not competencies:
         raise HTTPException(
@@ -246,9 +249,7 @@ def revoke_invite(
 
     # Check if already used or revoked
     if invite.status in ["used", "revoked"]:
-        raise HTTPException(
-            status_code=400, detail=f"Invite already {invite.status}"
-        )
+        raise HTTPException(status_code=400, detail=f"Invite already {invite.status}")
 
     # Revoke
     invite.status = "revoked"
@@ -302,7 +303,9 @@ def get_invite_info(token: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Window or subject not found")
 
     # Determine subject name visibility
-    show_subject_name = get_window_setting(window, "show_subject_name_to_external", "full")
+    show_subject_name = get_window_setting(
+        window, "show_subject_name_to_external", "full"
+    )
     if show_subject_name == "full":
         subject_name = subject.name
     elif show_subject_name == "partial":
@@ -319,20 +322,20 @@ def get_invite_info(token: str, db: Session = Depends(get_db)):
     if not invite.rubric_snapshot or not isinstance(invite.rubric_snapshot, dict):
         raise HTTPException(
             status_code=500,
-            detail="Invite data is corrupted. Please contact the person who sent you this link."
+            detail="Invite data is corrupted. Please contact the person who sent you this link.",
         )
-    
+
     competencies = []
     scale_min = 1
     scale_max = 5
     snapshot_competencies = invite.rubric_snapshot.get("competencies", [])
-    
+
     if not snapshot_competencies:
         raise HTTPException(
             status_code=500,
-            detail="No competencies found in invite. Please contact the person who sent you this link."
+            detail="No competencies found in invite. Please contact the person who sent you this link.",
         )
-    
+
     for comp_data in snapshot_competencies:
         comp_scale_min = comp_data.get("scale_min", 1)
         comp_scale_max = comp_data.get("scale_max", 5)
@@ -340,7 +343,7 @@ def get_invite_info(token: str, db: Session = Depends(get_db)):
         if not competencies:
             scale_min = comp_scale_min
             scale_max = comp_scale_max
-        
+
         competencies.append(
             CompetencyOut(
                 id=comp_data["id"],
@@ -366,7 +369,9 @@ def get_invite_info(token: str, db: Session = Depends(get_db)):
         scale_min=scale_min,
         scale_max=scale_max,
         instructions=get_window_setting(
-            window, "external_instructions", "Please assess the student on each competency."
+            window,
+            "external_instructions",
+            "Please assess the student on each competency.",
         ),
     )
 
@@ -406,9 +411,7 @@ def submit_external_scores(
         raise HTTPException(status_code=400, detail="No scores provided")
 
     # Get valid competency IDs from rubric snapshot
-    valid_comp_ids = {
-        c["id"] for c in invite.rubric_snapshot.get("competencies", [])
-    }
+    valid_comp_ids = {c["id"] for c in invite.rubric_snapshot.get("competencies", [])}
 
     # Create scores
     for score_item in data.scores:

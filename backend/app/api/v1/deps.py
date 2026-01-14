@@ -31,21 +31,21 @@ async def get_current_user_dev(
 ) -> User:
     """
     Authentication dependency supporting multiple methods:
-    
+
     1. Development mode (NODE_ENV=development):
        - X-User-Email header for quick testing
-    
+
     2. Production mode:
        - HttpOnly cookie (access_token) - preferred method
        - Bearer token in Authorization header - fallback for API clients
-    
+
     Security:
     - Dev-login is blocked in production
     - JWT tokens are validated and decoded
     - User must not be archived (archived=False)
     - School ID must match the token claim
     """
-    
+
     # DEVELOPMENT: Allow X-User-Email header ONLY when explicitly enabled
     if settings.ENABLE_DEV_LOGIN and x_user_email:
         logger.warning(
@@ -55,24 +55,23 @@ async def get_current_user_dev(
         user = db.query(User).filter(User.email == x_user_email).first()
         if not user:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, 
-                detail="Unknown user"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Unknown user"
             )
         return user
-    
+
     # PRODUCTION: Use cookie or bearer token
     token = None
-    
+
     # Priority 1: Cookie-based authentication (preferred)
     if access_token_cookie:
         token = access_token_cookie
         logger.debug("Authentication via HttpOnly cookie")
-    
+
     # Priority 2: Bearer token (fallback for API clients)
     elif bearer_token:
         token = bearer_token.credentials
         logger.debug("Authentication via Bearer token")
-    
+
     # No valid authentication method found
     if not token:
         # SECURITY: Block and alert on dev-login attempts when disabled
@@ -86,13 +85,13 @@ async def get_current_user_dev(
                 f"This may indicate an authentication bypass attempt. "
                 f"Use Azure AD authentication instead."
             )
-        
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated. Please log in.",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # Decode and validate JWT
     payload = decode_access_token(token)
     if not payload:
@@ -101,7 +100,7 @@ async def get_current_user_dev(
             detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # Extract user email from token
     email = payload.get("sub")
     if not email:
@@ -109,7 +108,7 @@ async def get_current_user_dev(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token payload",
         )
-    
+
     # Get user from database
     user = db.query(User).filter(User.email == email).first()
     if not user:
@@ -117,14 +116,14 @@ async def get_current_user_dev(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
         )
-    
+
     # Validate user is not archived
     if user.archived:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is archived",
         )
-    
+
     # Validate school_id matches token claim (if present in token)
     token_school_id = payload.get("school_id")
     if token_school_id is not None and user.school_id != token_school_id:
@@ -136,7 +135,7 @@ async def get_current_user_dev(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="School ID mismatch",
         )
-    
+
     return user
 
 
@@ -148,31 +147,31 @@ async def get_current_user_prod(
 ) -> User:
     """
     Production authentication dependency - NO X-User-Email header support.
-    
+
     Supports:
     - HttpOnly cookie (access_token) - preferred method
     - Bearer token in Authorization header - fallback for API clients
-    
+
     Security:
     - X-User-Email header is completely removed from signature
     - JWT tokens are validated and decoded
     - User must not be archived (archived=False)
     - School ID must match the token claim
     """
-    
+
     # PRODUCTION: Use cookie or bearer token ONLY
     token = None
-    
+
     # Priority 1: Cookie-based authentication (preferred)
     if access_token_cookie:
         token = access_token_cookie
         logger.debug("Authentication via HttpOnly cookie")
-    
+
     # Priority 2: Bearer token (fallback for API clients)
     elif bearer_token:
         token = bearer_token.credentials
         logger.debug("Authentication via Bearer token")
-    
+
     # No valid authentication method found
     if not token:
         raise HTTPException(
@@ -180,7 +179,7 @@ async def get_current_user_prod(
             detail="Not authenticated. Please log in.",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # Decode and validate JWT
     payload = decode_access_token(token)
     if not payload:
@@ -189,7 +188,7 @@ async def get_current_user_prod(
             detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # Extract user email from token
     email = payload.get("sub")
     if not email:
@@ -197,7 +196,7 @@ async def get_current_user_prod(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token payload",
         )
-    
+
     # Get user from database
     user = db.query(User).filter(User.email == email).first()
     if not user:
@@ -205,14 +204,14 @@ async def get_current_user_prod(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
         )
-    
+
     # Validate user is not archived
     if user.archived:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is archived",
         )
-    
+
     # Validate school_id matches token claim (if present in token)
     token_school_id = payload.get("school_id")
     if token_school_id is not None and user.school_id != token_school_id:
@@ -224,7 +223,7 @@ async def get_current_user_prod(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="School ID mismatch",
         )
-    
+
     return user
 
 
@@ -237,4 +236,3 @@ if settings.ENABLE_DEV_LOGIN:
 else:
     get_current_user = get_current_user_prod
     logger.info("Using production authentication (dev-login disabled)")
-

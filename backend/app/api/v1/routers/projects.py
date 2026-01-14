@@ -52,7 +52,10 @@ from app.core.rbac import (
     get_accessible_course_ids,
 )
 from app.core.audit import log_action
-from app.infra.services.archive_guards import require_course_year_not_archived, require_project_year_not_archived
+from app.infra.services.archive_guards import (
+    require_course_year_not_archived,
+    require_project_year_not_archived,
+)
 from app.infra.services.project_team_service import ProjectTeamService
 from app.infra.services.task_generation_service import TaskGenerationService
 
@@ -146,27 +149,28 @@ def get_running_projects_kpi(
     Get KPI statistics for running projects overview
     """
     require_role(user, ["admin", "teacher"])
-    
+
     # Count running projects
     query = scope_query_by_school(db.query(Project), Project, user)
-    
-    # Filter for running projects: 
+
+    # Filter for running projects:
     # - status is "active", OR
     # - current date is between start_date and end_date (if both dates are set)
     from datetime import datetime as dt
+
     today = dt.utcnow().date()
     query = query.filter(
         or_(
             Project.status == "active",
             (
-                (Project.start_date.isnot(None)) & 
-                (Project.end_date.isnot(None)) &
-                (Project.start_date <= today) & 
-                (Project.end_date >= today)
-            )
+                (Project.start_date.isnot(None))
+                & (Project.end_date.isnot(None))
+                & (Project.start_date <= today)
+                & (Project.end_date >= today)
+            ),
         )
     )
-    
+
     # Apply teacher course access restrictions
     if user.role == "teacher":
         accessible_courses = get_accessible_course_ids(db, user)
@@ -179,9 +183,9 @@ def get_running_projects_kpi(
         query = query.filter(
             (Project.course_id.in_(accessible_courses)) | (Project.course_id.is_(None))
         )
-    
+
     running_projects = query.count()
-    
+
     # Get unique active clients from running projects
     active_client_ids = set()
     for project in query.all():
@@ -192,15 +196,16 @@ def get_running_projects_kpi(
         )
         for link in client_links:
             active_client_ids.add(link.client_id)
-    
+
     active_clients_now = len(active_client_ids)
-    
+
     # Count upcoming moments (evaluations with future deadlines in running projects)
     from datetime import datetime, timedelta
+
     thirty_days_ahead = datetime.utcnow() + timedelta(days=30)
-    
+
     running_project_ids = [p.id for p in query.all()]
-    
+
     upcoming_moments = 0
     if running_project_ids:
         # Count evaluations with upcoming deadlines
@@ -212,18 +217,23 @@ def get_running_projects_kpi(
             )
             .all()
         )
-        
+
         for ev in upcoming_evals:
             settings = ev.settings or {}
             deadline_str = settings.get("deadline")
             if deadline_str:
                 try:
-                    deadline = datetime.fromisoformat(deadline_str.replace('Z', '+00:00'))
-                    if deadline.replace(tzinfo=None) >= datetime.utcnow() and deadline.replace(tzinfo=None) <= thirty_days_ahead:
+                    deadline = datetime.fromisoformat(
+                        deadline_str.replace("Z", "+00:00")
+                    )
+                    if (
+                        deadline.replace(tzinfo=None) >= datetime.utcnow()
+                        and deadline.replace(tzinfo=None) <= thirty_days_ahead
+                    ):
                         upcoming_moments += 1
                 except:
                     pass
-    
+
     return RunningProjectKPIOut(
         running_projects=running_projects,
         active_clients_now=active_clients_now,
@@ -241,34 +251,37 @@ def get_running_projects_overview(
     school_year: Optional[str] = None,  # e.g., "2025-2026"
     status: Optional[str] = None,
     search: Optional[str] = None,
-    sort_by: Optional[str] = Query(None, description="Sort field: course, project, client, next_moment"),
+    sort_by: Optional[str] = Query(
+        None, description="Sort field: course, project, client, next_moment"
+    ),
     sort_order: Optional[str] = Query("asc", description="Sort order: asc or desc"),
 ):
     """
     Get running projects overview with client, team, and moment information
     """
     require_role(user, ["admin", "teacher"])
-    
+
     # Base query - filter by school
     query = scope_query_by_school(db.query(Project), Project, user)
-    
-    # Filter for running projects: 
+
+    # Filter for running projects:
     # - status is "active", OR
     # - current date is between start_date and end_date (if both dates are set)
     from datetime import datetime as dt
+
     today = dt.utcnow().date()
     query = query.filter(
         or_(
             Project.status == "active",
             (
-                (Project.start_date.isnot(None)) & 
-                (Project.end_date.isnot(None)) &
-                (Project.start_date <= today) & 
-                (Project.end_date >= today)
-            )
+                (Project.start_date.isnot(None))
+                & (Project.end_date.isnot(None))
+                & (Project.start_date <= today)
+                & (Project.end_date >= today)
+            ),
         )
     )
-    
+
     # Apply teacher course access restrictions
     if user.role == "teacher":
         accessible_courses = get_accessible_course_ids(db, user)
@@ -279,7 +292,7 @@ def get_running_projects_overview(
         query = query.filter(
             (Project.course_id.in_(accessible_courses)) | (Project.course_id.is_(None))
         )
-    
+
     # Filter by course
     if course_id:
         if not can_access_course(db, user, course_id):
@@ -288,19 +301,25 @@ def get_running_projects_overview(
                 detail="You don't have access to this course",
             )
         query = query.filter(Project.course_id == course_id)
-    
+
     # Filter by school year
     if school_year:
         # Parse school year (e.g., "2025-2026" -> year 2025)
         try:
-            year_start = int(school_year.split("–")[0]) if "–" in school_year else int(school_year.split("-")[0])
-            query = query.join(Project.course).filter(func.extract("year", Project.start_date) == year_start)
+            year_start = (
+                int(school_year.split("–")[0])
+                if "–" in school_year
+                else int(school_year.split("-")[0])
+            )
+            query = query.join(Project.course).filter(
+                func.extract("year", Project.start_date) == year_start
+            )
         except:
             pass
-    
+
     # Filter by status (already filtered to active, but can add more granular status filtering)
     # For now, we'll keep it simple
-    
+
     # Search filter
     if search:
         search_filter = or_(
@@ -308,13 +327,13 @@ def get_running_projects_overview(
             Project.class_name.ilike(f"%{search}%"),
         )
         query = query.filter(search_filter)
-    
+
     # Count total before pagination
     total = query.count()
-    
+
     # Sorting - we'll apply after fetching for complex sorts involving joins
     projects = query.all()
-    
+
     # Build items with all required information
     items = []
     for project in projects:
@@ -323,7 +342,7 @@ def get_running_projects_overview(
         if project.course_id:
             course = db.query(Course).filter(Course.id == project.course_id).first()
             course_name = course.name if course else None
-        
+
         # Get first client (main client)
         client_link = (
             db.query(ClientProjectLink)
@@ -331,7 +350,7 @@ def get_running_projects_overview(
             .order_by(desc(ClientProjectLink.role == "main"))
             .first()
         )
-        
+
         client_id = None
         client_organization = None
         client_email = None
@@ -341,65 +360,70 @@ def get_running_projects_overview(
                 client_id = client.id
                 client_organization = client.organization
                 client_email = client.email
-        
+
         # Get team/group info from course
         team_number = None
         student_names = []
         if project.course_id:
             # Get groups for this course
             groups = (
-                db.query(Group)
-                .filter(Group.course_id == project.course_id)
-                .first()
+                db.query(Group).filter(Group.course_id == project.course_id).first()
             )
             if groups:
                 team_number = groups.team_number
                 # Get group members
                 from app.infra.db.models import GroupMember
+
                 members = (
                     db.query(GroupMember)
-                    .filter(GroupMember.group_id == groups.id, GroupMember.active.is_(True))
+                    .filter(
+                        GroupMember.group_id == groups.id, GroupMember.active.is_(True)
+                    )
                     .all()
                 )
                 student_names = [m.user.name for m in members if m.user]
-        
+
         # Get next moment from evaluations
         next_moment_type = None
         next_moment_date = None
-        
+
         evaluations = (
-            db.query(Evaluation)
-            .filter(Evaluation.project_id == project.id)
-            .all()
+            db.query(Evaluation).filter(Evaluation.project_id == project.id).all()
         )
-        
+
         from datetime import datetime
+
         upcoming_evals = []
         for ev in evaluations:
             settings = ev.settings or {}
             deadline_str = settings.get("deadline")
             if deadline_str:
                 try:
-                    deadline = datetime.fromisoformat(deadline_str.replace('Z', '+00:00'))
+                    deadline = datetime.fromisoformat(
+                        deadline_str.replace("Z", "+00:00")
+                    )
                     if deadline.replace(tzinfo=None) >= datetime.utcnow():
                         upcoming_evals.append((deadline, ev))
                 except:
                     pass
-        
+
         if upcoming_evals:
             # Sort by date and get the nearest
             upcoming_evals.sort(key=lambda x: x[0])
             nearest_deadline, nearest_eval = upcoming_evals[0]
             next_moment_date = nearest_deadline.date()
-            
+
             # Determine type based on evaluation title or type
             if "tussen" in nearest_eval.title.lower():
                 next_moment_type = "Tussenpresentatie"
-            elif "eind" in nearest_eval.title.lower() or "final" in nearest_eval.title.lower():
+            elif (
+                "eind" in nearest_eval.title.lower()
+                or "final" in nearest_eval.title.lower()
+            ):
                 next_moment_type = "Eindpresentatie"
             else:
                 next_moment_type = "Contactmoment"
-        
+
         items.append(
             RunningProjectItem(
                 project_id=project.id,
@@ -418,7 +442,7 @@ def get_running_projects_overview(
                 next_moment_date=next_moment_date,
             )
         )
-    
+
     # Apply sorting
     if sort_by:
         reverse = sort_order == "desc"
@@ -429,16 +453,18 @@ def get_running_projects_overview(
         elif sort_by == "client":
             items.sort(key=lambda x: x.client_organization or "", reverse=reverse)
         elif sort_by == "next_moment":
-            items.sort(key=lambda x: x.next_moment_date or datetime.max.date(), reverse=reverse)
-    
+            items.sort(
+                key=lambda x: x.next_moment_date or datetime.max.date(), reverse=reverse
+            )
+
     # Apply pagination
     start_idx = (page - 1) * per_page
     end_idx = start_idx + per_page
     paginated_items = items[start_idx:end_idx]
-    
+
     # Calculate pages
     pages = (total + per_page - 1) // per_page if total > 0 else 0
-    
+
     return RunningProjectsListOut(
         items=paginated_items,
         total=total,
@@ -535,9 +561,7 @@ def get_project(
 
     # Get evaluation counts by type
     eval_counts = (
-        db.query(
-            Evaluation.evaluation_type, func.count(Evaluation.id).label("count")
-        )
+        db.query(Evaluation.evaluation_type, func.count(Evaluation.id).label("count"))
         .filter(Evaluation.project_id == project_id)
         .group_by(Evaluation.evaluation_type)
         .all()
@@ -562,7 +586,8 @@ def get_project(
         db.query(func.count(CompetencyWindow.id))
         .filter(
             CompetencyWindow.school_id == user.school_id,
-            cast(CompetencyWindow.settings.op('->>') ('project_id'), Integer) == project_id,
+            cast(CompetencyWindow.settings.op("->>")("project_id"), Integer)
+            == project_id,
         )
         .scalar()
         or 0
@@ -727,7 +752,7 @@ def delete_project(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have access to this project",
         )
-    
+
     # Check if project's year is archived
     require_project_year_not_archived(db, project_id)
 
@@ -790,7 +815,11 @@ def get_project_notes(
     return notes_contexts
 
 
-@router.post("/wizard-create", response_model=WizardProjectOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/wizard-create",
+    response_model=WizardProjectOut,
+    status_code=status.HTTP_201_CREATED,
+)
 def wizard_create_project(
     payload: WizardProjectCreate,
     db: Session = Depends(get_db),
@@ -799,7 +828,7 @@ def wizard_create_project(
 ):
     """
     Create a project with linked evaluations, project assessments, competency windows, notes, and clients via wizard.
-    
+
     Now creates proper entity types:
     - Peer evaluations -> Evaluation records with evaluation_type="peer"
     - Project assessments -> ProjectAssessment records (one per group)
@@ -833,7 +862,7 @@ def wizard_create_project(
 
     # Track warnings for edge cases
     warnings: List[str] = []
-    
+
     # Track all created entities
     created_entities: List[WizardEntityOut] = []
 
@@ -848,8 +877,10 @@ def wizard_create_project(
     # Process peer_tussen
     if payload.evaluations.peer_tussen and payload.evaluations.peer_tussen.enabled:
         peer_config = payload.evaluations.peer_tussen
-        peer_rubric_id = peer_config.rubric_id or (get_default_rubric("peer").id if get_default_rubric("peer") else None)
-        
+        peer_rubric_id = peer_config.rubric_id or (
+            get_default_rubric("peer").id if get_default_rubric("peer") else None
+        )
+
         if peer_rubric_id:
             title_suffix = peer_config.title_suffix or "tussentijds"
             eval_tussen = Evaluation(
@@ -860,29 +891,39 @@ def wizard_create_project(
                 title=f"{project.title} – Peerevaluatie ({title_suffix})",
                 evaluation_type="peer",
                 status="draft",
-                settings={"deadline": peer_config.deadline.isoformat() if peer_config.deadline else None},
+                settings={
+                    "deadline": peer_config.deadline.isoformat()
+                    if peer_config.deadline
+                    else None
+                },
             )
             db.add(eval_tussen)
             db.flush()
-            
-            created_entities.append(WizardEntityOut(
-                type="peer",
-                data={
-                    "id": eval_tussen.id,
-                    "title": eval_tussen.title,
-                    "evaluation_type": eval_tussen.evaluation_type,
-                    "status": eval_tussen.status,
-                    "deadline": peer_config.deadline.isoformat() if peer_config.deadline else None,
-                }
-            ))
+
+            created_entities.append(
+                WizardEntityOut(
+                    type="peer",
+                    data={
+                        "id": eval_tussen.id,
+                        "title": eval_tussen.title,
+                        "evaluation_type": eval_tussen.evaluation_type,
+                        "status": eval_tussen.status,
+                        "deadline": peer_config.deadline.isoformat()
+                        if peer_config.deadline
+                        else None,
+                    },
+                )
+            )
         else:
             warnings.append("No peer rubric found for peer_tussen evaluation")
 
     # Process peer_eind
     if payload.evaluations.peer_eind and payload.evaluations.peer_eind.enabled:
         peer_config = payload.evaluations.peer_eind
-        peer_rubric_id = peer_config.rubric_id or (get_default_rubric("peer").id if get_default_rubric("peer") else None)
-        
+        peer_rubric_id = peer_config.rubric_id or (
+            get_default_rubric("peer").id if get_default_rubric("peer") else None
+        )
+
         if peer_rubric_id:
             title_suffix = peer_config.title_suffix or "eind"
             eval_eind = Evaluation(
@@ -893,37 +934,52 @@ def wizard_create_project(
                 title=f"{project.title} – Peerevaluatie ({title_suffix})",
                 evaluation_type="peer",
                 status="draft",
-                settings={"deadline": peer_config.deadline.isoformat() if peer_config.deadline else None},
+                settings={
+                    "deadline": peer_config.deadline.isoformat()
+                    if peer_config.deadline
+                    else None
+                },
             )
             db.add(eval_eind)
             db.flush()
-            
-            created_entities.append(WizardEntityOut(
-                type="peer",
-                data={
-                    "id": eval_eind.id,
-                    "title": eval_eind.title,
-                    "evaluation_type": eval_eind.evaluation_type,
-                    "status": eval_eind.status,
-                    "deadline": peer_config.deadline.isoformat() if peer_config.deadline else None,
-                }
-            ))
+
+            created_entities.append(
+                WizardEntityOut(
+                    type="peer",
+                    data={
+                        "id": eval_eind.id,
+                        "title": eval_eind.title,
+                        "evaluation_type": eval_eind.evaluation_type,
+                        "status": eval_eind.status,
+                        "deadline": peer_config.deadline.isoformat()
+                        if peer_config.deadline
+                        else None,
+                    },
+                )
+            )
         else:
             warnings.append("No peer rubric found for peer_eind evaluation")
 
     # 3. Create project assessments (now creates ProjectAssessment records, one per group)
     # Helper function to create project assessments for a given config
-    def create_project_assessments(pa_config: ProjectAssessmentConfig, version_suffix: str):
+    def create_project_assessments(
+        pa_config: ProjectAssessmentConfig, version_suffix: str
+    ):
         if not project.course_id:
-            warnings.append(f"Project assessment ({version_suffix}) requires a course_id but none was provided")
+            warnings.append(
+                f"Project assessment ({version_suffix}) requires a course_id but none was provided"
+            )
             return
-        
+
         # Get all groups for this course
-        groups = db.query(Group).filter(
-            Group.school_id == user.school_id,
-            Group.course_id == project.course_id
-        ).all()
-        
+        groups = (
+            db.query(Group)
+            .filter(
+                Group.school_id == user.school_id, Group.course_id == project.course_id
+            )
+            .all()
+        )
+
         if not groups:
             # Edge case: course has no groups
             warnings.append(
@@ -941,11 +997,15 @@ def wizard_create_project(
             # - Historical record of team composition for this specific project
             for group in groups:
                 # Check if project team already exists for this group (might be created by previous assessment)
-                existing_project_team = db.query(ProjectTeam).filter(
-                    ProjectTeam.project_id == project.id,
-                    ProjectTeam.team_id == group.id
-                ).first()
-                
+                existing_project_team = (
+                    db.query(ProjectTeam)
+                    .filter(
+                        ProjectTeam.project_id == project.id,
+                        ProjectTeam.team_id == group.id,
+                    )
+                    .first()
+                )
+
                 if existing_project_team:
                     project_team = existing_project_team
                 else:
@@ -957,11 +1017,11 @@ def wizard_create_project(
                         team_id=group.id,
                         team_name=group.name,
                     )
-                    
+
                     # Copy group.team_number to project_team.team_number
                     if group.team_number is not None:
                         project_team.team_number = group.team_number
-                    
+
                     # Copy members from group to project team
                     ProjectTeamService.copy_members_from_group(
                         db=db,
@@ -970,13 +1030,13 @@ def wizard_create_project(
                         school_id=user.school_id,
                     )
                     db.flush()  # Flush to get project_team.id
-                
+
                 # Create ProjectAssessment linked to project and project_team
                 # Include version suffix in title if provided, but not group name
                 title_with_version = project.title
                 if version_suffix:
                     title_with_version += f" ({version_suffix})"
-                
+
                 assessment = ProjectAssessment(
                     school_id=user.school_id,
                     project_id=project.id,  # Set project_id on the model
@@ -988,60 +1048,86 @@ def wizard_create_project(
                     version=pa_config.version or version_suffix,
                     status="draft",
                     metadata_json={
-                        "deadline": pa_config.deadline.isoformat() if pa_config.deadline else None,
-                    }
+                        "deadline": pa_config.deadline.isoformat()
+                        if pa_config.deadline
+                        else None,
+                    },
                 )
                 db.add(assessment)
                 db.flush()
-                
-                created_entities.append(WizardEntityOut(
-                    type="project_assessment",
-                    data={
-                        "id": assessment.id,
-                        "title": assessment.title,
-                        "project_id": assessment.project_id,
-                        "group_id": assessment.group_id,
-                        "group_name": group.name,
-                        "project_team_id": assessment.project_team_id,
-                        "rubric_id": assessment.rubric_id,
-                        "version": assessment.version,
-                        "status": assessment.status,
-                        "deadline": pa_config.deadline.isoformat() if pa_config.deadline else None,
-                    }
-                ))
-    
+
+                created_entities.append(
+                    WizardEntityOut(
+                        type="project_assessment",
+                        data={
+                            "id": assessment.id,
+                            "title": assessment.title,
+                            "project_id": assessment.project_id,
+                            "group_id": assessment.group_id,
+                            "group_name": group.name,
+                            "project_team_id": assessment.project_team_id,
+                            "rubric_id": assessment.rubric_id,
+                            "version": assessment.version,
+                            "status": assessment.status,
+                            "deadline": pa_config.deadline.isoformat()
+                            if pa_config.deadline
+                            else None,
+                        },
+                    )
+                )
+
     # Process project_assessment_tussen
-    if payload.evaluations.project_assessment_tussen and payload.evaluations.project_assessment_tussen.enabled:
-        create_project_assessments(payload.evaluations.project_assessment_tussen, "tussentijds")
-    
+    if (
+        payload.evaluations.project_assessment_tussen
+        and payload.evaluations.project_assessment_tussen.enabled
+    ):
+        create_project_assessments(
+            payload.evaluations.project_assessment_tussen, "tussentijds"
+        )
+
     # Process project_assessment_eind
-    if payload.evaluations.project_assessment_eind and payload.evaluations.project_assessment_eind.enabled:
+    if (
+        payload.evaluations.project_assessment_eind
+        and payload.evaluations.project_assessment_eind.enabled
+    ):
         create_project_assessments(payload.evaluations.project_assessment_eind, "eind")
-    
+
     # Legacy support: process single project_assessment if provided
-    if payload.evaluations.project_assessment and payload.evaluations.project_assessment.enabled:
+    if (
+        payload.evaluations.project_assessment
+        and payload.evaluations.project_assessment.enabled
+    ):
         # Use explicit version from payload, or no suffix if not provided
         version_suffix = payload.evaluations.project_assessment.version or None
-        create_project_assessments(payload.evaluations.project_assessment, version_suffix or "")
+        create_project_assessments(
+            payload.evaluations.project_assessment, version_suffix or ""
+        )
 
     # 4. Create competency window (now creates CompetencyWindow records)
-    if payload.evaluations.competency_scan and payload.evaluations.competency_scan.enabled:
+    if (
+        payload.evaluations.competency_scan
+        and payload.evaluations.competency_scan.enabled
+    ):
         cs_config = payload.evaluations.competency_scan
-        
+
         # Validate competencies exist
         if cs_config.competency_ids:
-            valid_competencies = db.query(Competency).filter(
-                Competency.school_id == user.school_id,
-                Competency.id.in_(cs_config.competency_ids)
-            ).all()
+            valid_competencies = (
+                db.query(Competency)
+                .filter(
+                    Competency.school_id == user.school_id,
+                    Competency.id.in_(cs_config.competency_ids),
+                )
+                .all()
+            )
             valid_competency_ids = [c.id for c in valid_competencies]
-            
+
             if len(valid_competency_ids) != len(cs_config.competency_ids):
                 warnings.append("Some competency IDs were invalid and were skipped")
         else:
             valid_competency_ids = []
             warnings.append("No competencies selected for competency scan")
-        
+
         # Create CompetencyWindow
         title = cs_config.title or f"{project.title} – Competentiescan"
         window = CompetencyWindow(
@@ -1056,24 +1142,34 @@ def wizard_create_project(
             settings={
                 "project_id": project.id,
                 "competency_ids": valid_competency_ids,
-                "deadline": (cs_config.deadline or cs_config.end_date).isoformat() if (cs_config.deadline or cs_config.end_date) else None,
-            }
+                "deadline": (cs_config.deadline or cs_config.end_date).isoformat()
+                if (cs_config.deadline or cs_config.end_date)
+                else None,
+            },
         )
         db.add(window)
         db.flush()
-        
-        created_entities.append(WizardEntityOut(
-            type="competency_scan",
-            data={
-                "id": window.id,
-                "title": window.title,
-                "start_date": cs_config.start_date.isoformat() if cs_config.start_date else None,
-                "end_date": cs_config.end_date.isoformat() if cs_config.end_date else None,
-                "deadline": (cs_config.deadline or cs_config.end_date).isoformat() if (cs_config.deadline or cs_config.end_date) else None,
-                "status": window.status,
-                "competency_ids": valid_competency_ids,
-            }
-        ))
+
+        created_entities.append(
+            WizardEntityOut(
+                type="competency_scan",
+                data={
+                    "id": window.id,
+                    "title": window.title,
+                    "start_date": cs_config.start_date.isoformat()
+                    if cs_config.start_date
+                    else None,
+                    "end_date": cs_config.end_date.isoformat()
+                    if cs_config.end_date
+                    else None,
+                    "deadline": (cs_config.deadline or cs_config.end_date).isoformat()
+                    if (cs_config.deadline or cs_config.end_date)
+                    else None,
+                    "status": window.status,
+                    "competency_ids": valid_competency_ids,
+                },
+            )
+        )
 
     # 5. Create project notes context if requested
     note_context = None
@@ -1115,20 +1211,30 @@ def wizard_create_project(
     # Extract presentation dates from project assessment configurations
     tussen_datum = None
     eind_datum = None
-    
-    if payload.evaluations.project_assessment_tussen and payload.evaluations.project_assessment_tussen.enabled:
+
+    if (
+        payload.evaluations.project_assessment_tussen
+        and payload.evaluations.project_assessment_tussen.enabled
+    ):
         if payload.evaluations.project_assessment_tussen.deadline:
             tussen_datum = payload.evaluations.project_assessment_tussen.deadline.date()
-    
-    if payload.evaluations.project_assessment_eind and payload.evaluations.project_assessment_eind.enabled:
+
+    if (
+        payload.evaluations.project_assessment_eind
+        and payload.evaluations.project_assessment_eind.enabled
+    ):
         if payload.evaluations.project_assessment_eind.deadline:
             eind_datum = payload.evaluations.project_assessment_eind.deadline.date()
-    
+
     # Legacy support
-    if not eind_datum and payload.evaluations.project_assessment and payload.evaluations.project_assessment.enabled:
+    if (
+        not eind_datum
+        and payload.evaluations.project_assessment
+        and payload.evaluations.project_assessment.enabled
+    ):
         if payload.evaluations.project_assessment.deadline:
             eind_datum = payload.evaluations.project_assessment.deadline.date()
-    
+
     # Generate tasks if we have dates and clients
     generated_tasks = []
     if (tussen_datum or eind_datum) and linked_clients:
@@ -1139,20 +1245,24 @@ def wizard_create_project(
             eind_datum=eind_datum,
             commit=False,  # Don't commit yet, will commit together with everything else
         )
-        
+
         # Add task entities to created_entities for reporting
         for task in generated_tasks:
-            created_entities.append(WizardEntityOut(
-                type="task",
-                data={
-                    "id": task.id,
-                    "title": task.title,
-                    "type": task.type,
-                    "source": task.source,
-                    "due_date": task.due_date.isoformat() if task.due_date else None,
-                    "status": task.status,
-                }
-            ))
+            created_entities.append(
+                WizardEntityOut(
+                    type="task",
+                    data={
+                        "id": task.id,
+                        "title": task.title,
+                        "type": task.type,
+                        "source": task.source,
+                        "due_date": task.due_date.isoformat()
+                        if task.due_date
+                        else None,
+                        "status": task.status,
+                    },
+                )
+            )
 
     # Commit all changes
     db.commit()

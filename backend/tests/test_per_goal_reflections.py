@@ -1,6 +1,7 @@
 """
 Tests for per-goal reflection functionality
 """
+
 import pytest
 from app.api.v1.schemas.competencies import (
     CompetencyReflectionCreate,

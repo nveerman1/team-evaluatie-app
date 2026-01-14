@@ -25,7 +25,7 @@ def upgrade():
     op.create_index(
         "ix_rubric_criteria_order", "rubric_criteria", ["order"], unique=False
     )
-    
+
     # Note: Backfill is done in a separate migration (rc_20251212_02_backfill_order)
     # to handle cases where this migration was already run before the backfill was added
 

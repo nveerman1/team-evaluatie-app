@@ -46,7 +46,9 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_subproject_school", "subprojects", ["school_id"], unique=False)
-    op.create_index("ix_subproject_project", "subprojects", ["project_id"], unique=False)
+    op.create_index(
+        "ix_subproject_project", "subprojects", ["project_id"], unique=False
+    )
     op.create_index("ix_subproject_client", "subprojects", ["client_id"], unique=False)
     op.create_index(
         "ix_subproject_team", "subprojects", ["project_id", "team_number"], unique=False

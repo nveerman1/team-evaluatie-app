@@ -191,7 +191,6 @@ def test_rate_limiting_blocks_excessive_requests():
     # We test that the middleware raises the correct HTTPException
     from fastapi import Request
     from app.api.middleware.rate_limit import RateLimitMiddleware as RLM
-    from starlette.responses import Response
 
     # Create a mock request
     request = MagicMock(spec=Request)
@@ -202,7 +201,6 @@ def test_rate_limiting_blocks_excessive_requests():
     middleware = RLM(app, rate_limiter=mock_rate_limiter)
 
     # Test that it raises HTTPException with 429 status
-    from fastapi import HTTPException
 
     # The middleware should raise HTTPException when rate limit is exceeded
     # We verify this by checking is_allowed is called and returns False
@@ -380,9 +378,9 @@ def test_dev_login_disabled_in_production():
     os.environ["SECRET_KEY"] = "test-secret-key-at-least-32-characters-long"
 
     test_settings = Settings()
-    assert (
-        test_settings.NODE_ENV == "production"
-    ), "Invalid NODE_ENV should default to production"
+    assert test_settings.NODE_ENV == "production", (
+        "Invalid NODE_ENV should default to production"
+    )
 
     # Clean up
     os.environ["NODE_ENV"] = original_env

@@ -14,14 +14,14 @@ def map_somtoday_student_to_user(
 ) -> Dict[str, Any]:
     """
     Map Somtoday student data to User model
-    
+
     Args:
         somtoday_student: Student data from Somtoday API
         school_id: School ID to associate with
-        
+
     Returns:
         Dictionary with User model fields
-        
+
     Example Somtoday student structure:
     {
         "id": "12345",
@@ -50,15 +50,15 @@ def map_somtoday_class_to_group(
 ) -> Dict[str, Any]:
     """
     Map Somtoday class data to Group model
-    
+
     Args:
         somtoday_class: Class data from Somtoday API
         school_id: School ID to associate with
         course_id: Course ID to associate with
-        
+
     Returns:
         Dictionary with Group model fields
-        
+
     Example Somtoday class structure:
     {
         "id": "class-123",
@@ -76,16 +76,14 @@ def map_somtoday_class_to_group(
     }
 
 
-def match_user_by_email(
-    email: str, existing_users: List[Any]
-) -> Optional[Any]:
+def match_user_by_email(email: str, existing_users: List[Any]) -> Optional[Any]:
     """
     Match a user by email address
-    
+
     Args:
         email: Email to search for
         existing_users: List of User objects
-        
+
     Returns:
         Matched User or None
     """
@@ -101,13 +99,13 @@ def match_user_by_leerlingnummer(
 ) -> Optional[Any]:
     """
     Match a user by leerlingnummer (student number)
-    
+
     Note: This requires storing leerlingnummer in User metadata
-    
+
     Args:
         leerlingnummer: Student number to search for
         existing_users: List of User objects
-        
+
     Returns:
         Matched User or None
     """
@@ -125,17 +123,17 @@ def prepare_grade_export(
 ) -> Dict[str, Any]:
     """
     Prepare a grade for export to Somtoday
-    
+
     Args:
         user_email: Student email
         course_code: Course code in Somtoday
         grade_value: Grade value (1-10)
         grade_date: Date when grade was assigned
         description: Optional description
-        
+
     Returns:
         Grade object for Somtoday API
-        
+
     Example output:
     {
         "studentEmail": "jan.jansen@school.nl",

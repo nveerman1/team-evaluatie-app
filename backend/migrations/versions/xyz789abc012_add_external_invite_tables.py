@@ -51,9 +51,7 @@ def upgrade():
         sa.ForeignKeyConstraint(
             ["window_id"], ["competency_windows.id"], ondelete="CASCADE"
         ),
-        sa.ForeignKeyConstraint(
-            ["subject_user_id"], ["users.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["subject_user_id"], ["users.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["invited_by_user_id"], ["users.id"], ondelete="CASCADE"
         ),
@@ -114,9 +112,7 @@ def upgrade():
         sa.ForeignKeyConstraint(
             ["window_id"], ["competency_windows.id"], ondelete="CASCADE"
         ),
-        sa.ForeignKeyConstraint(
-            ["subject_user_id"], ["users.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["subject_user_id"], ["users.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["competency_id"], ["competencies.id"], ondelete="CASCADE"
         ),

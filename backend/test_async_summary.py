@@ -9,6 +9,7 @@ This script tests the complete async workflow:
 
 Run with: python test_async_summary.py
 """
+
 import sys
 from pathlib import Path
 
@@ -16,14 +17,11 @@ from pathlib import Path
 backend_dir = Path(__file__).parent
 sys.path.insert(0, str(backend_dir))
 
+
 def test_imports():
     """Test that all required modules can be imported."""
     print("Testing imports...")
     try:
-        from app.infra.queue.connection import RedisConnection, get_queue
-        from app.infra.queue.tasks import generate_ai_summary_task
-        from app.infra.db.models import SummaryGenerationJob, FeedbackSummary
-        from app.core.config import settings
         print("✓ All imports successful")
         return True
     except Exception as e:
@@ -36,13 +34,16 @@ def test_redis_connection():
     print("\nTesting Redis connection...")
     try:
         from app.infra.queue.connection import RedisConnection
+
         conn = RedisConnection.get_connection()
         conn.ping()
         print(f"✓ Redis connected: {conn}")
         return True
     except Exception as e:
         print(f"✗ Redis connection failed: {e}")
-        print("  Make sure Redis is running: docker compose -f ops/docker/compose.dev.yml up -d")
+        print(
+            "  Make sure Redis is running: docker compose -f ops/docker/compose.dev.yml up -d"
+        )
         return False
 
 
@@ -51,18 +52,19 @@ def test_database_connection():
     print("\nTesting database connection...")
     try:
         from app.infra.db.session import SessionLocal
-        from app.infra.db.models import SummaryGenerationJob
         from sqlalchemy import text
-        
+
         db = SessionLocal()
-        
+
         # Check if table exists
         result = db.execute(
-            text("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'summary_generation_jobs')")
+            text(
+                "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'summary_generation_jobs')"
+            )
         ).scalar()
-        
+
         db.close()
-        
+
         if result:
             print("✓ Database connected and table exists")
             return True
@@ -81,20 +83,21 @@ def test_queue_operations():
     print("\nTesting queue operations...")
     try:
         from app.infra.queue.connection import get_queue
-        
-        queue = get_queue('ai-summaries')
-        
+
+        queue = get_queue("ai-summaries")
+
         # Check queue stats
         count = len(queue)
         print(f"✓ Queue 'ai-summaries' accessible, {count} jobs pending")
-        
+
         # List workers
         from rq import Worker
         from app.infra.queue.connection import RedisConnection
+
         conn = RedisConnection.get_connection()
         workers = Worker.all(connection=conn)
         print(f"  {len(workers)} workers connected")
-        
+
         return True
     except Exception as e:
         print(f"✗ Queue operations failed: {e}")
@@ -107,12 +110,12 @@ def test_task_structure():
     try:
         from app.infra.queue.tasks import generate_ai_summary_task
         import inspect
-        
+
         sig = inspect.signature(generate_ai_summary_task)
         params = list(sig.parameters.keys())
-        
+
         # Updated: job_id is now retrieved from RQ context, not a parameter
-        expected = ['school_id', 'evaluation_id', 'student_id']
+        expected = ["school_id", "evaluation_id", "student_id"]
         if params == expected:
             print(f"✓ Task signature correct: {params}")
             print("  (job_id is retrieved from RQ context, not passed as parameter)")
@@ -130,12 +133,12 @@ def test_config():
     print("\nTesting configuration...")
     try:
         from app.core.config import settings
-        
+
         print(f"  REDIS_URL: {settings.REDIS_URL}")
         print(f"  DATABASE_URL: {settings.DATABASE_URL[:30]}...")
         print(f"  OLLAMA_BASE_URL: {settings.OLLAMA_BASE_URL}")
         print(f"  OLLAMA_MODEL: {settings.OLLAMA_MODEL}")
-        print(f"✓ Configuration loaded")
+        print("✓ Configuration loaded")
         return True
     except Exception as e:
         print(f"✗ Configuration failed: {e}")
@@ -147,7 +150,7 @@ def run_all_tests():
     print("=" * 60)
     print("Async AI Summary Generation - Test Suite")
     print("=" * 60)
-    
+
     tests = [
         ("Imports", test_imports),
         ("Configuration", test_config),
@@ -156,7 +159,7 @@ def run_all_tests():
         ("Queue Operations", test_queue_operations),
         ("Task Structure", test_task_structure),
     ]
-    
+
     results = []
     for name, test_func in tests:
         try:
@@ -165,20 +168,20 @@ def run_all_tests():
         except Exception as e:
             print(f"\n✗ Test '{name}' crashed: {e}")
             results.append((name, False))
-    
+
     print("\n" + "=" * 60)
     print("Test Results Summary")
     print("=" * 60)
-    
+
     passed = sum(1 for _, result in results if result)
     total = len(results)
-    
+
     for name, result in results:
         status = "✓ PASS" if result else "✗ FAIL"
         print(f"{status:8} {name}")
-    
+
     print(f"\n{passed}/{total} tests passed")
-    
+
     if passed == total:
         print("\n🎉 All tests passed! System is ready.")
         print("\nNext steps:")
@@ -192,6 +195,6 @@ def run_all_tests():
         return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     exit_code = run_all_tests()
     sys.exit(exit_code)

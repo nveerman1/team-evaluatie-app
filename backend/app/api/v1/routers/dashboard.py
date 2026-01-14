@@ -374,7 +374,10 @@ def dashboard_export_csv(
 ):
     # Reuse JSON endpoint om dubbele logica te voorkomen
     data: DashboardResponse = dashboard_evaluation(
-        evaluation_id, include_breakdown=False, db=db, user=user  # type: ignore
+        evaluation_id,
+        include_breakdown=False,
+        db=db,
+        user=user,  # type: ignore
     )
 
     # CSV bouwen
@@ -817,7 +820,9 @@ def export_student_progress_csv(
     """
     # Reuse the progress endpoint
     data: StudentProgressResponse = get_student_progress(
-        evaluation_id, db=db, user=user  # type: ignore
+        evaluation_id,
+        db=db,
+        user=user,  # type: ignore
     )
 
     # CSV bouwen

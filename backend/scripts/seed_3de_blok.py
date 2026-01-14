@@ -8,9 +8,9 @@ Creates:
 
 Usage:
     python scripts/seed_3de_blok.py [school_id]
-    
+
     school_id: Optional. The ID of the school to add students to (default: 1)
-    
+
 Examples:
     python scripts/seed_3de_blok.py        # Adds to school_id=1
     python scripts/seed_3de_blok.py 2      # Adds to school_id=2
@@ -31,16 +31,16 @@ from app.core.security import get_password_hash
 
 def seed_3de_blok(target_school_id=1):
     """Seed 3de Blok test data
-    
+
     Args:
         target_school_id: The school ID to add students to (default: 1)
     """
     print("=" * 60)
     print("SEEDING 3DE BLOK TEST DATA")
     print("=" * 60)
-    
+
     db = SessionLocal()
-    
+
     try:
         # Get the target school
         school = db.query(School).filter(School.id == target_school_id).first()
@@ -54,16 +54,17 @@ def seed_3de_blok(target_school_id=1):
             else:
                 print("  No schools found in database.")
             return
-        
+
         print(f"✓ Using school: {school.name} (ID: {school.id})")
-        
+
         # Get an admin or teacher user for created_by field
         # Try to find any admin or teacher in this school
-        admin = db.query(User).filter(
-            User.school_id == school.id,
-            User.role.in_(["admin", "teacher"])
-        ).first()
-        
+        admin = (
+            db.query(User)
+            .filter(User.school_id == school.id, User.role.in_(["admin", "teacher"]))
+            .first()
+        )
+
         if not admin:
             print("⚠ Warning: No admin or teacher found in this school.")
             print("  Creating admin user for attendance event tracking...")
@@ -79,7 +80,7 @@ def seed_3de_blok(target_school_id=1):
             db.commit()
             db.refresh(admin)
             print(f"✓ Created admin user: {admin.email}")
-        
+
         # Define test students
         students_data = [
             {
@@ -113,19 +114,22 @@ def seed_3de_blok(target_school_id=1):
                 "rfid_uid": "RFID005",
             },
         ]
-        
+
         print("\n" + "-" * 60)
         print("Creating students and RFID cards:")
         print("-" * 60)
-        
+
         created_students = []
         for student_data in students_data:
             # Check if student already exists
-            student = db.query(User).filter(
-                User.email == student_data["email"],
-                User.school_id == school.id
-            ).first()
-            
+            student = (
+                db.query(User)
+                .filter(
+                    User.email == student_data["email"], User.school_id == school.id
+                )
+                .first()
+            )
+
             if not student:
                 # Create student
                 student = User(
@@ -142,12 +146,14 @@ def seed_3de_blok(target_school_id=1):
                 print(f"✓ Created student: {student.name} ({student.email})")
             else:
                 print(f"✓ Student already exists: {student.name} ({student.email})")
-            
+
             # Check if RFID card already exists
-            rfid_card = db.query(RFIDCard).filter(
-                RFIDCard.uid == student_data["rfid_uid"]
-            ).first()
-            
+            rfid_card = (
+                db.query(RFIDCard)
+                .filter(RFIDCard.uid == student_data["rfid_uid"])
+                .first()
+            )
+
             if not rfid_card:
                 # Create RFID card
                 rfid_card = RFIDCard(
@@ -161,18 +167,18 @@ def seed_3de_blok(target_school_id=1):
                 print(f"  ✓ Assigned RFID card: {rfid_card.uid}")
             else:
                 print(f"  ✓ RFID card already exists: {rfid_card.uid}")
-            
+
             created_students.append(student)
-        
+
         db.commit()
-        
+
         print("\n" + "-" * 60)
         print("Creating sample attendance events:")
         print("-" * 60)
-        
+
         # Create some sample attendance events
         now = datetime.now()
-        
+
         # Lars: School check-in (yesterday, 2 hours)
         lars = created_students[0]
         event1 = AttendanceEvent(
@@ -185,7 +191,7 @@ def seed_3de_blok(target_school_id=1):
         )
         db.add(event1)
         print(f"✓ Created school attendance for {lars.name} (yesterday, 2h)")
-        
+
         # Sophie: School check-in (today, still checked in)
         sophie = created_students[1]
         event2 = AttendanceEvent(
@@ -198,7 +204,7 @@ def seed_3de_blok(target_school_id=1):
         )
         db.add(event2)
         print(f"✓ Created school attendance for {sophie.name} (currently checked in)")
-        
+
         # Daan: External work (pending approval)
         daan = created_students[2]
         event3 = AttendanceEvent(
@@ -214,7 +220,7 @@ def seed_3de_blok(target_school_id=1):
         )
         db.add(event3)
         print(f"✓ Created external work for {daan.name} (pending approval)")
-        
+
         # Lars: External work (approved)
         event4 = AttendanceEvent(
             user_id=lars.id,
@@ -231,7 +237,7 @@ def seed_3de_blok(target_school_id=1):
         )
         db.add(event4)
         print(f"✓ Created external work for {lars.name} (approved)")
-        
+
         # Lisa: School check-in (yesterday, 3 hours)
         lisa = created_students[3]
         event5 = AttendanceEvent(
@@ -244,7 +250,7 @@ def seed_3de_blok(target_school_id=1):
         )
         db.add(event5)
         print(f"✓ Created school attendance for {lisa.name} (yesterday, 3h)")
-        
+
         # Tim: School check-in (today, still checked in)
         tim = created_students[4]
         event6 = AttendanceEvent(
@@ -257,9 +263,9 @@ def seed_3de_blok(target_school_id=1):
         )
         db.add(event6)
         print(f"✓ Created school attendance for {tim.name} (currently checked in)")
-        
+
         db.commit()
-        
+
         print("\n" + "=" * 60)
         print("3DE BLOK TEST DATA SEEDED SUCCESSFULLY")
         print("=" * 60)
@@ -267,16 +273,17 @@ def seed_3de_blok(target_school_id=1):
         print(f"\nCreated/verified {len(students_data)} students:")
         for student in created_students:
             print(f"  - {student.name} ({student.email})")
-        print(f"\nPassword for all students: demo123")
-        print(f"\nRFID UIDs assigned:")
+        print("\nPassword for all students: demo123")
+        print("\nRFID UIDs assigned:")
         for i, student_data in enumerate(students_data):
             print(f"  - {created_students[i].name}: {student_data['rfid_uid']}")
-        print(f"\nSample attendance events created: 6")
+        print("\nSample attendance events created: 6")
         print("=" * 60)
-        
+
     except Exception as e:
         print(f"\n❌ Error: {e}")
         import traceback
+
         traceback.print_exc()
         db.rollback()
         raise
@@ -291,7 +298,9 @@ if __name__ == "__main__":
         try:
             school_id = int(sys.argv[1])
         except ValueError:
-            print(f"❌ Error: Invalid school_id '{sys.argv[1]}'. Please provide a valid integer (e.g., 1, 2, 3).")
+            print(
+                f"❌ Error: Invalid school_id '{sys.argv[1]}'. Please provide a valid integer (e.g., 1, 2, 3)."
+            )
             sys.exit(1)
-    
+
     seed_3de_blok(school_id)

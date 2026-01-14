@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 # ---------- Project Assessment ----------
 
+
 class ProjectAssessmentCreate(BaseModel):
     group_id: int
     rubric_id: int
@@ -68,6 +69,7 @@ class ProjectAssessmentListResponse(BaseModel):
 
 # ---------- Project Assessment Scores ----------
 
+
 class ProjectAssessmentScoreCreate(BaseModel):
     criterion_id: int
     score: int
@@ -100,6 +102,7 @@ class ProjectAssessmentScoreBatchRequest(BaseModel):
 
 # ---------- Project Assessment Reflection ----------
 
+
 class ProjectAssessmentReflectionCreate(BaseModel):
     text: str
 
@@ -118,8 +121,10 @@ class ProjectAssessmentReflectionOut(BaseModel):
 
 # ---------- Detailed view for students ----------
 
+
 class ProjectAssessmentDetailOut(BaseModel):
     """Detailed project assessment including scores and rubric info"""
+
     assessment: ProjectAssessmentOut
     scores: List[ProjectAssessmentScoreOut]
     rubric_title: str
@@ -134,8 +139,10 @@ class ProjectAssessmentDetailOut(BaseModel):
 
 # ---------- Team member info ----------
 
+
 class TeamMemberInfo(BaseModel):
     """Team member information"""
+
     id: int
     name: str
     email: str
@@ -143,6 +150,7 @@ class TeamMemberInfo(BaseModel):
 
 class TeamAssessmentStatus(BaseModel):
     """Team assessment status for overview"""
+
     group_id: int
     group_name: str
     team_number: Optional[int]
@@ -156,6 +164,7 @@ class TeamAssessmentStatus(BaseModel):
 
 class ProjectAssessmentTeamOverview(BaseModel):
     """Team overview for a project assessment"""
+
     assessment: ProjectAssessmentOut
     rubric_title: str
     rubric_scale_min: int
@@ -166,8 +175,10 @@ class ProjectAssessmentTeamOverview(BaseModel):
 
 # ---------- Reflections overview for teachers ----------
 
+
 class ReflectionInfo(BaseModel):
     """Student reflection info for teacher view"""
+
     id: int
     user_id: int
     user_name: str
@@ -178,6 +189,7 @@ class ReflectionInfo(BaseModel):
 
 class ProjectAssessmentReflectionsOverview(BaseModel):
     """All reflections for a project assessment"""
+
     assessment: ProjectAssessmentOut
     group_name: str
     reflections: List[ReflectionInfo]
@@ -185,8 +197,10 @@ class ProjectAssessmentReflectionsOverview(BaseModel):
 
 # ---------- Scores overview for teachers ----------
 
+
 class CriterionScore(BaseModel):
     """Score for a specific criterion"""
+
     criterion_id: int
     criterion_name: str
     category: Optional[str] = None
@@ -197,6 +211,7 @@ class CriterionScore(BaseModel):
 
 class TeamScoreOverview(BaseModel):
     """Complete score overview for a team"""
+
     team_number: int
     team_name: str
     members: List[TeamMemberInfo]
@@ -209,6 +224,7 @@ class TeamScoreOverview(BaseModel):
 
 class ScoreStatistics(BaseModel):
     """Statistics for the assessment"""
+
     average_per_criterion: Dict[str, float]  # criterion_name -> average
     highest_score: Optional[float] = None
     lowest_score: Optional[float] = None
@@ -220,6 +236,7 @@ class ScoreStatistics(BaseModel):
 
 class ProjectAssessmentScoresOverview(BaseModel):
     """Complete scores overview for a project assessment"""
+
     assessment: ProjectAssessmentOut
     rubric_title: str
     rubric_scale_min: int
@@ -231,8 +248,10 @@ class ProjectAssessmentScoresOverview(BaseModel):
 
 # ---------- Individual students overview for teachers ----------
 
+
 class StudentScoreOverview(BaseModel):
     """Complete score overview for an individual student"""
+
     student_id: int
     student_name: str
     student_email: str
@@ -248,6 +267,7 @@ class StudentScoreOverview(BaseModel):
 
 class StudentScoreStatistics(BaseModel):
     """Statistics for student scores"""
+
     average_per_criterion: Dict[str, float]  # criterion_name -> average
     average_grade: Optional[float] = None
     highest_grade: Optional[float] = None
@@ -258,6 +278,7 @@ class StudentScoreStatistics(BaseModel):
 
 class ProjectAssessmentStudentsOverview(BaseModel):
     """Complete individual students overview for a project assessment"""
+
     assessment: ProjectAssessmentOut
     rubric_title: str
     rubric_scale_min: int

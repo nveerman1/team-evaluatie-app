@@ -20,7 +20,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Add updated_at column to summary_generation_jobs table.
-    
+
     This column tracks when job records are modified and is consistent
     with the Base class definition which includes updated_at with
     server_default=func.now() and onupdate=func.now().
@@ -35,12 +35,10 @@ def upgrade() -> None:
             nullable=False,
         ),
     )
-    
+
     # Backfill existing rows: set updated_at to created_at for existing records
     # This ensures historical consistency
-    op.execute(
-        "UPDATE summary_generation_jobs SET updated_at = created_at"
-    )
+    op.execute("UPDATE summary_generation_jobs SET updated_at = created_at")
 
 
 def downgrade() -> None:

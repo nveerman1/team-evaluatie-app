@@ -126,7 +126,7 @@ class Settings(BaseSettings):
     # CORS - Store as string to avoid JSON parsing issues
     cors_origins_str: str = Field(
         default="http://localhost:3000,http://127.0.0.1:3000",
-        validation_alias="CORS_ORIGINS"
+        validation_alias="CORS_ORIGINS",
     )
 
     # Frontend & Backend URLs
@@ -146,7 +146,7 @@ class Settings(BaseSettings):
         logger = logging.getLogger(__name__)
 
         node_env = os.getenv("NODE_ENV", "development")
-        
+
         # If explicitly set via env var, respect it
         if os.getenv("COOKIE_SECURE") is not None:
             if node_env == "production" and not v:
@@ -155,7 +155,7 @@ class Settings(BaseSettings):
                     "Cookies will be sent over unencrypted HTTP connections."
                 )
             return v
-        
+
         # Otherwise, default based on environment
         if node_env == "production":
             logger.info("Production environment: COOKIE_SECURE=True (default)")

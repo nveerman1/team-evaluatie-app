@@ -18,7 +18,9 @@ class StudentClassMembershipBase(BaseModel):
 class StudentClassMembershipCreate(StudentClassMembershipBase):
     """Schema for creating a student class membership"""
 
-    academic_year_id: int = Field(..., description="FK to AcademicYear (redundant for constraint)")
+    academic_year_id: int = Field(
+        ..., description="FK to AcademicYear (redundant for constraint)"
+    )
 
 
 class StudentClassMembershipUpdate(BaseModel):

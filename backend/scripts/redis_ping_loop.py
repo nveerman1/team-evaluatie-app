@@ -19,6 +19,7 @@ Example:
     # Test for 30 minutes with 5 second intervals
     python scripts/redis_ping_loop.py --interval 5 --duration 30
 """
+
 import sys
 import time
 import argparse
@@ -172,12 +173,16 @@ def main():
     logger.info("=" * 70)
     logger.info("Test Summary")
     logger.info("=" * 70)
-    logger.info(f"Total duration:    {elapsed:.1f} seconds ({elapsed/60:.1f} minutes)")
+    logger.info(
+        f"Total duration:    {elapsed:.1f} seconds ({elapsed / 60:.1f} minutes)"
+    )
     logger.info(f"Total pings:       {ping_count}")
     logger.info(
-        f"Successful pings:  {success_count} ({success_count/ping_count*100:.1f}%)"
+        f"Successful pings:  {success_count} ({success_count / ping_count * 100:.1f}%)"
     )
-    logger.info(f"Failed pings:      {error_count} ({error_count/ping_count*100:.1f}%)")
+    logger.info(
+        f"Failed pings:      {error_count} ({error_count / ping_count * 100:.1f}%)"
+    )
     if success_count > 0:
         logger.info(f"Latency (avg):     {avg_latency:.2f}ms")
         logger.info(f"Latency (min):     {min_latency:.2f}ms")

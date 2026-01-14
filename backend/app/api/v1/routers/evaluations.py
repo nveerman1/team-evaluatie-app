@@ -46,7 +46,7 @@ def _get_teacher_course_ids(db: Session, user: User) -> list[int]:
         return []
     if user.role != "teacher":
         return []
-    
+
     course_ids_query = select(TeacherCourse.course_id).where(
         TeacherCourse.school_id == user.school_id,
         TeacherCourse.teacher_id == user.id,
@@ -223,13 +223,13 @@ def get_evaluation(
     )
     if not ev:
         raise HTTPException(status_code=404, detail="Evaluation not found")
-    
+
     # If user is a teacher (not admin), verify they have access to the evaluation's course
     if user.role == "teacher" and ev.course_id:
         teacher_course_ids = _get_teacher_course_ids(db, user)
         if teacher_course_ids and ev.course_id not in teacher_course_ids:
             raise HTTPException(status_code=404, detail="Evaluation not found")
-    
+
     return _to_out(ev)
 
 
@@ -242,13 +242,15 @@ def list_evaluations(
         None, pattern="^(draft|open|closed)$", description="Filter op status"
     ),
     course_id: Optional[int] = Query(None, description="Filter op course_id"),
-    evaluation_type: Optional[str] = Query(None, description="Filter op evaluation_type (peer, project, competency)"),
+    evaluation_type: Optional[str] = Query(
+        None, description="Filter op evaluation_type (peer, project, competency)"
+    ),
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
 ):
     """
     List evaluations.
-    
+
     Access control:
     - Students: see evaluations for courses they're enrolled in
     - Teachers: see evaluations for courses they're assigned to
@@ -277,7 +279,7 @@ def list_evaluations(
         else:
             # Student has no courses, filter to impossible condition to return empty
             stmt = stmt.where(Evaluation.id == -1)
-    
+
     # If user is a teacher (not admin), only show evaluations for courses they're assigned to
     elif user.role == "teacher":
         teacher_course_ids = _get_teacher_course_ids(db, user)
@@ -657,7 +659,7 @@ def close_evaluation(
 ):
     """
     Close an evaluation and mark it as archived
-    
+
     Sets status to 'closed' and records closed_at timestamp.
     This action is idempotent - calling it multiple times has the same effect.
     Once closed, the project_team members become read-only.
@@ -665,10 +667,10 @@ def close_evaluation(
     from datetime import datetime, timezone
     from app.core.rbac import require_role
     from app.core.audit import log_update
-    
+
     # Require teacher or admin role
     require_role(user, ["teacher", "admin"])
-    
+
     # Get evaluation
     evaluation = (
         db.query(Evaluation)
@@ -677,15 +679,14 @@ def close_evaluation(
     )
     if not evaluation:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Evaluation not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Evaluation not found"
         )
-    
+
     # Update status and closed_at if not already closed
     if evaluation.status != "closed":
         evaluation.status = "closed"
         evaluation.closed_at = datetime.now(timezone.utc)
-        
+
         # Log action
         log_update(
             db=db,
@@ -694,10 +695,10 @@ def close_evaluation(
             entity_id=evaluation_id,
             details={"action": "close", "closed_at": evaluation.closed_at.isoformat()},
         )
-    
+
     db.commit()
     db.refresh(evaluation)
-    
+
     # Format output
     return EvaluationOut(
         id=evaluation.id,
@@ -754,7 +755,6 @@ OMZA_CATEGORY_MAP = {
 
 OMZA_KEYS = ["organiseren", "meedoen", "zelfvertrouwen", "autonomie"]
 OMZA_SHORT_CODES = ["O", "M", "Z", "A"]
-
 
 
 def _normalize_category(category: Optional[str]) -> Optional[str]:
@@ -827,49 +827,43 @@ def get_evaluation_teams(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Niet ingelogd"
         )
-    
+
     # Get evaluation
     evaluation = (
         db.query(Evaluation)
-        .filter(
-            Evaluation.id == evaluation_id,
-            Evaluation.school_id == user.school_id
-        )
+        .filter(Evaluation.id == evaluation_id, Evaluation.school_id == user.school_id)
         .first()
     )
     if not evaluation:
         raise HTTPException(status_code=404, detail="Evaluation not found")
-    
+
     # If evaluation doesn't have a project, return empty
     if not evaluation.project_id:
-        return {
-            "project_id": None,
-            "project_name": None,
-            "teams": []
-        }
-    
+        return {"project_id": None, "project_name": None, "teams": []}
+
     # Get project info
     project = db.query(Project).filter(Project.id == evaluation.project_id).first()
     project_name = project.title if project else None
-    
+
     # Get all teams for the project
     teams = (
         db.query(ProjectTeam)
         .filter(
             ProjectTeam.project_id == evaluation.project_id,
-            ProjectTeam.school_id == user.school_id
+            ProjectTeam.school_id == user.school_id,
         )
         .order_by(ProjectTeam.team_number)
         .all()
     )
-    
+
     # Get all allocated user IDs for this evaluation
     allocated_user_ids = {
-        user_id for (user_id,) in db.query(Allocation.reviewee_id)
+        user_id
+        for (user_id,) in db.query(Allocation.reviewee_id)
         .filter(Allocation.evaluation_id == evaluation_id)
         .distinct()
     }
-    
+
     result = []
     for team in teams:
         # Get team members
@@ -877,12 +871,11 @@ def get_evaluation_teams(
             db.query(ProjectTeamMember, User)
             .join(User, ProjectTeamMember.user_id == User.id)
             .filter(
-                ProjectTeamMember.project_team_id == team.id,
-                User.archived.is_(False)
+                ProjectTeamMember.project_team_id == team.id, User.archived.is_(False)
             )
             .all()
         )
-        
+
         members = [
             {
                 "user_id": user.id,
@@ -893,15 +886,17 @@ def get_evaluation_teams(
             }
             for member, user in members_query
         ]
-        
-        result.append({
-            "team_id": team.id,
-            "team_number": team.team_number,
-            "display_name": team.display_name_at_time,
-            "member_count": len(members),
-            "members": members,
-        })
-    
+
+        result.append(
+            {
+                "team_id": team.id,
+                "team_number": team.team_number,
+                "display_name": team.display_name_at_time,
+                "member_count": len(members),
+                "members": members,
+            }
+        )
+
     return {
         "project_id": evaluation.project_id,
         "project_name": project_name,
@@ -923,29 +918,26 @@ def get_allocations_with_teams(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Niet ingelogd"
         )
-    
+
     # Get evaluation
     evaluation = (
         db.query(Evaluation)
-        .filter(
-            Evaluation.id == evaluation_id,
-            Evaluation.school_id == user.school_id
-        )
+        .filter(Evaluation.id == evaluation_id, Evaluation.school_id == user.school_id)
         .first()
     )
     if not evaluation:
         raise HTTPException(status_code=404, detail="Evaluation not found")
-    
+
     # Get allocations
     allocations_query = (
         db.query(Allocation)
         .filter(
             Allocation.evaluation_id == evaluation_id,
-            Allocation.school_id == user.school_id
+            Allocation.school_id == user.school_id,
         )
         .all()
     )
-    
+
     # If no project, return allocations without team info
     if not evaluation.project_id:
         # Get all unique user IDs from allocations
@@ -953,40 +945,42 @@ def get_allocations_with_teams(
         for alloc in allocations_query:
             user_ids.add(alloc.reviewer_id)
             user_ids.add(alloc.reviewee_id)
-        
+
         # Fetch all users in a single query
         users = db.query(User).filter(User.id.in_(user_ids)).all()
         user_map = {u.id: u for u in users}
-        
+
         result = []
         for alloc in allocations_query:
             evaluator = user_map.get(alloc.reviewer_id)
             evaluatee = user_map.get(alloc.reviewee_id)
-            
-            result.append({
-                "id": alloc.id,
-                "evaluator_id": alloc.reviewer_id,
-                "evaluator_name": evaluator.name if evaluator else None,
-                "evaluator_team": None,
-                "evaluatee_id": alloc.reviewee_id,
-                "evaluatee_name": evaluatee.name if evaluatee else None,
-                "evaluatee_team": None,
-                "status": "completed" if alloc.submitted_at else "pending",
-            })
-        
+
+            result.append(
+                {
+                    "id": alloc.id,
+                    "evaluator_id": alloc.reviewer_id,
+                    "evaluator_name": evaluator.name if evaluator else None,
+                    "evaluator_team": None,
+                    "evaluatee_id": alloc.reviewee_id,
+                    "evaluatee_name": evaluatee.name if evaluatee else None,
+                    "evaluatee_team": None,
+                    "status": "completed" if alloc.submitted_at else "pending",
+                }
+            )
+
         return {"allocations": result}
-    
+
     # Build mapping of user_id -> team_number
     user_team_map = {}
     teams = (
         db.query(ProjectTeam)
         .filter(
             ProjectTeam.project_id == evaluation.project_id,
-            ProjectTeam.school_id == user.school_id
+            ProjectTeam.school_id == user.school_id,
         )
         .all()
     )
-    
+
     for team in teams:
         members = (
             db.query(ProjectTeamMember)
@@ -995,34 +989,36 @@ def get_allocations_with_teams(
         )
         for member in members:
             user_team_map[member.user_id] = team.team_number
-    
+
     # Get all unique user IDs from allocations
     user_ids = set()
     for alloc in allocations_query:
         user_ids.add(alloc.reviewer_id)
         user_ids.add(alloc.reviewee_id)
-    
+
     # Fetch all users in a single query
     users = db.query(User).filter(User.id.in_(user_ids)).all()
     user_map = {u.id: u for u in users}
-    
+
     # Build result with team info
     result = []
     for alloc in allocations_query:
         evaluator = user_map.get(alloc.reviewer_id)
         evaluatee = user_map.get(alloc.reviewee_id)
-        
-        result.append({
-            "id": alloc.id,
-            "evaluator_id": alloc.reviewer_id,
-            "evaluator_name": evaluator.name if evaluator else None,
-            "evaluator_team": user_team_map.get(alloc.reviewer_id),
-            "evaluatee_id": alloc.reviewee_id,
-            "evaluatee_name": evaluatee.name if evaluatee else None,
-            "evaluatee_team": user_team_map.get(alloc.reviewee_id),
-            "status": "completed" if alloc.submitted_at else "pending",
-        })
-    
+
+        result.append(
+            {
+                "id": alloc.id,
+                "evaluator_id": alloc.reviewer_id,
+                "evaluator_name": evaluator.name if evaluator else None,
+                "evaluator_team": user_team_map.get(alloc.reviewer_id),
+                "evaluatee_id": alloc.reviewee_id,
+                "evaluatee_name": evaluatee.name if evaluatee else None,
+                "evaluatee_team": user_team_map.get(alloc.reviewee_id),
+                "status": "completed" if alloc.submitted_at else "pending",
+            }
+        )
+
     return {"allocations": result}
 
 
@@ -1056,7 +1052,9 @@ def get_my_peer_feedback_results(
         .filter(
             Evaluation.school_id == user.school_id,
             Evaluation.id.in_(select(student_eval_ids)),
-            Evaluation.status.in_(["open", "closed"]),  # Only show open and closed evaluations
+            Evaluation.status.in_(
+                ["open", "closed"]
+            ),  # Only show open and closed evaluations
         )
         .order_by(Evaluation.created_at.desc())
         .all()
@@ -1134,9 +1132,7 @@ def get_my_peer_feedback_results(
             peer_entry = {
                 "peerLabel": f"Teamgenoot {chr(64 + idx)}",  # A, B, C, ...
                 "notes": notes_text,
-                "scores": {
-                    k: _calc_avg(data["scores"][k]) for k in OMZA_KEYS
-                },
+                "scores": {k: _calc_avg(data["scores"][k]) for k in OMZA_KEYS},
             }
             peers.append(peer_entry)
 
@@ -1165,7 +1161,7 @@ def get_my_peer_feedback_results(
         teacher_grade_comment = None
         suggested_grade = None
         group_grade = None
-        
+
         # First check PublishedGrade table (published grades take precedence)
         published_grade_record = (
             db.query(PublishedGrade)
@@ -1180,7 +1176,7 @@ def get_my_peer_feedback_results(
             teacher_grade = float(published_grade_record.grade)
             if published_grade_record.reason:
                 teacher_grade_comment = published_grade_record.reason
-        
+
         # Then check Grade table for additional information
         grade_record = (
             db.query(Grade)
@@ -1200,17 +1196,17 @@ def get_my_peer_feedback_results(
                 meta_gcf = grade_record.meta.get("gcf")
                 if meta_gcf is not None:
                     gcf_score = float(meta_gcf)
-            
+
             # Get suggested (auto-generated) grade
             if grade_record.suggested_grade is not None:
                 suggested_grade = float(grade_record.suggested_grade)
-            
+
             # Get group grade from meta field
             if grade_record.meta and isinstance(grade_record.meta, dict):
                 meta_group_grade = grade_record.meta.get("group_grade")
                 if meta_group_grade is not None:
                     group_grade = float(meta_group_grade)
-            
+
             # Get teacher grade from Grade table only if not found in PublishedGrade
             # Calculate final grade using the same logic as teacher grades page:
             # 1. Override (grade field) if set
@@ -1226,7 +1222,7 @@ def get_my_peer_feedback_results(
                 elif suggested_grade is not None:
                     # Fallback to suggested grade
                     teacher_grade = suggested_grade
-            
+
             # Get teacher comment/reason (only if not already set from PublishedGrade)
             if not teacher_grade_comment and grade_record.override_reason:
                 teacher_grade_comment = grade_record.override_reason
@@ -1240,12 +1236,12 @@ def get_my_peer_feedback_results(
                 teacher_key = f"teacher_score_{user.id}_{cat_key}"
                 if teacher_key in ev.settings and ev.settings[teacher_key] is not None:
                     teacher_omza_scores[cat_key] = ev.settings[teacher_key]
-            
+
             # Get teacher comment
             teacher_comment_key = f"teacher_comment_{user.id}"
             if teacher_comment_key in ev.settings:
                 teacher_comments = ev.settings[teacher_comment_key]
-        
+
         # Get reflection for this student
         reflection_data = None
         reflection_record = (
@@ -1260,7 +1256,9 @@ def get_my_peer_feedback_results(
         if reflection_record and reflection_record.text:
             reflection_data = {
                 "text": reflection_record.text,
-                "submittedAt": reflection_record.submitted_at.isoformat() if reflection_record.submitted_at else None,
+                "submittedAt": reflection_record.submitted_at.isoformat()
+                if reflection_record.submitted_at
+                else None,
             }
 
         # Build trend data (historical averages)
@@ -1303,19 +1301,21 @@ def get_my_peer_feedback_results(
             "autonomie": "Autonomie",
         }
         omza_keys_short = ["O", "M", "Z", "A"]
-        
+
         for idx, k in enumerate(OMZA_KEYS):
             current_avg = _calc_avg(peer_scores_by_cat[k])
             prev_avg = _calc_avg(prev_scores_by_cat.get(k, []))
             # Calculate delta if there's a previous evaluation, otherwise 0
             delta = round(current_avg - prev_avg, 1) if prev_evaluation else 0.0
-            
-            omza_averages.append({
-                "key": omza_keys_short[idx],
-                "label": omza_labels_map[k],
-                "value": current_avg,
-                "delta": delta,
-            })
+
+            omza_averages.append(
+                {
+                    "key": omza_keys_short[idx],
+                    "label": omza_labels_map[k],
+                    "value": current_avg,
+                    "delta": delta,
+                }
+            )
 
         result_item = {
             "id": f"ev-{ev.id}",

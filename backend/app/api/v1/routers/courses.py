@@ -6,10 +6,16 @@ from __future__ import annotations
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 
 from app.api.v1.deps import get_db, get_current_user
-from app.infra.db.models import Course, User, TeacherCourse, Group, GroupMember, AcademicYear
+from app.infra.db.models import (
+    Course,
+    User,
+    TeacherCourse,
+    Group,
+    GroupMember,
+    AcademicYear,
+)
 from app.api.v1.schemas.courses import (
     CourseCreate,
     CourseUpdate,
@@ -21,9 +27,12 @@ from app.api.v1.schemas.courses import (
     CourseStudentCreate,
     BulkStudentTeamUpdate,
 )
-from app.core.rbac import require_role, scope_query_by_school, require_course_access
+from app.core.rbac import require_role, require_course_access
 from app.core.audit import log_create, log_update, log_delete
-from app.infra.services.archive_guards import require_year_not_archived, require_course_year_not_archived
+from app.infra.services.archive_guards import (
+    require_year_not_archived,
+    require_course_year_not_archived,
+)
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 
@@ -111,15 +120,17 @@ def list_courses(
             .all()
         )
         course_dict["teacher_names"] = [t[0] for t in teachers]
-        
+
         # Get academic year label if course has academic_year_id
         if course.academic_year_id:
-            academic_year = db.query(AcademicYear).filter(
-                AcademicYear.id == course.academic_year_id
-            ).first()
+            academic_year = (
+                db.query(AcademicYear)
+                .filter(AcademicYear.id == course.academic_year_id)
+                .first()
+            )
             if academic_year:
                 course_dict["academic_year_label"] = academic_year.label
-        
+
         course_outputs.append(CourseOut(**course_dict))
 
     return CourseListOut(
