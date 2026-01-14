@@ -1,0 +1,52 @@
+name: OSV (Frontend lockfile + Backend SBOM)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  schedule:
+    - cron: "30 6 * * 1"  # elke maandag 06:30 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  frontend_lockfile_scan:
+    name: Frontend lockfile scan (OSV)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: OSV scan pnpm-lock.yaml
+        run: |
+          docker run --rm -v "$PWD:/src" ghcr.io/google/osv-scanner:latest \
+            scan -L /src/frontend/pnpm-lock.yaml
+
+  backend_sbom_scan:
+    name: Backend SBOM scan (CycloneDX -> OSV)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend deps in venv
+        run: |
+          python -m venv backend/.venv
+          source backend/.venv/bin/activate
+          python -m pip install -U pip
+          pip install -r backend/requirements.txt
+          pip install cyclonedx-bom
+
+      - name: Generate CycloneDX SBOM (from installed env)
+        run: |
+          source backend/.venv/bin/activate
+          cyclonedx-py environment --format json --output backend-sbom.json
+
+      - name: OSV scan SBOM
+        run: |
+          docker run --rm -v "$PWD:/src" ghcr.io/google/osv-scanner:latest \
+            scan --sbom /src/backend-sbom.json
