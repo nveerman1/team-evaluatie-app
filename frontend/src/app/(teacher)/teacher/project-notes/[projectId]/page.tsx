@@ -95,10 +95,13 @@ export default function ProjectNotesDetailPage({
       // Create and download CSV file using native browser APIs
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
+      link.href = url;
       const filename = `${context?.title || 'project'}_aantekeningen_${new Date().toISOString().split('T')[0]}.csv`;
       link.download = filename;
       link.click();
+      // Revoke the object URL to prevent memory leaks
+      setTimeout(() => URL.revokeObjectURL(url), 100);
     } catch (error) {
       console.error('Failed to export notes:', error);
       alert('Fout bij exporteren. Probeer het opnieuw.');

@@ -207,9 +207,12 @@ export default function ScoresOverviewInner() {
 
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
+      link.href = url;
       link.download = `scores-teams-${data.assessment.title.replace(/[^a-z0-9]/gi, "_")}.csv`;
       link.click();
+      // Revoke the object URL to prevent memory leaks
+      setTimeout(() => URL.revokeObjectURL(url), 100);
     } else if (viewMode === "students" && studentsData) {
       const headers = ["Leerling", "Klas", "Team", ...studentsData.criteria.map((c) => c.name), "Totaalscore", "Cijfer", "Laatst bewerkt"];
       const rows = studentsData.student_scores.map((student) => {
@@ -232,9 +235,12 @@ export default function ScoresOverviewInner() {
 
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
+      link.href = url;
       link.download = `scores-students-${studentsData.assessment.title.replace(/[^a-z0-9]/gi, "_")}.csv`;
       link.click();
+      // Revoke the object URL to prevent memory leaks
+      setTimeout(() => URL.revokeObjectURL(url), 100);
     }
   }
 
