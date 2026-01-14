@@ -101,13 +101,16 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         trusted_origins = self._get_trusted_origins()
         
         if not trusted_origins:
-            logger.warning(
-                "No trusted origins configured for CSRF protection. "
-                "Set FRONTEND_URL and/or CORS_ORIGINS."
+            # SECURITY: Fail secure when no origins configured
+            # In a properly configured system, FRONTEND_URL and/or CORS_ORIGINS should be set
+            logger.error(
+                "CRITICAL: No trusted origins configured for CSRF protection. "
+                "CSRF validation will FAIL SECURE (block all requests). "
+                "Please configure FRONTEND_URL and/or CORS_ORIGINS. "
+                f"Request: {request.method} {request.url.path}"
             )
-            # Fail open if no origins configured (prevents breaking existing deployments)
-            # In production, this should be configured properly
-            return True
+            # Fail secure: block request when origins not configured
+            return False
 
         # Try Origin header first (preferred, more reliable)
         origin_header = request.headers.get("origin")

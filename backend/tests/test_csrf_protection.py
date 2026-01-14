@@ -343,6 +343,50 @@ class TestCSRFConfiguration:
             # Clean up environment
             os.environ.pop("FRONTEND_URL", None)
             os.environ.pop("CORS_ORIGINS", None)
+    
+    def test_csrf_fails_secure_when_no_origins_configured(self):
+        """Test that CSRF fails secure (blocks) when origins cannot be determined"""
+        from app.core.config import Settings
+        import os
+        
+        # Override to prevent defaults
+        os.environ["FRONTEND_URL"] = ""
+        os.environ["CORS_ORIGINS"] = ""
+        
+        try:
+            test_settings = Settings()
+            # Force empty origins list
+            test_settings.FRONTEND_URL = ""
+            test_settings.cors_origins_str = ""
+            
+            # Verify origins list is actually empty
+            origins = []
+            if test_settings.FRONTEND_URL:
+                origins.append(test_settings.FRONTEND_URL)
+            origins.extend(test_settings.CORS_ORIGINS)
+            
+            # Only run this test if we successfully got empty origins
+            # (default localhost might be added by config)
+            if not origins or origins == ['', '']:
+                app = FastAPI()
+                
+                with patch("app.api.middleware.security_headers.settings", test_settings):
+                    app.add_middleware(SecurityHeadersMiddleware)
+                    
+                    @app.post("/api/v1/test")
+                    def test_post():
+                        return {"message": "success"}
+                    
+                    client = TestClient(app)
+                    response = client.post(
+                        "/api/v1/test",
+                        headers={"Origin": "http://evil.com"}
+                    )
+                    # Should fail secure (block) when no origins configured
+                    assert response.status_code == 403
+        finally:
+            os.environ.pop("FRONTEND_URL", None)
+            os.environ.pop("CORS_ORIGINS", None)
 
 
 class TestCSRFLogging:
