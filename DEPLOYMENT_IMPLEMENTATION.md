@@ -264,6 +264,10 @@ docker compose -f ops/docker/compose.prod.yml logs -f
 - ✅ Optional integrations (Sentry, AI/Ollama)
 - ✅ Detailed comments and examples
 - ✅ Security checklist
+- ⚠️ **CRITICAL:** `NODE_ENV=production` required for security features:
+  - Disables API documentation (/docs, /redoc, /openapi.json)
+  - Enables hardened Content-Security-Policy (no unsafe-eval)
+  - Enforces stricter security header configurations
 
 ## 📚 Documentation Delivered
 
@@ -344,10 +348,12 @@ docker compose -f ops/docker/compose.prod.yml logs -f
 - ✅ Strong JWT secret key generation
 - ✅ Secure cookie settings (HttpOnly, Secure, SameSite)
 - ✅ CORS with explicit origin list (no wildcards)
-- ✅ Rate limiting middleware
+- ✅ Rate limiting middleware (including file uploads: 5 req/min)
 - ✅ Input validation (Pydantic)
 - ✅ SQL injection protection (SQLAlchemy ORM)
-- ✅ XSS protection (React escaping + CSP)
+- ✅ XSS protection (React escaping + hardened CSP for production)
+- ✅ API documentation disabled in production (NODE_ENV=production)
+- ✅ SSRF protection for Ollama service (hostname allowlist)
 
 ### Network Level
 - ✅ Nginx security headers (X-Frame-Options, CSP, HSTS)
@@ -355,6 +361,8 @@ docker compose -f ops/docker/compose.prod.yml logs -f
 - ✅ OCSP stapling
 - ✅ Rate limiting (per IP)
 - ✅ DDoS protection (connection limits)
+- ✅ Content-Security-Policy: Production uses strict policy (no unsafe-eval for scripts)
+- ✅ Content-Security-Policy: Development allows unsafe directives for Next.js hot reload
 
 ### System Level
 - ✅ Non-root container users
@@ -414,6 +422,7 @@ docker compose -f ops/docker/compose.prod.yml logs -f
 - ✅ Build verification
 - ✅ Deployment automation
 - ✅ Health checks
+- ✅ GitHub Actions pinned to commit SHAs (supply chain security)
 
 ## 🎯 Design Decisions & Trade-offs
 

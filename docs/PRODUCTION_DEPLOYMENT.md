@@ -167,6 +167,12 @@ AZURE_AD_REDIRECT_URI=https://yourdomain.com/api/v1/auth/azure/callback
 NODE_ENV=production
 APP_ENV=production
 COOKIE_SECURE=true
+
+# Security Note (as of 2026-01-14):
+# NODE_ENV=production enables critical security features:
+# - Disables API documentation (/docs, /redoc, /openapi.json)
+# - Enables hardened Content-Security-Policy (no unsafe-eval)
+# - Enforces stricter security header configurations
 ```
 
 ### Step 3: Create Backup Directory

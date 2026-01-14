@@ -47,6 +47,13 @@ git checkout copilot/implement-production-hardening-v2
 git pull origin copilot/implement-production-hardening-v2
 ```
 
+**Note:** As of January 14, 2026, the following security enhancements have been implemented:
+- GitHub Actions pinned to commit SHAs for supply chain security
+- Hardened Content-Security-Policy for production (no unsafe-eval)
+- API documentation disabled in production (requires NODE_ENV=production)
+- Rate limiting added to file upload endpoints (5 req/min)
+- SSRF protection for Ollama service with hostname allowlist
+
 ### 1.3 Review Changes
 
 ```bash
@@ -61,6 +68,42 @@ ls -la ops/host-configs/
 ```
 
 ## Phase 2: Apply Repository Changes
+
+### 2.0 Verify Environment Configuration
+
+**CRITICAL: Verify NODE_ENV is set to 'production' for security features:**
+
+```bash
+cd /srv/team-evaluatie-app
+
+# Check current environment configuration
+grep NODE_ENV .env.prod
+
+# Should show: NODE_ENV=production
+# If not, update it:
+sed -i 's/NODE_ENV=.*/NODE_ENV=production/' .env.prod
+```
+
+**Security Impact of NODE_ENV=production:**
+- ✅ Disables API documentation endpoints (/docs, /redoc, /openapi.json)
+- ✅ Enables hardened Content-Security-Policy (removes unsafe-eval)
+- ✅ Enforces stricter security configurations
+
+**Verify Ollama Configuration (if using AI features):**
+
+```bash
+# Ollama URL must use allowed hostnames only (SSRF prevention)
+grep OLLAMA_BASE_URL .env.prod
+
+# Valid examples (allowed hostnames: localhost, 127.0.0.1, ::1, ollama):
+# OLLAMA_BASE_URL=http://localhost:11434
+# OLLAMA_BASE_URL=http://127.0.0.1:11434
+# OLLAMA_BASE_URL=http://ollama:11434  # Docker service name
+
+# Invalid (will be blocked by SSRF protection):
+# OLLAMA_BASE_URL=http://10.0.0.5:11434  # Private IP not allowed
+# OLLAMA_BASE_URL=http://example.com:11434  # External hostname not allowed
+```
 
 ### 2.1 Update Nginx Configuration
 
@@ -311,7 +354,39 @@ curl -I https://app.technasiummbh.nl/api/v1/health 2>&1 | grep -i "x-frame-optio
 # Expected output: 1
 ```
 
-### 4.4 Verify Rate Limiting
+### 4.4 Verify Content-Security-Policy (Production)
+
+```bash
+# Check CSP for frontend (should be strict in production)
+curl -sI https://app.technasiummbh.nl/ | grep -i "content-security-policy"
+
+# Expected (production): Should NOT contain 'unsafe-eval' for script-src
+# Should contain: script-src 'self' 'wasm-unsafe-eval'
+# Should contain: style-src 'self' 'unsafe-inline' (required for Tailwind CSS-in-JS)
+
+# Check CSP for backend API
+curl -sI https://app.technasiummbh.nl/api/v1/health | grep -i "content-security-policy"
+```
+
+### 4.5 Verify API Documentation Disabled
+
+```bash
+# Try to access API documentation (should be disabled in production)
+curl -I https://app.technasiummbh.nl/docs
+# Expected: 404 Not Found
+
+curl -I https://app.technasiummbh.nl/redoc
+# Expected: 404 Not Found
+
+curl -I https://app.technasiummbh.nl/openapi.json
+# Expected: 404 Not Found
+
+# Verify NODE_ENV is set correctly
+docker exec tea_backend env | grep NODE_ENV
+# Expected: NODE_ENV=production
+```
+
+### 4.6 Verify Rate Limiting
 
 ```bash
 # Test general rate limiting (should allow 10 req/s)
@@ -323,9 +398,12 @@ for i in {1..15}; do curl -s -o /dev/null -w "%{http_code}\n" https://app.techna
 for i in {1..10}; do curl -s -o /dev/null -w "%{http_code}\n" https://app.technasiummbh.nl/api/v1/auth/me; done
 
 # Expected: First 3-5 succeed, then 429
+
+# Test file upload rate limiting (5 req/min - NEW security feature as of 2026-01-14)
+# Applies to CSV imports and endpoints with /upload or .csv in path
 ```
 
-### 4.5 Verify Header Stripping
+### 4.7 Verify Header Stripping
 
 ```bash
 # Attempt to inject X-User-Email header (should be stripped)
@@ -337,20 +415,26 @@ curl -H "X-User-Email: attacker@evil.com" \
 docker logs tea_backend --tail 20 | grep -i "x-user-email"
 ```
 
-### 4.6 Verify Docs Access Control
+### 4.8 Verify API Documentation Disabled (Production)
 
 ```bash
-# Try to access docs from unauthorized IP
+# Try to access docs (should return 404 in production with NODE_ENV=production)
 curl -I https://app.technasiummbh.nl/docs
+# Expected: 404 Not Found (API docs disabled for security)
 
-# Expected: 403 Forbidden (if IP restrictions are active)
+curl -I https://app.technasiummbh.nl/redoc
+# Expected: 404 Not Found
 
-# To allow access from your IP, edit ops/nginx/site.conf:
-# Uncomment the "allow YOUR_IP;" line and add your IP
-# Then reload nginx: docker exec tea_nginx nginx -s reload
+curl -I https://app.technasiummbh.nl/openapi.json
+# Expected: 404 Not Found
+
+# This is a security feature implemented 2026-01-14 to:
+# - Prevent API reconnaissance
+# - Protect against Swagger UI vulnerabilities
+# - Reduce information disclosure
 ```
 
-### 4.7 Verify Resource Limits
+### 4.9 Verify Resource Limits
 
 ```bash
 # Check container resource usage
@@ -534,20 +618,31 @@ For additional support:
 
 ## Completion Checklist
 
+### Pre-Deployment
 - [ ] Pre-deployment backup completed
 - [ ] Repository changes pulled and reviewed
+- [ ] **NODE_ENV=production** set in .env.prod
+- [ ] Ollama URL validated (if using AI features)
+
+### Configuration Updates
 - [ ] Nginx configuration updated and validated
 - [ ] Docker Compose updated with new configuration
 - [ ] All containers healthy after restart
 - [ ] Network isolation verified (public/private)
+
+### Security Verification (Updated 2026-01-14)
 - [ ] Security headers verified (no duplicates)
+- [ ] **Content-Security-Policy verified** (production: no unsafe-eval)
+- [ ] **API documentation disabled** (/docs, /redoc, /openapi.json return 404)
 - [ ] Rate limiting tested and working
+- [ ] **File upload rate limiting verified** (5 req/min)
 - [ ] Header stripping verified
-- [ ] Docs access control configured
 - [ ] Nginx logs mounted and accessible
 - [ ] Fail2ban installed and configured
 - [ ] Logrotate configured for nginx logs
 - [ ] UFW firewall configured (staging or production)
+
+### Monitoring & Backups
 - [ ] Automated backups configured
 - [ ] Health monitoring configured
 - [ ] All verification tests passed

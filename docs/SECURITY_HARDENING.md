@@ -284,9 +284,32 @@ Backend (FastAPI) automatically validates input via Pydantic models.
 
 Additional checks:
 - SQL injection: ✅ Protected (using SQLAlchemy ORM)
-- XSS: ✅ Protected (React escapes by default)
+- XSS: ✅ Protected (React escapes by default + hardened CSP)
 - CSRF: ✅ Protected (SameSite cookies)
-- File uploads: ⚠️ Implement size limits and type validation
+- File uploads: ✅ Rate limited (5 req/min as of 2026-01-14)
+- SSRF: ✅ Protected (URL validation with hostname allowlists)
+
+**New Security Features (2026-01-14):**
+
+1. **API Documentation Disabled in Production**
+   - Requires `NODE_ENV=production` in `.env.prod`
+   - Disables `/docs`, `/redoc`, and `/openapi.json` endpoints
+   - Prevents API reconnaissance and Swagger UI vulnerabilities
+
+2. **Hardened Content-Security-Policy**
+   - Production: Removes `unsafe-eval` from script-src
+   - Allows `wasm-unsafe-eval` for WebAssembly only
+   - Development: Keeps unsafe directives for Next.js hot reload
+
+3. **File Upload Rate Limiting**
+   - CSV imports: 5 requests per minute
+   - Prevents DoS attacks on resource-intensive operations
+   - Complements existing 10MB file size and 10,000 row limits
+
+4. **Ollama SSRF Protection**
+   - Only allows localhost, 127.0.0.1, ::1, and 'ollama' hostnames
+   - Validates URL protocol (HTTP/HTTPS only)
+   - Prevents internal network scanning
 
 ### 7. Dependency Security
 
@@ -551,6 +574,61 @@ docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
 
 # Schedule weekly scans
 echo "0 3 * * 0 cd /opt/team-evaluatie-app && docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image tea-backend:latest > /var/log/tea-security-scan.log" | crontab -
+```
+
+---
+
+## CI/CD Security
+
+### 1. GitHub Actions Security (Updated 2026-01-14)
+
+**Supply Chain Security:**
+All GitHub Actions are now pinned to full commit SHAs to prevent supply chain attacks:
+
+```yaml
+# .github/workflows/deploy.yml and ci.yml
+- name: Checkout code
+  uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+- name: Set up Python
+  uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b  # v5.3.0
+
+- name: Set up Node.js
+  uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af  # v4.1.0
+```
+
+**Why This Matters:**
+- Version tags (e.g., `@v4`) can be moved by attackers who compromise the action repository
+- Commit SHAs are immutable and cannot be changed
+- Comments preserve version information for maintainability
+
+**Maintenance:**
+- Review and update actions quarterly
+- Use Dependabot to monitor for updates
+- Verify commit SHAs match expected versions before updating
+
+### 2. Secrets Management
+
+```bash
+# Never commit secrets to repository
+git grep -i "password\|secret\|key" | grep -v ".example"
+
+# Use GitHub Secrets for CI/CD
+# Settings > Secrets and variables > Actions
+# Add: VPS_HOST, VPS_USER, VPS_SSH_KEY, GHCR_TOKEN
+```
+
+### 3. Deployment Security
+
+```bash
+# Verify SSH key permissions
+chmod 600 ~/.ssh/deploy_key
+
+# Use deploy-specific SSH keys (not personal keys)
+# Rotate keys regularly (every 6 months)
+
+# Review deployment logs for suspicious activity
+# GitHub Actions > Recent workflow runs
 ```
 
 ---
