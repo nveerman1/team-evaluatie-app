@@ -287,6 +287,23 @@ def seed_competency_scans_with_scores():
             # Track goals per student for reflection linking
             student_goals = {}
 
+            # Handle extreme scores configuration
+            use_extreme_scores = window_data.get("use_extreme_scores", False)
+            if use_extreme_scores:
+                # Divide students into groups for extreme score patterns
+                num_students = len(students)
+                third = num_students // 3
+                low_score_students = students[:third]
+                high_score_students = students[third : third * 2]
+                growth_students = students[third * 2 :]
+                # Track previous scores for growth calculation
+                previous_scores_by_student = {}
+            else:
+                low_score_students = []
+                high_score_students = []
+                growth_students = []
+                previous_scores_by_student = {}
+
             for student in students:
                 # Create goals for this student if needed (one per student, not per competency)
                 if include_goals:
@@ -427,6 +444,11 @@ def seed_competency_scans_with_scores():
                     )
                     db.add(self_score)
                     scores_created += 1
+
+                    # Track score for growth calculation in future windows
+                    if use_extreme_scores:
+                        key = (student.id, competency.id)
+                        previous_scores_by_student[key] = score
 
                 # Create reflection for this student if needed (one per student)
                 if include_reflection:
