@@ -1,4 +1,4 @@
-name: Security: OSV (Frontend lockfile + Backend SBOM) + Trivy (Docker images)
+name: Security
 
 on:
   push:
