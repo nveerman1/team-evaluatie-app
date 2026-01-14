@@ -57,27 +57,48 @@ export default function ProjectNotesDetailPage({
   async function handleExport() {
     try {
       const notes = await projectNotesService.listNotes(Number(projectId));
-      const XLSX = await import('xlsx');
       
-      const exportData = notes.map(note => ({
-        'Datum': new Date(note.created_at).toLocaleDateString('nl-NL'),
-        'Type': note.note_type === 'project' ? 'Project' : note.note_type === 'team' ? 'Team' : 'Student',
-        'Team': note.team_name || '-',
-        'Student': note.student_name || '-',
-        'OMZA Categorie': note.omza_category || '-',
-        'Eindterm': note.learning_objective_title || '-',
-        'Tags': note.tags.join(', '),
-        'Aantekening': note.text,
-        'Competentiebewijs': note.is_competency_evidence ? 'Ja' : 'Nee',
-        'Portfolio': note.is_portfolio_evidence ? 'Ja' : 'Nee',
-      }));
+      // Prepare CSV headers
+      const headers = [
+        'Datum',
+        'Type',
+        'Team',
+        'Student',
+        'OMZA Categorie',
+        'Eindterm',
+        'Tags',
+        'Aantekening',
+        'Competentiebewijs',
+        'Portfolio',
+      ];
       
-      const ws = XLSX.utils.json_to_sheet(exportData);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Aantekeningen');
+      // Prepare CSV rows
+      const rows = notes.map(note => [
+        new Date(note.created_at).toLocaleDateString('nl-NL'),
+        note.note_type === 'project' ? 'Project' : note.note_type === 'team' ? 'Team' : 'Student',
+        note.team_name || '-',
+        note.student_name || '-',
+        note.omza_category || '-',
+        note.learning_objective_title || '-',
+        note.tags.join(', '),
+        note.text,
+        note.is_competency_evidence ? 'Ja' : 'Nee',
+        note.is_portfolio_evidence ? 'Ja' : 'Nee',
+      ]);
       
-      const filename = `${context?.title || 'project'}_aantekeningen_${new Date().toISOString().split('T')[0]}.xlsx`;
-      XLSX.writeFile(wb, filename);
+      // Create CSV content
+      const csvContent =
+        headers.join(',') +
+        '\n' +
+        rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+      
+      // Create and download CSV file using native browser APIs
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      const filename = `${context?.title || 'project'}_aantekeningen_${new Date().toISOString().split('T')[0]}.csv`;
+      link.download = filename;
+      link.click();
     } catch (error) {
       console.error('Failed to export notes:', error);
       alert('Fout bij exporteren. Probeer het opnieuw.');
