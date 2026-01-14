@@ -8,7 +8,7 @@ This ensures that:
 4. The same calculation logic is used everywhere
 """
 
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
 from app.infra.db.models import Evaluation, RubricCriterion, Score, Allocation
 
@@ -71,7 +71,7 @@ def compute_weighted_omza_scores(
 
     # Group criteria by category with their weights
     # Normalize category names to short codes
-    category_criteria: Dict[str, list[Dict[str, float]]] = {}
+    category_criteria: Dict[str, List[Dict[str, float]]] = {}
     for criterion in criteria:
         cat = criterion.category
         if not cat:
@@ -204,7 +204,7 @@ def compute_weighted_omza_scores_batch(
 
     # Group criteria by category with their weights
     # Normalize category names to short codes
-    category_criteria_batch: Dict[str, list[Dict[str, float]]] = {}
+    category_criteria_batch: Dict[str, List[Dict[str, float]]] = {}
     for criterion in criteria:
         cat = criterion.category
         if not cat:
@@ -247,7 +247,7 @@ def compute_weighted_omza_scores_batch(
     )
 
     # Group scores by student and category
-    student_scores: Dict[int, Dict[str, Dict[str, list[tuple[float, int]]]]] = {}
+    student_scores: Dict[int, Dict[str, Dict[str, List[tuple[float, int]]]]] = {}
     for score, criterion_id, reviewer_id, reviewee_id in scores_query:
         if reviewee_id not in student_scores:
             student_scores[reviewee_id] = {}
