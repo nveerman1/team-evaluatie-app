@@ -184,9 +184,10 @@ CSRF protection is one layer in a multi-layered security approach:
 **CSRF Validation Failures** (WARNING level):
 ```
 CSRF validation failed: Origin 'http://evil.com' not in trusted origins.
-Allowed: ['http://localhost:3000', 'http://127.0.0.1:3000'].
 Request: POST /api/v1/test
 ```
+
+Note: For security reasons, the list of allowed origins is not logged to prevent exposing configuration details to potential attackers.
 
 **CSRF Attacks Blocked** (ERROR level):
 ```

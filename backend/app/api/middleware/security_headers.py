@@ -122,7 +122,6 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             else:
                 logger.warning(
                     f"CSRF validation failed: Origin '{origin}' not in trusted origins. "
-                    f"Allowed: {trusted_origins}. "
                     f"Request: {request.method} {request.url.path}"
                 )
                 return False
@@ -137,7 +136,6 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             else:
                 logger.warning(
                     f"CSRF validation failed: Referer origin '{referer_origin}' not in trusted origins. "
-                    f"Allowed: {trusted_origins}. "
                     f"Request: {request.method} {request.url.path}"
                 )
                 return False
