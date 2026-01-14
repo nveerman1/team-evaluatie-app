@@ -6,6 +6,8 @@ import requests
 from typing import Optional
 from datetime import datetime
 
+from app.api.v1.utils.url_validation import validate_webhook_url
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,6 +38,12 @@ class WebhookService:
         """
         if not url:
             return False, "No webhook URL provided"
+        
+        # Validate URL to prevent SSRF attacks
+        is_valid, error_msg = validate_webhook_url(url)
+        if not is_valid:
+            logger.error(f"Webhook URL validation failed: {error_msg}")
+            return False, f"Invalid webhook URL: {error_msg}"
         
         headers = {
             "Content-Type": "application/json",

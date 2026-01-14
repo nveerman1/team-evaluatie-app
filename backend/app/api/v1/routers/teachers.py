@@ -16,6 +16,7 @@ from passlib.context import CryptContext
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import User, TeacherCourse, Course
 from app.core.rbac import require_role
+from app.api.v1.utils.csv_sanitization import sanitize_csv_value
 from app.api.v1.schemas.teachers import (
     TeacherOut,
     TeacherCreate,
@@ -30,6 +31,10 @@ router = APIRouter(prefix="/teachers", tags=["teachers"])
 
 SortKey = Literal["name", "email", "role"]
 Dir = Literal["asc", "desc"]
+
+# CSV import limits (DoS protection)
+MAX_CSV_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+MAX_CSV_ROWS = 10000  # Maximum number of rows to process
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
@@ -227,11 +232,11 @@ def export_teachers_csv(
     for teacher in teachers:
         writer.writerow(
             [
-                teacher.id,
-                teacher.name,
-                teacher.email,
-                teacher.role,
-                "active" if not teacher.archived else "inactive",
+                sanitize_csv_value(teacher.id),
+                sanitize_csv_value(teacher.name),
+                sanitize_csv_value(teacher.email),
+                sanitize_csv_value(teacher.role),
+                sanitize_csv_value("active" if not teacher.archived else "inactive"),
             ]
         )
 
@@ -552,6 +557,14 @@ async def import_teachers_csv(
             status_code=http_status.HTTP_400_BAD_REQUEST,
             detail="File must be a CSV",
         )
+    
+    # Check file size to prevent DoS attacks
+    content = await file.read()
+    if len(content) > MAX_CSV_FILE_SIZE:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail=f"File too large. Maximum size is {MAX_CSV_FILE_SIZE // (1024 * 1024)}MB",
+        )
 
     result = CSVImportResult(
         success_count=0, error_count=0, errors=[], created=[], updated=[]
@@ -559,7 +572,6 @@ async def import_teachers_csv(
 
     try:
         # Read CSV content
-        content = await file.read()
         csv_text = content.decode("utf-8")
         csv_file = StringIO(csv_text)
         reader = csv.DictReader(csv_file)
@@ -575,6 +587,14 @@ async def import_teachers_csv(
         row_num = 1
         for row in reader:
             row_num += 1
+            
+            # Check row count limit to prevent DoS attacks
+            if row_num > MAX_CSV_ROWS + 1:  # +1 for header row
+                raise HTTPException(
+                    status_code=http_status.HTTP_400_BAD_REQUEST,
+                    detail=f"Too many rows in CSV. Maximum is {MAX_CSV_ROWS} rows",
+                )
+            
             try:
                 name = row.get("name", "").strip()
                 email = row.get("email", "").strip().lower()
