@@ -73,31 +73,37 @@ jobs:
           docker build -t tea-nginx:ci -f ops/nginx/Dockerfile ops/nginx
 
 
-      # Trivy pinned via action (makkelijk) of via container (ook prima).
+      # Trivy scan backend image
       - name: Trivy scan backend
         uses: aquasecurity/trivy-action@0.24.0
         with:
+          scan-type: image
           image-ref: tea-backend:ci
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           format: table
           exit-code: 1
 
+      # Trivy scan frontend image
       - name: Trivy scan frontend
         uses: aquasecurity/trivy-action@0.24.0
         with:
+          scan-type: image
           image-ref: tea-frontend:ci
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           format: table
           exit-code: 1
 
+      # Trivy scan nginx image
       - name: Trivy scan nginx
         uses: aquasecurity/trivy-action@0.24.0
         with:
+          scan-type: image
           image-ref: tea-nginx:ci
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           format: table
           exit-code: 1
+
 
