@@ -1188,6 +1188,8 @@ def get_my_projects(
             Project.status.in_(["concept", "active", "completed"]),
         )
     
+    # Load all projects - this is acceptable as students typically have access to
+    # a limited number of projects (usually 10-30) through their course enrollments
     projects = query.order_by(Project.start_date.desc().nulls_last()).all()
     
     logger.info(

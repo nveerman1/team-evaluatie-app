@@ -197,7 +197,10 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
       }
       
       // Prepare event list params
-      const eventsParams: any = {
+      const eventsParams: {
+        start_date?: string;
+        per_page: number;
+      } = {
         start_date: startDate,
         per_page: 100,
       };
@@ -391,7 +394,8 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
                     }
                   }
                 } catch (error) {
-                  // Silently ignore date parsing errors
+                  // Date parsing errors are non-critical - the project title will still display
+                  // without the date range, which is acceptable fallback behavior
                 }
                 return (
                   <option key={project.id} value={project.id}>
