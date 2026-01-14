@@ -14,7 +14,10 @@ from app.infra.db.models import User, School
 from app.core.azure_ad import azure_ad_authenticator
 from app.core.security import create_access_token
 from app.core.config import settings
-from app.core.redirect_validator import normalize_and_validate_return_to, get_role_home_path
+from app.core.redirect_validator import (
+    normalize_and_validate_return_to,
+    get_role_home_path,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +56,9 @@ def azure_login(
         )
 
     # Validate returnTo if provided
-    validated_return_to = normalize_and_validate_return_to(return_to) if return_to else None
+    validated_return_to = (
+        normalize_and_validate_return_to(return_to) if return_to else None
+    )
 
     # Generate state for CSRF protection, include school_id and optional returnTo
     # Use base64-encoded JSON to avoid parsing issues with colons in URLs
@@ -143,7 +148,9 @@ def azure_callback(
     user = azure_ad_authenticator.provision_or_update_user(db, profile, school_id)
 
     # Create JWT token with role claim
-    jwt_token = create_access_token(sub=user.email, role=user.role, school_id=user.school_id)
+    jwt_token = create_access_token(
+        sub=user.email, role=user.role, school_id=user.school_id
+    )
 
     logger.info(
         f"Azure AD authentication successful for user {user.email}, "
@@ -154,7 +161,9 @@ def azure_callback(
     frontend_url = settings.FRONTEND_URL
 
     # Validate returnTo if present
-    validated_return_to = normalize_and_validate_return_to(return_to) if return_to else None
+    validated_return_to = (
+        normalize_and_validate_return_to(return_to) if return_to else None
+    )
 
     if validated_return_to:
         redirect_path = validated_return_to
@@ -184,7 +193,9 @@ def azure_callback(
 
     response.set_cookie(**cookie_kwargs)
 
-    logger.info(f"Authentication cookie set for user {user.email}, redirecting to {redirect_url}")
+    logger.info(
+        f"Authentication cookie set for user {user.email}, redirecting to {redirect_url}"
+    )
 
     return response
 
@@ -256,7 +267,9 @@ def dev_login(
     # Find user
     user = db.query(User).filter(User.email == email).first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+        )
 
     # Check if user is archived
     if user.archived:
@@ -266,11 +279,15 @@ def dev_login(
         )
 
     # Create JWT token
-    jwt_token = create_access_token(sub=user.email, role=user.role, school_id=user.school_id)
+    jwt_token = create_access_token(
+        sub=user.email, role=user.role, school_id=user.school_id
+    )
 
     # Determine redirect path
     frontend_url = settings.FRONTEND_URL
-    validated_return_to = normalize_and_validate_return_to(return_to) if return_to else None
+    validated_return_to = (
+        normalize_and_validate_return_to(return_to) if return_to else None
+    )
 
     if validated_return_to:
         redirect_path = validated_return_to
