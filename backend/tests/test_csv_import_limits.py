@@ -110,7 +110,9 @@ class TestCSVImportLimits:
             
             # Should succeed without raising exception
             assert result is not None
-            assert hasattr(result, 'success_count') or 'success_count' in result or result.success_count >= 0
+            # Result should be a CSVImportResult with success_count attribute
+            assert hasattr(result, 'success_count')
+            assert result.success_count >= 0
 
     def test_students_csv_rejects_oversized_file(self):
         """Test that student CSV import rejects files over 10MB"""

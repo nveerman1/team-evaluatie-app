@@ -103,27 +103,38 @@ def validate_webhook_url(url: str) -> Tuple[bool, str]:
     if not hostname:
         return False, "Invalid webhook URL: no hostname found"
     
-    # Resolve hostname to IP address
+    # Resolve hostname to IP address (supports both IPv4 and IPv6)
     try:
-        ip_str = socket.gethostbyname(hostname)
-        ip_obj = ipaddress.ip_address(ip_str)
+        # Use getaddrinfo to support both IPv4 and IPv6
+        addr_info = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+        if not addr_info:
+            return False, "Cannot resolve webhook hostname"
+        
+        # Check all resolved IPs (a hostname can resolve to multiple IPs)
+        for family, _, _, _, sockaddr in addr_info:
+            ip_str = sockaddr[0]
+            try:
+                ip_obj = ipaddress.ip_address(ip_str)
+            except ValueError:
+                continue  # Skip invalid IPs
+            
+            # Block loopback addresses first (127.0.0.0/8, ::1)
+            if ip_obj.is_loopback:
+                return False, "Webhook URL resolves to loopback address (blocked for security)"
+            
+            # Block private/internal IP ranges (SSRF prevention)
+            if ip_obj.is_private:
+                return False, "Webhook URL resolves to private IP address (blocked for security)"
+            
+            # Block link-local addresses (169.254.0.0/16 for IPv4, fe80::/10 for IPv6)
+            if ip_obj.is_link_local:
+                return False, "Webhook URL resolves to link-local address (blocked for security)"
+            
+            # Block multicast and reserved addresses
+            if ip_obj.is_multicast or ip_obj.is_reserved:
+                return False, "Webhook URL resolves to multicast/reserved address (blocked for security)"
+        
     except (socket.gaierror, ValueError) as e:
         return False, f"Cannot resolve webhook hostname: {str(e)}"
-    
-    # Block private/internal IP ranges (SSRF prevention)
-    if ip_obj.is_private:
-        return False, "Webhook URL resolves to private IP address (blocked for security)"
-    
-    # Block loopback addresses (127.0.0.0/8, ::1)
-    if ip_obj.is_loopback:
-        return False, "Webhook URL resolves to loopback address (blocked for security)"
-    
-    # Block link-local addresses (169.254.0.0/16 for IPv4, fe80::/10 for IPv6)
-    if ip_obj.is_link_local:
-        return False, "Webhook URL resolves to link-local address (blocked for security)"
-    
-    # Block multicast and reserved addresses
-    if ip_obj.is_multicast or ip_obj.is_reserved:
-        return False, "Webhook URL resolves to multicast/reserved address (blocked for security)"
     
     return True, ""

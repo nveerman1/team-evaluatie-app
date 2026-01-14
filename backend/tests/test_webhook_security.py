@@ -14,7 +14,9 @@ class TestWebhookURLValidation:
 
     def test_valid_https_public_url(self):
         """Test that valid HTTPS public URLs are accepted"""
-        with patch('app.api.v1.utils.url_validation.socket.gethostbyname', return_value='8.8.8.8'):
+        with patch('app.api.v1.utils.url_validation.socket.getaddrinfo', return_value=[
+            (socket.AF_INET, socket.SOCK_STREAM, 6, '', ('8.8.8.8', 443))
+        ]):
             is_valid, error = validate_webhook_url("https://example.com/webhook")
             assert is_valid is True
             assert error == ""
@@ -33,7 +35,9 @@ class TestWebhookURLValidation:
 
     def test_localhost_blocked(self):
         """Test that localhost/127.0.0.1 is blocked"""
-        with patch('app.api.v1.utils.url_validation.socket.gethostbyname', return_value='127.0.0.1'):
+        with patch('app.api.v1.utils.url_validation.socket.getaddrinfo', return_value=[
+            (socket.AF_INET, socket.SOCK_STREAM, 6, '', ('127.0.0.1', 443))
+        ]):
             is_valid, error = validate_webhook_url("https://localhost/webhook")
             assert is_valid is False
             # 127.0.0.1 is both loopback and private, so either message is acceptable
@@ -41,28 +45,36 @@ class TestWebhookURLValidation:
 
     def test_private_ip_10_blocked(self):
         """Test that private IP 10.0.0.0/8 is blocked"""
-        with patch('app.api.v1.utils.url_validation.socket.gethostbyname', return_value='10.0.0.1'):
+        with patch('app.api.v1.utils.url_validation.socket.getaddrinfo', return_value=[
+            (socket.AF_INET, socket.SOCK_STREAM, 6, '', ('10.0.0.1', 443))
+        ]):
             is_valid, error = validate_webhook_url("https://internal.company.com/webhook")
             assert is_valid is False
             assert "private" in error.lower()
 
     def test_private_ip_172_blocked(self):
         """Test that private IP 172.16.0.0/12 is blocked"""
-        with patch('app.api.v1.utils.url_validation.socket.gethostbyname', return_value='172.16.0.1'):
+        with patch('app.api.v1.utils.url_validation.socket.getaddrinfo', return_value=[
+            (socket.AF_INET, socket.SOCK_STREAM, 6, '', ('172.16.0.1', 443))
+        ]):
             is_valid, error = validate_webhook_url("https://internal.company.com/webhook")
             assert is_valid is False
             assert "private" in error.lower()
 
     def test_private_ip_192_blocked(self):
         """Test that private IP 192.168.0.0/16 is blocked"""
-        with patch('app.api.v1.utils.url_validation.socket.gethostbyname', return_value='192.168.1.1'):
+        with patch('app.api.v1.utils.url_validation.socket.getaddrinfo', return_value=[
+            (socket.AF_INET, socket.SOCK_STREAM, 6, '', ('192.168.1.1', 443))
+        ]):
             is_valid, error = validate_webhook_url("https://router.local/webhook")
             assert is_valid is False
             assert "private" in error.lower()
 
     def test_link_local_blocked(self):
         """Test that link-local IP 169.254.0.0/16 (AWS/Azure metadata) is blocked"""
-        with patch('app.api.v1.utils.url_validation.socket.gethostbyname', return_value='169.254.169.254'):
+        with patch('app.api.v1.utils.url_validation.socket.getaddrinfo', return_value=[
+            (socket.AF_INET, socket.SOCK_STREAM, 6, '', ('169.254.169.254', 443))
+        ]):
             is_valid, error = validate_webhook_url("https://metadata.service/webhook")
             assert is_valid is False
             # 169.254.x.x is both link-local and private, so either message is acceptable
@@ -70,11 +82,13 @@ class TestWebhookURLValidation:
 
     def test_ipv6_localhost_blocked(self):
         """Test that IPv6 localhost ::1 is blocked"""
-        with patch('app.api.v1.utils.url_validation.socket.gethostbyname', return_value='::1'):
+        with patch('app.api.v1.utils.url_validation.socket.getaddrinfo', return_value=[
+            (socket.AF_INET6, socket.SOCK_STREAM, 6, '', ('::1', 443, 0, 0))
+        ]):
             is_valid, error = validate_webhook_url("https://localhost6/webhook")
             assert is_valid is False
-            # IPv6 ::1 is recognized as loopback or private
-            assert "loopback" in error.lower() or "private" in error.lower() or "invalid" in error.lower()
+            # IPv6 ::1 is loopback
+            assert "loopback" in error.lower()
 
     def test_dns_resolution_failure(self):
         """Test that DNS resolution failures are handled"""
@@ -97,7 +111,9 @@ class TestWebhookServiceSSRFProtection:
     def test_webhook_service_validates_url(self):
         """Test that WebhookService validates URLs before sending"""
         # Try to send webhook to localhost - should be blocked
-        with patch('app.api.v1.utils.url_validation.socket.gethostbyname', return_value='127.0.0.1'):
+        with patch('app.api.v1.utils.url_validation.socket.getaddrinfo', return_value=[
+            (socket.AF_INET, socket.SOCK_STREAM, 6, '', ('127.0.0.1', 443))
+        ]):
             success, error = WebhookService.send_webhook(
                 url="https://localhost/webhook",
                 payload={"test": "data"}
@@ -111,7 +127,9 @@ class TestWebhookServiceSSRFProtection:
         mock_response = Mock()
         mock_response.status_code = 200
         
-        with patch('app.api.v1.utils.url_validation.socket.gethostbyname', return_value='8.8.8.8'):
+        with patch('app.api.v1.utils.url_validation.socket.getaddrinfo', return_value=[
+            (socket.AF_INET, socket.SOCK_STREAM, 6, '', ('8.8.8.8', 443))
+        ]):
             with patch('app.infra.services.webhook_service.requests.post', return_value=mock_response):
                 success, error = WebhookService.send_webhook(
                     url="https://example.com/webhook",
@@ -123,14 +141,21 @@ class TestWebhookServiceSSRFProtection:
     def test_webhook_service_blocks_private_network(self):
         """Test that WebhookService blocks private network IPs"""
         # Try various private IP ranges
-        private_ips = ['10.0.0.1', '172.16.0.1', '192.168.1.1', '169.254.169.254']
+        private_ips = [
+            ('10.0.0.1', 443),
+            ('172.16.0.1', 443),
+            ('192.168.1.1', 443),
+            ('169.254.169.254', 443)
+        ]
         
-        for ip in private_ips:
-            with patch('app.api.v1.utils.url_validation.socket.gethostbyname', return_value=ip):
+        for ip_addr, port in private_ips:
+            with patch('app.api.v1.utils.url_validation.socket.getaddrinfo', return_value=[
+                (socket.AF_INET, socket.SOCK_STREAM, 6, '', (ip_addr, port))
+            ]):
                 success, error = WebhookService.send_webhook(
-                    url=f"https://internal-{ip.replace('.', '-')}.com/webhook",
+                    url=f"https://internal-{ip_addr.replace('.', '-')}.com/webhook",
                     payload={"test": "data"}
                 )
-                assert success is False, f"Should block IP {ip}"
+                assert success is False, f"Should block IP {ip_addr}"
                 assert error is not None
                 assert "Invalid webhook URL" in error
