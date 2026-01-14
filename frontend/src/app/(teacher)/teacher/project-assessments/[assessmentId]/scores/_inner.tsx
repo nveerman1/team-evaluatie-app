@@ -203,13 +203,16 @@ export default function ScoresOverviewInner() {
       const csvContent =
         headers.join(",") +
         "\n" +
-        rows.map((row) => row.map((cell) => `"${cell}"`).join(",")).join("\n");
+        rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
 
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
+      link.href = url;
       link.download = `scores-teams-${data.assessment.title.replace(/[^a-z0-9]/gi, "_")}.csv`;
       link.click();
+      // Revoke the object URL to prevent memory leaks
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } else if (viewMode === "students" && studentsData) {
       const headers = ["Leerling", "Klas", "Team", ...studentsData.criteria.map((c) => c.name), "Totaalscore", "Cijfer", "Laatst bewerkt"];
       const rows = studentsData.student_scores.map((student) => {
@@ -228,115 +231,20 @@ export default function ScoresOverviewInner() {
       const csvContent =
         headers.join(",") +
         "\n" +
-        rows.map((row) => row.map((cell) => `"${cell}"`).join(",")).join("\n");
+        rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
 
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
+      link.href = url;
       link.download = `scores-students-${studentsData.assessment.title.replace(/[^a-z0-9]/gi, "_")}.csv`;
       link.click();
+      // Revoke the object URL to prevent memory leaks
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
   }
 
-  async function exportToXLSX() {
-    // Dynamically import xlsx only when needed (client-side only)
-    const XLSX = await import("xlsx");
 
-    if (viewMode === "teams" && data) {
-      // Prepare data for Excel
-      const headers = ["Team", "Teamleden", ...data.criteria.map((c) => c.name), "Totaalscore", "Cijfer"];
-      const rows = data.team_scores.map((team) => {
-        const members = team.members.map((m) => m.name).join("; ");
-        const scores = team.criterion_scores.map((cs) => cs.score !== null && cs.score !== undefined ? cs.score : "");
-        return [
-          team.team_name,
-          members,
-          ...scores,
-          team.total_score !== null && team.total_score !== undefined ? team.total_score : "",
-          team.grade !== null && team.grade !== undefined ? team.grade : "",
-        ];
-      });
-
-      // Add statistics row
-      const avgRow = [
-        "Gemiddelde",
-        "",
-        ...data.criteria.map((c) => data.statistics.average_per_criterion[c.name] || ""),
-        "",
-        "",
-      ];
-
-      // Create worksheet
-      const wsData = [headers, ...rows, [], avgRow];
-      const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-      // Set column widths
-      const colWidths = [
-        { wch: 15 }, // Team
-        { wch: 40 }, // Teamleden
-        ...data.criteria.map(() => ({ wch: 15 })), // Criteria
-        { wch: 12 }, // Totaalscore
-        { wch: 10 }, // Cijfer
-      ];
-      ws["!cols"] = colWidths;
-
-      // Create workbook and add worksheet
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Scores");
-
-      // Generate file and trigger download
-      XLSX.writeFile(wb, `scores-teams-${data.assessment.title.replace(/[^a-z0-9]/gi, "_")}.xlsx`);
-    } else if (viewMode === "students" && studentsData) {
-      // Prepare data for Excel - students view
-      const headers = ["Leerling", "Klas", "Team", ...studentsData.criteria.map((c) => c.name), "Totaalscore", "Cijfer", "Laatst bewerkt"];
-      const rows = studentsData.student_scores.map((student) => {
-        const scores = student.criterion_scores.map((cs) => cs.score !== null && cs.score !== undefined ? cs.score : "");
-        return [
-          student.student_name,
-          student.class_name || "",
-          student.team_name || "",
-          ...scores,
-          student.total_score !== null && student.total_score !== undefined ? student.total_score : "",
-          student.grade !== null && student.grade !== undefined ? student.grade : "",
-          student.updated_at ? new Date(student.updated_at).toLocaleDateString("nl-NL") : "",
-        ];
-      });
-
-      // Add statistics row
-      const avgRow = [
-        "Gemiddelde",
-        "",
-        "",
-        ...studentsData.criteria.map((c) => studentsData.statistics.average_per_criterion[c.name] || ""),
-        "",
-        studentsData.statistics.average_grade || "",
-        "",
-      ];
-
-      // Create worksheet
-      const wsData = [headers, ...rows, [], avgRow];
-      const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-      // Set column widths
-      const colWidths = [
-        { wch: 25 }, // Leerling
-        { wch: 10 }, // Klas
-        { wch: 15 }, // Team
-        ...studentsData.criteria.map(() => ({ wch: 15 })), // Criteria
-        { wch: 12 }, // Totaalscore
-        { wch: 10 }, // Cijfer
-        { wch: 15 }, // Laatst bewerkt
-      ];
-      ws["!cols"] = colWidths;
-
-      // Create workbook and add worksheet
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Leerlingen");
-
-      // Generate file and trigger download
-      XLSX.writeFile(wb, `scores-students-${studentsData.assessment.title.replace(/[^a-z0-9]/gi, "_")}.xlsx`);
-    }
-  }
 
   function getScoreColor(score: number | null | undefined, scale_min: number, scale_max: number): string {
     if (score === null || score === undefined) return "";
