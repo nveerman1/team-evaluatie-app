@@ -1,0 +1,99 @@
+name: Security: OSV (Frontend lockfile + Backend SBOM) + Trivy (Docker images)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  schedule:
+    - cron: "30 6 * * 1"  # elke maandag 06:30 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  frontend_lockfile_scan:
+    name: Frontend lockfile scan (OSV)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: OSV scan pnpm-lock.yaml
+        run: |
+          docker run --rm -v "$PWD:/src" ghcr.io/google/osv-scanner:v2.3.1 \
+            scan -L /src/frontend/pnpm-lock.yaml
+
+  backend_sbom_scan:
+    name: Backend SBOM scan (CycloneDX -> OSV)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend deps in venv
+        run: |
+          python -m venv backend/.venv
+          source backend/.venv/bin/activate
+          python -m pip install -U pip
+          python -m pip install -r backend/requirements.txt
+          python -m pip install cyclonedx-bom
+
+      - name: Generate CycloneDX SBOM (from installed env)
+        run: |
+          backend/.venv/bin/python -m cyclonedx_py environment --of json -o backend.cdx.json
+
+
+      - name: OSV scan SBOM
+        run: |
+          docker run --rm -v "$PWD:/src" ghcr.io/google/osv-scanner:latest \
+            scan -L /src/backend.cdx.json
+
+  trivy_images:
+    name: Trivy (docker images)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Bouw je images zoals jij ze in prod bouwt. Pas tags/namen aan je compose aan.
+      - name: Build images
+        run: |
+          docker build -t tea-backend:ci -f backend/Dockerfile backend
+          docker build -t tea-frontend:ci -f frontend/Dockerfile frontend
+          docker build -t tea-nginx:ci -f ops/nginx/Dockerfile ops/nginx
+
+      # Trivy pinned via action (makkelijk) of via container (ook prima).
+      - name: Trivy scan backend
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: tea-backend:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: table
+          exit-code: 1
+
+      - name: Trivy scan frontend
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: tea-frontend:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: table
+          exit-code: 1
+
+      - name: Trivy scan nginx
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: tea-nginx:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: table
+          exit-code: 1
+
