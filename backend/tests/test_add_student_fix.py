@@ -89,7 +89,7 @@ def test_add_student_to_course_logs_correctly():
         patch("app.api.v1.routers.courses.User", return_value=mock_student),
     ):
         # Call the endpoint
-        result = add_student_to_course(
+        add_student_to_course(
             course_id=1,
             payload=payload,
             db=db,

@@ -115,10 +115,7 @@ def _compute_feedback_hash(comments: List[str]) -> str:
     return hashlib.sha256(content.encode()).hexdigest()
 
 
-@router.get(
-    "/evaluation/{evaluation_id}/student/{student_id}",
-    response_model=FeedbackSummaryResponse,
-)
+@router.get("/evaluation/{evaluation_id}/student/{student_id}", response_model=FeedbackSummaryResponse)
 def get_student_feedback_summary(
     evaluation_id: int,
     student_id: int,
@@ -126,7 +123,7 @@ def get_student_feedback_summary(
     user=Depends(get_current_user),
 ):
     """Get or generate AI summary of peer feedback for a student."""
-
+    
     # Verify evaluation exists and user has access
     ev = (
         db.query(Evaluation)
@@ -135,7 +132,7 @@ def get_student_feedback_summary(
     )
     if not ev:
         raise HTTPException(status_code=404, detail="Evaluation not found")
-
+    
     # Verify student exists and is in the school
     student = (
         db.query(User)
@@ -144,11 +141,11 @@ def get_student_feedback_summary(
     )
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
-
+    
     # Get peer feedback comments for this student (received, not self)
     U_from = aliased(User)
     U_to = aliased(User)
-
+    
     feedback_rows = (
         db.query(Score.comment, U_from.name)
         .join(Allocation, Allocation.id == Score.allocation_id)
@@ -164,10 +161,10 @@ def get_student_feedback_summary(
         )
         .all()
     )
-
+    
     comments = [row.comment for row in feedback_rows if row.comment]
     reviewer_names = [row.name for row in feedback_rows if row.name]
-
+    
     if not comments:
         # No feedback yet
         return FeedbackSummaryResponse(
@@ -178,10 +175,10 @@ def get_student_feedback_summary(
             feedback_count=0,
             cached=False,
         )
-
+    
     # Compute hash of current feedback
     feedback_hash = _compute_feedback_hash(comments)
-
+    
     # Check if we have a cached summary
     cached_summary = (
         db.query(FeedbackSummary)
@@ -192,7 +189,7 @@ def get_student_feedback_summary(
         )
         .first()
     )
-
+    
     if cached_summary:
         # Return cached summary
         return FeedbackSummaryResponse(
@@ -203,20 +200,20 @@ def get_student_feedback_summary(
             feedback_count=len(comments),
             cached=True,
         )
-
+    
     # Generate new summary
     # First anonymize the comments
     all_names = reviewer_names + [student.name]
     anonymizer = AnonymizationService()
     anonymized_comments = anonymizer.anonymize_comments(comments, all_names)
-
+    
     if not anonymized_comments:
         anonymized_comments = comments  # Fallback if anonymization removed everything
-
+    
     # Try AI generation
     ollama = OllamaService()
     start_time = time.time()
-
+    
     try:
         ai_summary = ollama.generate_summary(
             feedback_comments=anonymized_comments,
@@ -225,13 +222,12 @@ def get_student_feedback_summary(
         )
     except Exception as e:
         import logging
-
         logger = logging.getLogger(__name__)
         logger.error(f"Exception during AI generation: {type(e).__name__}: {e}")
         ai_summary = None
-
+    
     duration_ms = int((time.time() - start_time) * 1000)
-
+    
     if ai_summary:
         summary_text = ai_summary
         method = "ai"
@@ -239,14 +235,14 @@ def get_student_feedback_summary(
         # Fallback to rule-based summary
         summary_text = ollama.create_fallback_summary(anonymized_comments)
         method = "fallback"
-
+    
     # Cache the summary
     # Delete old summary if exists
     db.query(FeedbackSummary).filter(
         FeedbackSummary.evaluation_id == evaluation_id,
         FeedbackSummary.student_id == student_id,
     ).delete()
-
+    
     new_summary = FeedbackSummary(
         school_id=user.school_id,
         evaluation_id=evaluation_id,
@@ -258,7 +254,7 @@ def get_student_feedback_summary(
     )
     db.add(new_summary)
     db.commit()
-
+    
     return FeedbackSummaryResponse(
         student_id=student_id,
         student_name=student.name,
@@ -269,10 +265,7 @@ def get_student_feedback_summary(
     )
 
 
-@router.post(
-    "/evaluation/{evaluation_id}/student/{student_id}/regenerate",
-    response_model=FeedbackSummaryResponse,
-)
+@router.post("/evaluation/{evaluation_id}/student/{student_id}/regenerate", response_model=FeedbackSummaryResponse)
 def regenerate_student_feedback_summary(
     evaluation_id: int,
     student_id: int,
@@ -281,14 +274,14 @@ def regenerate_student_feedback_summary(
     user=Depends(get_current_user),
 ):
     """Force regeneration of AI summary, bypassing cache."""
-
+    
     # Delete existing cache
     db.query(FeedbackSummary).filter(
         FeedbackSummary.evaluation_id == evaluation_id,
         FeedbackSummary.student_id == student_id,
     ).delete()
     db.commit()
-
+    
     # Call get endpoint to generate new summary
     return get_student_feedback_summary(evaluation_id, student_id, db, user)
 
@@ -301,7 +294,7 @@ def get_student_feedback_quotes(
     user=Depends(get_current_user),
 ):
     """Get anonymized peer feedback quotes for a student."""
-
+    
     # Verify evaluation exists
     ev = (
         db.query(Evaluation)
@@ -310,10 +303,10 @@ def get_student_feedback_quotes(
     )
     if not ev:
         raise HTTPException(status_code=404, detail="Evaluation not found")
-
+    
     # Get peer feedback comments
     U_from = aliased(User)
-
+    
     feedback_rows = (
         db.query(Score.comment, Score.criterion_id, U_from.name)
         .join(Allocation, Allocation.id == Score.allocation_id)
@@ -328,16 +321,16 @@ def get_student_feedback_quotes(
         )
         .all()
     )
-
+    
     # Get student for anonymization
     student = db.query(User).filter(User.id == student_id).first()
-
+    
     # Anonymize
     anonymizer = AnonymizationService()
     all_names = [row.name for row in feedback_rows if row.name]
     if student:
         all_names.append(student.name)
-
+    
     quotes = []
     for row in feedback_rows:
         if row.comment:
@@ -347,23 +340,17 @@ def get_student_feedback_quotes(
                 text = anonymized[0]
                 if len(text) > 300:
                     text = text[:297] + "..."
-                quotes.append(
-                    {
-                        "text": text,
-                        "criterion_id": row.criterion_id,
-                    }
-                )
-
+                quotes.append({
+                    "text": text,
+                    "criterion_id": row.criterion_id,
+                })
+    
     return {"quotes": quotes, "count": len(quotes)}
 
 
 # ============ Async Queue Endpoints ============
 
-
-@router.post(
-    "/evaluation/{evaluation_id}/student/{student_id}/queue",
-    response_model=JobStatusResponse,
-)
+@router.post("/evaluation/{evaluation_id}/student/{student_id}/queue", response_model=JobStatusResponse)
 def queue_summary_generation(
     evaluation_id: int,
     student_id: int,
@@ -374,7 +361,7 @@ def queue_summary_generation(
     """
     Queue an async job to generate AI summary for a student.
     Returns job status that can be polled.
-
+    
     Supports:
     - Priority levels (high, normal, low)
     - Webhook notifications
@@ -388,7 +375,7 @@ def queue_summary_generation(
     )
     if not ev:
         raise HTTPException(status_code=404, detail="Evaluation not found")
-
+    
     # Verify student exists
     student = (
         db.query(User)
@@ -397,7 +384,7 @@ def queue_summary_generation(
     )
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
-
+    
     # Check if job already exists and is not failed or cancelled
     existing_job = (
         db.query(SummaryGenerationJob)
@@ -409,7 +396,7 @@ def queue_summary_generation(
         .order_by(SummaryGenerationJob.created_at.desc())
         .first()
     )
-
+    
     if existing_job:
         # Return existing job status
         return JobStatusResponse(
@@ -418,15 +405,9 @@ def queue_summary_generation(
             student_id=existing_job.student_id,
             evaluation_id=existing_job.evaluation_id,
             created_at=existing_job.created_at.isoformat(),
-            started_at=existing_job.started_at.isoformat()
-            if existing_job.started_at
-            else None,
-            completed_at=existing_job.completed_at.isoformat()
-            if existing_job.completed_at
-            else None,
-            cancelled_at=existing_job.cancelled_at.isoformat()
-            if existing_job.cancelled_at
-            else None,
+            started_at=existing_job.started_at.isoformat() if existing_job.started_at else None,
+            completed_at=existing_job.completed_at.isoformat() if existing_job.completed_at else None,
+            cancelled_at=existing_job.cancelled_at.isoformat() if existing_job.cancelled_at else None,
             result=existing_job.result,
             error_message=existing_job.error_message,
             progress=existing_job.progress,
@@ -435,24 +416,21 @@ def queue_summary_generation(
             max_retries=existing_job.max_retries,
             webhook_delivered=existing_job.webhook_delivered,
         )
-
+    
     # Validate priority
     if request.priority not in VALID_PRIORITIES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Priority must be one of: {', '.join(VALID_PRIORITIES)}",
-        )
-
+        raise HTTPException(status_code=400, detail=f"Priority must be one of: {', '.join(VALID_PRIORITIES)}")
+    
     # Create new job
     job_id = f"summary-{evaluation_id}-{student_id}-{int(time.time())}"
-
+    
     # Determine queue name based on priority
     queue_name = QUEUE_AI_SUMMARIES
     if request.priority == PRIORITY_HIGH:
         queue_name = QUEUE_AI_SUMMARIES_HIGH
     elif request.priority == PRIORITY_LOW:
         queue_name = QUEUE_AI_SUMMARIES_LOW
-
+    
     new_job_record = SummaryGenerationJob(
         school_id=user.school_id,
         evaluation_id=evaluation_id,
@@ -467,7 +445,7 @@ def queue_summary_generation(
     db.add(new_job_record)
     db.commit()
     db.refresh(new_job_record)
-
+    
     # Queue the job
     try:
         queue = get_queue(queue_name)
@@ -477,7 +455,7 @@ def queue_summary_generation(
             evaluation_id=evaluation_id,
             student_id=student_id,
             job_id=job_id,
-            job_timeout="10m",
+            job_timeout='10m',
             result_ttl=86400,  # Keep results for 24 hours
             failure_ttl=86400,
         )
@@ -492,7 +470,7 @@ def queue_summary_generation(
         db.commit()
         logger.error(f"Failed to enqueue job {job_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to queue job: {str(e)}")
-
+    
     return JobStatusResponse(
         job_id=job_id,
         status="queued",
@@ -522,10 +500,10 @@ def get_job_status(
         )
         .first()
     )
-
+    
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-
+    
     return JobStatusResponse(
         job_id=job.job_id,
         status=job.status,
@@ -553,7 +531,7 @@ def cancel_job(
 ):
     """
     Cancel a queued or processing job.
-
+    
     Note: Jobs that are already processing may complete before cancellation takes effect.
     """
     job = (
@@ -564,22 +542,23 @@ def cancel_job(
         )
         .first()
     )
-
+    
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-
+    
     # Check if job can be cancelled
     if job.status in ["completed", "failed", "cancelled"]:
         raise HTTPException(
-            status_code=400, detail=f"Cannot cancel job with status '{job.status}'"
+            status_code=400,
+            detail=f"Cannot cancel job with status '{job.status}'"
         )
-
+    
     # Update job status
     job.status = "cancelled"
     job.cancelled_at = db.execute(text("SELECT NOW()")).scalar()
     job.cancelled_by = user.id
     db.commit()
-
+    
     return {
         "message": "Job cancelled successfully",
         "job_id": job_id,
@@ -597,7 +576,7 @@ def batch_queue_summaries(
     """
     Queue summary generation for multiple students in an evaluation.
     Useful for teachers to pre-generate summaries for all students.
-
+    
     Supports:
     - Priority levels
     - Webhook notifications
@@ -610,7 +589,7 @@ def batch_queue_summaries(
     )
     if not ev:
         raise HTTPException(status_code=404, detail="Evaluation not found")
-
+    
     # Verify all students exist
     students = (
         db.query(User)
@@ -620,21 +599,21 @@ def batch_queue_summaries(
         )
         .all()
     )
-
+    
     if len(students) != len(payload.student_ids):
         raise HTTPException(status_code=400, detail="Some students not found")
-
+    
     # Determine queue name based on priority
     queue_name = QUEUE_AI_SUMMARIES
     if payload.priority == PRIORITY_HIGH:
         queue_name = QUEUE_AI_SUMMARIES_HIGH
     elif payload.priority == PRIORITY_LOW:
         queue_name = QUEUE_AI_SUMMARIES_LOW
-
+    
     # Queue jobs for each student
     queue = get_queue(queue_name)
     results = []
-
+    
     for student_id in payload.student_ids:
         # Check if job already queued or completed
         existing_job = (
@@ -647,22 +626,18 @@ def batch_queue_summaries(
             .order_by(SummaryGenerationJob.created_at.desc())
             .first()
         )
-
+        
         if existing_job:
-            results.append(
-                {
-                    "student_id": student_id,
-                    "job_id": existing_job.job_id,
-                    "status": "already_exists"
-                    if existing_job.status == "completed"
-                    else "already_queued",
-                }
-            )
+            results.append({
+                "student_id": student_id,
+                "job_id": existing_job.job_id,
+                "status": "already_exists" if existing_job.status == "completed" else "already_queued",
+            })
             continue
-
+        
         # Create and queue new job
         job_id = f"summary-{evaluation_id}-{student_id}-{int(time.time())}"
-
+        
         new_job_record = SummaryGenerationJob(
             school_id=user.school_id,
             evaluation_id=evaluation_id,
@@ -674,7 +649,7 @@ def batch_queue_summaries(
             queue_name=queue_name,
         )
         db.add(new_job_record)
-
+        
         try:
             rq_job = queue.enqueue(
                 generate_ai_summary_task,
@@ -682,7 +657,7 @@ def batch_queue_summaries(
                 evaluation_id=evaluation_id,
                 student_id=student_id,
                 job_id=job_id,
-                job_timeout="10m",
+                job_timeout='10m',
                 result_ttl=86400,
                 failure_ttl=86400,
             )
@@ -690,29 +665,23 @@ def batch_queue_summaries(
                 f"Batch: enqueued job {job_id} to queue '{queue_name}' "
                 f"(RQ job ID: {rq_job.id}, student: {student_id})"
             )
-            results.append(
-                {
-                    "student_id": student_id,
-                    "job_id": job_id,
-                    "status": "queued",
-                }
-            )
+            results.append({
+                "student_id": student_id,
+                "job_id": job_id,
+                "status": "queued",
+            })
         except Exception as e:
-            logger.error(
-                f"Batch: failed to enqueue job {job_id} for student {student_id}: {e}"
-            )
+            logger.error(f"Batch: failed to enqueue job {job_id} for student {student_id}: {e}")
             new_job_record.status = "failed"
             new_job_record.error_message = f"Failed to queue: {str(e)}"
-            results.append(
-                {
-                    "student_id": student_id,
-                    "status": "failed",
-                    "error": str(e),
-                }
-            )
-
+            results.append({
+                "student_id": student_id,
+                "status": "failed",
+                "error": str(e),
+            })
+    
     db.commit()
-
+    
     return {
         "evaluation_id": evaluation_id,
         "total_students": len(payload.student_ids),
@@ -735,12 +704,12 @@ def list_evaluation_jobs(
         SummaryGenerationJob.evaluation_id == evaluation_id,
         SummaryGenerationJob.school_id == user.school_id,
     )
-
+    
     if status:
         query = query.filter(SummaryGenerationJob.status == status)
-
+    
     jobs = query.order_by(SummaryGenerationJob.created_at.desc()).all()
-
+    
     return {
         "evaluation_id": evaluation_id,
         "total": len(jobs),
@@ -768,7 +737,6 @@ def list_evaluation_jobs(
 
 # ============ Queue Monitoring & Dashboard ============
 
-
 @router.get("/queue/stats", response_model=QueueStatsResponse)
 def get_queue_stats(
     db: Session = Depends(get_db),
@@ -780,53 +748,33 @@ def get_queue_stats(
     """
     from rq import Worker
     from app.infra.queue.connection import RedisConnection
-
+    
     # Count jobs by status
-    queued_count = (
-        db.query(SummaryGenerationJob)
-        .filter(
-            SummaryGenerationJob.school_id == user.school_id,
-            SummaryGenerationJob.status == "queued",
-        )
-        .count()
-    )
-
-    processing_count = (
-        db.query(SummaryGenerationJob)
-        .filter(
-            SummaryGenerationJob.school_id == user.school_id,
-            SummaryGenerationJob.status == "processing",
-        )
-        .count()
-    )
-
-    completed_count = (
-        db.query(SummaryGenerationJob)
-        .filter(
-            SummaryGenerationJob.school_id == user.school_id,
-            SummaryGenerationJob.status == "completed",
-        )
-        .count()
-    )
-
-    failed_count = (
-        db.query(SummaryGenerationJob)
-        .filter(
-            SummaryGenerationJob.school_id == user.school_id,
-            SummaryGenerationJob.status == "failed",
-        )
-        .count()
-    )
-
-    cancelled_count = (
-        db.query(SummaryGenerationJob)
-        .filter(
-            SummaryGenerationJob.school_id == user.school_id,
-            SummaryGenerationJob.status == "cancelled",
-        )
-        .count()
-    )
-
+    queued_count = db.query(SummaryGenerationJob).filter(
+        SummaryGenerationJob.school_id == user.school_id,
+        SummaryGenerationJob.status == "queued",
+    ).count()
+    
+    processing_count = db.query(SummaryGenerationJob).filter(
+        SummaryGenerationJob.school_id == user.school_id,
+        SummaryGenerationJob.status == "processing",
+    ).count()
+    
+    completed_count = db.query(SummaryGenerationJob).filter(
+        SummaryGenerationJob.school_id == user.school_id,
+        SummaryGenerationJob.status == "completed",
+    ).count()
+    
+    failed_count = db.query(SummaryGenerationJob).filter(
+        SummaryGenerationJob.school_id == user.school_id,
+        SummaryGenerationJob.status == "failed",
+    ).count()
+    
+    cancelled_count = db.query(SummaryGenerationJob).filter(
+        SummaryGenerationJob.school_id == user.school_id,
+        SummaryGenerationJob.status == "cancelled",
+    ).count()
+    
     # Count workers
     try:
         redis_conn = RedisConnection.get_connection()
@@ -834,7 +782,7 @@ def get_queue_stats(
         workers_count = len(workers)
     except Exception:
         workers_count = 0
-
+    
     return QueueStatsResponse(
         queue_name="ai-summaries",
         queued_count=queued_count,
@@ -857,44 +805,39 @@ def get_queue_health(
     """
     from rq import Worker, Queue
     from app.infra.queue.connection import RedisConnection
-
+    
     try:
         redis_conn = RedisConnection.get_connection()
-
+        
         # Check Redis connection
         redis_conn.ping()
-        redis_healthy = True
-
+        
         # Get worker info
         workers = Worker.all(connection=redis_conn)
         workers_info = []
         for w in workers:
-            workers_info.append(
-                {
-                    "name": w.name,
-                    "state": w.get_state(),
-                    "current_job": w.get_current_job_id(),
-                }
-            )
-
+            workers_info.append({
+                "name": w.name,
+                "state": w.get_state(),
+                "current_job": w.get_current_job_id(),
+            })
+        
         # Get queue info
         queues_info = []
         for queue_name in ["ai-summaries-high", "ai-summaries", "ai-summaries-low"]:
             q = Queue(queue_name, connection=redis_conn)
-            queues_info.append(
-                {
-                    "name": queue_name,
-                    "count": len(q),
-                }
-            )
-
+            queues_info.append({
+                "name": queue_name,
+                "count": len(q),
+            })
+        
         return {
             "status": "healthy",
             "redis": "connected",
             "workers": workers_info,
             "queues": queues_info,
         }
-
+        
     except Exception as e:
         return {
             "status": "unhealthy",
@@ -904,7 +847,6 @@ def get_queue_health(
 
 # ============ Scheduled Jobs (Cron) ============
 
-
 @router.post("/scheduled-jobs", response_model=ScheduledJobResponse)
 def create_scheduled_job(
     request: ScheduledJobRequest,
@@ -913,16 +855,16 @@ def create_scheduled_job(
 ):
     """
     Create a new scheduled job with cron-like scheduling.
-
+    
     Example cron expressions:
     - "0 2 * * *" - Daily at 2am
     - "0 */6 * * *" - Every 6 hours
     - "0 9 * * 1" - Every Monday at 9am
     """
     from app.infra.services.scheduler_service import SchedulerService
-
+    
     scheduler = SchedulerService(db)
-
+    
     try:
         scheduled_job = scheduler.create_scheduled_job(
             school_id=user.school_id,
@@ -934,7 +876,7 @@ def create_scheduled_job(
             enabled=request.enabled,
             created_by=user.id,
         )
-
+        
         return ScheduledJobResponse(
             id=scheduled_job.id,
             name=scheduled_job.name,
@@ -942,12 +884,8 @@ def create_scheduled_job(
             queue_name=scheduled_job.queue_name,
             cron_expression=scheduled_job.cron_expression,
             enabled=scheduled_job.enabled,
-            last_run_at=scheduled_job.last_run_at.isoformat()
-            if scheduled_job.last_run_at
-            else None,
-            next_run_at=scheduled_job.next_run_at.isoformat()
-            if scheduled_job.next_run_at
-            else None,
+            last_run_at=scheduled_job.last_run_at.isoformat() if scheduled_job.last_run_at else None,
+            next_run_at=scheduled_job.next_run_at.isoformat() if scheduled_job.next_run_at else None,
             created_at=scheduled_job.created_at.isoformat(),
         )
     except ValueError as e:
@@ -961,16 +899,11 @@ def list_scheduled_jobs(
 ):
     """List all scheduled jobs for the current school."""
     from app.infra.db.models import ScheduledJob as ScheduledJobModel
-
-    jobs = (
-        db.query(ScheduledJobModel)
-        .filter(
-            ScheduledJobModel.school_id == user.school_id,
-        )
-        .order_by(ScheduledJobModel.created_at.desc())
-        .all()
-    )
-
+    
+    jobs = db.query(ScheduledJobModel).filter(
+        ScheduledJobModel.school_id == user.school_id,
+    ).order_by(ScheduledJobModel.created_at.desc()).all()
+    
     return {
         "total": len(jobs),
         "jobs": [
@@ -998,13 +931,13 @@ def delete_scheduled_job(
 ):
     """Delete a scheduled job."""
     from app.infra.services.scheduler_service import SchedulerService
-
+    
     scheduler = SchedulerService(db)
     success = scheduler.delete_scheduled_job(job_id, user.school_id)
-
+    
     if not success:
         raise HTTPException(status_code=404, detail="Scheduled job not found")
-
+    
     return {"message": "Scheduled job deleted successfully"}
 
 
@@ -1018,23 +951,23 @@ def update_scheduled_job(
 ):
     """Update a scheduled job (enable/disable or change schedule)."""
     from app.infra.services.scheduler_service import SchedulerService
-
+    
     updates = {}
     if enabled is not None:
-        updates["enabled"] = enabled
+        updates['enabled'] = enabled
     if cron_expression is not None:
-        updates["cron_expression"] = cron_expression
-
+        updates['cron_expression'] = cron_expression
+    
     if not updates:
         raise HTTPException(status_code=400, detail="No updates provided")
-
+    
     scheduler = SchedulerService(db)
-
+    
     try:
         job = scheduler.update_scheduled_job(job_id, user.school_id, **updates)
         if not job:
             raise HTTPException(status_code=404, detail="Scheduled job not found")
-
+        
         return {
             "message": "Scheduled job updated successfully",
             "job_id": job.id,

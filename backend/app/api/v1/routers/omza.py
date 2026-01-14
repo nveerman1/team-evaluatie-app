@@ -130,9 +130,9 @@ async def get_omza_data(
         .filter(
             Group.course_id == evaluation.course_id,
             Group.school_id == current_user.school_id,
-            GroupMember.active == True,
+            GroupMember.active.is_(True),
             User.role == "student",
-            User.archived == False,
+            User.archived.is_(False),
         )
         .distinct()
         .all()

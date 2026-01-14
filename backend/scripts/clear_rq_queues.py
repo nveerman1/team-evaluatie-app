@@ -24,8 +24,8 @@ from pathlib import Path
 backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
-from rq import Queue
-from app.infra.queue.connection import RedisConnection
+from rq import Queue  # noqa: E402
+from app.infra.queue.connection import RedisConnection  # noqa: E402
 
 QUEUE_NAMES = [
     "ai-summaries-high",

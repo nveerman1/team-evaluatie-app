@@ -84,7 +84,7 @@ def list_courses(
             TeacherCourse,
             (TeacherCourse.course_id == Course.id)
             & (TeacherCourse.teacher_id == user.id)
-            & (TeacherCourse.is_active == True),
+            & (TeacherCourse.is_active.is_(True)),
         )
     elif user.role == "student":
         # Only show courses the student is enrolled in
@@ -94,7 +94,7 @@ def list_courses(
             GroupMember,
             (GroupMember.group_id == Group.id)
             & (GroupMember.user_id == user.id)
-            & (GroupMember.active == True),
+            & (GroupMember.active.is_(True)),
         )
 
     # Get total count
@@ -115,7 +115,7 @@ def list_courses(
             .join(TeacherCourse, TeacherCourse.teacher_id == User.id)
             .filter(
                 TeacherCourse.course_id == course.id,
-                TeacherCourse.is_active == True,
+                TeacherCourse.is_active.is_(True),
             )
             .all()
         )
@@ -245,7 +245,7 @@ def get_course(
         .join(TeacherCourse, TeacherCourse.teacher_id == User.id)
         .filter(
             TeacherCourse.course_id == course.id,
-            TeacherCourse.is_active == True,
+            TeacherCourse.is_active.is_(True),
         )
         .all()
     )
@@ -386,7 +386,7 @@ def list_course_teachers(
         .join(User, User.id == TeacherCourse.teacher_id)
         .filter(
             TeacherCourse.course_id == course_id,
-            TeacherCourse.is_active == True,
+            TeacherCourse.is_active.is_(True),
         )
         .all()
     )
@@ -602,7 +602,7 @@ def list_course_students(
             Group.course_id == course_id,
             User.school_id == user.school_id,
             User.role == "student",
-            GroupMember.active == True,
+            GroupMember.active.is_(True),
         )
         .distinct()
         .order_by(User.class_name, User.name)

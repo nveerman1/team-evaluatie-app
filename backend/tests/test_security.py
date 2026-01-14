@@ -198,7 +198,7 @@ def test_rate_limiting_blocks_excessive_requests():
     request.client.host = "127.0.0.1"
 
     # Create middleware instance
-    middleware = RLM(app, rate_limiter=mock_rate_limiter)
+    RLM(app, rate_limiter=mock_rate_limiter)
 
     # Test that it raises HTTPException with 429 status
 
@@ -248,7 +248,7 @@ def test_rate_limiting_skips_health_check():
     mock_rate_limiter = MagicMock(spec=RateLimiter)
 
     app = FastAPI()
-    middleware = RateLimitMiddleware(app, rate_limiter=mock_rate_limiter)
+    RateLimitMiddleware(app, rate_limiter=mock_rate_limiter)
 
     @app.get("/health")
     def health():

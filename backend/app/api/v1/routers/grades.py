@@ -127,7 +127,7 @@ def preview_grades(
         #
         # students = (
         #     db.query(User)
-        #     .filter(User.role == "student", User.archived == False)
+        #     .filter(User.role == "student", User.archived.is_(False))
         #     .order_by(User.name.asc())
         #     .all()
         # )
@@ -160,9 +160,6 @@ def preview_grades(
         except Exception as e:
             print(f"[grades.preview] project teams mapping failed: {e!r}")
             project_team_map = {}
-
-    # 4) Defaults (tot je echte berekeningen zijn aangesloten)
-    DEFAULT_GROUP = group_grade if group_grade is not None else 7.0
 
     # ---- Scores ophalen per student ----
     from statistics import mean
@@ -234,7 +231,6 @@ def preview_grades(
     if Allocation:
         for u in students:
             raw_gid = team_gid_by_uid.get(u.id)
-            neat_team = team_index_by_gid.get(raw_gid) if raw_gid is not None else None
             teamid_by_uid[u.id] = raw_gid
 
             allocs = (

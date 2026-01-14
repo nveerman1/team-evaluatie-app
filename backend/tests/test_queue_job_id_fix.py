@@ -143,7 +143,7 @@ class TestEnqueueIntegration:
             mock_enqueue_call.return_value = mock_job
 
             # Enqueue a job (same way as in feedback_summary.py)
-            rq_job = queue.enqueue(
+            queue.enqueue(
                 generate_ai_summary_task,
                 school_id=1,
                 evaluation_id=2,

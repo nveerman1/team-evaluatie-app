@@ -385,7 +385,7 @@ class ProjectTeamService:
             .filter(
                 GroupMember.group_id == group_id,
                 GroupMember.school_id == school_id,
-                GroupMember.active == True,
+                GroupMember.active.is_(True),
             )
             .all()
         )

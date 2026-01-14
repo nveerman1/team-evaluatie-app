@@ -52,7 +52,7 @@ class TestProjectTeamService:
         db.query.side_effect = side_effect
 
         # Create project team
-        result = ProjectTeamService.create_project_team(
+        ProjectTeamService.create_project_team(
             db=db,
             project_id=project_id,
             school_id=school_id,
