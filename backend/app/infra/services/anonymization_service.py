@@ -1,6 +1,6 @@
 from __future__ import annotations
 import re
-from typing import List
+from typing import List, Optional
 
 
 class AnonymizationService:
@@ -8,7 +8,7 @@ class AnonymizationService:
 
     @staticmethod
     def anonymize_comments(
-        comments: List[str], student_names: List[str] = None
+        comments: List[str], student_names: Optional[List[str]] = None
     ) -> List[str]:
         """
         Remove names, emails, and direct references from feedback comments.
