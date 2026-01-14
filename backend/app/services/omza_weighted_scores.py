@@ -8,7 +8,7 @@ This ensures that:
 4. The same calculation logic is used everywhere
 """
 
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
 from app.infra.db.models import Evaluation, RubricCriterion, Score, Allocation
 
@@ -34,7 +34,7 @@ def compute_weighted_omza_scores(
         }
     """
     # Initialize result structure
-    result = {
+    result: Dict[str, Dict[str, Optional[float]]] = {
         "O": {"peer": None, "self": None},
         "M": {"peer": None, "self": None},
         "Z": {"peer": None, "self": None},
@@ -71,9 +71,11 @@ def compute_weighted_omza_scores(
 
     # Group criteria by category with their weights
     # Normalize category names to short codes
-    category_criteria = {}
+    category_criteria: Dict[str, List[Dict[str, float]]] = {}
     for criterion in criteria:
         cat = criterion.category
+        if not cat:
+            continue  # Skip criteria without category
         # Normalize to short code
         cat_normalized = category_name_to_code.get(cat, cat)
         if cat_normalized not in category_criteria:
@@ -167,7 +169,7 @@ def compute_weighted_omza_scores_batch(
     evaluation = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
     if not evaluation or not evaluation.rubric_id:
         # Return empty results with default structure
-        results = {}
+        results: Dict[int, Dict[str, Dict[str, Optional[float]]]] = {}
         for reviewee_id in reviewee_ids:
             results[reviewee_id] = {
                 "O": {"peer": None, "self": None},
@@ -202,14 +204,16 @@ def compute_weighted_omza_scores_batch(
 
     # Group criteria by category with their weights
     # Normalize category names to short codes
-    category_criteria = {}
+    category_criteria_batch: Dict[str, List[Dict[str, float]]] = {}
     for criterion in criteria:
         cat = criterion.category
+        if not cat:
+            continue  # Skip criteria without category
         # Normalize to short code
         cat_normalized = category_name_to_code.get(cat, cat)
-        if cat_normalized not in category_criteria:
-            category_criteria[cat_normalized] = []
-        category_criteria[cat_normalized].append(
+        if cat_normalized not in category_criteria_batch:
+            category_criteria_batch[cat_normalized] = []
+        category_criteria_batch[cat_normalized].append(
             {
                 "id": criterion.id,
                 "weight": criterion.weight if criterion.weight else 1.0,
@@ -217,11 +221,11 @@ def compute_weighted_omza_scores_batch(
         )
 
     # Initialize results for all students with actual categories from rubric
-    results = {}
+    results_batch: Dict[int, Dict[str, Dict[str, Optional[float]]]] = {}
     for reviewee_id in reviewee_ids:
-        results[reviewee_id] = {}
-        for cat_name in category_criteria.keys():
-            results[reviewee_id][cat_name] = {"peer": None, "self": None}
+        results_batch[reviewee_id] = {}
+        for cat_name in category_criteria_batch.keys():
+            results_batch[reviewee_id][cat_name] = {"peer": None, "self": None}
 
     # Get all scores for all students in one query
     all_criterion_ids = [c.id for c in criteria]
@@ -243,13 +247,13 @@ def compute_weighted_omza_scores_batch(
     )
 
     # Group scores by student and category
-    student_scores = {}
+    student_scores: Dict[int, Dict[str, Dict[str, List[tuple[float, int]]]]] = {}
     for score, criterion_id, reviewer_id, reviewee_id in scores_query:
         if reviewee_id not in student_scores:
             student_scores[reviewee_id] = {}
 
         # Find which category this criterion belongs to
-        for cat_name, cat_criteria in category_criteria.items():
+        for cat_name, cat_criteria in category_criteria_batch.items():
             if any(c["id"] == criterion_id for c in cat_criteria):
                 if cat_name not in student_scores[reviewee_id]:
                     student_scores[reviewee_id][cat_name] = {"peer": [], "self": []}
@@ -265,7 +269,7 @@ def compute_weighted_omza_scores_batch(
         if reviewee_id not in student_scores:
             continue
 
-        for cat_name, cat_criteria in category_criteria.items():
+        for cat_name, cat_criteria in category_criteria_batch.items():
             if cat_name not in student_scores[reviewee_id]:
                 continue
 
@@ -281,7 +285,7 @@ def compute_weighted_omza_scores_batch(
                     weight_map.get(crit_id, 1.0) for _, crit_id in peer_data
                 )
                 if weight_sum > 0:
-                    results[reviewee_id][cat_name]["peer"] = weighted_sum / weight_sum
+                    results_batch[reviewee_id][cat_name]["peer"] = weighted_sum / weight_sum
 
             # Calculate self weighted average
             self_data = student_scores[reviewee_id][cat_name]["self"]
@@ -293,6 +297,6 @@ def compute_weighted_omza_scores_batch(
                     weight_map.get(crit_id, 1.0) for _, crit_id in self_data
                 )
                 if weight_sum > 0:
-                    results[reviewee_id][cat_name]["self"] = weighted_sum / weight_sum
+                    results_batch[reviewee_id][cat_name]["self"] = weighted_sum / weight_sum
 
-    return results
+    return results_batch
