@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +25,12 @@ import {
   Calendar,
 } from "lucide-react";
 import { studentStyles } from "@/styles/student-dashboard.styles";
-import { attendanceService, type AttendanceEvent, type AttendanceTotals } from "@/services/attendance.service";
+import { 
+  attendanceService, 
+  type AttendanceEvent, 
+  type AttendanceTotals, 
+  type Project 
+} from "@/services/attendance.service";
 
 type PeriodFilter = "week" | "maand" | "alles";
 
@@ -118,13 +124,22 @@ function SmallHelp({ children }: { children: React.ReactNode }) {
 }
 
 export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  
   const [period, setPeriod] = useState<PeriodFilter>("week");
   const [showNewExternal, setShowNewExternal] = useState(false);
   const [expandedRejectId, setExpandedRejectId] = useState<number | null>(null);
   const [totals, setTotals] = useState<AttendanceTotals | null>(null);
   const [events, setEvents] = useState<AttendanceEvent[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  
+  // Get project_id from URL params
+  const projectIdFromUrl = searchParams.get("project_id");
+  const [projectFilter, setProjectFilter] = useState<string>(projectIdFromUrl || "");
+  
   const [formData, setFormData] = useState({
     location: "Thuis",
     description: "",
@@ -132,16 +147,39 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
     end: "",
   });
 
+  // Update project filter when URL changes
+  useEffect(() => {
+    setProjectFilter(projectIdFromUrl || "");
+  }, [projectIdFromUrl]);
+
+  // Load projects on mount
+  useEffect(() => {
+    fetchProjects();
+  }, []);
+
+  // Reload data when period or project filter changes
   useEffect(() => {
     fetchData();
-  }, [period]);
+  }, [period, projectFilter]);
+
+  const fetchProjects = async () => {
+    try {
+      const projectsData = await attendanceService.getMyProjects();
+      setProjects(projectsData);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+    }
+  };
 
   const fetchData = async () => {
     try {
       setLoading(true);
       
+      // Prepare params for totals request
+      const totalsParams = projectFilter ? { project_id: parseInt(projectFilter, 10) } : undefined;
+      
       // Fetch totals
-      const totalsData = await attendanceService.getMyAttendance();
+      const totalsData = await attendanceService.getMyAttendance(totalsParams);
       setTotals(totalsData);
       
       // Fetch events
@@ -158,16 +196,47 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
         startDate = monthAgo.toISOString();
       }
       
-      const eventsData = await attendanceService.listEvents({
+      // Prepare event list params
+      const eventsParams: {
+        start_date?: string;
+        per_page: number;
+      } = {
         start_date: startDate,
         per_page: 100,
-      });
+      };
+      
+      // Note: We don't filter events by project_id because the backend 
+      // doesn't support that for students, and we want to show all events
+      // in the time period. The totals are filtered by project date range.
+      
+      const eventsData = await attendanceService.listEvents(eventsParams);
       setEvents(eventsData.events);
     } catch (error) {
       console.error("Error fetching attendance data:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleProjectFilterChange = (value: string) => {
+    setProjectFilter(value);
+    
+    // Update URL params
+    const currentParams = new URLSearchParams(window.location.search);
+    const currentTab = currentParams.get("tab");
+    
+    if (value) {
+      currentParams.set("project_id", value);
+    } else {
+      currentParams.delete("project_id");
+    }
+    
+    // Preserve the tab parameter
+    if (currentTab) {
+      currentParams.set("tab", currentTab);
+    }
+    
+    router.push(`/student?${currentParams.toString()}`, { scroll: false });
   };
 
   const handleSubmitExternalWork = async (e: React.FormEvent) => {
@@ -292,6 +361,54 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
                 Alles
               </Button>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Project filter */}
+      <Card className="rounded-2xl border-slate-200 bg-white shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <label className="text-sm font-medium text-slate-900 shrink-0">
+              Filter op project:
+            </label>
+            <select
+              className="flex-1 px-3 py-2 border border-slate-300 rounded-xl text-sm bg-white hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+              value={projectFilter}
+              onChange={(e) => handleProjectFilterChange(e.target.value)}
+            >
+              <option value="">Alle projecten</option>
+              {projects.map((project) => {
+                let dateRange = '';
+                try {
+                  if (project.start_date && project.end_date) {
+                    const startDate = new Date(project.start_date);
+                    const endDate = new Date(project.end_date);
+                    if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+                      dateRange = ` (${startDate.toLocaleDateString('nl-NL')} - ${endDate.toLocaleDateString('nl-NL')})`;
+                    }
+                  } else if (project.start_date) {
+                    const startDate = new Date(project.start_date);
+                    if (!isNaN(startDate.getTime())) {
+                      dateRange = ` (vanaf ${startDate.toLocaleDateString('nl-NL')})`;
+                    }
+                  }
+                } catch (error) {
+                  // Date parsing errors are non-critical - the project title will still display
+                  // without the date range, which is acceptable fallback behavior
+                }
+                return (
+                  <option key={project.id} value={project.id}>
+                    {project.title}{dateRange}
+                  </option>
+                );
+              })}
+            </select>
+            {projectFilter && (
+              <SmallHelp>
+                Totalen en blokken tonen alleen gegevens binnen de projectperiode.
+              </SmallHelp>
+            )}
           </div>
         </CardContent>
       </Card>
