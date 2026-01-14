@@ -30,7 +30,7 @@ const raw = process.env.NEXT_PUBLIC_API_URL?.trim();
 export const baseURL =
   raw?.replace(/\/+$/, "") ??
   (process.env.NODE_ENV !== "production"
-    ? "http://localhost:8000/api/v1"
+    ? "/api/v1"  // Use relative path for dev - Next.js rewrites proxy to backend
     : undefined);
 
 if (process.env.NODE_ENV === "production" && !baseURL) {
