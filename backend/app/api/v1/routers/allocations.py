@@ -331,7 +331,7 @@ def my_allocations(
         
         # Create self-allocation if missing
         if not has_self:
-            self_alloc = _ensure_allocation(
+            _ensure_allocation(
                 db, school_id, evaluation_id, user.id, user.id, True
             )
             needs_commit = True

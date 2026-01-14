@@ -7,7 +7,6 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, and_
 from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_db, get_current_user

@@ -3,7 +3,7 @@ Test for the add_student_to_course log_create fix
 """
 
 from unittest.mock import Mock, patch
-from app.infra.db.models import User, Course, Group, GroupMember
+from app.infra.db.models import User, Course, Group
 from app.api.v1.routers.courses import add_student_to_course
 from app.api.v1.schemas.courses import CourseStudentCreate
 
@@ -88,7 +88,7 @@ def test_add_student_to_course_logs_correctly():
          patch("app.api.v1.routers.courses.User", return_value=mock_student):
         
         # Call the endpoint
-        result = add_student_to_course(
+        add_student_to_course(
             course_id=1,
             payload=payload,
             db=db,

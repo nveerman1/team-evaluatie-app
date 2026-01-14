@@ -31,7 +31,6 @@ from app.api.v1.schemas.project_assessments import (
     ProjectAssessmentOut,
     ProjectAssessmentListItem,
     ProjectAssessmentListResponse,
-    ProjectAssessmentScoreCreate,
     ProjectAssessmentScoreOut,
     ProjectAssessmentScoreBatchRequest,
     ProjectAssessmentReflectionCreate,
@@ -423,7 +422,7 @@ def get_project_assessment(
             GroupMember.group_id == pa.group_id,
             GroupMember.user_id == user.id,
             GroupMember.school_id == user.school_id,
-            GroupMember.active == True,
+            GroupMember.active.is_(True),
         ).first()
         if not is_member:
             raise HTTPException(status_code=403, detail="Not authorized to view this assessment")
@@ -689,7 +688,7 @@ def get_assessment_teams_overview(
     ).filter(
         GroupMember.group_id == group.id,
         GroupMember.school_id == user.school_id,
-        GroupMember.active == True,
+        GroupMember.active.is_(True),
     ).all()
     
     # Build user_id -> project team_number mapping if assessment has a project
@@ -851,7 +850,7 @@ def batch_create_update_scores(
     if user.role not in ("teacher", "admin"):
         raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen scores toevoegen")
     
-    pa = _get_assessment_with_access_check(db, assessment_id, user)
+    _get_assessment_with_access_check(db, assessment_id, user)
     
     result = []
     for score_data in payload.scores:
@@ -921,7 +920,7 @@ def create_or_update_reflection(
         GroupMember.group_id == pa.group_id,
         GroupMember.user_id == user.id,
         GroupMember.school_id == user.school_id,
-        GroupMember.active == True,
+        GroupMember.active.is_(True),
     ).first()
     if not is_member:
         raise HTTPException(status_code=403, detail="Not authorized to reflect on this assessment")
@@ -996,8 +995,8 @@ def get_assessment_scores_overview(
     ).filter(
         GroupMember.group_id == group.id,
         GroupMember.school_id == user.school_id,
-        GroupMember.active == True,
-        User.archived == False,
+        GroupMember.active.is_(True),
+        User.archived.is_(False),
     ).all()
     
     # Build user_id -> project team_number mapping if assessment has a project
@@ -1046,10 +1045,6 @@ def get_assessment_scores_overview(
     for score in all_scores:
         key = (score.team_number, score.criterion_id)
         scores_map[key] = score
-    
-    # Get teacher name
-    teacher = db.query(User).filter(User.id == pa.teacher_id).first()
-    teacher_name = teacher.name if teacher else None
     
     # Build team score overview for each team
     team_scores = []
@@ -1198,9 +1193,9 @@ def get_assessment_students_overview(
     ).filter(
         GroupMember.group_id == group.id,
         GroupMember.school_id == user.school_id,
-        GroupMember.active == True,
+        GroupMember.active.is_(True),
         User.role == "student",
-        User.archived == False,
+        User.archived.is_(False),
     ).all()
     
     # Build user_id -> project team_number mapping if assessment has a project

@@ -24,7 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from datetime import datetime, timedelta
 
 from app.infra.db.session import SessionLocal
-from app.infra.db.models import School, User, Competency, CompetencyWindow, Course
+from app.infra.db.models import School, Competency, CompetencyWindow, Course
 
 
 def seed_competency_scans(target_school_id=1):

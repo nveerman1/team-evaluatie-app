@@ -1,5 +1,4 @@
 """Tests for the AnonymizationService."""
-import pytest
 from app.infra.services.anonymization_service import AnonymizationService
 
 

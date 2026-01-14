@@ -14,7 +14,6 @@ from app.api.v1.schemas.project_teams import (
     ProjectTeamMemberOut,
     ProjectStudentOut,
     BulkAddMembersRequest,
-    CloneProjectTeamsRequest,
     CloneProjectTeamsResponse,
 )
 from app.infra.db.models import User, Project, ProjectTeam, ProjectTeamMember
@@ -202,8 +201,6 @@ def get_project_students(
         )
 
     # Query all students who are members of project teams in this project
-    from sqlalchemy import func
-    from app.infra.db.models import GroupMember, Group
     
     # Get all unique students from project team members
     students_data = (

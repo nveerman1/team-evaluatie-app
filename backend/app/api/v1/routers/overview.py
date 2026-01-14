@@ -10,28 +10,6 @@ from typing import Optional
 import logging
 from collections import defaultdict
 
-logger = logging.getLogger(__name__)
-
-# Grade calculation constants
-# GCF (Group Correction Factor) typically ranges from 0.5 to 1.5 in normal cases
-# We set the warning threshold higher (2.0) to allow for exceptional cases
-# while still logging potentially incorrect values for review
-MAX_REASONABLE_GCF = 2.0
-
-# Mapping from full Dutch category names to short abbreviations
-# This ensures frontend compatibility
-CATEGORY_NAME_TO_ABBREV = {
-    "Organiseren": "O",
-    "Meedoen": "M",
-    "Zelfvertrouwen": "Z",
-    "Autonomie": "A",
-    # Fallback: first letter uppercase
-}
-
-def get_category_abbrev(category_name: str) -> str:
-    """Convert full category name to abbreviation for frontend compatibility"""
-    return CATEGORY_NAME_TO_ABBREV.get(category_name, category_name[0].upper() if category_name else "")
-
 from app.api.v1.deps import get_db, get_current_user
 from app.core.grading import score_to_grade as _score_to_grade
 from app.infra.db.models import (
@@ -78,7 +56,6 @@ from app.api.v1.schemas.overview import (
     KpiData,
     KpiStudent,
     FeedbackItem,
-    TeacherFeedbackItem,
     TeacherFeedbackResponse,
     ReflectionItem,
     ReflectionResponse,
@@ -86,6 +63,28 @@ from app.api.v1.schemas.overview import (
     AggregatedFeedbackResponse,
     CriterionDetail,
 )
+
+logger = logging.getLogger(__name__)
+
+# Grade calculation constants
+# GCF (Group Correction Factor) typically ranges from 0.5 to 1.5 in normal cases
+# We set the warning threshold higher (2.0) to allow for exceptional cases
+# while still logging potentially incorrect values for review
+MAX_REASONABLE_GCF = 2.0
+
+# Mapping from full Dutch category names to short abbreviations
+# This ensures frontend compatibility
+CATEGORY_NAME_TO_ABBREV = {
+    "Organiseren": "O",
+    "Meedoen": "M",
+    "Zelfvertrouwen": "Z",
+    "Autonomie": "A",
+    # Fallback: first letter uppercase
+}
+
+def get_category_abbrev(category_name: str) -> str:
+    """Convert full category name to abbreviation for frontend compatibility"""
+    return CATEGORY_NAME_TO_ABBREV.get(category_name, category_name[0].upper() if category_name else "")
 
 router = APIRouter(prefix="/overview", tags=["overview"])
 
@@ -719,7 +718,7 @@ def get_overview_matrix(
     ).filter(
         ProjectAssessment.school_id == school_id,
         ProjectAssessment.status == "published",  # Only published projects
-        ProjectAssessment.is_advisory == False  # Exclude external assessments
+        ProjectAssessment.is_advisory.is_(False)  # Exclude external assessments
     )
     
     if course_id:
@@ -1107,7 +1106,7 @@ def get_project_overview(
         Client, ClientProjectLink.client_id == Client.id
     ).filter(
         ProjectAssessment.school_id == school_id,
-        ProjectAssessment.is_advisory == False,  # Exclude external assessments
+        ProjectAssessment.is_advisory.is_(False),  # Exclude external assessments
         ProjectAssessment.status.in_(["published", "closed"])  # Only show published or closed assessments
     )
     
@@ -1209,9 +1208,6 @@ def get_project_overview(
                 criteria = db.query(RubricCriterion).filter(
                     RubricCriterion.rubric_id == rubric.id
                 ).all()
-                
-                # Create criterion map for easy lookup
-                criterion_map = {c.id: c for c in criteria}
                 
                 # Group scores by team_number
                 team_scores = defaultdict(list)
@@ -1319,7 +1315,7 @@ def get_project_trends(
     ).filter(
         ProjectAssessment.school_id == school_id,
         ProjectAssessment.status.in_(["published", "closed"]),  # Include published and closed assessments
-        ProjectAssessment.is_advisory == False  # Exclude external assessments
+        ProjectAssessment.is_advisory.is_(False)  # Exclude external assessments
     ).order_by(ProjectAssessment.published_at.asc())
     
     # Apply filters
@@ -1566,7 +1562,7 @@ def get_academic_years(
     
     academic_years = db.query(AcademicYear).filter(
         AcademicYear.school_id == school_id,
-        AcademicYear.is_archived == False
+        AcademicYear.is_archived.is_(False)
     ).order_by(AcademicYear.start_date.desc()).all()
     
     return [{"label": ay.label, "id": ay.id} for ay in academic_years]
@@ -1584,7 +1580,7 @@ def get_courses_for_overview(
     
     courses = db.query(Course).filter(
         Course.school_id == school_id,
-        Course.is_active == True
+        Course.is_active.is_(True)
     ).order_by(Course.name).all()
     
     return [{"id": c.id, "name": c.name} for c in courses]
@@ -1612,7 +1608,6 @@ def get_peer_evaluation_dashboard(
     - student_name: Filter by student name
     """
     from datetime import datetime, timedelta
-    from sqlalchemy import func, case, distinct
     from collections import defaultdict
     
     school_id = current_user.school_id
@@ -1683,14 +1678,13 @@ def get_peer_evaluation_dashboard(
     students_query = db.query(User).filter(
         User.school_id == school_id,
         User.role == "student",
-        User.archived == False
+        User.archived.is_(False)
     )
     
     if student_name:
         students_query = students_query.filter(User.name.ilike(f"%{student_name}%"))
     
     students = students_query.all()
-    student_map = {s.id: s for s in students}
     
     # Build heatmap data with current scores
     heatmap_data = []
@@ -2044,7 +2038,6 @@ def get_peer_evaluation_feedback(
     - search_text: Search in feedback text
     - risk_only: Show only risk behavior items
     """
-    from collections import defaultdict
     
     school_id = current_user.school_id
     
@@ -2420,7 +2413,7 @@ def get_teacher_feedback(
     students = db.query(User).filter(
         User.school_id == school_id,
         User.role == "student",
-        User.archived == False
+        User.archived.is_(False)
     ).all()
     
     teacher_feedback_items = []

@@ -19,7 +19,6 @@ Or run specific test class:
     pytest tests/test_job_enhancements.py::TestJobProgressTracking -v
 """
 import pytest
-from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, MagicMock
 from sqlalchemy.orm import Session
 
@@ -27,7 +26,6 @@ from app.infra.db.models import SummaryGenerationJob, ScheduledJob
 from app.infra.services.webhook_service import WebhookService
 from app.infra.services.rate_limiter import RateLimiter
 from app.infra.services.scheduler_service import SchedulerService
-from app.infra.queue.connection import get_queue
 
 
 class TestJobProgressTracking:
@@ -361,7 +359,7 @@ class TestRedisConnectionConfiguration:
         
         # Get a queue (which will create a connection)
         try:
-            queue = get_queue('test-queue')
+            get_queue('test-queue')
             
             # Verify Redis.from_url was called with decode_responses=False
             mock_redis.from_url.assert_called()

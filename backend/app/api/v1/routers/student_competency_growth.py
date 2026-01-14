@@ -27,8 +27,6 @@ from app.infra.db.models import (
     CompetencyReflection,
     CompetencyCategory,
     Competency,
-    Group,
-    GroupMember,
 )
 from pydantic import BaseModel
 
@@ -466,20 +464,6 @@ def get_student_growth_data(
     """
     school_id = current_user.school_id
     user_id = current_user.id
-
-    # Get course IDs where student is enrolled
-    student_course_ids = (
-        db.query(Group.course_id)
-        .join(GroupMember, GroupMember.group_id == Group.id)
-        .filter(
-            GroupMember.user_id == user_id,
-            GroupMember.active.is_(True),
-            Group.school_id == school_id,
-        )
-        .distinct()
-        .all()
-    )
-    course_ids = [cid for (cid,) in student_course_ids if cid]
 
     # 1. Get all windows where student has submitted scores
     window_ids_with_scores = (

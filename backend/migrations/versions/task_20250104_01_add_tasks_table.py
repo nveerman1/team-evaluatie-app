@@ -7,7 +7,6 @@ Create Date: 2025-01-04 22:00:00.000000
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import ARRAY
 
 revision = "task_20250104_01"
 down_revision = "queue_20260101_05"

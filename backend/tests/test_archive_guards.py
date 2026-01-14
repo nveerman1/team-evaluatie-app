@@ -9,9 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.infra.db.models import (
     School,
-    User,
     AcademicYear,
-    Class,
     Course,
     Project,
 )

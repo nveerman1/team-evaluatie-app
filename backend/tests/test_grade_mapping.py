@@ -8,7 +8,6 @@ With exponent ≈ 0.85:
   - 5/5 → 10.0
 """
 
-import pytest
 from app.core.grading import score_to_grade
 
 

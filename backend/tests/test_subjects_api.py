@@ -99,7 +99,7 @@ class TestSubjectEndpoints:
 
         with patch("app.api.v1.routers.subjects.require_role"):
             with patch("app.api.v1.routers.subjects.log_create"):
-                result = create_subject(subject_data=subject_data, db=db, user=user)
+                create_subject(subject_data=subject_data, db=db, user=user)
 
         db.add.assert_called_once()
         db.commit.assert_called_once()

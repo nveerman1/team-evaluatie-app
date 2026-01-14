@@ -17,8 +17,8 @@ from datetime import datetime
 backend_dir = Path(__file__).parent
 sys.path.insert(0, str(backend_dir))
 
-from app.infra.db.session import SessionLocal
-from app.infra.services.scheduler_service import SchedulerService
+from app.infra.db.session import SessionLocal  # noqa: E402
+from app.infra.services.scheduler_service import SchedulerService  # noqa: E402
 
 # Setup logging
 logging.basicConfig(

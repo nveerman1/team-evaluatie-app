@@ -9,8 +9,7 @@ Run with:
     pytest tests/test_queue_stats_endpoint.py -v
 """
 import pytest
-from datetime import datetime
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 

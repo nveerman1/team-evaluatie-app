@@ -13,14 +13,11 @@ from __future__ import annotations
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import (
     User,
     Evaluation,
-    Score,
-    Allocation,
     RubricCriterion,
     Rubric,
     ProjectTeam,
@@ -133,9 +130,9 @@ async def get_omza_data(
         .filter(
             Group.course_id == evaluation.course_id,
             Group.school_id == current_user.school_id,
-            GroupMember.active == True,
+            GroupMember.active.is_(True),
             User.role == "student",
-            User.archived == False,
+            User.archived.is_(False),
         )
         .distinct()
         .all()

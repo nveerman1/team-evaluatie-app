@@ -23,7 +23,6 @@ from app.api.v1.schemas.competencies import (
     ExternalInviteOut,
     ExternalInvitePublicInfo,
     ExternalScoreSubmit,
-    ExternalScoreOut,
     CompetencyOut,
 )
 from app.core.security import generate_external_token, hash_token
@@ -109,7 +108,7 @@ def create_invites(
     # Get rubric snapshot (competencies + levels)
     competencies_query = select(Competency).where(
         Competency.school_id == current_user.school_id,
-        Competency.active == True,
+        Competency.active.is_(True),
     )
     
     # Filter by selected competencies if specified

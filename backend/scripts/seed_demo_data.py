@@ -17,21 +17,11 @@ import os
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from datetime import datetime, timedelta
-from sqlalchemy.orm import Session
 
 from app.infra.db.session import SessionLocal
 from app.infra.db.models import (
     School,
     User,
-    Course,
-    TeacherCourse,
-    Group,
-    GroupMember,
-    Rubric,
-    RubricCriterion,
-    Evaluation,
-    Allocation,
 )
 from app.core.security import get_password_hash
 

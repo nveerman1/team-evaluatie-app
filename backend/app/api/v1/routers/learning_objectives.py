@@ -42,7 +42,7 @@ def _get_user_course_ids(db: Session, user: User) -> list[int]:
     course_ids_query = select(TeacherCourse.course_id).where(
         TeacherCourse.school_id == user.school_id,
         TeacherCourse.teacher_id == user.id,
-        TeacherCourse.is_active == True,
+        TeacherCourse.is_active.is_(True),
     )
     result = db.execute(course_ids_query).scalars().all()
     return list(result)
@@ -175,12 +175,12 @@ def list_learning_objectives(
 
     # Filter by objective type
     if objective_type == "template":
-        query = query.where(LearningObjective.is_template == True)
+        query = query.where(LearningObjective.is_template.is_(True))
     elif objective_type == "teacher":
         # Show own objectives + objectives from shared courses
         if user_course_ids:
             query = query.where(
-                LearningObjective.is_template == False,
+                LearningObjective.is_template.is_(False),
                 or_(
                     LearningObjective.teacher_id == user.id,
                     LearningObjective.course_id.in_(user_course_ids)
@@ -188,12 +188,12 @@ def list_learning_objectives(
             )
         else:
             query = query.where(
-                LearningObjective.is_template == False,
+                LearningObjective.is_template.is_(False),
                 LearningObjective.teacher_id == user.id
             )
     elif include_teacher_objectives or include_course_objectives:
         # Include templates + own objectives + shared course objectives
-        conditions = [LearningObjective.is_template == True]
+        conditions = [LearningObjective.is_template.is_(True)]
         
         if include_teacher_objectives:
             conditions.append(LearningObjective.teacher_id == user.id)
@@ -201,14 +201,14 @@ def list_learning_objectives(
         if include_course_objectives and user_course_ids:
             # Include teacher objectives from shared courses (but not templates)
             conditions.append(
-                (LearningObjective.is_template == False) & 
+                (LearningObjective.is_template.is_(False)) & 
                 LearningObjective.course_id.in_(user_course_ids)
             )
         
         query = query.where(or_(*conditions))
     else:
         # Default: backward compatible - only templates
-        query = query.where(LearningObjective.is_template == True)
+        query = query.where(LearningObjective.is_template.is_(True))
 
     # Filter by subject_id - if provided, show only subject-specific ones
     # if not provided, show only school-wide ones (NULL subject_id)
@@ -498,7 +498,7 @@ def get_learning_objectives_overview(
     students_query = select(User).where(
         User.school_id == user.school_id,
         User.role == "student",
-        User.archived == False,
+        User.archived.is_(False),
     )
 
     if class_name:
@@ -512,7 +512,7 @@ def get_learning_objectives_overview(
             Group, Group.id == GroupMember.group_id
         ).where(
             Group.course_id == course_id,
-            GroupMember.active == True,
+            GroupMember.active.is_(True),
         ).distinct()
 
     students = db.execute(students_query).scalars().all()
@@ -531,7 +531,7 @@ def get_learning_objectives_overview(
         lo_query = lo_query.where(LearningObjective.id == learning_objective_id)
     else:
         # Build visibility conditions
-        conditions = [LearningObjective.is_template == True]
+        conditions = [LearningObjective.is_template.is_(True)]
         
         if include_teacher_objectives:
             conditions.append(LearningObjective.teacher_id == user.id)
@@ -539,7 +539,7 @@ def get_learning_objectives_overview(
         if include_course_objectives and user_course_ids:
             # Include teacher objectives from shared courses
             conditions.append(
-                (LearningObjective.is_template == False) & 
+                (LearningObjective.is_template.is_(False)) & 
                 LearningObjective.course_id.in_(user_course_ids)
             )
         
@@ -652,7 +652,7 @@ def get_learning_objectives_overview(
                         group_scores_query = select(ProjectAssessmentScore).where(
                             ProjectAssessmentScore.assessment_id == assessment.id,
                             ProjectAssessmentScore.criterion_id.in_(criteria_ids),
-                            ProjectAssessmentScore.team_number == None,
+                            ProjectAssessmentScore.team_number.is_(None),
                         )
                         proj_scores = db.execute(group_scores_query).scalars().all()
                     

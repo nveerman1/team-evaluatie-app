@@ -30,12 +30,6 @@ from app.core.config import settings
 from app.infra.db.models import (
     ProjectTeam,
     ProjectTeamMember,
-    Evaluation,
-    ProjectAssessment,
-    ProjectNotesContext,
-    Group,
-    GroupMember,
-    Allocation,
 )
 
 

@@ -35,7 +35,6 @@ from app.api.v1.schemas.competencies import (
     CompetencyUpdate,
     CompetencyOut,
     CompetencyListResponse,
-    CompetencyWithCategoryOut,
     CompetencyTree,
     CompetencyCategoryTreeItem,
     CompetencyTreeItem,
@@ -369,11 +368,11 @@ def list_competencies(
         )
         .where(
             Competency.school_id == current_user.school_id,
-            Competency.is_template == True,  # Only templates for backward compatibility
+            Competency.is_template.is_(True),  # Only templates for backward compatibility
         )
     )
     if active_only:
-        query = query.where(Competency.active == True)
+        query = query.where(Competency.active.is_(True))
     query = query.order_by(Competency.order, Competency.name)
 
     competencies = db.execute(query).scalars().all()
@@ -428,7 +427,7 @@ def list_teacher_competencies(
     )
 
     if active_only:
-        query = query.where(Competency.active == True)
+        query = query.where(Competency.active.is_(True))
 
     # Get course IDs the current user is assigned to (for shared course competencies)
     user_course_ids = []
@@ -441,15 +440,15 @@ def list_teacher_competencies(
 
     # Filter by competency type
     if competency_type == "central":
-        query = query.where(Competency.is_template == True)
+        query = query.where(Competency.is_template.is_(True))
     elif competency_type == "teacher":
         query = query.where(
-            Competency.is_template == False, Competency.teacher_id == current_user.id
+            Competency.is_template.is_(False), Competency.teacher_id == current_user.id
         )
     elif competency_type == "shared":
         if user_course_ids:
             query = query.where(
-                Competency.is_template == False,
+                Competency.is_template.is_(False),
                 Competency.teacher_id != current_user.id,
                 Competency.course_id.in_(user_course_ids),
             )
@@ -462,7 +461,7 @@ def list_teacher_competencies(
         or include_course_competencies
     ):
         # Include central + own + shared based on flags
-        conditions = [Competency.is_template == True]
+        conditions = [Competency.is_template.is_(True)]
 
         if include_teacher_competencies or competency_type == "all":
             conditions.append(Competency.teacher_id == current_user.id)
@@ -472,7 +471,7 @@ def list_teacher_competencies(
         ) and user_course_ids:
             # Include teacher competencies from shared courses
             conditions.append(
-                (Competency.is_template == False)
+                (Competency.is_template.is_(False))
                 & (Competency.teacher_id != current_user.id)
                 & Competency.course_id.in_(user_course_ids)
             )
@@ -480,7 +479,7 @@ def list_teacher_competencies(
         query = query.where(or_(*conditions))
     else:
         # Default: backward compatible - only central/templates
-        query = query.where(Competency.is_template == True)
+        query = query.where(Competency.is_template.is_(True))
 
     # Filter by subject_id (for central competencies)
     if subject_id is not None:
@@ -796,9 +795,6 @@ def reorder_competencies(
     category = db.get(CompetencyCategory, data.category_id)
     if not category or category.school_id != current_user.school_id:
         raise HTTPException(status_code=404, detail="Category not found")
-
-    # Get all competency IDs from the request
-    requested_ids = {item.id for item in data.items}
 
     # Fetch all competencies in this category for this school
     competencies = (
@@ -1513,7 +1509,7 @@ def get_my_window_overview(
             select(Competency)
             .where(
                 Competency.school_id == current_user.school_id,
-                Competency.active == True,
+                Competency.active.is_(True),
             )
             .order_by(Competency.order)
         )
@@ -1950,8 +1946,6 @@ def get_student_historical_scores(
             CompetencyCategory.school_id == current_user.school_id
         ).order_by(CompetencyCategory.order_index)
     ).scalars().all()
-    
-    category_map = {cat.id: cat for cat in categories}
 
     scans = []
     for window in windows:

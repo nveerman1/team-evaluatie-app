@@ -2,7 +2,6 @@
 Tests for CSV injection protection
 """
 
-import pytest
 from app.api.v1.utils.csv_sanitization import sanitize_csv_value
 
 

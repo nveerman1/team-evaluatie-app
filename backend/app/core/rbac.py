@@ -9,10 +9,9 @@ This module provides centralized authorization logic for the application:
 """
 
 from __future__ import annotations
-from typing import Optional, List
+from typing import List
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import select
 
 from app.infra.db.models import User, Course, Evaluation, TeacherCourse
 
@@ -100,7 +99,7 @@ def can_access_course(db: Session, user: User, course_id: int) -> bool:
         teacher_course = db.query(TeacherCourse).filter(
             TeacherCourse.teacher_id == user.id,
             TeacherCourse.course_id == course_id,
-            TeacherCourse.is_active == True
+            TeacherCourse.is_active.is_(True)
         ).first()
         return teacher_course is not None
     
@@ -113,7 +112,7 @@ def can_access_course(db: Session, user: User, course_id: int) -> bool:
         ).filter(
             GroupMember.user_id == user.id,
             Group.course_id == course_id,
-            GroupMember.active == True
+            GroupMember.active.is_(True)
         ).first()
         return member is not None
     
@@ -220,7 +219,7 @@ def get_accessible_course_ids(db: Session, user: User) -> List[int]:
     if user.role == "admin":
         courses = db.query(Course.id).filter(
             Course.school_id == user.school_id,
-            Course.is_active == True
+            Course.is_active.is_(True)
         ).all()
         return [c.id for c in courses]
     
@@ -228,7 +227,7 @@ def get_accessible_course_ids(db: Session, user: User) -> List[int]:
     if user.role == "teacher":
         teacher_courses = db.query(TeacherCourse.course_id).filter(
             TeacherCourse.teacher_id == user.id,
-            TeacherCourse.is_active == True
+            TeacherCourse.is_active.is_(True)
         ).all()
         return [tc.course_id for tc in teacher_courses]
     
@@ -240,7 +239,7 @@ def get_accessible_course_ids(db: Session, user: User) -> List[int]:
             GroupMember, GroupMember.group_id == Group.id
         ).filter(
             GroupMember.user_id == user.id,
-            GroupMember.active == True
+            GroupMember.active.is_(True)
         ).distinct().all()
         return [c.course_id for c in courses]
     

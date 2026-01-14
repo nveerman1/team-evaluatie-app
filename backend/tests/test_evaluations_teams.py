@@ -2,20 +2,16 @@
 Tests for Evaluation Teams integration endpoints
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 from datetime import datetime, timezone
 
 from app.infra.db.models import (
     User,
-    School,
     Project,
     ProjectTeam,
     ProjectTeamMember,
     Evaluation,
     Allocation,
-    Course,
-    Rubric,
 )
 
 

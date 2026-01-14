@@ -11,7 +11,7 @@ Run with:
     pytest tests/test_queue_job_id_fix.py -v
 """
 import pytest
-from unittest.mock import Mock, patch, MagicMock, PropertyMock
+from unittest.mock import Mock, patch, MagicMock
 from app.infra.queue.tasks import generate_ai_summary_task
 from app.infra.queue.connection import get_queue
 
@@ -138,7 +138,7 @@ class TestEnqueueIntegration:
             mock_enqueue_call.return_value = mock_job
             
             # Enqueue a job (same way as in feedback_summary.py)
-            rq_job = queue.enqueue(
+            queue.enqueue(
                 generate_ai_summary_task,
                 school_id=1,
                 evaluation_id=2,

@@ -2,10 +2,7 @@
 Tests for RFID card creation API endpoint
 """
 
-import pytest
-from unittest.mock import Mock
-from app.api.v1.schemas.attendance import RFIDCardCreate, RFIDCardOut
-from app.infra.db.models import User, RFIDCard
+from app.api.v1.schemas.attendance import RFIDCardCreate
 
 
 class TestRFIDCardCreateSchema:
@@ -53,7 +50,6 @@ class TestRFIDCardEndpoint:
 
     def test_create_card_accepts_request_without_user_id_in_body(self):
         """Test that the endpoint accepts request without user_id in body (gets it from URL)"""
-        from app.api.v1.routers.rfid import create_rfid_card
         
         # This test verifies that the schema and endpoint work together correctly
         # The key point is that RFIDCardCreate does not require user_id in body

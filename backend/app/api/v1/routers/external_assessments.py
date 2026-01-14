@@ -4,12 +4,11 @@ Public endpoints that use token-based authentication
 """
 
 from __future__ import annotations
-from typing import List, Optional
-from datetime import datetime, timedelta
+from typing import List
+from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, and_, or_
-from sqlalchemy.orm import Session, joinedload
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_db
 from app.infra.db.models import (
@@ -82,9 +81,9 @@ def _get_member_names(db: Session, group_id: int, team_number: int) -> str:
         GroupMember, GroupMember.user_id == User.id
     ).filter(
         GroupMember.group_id == group_id,
-        GroupMember.active == True,
+        GroupMember.active.is_(True),
         User.team_number == team_number,
-        User.archived == False,
+        User.archived.is_(False),
     ).all()
     
     member_names = [m.name for m in members if m.name]
@@ -250,7 +249,7 @@ def get_team_assessment_detail(
     # Get criteria (only visible to externals)
     criteria = db.query(RubricCriterion).filter(
         RubricCriterion.rubric_id == rubric.id,
-        RubricCriterion.visible_to_external == True,
+        RubricCriterion.visible_to_external.is_(True),
     ).all()
     
     rubric_out = RubricForExternal(

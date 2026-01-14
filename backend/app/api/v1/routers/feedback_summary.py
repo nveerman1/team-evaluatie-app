@@ -3,11 +3,10 @@ import hashlib
 import logging
 import time
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy import text
 from pydantic import BaseModel
-from rq.job import Job
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import (
@@ -21,7 +20,7 @@ from app.infra.db.models import (
 from app.infra.services.ollama_service import OllamaService
 from app.infra.services.anonymization_service import AnonymizationService
 from app.infra.queue.connection import get_queue
-from app.infra.queue.tasks import generate_ai_summary_task, batch_generate_summaries_task
+from app.infra.queue.tasks import generate_ai_summary_task
 
 router = APIRouter(prefix="/feedback-summaries", tags=["feedback-summaries"])
 logger = logging.getLogger(__name__)
@@ -812,7 +811,6 @@ def get_queue_health(
         
         # Check Redis connection
         redis_conn.ping()
-        redis_healthy = True
         
         # Get worker info
         workers = Worker.all(connection=redis_conn)
@@ -864,7 +862,6 @@ def create_scheduled_job(
     - "0 9 * * 1" - Every Monday at 9am
     """
     from app.infra.services.scheduler_service import SchedulerService
-    from app.infra.db.models import ScheduledJob as ScheduledJobModel
     
     scheduler = SchedulerService(db)
     

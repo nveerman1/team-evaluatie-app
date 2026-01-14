@@ -22,8 +22,8 @@ import argparse
 backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
-from app.infra.db.session import SessionLocal
-from app.infra.db.models import SummaryGenerationJob
+from app.infra.db.session import SessionLocal  # noqa: E402
+from app.infra.db.models import SummaryGenerationJob  # noqa: E402
 
 
 def cleanup_stuck_jobs(dry_run: bool = False, older_than_minutes: int = 10):
