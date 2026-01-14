@@ -8,9 +8,6 @@ Tests:
 4. Student can retrieve their accessible projects
 """
 
-import pytest
-from datetime import datetime, timedelta
-from unittest.mock import Mock, patch
 from app.api.v1.routers.attendance import get_my_attendance, get_my_projects
 
 

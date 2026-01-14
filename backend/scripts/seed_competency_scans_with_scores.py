@@ -287,6 +287,29 @@ def seed_competency_scans_with_scores():
             # Track goals per student for reflection linking
             student_goals = {}
 
+            # Handle extreme scores configuration
+            use_extreme_scores = window_data.get("use_extreme_scores", False)
+            if use_extreme_scores:
+                # Divide students into groups for extreme score patterns
+                num_students = len(students)
+                if num_students >= 3:
+                    third = max(1, num_students // 3)
+                    low_score_students = students[:third]
+                    high_score_students = students[third : third * 2]
+                    growth_students = students[third * 2 :]
+                else:
+                    # For fewer than 3 students, distribute as evenly as possible
+                    low_score_students = students[:1] if num_students >= 1 else []
+                    high_score_students = students[1:2] if num_students >= 2 else []
+                    growth_students = []  # No third group if fewer than 3 students
+                # Track previous scores for growth calculation
+                previous_scores_by_student = {}
+            else:
+                low_score_students = []
+                high_score_students = []
+                growth_students = []
+                previous_scores_by_student = {}
+
             for student in students:
                 # Create goals for this student if needed (one per student, not per competency)
                 if include_goals:
@@ -427,6 +450,11 @@ def seed_competency_scans_with_scores():
                     )
                     db.add(self_score)
                     scores_created += 1
+
+                    # Track score for growth calculation in future windows
+                    if use_extreme_scores:
+                        key = (student.id, competency.id)
+                        previous_scores_by_student[key] = score
 
                 # Create reflection for this student if needed (one per student)
                 if include_reflection:
