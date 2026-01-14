@@ -73,6 +73,16 @@ export interface Course {
   code: string | null;
 }
 
+export interface Project {
+  id: number;
+  title: string;
+  class_name: string | null;
+  course_id: number | null;
+  start_date: string | null;
+  end_date: string | null;
+  status: string;
+}
+
 export interface StatsSummary {
   school_minutes: number;
   school_blocks: number;
@@ -215,8 +225,18 @@ export const attendanceService = {
   /**
    * Get current user's attendance totals
    */
-  async getMyAttendance(): Promise<AttendanceTotals> {
-    const response = await api.get<AttendanceTotals>("/attendance/me");
+  async getMyAttendance(params?: {
+    project_id?: number;
+  }): Promise<AttendanceTotals> {
+    const response = await api.get<AttendanceTotals>("/attendance/me", { params });
+    return response.data;
+  },
+
+  /**
+   * Get projects accessible to current user (student)
+   */
+  async getMyProjects(): Promise<Project[]> {
+    const response = await api.get<Project[]>("/attendance/my-projects");
     return response.data;
   },
 

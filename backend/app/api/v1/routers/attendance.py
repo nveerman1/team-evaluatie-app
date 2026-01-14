@@ -596,63 +596,76 @@ def bulk_approve_external_work(
 def get_my_attendance(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    project_id: Optional[int] = Query(None, description="Filter by project ID"),
 ):
     """
     Get current user's attendance totals and recent events
+    Optionally filter by project_id to show totals for a specific project
     """
-    # Calculate totals
-    school_seconds = (
-        db.query(
-            func.sum(
-                func.extract(
-                    "epoch", AttendanceEvent.check_out - AttendanceEvent.check_in
-                )
+    # If project_id is provided, get project details for date filtering
+    project = None
+    if project_id:
+        project = (
+            db.query(Project)
+            .filter(
+                Project.id == project_id, 
+                Project.school_id == current_user.school_id
+            )
+            .first()
+        )
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+            )
+
+    # Calculate totals - build base queries
+    school_query = db.query(
+        func.sum(
+            func.extract(
+                "epoch", AttendanceEvent.check_out - AttendanceEvent.check_in
             )
         )
-        .filter(
-            AttendanceEvent.user_id == current_user.id,
-            AttendanceEvent.is_external.is_(False),
-            AttendanceEvent.check_out.isnot(None),
-        )
-        .scalar()
-        or 0
+    ).filter(
+        AttendanceEvent.user_id == current_user.id,
+        AttendanceEvent.is_external.is_(False),
+        AttendanceEvent.check_out.isnot(None),
     )
 
-    external_approved_seconds = (
-        db.query(
-            func.sum(
-                func.extract(
-                    "epoch", AttendanceEvent.check_out - AttendanceEvent.check_in
-                )
+    external_approved_query = db.query(
+        func.sum(
+            func.extract(
+                "epoch", AttendanceEvent.check_out - AttendanceEvent.check_in
             )
         )
-        .filter(
-            AttendanceEvent.user_id == current_user.id,
-            AttendanceEvent.is_external.is_(True),
-            AttendanceEvent.approval_status == "approved",
-            AttendanceEvent.check_out.isnot(None),
-        )
-        .scalar()
-        or 0
+    ).filter(
+        AttendanceEvent.user_id == current_user.id,
+        AttendanceEvent.is_external.is_(True),
+        AttendanceEvent.approval_status == "approved",
+        AttendanceEvent.check_out.isnot(None),
     )
 
-    external_pending_seconds = (
-        db.query(
-            func.sum(
-                func.extract(
-                    "epoch", AttendanceEvent.check_out - AttendanceEvent.check_in
-                )
+    external_pending_query = db.query(
+        func.sum(
+            func.extract(
+                "epoch", AttendanceEvent.check_out - AttendanceEvent.check_in
             )
         )
-        .filter(
-            AttendanceEvent.user_id == current_user.id,
-            AttendanceEvent.is_external.is_(True),
-            AttendanceEvent.approval_status == "pending",
-            AttendanceEvent.check_out.isnot(None),
-        )
-        .scalar()
-        or 0
+    ).filter(
+        AttendanceEvent.user_id == current_user.id,
+        AttendanceEvent.is_external.is_(True),
+        AttendanceEvent.approval_status == "pending",
+        AttendanceEvent.check_out.isnot(None),
     )
+
+    # Apply project date range filter if project is provided
+    if project:
+        school_query = apply_project_date_filter(school_query, project)
+        external_approved_query = apply_project_date_filter(external_approved_query, project)
+        external_pending_query = apply_project_date_filter(external_pending_query, project)
+
+    school_seconds = school_query.scalar() or 0
+    external_approved_seconds = external_approved_query.scalar() or 0
+    external_pending_seconds = external_pending_query.scalar() or 0
 
     total_seconds = int(school_seconds) + int(external_approved_seconds)
     lesson_blocks = round(total_seconds / (75 * 60), 1)
@@ -1116,6 +1129,71 @@ def get_projects_by_course(
         f"Fetching projects for school {current_user.school_id}, course {course_id}: found {len(projects)} projects"
     )
 
+    return [
+        {
+            "id": p.id,
+            "title": p.title,
+            "class_name": p.class_name,
+            "course_id": p.course_id,
+            "start_date": p.start_date.isoformat() if p.start_date else None,
+            "end_date": p.end_date.isoformat() if p.end_date else None,
+            "status": p.status,
+        }
+        for p in projects
+    ]
+
+
+@router.get("/my-projects")
+def get_my_projects(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get projects accessible to the current student
+    Returns projects from courses the student is enrolled in
+    """
+    if current_user.role not in ["student", "teacher", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only students, teachers, and admins can view projects",
+        )
+    
+    # For students, get projects from their enrolled courses
+    if current_user.role == "student":
+        # Get course IDs the student is enrolled in
+        enrolled_course_ids = (
+            db.query(CourseEnrollment.course_id)
+            .filter(
+                CourseEnrollment.student_id == current_user.id,
+                CourseEnrollment.active.is_(True),
+            )
+            .all()
+        )
+        
+        course_ids = [course_id[0] for course_id in enrolled_course_ids]
+        
+        if not course_ids:
+            return []
+        
+        # Get projects from these courses
+        query = db.query(Project).filter(
+            Project.school_id == current_user.school_id,
+            Project.course_id.in_(course_ids),
+            Project.status.in_(["active", "completed"]),
+        )
+    else:
+        # For teachers/admins, show all projects in their school
+        query = db.query(Project).filter(
+            Project.school_id == current_user.school_id,
+            Project.status.in_(["concept", "active", "completed"]),
+        )
+    
+    projects = query.order_by(Project.start_date.desc().nulls_last()).all()
+    
+    logger.info(
+        f"Fetching projects for user {current_user.id} (role: {current_user.role}): found {len(projects)} projects"
+    )
+    
     return [
         {
             "id": p.id,
