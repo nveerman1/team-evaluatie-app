@@ -68,7 +68,9 @@ const nextConfig: NextConfig = {
               : [
                   "default-src 'self'",
                   "script-src 'self' 'wasm-unsafe-eval'", // Allow WebAssembly, no eval/inline
-                  "style-src 'self' 'unsafe-inline'", // Still needed for Next.js styled-components
+                  "style-src 'self' 'unsafe-inline'", // Required for Next.js CSS-in-JS (Tailwind)
+                  // TODO: Consider nonce-based CSP for styles to remove unsafe-inline
+                  // This would require middleware to inject nonces into all style tags
                   "img-src 'self' data: blob: https:",
                   "font-src 'self' data:",
                   "connect-src 'self' https://app.technasiummbh.nl", // Production API only

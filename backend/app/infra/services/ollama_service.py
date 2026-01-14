@@ -56,12 +56,19 @@ class OllamaService:
         try:
             parsed = urlparse(url)
             hostname = parsed.hostname or ""
+            scheme = parsed.scheme or ""
+            
+            # Enforce HTTP/HTTPS only (prevent file://, ftp://, etc.)
+            if scheme not in ["http", "https"]:
+                raise ValueError(
+                    f"Ollama URL must use HTTP or HTTPS protocol. "
+                    f"This prevents protocol smuggling attacks."
+                )
             
             # Check if hostname is on allowlist
             if hostname.lower() not in ALLOWED_OLLAMA_HOSTS:
                 raise ValueError(
-                    f"Ollama host '{hostname}' not allowed. "
-                    f"Only {ALLOWED_OLLAMA_HOSTS} are permitted. "
+                    f"Ollama host not allowed. Only localhost and internal services are permitted. "
                     f"This prevents SSRF attacks."
                 )
             
