@@ -6,7 +6,6 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
-from datetime import datetime, timezone
 
 from app.main import app
 from app.core.security import create_access_token

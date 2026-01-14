@@ -7,7 +7,6 @@ from typing import Optional
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_, and_
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import (
@@ -122,7 +121,7 @@ def list_tasks(
         try:
             from_dt = datetime.fromisoformat(from_date).date()
             query = query.filter(Task.due_date >= from_dt)
-        except (ValueError, AttributeError) as e:
+        except (ValueError, AttributeError):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid 'from' date format: {from_date}. Expected ISO format (YYYY-MM-DD)."
@@ -132,7 +131,7 @@ def list_tasks(
         try:
             to_dt = datetime.fromisoformat(to_date).date()
             query = query.filter(Task.due_date <= to_dt)
-        except (ValueError, AttributeError) as e:
+        except (ValueError, AttributeError):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid 'to' date format: {to_date}. Expected ISO format (YYYY-MM-DD)."

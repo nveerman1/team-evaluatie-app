@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 from croniter import croniter
 from sqlalchemy.orm import Session
@@ -164,7 +164,7 @@ class SchedulerService:
         now = datetime.utcnow()
         
         jobs = self.db.query(ScheduledJob).filter(
-            ScheduledJob.enabled == True,
+            ScheduledJob.enabled.is_(True),
             ScheduledJob.next_run_at <= now,
         ).all()
         

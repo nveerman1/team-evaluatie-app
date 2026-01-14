@@ -3,7 +3,7 @@ Schemas for External Assessments API
 """
 
 from __future__ import annotations
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict
 from datetime import datetime
 from pydantic import BaseModel, Field, EmailStr, ConfigDict
 

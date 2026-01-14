@@ -4,7 +4,6 @@ Tests for School Management Architecture - Academic Years, Classes, Course Enrol
 
 import pytest
 from datetime import date
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.infra.db.models import (

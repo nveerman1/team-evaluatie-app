@@ -49,7 +49,6 @@ def get_dashboard_kpi(
     Get KPI statistics for dashboard: active clients, projects this year, at-risk count
     """
     current_year = datetime.utcnow().year
-    last_year = current_year - 1
     one_year_ago = datetime.utcnow() - timedelta(days=365)
     
     # Active clients

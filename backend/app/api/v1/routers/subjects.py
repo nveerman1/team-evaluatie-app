@@ -6,7 +6,6 @@ from __future__ import annotations
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import Subject, Course, User
@@ -17,7 +16,7 @@ from app.api.v1.schemas.subjects import (
     SubjectListOut,
 )
 from app.api.v1.schemas.courses import CourseOut
-from app.core.rbac import require_role, scope_query_by_school
+from app.core.rbac import require_role
 from app.core.audit import log_create, log_update, log_delete
 
 router = APIRouter(prefix="/subjects", tags=["subjects"])

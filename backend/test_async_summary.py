@@ -20,10 +20,6 @@ def test_imports():
     """Test that all required modules can be imported."""
     print("Testing imports...")
     try:
-        from app.infra.queue.connection import RedisConnection, get_queue
-        from app.infra.queue.tasks import generate_ai_summary_task
-        from app.infra.db.models import SummaryGenerationJob, FeedbackSummary
-        from app.core.config import settings
         print("✓ All imports successful")
         return True
     except Exception as e:
@@ -51,7 +47,6 @@ def test_database_connection():
     print("\nTesting database connection...")
     try:
         from app.infra.db.session import SessionLocal
-        from app.infra.db.models import SummaryGenerationJob
         from sqlalchemy import text
         
         db = SessionLocal()

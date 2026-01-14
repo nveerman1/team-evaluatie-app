@@ -15,7 +15,6 @@ Create Date: 2025-11-12 10:00:00.000000
 from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "mt_20251112_01"

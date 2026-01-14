@@ -4,10 +4,10 @@
 
 from __future__ import annotations
 from typing import Optional
-from datetime import datetime, timedelta, date, timezone
+from datetime import datetime, timedelta, timezone
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_, case
 
 from app.api.v1.deps import get_db, get_current_user
@@ -15,7 +15,6 @@ from app.infra.db.models import (
     User,
     RFIDCard,
     AttendanceEvent,
-    AttendanceAggregate,
     Project,
     CourseEnrollment,
     Course,
@@ -24,11 +23,9 @@ from app.api.v1.schemas.attendance import (
     RFIDScanRequest,
     RFIDScanResponse,
     AttendanceEventOut,
-    AttendanceEventCreate,
     AttendanceEventUpdate,
     AttendanceEventListOut,
     ExternalWorkCreate,
-    ExternalWorkApprove,
     ExternalWorkReject,
     BulkDeleteRequest,
     BulkApproveRequest,
@@ -45,7 +42,6 @@ from app.api.v1.schemas.attendance import (
     TopBottomData,
     EngagementStudent,
 )
-from app.core.rbac import require_role
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/attendance", tags=["attendance"])
@@ -89,7 +85,7 @@ def rfid_scan(
         # Find RFID card
         card = (
             db.query(RFIDCard)
-            .filter(RFIDCard.uid == request.uid, RFIDCard.is_active == True)
+            .filter(RFIDCard.uid == request.uid, RFIDCard.is_active.is_(True))
             .first()
         )
 
@@ -109,7 +105,7 @@ def rfid_scan(
             db.query(AttendanceEvent)
             .filter(
                 AttendanceEvent.user_id == user.id,
-                AttendanceEvent.is_external == False,
+                AttendanceEvent.is_external.is_(False),
                 AttendanceEvent.check_out.is_(None),
             )
             .order_by(AttendanceEvent.check_in.desc())
@@ -469,7 +465,7 @@ def approve_external_work(
         .join(User, AttendanceEvent.user_id == User.id)
         .filter(
             AttendanceEvent.id == event_id,
-            AttendanceEvent.is_external == True,
+            AttendanceEvent.is_external.is_(True),
             User.school_id == current_user.school_id,
         )
         .first()
@@ -512,7 +508,7 @@ def reject_external_work(
         .join(User, AttendanceEvent.user_id == User.id)
         .filter(
             AttendanceEvent.id == event_id,
-            AttendanceEvent.is_external == True,
+            AttendanceEvent.is_external.is_(True),
             User.school_id == current_user.school_id,
         )
         .first()
@@ -559,7 +555,7 @@ def bulk_approve_external_work(
         .join(User, AttendanceEvent.user_id == User.id)
         .filter(
             AttendanceEvent.id.in_(request.event_ids),
-            AttendanceEvent.is_external == True,
+            AttendanceEvent.is_external.is_(True),
             User.school_id == current_user.school_id,
         )
         .all()
@@ -615,7 +611,7 @@ def get_my_attendance(
         )
         .filter(
             AttendanceEvent.user_id == current_user.id,
-            AttendanceEvent.is_external == False,
+            AttendanceEvent.is_external.is_(False),
             AttendanceEvent.check_out.isnot(None),
         )
         .scalar()
@@ -632,7 +628,7 @@ def get_my_attendance(
         )
         .filter(
             AttendanceEvent.user_id == current_user.id,
-            AttendanceEvent.is_external == True,
+            AttendanceEvent.is_external.is_(True),
             AttendanceEvent.approval_status == "approved",
             AttendanceEvent.check_out.isnot(None),
         )
@@ -650,7 +646,7 @@ def get_my_attendance(
         )
         .filter(
             AttendanceEvent.user_id == current_user.id,
-            AttendanceEvent.is_external == True,
+            AttendanceEvent.is_external.is_(True),
             AttendanceEvent.approval_status == "pending",
             AttendanceEvent.check_out.isnot(None),
         )
@@ -693,7 +689,7 @@ def get_current_presence(
         .join(User, AttendanceEvent.user_id == User.id)
         .filter(
             User.school_id == current_user.school_id,
-            AttendanceEvent.is_external == False,
+            AttendanceEvent.is_external.is_(False),
             AttendanceEvent.check_out.is_(None),
         )
         .order_by(AttendanceEvent.check_in.desc())
@@ -870,7 +866,7 @@ def get_attendance_overview(
         student_ids = (
             db.query(CourseEnrollment.student_id)
             .filter(
-                CourseEnrollment.course_id == course_id, CourseEnrollment.active == True
+                CourseEnrollment.course_id == course_id, CourseEnrollment.active.is_(True)
             )
             .subquery()
         )
@@ -902,7 +898,7 @@ def get_attendance_overview(
             )
         ).filter(
             AttendanceEvent.user_id == student.id,
-            AttendanceEvent.is_external == False,
+            AttendanceEvent.is_external.is_(False),
             AttendanceEvent.check_out.isnot(None),
         )
 
@@ -921,7 +917,7 @@ def get_attendance_overview(
             )
         ).filter(
             AttendanceEvent.user_id == student.id,
-            AttendanceEvent.is_external == True,
+            AttendanceEvent.is_external.is_(True),
             AttendanceEvent.approval_status == "approved",
             AttendanceEvent.check_out.isnot(None),
         )
@@ -943,7 +939,7 @@ def get_attendance_overview(
             )
         ).filter(
             AttendanceEvent.user_id == student.id,
-            AttendanceEvent.is_external == True,
+            AttendanceEvent.is_external.is_(True),
             AttendanceEvent.approval_status == "pending",
             AttendanceEvent.check_out.isnot(None),
         )
@@ -1070,7 +1066,7 @@ def get_courses(
 
     courses = (
         db.query(Course)
-        .filter(Course.school_id == current_user.school_id, Course.is_active == True)
+        .filter(Course.school_id == current_user.school_id, Course.is_active.is_(True))
         .order_by(Course.name)
         .all()
     )
@@ -1214,7 +1210,7 @@ def get_stats_summary(
         .join(User, AttendanceEvent.user_id == User.id)
         .filter(
             User.school_id == current_user.school_id,
-            AttendanceEvent.is_external == False,
+            AttendanceEvent.is_external.is_(False),
             AttendanceEvent.check_out.isnot(None),
         )
     )
@@ -1233,7 +1229,7 @@ def get_stats_summary(
         .join(User, AttendanceEvent.user_id == User.id)
         .filter(
             User.school_id == current_user.school_id,
-            AttendanceEvent.is_external == True,
+            AttendanceEvent.is_external.is_(True),
             AttendanceEvent.approval_status == "approved",
             AttendanceEvent.check_out.isnot(None),
         )
@@ -1317,14 +1313,14 @@ def get_stats_weekly(
             func.date_trunc("week", AttendanceEvent.check_in).label("week_start"),
             func.sum(
                 case(
-                    (AttendanceEvent.is_external == False, 
+                    (AttendanceEvent.is_external.is_(False), 
                      func.extract("epoch", AttendanceEvent.check_out - AttendanceEvent.check_in)),
                     else_=0
                 )
             ).label("school_seconds"),
             func.sum(
                 case(
-                    (and_(AttendanceEvent.is_external == True, AttendanceEvent.approval_status == "approved"),
+                    (and_(AttendanceEvent.is_external.is_(True), AttendanceEvent.approval_status == "approved"),
                      func.extract("epoch", AttendanceEvent.check_out - AttendanceEvent.check_in)),
                     else_=0
                 )
@@ -1406,7 +1402,7 @@ def get_stats_daily(
         .join(User, AttendanceEvent.user_id == User.id)
         .filter(
             User.school_id == current_user.school_id,
-            AttendanceEvent.is_external == False,
+            AttendanceEvent.is_external.is_(False),
         )
     )
 
@@ -1485,7 +1481,7 @@ def get_stats_heatmap(
         .join(User, AttendanceEvent.user_id == User.id)
         .filter(
             User.school_id == current_user.school_id,
-            AttendanceEvent.is_external == False,
+            AttendanceEvent.is_external.is_(False),
             func.extract("dow", AttendanceEvent.check_in).between(1, 5),  # Monday-Friday
             func.extract("hour", AttendanceEvent.check_in).between(8, 18),
         )
@@ -1575,7 +1571,7 @@ def get_stats_signals(
         .join(AttendanceEvent, AttendanceEvent.user_id == User.id)
         .filter(
             User.school_id == current_user.school_id,
-            AttendanceEvent.is_external == True,
+            AttendanceEvent.is_external.is_(True),
             AttendanceEvent.approval_status == "approved",
             AttendanceEvent.check_out.isnot(None),
         )
@@ -1592,7 +1588,7 @@ def get_stats_signals(
         .join(AttendanceEvent, AttendanceEvent.user_id == User.id)
         .filter(
             User.school_id == current_user.school_id,
-            AttendanceEvent.is_external == False,
+            AttendanceEvent.is_external.is_(False),
             AttendanceEvent.check_out.isnot(None),
         )
     )
@@ -1671,7 +1667,7 @@ def get_stats_signals(
         .join(AttendanceEvent, AttendanceEvent.user_id == User.id)
         .filter(
             User.school_id == current_user.school_id,
-            AttendanceEvent.is_external == True,
+            AttendanceEvent.is_external.is_(True),
             AttendanceEvent.approval_status == "pending",
         )
     )
@@ -1730,7 +1726,7 @@ def get_stats_signals(
         .join(AttendanceEvent, AttendanceEvent.user_id == User.id)
         .filter(
             User.school_id == current_user.school_id,
-            AttendanceEvent.is_external == False,
+            AttendanceEvent.is_external.is_(False),
             AttendanceEvent.check_out.is_(None),
             AttendanceEvent.check_in <= threshold_time,
         )
@@ -1818,9 +1814,9 @@ def get_stats_top_bottom(
             User.school_id == current_user.school_id,
             AttendanceEvent.check_out.isnot(None),
             or_(
-                AttendanceEvent.is_external == False,
+                AttendanceEvent.is_external.is_(False),
                 and_(
-                    AttendanceEvent.is_external == True,
+                    AttendanceEvent.is_external.is_(True),
                     AttendanceEvent.approval_status == "approved"
                 )
             ),

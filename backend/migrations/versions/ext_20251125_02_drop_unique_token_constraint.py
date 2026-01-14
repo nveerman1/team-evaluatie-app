@@ -9,7 +9,6 @@ This is needed to support the "ALL_TEAMS" mode where multiple teams share the sa
 """
 
 from alembic import op
-import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "ext_20251125_02"

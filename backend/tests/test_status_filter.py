@@ -2,9 +2,7 @@
 Test for status filter parameter in list_evaluations endpoint
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock
-from sqlalchemy import select
+from unittest.mock import Mock
 
 from app.infra.db.models import User, Evaluation, Course
 

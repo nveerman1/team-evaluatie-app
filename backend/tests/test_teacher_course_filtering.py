@@ -6,17 +6,13 @@ competency windows, and project notes for courses they are assigned to.
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock
-from sqlalchemy import select
+from unittest.mock import Mock
 
 from app.infra.db.models import (
     User,
-    Course,
-    TeacherCourse,
     Evaluation,
     ProjectAssessment,
     CompetencyWindow,
-    ProjectNotesContext,
     Group,
 )
 

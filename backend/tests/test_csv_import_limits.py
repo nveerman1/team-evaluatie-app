@@ -3,7 +3,7 @@ Tests for CSV import DoS protection - file size and row limits
 """
 
 import pytest
-from io import BytesIO, StringIO
+from io import BytesIO
 from unittest.mock import Mock, patch
 from fastapi import UploadFile
 

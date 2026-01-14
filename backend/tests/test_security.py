@@ -191,7 +191,6 @@ def test_rate_limiting_blocks_excessive_requests():
     # We test that the middleware raises the correct HTTPException
     from fastapi import Request
     from app.api.middleware.rate_limit import RateLimitMiddleware as RLM
-    from starlette.responses import Response
 
     # Create a mock request
     request = MagicMock(spec=Request)
@@ -199,10 +198,9 @@ def test_rate_limiting_blocks_excessive_requests():
     request.client.host = "127.0.0.1"
 
     # Create middleware instance
-    middleware = RLM(app, rate_limiter=mock_rate_limiter)
+    RLM(app, rate_limiter=mock_rate_limiter)
 
     # Test that it raises HTTPException with 429 status
-    from fastapi import HTTPException
 
     # The middleware should raise HTTPException when rate limit is exceeded
     # We verify this by checking is_allowed is called and returns False
@@ -250,7 +248,7 @@ def test_rate_limiting_skips_health_check():
     mock_rate_limiter = MagicMock(spec=RateLimiter)
 
     app = FastAPI()
-    middleware = RateLimitMiddleware(app, rate_limiter=mock_rate_limiter)
+    RateLimitMiddleware(app, rate_limiter=mock_rate_limiter)
 
     @app.get("/health")
     def health():

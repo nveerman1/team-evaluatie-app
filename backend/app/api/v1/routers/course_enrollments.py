@@ -5,7 +5,6 @@ Course Enrollment API Router
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 
 from app.api.v1.deps import get_db, get_current_user
 from app.infra.db.models import User, Course, CourseEnrollment

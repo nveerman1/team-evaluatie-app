@@ -3,9 +3,9 @@ Tests for Projects API endpoints
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, patch
 from datetime import datetime, date
-from app.infra.db.models import User, Project, Evaluation, Rubric, Client
+from app.infra.db.models import User, Project, Rubric
 from app.api.v1.routers.projects import (
     list_projects,
     create_project,
@@ -104,7 +104,7 @@ class TestProjectsEndpoints:
         with patch("app.api.v1.routers.projects.require_role"):
             with patch("app.api.v1.routers.projects.can_access_course", return_value=True):
                 with patch("app.api.v1.routers.projects.log_action"):
-                    result = create_project(payload=payload, db=db, user=user)
+                    create_project(payload=payload, db=db, user=user)
                     
                     # Verify project was added and committed
                     db.add.assert_called()
@@ -171,7 +171,7 @@ class TestProjectsEndpoints:
         with patch("app.api.v1.routers.projects.require_role"):
             with patch("app.api.v1.routers.projects.can_access_course", return_value=True):
                 with patch("app.api.v1.routers.projects.log_action"):
-                    result = update_project(project_id=1, payload=payload, db=db, user=user)
+                    update_project(project_id=1, payload=payload, db=db, user=user)
                     
                     db.commit.assert_called()
 
@@ -258,7 +258,7 @@ class TestWizardEndpoint:
                 with patch("app.api.v1.routers.projects.log_action"):
                     # Just verify the function doesn't crash with proper mocking
                     try:
-                        result = wizard_create_project(payload=payload, db=db, user=user)
+                        wizard_create_project(payload=payload, db=db, user=user)
                         # If we get here, wizard executed
                         assert db.add.called
                         assert db.commit.called

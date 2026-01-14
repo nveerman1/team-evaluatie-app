@@ -108,9 +108,9 @@ def list_students(
     )
 
     if status == "active" and _supports_attr(User, "archived"):
-        stmt = stmt.where(User.archived == False)  # noqa
+        stmt = stmt.where(User.archived.is_(False))  # noqa
     elif status == "inactive" and _supports_attr(User, "archived"):
-        stmt = stmt.where(User.archived == True)  # noqa
+        stmt = stmt.where(User.archived.is_(True))  # noqa
 
     if q:
         stmt = stmt.where(or_(User.name.ilike(f"%{q}%"), User.email.ilike(f"%{q}%")))

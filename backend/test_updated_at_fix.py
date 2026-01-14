@@ -8,10 +8,9 @@ import os
 # Add backend to path
 sys.path.insert(0, os.path.dirname(__file__))
 
-from datetime import datetime
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-from app.infra.db.models import School, User, SummaryGenerationJob
+from app.infra.db.models import SummaryGenerationJob
 from app.core.config import settings
 
 # Database connection - use settings to avoid hardcoding credentials

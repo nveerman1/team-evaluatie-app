@@ -4,7 +4,6 @@ Service layer for Project Teams
 
 from typing import Optional, List, Tuple
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_, func
 from fastapi import HTTPException, status
 
 from app.infra.db.models import (
@@ -378,7 +377,7 @@ class ProjectTeamService:
             .filter(
                 GroupMember.group_id == group_id,
                 GroupMember.school_id == school_id,
-                GroupMember.active == True,
+                GroupMember.active.is_(True),
             )
             .all()
         )

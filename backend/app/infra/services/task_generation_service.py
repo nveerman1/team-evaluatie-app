@@ -4,7 +4,7 @@ Task generation service for automatic client tasks (opdrachtgeverstaken)
 
 from __future__ import annotations
 from typing import List, Optional
-from datetime import datetime, timedelta, date
+from datetime import timedelta, date
 from sqlalchemy.orm import Session
 
 from app.infra.db.models import Task, Project, Client, ClientProjectLink
@@ -63,7 +63,7 @@ class TaskGenerationService:
                 db.query(Task)
                 .filter(
                     Task.project_id == project.id,
-                    Task.auto_generated == True,
+                    Task.auto_generated.is_(True),
                     Task.source == "tussenpresentatie"
                 )
                 .first()
@@ -106,7 +106,7 @@ class TaskGenerationService:
                 db.query(Task)
                 .filter(
                     Task.project_id == project.id,
-                    Task.auto_generated == True,
+                    Task.auto_generated.is_(True),
                     Task.source == "eindpresentatie"
                 )
                 .first()
@@ -201,7 +201,7 @@ class TaskGenerationService:
             db.query(Task)
             .filter(
                 Task.project_id == project_id,
-                Task.auto_generated == True
+                Task.auto_generated.is_(True)
             )
             .all()
         )

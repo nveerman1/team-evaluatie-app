@@ -110,7 +110,7 @@ class TestCSRFProtectionPOST:
         """Test that POST without Origin or Referer is blocked"""
         client = TestClient(app_with_csrf)
         # TestClient may add headers automatically, so we need to be explicit
-        response = client.post("/api/v1/test")
+        client.post("/api/v1/test")
         # This should fail CSRF validation if no headers are present
         # Note: TestClient might add some headers, so we check behavior
         # In real-world scenario without headers, this would be blocked
@@ -288,7 +288,7 @@ class TestCSRFOriginExtraction:
         
         try:
             client = TestClient(app_with_csrf)
-            response = client.post(
+            client.post(
                 "/api/v1/test",
                 headers={"Referer": "https://example.com/page"}
             )

@@ -3,7 +3,7 @@ Tests for Project Teams API endpoints and service
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, patch
 from datetime import datetime, timezone
 from fastapi import HTTPException
 
@@ -11,9 +11,7 @@ from app.infra.db.models import (
     User,
     Project,
     ProjectTeam,
-    ProjectTeamMember,
     Group,
-    GroupMember,
     Evaluation,
     ProjectAssessment,
 )
@@ -54,7 +52,7 @@ class TestProjectTeamService:
         db.query.side_effect = side_effect
 
         # Create project team
-        result = ProjectTeamService.create_project_team(
+        ProjectTeamService.create_project_team(
             db=db,
             project_id=project_id,
             school_id=school_id,

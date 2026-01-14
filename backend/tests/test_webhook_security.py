@@ -3,7 +3,6 @@ Tests for webhook security - SSRF protection
 """
 
 import socket
-import pytest
 from unittest.mock import patch, Mock
 from app.api.v1.utils.url_validation import validate_webhook_url
 from app.infra.services.webhook_service import WebhookService

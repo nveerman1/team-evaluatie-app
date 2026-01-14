@@ -1,9 +1,8 @@
 from __future__ import annotations
-from typing import List, Optional
+from typing import Optional
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, func, and_
 from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_db, get_current_user
@@ -18,12 +17,10 @@ from app.infra.db.models import (
 )
 from app.api.v1.schemas.submissions import (
     SubmissionCreate,
-    SubmissionUpdate,
     SubmissionStatusUpdate,
     SubmissionOut,
     SubmissionWithTeamInfo,
     SubmissionListResponse,
-    SubmissionEventOut,
     MyTeamSubmissionsResponse,
 )
 from app.api.v1.utils.url_validation import validate_sharepoint_url
