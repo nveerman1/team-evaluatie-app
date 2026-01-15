@@ -108,7 +108,7 @@ services:
   # Redis (Job Queue & Caching)
   # ===========================================================================
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     container_name: tea_redis
     user: "999:999"
     restart: unless-stopped
