@@ -51,53 +51,63 @@ jobs:
           docker run --rm -v "$PWD:/src" ghcr.io/google/osv-scanner:latest \
             scan -L /src/backend.cdx.json
 
-  trivy_images:
-    name: Trivy (docker images)
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
+trivy_images:
+  name: Trivy (docker images)
+  runs-on: ubuntu-latest
+  permissions:
+    contents: read
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+  steps:
+    - uses: actions/checkout@v4
 
-      - name: Build images
-        env:
-          NEXT_PUBLIC_API_URL: http://localhost:8000
-        run: |
-          docker build -t tea-backend:ci -f backend/Dockerfile backend
-          docker build -t tea-frontend:ci -f frontend/Dockerfile frontend \
-            --build-arg NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-          docker build -t tea-nginx:ci -f ops/nginx/Dockerfile ops/nginx
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
+    - name: Build images
+      env:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+      run: |
+        docker build -t tea-backend:ci -f backend/Dockerfile backend
+        docker build -t tea-frontend:ci -f frontend/Dockerfile frontend \
+          --build-arg NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+        docker build -t tea-nginx:ci -f ops/nginx/Dockerfile ops/nginx
 
-      - name: Trivy scan backend
-        uses: aquasecurity/trivy-action@0.24.0
-        with:
-          scan-type: image
-          image-ref: tea-backend:ci
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          format: table
-          exit-code: 1
+    # (optioneel) even sanity check: bestaan de images echt?
+    - name: Debug docker images
+      run: docker images | head -n 50
 
-      - name: Trivy scan frontend
-        uses: aquasecurity/trivy-action@0.24.0
-        with:
-          scan-type: image
-          image-ref: tea-frontend:ci
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          format: table
-          exit-code: 1
+    # Trivy scan backend
+    - name: Trivy scan backend
+      uses: aquasecurity/trivy-action@0.33.1
+      with:
+        scan-type: image
+        image-ref: tea-backend:ci
+        severity: HIGH,CRITICAL
+        ignore-unfixed: true
+        format: table
+        exit-code: 1
+        version: v0.68.1
 
-      - name: Trivy scan nginx
-        uses: aquasecurity/trivy-action@0.24.0
-        with:
-          scan-type: image
-          image-ref: tea-nginx:ci
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          format: table
-          exit-code: 1
+    # Trivy scan frontend
+    - name: Trivy scan frontend
+      uses: aquasecurity/trivy-action@0.33.1
+      with:
+        scan-type: image
+        image-ref: tea-frontend:ci
+        severity: HIGH,CRITICAL
+        ignore-unfixed: true
+        format: table
+        exit-code: 1
+        version: v0.68.1
+
+    # Trivy scan nginx
+    - name: Trivy scan nginx
+      uses: aquasecurity/trivy-action@0.33.1
+      with:
+        scan-type: image
+        image-ref: tea-nginx:ci
+        severity: HIGH,CRITICAL
+        ignore-unfixed: true
+        format: table
+        exit-code: 1
+        version: v0.68.1
