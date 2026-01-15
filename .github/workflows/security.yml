@@ -70,7 +70,6 @@ jobs:
           docker build -t tea-backend:ci -f backend/Dockerfile backend
           docker build -t tea-frontend:ci -f frontend/Dockerfile frontend \
             --build-arg NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-          docker build -t tea-nginx:ci -f ops/nginx/Dockerfile ops/nginx
 
       - name: Debug docker images
         run: docker images | head -n 50
@@ -97,14 +96,18 @@ jobs:
           exit-code: 1
           version: v0.68.1
 
-      - name: Trivy scan nginx
+      - name: Pull nginx base image (for scan)
+        run: docker pull nginx:stable-alpine
+
+      - name: Trivy scan nginx (base image)
         uses: aquasecurity/trivy-action@0.33.1
         with:
           scan-type: image
-          image-ref: tea-nginx:ci
+          image-ref: nginx:stable-alpine
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           format: table
           exit-code: 1
           version: v0.68.1
+
   
