@@ -62,7 +62,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Bouw je images zoals jij ze in prod bouwt. Pas tags/namen aan je compose aan.
       - name: Build images
         env:
           NEXT_PUBLIC_API_URL: http://localhost:8000
@@ -73,7 +72,6 @@ jobs:
           docker build -t tea-nginx:ci -f ops/nginx/Dockerfile ops/nginx
 
 
-      # Trivy scan backend image
       - name: Trivy scan backend
         uses: aquasecurity/trivy-action@0.24.0
         with:
@@ -84,7 +82,6 @@ jobs:
           format: table
           exit-code: 1
 
-      # Trivy scan frontend image
       - name: Trivy scan frontend
         uses: aquasecurity/trivy-action@0.24.0
         with:
@@ -95,7 +92,6 @@ jobs:
           format: table
           exit-code: 1
 
-      # Trivy scan nginx image
       - name: Trivy scan nginx
         uses: aquasecurity/trivy-action@0.24.0
         with:
@@ -105,5 +101,3 @@ jobs:
           ignore-unfixed: true
           format: table
           exit-code: 1
-
-
