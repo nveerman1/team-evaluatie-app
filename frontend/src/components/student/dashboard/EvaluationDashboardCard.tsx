@@ -6,19 +6,12 @@ import { Progress } from "@/components/ui/progress";
 import { Clock, ChevronRight } from "lucide-react";
 import { ActionChip } from "./helpers";
 import { StudentEvaluation } from "@/dtos";
-import type { EvalStatus } from "@/dtos/evaluation.dto";
+import { canStudentSeeResult } from "@/lib/evaluation-helpers";
 import Link from "next/link";
 
 type EvaluationDashboardCardProps = {
   evaluation: StudentEvaluation;
 };
-
-// Helper function to check if student can see results
-function canStudentSeeResult(status: EvalStatus): boolean {
-  // Students can see results when evaluation is closed or open
-  // (open allows them to see feedback while still working)
-  return status === "closed" || status === "open";
-}
 
 export function EvaluationDashboardCard({ evaluation }: EvaluationDashboardCardProps) {
   // Check actual status from the evaluation

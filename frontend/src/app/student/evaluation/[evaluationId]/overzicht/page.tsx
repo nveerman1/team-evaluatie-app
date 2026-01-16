@@ -7,8 +7,9 @@ import { FeedbackSummary, EvaluationReflectionSection } from "@/components/stude
 import { AISummarySection } from "@/components/student/AISummarySection";
 import { peerFeedbackResultsService, studentService, evaluationService, courseService } from "@/services";
 import api from "@/lib/api";
+import { canStudentSeeResult } from "@/lib/evaluation-helpers";
 import type { EvaluationResult, OmzaKey, MyAllocation, DashboardResponse } from "@/dtos";
-import type { Evaluation, EvaluationTeamContext, EvaluationTeam, EvalStatus } from "@/dtos/evaluation.dto";
+import type { Evaluation, EvaluationTeamContext, EvaluationTeam } from "@/dtos/evaluation.dto";
 import type { Course } from "@/dtos/course.dto";
 import {
   OMZA_LABELS,
@@ -21,13 +22,6 @@ import {
   getTeamContributionLabel,
 } from "@/components/student/peer-results/helpers";
 import { studentStyles } from "@/styles/student-dashboard.styles";
-
-// Helper function to check if student can see results
-function canStudentSeeResult(status: EvalStatus): boolean {
-  // Students can see results when evaluation is closed
-  // For now, we'll also allow "open" status to maintain backward compatibility
-  return status === "closed" || status === "open";
-}
 
 export default function ResultaatPage() {
   const params = useParams();
