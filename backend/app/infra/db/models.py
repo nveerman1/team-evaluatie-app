@@ -968,6 +968,79 @@ class ProjectAssessmentReflection(Base):
     )
 
 
+class ProjectAssessmentSelfAssessment(Base):
+    """
+    Student self-assessment for project assessment
+    Each student fills out the same rubric as the teacher
+    """
+
+    __tablename__ = "project_assessment_self_assessments"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = tenant_fk()
+
+    assessment_id: Mapped[int] = mapped_column(
+        ForeignKey("project_assessments.id", ondelete="CASCADE"), nullable=False
+    )
+    student_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    team_number: Mapped[Optional[int]] = mapped_column(nullable=True)
+
+    # Metadata
+    locked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "assessment_id",
+            "student_id",
+            name="uq_self_assessment_once_per_student",
+        ),
+        Index("ix_self_assessment_assessment", "assessment_id"),
+        Index("ix_self_assessment_student", "student_id"),
+    )
+
+
+class ProjectAssessmentSelfAssessmentScore(Base):
+    """
+    Individual criterion scores for student self-assessment
+    """
+
+    __tablename__ = "project_assessment_self_assessment_scores"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = tenant_fk()
+
+    self_assessment_id: Mapped[int] = mapped_column(
+        ForeignKey("project_assessment_self_assessments.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    criterion_id: Mapped[int] = mapped_column(
+        ForeignKey("rubric_criteria.id", ondelete="CASCADE"), nullable=False
+    )
+
+    score: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    comment: Mapped[Optional[str]] = mapped_column(Text)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "self_assessment_id",
+            "criterion_id",
+            name="uq_self_score_per_criterion",
+        ),
+        Index("ix_self_score_self_assessment", "self_assessment_id"),
+        Index("ix_self_score_criterion", "criterion_id"),
+    )
+
+
 # ============ Competency Monitor ============
 
 
