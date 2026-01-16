@@ -60,15 +60,17 @@ function StudentDashboardContent() {
     return openEvaluations.filter((e) => e.title.toLowerCase().includes(q));
   }, [openEvaluations, searchQuery]);
 
-  // Filter project assessments by search query and status (only published)
+  // Filter project assessments by search query and status (open, published, closed)
   const filteredProjectAssessments = useMemo(() => {
-    // First filter by status - only show published assessments
-    const publishedAssessments = (projectAssessments || []).filter((p) => p.status === "published");
+    // Show assessments with status: open, published, or closed
+    const visibleAssessments = (projectAssessments || []).filter((p) => 
+      ["open", "published", "closed"].includes(p.status)
+    );
     
     // Then filter by search query
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return publishedAssessments;
-    return publishedAssessments.filter((p) => p.title.toLowerCase().includes(q));
+    if (!q) return visibleAssessments;
+    return visibleAssessments.filter((p) => p.title.toLowerCase().includes(q));
   }, [projectAssessments, searchQuery]);
 
   // Filter all project assessments by search query only (for Inleveren tab)

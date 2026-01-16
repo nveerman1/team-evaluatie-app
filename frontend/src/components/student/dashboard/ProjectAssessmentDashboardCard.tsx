@@ -13,7 +13,10 @@ type ProjectAssessmentDashboardCardProps = {
 export function ProjectAssessmentDashboardCard({ 
   assessment 
 }: ProjectAssessmentDashboardCardProps) {
-  const isPublished = assessment.status === "published";
+  // Status-based logic
+  const isOpen = assessment.status === "open";
+  const isPublishedOrClosed = ["published", "closed"].includes(assessment.status);
+  
   const grade = (assessment.metadata_json as any)?.final_grade || (assessment.metadata_json as any)?.suggested_grade;
   
   return (
@@ -27,12 +30,14 @@ export function ProjectAssessmentDashboardCard({
               </h3>
               <Badge
                 className={
-                  !isPublished
-                    ? "rounded-full bg-slate-900 text-white"
-                    : "rounded-full bg-slate-100 text-slate-700"
+                  isOpen
+                    ? "rounded-full bg-blue-600 text-white"
+                    : isPublishedOrClosed
+                    ? "rounded-full bg-slate-100 text-slate-700"
+                    : "rounded-full bg-slate-900 text-white"
                 }
               >
-                {!isPublished ? "Open" : "Gesloten"}
+                {isOpen ? "Open" : isPublishedOrClosed ? "Gesloten" : "Concept"}
               </Badge>
             </div>
             <div className="text-sm text-slate-600">
@@ -51,12 +56,23 @@ export function ProjectAssessmentDashboardCard({
           </div>
 
           <div className="flex shrink-0 items-start gap-2 sm:justify-end">
-            <Button asChild className="rounded-xl" size="sm">
-              <Link href={`/student/project-assessments/${assessment.id}`}>
-                Bekijk
+            {/* Self-assessment button - always visible when status is open/published/closed */}
+            <Button asChild className="rounded-xl" size="sm" variant="outline">
+              <Link href={`/student/project-assessments/${assessment.id}/self`}>
+                Zelfbeoordeling
                 <ChevronRight className="ml-1 h-4 w-4" />
               </Link>
             </Button>
+            
+            {/* Project assessment button - only visible when published or closed */}
+            {isPublishedOrClosed && (
+              <Button asChild className="rounded-xl" size="sm">
+                <Link href={`/student/project-assessments/${assessment.id}`}>
+                  Projectbeoordeling
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Link>
+              </Button>
+            )}
           </div>
         </div>
       </CardContent>

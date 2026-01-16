@@ -13,6 +13,10 @@ import {
   ProjectAssessmentReflectionsOverview,
   ProjectAssessmentScoresOverview,
   ProjectAssessmentStudentsOverview,
+  SelfAssessmentDetailOut,
+  SelfAssessmentOut,
+  SelfAssessmentCreate,
+  ProjectAssessmentSelfOverview,
 } from "@/dtos/project-assessment.dto";
 
 export const projectAssessmentService = {
@@ -155,6 +159,53 @@ export const projectAssessmentService = {
     const response = await api.get<ProjectAssessmentStudentsOverview>(
       `/project-assessments/${assessmentId}/students-overview`
     );
+    return response.data;
+  },
+
+  /**
+   * Get student's own self-assessment
+   */
+  async getSelfAssessment(
+    assessmentId: number
+  ): Promise<SelfAssessmentDetailOut> {
+    const response = await api.get<SelfAssessmentDetailOut>(
+      `/project-assessments/${assessmentId}/self`
+    );
+    return response.data;
+  },
+
+  /**
+   * Create or update student's self-assessment
+   */
+  async createOrUpdateSelfAssessment(
+    assessmentId: number,
+    data: SelfAssessmentCreate
+  ): Promise<SelfAssessmentOut> {
+    const response = await api.post<SelfAssessmentOut>(
+      `/project-assessments/${assessmentId}/self`,
+      data
+    );
+    return response.data;
+  },
+
+  /**
+   * Get self-assessment overview for teachers
+   */
+  async getSelfAssessmentOverview(
+    assessmentId: number,
+    q?: string,
+    sort?: string,
+    direction?: string
+  ): Promise<ProjectAssessmentSelfOverview> {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (sort) params.set("sort", sort);
+    if (direction) params.set("direction", direction);
+    const queryString = params.toString();
+    const url = queryString
+      ? `/project-assessments/${assessmentId}/self/overview?${queryString}`
+      : `/project-assessments/${assessmentId}/self/overview`;
+    const response = await api.get<ProjectAssessmentSelfOverview>(url);
     return response.data;
   },
 };
