@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func
@@ -1539,7 +1539,7 @@ def create_or_update_self_assessment(
                 detail="Self-assessment is locked and cannot be modified",
             )
         # Update timestamp
-        self_assessment.updated_at = datetime.utcnow()
+        self_assessment.updated_at = datetime.now(timezone.utc)
     else:
         # Create new self-assessment
         self_assessment = ProjectAssessmentSelfAssessment(
@@ -1715,7 +1715,7 @@ def get_self_assessment_overview(
         )
     
     # Build map of self_assessment_id -> [scores]
-    scores_map: dict[int, list] = {}
+    scores_map: dict[int, list[ProjectAssessmentSelfAssessmentScore]] = {}
     for score in all_scores:
         if score.self_assessment_id not in scores_map:
             scores_map[score.self_assessment_id] = []
