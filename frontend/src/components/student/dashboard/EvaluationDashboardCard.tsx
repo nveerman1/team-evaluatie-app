@@ -6,11 +6,19 @@ import { Progress } from "@/components/ui/progress";
 import { Clock, ChevronRight } from "lucide-react";
 import { ActionChip } from "./helpers";
 import { StudentEvaluation } from "@/dtos";
+import type { EvalStatus } from "@/dtos/evaluation.dto";
 import Link from "next/link";
 
 type EvaluationDashboardCardProps = {
   evaluation: StudentEvaluation;
 };
+
+// Helper function to check if student can see results
+function canStudentSeeResult(status: EvalStatus): boolean {
+  // Students can see results when evaluation is closed or open
+  // (open allows them to see feedback while still working)
+  return status === "closed" || status === "open";
+}
 
 export function EvaluationDashboardCard({ evaluation }: EvaluationDashboardCardProps) {
   // Check actual status from the evaluation
@@ -80,24 +88,15 @@ export function EvaluationDashboardCard({ evaluation }: EvaluationDashboardCardP
                   <ChevronRight className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
-            ) : (
+            ) : null}
+            {canStudentSeeResult(evaluation.status) && (
               <Button asChild variant="secondary" size="sm" className="rounded-xl">
                 <Link href={`/student/evaluation/${evaluation.id}/overzicht`}>
-                  {isOpen && isCompleted ? "Bekijk resultaat" : "Terugkijken"}
+                  Resultaat
                   <ChevronRight className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
             )}
-            <Button asChild variant="ghost" size="sm" className="rounded-xl text-slate-700">
-              <Link href={`/student/evaluation/${evaluation.id}/overzicht`}>
-                Feedback
-              </Link>
-            </Button>
-            <Button asChild variant="ghost" size="sm" className="rounded-xl text-slate-700">
-              <Link href={`/student/evaluation/${evaluation.id}/reflectie`}>
-                Reflectie
-              </Link>
-            </Button>
           </div>
         </div>
       </CardContent>
