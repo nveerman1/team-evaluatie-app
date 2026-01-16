@@ -89,6 +89,18 @@ def upgrade():
         sa.Column("criterion_id", sa.Integer(), nullable=False),
         sa.Column("score", sa.SmallInteger(), nullable=False),
         sa.Column("comment", sa.Text(), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(
             ["self_assessment_id"],
             ["project_assessment_self_assessments.id"],
