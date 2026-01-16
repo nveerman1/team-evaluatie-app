@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Clock, ChevronRight } from "lucide-react";
 import { ActionChip } from "./helpers";
 import { StudentEvaluation } from "@/dtos";
+import { canStudentSeeResult } from "@/lib/evaluation-helpers";
 import Link from "next/link";
 
 type EvaluationDashboardCardProps = {
@@ -73,31 +74,22 @@ export function EvaluationDashboardCard({ evaluation }: EvaluationDashboardCardP
           </div>
 
           <div className="flex shrink-0 flex-wrap items-start gap-2 sm:justify-end">
-            {isOpen && !isCompleted ? (
+            {isOpen && !isCompleted && (
               <Button asChild className="rounded-xl bg-slate-900 hover:bg-slate-800" size="sm">
                 <Link href={`/student/${evaluation.id}?step=${evaluation.nextStep || 1}`}>
                   Verder
                   <ChevronRight className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
-            ) : (
+            )}
+            {canStudentSeeResult(evaluation.status) && (
               <Button asChild variant="secondary" size="sm" className="rounded-xl">
                 <Link href={`/student/evaluation/${evaluation.id}/overzicht`}>
-                  {isOpen && isCompleted ? "Bekijk resultaat" : "Terugkijken"}
+                  Resultaat
                   <ChevronRight className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
             )}
-            <Button asChild variant="ghost" size="sm" className="rounded-xl text-slate-700">
-              <Link href={`/student/evaluation/${evaluation.id}/overzicht`}>
-                Feedback
-              </Link>
-            </Button>
-            <Button asChild variant="ghost" size="sm" className="rounded-xl text-slate-700">
-              <Link href={`/student/evaluation/${evaluation.id}/reflectie`}>
-                Reflectie
-              </Link>
-            </Button>
           </div>
         </div>
       </CardContent>
