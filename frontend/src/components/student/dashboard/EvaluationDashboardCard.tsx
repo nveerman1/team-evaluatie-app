@@ -81,14 +81,14 @@ export function EvaluationDashboardCard({ evaluation }: EvaluationDashboardCardP
           </div>
 
           <div className="flex shrink-0 flex-wrap items-start gap-2 sm:justify-end">
-            {isOpen && !isCompleted ? (
+            {isOpen && !isCompleted && (
               <Button asChild className="rounded-xl bg-slate-900 hover:bg-slate-800" size="sm">
                 <Link href={`/student/${evaluation.id}?step=${evaluation.nextStep || 1}`}>
                   Verder
                   <ChevronRight className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
-            ) : null}
+            )}
             {canStudentSeeResult(evaluation.status) && (
               <Button asChild variant="secondary" size="sm" className="rounded-xl">
                 <Link href={`/student/evaluation/${evaluation.id}/overzicht`}>

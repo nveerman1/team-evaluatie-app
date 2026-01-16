@@ -40,7 +40,7 @@ export function EvaluationReflectionSection({
       .finally(() => setLoading(false));
   }, [evaluationId]);
 
-  const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+  const wordCount = text.trim().length === 0 ? 0 : text.trim().split(/\s+/).filter(Boolean).length;
   const isValid = wordCount >= minWords && wordCount <= maxWords;
   const submitted = !!reflection?.submitted_at;
 
