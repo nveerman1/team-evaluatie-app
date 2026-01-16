@@ -82,7 +82,14 @@ export default function ProjectAssessmentLayout({ children }: LayoutProps) {
       // Reload data to get updated status
       await loadData();
       
-      showToast(newStatus === "published" ? "Beoordeling gepubliceerd" : "Beoordeling teruggezet naar concept");
+      // Show appropriate message based on new status
+      const statusMessages: Record<string, string> = {
+        draft: "Status gewijzigd naar Concept",
+        open: "Status gewijzigd naar Open (studenten kunnen nu zelfbeoordeling invullen)",
+        published: "Status gewijzigd naar Gepubliceerd (studenten kunnen beoordeling bekijken)",
+        closed: "Status gewijzigd naar Gesloten",
+      };
+      showToast(statusMessages[newStatus] || "Status gewijzigd");
     } catch (e: unknown) {
       const err = e as { response?: { data?: { detail?: string } }; message?: string };
       showToast(err?.response?.data?.detail || err?.message || "Status wijzigen mislukt");
@@ -130,7 +137,9 @@ export default function ProjectAssessmentLayout({ children }: LayoutProps) {
               <StatusToggle
                 options={[
                   { value: "draft", label: "Concept" },
+                  { value: "open", label: "Open" },
                   { value: "published", label: "Gepubliceerd" },
+                  { value: "closed", label: "Gesloten" },
                 ]}
                 value={data.assessment.status}
                 onChange={handleStatusChange}
