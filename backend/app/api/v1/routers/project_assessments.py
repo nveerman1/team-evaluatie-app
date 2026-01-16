@@ -1557,14 +1557,12 @@ def create_or_update_self_assessment(
     if not rubric:
         raise HTTPException(status_code=404, detail="Rubric not found")
     
+    valid_criterion_ids_query = select(RubricCriterion.id).where(
+        RubricCriterion.rubric_id == rubric.id,
+        RubricCriterion.school_id == user.school_id,
+    )
     valid_criterion_ids = set(
-        db.query(RubricCriterion.id)
-        .filter(
-            RubricCriterion.rubric_id == rubric.id,
-            RubricCriterion.school_id == user.school_id,
-        )
-        .scalars()
-        .all()
+        db.execute(valid_criterion_ids_query).scalars().all()
     )
     
     for score_data in payload.scores:
