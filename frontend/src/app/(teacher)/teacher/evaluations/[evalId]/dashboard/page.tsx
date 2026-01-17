@@ -322,6 +322,7 @@ export default function EvaluationDashboardPage() {
                   <div className="mx-2 h-6 w-px bg-slate-300"></div>
                   <TeamFilter
                     teams={teamContext.teams.map(t => ({
+                      teamId: t.team_id,
                       teamNumber: t.team_number,
                       displayName: t.display_name,
                       memberCount: t.member_count,
