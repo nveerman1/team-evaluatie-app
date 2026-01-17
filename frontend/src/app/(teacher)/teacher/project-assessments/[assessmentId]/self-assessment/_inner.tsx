@@ -187,7 +187,7 @@ export default function ProjectAssessmentSelfInner() {
                       {/* Team row */}
                       <tr className="hover:bg-gray-50 transition-colors">
                         <td className="px-3 py-4 text-sm font-semibold text-gray-900">
-                          {team.team_name}
+                          Team {team.team_number}
                         </td>
                         <td className="px-4 py-4 text-sm text-gray-600">
                           <div className="flex flex-wrap gap-x-2 gap-y-0.5">
@@ -246,74 +246,90 @@ export default function ProjectAssessmentSelfInner() {
                       {isExpanded && (
                         <tr>
                           <td colSpan={5 + categories.length} className="bg-gray-50 px-6 py-4">
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                               <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-600">
                                 Individuele zelfbeoordelingen
                               </h4>
                               {team.student_details.map((student) => (
                                 <div
                                   key={student.student_id}
-                                  className="rounded-lg border border-gray-200 bg-white p-4"
+                                  className="rounded-lg border border-gray-200 bg-white overflow-hidden"
                                 >
-                                  <div className="mb-2 flex items-center justify-between">
-                                    <div>
-                                      <p className="text-sm font-semibold text-gray-900">
-                                        {student.student_name}
-                                      </p>
-                                      {student.updated_at && (
-                                        <p className="text-xs text-gray-500">
-                                          Laatst bijgewerkt:{" "}
-                                          {new Date(
-                                            student.updated_at
-                                          ).toLocaleDateString("nl-NL")}
+                                  {/* Student header */}
+                                  <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <p className="text-sm font-semibold text-gray-900">
+                                          {student.student_name}
                                         </p>
-                                      )}
-                                    </div>
-                                    <div className="text-right">
-                                      {student.has_self_assessment ? (
-                                        <>
-                                          <p className="text-sm font-medium text-gray-700">
-                                            Score:{" "}
-                                            {student.total_score?.toFixed(1) ||
-                                              "—"}
+                                        {student.updated_at && (
+                                          <p className="text-xs text-gray-500">
+                                            Laatst bijgewerkt:{" "}
+                                            {new Date(
+                                              student.updated_at
+                                            ).toLocaleDateString("nl-NL")}
                                           </p>
-                                          <p className="text-sm font-semibold text-blue-600">
-                                            Cijfer:{" "}
-                                            {student.grade?.toFixed(1) || "—"}
-                                          </p>
-                                        </>
-                                      ) : (
-                                        <span className="text-xs text-gray-400">
-                                          Niet ingevuld
-                                        </span>
-                                      )}
+                                        )}
+                                      </div>
+                                      <div className="text-right">
+                                        {student.has_self_assessment ? (
+                                          <>
+                                            <p className="text-sm font-medium text-gray-700">
+                                              Score:{" "}
+                                              {student.total_score?.toFixed(1) ||
+                                                "—"}
+                                            </p>
+                                            <p className="text-sm font-semibold text-blue-600">
+                                              Cijfer:{" "}
+                                              {student.grade?.toFixed(1) || "—"}
+                                            </p>
+                                          </>
+                                        ) : (
+                                          <span className="text-xs text-gray-400">
+                                            Niet ingevuld
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
 
-                                  {/* Criteria scores */}
+                                  {/* Criteria scores table */}
                                   {student.has_self_assessment && (
-                                    <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                                      {student.criterion_scores.map(
-                                        (criterionScore) => (
-                                          <div
-                                            key={criterionScore.criterion_id}
-                                            className="rounded border border-gray-100 bg-gray-50 p-2"
-                                          >
-                                            <p className="text-xs font-medium text-gray-600">
-                                              {criterionScore.criterion_name}
-                                            </p>
-                                            <p className="text-sm font-semibold text-gray-900">
-                                              {criterionScore.score ?? "—"}
-                                            </p>
-                                            {criterionScore.comment && (
-                                              <p className="mt-1 text-xs text-gray-500">
-                                                {criterionScore.comment}
-                                              </p>
-                                            )}
-                                          </div>
-                                        )
-                                      )}
-                                    </div>
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                      <thead className="bg-white">
+                                        <tr>
+                                          <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            Criterium
+                                          </th>
+                                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-24">
+                                            Score
+                                          </th>
+                                          <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            Opmerking
+                                          </th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="bg-white divide-y divide-gray-100">
+                                        {student.criterion_scores.map(
+                                          (criterionScore) => (
+                                            <tr
+                                              key={criterionScore.criterion_id}
+                                              className="hover:bg-gray-50"
+                                            >
+                                              <td className="px-4 py-2 text-sm text-gray-900">
+                                                {criterionScore.criterion_name}
+                                              </td>
+                                              <td className="px-4 py-2 text-sm font-semibold text-gray-900 text-center">
+                                                {criterionScore.score ?? "—"}
+                                              </td>
+                                              <td className="px-4 py-2 text-sm text-gray-600">
+                                                {criterionScore.comment || "—"}
+                                              </td>
+                                            </tr>
+                                          )
+                                        )}
+                                      </tbody>
+                                    </table>
                                   )}
                                 </div>
                               ))}
