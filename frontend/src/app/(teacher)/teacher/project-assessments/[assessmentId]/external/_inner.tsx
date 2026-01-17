@@ -49,7 +49,8 @@ export default function ExternalAssessmentPageInner() {
     teamId: number,
     teamNumber: number | undefined
   ) => {
-    const key = `${teamId}-${teamNumber ?? 'no-number'}`;
+    // Use team_id as the key since it's unique
+    const key = String(teamId);
     const isCurrentlyExpanded = expandedTeams.has(key);
     const willBeExpanded = !isCurrentlyExpanded;
 
@@ -302,7 +303,7 @@ export default function ExternalAssessmentPageInner() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredStatuses.map((team, index) => {
-                  const key = `${team.team_id}-${team.team_number ?? 'no-number'}`;
+                  const key = String(team.team_id);
                   const isExpanded = expandedTeams.has(key);
                   const detailData = teamDetailsCache.get(key);
                   const isLoading = loadingTeams.has(key);
@@ -375,19 +376,13 @@ export default function ExternalAssessmentPageInner() {
                               </div>
                             )}
 
-                            {!isLoading && loadError && (
+                            {!isLoading && (loadError || !detailData) && (
                               <div className="text-red-600 bg-red-50 p-4 rounded-lg">
-                                {loadError}
+                                {loadError || "Kon advies niet laden"}
                               </div>
                             )}
 
-                            {!isLoading && !loadError && !detailData && (
-                              <div className="text-red-600 bg-red-50 p-4 rounded-lg">
-                                Kon advies niet laden
-                              </div>
-                            )}
-
-                            {!isLoading && !loadError && detailData && (
+                            {!isLoading && detailData && (
                               <div className="space-y-4">
                                 {/* Evaluator Info */}
                                 <div className="bg-white rounded-lg border border-gray-200 p-4">
