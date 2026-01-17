@@ -349,6 +349,10 @@ def my_allocations(
                     .all()
                 )
                 valid_teammate_ids = {uid for (uid,) in team_member_ids}
+            else:
+                # User not assigned to any project team for this evaluation
+                # Log for debugging but this is expected if user hasn't been assigned yet
+                print(f"[ALLOC] User {user.id} not found in any ProjectTeam for project {ev.project_id}")
         else:
             # LEGACY: Find teammates with same course AND same team_number
             # Use User.team_number as the source of truth for team membership
@@ -361,6 +365,9 @@ def my_allocations(
                 )
 
                 valid_teammate_ids = set(teammates)
+            else:
+                # User has no team_number set - expected for students not yet assigned to teams
+                print(f"[ALLOC] User {user.id} has no team_number for legacy evaluation {evaluation_id}")
 
         needs_commit = False
 
