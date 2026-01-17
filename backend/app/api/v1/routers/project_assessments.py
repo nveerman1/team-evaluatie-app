@@ -1660,8 +1660,12 @@ def get_self_assessment_overview(
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
     
-    # Get all students in this group
-    students = (
+    # Get all students - if assessment has a project, include students from ProjectTeamMember
+    # This matches the behavior of the submissions page
+    students_set = set()
+    
+    # First, get students from group membership
+    group_students = (
         db.query(User)
         .join(GroupMember, GroupMember.user_id == User.id)
         .filter(
@@ -1673,6 +1677,26 @@ def get_self_assessment_overview(
         )
         .all()
     )
+    students_set.update(group_students)
+    
+    # If assessment has a project, also get students from project teams
+    # This ensures students assigned to project teams are included even if not active in group
+    if pa.project_id:
+        project_team_students = (
+            db.query(User)
+            .join(ProjectTeamMember, ProjectTeamMember.user_id == User.id)
+            .join(ProjectTeam, ProjectTeam.id == ProjectTeamMember.project_team_id)
+            .filter(
+                ProjectTeam.project_id == pa.project_id,
+                ProjectTeam.school_id == user.school_id,
+                User.archived.is_(False),
+                User.role == "student",
+            )
+            .all()
+        )
+        students_set.update(project_team_students)
+    
+    students = list(students_set)
     
     # Build user_id -> project team_number mapping if assessment has a project
     user_team_map: dict[int, int] = {}
