@@ -83,23 +83,15 @@ export default function StudentEditModal({
     setIsSubmitting(true);
 
     try {
-      if (mode === "create") {
-        await onSubmit({
-          name: name.trim(),
-          email: email.trim().toLowerCase(),
-          class_name: className.trim() || undefined,
-          course_name: selectedCourseName || undefined,
-          status,
-        });
-      } else {
-        await onSubmit({
-          name: name.trim(),
-          email: email.trim().toLowerCase(),
-          class_name: className.trim() || undefined,
-          course_name: selectedCourseName || undefined,
-          status,
-        });
-      }
+      const data = {
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        class_name: className.trim() || undefined,
+        course_name: selectedCourseName || undefined,
+        status,
+      };
+
+      await onSubmit(data);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Er is een fout opgetreden");

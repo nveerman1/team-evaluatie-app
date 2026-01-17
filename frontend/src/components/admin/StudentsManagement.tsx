@@ -154,18 +154,6 @@ const StudentsManagement = forwardRef((props, ref) => {
     }
   };
 
-  const handleToggleStatus = async (student: AdminStudent) => {
-    try {
-      const newStatus = student.status === "active" ? "inactive" : "active";
-      await adminStudentService.updateStudent(student.id, {
-        status: newStatus,
-      });
-      await loadStudents();
-    } catch (err) {
-      console.error("Failed to toggle status:", err);
-    }
-  };
-
   const handleExportCSV = async () => {
     try {
       const params: any = {};
