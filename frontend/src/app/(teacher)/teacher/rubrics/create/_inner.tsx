@@ -424,24 +424,24 @@ export default function CreateRubricPageInner() {
         {/* Subject selector - show for both peer and project scope */}
         <div className="space-y-1">
           <label className="block text-sm font-medium">Vakgebied / Sectie</label>
-          <select
-            className="w-full border rounded-lg px-3 py-2"
-            value={selectedSubjectId || ""}
-            onChange={(e) => setSelectedSubjectId(e.target.value ? parseInt(e.target.value) : null)}
-            disabled={loadingSubjects}
-          >
-            {loadingSubjects ? (
-              <option value="">Vakgebieden laden...</option>
-            ) : subjects.length === 0 ? (
-              <option value="">Geen vakgebieden beschikbaar</option>
-            ) : (
-              subjects.map((subject) => (
+          {loadingSubjects ? (
+            <div className="w-full border rounded-lg px-3 py-2 bg-gray-50 text-gray-500">
+              Vakgebieden laden...
+            </div>
+          ) : (
+            <select
+              className="w-full border rounded-lg px-3 py-2"
+              value={selectedSubjectId || ""}
+              onChange={(e) => setSelectedSubjectId(e.target.value ? parseInt(e.target.value) : null)}
+            >
+              <option value="">-- Kies een sectie --</option>
+              {subjects.map((subject) => (
                 <option key={subject.id} value={subject.id}>
                   {subject.name} ({subject.code})
                 </option>
-              ))
-            )}
-          </select>
+              ))}
+            </select>
+          )}
         </div>
 
         {/* Target level dropdown - show for both peer and project scope */}
