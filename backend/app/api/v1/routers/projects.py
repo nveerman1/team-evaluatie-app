@@ -1043,7 +1043,7 @@ def wizard_create_project(
                 # Create ProjectAssessment linked to project and project_team
                 # Include both version suffix and group name to make assessments distinguishable
                 title_parts = [project.title]
-                if group.name:
+                if group.name and group.name.strip():
                     title_parts.append(f"- {group.name}")
                 if version_suffix:
                     title_parts.append(f"({version_suffix})")
