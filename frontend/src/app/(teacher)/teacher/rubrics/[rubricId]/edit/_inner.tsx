@@ -624,11 +624,17 @@ export default function EditRubricPageInner() {
                 }}
                 disabled={loadingSubjects}
               >
-                {subjects.map((subject) => (
-                  <option key={subject.id} value={subject.id}>
-                    {subject.name} ({subject.code})
-                  </option>
-                ))}
+                {loadingSubjects ? (
+                  <option value="">Vakgebieden laden...</option>
+                ) : subjects.length === 0 ? (
+                  <option value="">Geen vakgebieden beschikbaar</option>
+                ) : (
+                  subjects.map((subject) => (
+                    <option key={subject.id} value={subject.id}>
+                      {subject.name} ({subject.code})
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 
