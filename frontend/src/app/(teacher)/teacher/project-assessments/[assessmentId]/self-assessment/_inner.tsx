@@ -81,6 +81,7 @@ export default function ProjectAssessmentSelfInner() {
   });
 
   // Calculate average scores per category for each team
+  // Returns both raw scores and grades (1-10 scale using formula: points/total*9+1)
   const getTeamCategoryAverages = (team: typeof data.team_overviews[0]) => {
     const categoryAverages: Record<string, number> = {};
     
@@ -96,7 +97,15 @@ export default function ProjectAssessmentSelfInner() {
         .filter((score): score is number => score !== null && score !== undefined);
       
       if (scores.length > 0) {
-        categoryAverages[category] = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+        // Calculate average score for this category
+        const avgScore = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+        
+        // Convert to grade (1-10) using formula: (points / total_points) * 9 + 1
+        // Assuming max score per criterion is data.rubric_scale_max
+        const maxScore = data.rubric_scale_max;
+        const grade = (avgScore / maxScore) * 9 + 1;
+        
+        categoryAverages[category] = grade;
       }
     });
     
@@ -178,7 +187,7 @@ export default function ProjectAssessmentSelfInner() {
                       {/* Team row */}
                       <tr className="hover:bg-gray-50 transition-colors">
                         <td className="px-3 py-4 text-sm font-semibold text-gray-900">
-                          Team {team.team_number}
+                          {team.team_name}
                         </td>
                         <td className="px-4 py-4 text-sm text-gray-600">
                           <div className="flex flex-wrap gap-x-2 gap-y-0.5">
