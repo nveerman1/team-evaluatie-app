@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Loading, ErrorMessage, TeamBadge, TeamMembersList } from "@/components";
+import { Loading, ErrorMessage } from "@/components";
 import { FeedbackSummary, EvaluationReflectionSection } from "@/components/student";
 import { AISummarySection } from "@/components/student/AISummarySection";
 import { peerFeedbackResultsService, studentService, evaluationService, courseService } from "@/services";
@@ -336,39 +336,91 @@ export default function ResultaatPage() {
                 )}
               </div>
 
-              {/* Right column: Team-bijdrage */}
+              {/* Right column: Teambeoordeling */}
               <div className="space-y-3">
-                {/* Team-bijdrage / correctiefactor (GCF) */}
-                {teamContributionFactor != null && (
+                {/* Teambeoordeling - Teacher OMZA scores */}
+                {evaluationData.teacherOmza && Object.keys(evaluationData.teacherOmza).length > 0 && (
                   <div className="rounded-xl border border-slate-100 bg-indigo-50/60 p-3">
-                    <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                    <div className="flex items-center justify-between text-xs font-semibold text-slate-700 mb-3">
+                      <span>Teambeoordeling</span>
+                    </div>
+                    
+                    {/* OMZA scores table */}
+                    <div className="space-y-2">
+                      {Object.entries(evaluationData.teacherOmza).map(([key, value]) => {
+                        const omzaLabels: Record<string, string> = {
+                          O: "Organiseren",
+                          M: "Meedoen", 
+                          Z: "Zelfvertrouwen",
+                          A: "Autonomie"
+                        };
+                        const label = omzaLabels[key] || key;
+                        
+                        // Get corresponding peer average and delta for comparison
+                        const peerAvg = evaluationData.omzaAverages?.find(avg => avg.key === key);
+                        const delta = peerAvg?.delta ?? 0;
+                        
+                        // Color based on teacher score (1-4 scale)
+                        const getOmzaColor = (score: number) => {
+                          if (score >= 3.5) return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+                          if (score >= 2.5) return "bg-green-50 text-green-700 ring-green-200";
+                          if (score >= 1.5) return "bg-amber-50 text-amber-700 ring-amber-200";
+                          return "bg-rose-50 text-rose-700 ring-rose-200";
+                        };
+                        
+                        return (
+                          <div key={key} className="flex items-center justify-between text-xs">
+                            <span className="text-slate-600 font-medium">{key}</span>
+                            <div className="flex items-center gap-2">
+                              <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full ring-1 text-xs font-semibold ${getOmzaColor(value)}`}>
+                                {value.toFixed(1)}
+                              </span>
+                              {delta !== 0 && (
+                                <span className={`text-[10px] font-medium ${
+                                  delta > 0 ? "text-emerald-600" : delta < 0 ? "text-red-600" : "text-slate-500"
+                                }`}>
+                                  {delta > 0 ? "↑" : "↓"}{Math.abs(delta).toFixed(1)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Pills row */}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {/* GCF pill */}
+                      {teamContributionFactor != null && (
+                        <span className="inline-flex items-center rounded-full bg-white/80 px-2 py-0.5 text-[10px] uppercase tracking-wide text-indigo-600 font-semibold">
+                          GCF: {teamContributionFactor.toFixed(2)}
+                        </span>
+                      )}
+                      {/* SPR pill - placeholder for now, will be fetched */}
+                      {evaluationData.gcfScore != null && (
+                        <span className="inline-flex items-center rounded-full bg-white/80 px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-600 font-semibold">
+                          SPR: -
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Fallback: Show GCF even if no teacher OMZA */}
+                {!evaluationData.teacherOmza && teamContributionFactor != null && (
+                  <div className="rounded-xl border border-slate-100 bg-indigo-50/60 p-3">
+                    <div className="flex items-center justify-between text-xs font-semibold text-slate-700 mb-2">
                       <span>Team-bijdrage</span>
                       <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] uppercase tracking-wide text-indigo-600">
                         Correctiefactor
                       </span>
                     </div>
-                    <div className="mt-2 flex items-baseline justify-between">
-                      <div>
-                        <p className="text-2xl font-semibold text-slate-900">
-                          {teamContributionFactor.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-slate-500">Range 0,90 – 1,10</p>
-                      </div>
-                      <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-700">
-                        {teamContributionLabel}
-                      </span>
+                    <div className="mt-2">
+                      <p className="text-2xl font-semibold text-slate-900">
+                        {teamContributionFactor.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-slate-500">Range 0,90 – 1,10</p>
                     </div>
-                    <div className="mt-2 h-1.5 w-full rounded-full bg-indigo-100">
-                      <div
-                        className="h-1.5 rounded-full bg-indigo-500"
-                        style={{
-                          width: `${Math.min(100, Math.max(0, (teamContributionFactor - 0.9) * 500))}%`,
-                        }}
-                      />
-                    </div>
-                    <p className="mt-1 text-[11px] text-slate-500">
-                      Factor waarmee de docent het groepscijfer corrigeert op basis van peer-feedback.
-                    </p>
                   </div>
                 )}
               </div>
@@ -447,22 +499,6 @@ export default function ResultaatPage() {
             </div>
           )}
         </article>
-
-        {/* Team Section */}
-        {teamContext && myTeam && (
-          <article className="mt-6 rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <TeamBadge teamNumber={myTeam.team_number} displayName={myTeam.display_name} size="lg" />
-              <h2 className="text-lg font-semibold text-slate-900">
-                Jouw Teamleden
-              </h2>
-            </div>
-            <TeamMembersList members={myTeam.members} />
-            <p className="mt-4 text-xs text-slate-500">
-              Je hebt {myTeam.members.length} teamleden voor deze evaluatie.
-            </p>
-          </article>
-        )}
 
         {/* Reflection Section */}
         <div className="mt-6">
