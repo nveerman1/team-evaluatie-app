@@ -9,6 +9,7 @@ const tabs = [
   { id: "edit", label: "Rubric invullen", href: (id: string) => `/teacher/project-assessments/${id}/edit` },
   { id: "scores", label: "Scores", href: (id: string) => `/teacher/project-assessments/${id}/scores` },
   { id: "reflections", label: "Reflecties", href: (id: string) => `/teacher/project-assessments/${id}/reflections` },
+  { id: "self-assessment", label: "Zelfbeoordeling", href: (id: string) => `/teacher/project-assessments/${id}/self-assessment` },
   { id: "external", label: "Externe beoordeling", href: (id: string) => `/teacher/project-assessments/${id}/external` },
   { id: "settings", label: "Bewerken", href: (id: string) => `/teacher/project-assessments/${id}/settings` },
 ];

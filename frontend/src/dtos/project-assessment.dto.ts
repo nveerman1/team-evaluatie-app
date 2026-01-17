@@ -225,3 +225,93 @@ export type ProjectAssessmentStudentsOverview = {
   student_scores: StudentScoreOverview[];
   statistics: StudentScoreStatistics;
 };
+
+// ---------- Self Assessment ----------
+
+export type SelfAssessmentScoreCreate = {
+  criterion_id: number;
+  score: number;
+  comment?: string | null;
+};
+
+export type SelfAssessmentCreate = {
+  scores: SelfAssessmentScoreCreate[];
+};
+
+export type SelfAssessmentScoreOut = {
+  id: number;
+  criterion_id: number;
+  score: number;
+  comment?: string | null;
+};
+
+export type SelfAssessmentOut = {
+  id: number;
+  assessment_id: number;
+  student_id: number;
+  team_number?: number | null;
+  locked: boolean;
+  created_at: string;
+  updated_at: string;
+  scores: SelfAssessmentScoreOut[];
+};
+
+export type SelfAssessmentDetailOut = {
+  self_assessment?: SelfAssessmentOut | null;
+  assessment: ProjectAssessmentOut;
+  rubric_title: string;
+  rubric_scale_min: number;
+  rubric_scale_max: number;
+  criteria: Array<{
+    id: number;
+    name: string;
+    weight: number;
+    category?: string | null;
+    descriptors: Record<string, string>;
+  }>;
+  can_edit: boolean;
+};
+
+export type StudentSelfAssessmentInfo = {
+  student_id: number;
+  student_name: string;
+  criterion_scores: CriterionScore[];
+  total_score?: number | null;
+  grade?: number | null;
+  updated_at?: string | null;
+  has_self_assessment: boolean;
+};
+
+export type TeamSelfAssessmentOverview = {
+  team_number: number;
+  team_name: string;
+  members: TeamMemberInfo[];
+  avg_criterion_scores: CriterionScore[];
+  avg_total_score?: number | null;
+  avg_grade?: number | null;
+  student_details: StudentSelfAssessmentInfo[];
+  completed_count: number;
+};
+
+export type SelfAssessmentStatistics = {
+  total_students: number;
+  completed_assessments: number;
+  average_per_criterion: Record<string, number>;
+  average_grade?: number | null;
+};
+
+export type ProjectAssessmentSelfOverview = {
+  assessment: ProjectAssessmentOut;
+  rubric_title: string;
+  rubric_scale_min: number;
+  rubric_scale_max: number;
+  criteria: Array<{
+    id: number;
+    name: string;
+    weight: number;
+    category?: string | null;
+    descriptors: Record<string, string>;
+  }>;
+  team_overviews: TeamSelfAssessmentOverview[];
+  statistics: SelfAssessmentStatistics;
+};

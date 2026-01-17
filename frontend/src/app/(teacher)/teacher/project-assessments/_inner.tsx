@@ -5,6 +5,7 @@ import api, { ApiAuthError } from "@/lib/api";
 import { projectAssessmentService } from "@/services";
 import { ProjectAssessmentListItem, TeamAssessmentStatus } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
+import { normalizeProjectAssessmentStatus, getStatusPillProps } from "@/lib/project-assessment-status";
 
 type Course = {
   id: number;
@@ -245,15 +246,15 @@ export default function ProjectAssessmentsListInner() {
                     <h3 className="text-base font-semibold text-slate-900">
                       {item.title}
                     </h3>
-                    {item.status === "published" ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-green-100">
-                        Gepubliceerd
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-amber-100">
-                        Concept
-                      </span>
-                    )}
+                    {(() => {
+                      const normalizedStatus = normalizeProjectAssessmentStatus(item.status);
+                      const pillProps = getStatusPillProps(normalizedStatus);
+                      return (
+                        <span className={pillProps.className}>
+                          {pillProps.label}
+                        </span>
+                      );
+                    })()}
                   </div>
 
                   {/* Version */}

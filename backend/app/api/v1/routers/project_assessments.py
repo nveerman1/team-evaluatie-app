@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func
@@ -12,6 +12,8 @@ from app.infra.db.models import (
     ProjectAssessment,
     ProjectAssessmentScore,
     ProjectAssessmentReflection,
+    ProjectAssessmentSelfAssessment,
+    ProjectAssessmentSelfAssessmentScore,
     Rubric,
     RubricCriterion,
     Group,
@@ -48,6 +50,14 @@ from app.api.v1.schemas.project_assessments import (
     ProjectAssessmentStudentsOverview,
     StudentScoreOverview,
     StudentScoreStatistics,
+    SelfAssessmentCreate,
+    SelfAssessmentOut,
+    SelfAssessmentDetailOut,
+    SelfAssessmentScoreOut,
+    ProjectAssessmentSelfOverview,
+    TeamSelfAssessmentOverview,
+    StudentSelfAssessmentInfo,
+    SelfAssessmentStatistics,
 )
 
 router = APIRouter(prefix="/project-assessments", tags=["project-assessments"])
@@ -1382,3 +1392,587 @@ def get_assessment_students_overview(
         student_scores=student_scores,
         statistics=statistics,
     )
+
+
+# ---------- Self Assessment (Student) ----------
+
+
+@router.get("/{assessment_id}/self", response_model=SelfAssessmentDetailOut)
+def get_self_assessment(
+    assessment_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """Get student's own self-assessment for a project assessment"""
+    if user.role != "student":
+        raise HTTPException(status_code=403, detail="Only students can access self-assessments")
+    
+    # Get the assessment - students can see it if status is open or published
+    pa = db.query(ProjectAssessment).filter(
+        ProjectAssessment.id == assessment_id,
+        ProjectAssessment.school_id == user.school_id,
+        ProjectAssessment.status.in_(["open", "published", "closed"]),
+    ).first()
+    if not pa:
+        raise HTTPException(status_code=404, detail="Assessment not found or not yet available")
+    
+    # Check if student is in the group
+    is_member = db.query(GroupMember).filter(
+        GroupMember.group_id == pa.group_id,
+        GroupMember.user_id == user.id,
+        GroupMember.school_id == user.school_id,
+        GroupMember.active.is_(True),
+    ).first()
+    if not is_member:
+        raise HTTPException(status_code=403, detail="Not authorized to access this assessment")
+    
+    # Get rubric info
+    rubric = db.query(Rubric).filter(Rubric.id == pa.rubric_id).first()
+    if not rubric:
+        raise HTTPException(status_code=404, detail="Rubric not found")
+    
+    # Get all criteria
+    criteria = _get_ordered_criteria_query(db, rubric.id, user.school_id).all()
+    criteria_list = [
+        {
+            "id": c.id,
+            "name": c.name,
+            "weight": c.weight,
+            "category": getattr(c, "category", None),
+            "descriptors": c.descriptors,
+        }
+        for c in criteria
+    ]
+    
+    # Get existing self-assessment if it exists
+    self_assessment = db.query(ProjectAssessmentSelfAssessment).filter(
+        ProjectAssessmentSelfAssessment.assessment_id == assessment_id,
+        ProjectAssessmentSelfAssessment.student_id == user.id,
+        ProjectAssessmentSelfAssessment.school_id == user.school_id,
+    ).first()
+    
+    self_assessment_out = None
+    if self_assessment:
+        # Get scores for this self-assessment
+        scores = db.query(ProjectAssessmentSelfAssessmentScore).filter(
+            ProjectAssessmentSelfAssessmentScore.self_assessment_id == self_assessment.id,
+            ProjectAssessmentSelfAssessmentScore.school_id == user.school_id,
+        ).all()
+        
+        score_outs = [SelfAssessmentScoreOut.model_validate(s) for s in scores]
+        self_assessment_out = SelfAssessmentOut(
+            id=self_assessment.id,
+            assessment_id=self_assessment.assessment_id,
+            student_id=self_assessment.student_id,
+            team_number=self_assessment.team_number,
+            locked=self_assessment.locked,
+            created_at=self_assessment.created_at,
+            updated_at=self_assessment.updated_at,
+            scores=score_outs,
+        )
+    
+    # TODO: Add policy to lock self-assessment after published if desired
+    # Currently students can edit during open/published/closed status
+    can_edit = pa.status in ["open", "published"] and (
+        not self_assessment or not self_assessment.locked
+    )
+    
+    return SelfAssessmentDetailOut(
+        self_assessment=self_assessment_out,
+        assessment=_to_out_assessment(pa),
+        rubric_title=rubric.title,
+        rubric_scale_min=rubric.scale_min,
+        rubric_scale_max=rubric.scale_max,
+        criteria=criteria_list,
+        can_edit=can_edit,
+    )
+
+
+@router.post("/{assessment_id}/self", response_model=SelfAssessmentOut)
+def create_or_update_self_assessment(
+    assessment_id: int,
+    payload: SelfAssessmentCreate,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """Create or update student's self-assessment"""
+    if user.role != "student":
+        raise HTTPException(status_code=403, detail="Only students can submit self-assessments")
+    
+    # Get the assessment - only open or published assessments can be filled
+    pa = db.query(ProjectAssessment).filter(
+        ProjectAssessment.id == assessment_id,
+        ProjectAssessment.school_id == user.school_id,
+        ProjectAssessment.status.in_(["open", "published"]),
+    ).first()
+    if not pa:
+        raise HTTPException(
+            status_code=404,
+            detail="Assessment not found or not available for self-assessment",
+        )
+    
+    # Check if student is in the group
+    is_member = db.query(GroupMember).filter(
+        GroupMember.group_id == pa.group_id,
+        GroupMember.user_id == user.id,
+        GroupMember.school_id == user.school_id,
+        GroupMember.active.is_(True),
+    ).first()
+    if not is_member:
+        raise HTTPException(status_code=403, detail="Not authorized to assess this project")
+    
+    # Get student's team number
+    team_number = user.team_number
+    
+    # Get or create self-assessment
+    self_assessment = db.query(ProjectAssessmentSelfAssessment).filter(
+        ProjectAssessmentSelfAssessment.assessment_id == assessment_id,
+        ProjectAssessmentSelfAssessment.student_id == user.id,
+        ProjectAssessmentSelfAssessment.school_id == user.school_id,
+    ).first()
+    
+    if self_assessment:
+        # Check if locked
+        if self_assessment.locked:
+            raise HTTPException(
+                status_code=403,
+                detail="Self-assessment is locked and cannot be modified",
+            )
+        # Update timestamp
+        self_assessment.updated_at = datetime.now(timezone.utc)
+    else:
+        # Create new self-assessment
+        self_assessment = ProjectAssessmentSelfAssessment(
+            school_id=user.school_id,
+            assessment_id=assessment_id,
+            student_id=user.id,
+            team_number=team_number,
+            locked=False,
+        )
+        db.add(self_assessment)
+        db.flush()  # Get the ID
+    
+    # Validate that all criterion_ids are valid for this rubric
+    rubric = db.query(Rubric).filter(Rubric.id == pa.rubric_id).first()
+    if not rubric:
+        raise HTTPException(status_code=404, detail="Rubric not found")
+    
+    valid_criterion_ids_query = select(RubricCriterion.id).where(
+        RubricCriterion.rubric_id == rubric.id,
+        RubricCriterion.school_id == user.school_id,
+    )
+    valid_criterion_ids = set(
+        db.execute(valid_criterion_ids_query).scalars().all()
+    )
+    
+    for score_data in payload.scores:
+        if score_data.criterion_id not in valid_criterion_ids:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid criterion_id: {score_data.criterion_id}",
+            )
+        
+        # Validate score range
+        if not (rubric.scale_min <= score_data.score <= rubric.scale_max):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Score must be between {rubric.scale_min} and {rubric.scale_max}",
+            )
+    
+    # Update scores - delete existing and insert new ones
+    db.query(ProjectAssessmentSelfAssessmentScore).filter(
+        ProjectAssessmentSelfAssessmentScore.self_assessment_id == self_assessment.id
+    ).delete()
+    
+    for score_data in payload.scores:
+        score = ProjectAssessmentSelfAssessmentScore(
+            school_id=user.school_id,
+            self_assessment_id=self_assessment.id,
+            criterion_id=score_data.criterion_id,
+            score=score_data.score,
+            comment=score_data.comment,
+        )
+        db.add(score)
+    
+    db.commit()
+    db.refresh(self_assessment)
+    
+    # Get all scores for response
+    scores = db.query(ProjectAssessmentSelfAssessmentScore).filter(
+        ProjectAssessmentSelfAssessmentScore.self_assessment_id == self_assessment.id
+    ).all()
+    
+    score_outs = [SelfAssessmentScoreOut.model_validate(s) for s in scores]
+    
+    return SelfAssessmentOut(
+        id=self_assessment.id,
+        assessment_id=self_assessment.assessment_id,
+        student_id=self_assessment.student_id,
+        team_number=self_assessment.team_number,
+        locked=self_assessment.locked,
+        created_at=self_assessment.created_at,
+        updated_at=self_assessment.updated_at,
+        scores=score_outs,
+    )
+
+
+# ---------- Self Assessment Overview (Teacher) ----------
+
+
+@router.get("/{assessment_id}/self/overview", response_model=ProjectAssessmentSelfOverview)
+def get_self_assessment_overview(
+    assessment_id: int,
+    q: Optional[str] = Query(None, description="Search by student name or team"),
+    sort: Optional[str] = Query("team", description="Sort by: team|name|grade"),
+    direction: Optional[str] = Query("asc", description="Sort direction: asc|desc"),
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """Get aggregated self-assessment overview for teachers"""
+    if user.role not in ("teacher", "admin"):
+        raise HTTPException(
+            status_code=403,
+            detail="Only teachers and admins can view self-assessment overview",
+        )
+    
+    pa = _get_assessment_with_access_check(db, assessment_id, user)
+    
+    # Get rubric info
+    rubric = db.query(Rubric).filter(Rubric.id == pa.rubric_id).first()
+    if not rubric:
+        raise HTTPException(status_code=404, detail="Rubric not found")
+    
+    # Get all criteria
+    criteria = _get_ordered_criteria_query(db, rubric.id, user.school_id).all()
+    criteria_list = [
+        {
+            "id": c.id,
+            "name": c.name,
+            "weight": c.weight,
+            "category": getattr(c, "category", None),
+            "descriptors": c.descriptors,
+        }
+        for c in criteria
+    ]
+    
+    # Get group info
+    group = db.query(Group).filter(Group.id == pa.group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    # Get all students - if assessment has a project, include students from ProjectTeamMember
+    # This matches the behavior of the submissions page
+    students_set = set()
+    
+    # First, get students from group membership
+    group_students = (
+        db.query(User)
+        .join(GroupMember, GroupMember.user_id == User.id)
+        .filter(
+            GroupMember.group_id == group.id,
+            GroupMember.school_id == user.school_id,
+            GroupMember.active.is_(True),
+            User.archived.is_(False),
+            User.role == "student",
+        )
+        .all()
+    )
+    students_set.update(group_students)
+    
+    # If assessment has a project, also get students from project teams
+    # This ensures students assigned to project teams are included even if not active in group
+    if pa.project_id:
+        project_team_students = (
+            db.query(User)
+            .join(ProjectTeamMember, ProjectTeamMember.user_id == User.id)
+            .join(ProjectTeam, ProjectTeam.id == ProjectTeamMember.project_team_id)
+            .filter(
+                ProjectTeam.project_id == pa.project_id,
+                ProjectTeam.school_id == user.school_id,
+                User.archived.is_(False),
+                User.role == "student",
+            )
+            .all()
+        )
+        students_set.update(project_team_students)
+    
+    students = list(students_set)
+    
+    # Build user_id -> project team_number mapping if assessment has a project
+    user_team_map: dict[int, int] = {}
+    if pa.project_id:
+        project_teams = (
+            db.query(ProjectTeam)
+            .filter(
+                ProjectTeam.project_id == pa.project_id,
+                ProjectTeam.school_id == user.school_id,
+            )
+            .all()
+        )
+        
+        for team in project_teams:
+            members = (
+                db.query(ProjectTeamMember)
+                .filter(ProjectTeamMember.project_team_id == team.id)
+                .all()
+            )
+            for member in members:
+                user_team_map[member.user_id] = team.team_number
+    
+    # Apply search filter if provided
+    if q:
+        q_lower = q.lower()
+        students = [
+            s
+            for s in students
+            if q_lower in s.name.lower()
+            or (str(user_team_map.get(s.id, s.team_number or 0)) in q_lower)
+        ]
+    
+    # Get all self-assessments for this project assessment
+    self_assessments = (
+        db.query(ProjectAssessmentSelfAssessment)
+        .filter(
+            ProjectAssessmentSelfAssessment.assessment_id == assessment_id,
+            ProjectAssessmentSelfAssessment.school_id == user.school_id,
+        )
+        .all()
+    )
+    
+    # Build map of student_id -> self_assessment
+    self_assessment_map = {sa.student_id: sa for sa in self_assessments}
+    
+    # Get all self-assessment scores
+    self_assessment_ids = [sa.id for sa in self_assessments]
+    all_scores = []
+    if self_assessment_ids:
+        all_scores = (
+            db.query(ProjectAssessmentSelfAssessmentScore)
+            .filter(
+                ProjectAssessmentSelfAssessmentScore.self_assessment_id.in_(
+                    self_assessment_ids
+                ),
+                ProjectAssessmentSelfAssessmentScore.school_id == user.school_id,
+            )
+            .all()
+        )
+    
+    # Build map of self_assessment_id -> [scores]
+    scores_map: dict[int, list[ProjectAssessmentSelfAssessmentScore]] = {}
+    for score in all_scores:
+        if score.self_assessment_id not in scores_map:
+            scores_map[score.self_assessment_id] = []
+        scores_map[score.self_assessment_id].append(score)
+    
+    # Group students by team using project teams if available
+    # Note: Students without a team_num will be added to team 0 (no team)
+    teams_dict: dict[int, list[User]] = {}
+    for student in students:
+        if pa.project_id:
+            team_num = user_team_map.get(student.id, 0)  # Default to 0 if not found
+        else:
+            team_num = student.team_number if student.team_number is not None else 0
+        
+        if team_num not in teams_dict:
+            teams_dict[team_num] = []
+        teams_dict[team_num].append(student)
+    
+    # Build team overviews
+    team_overviews = []
+    for team_num in sorted(teams_dict.keys()):
+        team_students = teams_dict[team_num]
+        team_name = f"Team {team_num}" if team_num > 0 else "Geen team"
+        
+        # Build student details for this team
+        student_details = []
+        for student in team_students:
+            sa = self_assessment_map.get(student.id)
+            if sa:
+                scores = scores_map.get(sa.id, [])
+                criterion_scores = []
+                for criterion in criteria:
+                    score_obj = next(
+                        (s for s in scores if s.criterion_id == criterion.id), None
+                    )
+                    criterion_scores.append(
+                        CriterionScore(
+                            criterion_id=criterion.id,
+                            criterion_name=criterion.name,
+                            category=getattr(criterion, "category", None),
+                            score=score_obj.score if score_obj else None,
+                            comment=score_obj.comment if score_obj else None,
+                        )
+                    )
+                
+                # Calculate total score and grade
+                total_score = _calculate_total_score(
+                    criterion_scores, criteria, rubric.scale_min, rubric.scale_max
+                )
+                grade = (
+                    _score_to_grade(total_score, rubric.scale_min, rubric.scale_max)
+                    if total_score is not None
+                    else None
+                )
+                
+                student_details.append(
+                    StudentSelfAssessmentInfo(
+                        student_id=student.id,
+                        student_name=student.name,
+                        criterion_scores=criterion_scores,
+                        total_score=total_score,
+                        grade=grade,
+                        updated_at=sa.updated_at,
+                        has_self_assessment=True,
+                    )
+                )
+            else:
+                # Student has not completed self-assessment
+                student_details.append(
+                    StudentSelfAssessmentInfo(
+                        student_id=student.id,
+                        student_name=student.name,
+                        criterion_scores=[
+                            CriterionScore(
+                                criterion_id=c.id,
+                                criterion_name=c.name,
+                                category=getattr(c, "category", None),
+                                score=None,
+                                comment=None,
+                            )
+                            for c in criteria
+                        ],
+                        total_score=None,
+                        grade=None,
+                        updated_at=None,
+                        has_self_assessment=False,
+                    )
+                )
+        
+        # Calculate team averages
+        completed_students = [s for s in student_details if s.has_self_assessment]
+        avg_criterion_scores = []
+        for criterion in criteria:
+            scores_for_criterion = [
+                s.score
+                for student in completed_students
+                for s in student.criterion_scores
+                if s.criterion_id == criterion.id and s.score is not None
+            ]
+            avg_score = (
+                sum(scores_for_criterion) / len(scores_for_criterion)
+                if scores_for_criterion
+                else None
+            )
+            avg_criterion_scores.append(
+                CriterionScore(
+                    criterion_id=criterion.id,
+                    criterion_name=criterion.name,
+                    category=getattr(criterion, "category", None),
+                    score=round(avg_score, 1) if avg_score is not None else None,
+                    comment=None,
+                )
+            )
+        
+        # Calculate average total score and grade for team
+        total_scores = [s.total_score for s in completed_students if s.total_score is not None]
+        avg_total_score = sum(total_scores) / len(total_scores) if total_scores else None
+        
+        grades = [s.grade for s in completed_students if s.grade is not None]
+        avg_grade = sum(grades) / len(grades) if grades else None
+        
+        team_overviews.append(
+            TeamSelfAssessmentOverview(
+                team_number=team_num,
+                team_name=team_name,
+                members=[
+                    TeamMemberInfo(id=s.id, name=s.name, email=s.email)
+                    for s in team_students
+                ],
+                avg_criterion_scores=avg_criterion_scores,
+                avg_total_score=avg_total_score,
+                avg_grade=avg_grade,
+                student_details=student_details,
+                completed_count=len(completed_students),
+            )
+        )
+    
+    # Apply sorting
+    if sort == "team":
+        team_overviews.sort(
+            key=lambda t: t.team_number, reverse=(direction == "desc")
+        )
+    elif sort == "name":
+        # Sort by first student name in team
+        team_overviews.sort(
+            key=lambda t: t.members[0].name if t.members else "",
+            reverse=(direction == "desc"),
+        )
+    elif sort == "grade":
+        team_overviews.sort(
+            key=lambda t: t.avg_grade if t.avg_grade is not None else -1,
+            reverse=(direction == "desc"),
+        )
+    
+    # Calculate overall statistics
+    all_criterion_averages = {}
+    for criterion in criteria:
+        all_scores_for_criterion = []
+        for team in team_overviews:
+            for student in team.student_details:
+                if student.has_self_assessment:
+                    for cs in student.criterion_scores:
+                        if cs.criterion_id == criterion.id and cs.score is not None:
+                            all_scores_for_criterion.append(cs.score)
+        
+        if all_scores_for_criterion:
+            all_criterion_averages[criterion.name] = sum(
+                all_scores_for_criterion
+            ) / len(all_scores_for_criterion)
+    
+    all_grades = []
+    for team in team_overviews:
+        for student in team.student_details:
+            if student.grade is not None:
+                all_grades.append(student.grade)
+    
+    statistics = SelfAssessmentStatistics(
+        total_students=len(students),
+        completed_assessments=len(self_assessments),
+        average_per_criterion=all_criterion_averages,
+        average_grade=sum(all_grades) / len(all_grades) if all_grades else None,
+    )
+    
+    return ProjectAssessmentSelfOverview(
+        assessment=_to_out_assessment(pa),
+        rubric_title=rubric.title,
+        rubric_scale_min=rubric.scale_min,
+        rubric_scale_max=rubric.scale_max,
+        criteria=criteria_list,
+        team_overviews=team_overviews,
+        statistics=statistics,
+    )
+
+
+def _calculate_total_score(
+    criterion_scores: List[CriterionScore],
+    criteria: List[RubricCriterion],
+    scale_min: int,
+    scale_max: int,
+) -> Optional[float]:
+    """Calculate weighted average total score"""
+    total_weight = 0.0
+    weighted_sum = 0.0
+    
+    for cs in criterion_scores:
+        if cs.score is not None:
+            # Find the criterion to get its weight
+            criterion = next((c for c in criteria if c.id == cs.criterion_id), None)
+            if criterion:
+                weight = criterion.weight or 1.0
+                weighted_sum += cs.score * weight
+                total_weight += weight
+    
+    if total_weight == 0:
+        return None
+    
+    return weighted_sum / total_weight

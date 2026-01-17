@@ -286,3 +286,109 @@ class ProjectAssessmentStudentsOverview(BaseModel):
     criteria: List[Dict[str, Any]]  # All rubric criteria
     student_scores: List[StudentScoreOverview]
     statistics: StudentScoreStatistics
+
+
+# ---------- Self Assessment ----------
+
+
+class SelfAssessmentScoreCreate(BaseModel):
+    """Schema for creating/updating a score in self-assessment"""
+
+    criterion_id: int
+    score: int
+    comment: Optional[str] = None
+
+
+class SelfAssessmentCreate(BaseModel):
+    """Schema for creating/updating a self-assessment with scores"""
+
+    scores: List[SelfAssessmentScoreCreate]
+
+
+class SelfAssessmentScoreOut(BaseModel):
+    """Schema for a single self-assessment score"""
+
+    id: int
+    criterion_id: int
+    score: int
+    comment: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class SelfAssessmentOut(BaseModel):
+    """Schema for self-assessment detail"""
+
+    id: int
+    assessment_id: int
+    student_id: int
+    team_number: Optional[int] = None
+    locked: bool
+    created_at: datetime
+    updated_at: datetime
+    scores: List[SelfAssessmentScoreOut]
+
+    class Config:
+        from_attributes = True
+
+
+class SelfAssessmentDetailOut(BaseModel):
+    """Detailed self-assessment including rubric info (for student view)"""
+
+    self_assessment: Optional[SelfAssessmentOut] = None
+    assessment: ProjectAssessmentOut
+    rubric_title: str
+    rubric_scale_min: int
+    rubric_scale_max: int
+    criteria: List[Dict[str, Any]]  # criterion details
+    can_edit: bool  # Based on assessment status and lock status
+
+
+# ---------- Teacher Self Assessment Overview ----------
+
+
+class StudentSelfAssessmentInfo(BaseModel):
+    """Individual student's self-assessment info for teacher view"""
+
+    student_id: int
+    student_name: str
+    criterion_scores: List[CriterionScore]
+    total_score: Optional[float] = None
+    grade: Optional[float] = None
+    updated_at: Optional[datetime] = None
+    has_self_assessment: bool = False
+
+
+class TeamSelfAssessmentOverview(BaseModel):
+    """Team-aggregated self-assessment overview"""
+
+    team_number: int
+    team_name: str
+    members: List[TeamMemberInfo]
+    avg_criterion_scores: List[CriterionScore]  # Average per criterion
+    avg_total_score: Optional[float] = None
+    avg_grade: Optional[float] = None
+    student_details: List[StudentSelfAssessmentInfo]  # Individual student data
+    completed_count: int  # Number of students who completed self-assessment
+
+
+class SelfAssessmentStatistics(BaseModel):
+    """Statistics for self-assessments"""
+
+    total_students: int
+    completed_assessments: int
+    average_per_criterion: Dict[str, float]  # criterion_name -> average across all students
+    average_grade: Optional[float] = None
+
+
+class ProjectAssessmentSelfOverview(BaseModel):
+    """Complete self-assessment overview for teachers"""
+
+    assessment: ProjectAssessmentOut
+    rubric_title: str
+    rubric_scale_min: int
+    rubric_scale_max: int
+    criteria: List[Dict[str, Any]]  # All rubric criteria
+    team_overviews: List[TeamSelfAssessmentOverview]
+    statistics: SelfAssessmentStatistics
