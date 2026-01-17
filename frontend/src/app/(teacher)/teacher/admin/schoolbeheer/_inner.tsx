@@ -141,6 +141,12 @@ export default function SchoolbeheerPageInner() {
             >
               Exporteer CSV
             </button>
+            <button
+              onClick={() => leerlingenRef.current?.handleCreate?.()}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+            >
+              + Nieuwe leerling
+            </button>
           </div>
         );
       case "jaren":

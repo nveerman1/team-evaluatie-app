@@ -8,10 +8,10 @@ import {
 } from "@/services/admin-students.service";
 import { Course } from "@/dtos/course.dto";
 import { courseService } from "@/services/course.service";
-import LinkStudentToCourseModal from "@/components/admin/LinkStudentToCourseModal";
+import StudentEditModal from "@/components/admin/StudentEditModal";
 import BulkLinkStudentsToCourseModal from "@/components/admin/BulkLinkStudentsToCourseModal";
 import StudentCSVImportModal from "@/components/admin/StudentCSVImportModal";
-import { Link2, Power, PowerOff } from "lucide-react";
+import { Edit } from "lucide-react";
 
 const StudentsManagement = forwardRef((props, ref) => {
   // State
@@ -28,9 +28,10 @@ const StudentsManagement = forwardRef((props, ref) => {
   const [error, setError] = useState<string | null>(null);
 
   // Modal states
-  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<AdminStudent | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   
   // Bulk selection states
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<number>>(new Set());
@@ -127,38 +128,29 @@ const StudentsManagement = forwardRef((props, ref) => {
   };
 
   const handleLinkStudent = (student: AdminStudent) => {
-    setSelectedStudent(student);
-    setShowLinkModal(true);
+    setSelectedStudentId(student.id);
+    setShowEditModal(true);
   };
 
-  const handleLinkToCourse = async (courseName: string) => {
-    if (!selectedStudent) return;
-    
+  const handleCreateStudent = async (data: any) => {
     try {
-      const updatedStudent = await adminStudentService.updateStudent(selectedStudent.id, {
-        course_name: courseName,
-      });
-      
-      // Update the selected student with the fresh data from the server
-      setSelectedStudent(updatedStudent);
-      
-      // Reload both students and KPI data
+      await adminStudentService.createStudent(data);
       await Promise.all([loadStudents(), loadKPIData()]);
     } catch (err) {
-      console.error("Failed to link student to course:", err);
+      console.error("Failed to create student:", err);
       throw err; // Re-throw so modal can handle it
     }
   };
 
-  const handleToggleStatus = async (student: AdminStudent) => {
+  const handleUpdateStudent = async (data: any) => {
+    if (!selectedStudentId) return;
+    
     try {
-      const newStatus = student.status === "active" ? "inactive" : "active";
-      await adminStudentService.updateStudent(student.id, {
-        status: newStatus,
-      });
-      await loadStudents();
+      await adminStudentService.updateStudent(selectedStudentId, data);
+      await Promise.all([loadStudents(), loadKPIData()]);
     } catch (err) {
-      console.error("Failed to toggle status:", err);
+      console.error("Failed to update student:", err);
+      throw err; // Re-throw so modal can handle it
     }
   };
 
@@ -220,15 +212,22 @@ const StudentsManagement = forwardRef((props, ref) => {
     setShowBulkLinkModal(true);
   };
 
-  const handleBulkLinkToCourse = async (courseName: string) => {
+  const handleBulkLinkToCourse = async (courseName: string, className?: string) => {
     const idsToLink = Array.from(selectedStudentIds);
+    
+    // Prepare update data - only include fields that have values
+    const updateData: any = {};
+    if (courseName) {
+      updateData.course_name = courseName;
+    }
+    if (className) {
+      updateData.class_name = className;
+    }
     
     // Link all students concurrently for better performance
     const results = await Promise.allSettled(
       idsToLink.map(id =>
-        adminStudentService.updateStudent(id, {
-          course_name: courseName,
-        })
+        adminStudentService.updateStudent(id, updateData)
       )
     );
     
@@ -253,6 +252,7 @@ const StudentsManagement = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => ({
     handleExportCSV: handleExportCSV,
     handleImportCSV: () => setShowImportModal(true),
+    handleCreate: () => setShowCreateModal(true),
   }));
 
   // Calculate KPIs from all students data
@@ -603,24 +603,9 @@ const StudentsManagement = forwardRef((props, ref) => {
                               <button
                                 onClick={() => handleLinkStudent(student)}
                                 className="p-1.5 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded transition-colors"
-                                title="Koppelen"
+                                title="Bewerken"
                               >
-                                <Link2 className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleToggleStatus(student)}
-                                className={`p-1.5 rounded transition-colors ${
-                                  student.status === "active" 
-                                    ? "text-gray-600 hover:text-gray-900 hover:bg-gray-100" 
-                                    : "text-green-600 hover:text-green-900 hover:bg-green-50"
-                                }`}
-                                title={student.status === "active" ? "Deactiveren" : "Activeren"}
-                              >
-                                {student.status === "active" ? (
-                                  <PowerOff className="h-4 w-4" />
-                                ) : (
-                                  <Power className="h-4 w-4" />
-                                )}
+                                <Edit className="h-4 w-4" />
                               </button>
                             </div>
                           </td>
@@ -660,19 +645,25 @@ const StudentsManagement = forwardRef((props, ref) => {
         )}
       </div>
 
-      {/* Link modal */}
-      {selectedStudent && (
-        <LinkStudentToCourseModal
-          isOpen={showLinkModal}
-          onClose={() => {
-            setShowLinkModal(false);
-            setSelectedStudent(null);
-          }}
-          studentName={selectedStudent.name}
-          currentCourseName={selectedStudent.course_name}
-          onLink={handleLinkToCourse}
-        />
-      )}
+      {/* Edit/Create modal */}
+      <StudentEditModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedStudentId(null);
+        }}
+        studentId={selectedStudentId}
+        onSubmit={handleUpdateStudent}
+        mode="edit"
+      />
+
+      <StudentEditModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        studentId={null}
+        onSubmit={handleCreateStudent}
+        mode="create"
+      />
 
       {/* Bulk link modal */}
       <BulkLinkStudentsToCourseModal

@@ -8,7 +8,7 @@ type BulkLinkStudentsToCourseModalProps = {
   isOpen: boolean;
   onClose: () => void;
   studentCount: number;
-  onLink: (courseName: string) => Promise<void>;
+  onLink: (courseName: string, className?: string) => Promise<void>;
 };
 
 export default function BulkLinkStudentsToCourseModal({
@@ -19,6 +19,7 @@ export default function BulkLinkStudentsToCourseModal({
 }: BulkLinkStudentsToCourseModalProps) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourseName, setSelectedCourseName] = useState("");
+  const [className, setClassName] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +28,7 @@ export default function BulkLinkStudentsToCourseModal({
     if (isOpen) {
       loadCourses();
       setSelectedCourseName("");
+      setClassName("");
       setError(null);
     }
   }, [isOpen]);
@@ -51,8 +53,8 @@ export default function BulkLinkStudentsToCourseModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedCourseName) {
-      setError("Selecteer een vak");
+    if (!selectedCourseName && !className) {
+      setError("Selecteer een vak of voer een klas in");
       return;
     }
 
@@ -60,13 +62,14 @@ export default function BulkLinkStudentsToCourseModal({
     setError(null);
 
     try {
-      await onLink(selectedCourseName);
+      await onLink(selectedCourseName, className || undefined);
       // Close modal and clear form state after successful link
       setSelectedCourseName("");
+      setClassName("");
       onClose();
     } catch (err: any) {
-      console.error("Failed to bulk link students to course:", err);
-      setError(err.message || "Kon leerlingen niet koppelen aan vak");
+      console.error("Failed to bulk link students:", err);
+      setError(err.message || "Kon leerlingen niet koppelen");
     } finally {
       setLoading(false);
     }
@@ -79,17 +82,31 @@ export default function BulkLinkStudentsToCourseModal({
       <div className="bg-white rounded-xl shadow-lg max-w-md w-full mx-4">
         <div className="p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Koppel leerlingen aan vak
+            Koppel leerlingen aan klas en vak
           </h2>
           
           <p className="text-sm text-gray-600 mb-6">
-            Koppel <strong>{studentCount} {studentCount === 1 ? "leerling" : "leerlingen"}</strong> aan een vak
+            Koppel <strong>{studentCount} {studentCount === 1 ? "leerling" : "leerlingen"}</strong> aan een klas en/of vak
           </p>
 
           <form onSubmit={handleSubmit}>
+            <div className="mb-4">
+              <label htmlFor="className" className="block text-sm font-medium text-gray-700 mb-2">
+                Klas
+              </label>
+              <input
+                id="className"
+                type="text"
+                value={className}
+                onChange={(e) => setClassName(e.target.value)}
+                placeholder="Bijv. G2a"
+                className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+
             <div className="mb-6">
               <label htmlFor="course" className="block text-sm font-medium text-gray-700 mb-2">
-                Selecteer vak *
+                Selecteer vak
               </label>
               {loadingCourses ? (
                 <div className="text-sm text-gray-500">Vakken laden...</div>
@@ -99,9 +116,8 @@ export default function BulkLinkStudentsToCourseModal({
                   value={selectedCourseName}
                   onChange={(e) => setSelectedCourseName(e.target.value)}
                   className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  required
                 >
-                  <option value="">-- Selecteer een vak --</option>
+                  <option value="">-- Selecteer een vak (optioneel) --</option>
                   {courses.map((course) => (
                     <option key={course.id} value={course.name}>
                       {course.name} {course.code && `(${course.code})`}
