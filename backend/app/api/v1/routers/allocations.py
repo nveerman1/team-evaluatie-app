@@ -303,6 +303,10 @@ def my_allocations(
     Als er nog geen self-allocation bestaat maar de student hoort bij de course,
     wordt de self-allocation aangemaakt.
     Ook worden peer-allocations automatisch aangemaakt voor alle teamgenoten.
+    
+    Teammate determination:
+    - If evaluation has project_id: Uses ProjectTeam and ProjectTeamMember (new system)
+    - Otherwise: Falls back to legacy User.team_number and Groups
     """
     ev = _get_eval_or_404(db, evaluation_id)
 
