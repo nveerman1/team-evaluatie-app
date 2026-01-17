@@ -467,22 +467,22 @@ export default function GradesPageInner() {
             {/* Footer with averages */}
             {stats.hasData && (
               <div className="border-t border-gray-200 bg-gray-50 px-5 py-3">
-                <div className="flex items-center text-sm">
-                  <div className="w-20"></div>
-                  <div className="px-5 font-medium text-gray-900 flex-1">
+                <div className="grid grid-cols-[80px_1fr_auto_auto_auto_auto_auto] gap-0 text-sm items-center">
+                  <div></div>
+                  <div className="px-5 font-medium text-gray-900">
                     Gemiddelde (op basis van filter)
                   </div>
-                  <div className="px-3"></div>
-                  <div className="px-4 text-right font-medium text-gray-800 w-24">
+                  <div className="px-3 w-16"></div>
+                  <div className="px-4 text-right font-medium text-gray-800 w-32">
                     {stats.avgProposal.toFixed(1)}
                   </div>
-                  <div className="px-4 text-right font-medium text-gray-800 w-24">
+                  <div className="px-4 text-right font-medium text-gray-800 w-32">
                     {stats.avgGroupGrade.toFixed(1)}
                   </div>
-                  <div className="px-4 text-right font-medium text-gray-800 w-24">
+                  <div className="px-4 text-right font-medium text-gray-800 w-28">
                     {stats.avgGcf.toFixed(2)}
                   </div>
-                  <div className="px-4 text-right font-semibold text-gray-900 w-24">
+                  <div className="px-4 text-right font-semibold text-gray-900 w-32">
                     {stats.avgFinal.toFixed(1)}
                   </div>
                 </div>
