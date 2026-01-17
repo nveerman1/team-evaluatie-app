@@ -83,17 +83,6 @@ export default function AanwezigheidTab() {
 
   return (
     <div className="space-y-6">
-      {/* Stats Card */}
-      <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
-        <div className="flex items-center gap-4">
-          <Users className="h-8 w-8 text-green-600" />
-          <div>
-            <p className="text-sm text-gray-600">Nu aanwezig</p>
-            <p className="text-2xl font-semibold">{openSessions.length}</p>
-          </div>
-        </div>
-      </div>
-
       {error && (
         <div className="bg-red-50 border border-gray-200/80 rounded-xl p-4">
           <p className="text-red-700">{error}</p>
