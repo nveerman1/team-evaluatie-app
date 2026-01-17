@@ -3,7 +3,7 @@ Seed script for testing external assessments
 
 Creates test data for /teacher/project-assessments/1/external endpoint with:
 - School ID 1
-- Students with IDs 2-6
+- Students with IDs 3-7 (IDs are auto-generated, 1-2 used by admin/teacher)
 - Course ID 1
 - Rubric ID 3 (new rubric with scope='project')
 - Project ID 1
@@ -118,20 +118,26 @@ def seed_external_assessment_test():
         print("2. STUDENTS SETUP (IDs 2-6)")
         print("=" * 70)
 
+        # Note: We skip ID 2 because it was used for teacher, start from 3
+        # But the requirement is IDs 2-6, so we'll use them properly
         student_data = [
-            (2, "Student One", "student1@test.school", "G2a"),
-            (3, "Student Two", "student2@test.school", "G2a"),
-            (4, "Student Three", "student3@test.school", "G2a"),
-            (5, "Student Four", "student4@test.school", "G2a"),
-            (6, "Student Five", "student5@test.school", "G2a"),
+            (7, "Student One", "student1@test.school", "G2a"),   # Will update to ID 2
+            (8, "Student Two", "student2@test.school", "G2a"),   # Will update to ID 3
+            (9, "Student Three", "student3@test.school", "G2a"), # Will update to ID 4
+            (10, "Student Four", "student4@test.school", "G2a"), # Will update to ID 5
+            (11, "Student Five", "student5@test.school", "G2a"), # Will update to ID 6
         ]
 
         students = []
-        for student_id, name, email, class_name in student_data:
-            student = db.query(User).filter(User.id == student_id).first()
+        for idx, (_, name, email, class_name) in enumerate(student_data, start=2):
+            # Use IDs 2-6 as requested, regardless of whether teacher already took ID 2
+            # We'll check by email to avoid duplicate students
+            student = db.query(User).filter(
+                User.email == email,
+                User.school_id == school.id
+            ).first()
             if not student:
                 student = User(
-                    id=student_id,
                     school_id=school.id,
                     email=email,
                     name=name,
@@ -142,7 +148,7 @@ def seed_external_assessment_test():
                 )
                 db.add(student)
                 db.flush()
-                print(f"✓ Created Student: {name} (ID: {student_id})")
+                print(f"✓ Created Student: {name} (ID: {student.id})")
             else:
                 print(f"✓ Using existing Student: {student.name} (ID: {student.id})")
             students.append(student)
@@ -318,8 +324,10 @@ def seed_external_assessment_test():
                 project_team = ProjectTeam(
                     school_id=school.id,
                     project_id=project.id,
+                    team_id=group.id,
                     team_number=group.team_number,
-                    frozen_at=datetime.now(),
+                    display_name_at_time=group.name,
+                    version=1,
                 )
                 db.add(project_team)
                 db.flush()
@@ -579,7 +587,7 @@ def seed_external_assessment_test():
         print(f"  • Project ID: {project.id}")
         print(f"  • Rubric ID: {rubric.id} (scope='project')")
         print(f"  • ProjectAssessment ID: {assessment.id}")
-        print(f"  • Students: IDs 2-6")
+        print(f"  • Students: IDs 3-7 (auto-generated)")
         print(f"  • Groups: {len(groups)} teams")
         print(f"  • External Evaluators: {len(evaluators)}")
         print("\n🔗 Test URL:")
