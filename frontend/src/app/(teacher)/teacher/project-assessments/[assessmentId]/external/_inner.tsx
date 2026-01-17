@@ -77,7 +77,7 @@ export default function ExternalAssessmentPageInner() {
         const detail =
           await externalAssessmentService.getExternalAdvisoryDetail(
             teamId,
-            teamNumber ?? undefined
+            teamNumber
           );
         setTeamDetailsCache((prev) => new Map(prev).set(key, detail));
       } catch (e: unknown) {
@@ -302,7 +302,7 @@ export default function ExternalAssessmentPageInner() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredStatuses.map((team, index) => {
+                {filteredStatuses.map((team) => {
                   const key = String(team.team_id);
                   const isExpanded = expandedTeams.has(key);
                   const detailData = teamDetailsCache.get(key);
@@ -376,13 +376,13 @@ export default function ExternalAssessmentPageInner() {
                               </div>
                             )}
 
-                            {!isLoading && (loadError || !detailData) && (
+                            {!isLoading && loadError && (
                               <div className="text-red-600 bg-red-50 p-4 rounded-lg">
-                                {loadError || "Kon advies niet laden"}
+                                {loadError}
                               </div>
                             )}
 
-                            {!isLoading && detailData && (
+                            {!isLoading && !loadError && detailData && (
                               <div className="space-y-4">
                                 {/* Evaluator Info */}
                                 <div className="bg-white rounded-lg border border-gray-200 p-4">
