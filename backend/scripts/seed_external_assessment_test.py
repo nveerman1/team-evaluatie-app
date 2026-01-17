@@ -36,6 +36,7 @@ from app.infra.db.models import (
     Rubric,
     RubricCriterion,
     ProjectAssessment,
+    ProjectAssessmentScore,
     ExternalEvaluator,
     ProjectTeamExternal,
     Subject,
@@ -471,12 +472,12 @@ def seed_external_assessment_test():
 
         # Create assessment for first group/team
         assessment = db.query(ProjectAssessment).filter(
-            ProjectAssessment.id == 1
+            ProjectAssessment.project_id == project.id,
+            ProjectAssessment.role == "TEACHER"
         ).first()
         
         if not assessment:
             assessment = ProjectAssessment(
-                id=1,
                 school_id=school.id,
                 project_id=project.id,
                 group_id=groups[0].id,  # First group
@@ -574,6 +575,108 @@ def seed_external_assessment_test():
             else:
                 print(f"✓ Link already exists: {evaluator.name} -> {group.name}")
 
+        # Flush to ensure links are created
+        db.flush()
+
+        # ============================================================
+        # 12. External Assessments with Scores
+        # ============================================================
+        print("\n" + "=" * 70)
+        print("12. EXTERNAL ASSESSMENTS & SCORES SETUP")
+        print("=" * 70)
+
+        # Get visible criteria for external evaluators
+        visible_criteria = db.query(RubricCriterion).filter(
+            RubricCriterion.rubric_id == rubric.id,
+            RubricCriterion.visible_to_external.is_(True)
+        ).all()
+
+        # Create external assessments for each team
+        for idx, group in enumerate(groups):
+            evaluator = evaluators[idx % len(evaluators)]
+            project_team = project_teams[idx]
+            
+            # Check if external assessment already exists
+            existing_external_assessment = db.query(ProjectAssessment).filter(
+                ProjectAssessment.group_id == group.id,
+                ProjectAssessment.external_evaluator_id == evaluator.id,
+                ProjectAssessment.role == "EXTERNAL"
+            ).first()
+            
+            if not existing_external_assessment:
+                # Create external assessment
+                external_assessment = ProjectAssessment(
+                    school_id=school.id,
+                    project_id=project.id,
+                    group_id=group.id,
+                    project_team_id=project_team.id,
+                    rubric_id=rubric.id,
+                    external_evaluator_id=evaluator.id,
+                    title=f"External Assessment - {group.name}",
+                    version="extern",
+                    status="closed",  # Mark as completed
+                    role="EXTERNAL",
+                    is_advisory=True,
+                    closed_at=datetime.now(),
+                    published_at=datetime.now(),
+                )
+                db.add(external_assessment)
+                db.flush()
+                print(f"\n✓ Created External Assessment for {group.name} by {evaluator.name}")
+                
+                # Create scores for each visible criterion
+                for criterion in visible_criteria:
+                    # Generate realistic scores (3-5 range for external assessments)
+                    import random
+                    score_value = random.choice([3, 3, 4, 4, 4, 5])
+                    
+                    # Comments for different scores
+                    comments = {
+                        3: [
+                            "Voldoende niveau, maar kan nog beter.",
+                            "Basis aanwezig, maar verdere ontwikkeling nodig.",
+                            "Acceptabel, met ruimte voor verbetering.",
+                        ],
+                        4: [
+                            "Goed werk! Duidelijke voortgang zichtbaar.",
+                            "Prima uitgevoerd, enkele kleine verbeterpunten.",
+                            "Sterke prestatie met goede uitvoering.",
+                        ],
+                        5: [
+                            "Uitstekend! Professioneel niveau.",
+                            "Zeer sterk, excellente uitvoering.",
+                            "Indrukwekkend resultaat, goed gedaan!",
+                        ],
+                    }
+                    
+                    comment = random.choice(comments.get(score_value, [""]))
+                    
+                    score = ProjectAssessmentScore(
+                        school_id=school.id,
+                        assessment_id=external_assessment.id,
+                        criterion_id=criterion.id,
+                        team_number=group.team_number,
+                        student_id=None,  # Team score
+                        score=score_value,
+                        comment=comment if comment else None,
+                    )
+                    db.add(score)
+                    print(f"  ✓ Added score for '{criterion.name}': {score_value}/5")
+                
+                # Update the ProjectTeamExternal status to SUBMITTED
+                link = db.query(ProjectTeamExternal).filter(
+                    ProjectTeamExternal.group_id == group.id,
+                    ProjectTeamExternal.external_evaluator_id == evaluator.id,
+                    ProjectTeamExternal.assessment_id == assessment.id
+                ).first()
+                
+                if link:
+                    link.status = "SUBMITTED"
+                    link.submitted_at = datetime.now()
+                    print(f"  ✓ Updated link status to SUBMITTED")
+            else:
+                print(f"✓ External Assessment already exists for {group.name}")
+
         # Commit all changes
         db.commit()
 
@@ -585,15 +688,20 @@ def seed_external_assessment_test():
         print(f"  • Course ID: {course.id}")
         print(f"  • Project ID: {project.id}")
         print(f"  • Rubric ID: {rubric.id} (scope='project')")
-        print(f"  • ProjectAssessment ID: {assessment.id}")
+        print(f"  • ProjectAssessment ID: {assessment.id} (Teacher)")
         print(f"  • Students: 5 students (IDs are auto-generated)")
         print(f"  • Groups: {len(groups)} teams")
         print(f"  • External Evaluators: {len(evaluators)}")
+        print(f"  • External Assessments: {len(groups)} (with scores)")
         print("\n🔗 Test URL:")
         print(f"  http://localhost:3000/teacher/project-assessments/1/external")
         print("\n👤 Login credentials:")
         print(f"  Teacher: teacher@test.school / test123")
         print(f"  Admin: admin@test.school / test123")
+        print("\n📊 External Assessment Details:")
+        print(f"  • Each team has completed external assessment")
+        print(f"  • Scores range from 3-5 on visible criteria")
+        print(f"  • Status: SUBMITTED (completed)")
         print("=" * 70)
 
     except Exception as e:
