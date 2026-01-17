@@ -1741,23 +1741,23 @@ def get_self_assessment_overview(
         scores_map[score.self_assessment_id].append(score)
     
     # Group students by team using project teams if available
+    # Note: Students without a team_num will be added to team 0 (no team)
     teams_dict: dict[int, list[User]] = {}
     for student in students:
         if pa.project_id:
-            team_num = user_team_map.get(student.id, None)
+            team_num = user_team_map.get(student.id, 0)  # Default to 0 if not found
         else:
-            team_num = student.team_number
+            team_num = student.team_number if student.team_number is not None else 0
         
-        if team_num is not None:
-            if team_num not in teams_dict:
-                teams_dict[team_num] = []
-            teams_dict[team_num].append(student)
+        if team_num not in teams_dict:
+            teams_dict[team_num] = []
+        teams_dict[team_num].append(student)
     
     # Build team overviews
     team_overviews = []
     for team_num in sorted(teams_dict.keys()):
         team_students = teams_dict[team_num]
-        team_name = f"Team {team_num}"
+        team_name = f"Team {team_num}" if team_num > 0 else "Geen team"
         
         # Build student details for this team
         student_details = []
