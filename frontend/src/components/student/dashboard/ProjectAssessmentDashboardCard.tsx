@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronRight } from "lucide-react";
 import { ProjectAssessmentListItem } from "@/dtos";
 import Link from "next/link";
+import { normalizeProjectAssessmentStatus, getStudentStatusBadgeProps } from "@/lib/project-assessment-status";
 
 type ProjectAssessmentDashboardCardProps = {
   assessment: ProjectAssessmentListItem;
@@ -13,9 +14,13 @@ type ProjectAssessmentDashboardCardProps = {
 export function ProjectAssessmentDashboardCard({ 
   assessment 
 }: ProjectAssessmentDashboardCardProps) {
+  // Normalize status for consistency
+  const status = normalizeProjectAssessmentStatus(assessment.status);
+  const badgeProps = getStudentStatusBadgeProps(status);
+  
   // Status-based logic
-  const isOpen = assessment.status === "open";
-  const isPublishedOrClosed = ["published", "closed"].includes(assessment.status);
+  const isOpen = status === "open";
+  const isPublished = status === "published";
   
   const grade = (assessment.metadata_json as any)?.final_grade || (assessment.metadata_json as any)?.suggested_grade;
   
@@ -28,16 +33,8 @@ export function ProjectAssessmentDashboardCard({
               <h3 className="text-base font-semibold text-slate-900">
                 {assessment.title}
               </h3>
-              <Badge
-                className={
-                  isOpen
-                    ? "rounded-full bg-blue-600 text-white"
-                    : isPublishedOrClosed
-                    ? "rounded-full bg-slate-100 text-slate-700"
-                    : "rounded-full bg-slate-900 text-white"
-                }
-              >
-                {isOpen ? "Open" : isPublishedOrClosed ? "Gesloten" : "Concept"}
+              <Badge className={badgeProps.className}>
+                {badgeProps.label}
               </Badge>
             </div>
             <div className="text-sm text-slate-600">
@@ -56,7 +53,7 @@ export function ProjectAssessmentDashboardCard({
           </div>
 
           <div className="flex shrink-0 items-start gap-2 sm:justify-end">
-            {/* Self-assessment button - always visible when status is open/published/closed */}
+            {/* Self-assessment button - always visible when status is open/published */}
             <Button asChild className="rounded-xl" size="sm" variant="outline">
               <Link href={`/student/project-assessments/${assessment.id}/self`}>
                 Zelfbeoordeling
@@ -64,8 +61,8 @@ export function ProjectAssessmentDashboardCard({
               </Link>
             </Button>
             
-            {/* Project assessment button - only visible when published or closed */}
-            {isPublishedOrClosed && (
+            {/* Project assessment button - only visible when published */}
+            {isPublished && (
               <Button asChild className="rounded-xl" size="sm">
                 <Link href={`/student/project-assessments/${assessment.id}`}>
                   Projectbeoordeling

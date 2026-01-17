@@ -8,6 +8,11 @@ import { projectAssessmentService } from "@/services";
 import { ProjectAssessmentTeamOverview } from "@/dtos";
 import { Loading, ErrorMessage, StatusToggle } from "@/components";
 import { ProjectAssessmentTabs } from "@/components/teacher/project-assessments/ProjectAssessmentTabs";
+import { 
+  normalizeProjectAssessmentStatus, 
+  STATUS_TOGGLE_OPTIONS,
+  getStatusChangeMessage 
+} from "@/lib/project-assessment-status";
 
 type LayoutProps = {
   children: ReactNode;
@@ -70,8 +75,11 @@ export default function ProjectAssessmentLayout({ children }: LayoutProps) {
   async function handleStatusChange(newStatus: string) {
     if (!data || publishing) return;
     
+    // Normalize the status
+    const normalizedStatus = normalizeProjectAssessmentStatus(newStatus);
+    
     // Don't do anything if status is the same
-    if (data.assessment.status === newStatus) return;
+    if (normalizeProjectAssessmentStatus(data.assessment.status) === normalizedStatus) return;
     
     setPublishing(true);
     try {
@@ -82,14 +90,8 @@ export default function ProjectAssessmentLayout({ children }: LayoutProps) {
       // Reload data to get updated status
       await loadData();
       
-      // Show appropriate message based on new status
-      const statusMessages: Record<string, string> = {
-        draft: "Status gewijzigd naar Concept",
-        open: "Status gewijzigd naar Open (studenten kunnen nu zelfbeoordeling invullen)",
-        published: "Status gewijzigd naar Gepubliceerd (studenten kunnen beoordeling bekijken)",
-        closed: "Status gewijzigd naar Gesloten",
-      };
-      showToast(statusMessages[newStatus] || "Status gewijzigd");
+      // Show appropriate message
+      showToast(getStatusChangeMessage(normalizedStatus));
     } catch (e: unknown) {
       const err = e as { response?: { data?: { detail?: string } }; message?: string };
       showToast(err?.response?.data?.detail || err?.message || "Status wijzigen mislukt");
@@ -135,13 +137,8 @@ export default function ProjectAssessmentLayout({ children }: LayoutProps) {
             </div>
             <div className="flex items-center gap-2">
               <StatusToggle
-                options={[
-                  { value: "draft", label: "Concept" },
-                  { value: "open", label: "Open" },
-                  { value: "published", label: "Gepubliceerd" },
-                  { value: "closed", label: "Gesloten" },
-                ]}
-                value={data.assessment.status}
+                options={STATUS_TOGGLE_OPTIONS}
+                value={normalizeProjectAssessmentStatus(data.assessment.status)}
                 onChange={handleStatusChange}
                 disabled={publishing}
               />
