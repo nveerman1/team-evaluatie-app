@@ -997,15 +997,10 @@ def wizard_create_project(
                 "or create them manually after wizard completion."
             )
         else:
-            # Create one ProjectAssessment per group
-            # For each group, we create a ProjectTeam to freeze the team roster at this point in time.
-            # This ensures that project assessments reference the correct team composition,
-            # even if group membership changes later. The ProjectTeam preserves:
-            # - Team roster (members) at the time of project creation
-            # - Team number from the group for proper team identification
-            # - Historical record of team composition for this specific project
+            # Create ProjectTeams for ALL groups to freeze team rosters
+            # This preserves the team composition at the time of project creation
             for group in groups:
-                # Check if project team already exists for this group (might be created by previous assessment)
+                # Check if project team already exists for this group
                 existing_project_team = (
                     db.query(ProjectTeam)
                     .filter(
@@ -1015,9 +1010,7 @@ def wizard_create_project(
                     .first()
                 )
 
-                if existing_project_team:
-                    project_team = existing_project_team
-                else:
+                if not existing_project_team:
                     # Create ProjectTeam for this group to preserve team roster
                     project_team = ProjectTeamService.create_project_team(
                         db=db,
@@ -1040,52 +1033,54 @@ def wizard_create_project(
                     )
                     db.flush()  # Flush to get project_team.id
 
-                # Create ProjectAssessment linked to project and project_team
-                # Include version suffix in title if provided, but not group name
-                title_with_version = project.title
-                if version_suffix:
-                    title_with_version += f" ({version_suffix})"
+            # Create ONE ProjectAssessment for the entire project/course
+            # Link to the first group (required by schema), but it can score all teams
+            # NOTE: groups[0] is safe here because we're in the else block of "if not groups"
+            first_group = groups[0]
+            title_with_version = project.title
+            if version_suffix:
+                title_with_version += f" ({version_suffix})"
 
-                assessment = ProjectAssessment(
-                    school_id=user.school_id,
-                    project_id=project.id,  # Set project_id on the model
-                    group_id=group.id,
-                    project_team_id=project_team.id,  # Link to project team
-                    teacher_id=user.id,
-                    rubric_id=pa_config.rubric_id,
-                    title=title_with_version,
-                    version=pa_config.version or version_suffix,
-                    status="draft",
-                    metadata_json={
+            assessment = ProjectAssessment(
+                school_id=user.school_id,
+                project_id=project.id,  # Key: project_id enables scoring all teams
+                group_id=first_group.id,  # Required by schema, links to first group
+                project_team_id=None,  # None = assessment scores all teams in project
+                teacher_id=user.id,
+                rubric_id=pa_config.rubric_id,
+                title=title_with_version,
+                version=pa_config.version or version_suffix,
+                status="draft",
+                metadata_json={
+                    "deadline": (
+                        pa_config.deadline.isoformat()
+                        if pa_config.deadline
+                        else None
+                    ),
+                },
+            )
+            db.add(assessment)
+            db.flush()
+
+            created_entities.append(
+                WizardEntityOut(
+                    type="project_assessment",
+                    data={
+                        "id": assessment.id,
+                        "title": assessment.title,
+                        "project_id": assessment.project_id,
+                        "group_id": assessment.group_id,
+                        "group_name": first_group.name,
+                        "project_team_id": assessment.project_team_id,
+                        "rubric_id": assessment.rubric_id,
+                        "version": assessment.version,
+                        "status": assessment.status,
                         "deadline": (
                             pa_config.deadline.isoformat()
                             if pa_config.deadline
                             else None
                         ),
                     },
-                )
-                db.add(assessment)
-                db.flush()
-
-                created_entities.append(
-                    WizardEntityOut(
-                        type="project_assessment",
-                        data={
-                            "id": assessment.id,
-                            "title": assessment.title,
-                            "project_id": assessment.project_id,
-                            "group_id": assessment.group_id,
-                            "group_name": group.name,
-                            "project_team_id": assessment.project_team_id,
-                            "rubric_id": assessment.rubric_id,
-                            "version": assessment.version,
-                            "status": assessment.status,
-                            "deadline": (
-                                pa_config.deadline.isoformat()
-                                if pa_config.deadline
-                                else None
-                            ),
-                        },
                     )
                 )
 
