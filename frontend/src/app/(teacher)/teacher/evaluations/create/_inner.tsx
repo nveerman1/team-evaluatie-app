@@ -362,27 +362,6 @@ export default function CreateEvaluationPageInner() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              className="size-4"
-              checked={smoothing}
-              onChange={(e) => setSmoothing(e.target.checked)}
-            />
-            <span className="text-sm">Smoothing (stabiliseer cijfers)</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              className="size-4"
-              checked={reviewerRating}
-              onChange={(e) => setReviewerRating(e.target.checked)}
-            />
-            <span className="text-sm">Beoordeel reviewers mee</span>
-          </label>
-        </div>
-
         <div className="flex items-center gap-3">
           <button
             type="submit"
