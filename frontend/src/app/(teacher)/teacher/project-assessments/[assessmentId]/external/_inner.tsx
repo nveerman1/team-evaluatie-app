@@ -44,15 +44,18 @@ export default function ExternalAssessmentPageInner() {
     new Map()
   );
 
+  // Helper function to generate consistent keys for team identification
+  const getTeamKey = (teamId: number) => String(teamId);
+
   // Toggle team expansion and load data if needed
   const toggleTeamExpansion = async (
     teamId: number,
     teamNumber: number | undefined
   ) => {
     // Use team_id as the key since it's unique
-    const key = String(teamId);
-    const isCurrentlyExpanded = expandedTeams.has(key);
-    const willBeExpanded = !isCurrentlyExpanded;
+    const key = getTeamKey(teamId);
+    const isExpanded = expandedTeams.has(key);
+    const willExpand = !isExpanded;
 
     setExpandedTeams((prev) => {
       const newSet = new Set(prev);
@@ -65,7 +68,7 @@ export default function ExternalAssessmentPageInner() {
     });
 
     // Load detail data if not already cached and we're expanding
-    if (willBeExpanded && !teamDetailsCache.has(key)) {
+    if (willExpand && !teamDetailsCache.has(key)) {
       setLoadingTeams((prev) => new Set(prev).add(key));
       // Clear any previous error for this team
       setTeamLoadErrors((prev) => {
@@ -303,7 +306,7 @@ export default function ExternalAssessmentPageInner() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredStatuses.map((team) => {
-                  const key = String(team.team_id);
+                  const key = getTeamKey(team.team_id);
                   const isExpanded = expandedTeams.has(key);
                   const detailData = teamDetailsCache.get(key);
                   const isLoading = loadingTeams.has(key);
