@@ -1,5 +1,6 @@
 interface TeamInfo {
-  teamNumber: number;
+  teamId: number;
+  teamNumber: number | null;
   displayName: string;
   memberCount: number;
 }
@@ -34,8 +35,8 @@ export function TeamFilter({
       >
         <option value="">Alle teams</option>
         {teams.map((team) => (
-          <option key={team.teamNumber} value={team.teamNumber}>
-            Team {team.teamNumber} · {team.memberCount} leden
+          <option key={team.teamId} value={team.teamNumber ?? ""}>
+            Team {team.teamNumber ?? "?"} · {team.memberCount} leden
           </option>
         ))}
       </select>
