@@ -374,54 +374,7 @@ export default function ResultaatPage() {
               </div>
             </div>
 
-            {/* OMZA-balken (peer-feedback) */}
-            {omzaAverages && omzaAverages.length > 0 ? (
-              <div className="mt-4 grid gap-3 md:grid-cols-4">
-              {omzaAverages.map((item) => (
-                <div key={item.key} className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-                  <div className="flex items-center justify-between text-xs text-slate-500">
-                    <span>{item.label}</span>
-                    <div className="text-right">
-                      <span className="block font-medium text-slate-700">
-                        Gem.: {item.value.toFixed(1)}
-                      </span>
-                      <span
-                        className={`flex items-center gap-0.5 text-[11px] font-medium ${
-                          item.delta > 0
-                            ? "text-emerald-600"
-                            : item.delta < 0
-                            ? "text-red-600"
-                            : "text-slate-500"
-                        }`}
-                      >
-                        {item.delta > 0 ? "↑" : item.delta < 0 ? "↓" : "→"}
-                        {formatDelta(item.delta)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mt-2 h-1.5 w-full rounded-full bg-slate-200">
-                    <div
-                      className="h-1.5 rounded-full bg-indigo-500"
-                      style={{ width: `${Math.max(0, Math.min(100, ((item.value - 1) / 4) * 100))}%` }}
-                    />
-                  </div>
-                  <div className="mt-1 flex items-center justify-between text-[10px] text-slate-400">
-                    <span>1</span>
-                    <span>2</span>
-                    <span>3</span>
-                    <span>4</span>
-                    <span>5</span>
-                  </div>
-                </div>
-              ))}
-              </div>
-            ) : (
-              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-6 text-center">
-                <p className="text-sm text-slate-600">
-                  Nog geen peer-feedback ontvangen. OMZA scores worden hier getoond zodra je teamgenoten hun beoordeling hebben ingevuld.
-                </p>
-              </div>
-            )}
+
           </div>
 
           {/* DOCENT CARDS SECTION - Teacher comments and evaluation */}
