@@ -13,7 +13,7 @@ De seed script `seed_external_assessment_test.py` maakt een complete test omgevi
 - **School ID**: 1 ("Test School")
 - **Admin**: admin@test.school / test123
 - **Docent**: teacher@test.school / test123
-- **Studenten**: 5 studenten (IDs 3-7) met email adressen student1@test.school tot student5@test.school
+- **Studenten**: 5 studenten met email adressen student1@test.school tot student5@test.school (IDs worden automatisch toegekend door de database)
 
 ### Vak & Project Structuur
 - **Subject**: "Onderzoek & Ontwerpen" (O&O)
@@ -192,7 +192,7 @@ python scripts/seed_external_assessment_test.py
 
 ## Notities
 
-- Student IDs zijn 3-7 (niet 2-6) omdat IDs auto-generated zijn en 1-2 al gebruikt zijn door admin en teacher
+- Alle user IDs (inclusief studenten) worden automatisch toegekend door de database en zijn niet voorspelbaar
 - De rubric heeft 4 criteria waarvan er 3 zichtbaar zijn voor externe beoordelaars
 - Elk team heeft zijn eigen externe beoordelaar
 - ProjectTeam records hebben de team compositie "frozen" op het moment van aanmaken
