@@ -1,8 +1,7 @@
 "use client";
 
-import React from "react";
 import { useParams } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Fragment } from "react";
 import Link from "next/link";
 import { ApiAuthError } from "@/lib/api";
 import { projectAssessmentService } from "@/services";
@@ -48,6 +47,8 @@ export default function ExternalAssessmentPageInner() {
     teamNumber: number | undefined
   ) => {
     const key = `${teamId}-${teamNumber ?? 0}`;
+    const isCurrentlyExpanded = expandedTeams.has(key);
+    const willBeExpanded = !isCurrentlyExpanded;
 
     setExpandedTeams((prev) => {
       const newSet = new Set(prev);
@@ -60,7 +61,7 @@ export default function ExternalAssessmentPageInner() {
     });
 
     // Load detail data if not already cached and we're expanding
-    if (!expandedTeams.has(key) && !teamDetailsCache.has(key)) {
+    if (willBeExpanded && !teamDetailsCache.has(key)) {
       setLoadingTeams((prev) => new Set(prev).add(key));
       try {
         const detail =
@@ -293,7 +294,7 @@ export default function ExternalAssessmentPageInner() {
                   const isLoading = loadingTeams.has(key);
 
                   return (
-                    <React.Fragment key={key}>
+                    <Fragment key={key}>
                       {/* Team row */}
                       <tr className="bg-white hover:bg-gray-50">
                         <td className="px-5 py-3 font-medium sticky left-0 bg-white">
@@ -463,7 +464,7 @@ export default function ExternalAssessmentPageInner() {
                           </td>
                         </tr>
                       )}
-                    </React.Fragment>
+                    </Fragment>
                   );
                 })}
               </tbody>
