@@ -59,8 +59,8 @@ export default function CreateEvaluationPageInner() {
   const [minWords, setMinWords] = useState<number>(50);
   const [minCf, setMinCf] = useState<number>(0.6);
   const [maxCf, setMaxCf] = useState<number>(1.4);
-  const [smoothing, setSmoothing] = useState<boolean>(true);
-  const [reviewerRating, setReviewerRating] = useState<boolean>(true);
+  const smoothing = true;
+  const reviewerRating = true;
 
   // Filter projects based on selected course
   const filteredProjects = useMemo(() => {
