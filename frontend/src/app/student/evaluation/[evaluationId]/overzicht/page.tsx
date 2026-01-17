@@ -348,15 +348,18 @@ export default function ResultaatPage() {
                     {/* OMZA scores table */}
                     <div className="space-y-2">
                       {Object.entries(evaluationData.teacherOmza).map(([key, value]) => {
-                        const omzaLabels: Record<string, string> = {
-                          O: "Organiseren",
-                          M: "Meedoen", 
-                          Z: "Zelfvertrouwen",
-                          A: "Autonomie"
+                        // Map short keys to full labels using existing OMZA_LABELS constant
+                        const labelMap: Record<string, keyof typeof OMZA_LABELS> = {
+                          O: "organiseren",
+                          M: "meedoen",
+                          Z: "zelfvertrouwen",
+                          A: "autonomie"
                         };
-                        const label = omzaLabels[key] || key;
+                        const fullKey = labelMap[key];
+                        const label = fullKey ? OMZA_LABELS[fullKey] : key;
                         
                         // Get corresponding peer average and delta for comparison
+                        // omzaAverages uses short keys (O, M, Z, A) matching teacherOmza
                         const peerAvg = evaluationData.omzaAverages?.find(avg => avg.key === key);
                         const delta = peerAvg?.delta ?? 0;
                         
