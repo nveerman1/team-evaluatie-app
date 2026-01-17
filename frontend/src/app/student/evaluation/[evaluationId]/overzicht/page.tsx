@@ -338,62 +338,104 @@ export default function ResultaatPage() {
 
               {/* Right column: Teambeoordeling */}
               <div className="space-y-3">
-                {/* Teambeoordeling - Teacher OMZA scores */}
+                {/* Teambeoordeling - Teacher OMZA scores in table format */}
                 {evaluationData.teacherOmza && Object.keys(evaluationData.teacherOmza).length > 0 && (
-                  <div className="rounded-xl border border-slate-100 bg-indigo-50/60 p-3">
-                    <div className="flex items-center justify-between text-xs font-semibold text-slate-700 mb-3">
-                      <span>Teambeoordeling</span>
+                  <div className="rounded-xl border border-slate-200 bg-white p-3">
+                    <div className="mb-3">
+                      <h4 className="text-xs font-semibold text-slate-700">Teambeoordeling</h4>
                     </div>
                     
-                    {/* OMZA scores table */}
-                    <div className="space-y-2">
-                      {Object.entries(evaluationData.teacherOmza).map(([key, value]) => {
-                        // Get corresponding peer average and delta for comparison
-                        // omzaAverages uses short keys (O, M, Z, A) matching teacherOmza
-                        const peerAvg = evaluationData.omzaAverages?.find(avg => avg.key === key);
-                        const delta = peerAvg?.delta ?? 0;
-                        
-                        // Color based on teacher score (1-4 scale)
-                        const getOmzaColor = (score: number) => {
-                          if (score >= 3.5) return "bg-emerald-50 text-emerald-700 ring-emerald-200";
-                          if (score >= 2.5) return "bg-green-50 text-green-700 ring-green-200";
-                          if (score >= 1.5) return "bg-amber-50 text-amber-700 ring-amber-200";
-                          return "bg-rose-50 text-rose-700 ring-rose-200";
-                        };
-                        
-                        return (
-                          <div key={key} className="flex items-center justify-between text-xs">
-                            <span className="text-slate-600 font-medium">{key}</span>
-                            <div className="flex items-center gap-2">
-                              <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full ring-1 text-xs font-semibold ${getOmzaColor(value)}`}>
-                                {value.toFixed(1)}
-                              </span>
-                              {delta !== 0 && (
-                                <span className={`text-[10px] font-medium ${
-                                  delta > 0 ? "text-emerald-600" : delta < 0 ? "text-red-600" : "text-slate-500"
-                                }`}>
-                                  {delta > 0 ? "↑" : "↓"}{Math.abs(delta).toFixed(1)}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
+                    {/* OMZA scores table - matching heatmap style */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-slate-200">
+                            <th className="px-2 py-1.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wide">OMZA</th>
+                            <th className="px-2 py-1.5 text-center text-[10px] font-semibold text-slate-600 uppercase tracking-wide">Score</th>
+                            <th className="px-2 py-1.5 text-center text-[10px] font-semibold text-slate-600 uppercase tracking-wide">Δ</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {Object.entries(evaluationData.teacherOmza).map(([key, value]) => {
+                            // Get corresponding peer average and delta for comparison
+                            const peerAvg = evaluationData.omzaAverages?.find(avg => avg.key === key);
+                            const delta = peerAvg?.delta ?? 0;
+                            
+                            // Color based on teacher score (1-4 scale) matching heatmap
+                            const getScoreColor = (score: number) => {
+                              if (score >= 3.5) return "bg-green-100 text-green-700";
+                              if (score >= 2.5) return "bg-blue-100 text-blue-700";
+                              return "bg-orange-100 text-orange-700";
+                            };
+                            
+                            return (
+                              <tr key={key} className="hover:bg-slate-50">
+                                <td className="px-2 py-2 text-left">
+                                  <span className="text-xs font-medium text-slate-700">{key}</span>
+                                </td>
+                                <td className="px-2 py-2 text-center">
+                                  <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(value)}`}>
+                                    {value.toFixed(1)}
+                                  </span>
+                                </td>
+                                <td className="px-2 py-2 text-center">
+                                  {delta !== 0 && (
+                                    <span className={`text-[10px] font-medium tabular-nums ${
+                                      delta > 0 ? "text-green-600" : "text-red-600"
+                                    }`}>
+                                      {delta > 0 ? "+" : ""}{delta.toFixed(1)}
+                                    </span>
+                                  )}
+                                  {delta === 0 && <span className="text-slate-300 text-xs">–</span>}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
                     
-                    {/* Pills row */}
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {/* GCF pill */}
+                    {/* GCF and SPR labels with colors */}
+                    <div className="mt-3 pt-3 border-t border-slate-200 space-y-2">
+                      {/* GCF label */}
                       {teamContributionFactor != null && (
-                        <span className="inline-flex items-center rounded-full bg-white/80 px-2 py-0.5 text-[10px] uppercase tracking-wide text-indigo-600 font-semibold">
-                          GCF: {teamContributionFactor.toFixed(2)}
-                        </span>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-600">Correctiefactor (GCF):</span>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md font-semibold ${
+                            teamContributionFactor >= 1.05
+                              ? "bg-green-100 text-green-700"
+                              : teamContributionFactor >= 0.95
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-orange-100 text-orange-700"
+                          }`}>
+                            {teamContributionLabel || (
+                              teamContributionFactor >= 1.05
+                                ? "Boven verwachting"
+                                : teamContributionFactor >= 0.95
+                                ? "Naar verwachting"
+                                : "Onder verwachting"
+                            )}
+                          </span>
+                        </div>
                       )}
-                      {/* SPR pill */}
+                      {/* SPR label */}
                       {evaluationData.sprScore != null && (
-                        <span className="inline-flex items-center rounded-full bg-white/80 px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-600 font-semibold">
-                          SPR: {evaluationData.sprScore.toFixed(2)}
-                        </span>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-600">Zelfbeeld (SPR):</span>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md font-semibold ${
+                            evaluationData.sprScore >= 1.2
+                              ? "bg-orange-100 text-orange-700"
+                              : evaluationData.sprScore >= 0.8
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-orange-100 text-orange-700"
+                          }`}>
+                            {evaluationData.sprScore >= 1.2
+                              ? "Te hoog"
+                              : evaluationData.sprScore >= 0.8
+                              ? "Realistisch"
+                              : "Te laag"}
+                          </span>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -401,18 +443,27 @@ export default function ResultaatPage() {
                 
                 {/* Fallback: Show GCF even if no teacher OMZA */}
                 {!evaluationData.teacherOmza && teamContributionFactor != null && (
-                  <div className="rounded-xl border border-slate-100 bg-indigo-50/60 p-3">
-                    <div className="flex items-center justify-between text-xs font-semibold text-slate-700 mb-2">
-                      <span>Team-bijdrage</span>
-                      <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] uppercase tracking-wide text-indigo-600">
-                        Correctiefactor
-                      </span>
+                  <div className="rounded-xl border border-slate-200 bg-white p-3">
+                    <div className="mb-2">
+                      <h4 className="text-xs font-semibold text-slate-700">Team-bijdrage</h4>
                     </div>
-                    <div className="mt-2">
-                      <p className="text-2xl font-semibold text-slate-900">
-                        {teamContributionFactor.toFixed(2)}
-                      </p>
-                      <p className="text-xs text-slate-500">Range 0,90 – 1,10</p>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-600">Correctiefactor (GCF):</span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md font-semibold ${
+                        teamContributionFactor >= 1.05
+                          ? "bg-green-100 text-green-700"
+                          : teamContributionFactor >= 0.95
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-orange-100 text-orange-700"
+                      }`}>
+                        {teamContributionLabel || (
+                          teamContributionFactor >= 1.05
+                            ? "Boven verwachting"
+                            : teamContributionFactor >= 0.95
+                            ? "Naar verwachting"
+                            : "Onder verwachting"
+                        )}
+                      </span>
                     </div>
                   </div>
                 )}
