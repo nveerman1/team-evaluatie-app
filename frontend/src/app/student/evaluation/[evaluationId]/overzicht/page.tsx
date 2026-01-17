@@ -396,10 +396,10 @@ export default function ResultaatPage() {
                           GCF: {teamContributionFactor.toFixed(2)}
                         </span>
                       )}
-                      {/* SPR pill - placeholder for now, will be fetched */}
-                      {evaluationData.gcfScore != null && (
+                      {/* SPR pill */}
+                      {evaluationData.sprScore != null && (
                         <span className="inline-flex items-center rounded-full bg-white/80 px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-600 font-semibold">
-                          SPR: -
+                          SPR: {evaluationData.sprScore.toFixed(2)}
                         </span>
                       )}
                     </div>

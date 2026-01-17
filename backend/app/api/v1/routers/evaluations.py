@@ -1161,6 +1161,7 @@ def get_my_peer_feedback_results(
         teacher_grade_comment = None
         suggested_grade = None
         group_grade = None
+        spr_score = None
 
         # First check PublishedGrade table (published grades take precedence)
         published_grade_record = (
@@ -1206,6 +1207,11 @@ def get_my_peer_feedback_results(
                 meta_group_grade = grade_record.meta.get("group_grade")
                 if meta_group_grade is not None:
                     group_grade = float(meta_group_grade)
+                
+                # Get SPR (Self-Peer Ratio) from meta field
+                meta_spr = grade_record.meta.get("spr")
+                if meta_spr is not None:
+                    spr_score = float(meta_spr)
 
             # Get teacher grade from Grade table only if not found in PublishedGrade
             # Calculate final grade using the same logic as teacher grades page:
@@ -1330,6 +1336,7 @@ def get_my_peer_feedback_results(
             "selfScore": self_score,
             "trend": trend if trend else None,
             "gcfScore": gcf_score,
+            "sprScore": spr_score,
             "reflection": reflection_data,
             # Teacher data
             "teacherComments": teacher_comments,
