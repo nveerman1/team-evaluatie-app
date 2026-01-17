@@ -444,8 +444,7 @@ def get_project_assessment(
                 ProjectTeam.school_id == user.school_id,
                 ProjectTeamMember.user_id == user.id,
             ).first()
-            if is_project_member:
-                is_member = True  # Allow access if in project team
+            is_member = is_project_member is not None  # Allow access if in project team
         
         if not is_member:
             raise HTTPException(status_code=403, detail="Not authorized to view this assessment")
@@ -707,7 +706,7 @@ def get_assessment_teams_overview(
     
     # Get all users - if assessment has a project, include students from ProjectTeamMember
     # This matches the behavior of the submissions page and self-assessment overview
-    members_set = set()
+    members_set: set[User] = set()
     
     # First, get students from group membership
     group_members = (
@@ -980,8 +979,7 @@ def create_or_update_reflection(
             ProjectTeam.school_id == user.school_id,
             ProjectTeamMember.user_id == user.id,
         ).first()
-        if is_project_member:
-            is_member = True  # Allow access if in project team
+        is_member = is_project_member is not None  # Allow access if in project team
     
     if not is_member:
         raise HTTPException(status_code=403, detail="Not authorized to reflect on this assessment")
@@ -1052,7 +1050,7 @@ def get_assessment_scores_overview(
     
     # Get all users - if assessment has a project, include students from ProjectTeamMember
     # This matches the behavior of the submissions page and self-assessment overview
-    members_set = set()
+    members_set: set[User] = set()
     
     # First, get members from group membership
     group_members = (
@@ -1276,7 +1274,7 @@ def get_assessment_students_overview(
     
     # Get all students - if assessment has a project, include students from ProjectTeamMember
     # This matches the behavior of the submissions page and self-assessment overview
-    students_set = set()
+    students_set: set[User] = set()
     
     # First, get students from group membership
     group_students = (
@@ -1537,8 +1535,7 @@ def get_self_assessment(
             ProjectTeam.school_id == user.school_id,
             ProjectTeamMember.user_id == user.id,
         ).first()
-        if is_project_member:
-            is_member = True  # Allow access if in project team
+        is_member = is_project_member is not None  # Allow access if in project team
     
     if not is_member:
         raise HTTPException(status_code=403, detail="Not authorized to access this assessment")
@@ -1645,8 +1642,7 @@ def create_or_update_self_assessment(
             ProjectTeam.school_id == user.school_id,
             ProjectTeamMember.user_id == user.id,
         ).first()
-        if is_project_member:
-            is_member = True  # Allow access if in project team
+        is_member = is_project_member is not None  # Allow access if in project team
     
     if not is_member:
         raise HTTPException(status_code=403, detail="Not authorized to assess this project")
