@@ -6,7 +6,6 @@ import { createPortal } from "react-dom";
 import { useParams, useRouter } from "next/navigation";
 import RubricEditor, { type CriterionItem } from "@/components/teacher/RubricEditor";
 import { subjectService } from "@/services/subject.service";
-import { courseService } from "@/services/course.service";
 import { listPeerCriteria } from "@/services/peer-evaluation-criterion-template.service";
 import { listProjectRubricCriteria } from "@/services/project-rubric-criterion-template.service";
 import type { Subject } from "@/dtos/subject.dto";
@@ -180,34 +179,18 @@ export default function EditRubricPageInner() {
     };
   }, [rubricId]);
 
-  // Load subjects based on teacher's courses when modal opens and auto-select first one
+  // Load all subjects when modal opens and auto-select first one
   useEffect(() => {
     if (!showTemplateModal) return;
-    async function loadTeacherSubjects() {
+    async function loadSubjects() {
       setLoadingSubjects(true);
       try {
-        // Get the teacher's courses (API filters by logged-in teacher)
-        const coursesResponse = await courseService.listCourses({ per_page: 100, is_active: true });
-        const courses = coursesResponse.courses;
-        
-        // Extract unique subject IDs from the teacher's courses
-        const teacherSubjectIds = [...new Set(
-          courses
-            .map(c => c.subject_id)
-            .filter((id): id is number => id !== undefined && id !== null)
-        )];
-        
-        // Get all subjects and filter to only show teacher's subjects
         const subjectsResponse = await subjectService.listSubjects({ per_page: 100, is_active: true });
-        const teacherSubjects = subjectsResponse.subjects.filter(
-          subject => teacherSubjectIds.includes(subject.id)
-        );
-        
-        setSubjects(teacherSubjects);
+        setSubjects(subjectsResponse.subjects);
         
         // Auto-select first subject if we have subjects
-        if (teacherSubjects.length > 0 && !selectedSubjectId) {
-          setSelectedSubjectId(teacherSubjects[0].id);
+        if (subjectsResponse.subjects.length > 0 && !selectedSubjectId) {
+          setSelectedSubjectId(subjectsResponse.subjects[0].id);
         }
       } catch (err) {
         console.error("Failed to load subjects:", err);
@@ -215,7 +198,7 @@ export default function EditRubricPageInner() {
         setLoadingSubjects(false);
       }
     }
-    loadTeacherSubjects();
+    loadSubjects();
   }, [showTemplateModal]);
 
   // Load criteria when subject changes, filtered by rubric's target_level
