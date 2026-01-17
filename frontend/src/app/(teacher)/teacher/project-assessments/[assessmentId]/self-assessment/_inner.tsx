@@ -80,30 +80,46 @@ export default function ProjectAssessmentSelfInner() {
     groupedCriteria[cat].push(c);
   });
 
-  // Calculate average scores per category for each team
-  // Returns both raw scores and grades (1-10 scale using formula: points/total*9+1)
+  // Convert score to grade using curved mapping (matches backend calculation)
+  // grade = 1 + (normalized ** 0.85) * 9
+  const scoreToGrade = (score: number, scaleMin: number, scaleMax: number): number => {
+    const scaleRange = scaleMax - scaleMin;
+    if (scaleRange <= 0) return 1.0;
+    const clampedScore = Math.max(scaleMin, Math.min(scaleMax, score));
+    const normalized = (clampedScore - scaleMin) / scaleRange;
+    const exponent = 0.85; // Curve exponent (same as backend)
+    const curved = 1 + Math.pow(normalized, exponent) * 9;
+    return Math.round(curved * 10) / 10; // Round to 1 decimal
+  };
+
+  // Calculate weighted average scores per category for each team and convert to grades
   const getTeamCategoryAverages = (team: typeof data.team_overviews[0]) => {
     const categoryAverages: Record<string, number> = {};
     
     categories.forEach((category) => {
       const categoryCriteria = groupedCriteria[category];
-      const scores = categoryCriteria
-        .map((criterion) => {
-          const criterionScore = team.avg_criterion_scores.find(
-            (cs) => cs.criterion_id === criterion.id
-          );
-          return criterionScore?.score;
-        })
-        .filter((score): score is number => score !== null && score !== undefined);
       
-      if (scores.length > 0) {
-        // Calculate average score for this category
-        const avgScore = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+      // Calculate weighted average for this category
+      let totalWeight = 0;
+      let weightedSum = 0;
+      
+      categoryCriteria.forEach((criterion) => {
+        const criterionScore = team.avg_criterion_scores.find(
+          (cs) => cs.criterion_id === criterion.id
+        );
+        if (criterionScore?.score !== null && criterionScore?.score !== undefined) {
+          const weight = criterion.weight || 1.0;
+          weightedSum += criterionScore.score * weight;
+          totalWeight += weight;
+        }
+      });
+      
+      if (totalWeight > 0) {
+        // Calculate weighted average score for this category
+        const avgScore = weightedSum / totalWeight;
         
-        // Convert to grade (1-10) using formula: (points / total_points) * 9 + 1
-        // Assuming max score per criterion is data.rubric_scale_max
-        const maxScore = data.rubric_scale_max;
-        const grade = (avgScore / maxScore) * 9 + 1;
+        // Convert to grade (1-10) using curved mapping
+        const grade = scoreToGrade(avgScore, data.rubric_scale_min, data.rubric_scale_max);
         
         categoryAverages[category] = grade;
       }

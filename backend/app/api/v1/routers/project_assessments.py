@@ -1674,6 +1674,27 @@ def get_self_assessment_overview(
         .all()
     )
     
+    # Build user_id -> project team_number mapping if assessment has a project
+    user_team_map: dict[int, int] = {}
+    if pa.project_id:
+        project_teams = (
+            db.query(ProjectTeam)
+            .filter(
+                ProjectTeam.project_id == pa.project_id,
+                ProjectTeam.school_id == user.school_id,
+            )
+            .all()
+        )
+        
+        for team in project_teams:
+            members = (
+                db.query(ProjectTeamMember)
+                .filter(ProjectTeamMember.project_team_id == team.id)
+                .all()
+            )
+            for member in members:
+                user_team_map[member.user_id] = team.team_number
+    
     # Apply search filter if provided
     if q:
         q_lower = q.lower()
@@ -1681,7 +1702,7 @@ def get_self_assessment_overview(
             s
             for s in students
             if q_lower in s.name.lower()
-            or (s.team_number and str(s.team_number) in q_lower)
+            or (str(user_team_map.get(s.id, s.team_number or 0)) in q_lower)
         ]
     
     # Get all self-assessments for this project assessment
@@ -1719,19 +1740,24 @@ def get_self_assessment_overview(
             scores_map[score.self_assessment_id] = []
         scores_map[score.self_assessment_id].append(score)
     
-    # Group students by team
+    # Group students by team using project teams if available
     teams_dict: dict[int, list[User]] = {}
     for student in students:
-        team_num = student.team_number or 0
-        if team_num not in teams_dict:
-            teams_dict[team_num] = []
-        teams_dict[team_num].append(student)
+        if pa.project_id:
+            team_num = user_team_map.get(student.id, None)
+        else:
+            team_num = student.team_number
+        
+        if team_num is not None:
+            if team_num not in teams_dict:
+                teams_dict[team_num] = []
+            teams_dict[team_num].append(student)
     
     # Build team overviews
     team_overviews = []
     for team_num in sorted(teams_dict.keys()):
         team_students = teams_dict[team_num]
-        team_name = f"Team {team_num}" if team_num > 0 else "Geen team"
+        team_name = f"Team {team_num}"
         
         # Build student details for this team
         student_details = []
