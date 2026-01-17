@@ -40,13 +40,16 @@ export default function ExternalAssessmentPageInner() {
     Map<string, ExternalAdvisoryDetail>
   >(new Map());
   const [loadingTeams, setLoadingTeams] = useState<Set<string>>(new Set());
+  const [teamLoadErrors, setTeamLoadErrors] = useState<Map<string, string>>(
+    new Map()
+  );
 
   // Toggle team expansion and load data if needed
   const toggleTeamExpansion = async (
     teamId: number,
     teamNumber: number | undefined
   ) => {
-    const key = `${teamId}-${teamNumber ?? 0}`;
+    const key = `${teamId}-${teamNumber ?? 'no-number'}`;
     const isCurrentlyExpanded = expandedTeams.has(key);
     const willBeExpanded = !isCurrentlyExpanded;
 
@@ -63,6 +66,12 @@ export default function ExternalAssessmentPageInner() {
     // Load detail data if not already cached and we're expanding
     if (willBeExpanded && !teamDetailsCache.has(key)) {
       setLoadingTeams((prev) => new Set(prev).add(key));
+      // Clear any previous error for this team
+      setTeamLoadErrors((prev) => {
+        const newMap = new Map(prev);
+        newMap.delete(key);
+        return newMap;
+      });
       try {
         const detail =
           await externalAssessmentService.getExternalAdvisoryDetail(
@@ -72,6 +81,11 @@ export default function ExternalAssessmentPageInner() {
         setTeamDetailsCache((prev) => new Map(prev).set(key, detail));
       } catch (e: unknown) {
         console.error("Could not load team details:", e);
+        const errorMessage =
+          e instanceof ApiAuthError
+            ? e.originalMessage
+            : "Kon advies niet laden. Probeer het opnieuw.";
+        setTeamLoadErrors((prev) => new Map(prev).set(key, errorMessage));
       } finally {
         setLoadingTeams((prev) => {
           const newSet = new Set(prev);
@@ -288,10 +302,11 @@ export default function ExternalAssessmentPageInner() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredStatuses.map((team, index) => {
-                  const key = `${team.team_id}-${team.team_number ?? 0}`;
+                  const key = `${team.team_id}-${team.team_number ?? 'no-number'}`;
                   const isExpanded = expandedTeams.has(key);
                   const detailData = teamDetailsCache.get(key);
                   const isLoading = loadingTeams.has(key);
+                  const loadError = teamLoadErrors.get(key);
 
                   return (
                     <Fragment key={key}>
@@ -360,13 +375,19 @@ export default function ExternalAssessmentPageInner() {
                               </div>
                             )}
 
-                            {!isLoading && !detailData && (
+                            {!isLoading && loadError && (
+                              <div className="text-red-600 bg-red-50 p-4 rounded-lg">
+                                {loadError}
+                              </div>
+                            )}
+
+                            {!isLoading && !loadError && !detailData && (
                               <div className="text-red-600 bg-red-50 p-4 rounded-lg">
                                 Kon advies niet laden
                               </div>
                             )}
 
-                            {!isLoading && detailData && (
+                            {!isLoading && !loadError && detailData && (
                               <div className="space-y-4">
                                 {/* Evaluator Info */}
                                 <div className="bg-white rounded-lg border border-gray-200 p-4">
