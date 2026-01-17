@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import List, Optional, Tuple
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func
@@ -16,9 +17,12 @@ from app.infra.db.models import (
     Score,
     GroupMember,
     Group,
+    ProjectTeam,
+    ProjectTeamMember,
 )
 
 router = APIRouter(prefix="/allocations", tags=["allocations"])
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------
@@ -301,6 +305,10 @@ def my_allocations(
     Als er nog geen self-allocation bestaat maar de student hoort bij de course,
     wordt de self-allocation aangemaakt.
     Ook worden peer-allocations automatisch aangemaakt voor alle teamgenoten.
+    
+    Teammate determination:
+    - If evaluation has project_id: Uses ProjectTeam and ProjectTeamMember (new system)
+    - Otherwise: Falls back to legacy User.team_number and Groups
     """
     ev = _get_eval_or_404(db, evaluation_id)
 
@@ -316,17 +324,57 @@ def my_allocations(
         if school_id is None:
             raise HTTPException(500, "school_id ontbreekt op evaluatie/gebruiker")
 
-        # Find teammates with same course AND same team_number
-        # Use User.team_number as the source of truth for team membership
-        if user.team_number is not None:
-            teammates = _select_members_for_course(
-                db,
-                school_id=school_id,
-                course_id=ev.course_id,
-                team_number=user.team_number,
+        # NEW: If evaluation has a project_id, use ProjectTeam to find teammates
+        if ev.project_id:
+            # Find the project team that this user belongs to
+            user_project_team = (
+                db.query(ProjectTeam)
+                .join(ProjectTeamMember, ProjectTeamMember.project_team_id == ProjectTeam.id)
+                .filter(
+                    ProjectTeam.project_id == ev.project_id,
+                    ProjectTeam.school_id == school_id,
+                    ProjectTeamMember.user_id == user.id,
+                )
+                .first()
             )
+            
+            if user_project_team:
+                # Get all members of this project team
+                team_member_ids = (
+                    db.query(ProjectTeamMember.user_id)
+                    .join(User, User.id == ProjectTeamMember.user_id)
+                    .filter(
+                        ProjectTeamMember.project_team_id == user_project_team.id,
+                        User.role == "student",
+                        User.archived.is_(False),
+                    )
+                    .all()
+                )
+                valid_teammate_ids = {uid for (uid,) in team_member_ids}
+            else:
+                # User not assigned to any project team for this evaluation
+                # Log for debugging but this is expected if user hasn't been assigned yet
+                logger.warning(
+                    f"User {user.id} not found in any ProjectTeam for project {ev.project_id}, "
+                    f"evaluation {evaluation_id}"
+                )
+        else:
+            # LEGACY: Find teammates with same course AND same team_number
+            # Use User.team_number as the source of truth for team membership
+            if user.team_number is not None:
+                teammates = _select_members_for_course(
+                    db,
+                    school_id=school_id,
+                    course_id=ev.course_id,
+                    team_number=user.team_number,
+                )
 
-            valid_teammate_ids = set(teammates)
+                valid_teammate_ids = set(teammates)
+            else:
+                # User has no team_number set - expected for students not yet assigned to teams
+                logger.warning(
+                    f"User {user.id} has no team_number for legacy evaluation {evaluation_id}"
+                )
 
         needs_commit = False
 
