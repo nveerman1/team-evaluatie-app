@@ -1,20 +1,13 @@
 "use client";
 
+import React from "react";
 import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { ApiAuthError } from "@/lib/api";
 import { projectAssessmentService } from "@/services";
 import { ProjectAssessmentSelfOverview } from "@/dtos";
 import { Loading, ErrorMessage } from "@/components";
-import { ChevronDown, ChevronRight, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 export default function ProjectAssessmentSelfInner() {
   const params = useParams();
@@ -26,7 +19,7 @@ export default function ProjectAssessmentSelfInner() {
   
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("team");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   
   // Track which teams are expanded
   const [expandedTeams, setExpandedTeams] = useState<Set<number>>(new Set());
@@ -40,7 +33,7 @@ export default function ProjectAssessmentSelfInner() {
           assessmentId,
           searchQuery,
           sortBy,
-          sortDirection
+          sortOrder
         );
         setData(result);
       } catch (e: any) {
@@ -56,7 +49,7 @@ export default function ProjectAssessmentSelfInner() {
       }
     }
     loadData();
-  }, [assessmentId, searchQuery, sortBy, sortDirection]);
+  }, [assessmentId, searchQuery, sortBy, sortOrder]);
 
   const toggleTeamExpansion = (teamNumber: number) => {
     setExpandedTeams((prev) => {
@@ -74,106 +67,102 @@ export default function ProjectAssessmentSelfInner() {
   if (error) return <ErrorMessage message={error} />;
   if (!data) return <ErrorMessage message="Geen data gevonden" />;
 
+  // Group criteria by category
+  const groupedCriteria: Record<string, typeof data.criteria> = {};
+  const categories: string[] = [];
+  
+  data.criteria.forEach((c) => {
+    const cat = c.category || "Overig";
+    if (!groupedCriteria[cat]) {
+      groupedCriteria[cat] = [];
+      categories.push(cat);
+    }
+    groupedCriteria[cat].push(c);
+  });
+
+  // Calculate average scores per category for each team
+  const getTeamCategoryAverages = (team: typeof data.team_overviews[0]) => {
+    const categoryAverages: Record<string, number> = {};
+    
+    categories.forEach((category) => {
+      const categoryCriteria = groupedCriteria[category];
+      const scores = categoryCriteria
+        .map((criterion) => {
+          const criterionScore = team.avg_criterion_scores.find(
+            (cs) => cs.criterion_id === criterion.id
+          );
+          return criterionScore?.score;
+        })
+        .filter((score): score is number => score !== null && score !== undefined);
+      
+      if (scores.length > 0) {
+        categoryAverages[category] = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+      }
+    });
+    
+    return categoryAverages;
+  };
+
   return (
     <div className="space-y-6">
-      {/* Statistics card - matching Overview/Scores style */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">
-          Overzicht
-        </h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div>
-            <p className="text-sm text-gray-600">Totaal studenten</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900">
-              {data.statistics.total_students}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Ingevuld</p>
-            <p className="mt-1 text-2xl font-bold text-emerald-600">
-              {data.statistics.completed_assessments}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Gemiddeld cijfer</p>
-            <p className="mt-1 text-2xl font-bold text-blue-600">
-              {data.statistics.average_grade
-                ? data.statistics.average_grade.toFixed(1)
-                : "—"}
-            </p>
-          </div>
+      {/* Search and Sort controls - matching scores page style */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="flex flex-wrap gap-3 items-center">
+          <input
+            className="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Zoek op teamnaam of leerling..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <select
+            className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm shadow-sm"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+          >
+            <option value="team">Teamnummer</option>
+            <option value="name">Naam</option>
+            <option value="grade">Eindcijfer</option>
+          </select>
+          <button
+            onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+            className="h-9 px-3 rounded-lg border border-gray-300 bg-white text-sm shadow-sm hover:bg-slate-50"
+          >
+            {sortOrder === "asc" ? "↑" : "↓"}
+          </button>
         </div>
       </div>
 
-      {/* Search & Sort controls - matching Overview/Scores style */}
-      <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative flex-1 sm:max-w-md">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Zoek op naam of team..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-10 rounded-lg bg-white pl-9"
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Sorteer op:</span>
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-[160px] rounded-lg">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="team">Teamnummer</SelectItem>
-                <SelectItem value="name">Naam</SelectItem>
-                <SelectItem value="grade">Eindcijfer</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={sortDirection} onValueChange={(v: any) => setSortDirection(v)}>
-              <SelectTrigger className="w-[110px] rounded-lg">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="asc">Oplopend</SelectItem>
-                <SelectItem value="desc">Aflopend</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
-
-      {/* Teams table - matching Scores table style */}
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      {/* Teams table */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 w-20">
                   Team
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
                   Teamleden
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600">
+                <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600">
                   Ingevuld
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600">
-                  Gem. score
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600">
+                {categories.map((category) => (
+                  <th key={category} className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600">
+                    {category}
+                  </th>
+                ))}
+                <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600">
                   Eindcijfer
                 </th>
-                <th className="px-6 py-3"></th>
+                <th className="px-3 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">
               {data.team_overviews.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={5 + categories.length}
                     className="px-6 py-8 text-center text-sm text-gray-500"
                   >
                     Geen teams gevonden
@@ -182,29 +171,26 @@ export default function ProjectAssessmentSelfInner() {
               ) : (
                 data.team_overviews.map((team) => {
                   const isExpanded = expandedTeams.has(team.team_number);
+                  const categoryAverages = getTeamCategoryAverages(team);
+                  
                   return (
-                    <>
+                    <React.Fragment key={team.team_number}>
                       {/* Team row */}
-                      <tr
-                        key={team.team_number}
-                        className="hover:bg-gray-50 transition-colors"
-                      >
-                        <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                          {team.team_name}
+                      <tr className="hover:bg-gray-50 transition-colors">
+                        <td className="px-3 py-4 text-sm font-semibold text-gray-900">
+                          Team {team.team_number}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-600">
-                          <div className="flex flex-col gap-0.5">
-                            {team.members.slice(0, 2).map((member) => (
-                              <span key={member.id}>{member.name}</span>
-                            ))}
-                            {team.members.length > 2 && (
-                              <span className="text-xs text-gray-400">
-                                +{team.members.length - 2} meer
+                        <td className="px-4 py-4 text-sm text-gray-600">
+                          <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+                            {team.members.map((member, index) => (
+                              <span key={member.id}>
+                                {member.name}
+                                {index < team.members.length - 1 && ","}
                               </span>
-                            )}
+                            ))}
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-center text-sm">
+                        <td className="px-3 py-4 text-center text-sm">
                           <span
                             className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                               team.completed_count === team.members.length
@@ -217,15 +203,17 @@ export default function ProjectAssessmentSelfInner() {
                             {team.completed_count} / {team.members.length}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-center text-sm font-medium text-gray-900">
-                          {team.avg_total_score
-                            ? team.avg_total_score.toFixed(1)
-                            : "—"}
-                        </td>
-                        <td className="px-6 py-4 text-center text-sm font-semibold text-blue-600">
+                        {categories.map((category) => (
+                          <td key={category} className="px-3 py-4 text-center text-sm font-medium text-gray-900">
+                            {categoryAverages[category]
+                              ? categoryAverages[category].toFixed(1)
+                              : "—"}
+                          </td>
+                        ))}
+                        <td className="px-3 py-4 text-center text-sm font-semibold text-blue-600">
                           {team.avg_grade ? team.avg_grade.toFixed(1) : "—"}
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-3 py-4 text-right">
                           <button
                             onClick={() => toggleTeamExpansion(team.team_number)}
                             className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
@@ -248,7 +236,7 @@ export default function ProjectAssessmentSelfInner() {
                       {/* Expanded student details */}
                       {isExpanded && (
                         <tr>
-                          <td colSpan={6} className="bg-gray-50 px-6 py-4">
+                          <td colSpan={5 + categories.length} className="bg-gray-50 px-6 py-4">
                             <div className="space-y-3">
                               <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-600">
                                 Individuele zelfbeoordelingen
@@ -324,7 +312,7 @@ export default function ProjectAssessmentSelfInner() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   );
                 })
               )}
