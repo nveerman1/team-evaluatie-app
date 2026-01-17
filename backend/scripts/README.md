@@ -106,6 +106,44 @@ python scripts/seed_external_work.py
 
 ---
 
+### seed_external_assessment_test.py
+
+Seeds complete test data for external assessment feature at `/teacher/project-assessments/1/external`.
+
+**What it creates:**
+- School (ID 1)
+- Admin and Teacher users
+- Students (IDs 2-6)
+- Course (ID 1) with subject and academic year
+- Groups (2 teams with students)
+- Project (ID 1)
+- ProjectTeams (frozen rosters)
+- Rubric (ID 3) with scope='project' and 4 criteria (3 visible to externals, 1 internal)
+- ProjectAssessment (ID 1)
+- ExternalEvaluators (2 evaluators)
+- ProjectTeamExternal links with invitation tokens
+
+**Prerequisites:**
+- Database connection configured
+- Database migrations applied
+
+**Usage:**
+```bash
+cd backend
+python scripts/seed_external_assessment_test.py
+```
+
+**Test URL after seeding:**
+```
+http://localhost:3000/teacher/project-assessments/1/external
+```
+
+**Login credentials:**
+- Teacher: `teacher@test.school` / `test123`
+- Admin: `admin@test.school` / `test123`
+
+---
+
 ## Utility Scripts
 
 ### backfill_project_teams.py

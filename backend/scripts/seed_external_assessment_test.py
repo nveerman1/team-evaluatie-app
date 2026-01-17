@@ -1,0 +1,603 @@
+"""
+Seed script for testing external assessments
+
+Creates test data for /teacher/project-assessments/1/external endpoint with:
+- School ID 1
+- Students with IDs 2-6
+- Course ID 1
+- Rubric ID 3 (new rubric with scope='project')
+- Project ID 1
+- ProjectAssessment ID 1
+- External evaluators
+- ProjectTeamExternal links
+
+Usage:
+    cd backend
+    python scripts/seed_external_assessment_test.py
+"""
+
+import sys
+import os
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from datetime import datetime, timedelta
+from app.infra.db.session import SessionLocal
+from app.infra.db.models import (
+    School,
+    User,
+    Course,
+    Group,
+    GroupMember,
+    Project,
+    ProjectTeam,
+    ProjectTeamMember,
+    Rubric,
+    RubricCriterion,
+    ProjectAssessment,
+    ExternalEvaluator,
+    ProjectTeamExternal,
+    Subject,
+    AcademicYear,
+)
+from app.core.security import get_password_hash, generate_external_token
+
+
+def seed_external_assessment_test():
+    """Create test data for external assessments"""
+    print("=" * 70)
+    print("SEEDING EXTERNAL ASSESSMENT TEST DATA")
+    print("=" * 70)
+
+    db = SessionLocal()
+
+    try:
+        # ============================================================
+        # 1. School
+        # ============================================================
+        print("\n" + "=" * 70)
+        print("1. SCHOOL SETUP")
+        print("=" * 70)
+        
+        school = db.query(School).filter(School.id == 1).first()
+        if not school:
+            school = School(id=1, name="Test School")
+            db.add(school)
+            db.flush()
+            print(f"✓ Created School: {school.name} (ID: {school.id})")
+        else:
+            print(f"✓ Using existing School: {school.name} (ID: {school.id})")
+
+        # Create admin user if not exists
+        admin = db.query(User).filter(
+            User.school_id == school.id,
+            User.email == "admin@test.school"
+        ).first()
+        
+        if not admin:
+            admin = User(
+                school_id=school.id,
+                email="admin@test.school",
+                name="Test Admin",
+                role="admin",
+                auth_provider="local",
+                password_hash=get_password_hash("test123"),
+            )
+            db.add(admin)
+            db.flush()
+            print(f"✓ Created Admin: {admin.name} (ID: {admin.id})")
+        else:
+            print(f"✓ Using existing Admin: {admin.name} (ID: {admin.id})")
+
+        # Create teacher user
+        teacher = db.query(User).filter(
+            User.school_id == school.id,
+            User.email == "teacher@test.school"
+        ).first()
+        
+        if not teacher:
+            teacher = User(
+                school_id=school.id,
+                email="teacher@test.school",
+                name="Test Teacher",
+                role="teacher",
+                auth_provider="local",
+                password_hash=get_password_hash("test123"),
+            )
+            db.add(teacher)
+            db.flush()
+            print(f"✓ Created Teacher: {teacher.name} (ID: {teacher.id})")
+        else:
+            print(f"✓ Using existing Teacher: {teacher.name} (ID: {teacher.id})")
+
+        # ============================================================
+        # 2. Students (IDs 2-6)
+        # ============================================================
+        print("\n" + "=" * 70)
+        print("2. STUDENTS SETUP (IDs 2-6)")
+        print("=" * 70)
+
+        student_data = [
+            (2, "Student One", "student1@test.school", "G2a"),
+            (3, "Student Two", "student2@test.school", "G2a"),
+            (4, "Student Three", "student3@test.school", "G2a"),
+            (5, "Student Four", "student4@test.school", "G2a"),
+            (6, "Student Five", "student5@test.school", "G2a"),
+        ]
+
+        students = []
+        for student_id, name, email, class_name in student_data:
+            student = db.query(User).filter(User.id == student_id).first()
+            if not student:
+                student = User(
+                    id=student_id,
+                    school_id=school.id,
+                    email=email,
+                    name=name,
+                    class_name=class_name,
+                    role="student",
+                    auth_provider="local",
+                    password_hash=get_password_hash("test123"),
+                )
+                db.add(student)
+                db.flush()
+                print(f"✓ Created Student: {name} (ID: {student_id})")
+            else:
+                print(f"✓ Using existing Student: {student.name} (ID: {student.id})")
+            students.append(student)
+
+        # ============================================================
+        # 3. Subject and Academic Year
+        # ============================================================
+        print("\n" + "=" * 70)
+        print("3. SUBJECT & ACADEMIC YEAR SETUP")
+        print("=" * 70)
+
+        subject = db.query(Subject).filter(
+            Subject.school_id == school.id,
+            Subject.code == "O&O"
+        ).first()
+        
+        if not subject:
+            subject = Subject(
+                school_id=school.id,
+                name="Onderzoek & Ontwerpen",
+                code="O&O",
+                color="#3B82F6",
+                is_active=True,
+            )
+            db.add(subject)
+            db.flush()
+            print(f"✓ Created Subject: {subject.name} (ID: {subject.id})")
+        else:
+            print(f"✓ Using existing Subject: {subject.name} (ID: {subject.id})")
+
+        academic_year = db.query(AcademicYear).filter(
+            AcademicYear.school_id == school.id,
+            AcademicYear.label == "2025-2026"
+        ).first()
+        
+        if not academic_year:
+            academic_year = AcademicYear(
+                school_id=school.id,
+                label="2025-2026",
+                start_date=datetime(2025, 9, 1).date(),
+                end_date=datetime(2026, 7, 1).date(),
+                is_archived=False,
+            )
+            db.add(academic_year)
+            db.flush()
+            print(f"✓ Created Academic Year: {academic_year.label} (ID: {academic_year.id})")
+        else:
+            print(f"✓ Using existing Academic Year: {academic_year.label} (ID: {academic_year.id})")
+
+        # ============================================================
+        # 4. Course (ID 1)
+        # ============================================================
+        print("\n" + "=" * 70)
+        print("4. COURSE SETUP (ID 1)")
+        print("=" * 70)
+
+        course = db.query(Course).filter(Course.id == 1).first()
+        if not course:
+            course = Course(
+                id=1,
+                school_id=school.id,
+                subject_id=subject.id,
+                academic_year_id=academic_year.id,
+                name="O&O G2",
+                code="O&O",
+                period="P1",
+                level="onderbouw",
+                is_active=True,
+            )
+            db.add(course)
+            db.flush()
+            print(f"✓ Created Course: {course.name} (ID: {course.id})")
+        else:
+            print(f"✓ Using existing Course: {course.name} (ID: {course.id})")
+
+        # ============================================================
+        # 5. Groups with Students
+        # ============================================================
+        print("\n" + "=" * 70)
+        print("5. GROUPS SETUP")
+        print("=" * 70)
+
+        # Create two groups with different team numbers
+        group_configs = [
+            (1, "Team 1", [students[0], students[1]]),  # Students 2, 3
+            (2, "Team 2", [students[2], students[3], students[4]]),  # Students 4, 5, 6
+        ]
+
+        groups = []
+        for team_number, group_name, group_students in group_configs:
+            group = db.query(Group).filter(
+                Group.course_id == course.id,
+                Group.team_number == team_number
+            ).first()
+            
+            if not group:
+                group = Group(
+                    school_id=school.id,
+                    course_id=course.id,
+                    name=group_name,
+                    team_number=team_number,
+                )
+                db.add(group)
+                db.flush()
+                print(f"✓ Created Group: {group_name} (ID: {group.id}, Team: {team_number})")
+            else:
+                print(f"✓ Using existing Group: {group.name} (ID: {group.id}, Team: {team_number})")
+
+            # Add members to group
+            for student in group_students:
+                existing_member = db.query(GroupMember).filter(
+                    GroupMember.group_id == group.id,
+                    GroupMember.user_id == student.id
+                ).first()
+                
+                if not existing_member:
+                    member = GroupMember(
+                        school_id=school.id,
+                        group_id=group.id,
+                        user_id=student.id,
+                    )
+                    db.add(member)
+                    print(f"  ✓ Added {student.name} to {group_name}")
+            
+            groups.append(group)
+
+        db.flush()
+
+        # ============================================================
+        # 6. Project (ID 1)
+        # ============================================================
+        print("\n" + "=" * 70)
+        print("6. PROJECT SETUP (ID 1)")
+        print("=" * 70)
+
+        project = db.query(Project).filter(Project.id == 1).first()
+        if not project:
+            project = Project(
+                id=1,
+                school_id=school.id,
+                course_id=course.id,
+                title="Test Project - Arcade Kast",
+                description="Een project voor het bouwen van een arcade-kast",
+                class_name="G2a",
+                period="P1",
+                start_date=datetime.now().date() - timedelta(days=30),
+                end_date=datetime.now().date() + timedelta(days=30),
+                status="active",
+                created_by_id=teacher.id,
+            )
+            db.add(project)
+            db.flush()
+            print(f"✓ Created Project: {project.title} (ID: {project.id})")
+        else:
+            print(f"✓ Using existing Project: {project.title} (ID: {project.id})")
+
+        # ============================================================
+        # 7. ProjectTeams (frozen rosters)
+        # ============================================================
+        print("\n" + "=" * 70)
+        print("7. PROJECT TEAMS SETUP (Frozen Rosters)")
+        print("=" * 70)
+
+        project_teams = []
+        for group in groups:
+            # Check if project team already exists
+            project_team = db.query(ProjectTeam).filter(
+                ProjectTeam.project_id == project.id,
+                ProjectTeam.team_number == group.team_number
+            ).first()
+            
+            if not project_team:
+                project_team = ProjectTeam(
+                    school_id=school.id,
+                    project_id=project.id,
+                    team_number=group.team_number,
+                    frozen_at=datetime.now(),
+                )
+                db.add(project_team)
+                db.flush()
+                print(f"✓ Created ProjectTeam: Team {group.team_number} (ID: {project_team.id})")
+            else:
+                print(f"✓ Using existing ProjectTeam: Team {group.team_number} (ID: {project_team.id})")
+
+            # Add team members
+            group_members = db.query(GroupMember).filter(
+                GroupMember.group_id == group.id
+            ).all()
+            
+            for gm in group_members:
+                existing_ptm = db.query(ProjectTeamMember).filter(
+                    ProjectTeamMember.project_team_id == project_team.id,
+                    ProjectTeamMember.user_id == gm.user_id
+                ).first()
+                
+                if not existing_ptm:
+                    ptm = ProjectTeamMember(
+                        school_id=school.id,
+                        project_team_id=project_team.id,
+                        user_id=gm.user_id,
+                    )
+                    db.add(ptm)
+                    user = db.query(User).filter(User.id == gm.user_id).first()
+                    print(f"  ✓ Added {user.name} to ProjectTeam {group.team_number}")
+            
+            project_teams.append(project_team)
+
+        db.flush()
+
+        # ============================================================
+        # 8. Rubric (ID 3 with scope='project')
+        # ============================================================
+        print("\n" + "=" * 70)
+        print("8. RUBRIC SETUP (ID 3, scope='project')")
+        print("=" * 70)
+
+        rubric = db.query(Rubric).filter(Rubric.id == 3).first()
+        if not rubric:
+            rubric = Rubric(
+                id=3,
+                school_id=school.id,
+                title="Project Rubric - Externe Beoordeling",
+                description="Rubric voor externe beoordeling van projecten",
+                scale_min=1,
+                scale_max=5,
+                scope="project",
+                target_level="onderbouw",
+            )
+            db.add(rubric)
+            db.flush()
+            print(f"✓ Created Rubric: {rubric.title} (ID: {rubric.id})")
+        else:
+            print(f"✓ Using existing Rubric: {rubric.title} (ID: {rubric.id})")
+
+        # Add criteria to rubric
+        criteria_data = [
+            {
+                "name": "Creativiteit",
+                "weight": 1.0,
+                "descriptors": {
+                    "1": "Weinig originele ideeën",
+                    "2": "Enkele originele elementen",
+                    "3": "Goede creatieve oplossingen",
+                    "4": "Sterke creativiteit",
+                    "5": "Uitzonderlijk creatief",
+                },
+                "visible_to_external": True,
+                "order": 1,
+            },
+            {
+                "name": "Technische uitvoering",
+                "weight": 1.0,
+                "descriptors": {
+                    "1": "Veel technische problemen",
+                    "2": "Voldoende technische uitvoering",
+                    "3": "Goede technische kwaliteit",
+                    "4": "Sterke technische implementatie",
+                    "5": "Excellente technische uitvoering",
+                },
+                "visible_to_external": True,
+                "order": 2,
+            },
+            {
+                "name": "Presentatie",
+                "weight": 1.0,
+                "descriptors": {
+                    "1": "Onduidelijke presentatie",
+                    "2": "Basispresentatie",
+                    "3": "Goede presentatie",
+                    "4": "Sterke presentatie",
+                    "5": "Professionele presentatie",
+                },
+                "visible_to_external": True,
+                "order": 3,
+            },
+            {
+                "name": "Samenwerking (niet zichtbaar voor extern)",
+                "weight": 1.0,
+                "descriptors": {
+                    "1": "Weinig samenwerking",
+                    "2": "Voldoende samenwerking",
+                    "3": "Goede samenwerking",
+                    "4": "Sterke samenwerking",
+                    "5": "Excellente samenwerking",
+                },
+                "visible_to_external": False,  # This criterion is not visible to externals
+                "order": 4,
+            },
+        ]
+
+        for crit_data in criteria_data:
+            existing_crit = db.query(RubricCriterion).filter(
+                RubricCriterion.rubric_id == rubric.id,
+                RubricCriterion.name == crit_data["name"]
+            ).first()
+            
+            if not existing_crit:
+                criterion = RubricCriterion(
+                    school_id=school.id,
+                    rubric_id=rubric.id,
+                    name=crit_data["name"],
+                    weight=crit_data["weight"],
+                    descriptors=crit_data["descriptors"],
+                    visible_to_external=crit_data["visible_to_external"],
+                    order=crit_data["order"],
+                )
+                db.add(criterion)
+                visibility = "visible" if crit_data["visible_to_external"] else "not visible"
+                print(f"  ✓ Added criterion: {crit_data['name']} ({visibility} to externals)")
+
+        db.flush()
+
+        # ============================================================
+        # 9. ProjectAssessment (ID 1)
+        # ============================================================
+        print("\n" + "=" * 70)
+        print("9. PROJECT ASSESSMENT SETUP (ID 1)")
+        print("=" * 70)
+
+        # Create assessment for first group/team
+        assessment = db.query(ProjectAssessment).filter(
+            ProjectAssessment.id == 1
+        ).first()
+        
+        if not assessment:
+            assessment = ProjectAssessment(
+                id=1,
+                school_id=school.id,
+                project_id=project.id,
+                group_id=groups[0].id,  # First group
+                project_team_id=project_teams[0].id,
+                rubric_id=rubric.id,
+                teacher_id=teacher.id,
+                title="Tussentijdse Beoordeling - Test Project",
+                version="tussentijds",
+                status="open",
+                role="TEACHER",
+                is_advisory=False,
+            )
+            db.add(assessment)
+            db.flush()
+            print(f"✓ Created ProjectAssessment: {assessment.title} (ID: {assessment.id})")
+        else:
+            print(f"✓ Using existing ProjectAssessment: {assessment.title} (ID: {assessment.id})")
+
+        # ============================================================
+        # 10. ExternalEvaluators
+        # ============================================================
+        print("\n" + "=" * 70)
+        print("10. EXTERNAL EVALUATORS SETUP")
+        print("=" * 70)
+
+        evaluator_data = [
+            {
+                "name": "Jan de Vries",
+                "email": "jan.devries@extern.nl",
+                "organisation": "TechCorp",
+            },
+            {
+                "name": "Maria Jansen",
+                "email": "maria.jansen@bedrijf.nl",
+                "organisation": "InnovateB.V.",
+            },
+        ]
+
+        evaluators = []
+        for eval_data in evaluator_data:
+            evaluator = db.query(ExternalEvaluator).filter(
+                ExternalEvaluator.school_id == school.id,
+                ExternalEvaluator.email == eval_data["email"]
+            ).first()
+            
+            if not evaluator:
+                evaluator = ExternalEvaluator(
+                    school_id=school.id,
+                    name=eval_data["name"],
+                    email=eval_data["email"],
+                    organisation=eval_data["organisation"],
+                )
+                db.add(evaluator)
+                db.flush()
+                print(f"✓ Created External Evaluator: {eval_data['name']} ({eval_data['email']})")
+            else:
+                print(f"✓ Using existing External Evaluator: {evaluator.name} ({evaluator.email})")
+            
+            evaluators.append(evaluator)
+
+        # ============================================================
+        # 11. ProjectTeamExternal Links
+        # ============================================================
+        print("\n" + "=" * 70)
+        print("11. PROJECT TEAM EXTERNAL LINKS SETUP")
+        print("=" * 70)
+
+        # Link evaluators to teams
+        for idx, group in enumerate(groups):
+            evaluator = evaluators[idx % len(evaluators)]
+            
+            existing_link = db.query(ProjectTeamExternal).filter(
+                ProjectTeamExternal.group_id == group.id,
+                ProjectTeamExternal.assessment_id == assessment.id,
+                ProjectTeamExternal.team_number == group.team_number
+            ).first()
+            
+            if not existing_link:
+                token = generate_external_token()
+                link = ProjectTeamExternal(
+                    school_id=school.id,
+                    group_id=group.id,
+                    external_evaluator_id=evaluator.id,
+                    project_id=project.id,
+                    assessment_id=assessment.id,
+                    team_number=group.team_number,
+                    invitation_token=token,
+                    token_expires_at=datetime.now() + timedelta(days=30),
+                    status="INVITED",
+                    invited_at=datetime.now(),
+                )
+                db.add(link)
+                print(f"✓ Linked {evaluator.name} to {group.name} (Team {group.team_number})")
+                print(f"  Token: {token[:20]}...")
+            else:
+                print(f"✓ Link already exists: {evaluator.name} -> {group.name}")
+
+        # Commit all changes
+        db.commit()
+
+        print("\n" + "=" * 70)
+        print("EXTERNAL ASSESSMENT TEST DATA SEEDED SUCCESSFULLY")
+        print("=" * 70)
+        print("\n📋 Summary:")
+        print(f"  • School ID: {school.id}")
+        print(f"  • Course ID: {course.id}")
+        print(f"  • Project ID: {project.id}")
+        print(f"  • Rubric ID: {rubric.id} (scope='project')")
+        print(f"  • ProjectAssessment ID: {assessment.id}")
+        print(f"  • Students: IDs 2-6")
+        print(f"  • Groups: {len(groups)} teams")
+        print(f"  • External Evaluators: {len(evaluators)}")
+        print("\n🔗 Test URL:")
+        print(f"  http://localhost:3000/teacher/project-assessments/1/external")
+        print("\n👤 Login credentials:")
+        print(f"  Teacher: teacher@test.school / test123")
+        print(f"  Admin: admin@test.school / test123")
+        print("=" * 70)
+
+    except Exception as e:
+        print(f"\n❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
+if __name__ == "__main__":
+    seed_external_assessment_test()
