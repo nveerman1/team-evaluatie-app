@@ -37,17 +37,29 @@ Twee teams zijn aangemaakt:
   4. Samenwerking (NIET zichtbaar voor externe beoordelaars) ✗
 
 ### Project Assessment
-**ProjectAssessment ID 1**:
+**ProjectAssessment ID 1** (Docent beoordeling):
 - Titel: "Tussentijdse Beoordeling - Test Project"
 - Status: open
 - Gekoppeld aan Project 1 en Rubric 3
 
-### Externe Beoordelaars
-Twee externe beoordelaars zijn aangemaakt en gekoppeld aan de teams:
-1. **Jan de Vries** (jan.devries@extern.nl) - Gekoppeld aan Team 1
-2. **Maria Jansen** (maria.jansen@bedrijf.nl) - Gekoppeld aan Team 2
+### Externe Beoordelaars en Assessments
+Twee externe beoordelaars zijn aangemaakt met complete beoordelingen:
 
-Elke externe beoordelaar heeft een unieke uitnodiging token.
+1. **Jan de Vries** (jan.devries@extern.nl) - Team 1
+   - Status: SUBMITTED (voltooid)
+   - Scores: Creativiteit (5), Technische uitvoering (3), Presentatie (5)
+   - Inclusief Nederlandse feedback bij elke score
+
+2. **Maria Jansen** (maria.jansen@bedrijf.nl) - Team 2
+   - Status: SUBMITTED (voltooid)
+   - Scores: Creativiteit (3), Technische uitvoering (3), Presentatie (4)
+   - Inclusief Nederlandse feedback bij elke score
+
+Elke externe beoordelaar heeft:
+- Een unieke uitnodiging token via ProjectTeamExternal
+- Een voltooid extern assessment (ProjectAssessment met role=EXTERNAL)
+- Scores voor alle criteria die zichtbaar zijn voor externe beoordelaars
+- Nederlandse opmerkingen per score (bijv. "Uitstekend! Professioneel niveau.")
 
 ## Hoe Te Testen
 
@@ -110,7 +122,8 @@ npm run dev  # of pnpm dev
    - Je ziet de externe beoordelings pagina
    - Team 1 en Team 2 zijn zichtbaar
    - Elke team heeft een gekoppelde externe beoordelaar
-   - Status van uitnodigingen is zichtbaar
+   - Status: SUBMITTED (voltooid) voor beide teams
+   - Externe beoordelingen met scores zijn ingevuld en zichtbaar
 
 ## Database Query voor Verificatie
 
@@ -145,16 +158,32 @@ GROUP BY g.id, g.name, g.team_number;
 -- Check external evaluators
 SELECT id, name, email, organisation FROM external_evaluators WHERE school_id = 1;
 
--- Check external links
+-- Check external links and assessment status
 SELECT 
     pte.id,
     pte.team_number,
     ee.name as evaluator_name,
     pte.status,
+    pa.title as assessment_title,
+    pa.status as assessment_status,
     LEFT(pte.invitation_token, 20) as token_preview
 FROM project_team_externals pte
 JOIN external_evaluators ee ON pte.external_evaluator_id = ee.id
+LEFT JOIN project_assessments pa ON pa.external_evaluator_id = ee.id AND pa.role = 'EXTERNAL'
 WHERE pte.assessment_id = 1;
+
+-- Check external assessment scores
+SELECT 
+    pa.id as assessment_id,
+    pa.title,
+    rc.name as criterion,
+    pas.score,
+    pas.comment
+FROM project_assessments pa
+JOIN project_assessment_scores pas ON pas.assessment_id = pa.id
+JOIN rubric_criteria rc ON pas.criterion_id = rc.id
+WHERE pa.role = 'EXTERNAL'
+ORDER BY pa.id, rc.name;
 ```
 
 ## Opnieuw Seeden
