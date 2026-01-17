@@ -619,6 +619,10 @@ export default function EditRubricPageInner() {
                 <div className="w-full border rounded-lg px-3 py-2 bg-gray-50 text-gray-500">
                   Vakgebieden laden...
                 </div>
+              ) : subjects.length === 0 ? (
+                <div className="w-full border rounded-lg px-3 py-2 bg-gray-50 text-gray-500">
+                  Geen vakgebieden beschikbaar
+                </div>
               ) : (
                 <select
                   className="w-full border rounded-lg px-3 py-2"
@@ -628,7 +632,6 @@ export default function EditRubricPageInner() {
                     setSelectedCriteriaIds([]);
                   }}
                 >
-                  <option value="">-- Kies een sectie --</option>
                   {subjects.map((subject) => (
                     <option key={subject.id} value={subject.id}>
                       {subject.name} ({subject.code})
