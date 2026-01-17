@@ -1041,10 +1041,13 @@ def wizard_create_project(
                     db.flush()  # Flush to get project_team.id
 
                 # Create ProjectAssessment linked to project and project_team
-                # Include version suffix in title if provided, but not group name
-                title_with_version = project.title
+                # Include both version suffix and group name to make assessments distinguishable
+                title_parts = [project.title]
+                if group.name:
+                    title_parts.append(f"- {group.name}")
                 if version_suffix:
-                    title_with_version += f" ({version_suffix})"
+                    title_parts.append(f"({version_suffix})")
+                title_with_version = " ".join(title_parts)
 
                 assessment = ProjectAssessment(
                     school_id=user.school_id,
@@ -1106,9 +1109,22 @@ def wizard_create_project(
         create_project_assessments(payload.evaluations.project_assessment_eind, "eind")
 
     # Legacy support: process single project_assessment if provided
+    # ONLY process this if neither of the new fields (tussen/eind) are already enabled
+    # to prevent duplicate creation
+    tussen_enabled = (
+        payload.evaluations.project_assessment_tussen
+        and payload.evaluations.project_assessment_tussen.enabled
+    )
+    eind_enabled = (
+        payload.evaluations.project_assessment_eind
+        and payload.evaluations.project_assessment_eind.enabled
+    )
+    
     if (
         payload.evaluations.project_assessment
         and payload.evaluations.project_assessment.enabled
+        and not tussen_enabled
+        and not eind_enabled
     ):
         # Use explicit version from payload, or no suffix if not provided
         version_suffix = payload.evaluations.project_assessment.version or None
