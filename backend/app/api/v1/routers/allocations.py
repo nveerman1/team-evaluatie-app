@@ -16,6 +16,8 @@ from app.infra.db.models import (
     Score,
     GroupMember,
     Group,
+    ProjectTeam,
+    ProjectTeamMember,
 )
 
 router = APIRouter(prefix="/allocations", tags=["allocations"])
@@ -316,17 +318,45 @@ def my_allocations(
         if school_id is None:
             raise HTTPException(500, "school_id ontbreekt op evaluatie/gebruiker")
 
-        # Find teammates with same course AND same team_number
-        # Use User.team_number as the source of truth for team membership
-        if user.team_number is not None:
-            teammates = _select_members_for_course(
-                db,
-                school_id=school_id,
-                course_id=ev.course_id,
-                team_number=user.team_number,
+        # NEW: If evaluation has a project_id, use ProjectTeam to find teammates
+        if ev.project_id:
+            # Find the project team that this user belongs to
+            user_project_team = (
+                db.query(ProjectTeam)
+                .join(ProjectTeamMember, ProjectTeamMember.project_team_id == ProjectTeam.id)
+                .filter(
+                    ProjectTeam.project_id == ev.project_id,
+                    ProjectTeam.school_id == school_id,
+                    ProjectTeamMember.user_id == user.id,
+                )
+                .first()
             )
+            
+            if user_project_team:
+                # Get all members of this project team
+                team_member_ids = (
+                    db.query(ProjectTeamMember.user_id)
+                    .join(User, User.id == ProjectTeamMember.user_id)
+                    .filter(
+                        ProjectTeamMember.project_team_id == user_project_team.id,
+                        User.role == "student",
+                        User.archived.is_(False),
+                    )
+                    .all()
+                )
+                valid_teammate_ids = {uid for (uid,) in team_member_ids}
+        else:
+            # LEGACY: Find teammates with same course AND same team_number
+            # Use User.team_number as the source of truth for team membership
+            if user.team_number is not None:
+                teammates = _select_members_for_course(
+                    db,
+                    school_id=school_id,
+                    course_id=ev.course_id,
+                    team_number=user.team_number,
+                )
 
-            valid_teammate_ids = set(teammates)
+                valid_teammate_ids = set(teammates)
 
         needs_commit = False
 
