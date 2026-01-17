@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -19,7 +19,6 @@ type Row = {
   serverSuggested: number;
   rowGroupGrade?: number | null;
   override?: number | null;
-  comment?: string;
 };
 
 type SortKey = "team" | "class" | "name" | "final";
@@ -74,7 +73,6 @@ export default function GradesPageInner() {
             g.user_id,
             {
               override: g.grade ?? null,
-              comment: g.reason ?? "",
               rowGroupGrade: g.meta?.group_grade ?? null,
             },
           ]),
@@ -93,7 +91,6 @@ export default function GradesPageInner() {
               peerPct: i.avg_score, // Always fresh from preview
               serverSuggested: i.suggested_grade ?? 0, // Always fresh from preview
               override: saved?.override ?? null, // Preserved from saved
-              comment: saved?.comment ?? "", // Preserved from saved
               rowGroupGrade: saved?.rowGroupGrade ?? null, // Preserved from saved
             };
           }),
@@ -113,7 +110,7 @@ export default function GradesPageInner() {
         r.user_id,
         {
           grade: r.override ?? null,
-          reason: (r.comment ?? "").trim() || null,
+          reason: null,
           rowGroupGrade: r.rowGroupGrade ?? null,
         },
       ]),
@@ -227,7 +224,7 @@ export default function GradesPageInner() {
       const overrides = Object.fromEntries(
         rows.map((r) => [
           r.user_id,
-          { grade: finalGrade(r), reason: (r.comment ?? "").trim() || null },
+          { grade: finalGrade(r), reason: null },
         ]),
       );
       await gradesService.publish({
@@ -365,9 +362,6 @@ export default function GradesPageInner() {
                         )}
                       </div>
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
-                      Opmerking docent
-                    </th>
                   </tr>
                 </thead>
 
@@ -463,13 +457,6 @@ export default function GradesPageInner() {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 align-top">
-                        <AutoTextarea
-                          value={r.comment ?? ""}
-                          onChange={(v) => handleUpdateComment(r.user_id, v)}
-                          placeholder="Toelichting / motivatie (optioneel)"
-                        />
-                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -480,25 +467,24 @@ export default function GradesPageInner() {
             {/* Footer with averages */}
             {stats.hasData && (
               <div className="border-t border-gray-200 bg-gray-50 px-5 py-3">
-                <div className="flex items-center text-sm">
-                  <div className="w-20"></div>
-                  <div className="px-5 font-medium text-gray-900 flex-1">
+                <div className="grid grid-cols-[80px_1fr_auto_auto_auto_auto_auto] gap-0 text-sm items-center">
+                  <div></div>
+                  <div className="px-5 font-medium text-gray-900">
                     Gemiddelde (op basis van filter)
                   </div>
-                  <div className="px-3"></div>
-                  <div className="px-4 text-right font-medium text-gray-800 w-24">
+                  <div className="px-3 w-16"></div>
+                  <div className="px-4 text-right font-medium text-gray-800 w-32">
                     {stats.avgProposal.toFixed(1)}
                   </div>
-                  <div className="px-4 text-right font-medium text-gray-800 w-24">
+                  <div className="px-4 text-right font-medium text-gray-800 w-32">
                     {stats.avgGroupGrade.toFixed(1)}
                   </div>
-                  <div className="px-4 text-right font-medium text-gray-800 w-24">
+                  <div className="px-4 text-right font-medium text-gray-800 w-28">
                     {stats.avgGcf.toFixed(2)}
                   </div>
-                  <div className="px-4 text-right font-semibold text-gray-900 w-24">
+                  <div className="px-4 text-right font-semibold text-gray-900 w-32">
                     {stats.avgFinal.toFixed(1)}
                   </div>
-                  <div className="px-4 flex-1"></div>
                 </div>
               </div>
             )}
@@ -581,45 +567,4 @@ export default function GradesPageInner() {
       all.map((x) => (x.user_id === userId ? { ...x, override: null } : x)),
     );
   }
-
-  function handleUpdateComment(userId: number, value: string) {
-    setAutoSaveState("saving");
-    setRows((all) =>
-      all.map((x) => (x.user_id === userId ? { ...x, comment: value } : x)),
-    );
-  }
-}
-
-// --- UI helpers ---
-function AutoTextarea({
-  value,
-  onChange,
-  placeholder,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-}) {
-  const ref = useRef<HTMLTextAreaElement | null>(null);
-  useEffect(() => {
-    if (ref.current) resize(ref.current);
-  }, [value]);
-  function resize(el: HTMLTextAreaElement) {
-    el.style.height = "0px";
-    el.style.height = Math.max(40, el.scrollHeight) + "px";
-  }
-  return (
-    <textarea
-      ref={ref}
-      className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs text-gray-800 leading-snug resize-y shadow-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none"
-      placeholder={placeholder}
-      value={value}
-      onChange={(e) => {
-        onChange(e.target.value);
-        if (ref.current) resize(ref.current);
-      }}
-      rows={2}
-      style={{ minHeight: 40, maxHeight: 240 }}
-    />
-  );
 }
