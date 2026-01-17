@@ -1035,6 +1035,7 @@ def wizard_create_project(
 
             # Create ONE ProjectAssessment for the entire project/course
             # Link to the first group (required by schema), but it can score all teams
+            # NOTE: groups[0] is safe here because we're in the else block of "if not groups"
             first_group = groups[0]
             title_with_version = project.title
             if version_suffix:
@@ -1042,9 +1043,9 @@ def wizard_create_project(
 
             assessment = ProjectAssessment(
                 school_id=user.school_id,
-                project_id=project.id,
-                group_id=first_group.id,  # Link to first group (schema requirement)
-                project_team_id=None,  # Not tied to a specific team
+                project_id=project.id,  # Key: project_id enables scoring all teams
+                group_id=first_group.id,  # Required by schema, links to first group
+                project_team_id=None,  # None = assessment scores all teams in project
                 teacher_id=user.id,
                 rubric_id=pa_config.rubric_id,
                 title=title_with_version,
