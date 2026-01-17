@@ -312,6 +312,60 @@ def list_admin_students(
     return out
 
 
+@router.get("/{student_id}", response_model=dict)
+def get_admin_student(
+    student_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Get a single student by ID."""
+    if current_user is None or getattr(current_user, "school_id", None) is None:
+        raise HTTPException(
+            status_code=http_status.HTTP_401_UNAUTHORIZED, detail="Niet ingelogd"
+        )
+
+    u: Optional[User] = (
+        db.query(User)
+        .filter(
+            User.id == student_id,
+            User.school_id == current_user.school_id,
+            User.role == "student",
+        )
+        .one_or_none()
+    )
+    if not u:
+        raise HTTPException(status_code=404, detail="Student niet gevonden")
+
+    # Get course_name via subquery
+    csub = _course_name_subquery(db, current_user.school_id)
+    row = db.query(csub.c.course_name).filter(csub.c.user_id == u.id).first()
+    course_name_out = row[0] if row else None
+
+    # Determine if user has logged in
+    has_logged_in = bool(u.password_hash) or (
+        u.auth_provider and u.auth_provider != "local"
+    )
+
+    # Enrich with class and course info
+    enrichment = _enrich_student_with_class_and_courses(
+        db, u.id, current_user.school_id
+    )
+
+    return {
+        "id": u.id,
+        "name": u.name,
+        "email": u.email,
+        "class_name": getattr(u, "class_name", None),
+        "course_name": course_name_out,
+        "team_number": getattr(u, "team_number", None),
+        "status": "inactive" if getattr(u, "archived", False) else "active",
+        "has_logged_in": has_logged_in,
+        # New fields
+        "class_info": enrichment["class_info"],
+        "course_enrollments": enrichment["course_enrollments"],
+    }
+
+
 @router.post("", response_model=dict, status_code=http_status.HTTP_201_CREATED)
 def create_admin_student(
     payload: dict,

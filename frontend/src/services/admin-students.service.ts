@@ -53,6 +53,14 @@ export type AdminStudentUpdate = {
 
 export const adminStudentService = {
   /**
+   * Get a single student by ID
+   */
+  async getStudent(id: number): Promise<AdminStudent> {
+    const response = await api.get<AdminStudent>(`/admin/students/${id}`);
+    return response.data;
+  },
+
+  /**
    * List students with filtering and pagination
    */
   async listStudents(params: AdminStudentListParams = {}): Promise<AdminStudentListResponse> {
