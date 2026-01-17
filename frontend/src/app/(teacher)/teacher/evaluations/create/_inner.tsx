@@ -59,8 +59,8 @@ export default function CreateEvaluationPageInner() {
   const [minWords, setMinWords] = useState<number>(50);
   const [minCf, setMinCf] = useState<number>(0.6);
   const [maxCf, setMaxCf] = useState<number>(1.4);
-  const [smoothing, setSmoothing] = useState<boolean>(true);
-  const [reviewerRating, setReviewerRating] = useState<boolean>(true);
+  const smoothing = true;
+  const reviewerRating = true;
 
   // Filter projects based on selected course
   const filteredProjects = useMemo(() => {
@@ -360,27 +360,6 @@ export default function CreateEvaluationPageInner() {
             </div>
             <p className="text-xs text-gray-500">Bijv. 0.6 – 1.4</p>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              className="size-4"
-              checked={smoothing}
-              onChange={(e) => setSmoothing(e.target.checked)}
-            />
-            <span className="text-sm">Smoothing (stabiliseer cijfers)</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              className="size-4"
-              checked={reviewerRating}
-              onChange={(e) => setReviewerRating(e.target.checked)}
-            />
-            <span className="text-sm">Beoordeel reviewers mee</span>
-          </label>
         </div>
 
         <div className="flex items-center gap-3">
