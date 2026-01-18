@@ -19,8 +19,6 @@ from app.infra.db.models import (
     CourseEnrollment,
     Course,
     Subject,
-    GroupMember,
-    Group,
 )
 
 router = APIRouter(prefix="/admin/students", tags=["admin-students"])
@@ -157,7 +155,19 @@ def _course_name_subquery(db: Session, school_id: int):
     return csub
 
 
-def _get_or_create_course_and_group(db: Session, school_id: int, course_name: str):
+def _set_user_course_enrollment(
+    db: Session, school_id: int, user_id: int, course_name: Optional[str]
+):
+    """
+    Ensures student is enrolled in the specified course via CourseEnrollment.
+    - If course_name is empty/None: do nothing.
+    - If already enrolled in the course: ensure enrollment is active.
+    - Otherwise: deactivate other enrollments and activate/create enrollment for this course.
+    """
+    if not course_name:
+        return
+
+    # Find or create the course
     course = (
         db.query(Course)
         .filter(Course.school_id == school_id, Course.name == course_name)
@@ -166,104 +176,30 @@ def _get_or_create_course_and_group(db: Session, school_id: int, course_name: st
     if not course:
         course = Course(school_id=school_id, name=course_name)
         db.add(course)
-        db.flush()  # krijgt id
+        db.flush()  # Get ID
 
-    team = (
-        db.query(Group)
-        .filter(Group.course_id == course.id, Group.school_id == school_id)
-        .first()
-    )
-    if not team:
-        team = Group(school_id=school_id, course_id=course.id, name=course.name)
-        db.add(team)
-        db.flush()
-    return course, team
-
-
-def _ensure_course_enrollment(db: Session, course_id: int, student_id: int):
-    """
-    Phase 1 Migration Helper: Ensures a CourseEnrollment record exists for student.
-    Creates or reactivates as needed.
-    """
-    enrollment = (
+    # Check if student already has an active enrollment for this course
+    existing_enrollment = (
         db.query(CourseEnrollment)
         .filter(
-            CourseEnrollment.course_id == course_id,
-            CourseEnrollment.student_id == student_id
+            CourseEnrollment.course_id == course.id,
+            CourseEnrollment.student_id == user_id
         )
         .first()
     )
-    
-    if enrollment:
-        # Reactivate if inactive (SQLAlchemy auto-tracks changes)
-        if not enrollment.active:
-            enrollment.active = True
+
+    if existing_enrollment:
+        # Ensure it's active
+        if not existing_enrollment.active:
+            existing_enrollment.active = True
     else:
         # Create new enrollment
         new_enrollment = CourseEnrollment(
-            course_id=course_id,
-            student_id=student_id,
+            course_id=course.id,
+            student_id=user_id,
             active=True
         )
         db.add(new_enrollment)
-
-
-def _set_user_course_membership(
-    db: Session, school_id: int, user_id: int, course_name: Optional[str]
-):
-    """
-    Zorgt dat user actief gekoppeld is aan group van course_name.
-    - Als course_name leeg/None is: doe niets aan membership.
-    - Als al gekoppeld aan juiste group: niets doen.
-    - Anders: bestaande actieve memberships deactiveren en nieuwe toevoegen (of bestaande reactiveren).
-    
-    Phase 1 Migration: Also ensures CourseEnrollment record exists.
-    """
-    if not course_name:
-        return
-
-    # doel-group
-    course, team = _get_or_create_course_and_group(db, school_id, course_name)
-
-    # huidige actieve memberships
-    actives = (
-        db.query(GroupMember)
-        .filter(GroupMember.school_id == school_id, GroupMember.user_id == user_id, GroupMember.active.is_(True))
-        .all()
-    )
-
-    # al goed?
-    for m in actives:
-        if m.group_id == team.id:
-            # Phase 1: Ensure CourseEnrollment exists even if GroupMember already correct
-            _ensure_course_enrollment(db, course.id, user_id)
-            return  # al op de juiste plek
-
-    # deactivate oud
-    for m in actives:
-        m.active = False
-        db.add(m)
-
-    # check of er al een (inactieve) membership bestaat voor deze group
-    existing = (
-        db.query(GroupMember)
-        .filter(
-            GroupMember.school_id == school_id, GroupMember.user_id == user_id, GroupMember.group_id == team.id
-        )
-        .first()
-    )
-
-    if existing:
-        # reactivate bestaande membership
-        existing.active = True
-        db.add(existing)
-    else:
-        # add nieuwe membership
-        new_m = GroupMember(school_id=school_id, group_id=team.id, user_id=user_id, active=True)
-        db.add(new_m)
-    
-    # Phase 1: Ensure CourseEnrollment record exists
-    _ensure_course_enrollment(db, course.id, user_id)
 
 
 # ---------- routes ----------
@@ -442,10 +378,10 @@ def create_admin_student(
     db.add(u)
     db.flush()  # krijgt id
 
-    # optioneel: course_name -> membership zetten
+    # optioneel: course_name -> enrollment zetten
     course_name = (payload.get("course_name") or "").strip() or None
     if course_name:
-        _set_user_course_membership(db, current_user.school_id, u.id, course_name)
+        _set_user_course_enrollment(db, current_user.school_id, u.id, course_name)
 
     db.commit()
     db.refresh(u)
@@ -514,7 +450,7 @@ def update_admin_student(
     # optioneel: course_name wijzigen via update
     course_name = payload.get("course_name")
     if course_name:
-        _set_user_course_membership(
+        _set_user_course_enrollment(
             db, current_user.school_id, u.id, course_name.strip()
         )
 
@@ -722,9 +658,9 @@ def import_students_csv(
                 db.flush()  # krijg id
                 created += 1
 
-            # membership
+            # enrollment
             if course_name:
-                _set_user_course_membership(
+                _set_user_course_enrollment(
                     db, current_user.school_id, u.id, course_name
                 )
 
