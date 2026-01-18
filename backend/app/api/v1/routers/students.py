@@ -61,8 +61,8 @@ def _ensure_course_enrollment(db: Session, course_id: int, student_id: int):
             active=True
         ))
     elif not enrollment.active:
+        # SQLAlchemy automatically tracks changes to loaded objects
         enrollment.active = True
-        db.add(enrollment)
 
 
 try:

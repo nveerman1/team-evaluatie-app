@@ -195,10 +195,9 @@ def _ensure_course_enrollment(db: Session, course_id: int, student_id: int):
     )
     
     if enrollment:
-        # Reactivate if inactive
+        # Reactivate if inactive (SQLAlchemy auto-tracks changes)
         if not enrollment.active:
             enrollment.active = True
-            db.add(enrollment)
     else:
         # Create new enrollment
         new_enrollment = CourseEnrollment(
