@@ -345,52 +345,55 @@ export default function ResultaatPage() {
                       <h4 className="text-xs font-semibold text-slate-700">Teambeoordeling</h4>
                     </div>
                     
-                    {/* OMZA scores table - matching heatmap style */}
+                    {/* OMZA scores table - matching heatmap style with OMZA as columns */}
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-slate-200">
-                            <th className="px-2 py-1.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wide">OMZA</th>
-                            <th className="px-2 py-1.5 text-center text-[10px] font-semibold text-slate-600 uppercase tracking-wide">Score</th>
-                            <th className="px-2 py-1.5 text-center text-[10px] font-semibold text-slate-600 uppercase tracking-wide">Δ</th>
+                            {['O', 'M', 'Z', 'A'].map((key) => (
+                              <th key={key} className="px-2 py-1.5 text-center text-xs font-semibold text-slate-600">
+                                {key}
+                              </th>
+                            ))}
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {Object.entries(evaluationData.teacherOmza).map(([key, value]) => {
-                            // Get corresponding peer average and delta for comparison
-                            const peerAvg = evaluationData.omzaAverages?.find(avg => avg.key === key);
-                            const delta = peerAvg?.delta ?? 0;
-                            
-                            // Color based on teacher score (1-4 scale) matching heatmap
-                            const getScoreColor = (score: number) => {
-                              if (score >= 3.5) return "bg-green-100 text-green-700";
-                              if (score >= 2.5) return "bg-blue-100 text-blue-700";
-                              return "bg-orange-100 text-orange-700";
-                            };
-                            
-                            return (
-                              <tr key={key} className="hover:bg-slate-50">
-                                <td className="px-2 py-2 text-left">
-                                  <span className="text-xs font-medium text-slate-700">{key}</span>
-                                </td>
-                                <td className="px-2 py-2 text-center">
-                                  <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(value)}`}>
-                                    {value.toFixed(1)}
-                                  </span>
-                                </td>
-                                <td className="px-2 py-2 text-center">
-                                  {delta !== 0 && (
-                                    <span className={`text-[10px] font-medium tabular-nums ${
-                                      delta > 0 ? "text-green-600" : "text-red-600"
-                                    }`}>
-                                      {delta > 0 ? "+" : ""}{delta.toFixed(1)}
-                                    </span>
+                        <tbody>
+                          <tr className="hover:bg-slate-50">
+                            {['O', 'M', 'Z', 'A'].map((key) => {
+                              const value = evaluationData.teacherOmza[key as keyof typeof evaluationData.teacherOmza];
+                              const peerAvg = evaluationData.omzaAverages?.find(avg => avg.key === key);
+                              const delta = peerAvg?.delta ?? 0;
+                              
+                              // Color based on teacher score (1-4 scale) matching heatmap
+                              const getScoreColor = (score: number) => {
+                                if (score >= 3.5) return "bg-green-100 text-green-700";
+                                if (score >= 2.5) return "bg-blue-100 text-blue-700";
+                                return "bg-orange-100 text-orange-700";
+                              };
+                              
+                              return (
+                                <td key={key} className="px-2 py-2 text-center">
+                                  {value != null ? (
+                                    <div className="inline-flex flex-col items-center gap-0.5">
+                                      <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(value)}`}>
+                                        {value.toFixed(1)}
+                                      </span>
+                                      {delta !== 0 && (
+                                        <span className={`text-[10px] font-medium tabular-nums ${
+                                          delta > 0 ? "text-green-600" : "text-red-600"
+                                        }`}>
+                                          {delta > 0 ? "+" : ""}{delta.toFixed(1)}
+                                        </span>
+                                      )}
+                                      {delta === 0 && <span className="text-slate-300 text-xs">–</span>}
+                                    </div>
+                                  ) : (
+                                    <span className="text-slate-300">–</span>
                                   )}
-                                  {delta === 0 && <span className="text-slate-300 text-xs">–</span>}
                                 </td>
-                              </tr>
-                            );
-                          })}
+                              );
+                            })}
+                          </tr>
                         </tbody>
                       </table>
                     </div>
