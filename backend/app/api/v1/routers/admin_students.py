@@ -19,6 +19,8 @@ from app.infra.db.models import (
     CourseEnrollment,
     Course,
     Subject,
+    GroupMember,
+    Group,
 )
 
 router = APIRouter(prefix="/admin/students", tags=["admin-students"])
@@ -156,8 +158,6 @@ def _course_name_subquery(db: Session, school_id: int):
 
 
 def _get_or_create_course_and_group(db: Session, school_id: int, course_name: str):
-    from app.infra.db.models import Course, Group as Team
-
     course = (
         db.query(Course)
         .filter(Course.school_id == school_id, Course.name == course_name)
@@ -169,12 +169,12 @@ def _get_or_create_course_and_group(db: Session, school_id: int, course_name: st
         db.flush()  # krijgt id
 
     team = (
-        db.query(Team)
-        .filter(Team.course_id == course.id, Team.school_id == school_id)
+        db.query(Group)
+        .filter(Group.course_id == course.id, Group.school_id == school_id)
         .first()
     )
     if not team:
-        team = Team(school_id=school_id, course_id=course.id, name=course.name)
+        team = Group(school_id=school_id, course_id=course.id, name=course.name)
         db.add(team)
         db.flush()
     return course, team
@@ -185,8 +185,6 @@ def _ensure_course_enrollment(db: Session, course_id: int, student_id: int):
     Phase 1 Migration Helper: Ensures a CourseEnrollment record exists for student.
     Creates or reactivates as needed.
     """
-    from app.infra.db.models import CourseEnrollment
-    
     enrollment = (
         db.query(CourseEnrollment)
         .filter(
@@ -225,15 +223,13 @@ def _set_user_course_membership(
     if not course_name:
         return
 
-    from app.infra.db.models import GroupMember as TM, CourseEnrollment
-
     # doel-group
     course, team = _get_or_create_course_and_group(db, school_id, course_name)
 
     # huidige actieve memberships
     actives = (
-        db.query(TM)
-        .filter(TM.school_id == school_id, TM.user_id == user_id, TM.active.is_(True))
+        db.query(GroupMember)
+        .filter(GroupMember.school_id == school_id, GroupMember.user_id == user_id, GroupMember.active.is_(True))
         .all()
     )
 
@@ -251,9 +247,9 @@ def _set_user_course_membership(
 
     # check of er al een (inactieve) membership bestaat voor deze group
     existing = (
-        db.query(TM)
+        db.query(GroupMember)
         .filter(
-            TM.school_id == school_id, TM.user_id == user_id, TM.group_id == team.id
+            GroupMember.school_id == school_id, GroupMember.user_id == user_id, GroupMember.group_id == team.id
         )
         .first()
     )
@@ -264,7 +260,7 @@ def _set_user_course_membership(
         db.add(existing)
     else:
         # add nieuwe membership
-        new_m = TM(school_id=school_id, group_id=team.id, user_id=user_id, active=True)
+        new_m = GroupMember(school_id=school_id, group_id=team.id, user_id=user_id, active=True)
         db.add(new_m)
     
     # Phase 1: Ensure CourseEnrollment record exists

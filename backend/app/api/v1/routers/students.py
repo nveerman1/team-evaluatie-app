@@ -15,7 +15,7 @@ import re
 
 from app.api.v1.deps import get_db, get_current_user
 from app.api.v1.schemas.students import StudentCreate, StudentUpdate, StudentOut
-from app.infra.db.models import User
+from app.infra.db.models import User, CourseEnrollment
 
 router = APIRouter(prefix="/students", tags=["students"])
 
@@ -38,6 +38,32 @@ def extract_team_number(name: Optional[str]) -> Optional[int]:
 
 def team_name_for_number(n: int) -> str:
     return f"Team {n}"
+
+
+def _ensure_course_enrollment(db: Session, course_id: int, student_id: int):
+    """
+    Phase 1 Migration Helper: Ensures a CourseEnrollment record exists for student.
+    Creates or reactivates as needed.
+    """
+    enrollment = (
+        db.query(CourseEnrollment)
+        .filter(
+            CourseEnrollment.course_id == course_id,
+            CourseEnrollment.student_id == student_id
+        )
+        .first()
+    )
+    
+    if not enrollment:
+        db.add(CourseEnrollment(
+            course_id=course_id,
+            student_id=student_id,
+            active=True
+        ))
+        db.commit()
+    elif not enrollment.active:
+        enrollment.active = True
+        db.commit()
 
 
 try:
@@ -273,25 +299,7 @@ def create_student(
                 course_id = c.id
                 course_name = c.name
                 # Phase 1: Ensure CourseEnrollment exists
-                from app.infra.db.models import CourseEnrollment
-                enrollment = (
-                    db.query(CourseEnrollment)
-                    .filter(
-                        CourseEnrollment.course_id == course_id,
-                        CourseEnrollment.student_id == u.id
-                    )
-                    .first()
-                )
-                if not enrollment:
-                    db.add(CourseEnrollment(
-                        course_id=course_id,
-                        student_id=u.id,
-                        active=True
-                    ))
-                    db.commit()
-                elif not enrollment.active:
-                    enrollment.active = True
-                    db.commit()
+                _ensure_course_enrollment(db, course_id, u.id)
             else:
                 course_id = None
                 course_name = None
@@ -337,25 +345,7 @@ def create_student(
             course_id = c.id
             course_name = c.name
             # Phase 1: Ensure CourseEnrollment exists
-            from app.infra.db.models import CourseEnrollment
-            enrollment = (
-                db.query(CourseEnrollment)
-                .filter(
-                    CourseEnrollment.course_id == course_id,
-                    CourseEnrollment.student_id == u.id
-                )
-                .first()
-            )
-            if not enrollment:
-                db.add(CourseEnrollment(
-                    course_id=course_id,
-                    student_id=u.id,
-                    active=True
-                ))
-                db.commit()
-            elif not enrollment.active:
-                enrollment.active = True
-                db.commit()
+            _ensure_course_enrollment(db, course_id, u.id)
         else:
             course_id = None
             course_name = None
@@ -441,25 +431,7 @@ def update_student(
                 course_id = c.id
                 course_name = c.name
                 # Phase 1: Ensure CourseEnrollment exists
-                from app.infra.db.models import CourseEnrollment
-                enrollment = (
-                    db.query(CourseEnrollment)
-                    .filter(
-                        CourseEnrollment.course_id == course_id,
-                        CourseEnrollment.student_id == u.id
-                    )
-                    .first()
-                )
-                if not enrollment:
-                    db.add(CourseEnrollment(
-                        course_id=course_id,
-                        student_id=u.id,
-                        active=True
-                    ))
-                    db.commit()
-                elif not enrollment.active:
-                    enrollment.active = True
-                    db.commit()
+                _ensure_course_enrollment(db, course_id, u.id)
             else:
                 course_id = None
                 course_name = None
@@ -518,25 +490,7 @@ def update_student(
             course_id = c.id
             course_name = c.name
             # Phase 1: Ensure CourseEnrollment exists
-            from app.infra.db.models import CourseEnrollment
-            enrollment = (
-                db.query(CourseEnrollment)
-                .filter(
-                    CourseEnrollment.course_id == course_id,
-                    CourseEnrollment.student_id == u.id
-                )
-                .first()
-            )
-            if not enrollment:
-                db.add(CourseEnrollment(
-                    course_id=course_id,
-                    student_id=u.id,
-                    active=True
-                ))
-                db.commit()
-            elif not enrollment.active:
-                enrollment.active = True
-                db.commit()
+            _ensure_course_enrollment(db, course_id, u.id)
         else:
             course_id = None
             course_name = None

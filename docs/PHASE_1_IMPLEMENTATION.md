@@ -10,6 +10,8 @@
 
 Phase 1 establishes the `course_enrollments` table as the authoritative source for student-course relationships, preparing the codebase for migration away from the legacy `GroupMember` table.
 
+**Key Achievement:** All student creation and update flows now create CourseEnrollment records alongside GroupMember records (dual-write pattern).
+
 ---
 
 ## Deliverables
@@ -88,7 +90,42 @@ The `course_enrollments` table already has the necessary constraints:
 
 ---
 
-### ✅ 1.4 Testing
+### ✅ 1.4 Update Student Creation Flow
+
+**Status:** Complete - All flows now create CourseEnrollment records
+
+**Updated Files:**
+- `backend/app/api/v1/routers/admin_students.py`
+- `backend/app/api/v1/routers/students.py`
+
+**Changes Made:**
+
+#### admin_students.py
+Added `_ensure_course_enrollment()` helper function:
+```python
+def _ensure_course_enrollment(db: Session, course_id: int, student_id: int):
+    """
+    Phase 1 Migration Helper: Ensures a CourseEnrollment record exists for student.
+    Creates or reactivates as needed.
+    """
+```
+
+Updated `_set_user_course_membership()` to call this helper, ensuring that:
+- When a student is assigned to a course via course_name in admin panel
+- When a student is imported via CSV with course information
+- CourseEnrollment record is created or reactivated
+
+#### students.py
+Updated both `create_student()` and `update_student()` endpoints to create CourseEnrollment records when:
+- Student is assigned to a team via `team_id`
+- Student is assigned via `course_id` + `team_number`
+
+Both flows now ensure CourseEnrollment exists alongside GroupMember (dual-write pattern).
+
+**Verification:**
+Going forward, all new student enrollments will have CourseEnrollment records. Existing students can be backfilled using the backfill script.
+
+---
 
 **Test File:** `backend/tests/test_course_enrollment_backfill.py`
 
