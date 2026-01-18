@@ -43,7 +43,7 @@ def team_name_for_number(n: int) -> str:
 def _ensure_course_enrollment(db: Session, course_id: int, student_id: int):
     """
     Phase 1 Migration Helper: Ensures a CourseEnrollment record exists for student.
-    Creates or reactivates as needed.
+    Creates or reactivates as needed. Does not commit - caller should commit.
     """
     enrollment = (
         db.query(CourseEnrollment)
@@ -60,10 +60,9 @@ def _ensure_course_enrollment(db: Session, course_id: int, student_id: int):
             student_id=student_id,
             active=True
         ))
-        db.commit()
     elif not enrollment.active:
         enrollment.active = True
-        db.commit()
+        db.add(enrollment)
 
 
 try:
@@ -300,6 +299,7 @@ def create_student(
                 course_name = c.name
                 # Phase 1: Ensure CourseEnrollment exists
                 _ensure_course_enrollment(db, course_id, u.id)
+                db.commit()
             else:
                 course_id = None
                 course_name = None
@@ -346,6 +346,7 @@ def create_student(
             course_name = c.name
             # Phase 1: Ensure CourseEnrollment exists
             _ensure_course_enrollment(db, course_id, u.id)
+            db.commit()
         else:
             course_id = None
             course_name = None
@@ -432,6 +433,7 @@ def update_student(
                 course_name = c.name
                 # Phase 1: Ensure CourseEnrollment exists
                 _ensure_course_enrollment(db, course_id, u.id)
+                db.commit()
             else:
                 course_id = None
                 course_name = None
@@ -491,6 +493,7 @@ def update_student(
             course_name = c.name
             # Phase 1: Ensure CourseEnrollment exists
             _ensure_course_enrollment(db, course_id, u.id)
+            db.commit()
         else:
             course_id = None
             course_name = None
