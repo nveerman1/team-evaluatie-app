@@ -146,6 +146,62 @@ http://localhost:3000/teacher/project-assessments/1/external
 
 ## Utility Scripts
 
+### audit_course_enrollments.py
+
+**Purpose:** Audits CourseEnrollment coverage by comparing with GroupMember records.
+
+**Phase:** Legacy Tables Migration - Phase 1.1
+
+**What it does:**
+- Fetches all active GroupMember records
+- Identifies unique student-course pairs
+- Checks for corresponding CourseEnrollment records
+- Reports coverage statistics and identifies gaps
+
+**Usage:**
+```bash
+cd backend
+python scripts/audit_course_enrollments.py
+```
+
+**Exit codes:**
+- 0: PASS - 100% coverage
+- 1: WARNING - Coverage good but not 100%
+- 2: FAIL - Backfill required
+
+---
+
+### backfill_course_enrollments.py
+
+**Purpose:** Creates CourseEnrollment records for students missing them.
+
+**Phase:** Legacy Tables Migration - Phase 1.2
+
+**What it does:**
+- Identifies students with active GroupMember but no CourseEnrollment
+- Creates missing CourseEnrollment records
+- Activates inactive CourseEnrollment records where needed
+- Ensures idempotent operation (safe to run multiple times)
+
+**Usage:**
+```bash
+# Dry run (preview changes without committing)
+cd backend
+python scripts/backfill_course_enrollments.py
+
+# Live run (commit changes to database)
+cd backend
+python scripts/backfill_course_enrollments.py --commit
+```
+
+**Features:**
+- Handles students in multiple groups of the same course correctly
+- Prevents duplicate enrollments (unique constraint)
+- Supports both new creation and reactivation
+- Dry-run mode by default for safety
+
+---
+
 ### backfill_project_teams.py
 
 Backfills project team data for existing projects.
