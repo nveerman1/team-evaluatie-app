@@ -180,6 +180,37 @@ def _get_or_create_course_and_group(db: Session, school_id: int, course_name: st
     return course, team
 
 
+def _ensure_course_enrollment(db: Session, course_id: int, student_id: int):
+    """
+    Phase 1 Migration Helper: Ensures a CourseEnrollment record exists for student.
+    Creates or reactivates as needed.
+    """
+    from app.infra.db.models import CourseEnrollment
+    
+    enrollment = (
+        db.query(CourseEnrollment)
+        .filter(
+            CourseEnrollment.course_id == course_id,
+            CourseEnrollment.student_id == student_id
+        )
+        .first()
+    )
+    
+    if enrollment:
+        # Reactivate if inactive
+        if not enrollment.active:
+            enrollment.active = True
+            db.add(enrollment)
+    else:
+        # Create new enrollment
+        new_enrollment = CourseEnrollment(
+            course_id=course_id,
+            student_id=student_id,
+            active=True
+        )
+        db.add(new_enrollment)
+
+
 def _set_user_course_membership(
     db: Session, school_id: int, user_id: int, course_name: Optional[str]
 ):
@@ -188,14 +219,16 @@ def _set_user_course_membership(
     - Als course_name leeg/None is: doe niets aan membership.
     - Als al gekoppeld aan juiste group: niets doen.
     - Anders: bestaande actieve memberships deactiveren en nieuwe toevoegen (of bestaande reactiveren).
+    
+    Phase 1 Migration: Also ensures CourseEnrollment record exists.
     """
     if not course_name:
         return
 
-    from app.infra.db.models import GroupMember as TM
+    from app.infra.db.models import GroupMember as TM, CourseEnrollment
 
     # doel-group
-    _, team = _get_or_create_course_and_group(db, school_id, course_name)
+    course, team = _get_or_create_course_and_group(db, school_id, course_name)
 
     # huidige actieve memberships
     actives = (
@@ -207,6 +240,8 @@ def _set_user_course_membership(
     # al goed?
     for m in actives:
         if m.group_id == team.id:
+            # Phase 1: Ensure CourseEnrollment exists even if GroupMember already correct
+            _ensure_course_enrollment(db, course.id, user_id)
             return  # al op de juiste plek
 
     # deactivate oud
@@ -231,6 +266,9 @@ def _set_user_course_membership(
         # add nieuwe membership
         new_m = TM(school_id=school_id, group_id=team.id, user_id=user_id, active=True)
         db.add(new_m)
+    
+    # Phase 1: Ensure CourseEnrollment record exists
+    _ensure_course_enrollment(db, course.id, user_id)
 
 
 # ---------- routes ----------
