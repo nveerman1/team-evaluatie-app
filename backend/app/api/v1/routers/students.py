@@ -87,7 +87,7 @@ def list_students(
         ).where(
             and_(
                 CourseEnrollment.student_id == User.id,
-                CourseEnrollment.active == True,
+                CourseEnrollment.active.is_(True),
                 Course.school_id == current_user.school_id,
                 Course.name.ilike(val),
             )
@@ -112,7 +112,7 @@ def list_students(
             .join(Course, CourseEnrollment.course_id == Course.id)
             .filter(
                 CourseEnrollment.student_id.in_(user_ids),
-                CourseEnrollment.active == True,
+                CourseEnrollment.active.is_(True),
                 Course.school_id == current_user.school_id,
             )
             .all()

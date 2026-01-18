@@ -378,7 +378,7 @@ def create_admin_student(
     db.add(u)
     db.flush()  # krijgt id
 
-    # optioneel: course_name -> enrollment zetten
+    # Optional: set course enrollment
     course_name = (payload.get("course_name") or "").strip() or None
     if course_name:
         _set_user_course_enrollment(db, current_user.school_id, u.id, course_name)
@@ -658,7 +658,7 @@ def import_students_csv(
                 db.flush()  # krijg id
                 created += 1
 
-            # enrollment
+            # Set course enrollment for student
             if course_name:
                 _set_user_course_enrollment(
                     db, current_user.school_id, u.id, course_name
