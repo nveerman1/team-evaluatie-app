@@ -126,9 +126,6 @@ def test_rubric(test_db, test_school):
 
 
 @pytest.fixture
-
-
-@pytest.fixture
 def test_project_team(test_db, test_school, test_project):
     """Create a test project team"""
     team = ProjectTeam(
