@@ -1,7 +1,7 @@
 """remove group_id from project_assessments
 
 Revision ID: pa_20260119_01
-Revises: queue_20260101_05
+Revises: adec74c3bac7
 Create Date: 2026-01-19 12:00:00.000000
 
 Phase 2 Complete: Remove group_id, use project_team_id exclusively
@@ -22,7 +22,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "pa_20260119_01"
-down_revision = "queue_20260101_05"
+down_revision = "adec74c3bac7"
 branch_labels = None
 depends_on = None
 
