@@ -132,24 +132,22 @@ def _apply_sort(q, sort: Optional[SortKey], direction: Optional[Dir], csub_alias
 
 def _course_name_subquery(db: Session, school_id: int):
     """
-    Bepaalt per user de (eerste/belangrijkste) course_name via group_members -> groups -> courses.
-    Resultaat: (user_id, course_name)
+    Determines course_name per user via course_enrollments -> courses.
+    Result: (user_id, course_name)
     """
-    from app.infra.db.models import Group as Team, GroupMember as TM, Course
+    from app.infra.db.models import Course
 
     csub = (
         db.query(
-            TM.user_id.label("user_id"),
+            CourseEnrollment.student_id.label("user_id"),
             func.min(Course.name).label("course_name"),
         )
-        .join(Team, Team.id == TM.group_id)
-        .join(Course, Course.id == Team.course_id)
+        .join(Course, Course.id == CourseEnrollment.course_id)
         .filter(
-            TM.school_id == school_id,
             Course.school_id == school_id,
-            TM.active.is_(True),
+            CourseEnrollment.active.is_(True),
         )
-        .group_by(TM.user_id)
+        .group_by(CourseEnrollment.student_id)
         .subquery()
     )
     return csub
