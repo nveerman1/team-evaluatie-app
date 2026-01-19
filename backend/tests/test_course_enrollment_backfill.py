@@ -1,13 +1,14 @@
 """
-Tests for CourseEnrollment backfill scripts
+Tests for CourseEnrollment-only implementation
 
-Tests the audit and backfill functionality for Phase 1 of the legacy tables migration.
+Tests the CourseEnrollment logic for Phase 1 of the legacy tables migration.
+Note: These tests are for the CourseEnrollment-only approach (no GroupMember).
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 from app.infra.db.models import (
-    User, Course, Group, GroupMember, CourseEnrollment
+    User, Course, CourseEnrollment
 )
 
 
@@ -43,46 +44,20 @@ def sample_data():
     course.id = 1
     course.name = "Test Course"
     
-    # Mock group
-    group = Mock(spec=Group)
-    group.id = 1
-    group.course_id = 1
-    group.name = "Team 1"
-    
-    # Mock group members
-    gm1 = Mock(spec=GroupMember)
-    gm1.id = 1
-    gm1.user_id = 1
-    gm1.group_id = 1
-    gm1.active = True
-    
-    gm2 = Mock(spec=GroupMember)
-    gm2.id = 2
-    gm2.user_id = 2
-    gm2.group_id = 1
-    gm2.active = True
-    
     return {
         'course': course,
         'students': [student1, student2],
-        'group': group,
-        'group_members': [gm1, gm2]
     }
 
 
-def test_backfill_logic(sample_data):
-    """Test the basic logic of the backfill process"""
-    # Simulate the backfill logic
-    active_members = [gm for gm in sample_data['group_members'] if gm.active]
-    
-    assert len(active_members) == 2
-    
-    # Check that we would create the right number of enrollments
+def test_course_enrollment_creation(sample_data):
+    """Test direct CourseEnrollment creation"""
+    # Simulate creating enrollments directly
     enrollments_to_create = []
-    for gm in active_members:
+    for student in sample_data['students']:
         enrollments_to_create.append({
-            'student_id': gm.user_id,
-            'course_id': sample_data['group'].course_id,
+            'student_id': student.id,
+            'course_id': sample_data['course'].id,
             'active': True
         })
     
@@ -91,21 +66,21 @@ def test_backfill_logic(sample_data):
     assert set(e['student_id'] for e in enrollments_to_create) == {1, 2}
 
 
-def test_unique_pairs_identification():
-    """Test identification of unique student-course pairs"""
-    # Simulate student in multiple groups of same course
-    group_members = [
+def test_unique_student_course_pairs():
+    """Test that each student-course pair is unique"""
+    # Simulate multiple enrollment attempts for same student-course
+    enrollment_attempts = [
         {'user_id': 1, 'course_id': 1},  # Student 1, Course 1
-        {'user_id': 1, 'course_id': 1},  # Student 1, Course 1 again (different group)
+        {'user_id': 1, 'course_id': 1},  # Student 1, Course 1 (duplicate)
         {'user_id': 2, 'course_id': 1},  # Student 2, Course 1
         {'user_id': 1, 'course_id': 2},  # Student 1, Course 2
     ]
     
-    # Logic to get unique pairs
+    # Logic to enforce unique pairs
     unique_pairs = {}
-    for gm in group_members:
-        key = (gm['user_id'], gm['course_id'])
-        unique_pairs[key] = gm
+    for attempt in enrollment_attempts:
+        key = (attempt['user_id'], attempt['course_id'])
+        unique_pairs[key] = attempt
     
     # Should have 3 unique combinations
     assert len(unique_pairs) == 3
@@ -114,76 +89,133 @@ def test_unique_pairs_identification():
     assert (1, 2) in unique_pairs
 
 
-def test_inactive_filtering():
-    """Test that inactive members are filtered out"""
-    group_members = [
-        Mock(user_id=1, active=True),
-        Mock(user_id=2, active=False),
-        Mock(user_id=3, active=True),
+def test_active_enrollment_status():
+    """Test active/inactive enrollment handling"""
+    # Mock enrollments with different statuses
+    enrollments = [
+        Mock(student_id=1, course_id=1, active=True),
+        Mock(student_id=2, course_id=1, active=False),
+        Mock(student_id=3, course_id=1, active=True),
     ]
     
-    active_only = [gm for gm in group_members if gm.active]
+    active_only = [e for e in enrollments if e.active]
     
     assert len(active_only) == 2
-    assert all(gm.active for gm in active_only)
+    assert all(e.active for e in active_only)
 
 
-def test_idempotent_creation():
-    """Test that backfill logic handles existing enrollments correctly"""
+def test_enrollment_reactivation():
+    """Test that inactive enrollments can be reactivated"""
+    # Simulate existing inactive enrollment
+    existing_enrollment = {
+        'student_id': 1,
+        'course_id': 1,
+        'active': False
+    }
+    
+    # Reactivation logic
+    if not existing_enrollment['active']:
+        existing_enrollment['active'] = True
+    
+    assert existing_enrollment['active'] == True
+
+
+def test_idempotent_enrollment():
+    """Test that enrollment creation is idempotent"""
     # Simulate existing enrollments
     existing_enrollments = {
         (1, 1): True,  # Student 1, Course 1 already exists
     }
     
-    # New memberships to check
-    memberships_to_check = [
-        (1, 1),  # Already exists
+    # New enrollment requests
+    requests = [
+        (1, 1),  # Already exists - should skip
         (2, 1),  # Needs creation
         (3, 1),  # Needs creation
     ]
     
     to_create = []
-    for student_id, course_id in memberships_to_check:
+    for student_id, course_id in requests:
         if (student_id, course_id) not in existing_enrollments:
             to_create.append((student_id, course_id))
     
     # Should only create 2 new ones
     assert len(to_create) == 2
     assert (1, 1) not in to_create
+    assert (2, 1) in to_create
+    assert (3, 1) in to_create
 
 
-def test_coverage_calculation():
-    """Test coverage percentage calculation"""
-    total_pairs = 100
-    with_enrollment = 95
-    without_enrollment = 5
+def test_enrollment_coverage_calculation():
+    """Test enrollment coverage percentage calculation"""
+    total_students = 100
+    enrolled_students = 95
     
-    coverage = (with_enrollment / total_pairs) * 100
+    coverage = (enrolled_students / total_students) * 100
     
     assert coverage == 95.0
     
-    # Test edge case: no pairs
-    coverage_empty = (0 / 1) * 100 if 1 > 0 else 100.0
-    assert coverage_empty == 0.0
+    # Test edge case: all enrolled
+    full_coverage = (100 / 100) * 100
+    assert full_coverage == 100.0
 
 
-def test_multiple_groups_same_course():
-    """Test handling student in multiple groups of the same course"""
-    # Student 1 is in two different groups (Team A and Team B) of the same course
-    group_members = [
-        {'user_id': 1, 'course_id': 1, 'group_id': 1},
-        {'user_id': 1, 'course_id': 1, 'group_id': 2},
+def test_multiple_course_enrollments():
+    """Test student enrolled in multiple courses"""
+    # Student 1 enrolled in multiple courses
+    enrollments = [
+        {'user_id': 1, 'course_id': 1},  # Math
+        {'user_id': 1, 'course_id': 2},  # Physics
+        {'user_id': 1, 'course_id': 3},  # Chemistry
     ]
     
-    # Should only create ONE enrollment (unique by student+course)
-    unique_pairs = {}
-    for gm in group_members:
-        key = (gm['user_id'], gm['course_id'])
-        if key not in unique_pairs:
-            unique_pairs[key] = gm
-        else:
-            # Track that this student is in multiple groups
-            unique_pairs[key]['group_count'] = unique_pairs[key].get('group_count', 1) + 1
+    # Count enrollments per student
+    student_courses = {}
+    for e in enrollments:
+        student_id = e['user_id']
+        if student_id not in student_courses:
+            student_courses[student_id] = []
+        student_courses[student_id].append(e['course_id'])
     
-    assert len(unique_pairs) == 1, "Should create only one enrollment per student-course pair"
-    assert (1, 1) in unique_pairs
+    assert len(student_courses[1]) == 3
+    assert set(student_courses[1]) == {1, 2, 3}
+
+
+def test_enrollment_query_logic():
+    """Test CourseEnrollment query logic"""
+    # Simulate query for active enrollments
+    all_enrollments = [
+        {'student_id': 1, 'course_id': 1, 'active': True},
+        {'student_id': 1, 'course_id': 2, 'active': False},
+        {'student_id': 2, 'course_id': 1, 'active': True},
+        {'student_id': 3, 'course_id': 1, 'active': True},
+    ]
+    
+    # Filter for active only
+    active_enrollments = [e for e in all_enrollments if e['active']]
+    
+    assert len(active_enrollments) == 3
+    
+    # Filter for specific course
+    course_1_enrollments = [e for e in active_enrollments if e['course_id'] == 1]
+    assert len(course_1_enrollments) == 2
+
+
+def test_course_creation_with_enrollment():
+    """Test that course is created if it doesn't exist"""
+    # Simulate course creation logic
+    existing_courses = {
+        'Math 101': {'id': 1, 'name': 'Math 101'},
+    }
+    
+    requested_course = 'Physics 201'
+    
+    if requested_course not in existing_courses:
+        # Would create new course
+        new_course = {'id': 2, 'name': requested_course}
+        existing_courses[requested_course] = new_course
+    
+    assert 'Physics 201' in existing_courses
+    assert existing_courses['Physics 201']['id'] == 2
+    assert len(existing_courses) == 2
+
