@@ -107,14 +107,15 @@ def test_course(test_db, test_school):
 
 
 @pytest.fixture
-def test_project(test_db, test_school, test_course):
+def test_project(test_db, test_school, test_course, test_teacher):
     """Create a test project"""
     project = Project(
         id=1,
         school_id=test_school.id,
         course_id=test_course.id,
-        name="Test Project",
-        is_active=True,
+        title="Test Project",
+        status="active",
+        created_by_id=test_teacher.id,
     )
     test_db.add(project)
     test_db.commit()
