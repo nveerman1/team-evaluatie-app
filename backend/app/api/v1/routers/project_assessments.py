@@ -163,7 +163,7 @@ def create_project_assessment(
     """
     Create a new project assessment for a team (teacher/admin only)
     
-    Phase 2: Uses project_team_id as primary FK, group_id is optional/legacy
+    Phase 2 Complete: Uses project_team_id exclusively
     """
     if user.role not in ("teacher", "admin"):
         raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen beoordelingen aanmaken")
@@ -186,24 +186,10 @@ def create_project_assessment(
     if not project_team:
         raise HTTPException(status_code=404, detail="Project team not found")
     
-    # Optional: Verify legacy group_id if provided (for backward compatibility)
-    if payload.group_id:
-        group = db.query(Group).filter(
-            Group.id == payload.group_id,
-            Group.school_id == user.school_id,
-        ).first()
-        if not group:
-            raise HTTPException(status_code=404, detail="Group not found")
-    
-    # Dual-write pattern: Write to both project_team_id (primary) and group_id (legacy)
-    # If group_id not provided, try to get it from project_team.team_id
-    group_id_to_save = payload.group_id or project_team.team_id
-    
     pa = ProjectAssessment(
         school_id=user.school_id,
         project_id=payload.project_id,
-        project_team_id=payload.project_team_id,  # Primary FK
-        group_id=group_id_to_save,  # Legacy FK (optional, for backward compat)
+        project_team_id=payload.project_team_id,
         rubric_id=payload.rubric_id,
         teacher_id=user.id,
         title=payload.title,
@@ -222,7 +208,6 @@ def list_project_assessments(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
     project_team_id: Optional[int] = Query(None, description="Filter by project team"),
-    group_id: Optional[int] = Query(None, description="Filter by group (legacy)"),
     course_id: Optional[int] = Query(None, description="Filter by course"),
     status: Optional[str] = Query(None, description="Filter by status"),
     page: int = Query(1, ge=1),
@@ -231,7 +216,7 @@ def list_project_assessments(
     """
     List project assessments.
     
-    Phase 2: Uses project_team_id primarily, with group_id fallback
+    Phase 2 Complete: Uses project_team_id exclusively
     
     Access control:
     - Admins: see all assessments in their school
@@ -248,7 +233,6 @@ def list_project_assessments(
         teacher_course_ids = _get_teacher_course_ids(db, user)
         if teacher_course_ids:
             # Use project teams to filter - get project teams from assigned courses
-            # This is more accurate than using groups
             project_teams_subquery = select(ProjectTeam.id).where(
                 ProjectTeam.school_id == user.school_id,
                 ProjectTeam.project_id.in_(
@@ -276,13 +260,9 @@ def list_project_assessments(
             # No teams, return empty
             return ProjectAssessmentListResponse(items=[], page=page, limit=limit, total=0)
     
-    # Filter by project_team_id (primary)
+    # Filter by project_team_id
     if project_team_id:
         stmt = stmt.where(ProjectAssessment.project_team_id == project_team_id)
-    
-    # Filter by group_id (legacy fallback)
-    if group_id:
-        stmt = stmt.where(ProjectAssessment.group_id == group_id)
     
     if status:
         stmt = stmt.where(ProjectAssessment.status == status)
@@ -307,17 +287,10 @@ def list_project_assessments(
     rows: List[ProjectAssessment] = db.execute(stmt).scalars().all()
     
     # Fetch group, teacher, and course names (group_id is optional now)
-    group_map = {}
+    # Fetch team and course information
+    team_map = {}  # Maps project_team_id -> (team_name, course_id)
     course_map = {}
-    group_ids_to_fetch = [r.group_id for r in rows if r.group_id is not None]
-    if group_ids_to_fetch:
-        for g in db.query(Group).filter(
-            Group.school_id == user.school_id,
-            Group.id.in_(group_ids_to_fetch),
-        ).all():
-            group_map[g.id] = (g.name, g.course_id)
     
-    # Also get course info from project teams
     project_team_ids = [r.project_team_id for r in rows]
     if project_team_ids:
         # Batch query for project teams with their projects
@@ -329,14 +302,12 @@ def list_project_assessments(
         ).all()
         
         for pt, project in project_teams_with_projects:
-            # Add to group_map if not already there (from group_id)
-            # This ensures we have team names even if group_id is null
-            if project and project.course_id and pt.id not in group_map:
-                # Use project_team display name
-                group_map[pt.id] = (pt.display_name_at_time, project.course_id)
+            # Store team display name and course_id
+            course_id = project.course_id if project else None
+            team_map[pt.id] = (pt.display_name_at_time, course_id)
     
     # Get courses
-    course_ids = [c_id for _, c_id in group_map.values() if c_id]
+    course_ids = [c_id for _, c_id in team_map.values() if c_id]
     if course_ids:
         for c in db.query(Course).filter(
             Course.school_id == user.school_id,
@@ -426,20 +397,13 @@ def list_project_assessments(
     
     items = []
     for r in rows:
-        # Try to get info from group_id first (legacy), then fallback to project_team_id
-        group_name, course_id_val = None, None
-        if r.group_id:
-            group_name, course_id_val = group_map.get(r.group_id, (None, None))
-        
-        # If not found via group_id, try via project_team_id
-        if not group_name and r.project_team_id:
-            group_name, course_id_val = group_map.get(r.project_team_id, (None, None))
-        
+        # Get team info from project_team_id
+        team_name, course_id_val = team_map.get(r.project_team_id, (None, None))
         course_name = course_map.get(course_id_val) if course_id_val else None
         
         item_dict = {
             **_to_out_assessment(r).model_dump(),
-            "group_name": group_name,
+            "group_name": team_name,  # Using 'group_name' field for team name for backward compat
             "teacher_name": teacher_map.get(r.teacher_id),
             "course_name": course_name,
             "course_id": course_id_val,

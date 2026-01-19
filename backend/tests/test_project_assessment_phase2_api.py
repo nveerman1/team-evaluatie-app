@@ -1,8 +1,7 @@
 """
 Integration tests for Phase 2: ProjectAssessment API with project_team_id
 
-Tests the API endpoints to ensure they work with the new project_team_id primary FK
-and maintain backward compatibility with group_id.
+Tests the API endpoints to ensure they work with project_team_id exclusively.
 """
 
 import pytest
@@ -20,7 +19,6 @@ from app.infra.db.models import (
     ProjectAssessment,
     ProjectTeam,
     ProjectTeamMember,
-    Group,
     User,
     Project,
     Rubric,
@@ -128,28 +126,16 @@ def test_rubric(test_db, test_school):
 
 
 @pytest.fixture
-def test_group(test_db, test_school, test_course):
-    """Create a test group"""
-    group = Group(
-        id=1,
-        school_id=test_school.id,
-        course_id=test_course.id,
-        name="Test Team 1",
-        team_number=1,
-    )
-    test_db.add(group)
-    test_db.commit()
-    return group
 
 
 @pytest.fixture
-def test_project_team(test_db, test_school, test_project, test_group):
+def test_project_team(test_db, test_school, test_project):
     """Create a test project team"""
     team = ProjectTeam(
         id=1,
         school_id=test_school.id,
         project_id=test_project.id,
-        team_id=test_group.id,
+        team_id=None,  # No legacy group_id
         team_number=1,
         display_name_at_time="Test Team 1",
         version=1,
@@ -161,9 +147,9 @@ def test_project_team(test_db, test_school, test_project, test_group):
 
 
 def test_create_assessment_with_project_team_id(
-    client, test_db, test_school, test_teacher, test_project, test_rubric, test_project_team, test_group
+    client, test_db, test_school, test_teacher, test_project, test_rubric, test_project_team
 ):
-    """Test creating a project assessment with project_team_id (primary FK)"""
+    """Test creating a project assessment with project_team_id"""
     # Mock authentication
     from unittest.mock import patch
     
@@ -172,7 +158,6 @@ def test_create_assessment_with_project_team_id(
             "/api/v1/project-assessments",
             json={
                 "project_team_id": test_project_team.id,
-                "group_id": test_group.id,  # Optional for backward compatibility
                 "rubric_id": test_rubric.id,
                 "project_id": test_project.id,
                 "title": "Test Assessment",
@@ -183,7 +168,6 @@ def test_create_assessment_with_project_team_id(
     assert response.status_code == 201
     data = response.json()
     assert data["project_team_id"] == test_project_team.id
-    assert data["group_id"] == test_group.id
     assert data["title"] == "Test Assessment"
     
     # Verify in database
@@ -192,36 +176,10 @@ def test_create_assessment_with_project_team_id(
     ).first()
     assert assessment is not None
     assert assessment.project_team_id == test_project_team.id
-    assert assessment.group_id == test_group.id
-
-
-def test_create_assessment_without_group_id(
-    client, test_db, test_school, test_teacher, test_project, test_rubric, test_project_team
-):
-    """Test creating assessment with only project_team_id (no group_id)"""
-    from unittest.mock import patch
-    
-    with patch("app.api.v1.deps.get_current_user", return_value=test_teacher):
-        response = client.post(
-            "/api/v1/project-assessments",
-            json={
-                "project_team_id": test_project_team.id,
-                # No group_id provided
-                "rubric_id": test_rubric.id,
-                "project_id": test_project.id,
-                "title": "Test Assessment No Group",
-            }
-        )
-    
-    assert response.status_code == 201
-    data = response.json()
-    assert data["project_team_id"] == test_project_team.id
-    # group_id should be populated from project_team.team_id
-    assert data["group_id"] == test_project_team.team_id
 
 
 def test_list_assessments_by_project_team_id(
-    client, test_db, test_school, test_teacher, test_project, test_rubric, test_project_team, test_group
+    client, test_db, test_school, test_teacher, test_project, test_rubric, test_project_team
 ):
     """Test listing assessments filtered by project_team_id"""
     # Create test assessments
@@ -230,7 +188,6 @@ def test_list_assessments_by_project_team_id(
         school_id=test_school.id,
         project_id=test_project.id,
         project_team_id=test_project_team.id,
-        group_id=test_group.id,
         rubric_id=test_rubric.id,
         title="Assessment 1",
         status="draft",
@@ -240,7 +197,6 @@ def test_list_assessments_by_project_team_id(
         school_id=test_school.id,
         project_id=test_project.id,
         project_team_id=test_project_team.id,
-        group_id=test_group.id,
         rubric_id=test_rubric.id,
         title="Assessment 2",
         status="published",
@@ -262,49 +218,16 @@ def test_list_assessments_by_project_team_id(
     assert len(data["items"]) == 2
 
 
-def test_list_assessments_backward_compat_group_id(
-    client, test_db, test_school, test_teacher, test_project, test_rubric, test_project_team, test_group
+def test_assessment_response_includes_project_team_id(
+    client, test_db, test_school, test_teacher, test_project, test_rubric, test_project_team
 ):
-    """Test backward compatibility: filtering by group_id still works"""
+    """Test that assessment responses include project_team_id"""
     # Create test assessment
     assessment = ProjectAssessment(
         id=1,
         school_id=test_school.id,
         project_id=test_project.id,
         project_team_id=test_project_team.id,
-        group_id=test_group.id,
-        rubric_id=test_rubric.id,
-        title="Test Assessment",
-        status="draft",
-    )
-    test_db.add(assessment)
-    test_db.commit()
-    
-    from unittest.mock import patch
-    
-    # Test filtering by group_id (legacy)
-    with patch("app.api.v1.deps.get_current_user", return_value=test_teacher):
-        response = client.get(
-            f"/api/v1/project-assessments?group_id={test_group.id}"
-        )
-    
-    assert response.status_code == 200
-    data = response.json()
-    assert data["total"] == 1
-    assert data["items"][0]["group_id"] == test_group.id
-
-
-def test_assessment_response_includes_both_ids(
-    client, test_db, test_school, test_teacher, test_project, test_rubric, test_project_team, test_group
-):
-    """Test that assessment responses include both project_team_id and group_id"""
-    # Create test assessment
-    assessment = ProjectAssessment(
-        id=1,
-        school_id=test_school.id,
-        project_id=test_project.id,
-        project_team_id=test_project_team.id,
-        group_id=test_group.id,
         rubric_id=test_rubric.id,
         title="Test Assessment",
         status="draft",
@@ -322,4 +245,3 @@ def test_assessment_response_includes_both_ids(
     assert len(data["items"]) == 1
     item = data["items"][0]
     assert item["project_team_id"] == test_project_team.id
-    assert item["group_id"] == test_group.id

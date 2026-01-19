@@ -9,7 +9,6 @@ from pydantic import BaseModel, Field
 
 class ProjectAssessmentCreate(BaseModel):
     project_team_id: int  # Required - primary FK
-    group_id: Optional[int] = None  # Deprecated - legacy FK for backward compatibility
     rubric_id: int
     title: str
     version: Optional[str] = None
@@ -31,7 +30,6 @@ class ProjectAssessmentOut(BaseModel):
     school_id: int
     project_id: Optional[int] = None
     project_team_id: int  # Primary FK
-    group_id: Optional[int] = None  # Deprecated - legacy FK
     rubric_id: int
     teacher_id: Optional[int] = None
     external_evaluator_id: Optional[int] = None
