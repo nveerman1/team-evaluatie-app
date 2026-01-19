@@ -117,7 +117,7 @@ team_members = db.query(ProjectTeamMember).filter(
 **Key Question:** What if we need "current team assignments" outside project context?
 - Groups represented mutable "current" teams in a course
 - ProjectTeams are immutable per-project snapshots
-- **Solution:** May need to create teams differently OR accept that teams only exist in project context
+- **Solution:** accept that teams only exist in project context
 
 #### Tasks
 - [ ] Audit each endpoint to understand what data it needs
