@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, List, Dict, Tuple
+from typing import Optional, List
 from fastapi import (
     APIRouter,
     Depends,
@@ -9,53 +9,20 @@ from fastapi import (
     status,
 )
 from fastapi.responses import PlainTextResponse
-from sqlalchemy import select, and_, or_, exists
-from sqlalchemy.orm import Session, aliased
-import re
+from sqlalchemy import select, and_, or_
+from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_db, get_current_user
 from app.api.v1.schemas.students import StudentCreate, StudentUpdate, StudentOut
-from app.infra.db.models import User
+from app.infra.db.models import User, CourseEnrollment, Course
 
 router = APIRouter(prefix="/students", tags=["students"])
 
 # -------------------- helpers --------------------
 
-TEAM_RX = re.compile(r"(\d+)$")
-
-
-def extract_team_number(name: Optional[str]) -> Optional[int]:
-    if not name:
-        return None
-    m = TEAM_RX.search(name.strip())
-    if not m:
-        return None
-    try:
-        return int(m.group(1))
-    except ValueError:
-        return None
-
-
-def team_name_for_number(n: int) -> str:
-    return f"Team {n}"
-
-
-try:
-    from app.infra.db.models import Group as Team
-    from app.infra.db.models import GroupMember as TeamMember
-    from app.infra.db.models import Course
-except Exception:  # pragma: no cover
-    Team = None  # type: ignore
-    TeamMember = None  # type: ignore
-    Course = None  # type: ignore
-
-
-def _supports_attr(model, attr: str) -> bool:
-    return hasattr(model, attr)
-
 
 def _user_is_student_scoped():
-    if _supports_attr(User, "role"):
+    if hasattr(User, "role"):
         return User.role == "student"
     return True
 
@@ -63,20 +30,17 @@ def _user_is_student_scoped():
 def _to_out_row(
     u: User,
     class_name: Optional[str],
-    team_id: Optional[int],
-    team_name: Optional[str],
     course_id: Optional[int],
     course_name: Optional[str],
 ) -> StudentOut:
-    tnum = extract_team_number(team_name)
     return StudentOut(
         id=u.id,
         name=u.name,
         email=u.email,
         class_name=class_name,
-        team_id=team_id,
-        team_name=team_name,
-        team_number=tnum,
+        team_id=None,  # No longer using teams
+        team_name=None,
+        team_number=None,
         course_id=course_id,
         course_name=course_name,
         status="inactive" if getattr(u, "archived", False) else "active",
@@ -95,7 +59,6 @@ def list_students(
         None, description="Filter op klas of course-naam"
     ),
     class_name: Optional[str] = Query(None, description="Extra filter op klas (ILIKE)"),
-    team_id: Optional[int] = Query(None, description="Filter op team-id"),
     status: Optional[str] = Query(None, pattern="^(active|inactive)$"),
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=500),
@@ -107,10 +70,10 @@ def list_students(
         )
     )
 
-    if status == "active" and _supports_attr(User, "archived"):
-        stmt = stmt.where(User.archived.is_(False))  # noqa
-    elif status == "inactive" and _supports_attr(User, "archived"):
-        stmt = stmt.where(User.archived.is_(True))  # noqa
+    if status == "active" and hasattr(User, "archived"):
+        stmt = stmt.where(User.archived.is_(False))
+    elif status == "inactive" and hasattr(User, "archived"):
+        stmt = stmt.where(User.archived.is_(True))
 
     if q:
         stmt = stmt.where(or_(User.name.ilike(f"%{q}%"), User.email.ilike(f"%{q}%")))
@@ -118,99 +81,59 @@ def list_students(
     if class_or_course:
         val = f"%{class_or_course}%"
         class_match = User.class_name.ilike(val)
-        course_match = None
-        if TeamMember and Team and Course:
-            course_match = exists().where(
-                and_(
-                    TeamMember.user_id == User.id,
-                    TeamMember.school_id == current_user.school_id,
-                    TeamMember.active,
-                    TeamMember.group_id == Team.id,
-                    Team.school_id == current_user.school_id,
-                    Team.course_id == Course.id,
-                    Course.school_id == current_user.school_id,
-                    Course.name.ilike(val),
-                )
+        # Also match on course name via CourseEnrollment
+        course_match = select(CourseEnrollment.student_id).join(
+            Course, CourseEnrollment.course_id == Course.id
+        ).where(
+            and_(
+                CourseEnrollment.student_id == User.id,
+                CourseEnrollment.active.is_(True),
+                Course.school_id == current_user.school_id,
+                Course.name.ilike(val),
             )
-        stmt = (
-            stmt.where(or_(class_match, course_match))
-            if course_match
-            else stmt.where(class_match)
-        )
+        ).exists()
+        stmt = stmt.where(or_(class_match, course_match))
 
     if class_name:
         stmt = stmt.where(User.class_name.ilike(f"%{class_name}%"))
 
-    if team_id and Team and TeamMember:
-        tm_alias = aliased(TeamMember)
-        stmt = stmt.join(tm_alias, tm_alias.user_id == User.id).where(
-            tm_alias.group_id == team_id,
-            tm_alias.school_id == current_user.school_id,
-            tm_alias.active,
-        )
-
     stmt = stmt.order_by(User.name.asc()).limit(limit).offset((page - 1) * limit)
     users: list[User] = db.execute(stmt).scalars().all()
 
-    user_to_team_course: Dict[int, Tuple[Optional[int], Optional[int]]] = {}
-    team_name_map: Dict[int, str] = {}
-    course_name_map: Dict[int, str] = {}
-
-    if TeamMember and Team:
-        uids = [u.id for u in users]
-        if uids:
-            rows = (
-                db.query(
-                    TeamMember.user_id,
-                    TeamMember.group_id,
-                    Team.course_id.label("course_id"),
-                )
-                .join(Team, TeamMember.group_id == Team.id)
-                .filter(
-                    TeamMember.user_id.in_(uids),
-                    TeamMember.school_id == current_user.school_id,
-                    TeamMember.active,
-                )
-                .all()
+    # Get course enrollments for all users
+    user_ids = [u.id for u in users]
+    course_name_map = {}
+    user_to_course = {}
+    
+    if user_ids:
+        # Get active enrollments
+        enrollments = (
+            db.query(CourseEnrollment, Course.name)
+            .join(Course, CourseEnrollment.course_id == Course.id)
+            .filter(
+                CourseEnrollment.student_id.in_(user_ids),
+                CourseEnrollment.active.is_(True),
+                Course.school_id == current_user.school_id,
             )
-            for uid, gid, cid in rows:
-                if uid not in user_to_team_course:
-                    user_to_team_course[uid] = (gid, cid)
-
-    if Team:
-        rows = db.execute(
-            select(Team.id, Team.name).where(Team.school_id == current_user.school_id)
-        ).all()
-        team_name_map = {tid: tname or f"Team {tid}" for tid, tname in rows}
-
-    if Course:
-        rows = db.execute(
-            select(Course.id, Course.name).where(
-                Course.school_id == current_user.school_id
-            )
-        ).all()
-        course_name_map = {cid: cname or f"Course {cid}" for cid, cname in rows}
+            .all()
+        )
+        
+        for enrollment, course_name in enrollments:
+            # Use first active enrollment for each student
+            if enrollment.student_id not in user_to_course:
+                user_to_course[enrollment.student_id] = (enrollment.course_id, course_name)
 
     out = []
     for u in users:
         cn = getattr(u, "class_name", None)
-
-        # Haal gekoppelde team- en course-id's op
-        tid, cid = user_to_team_course.get(u.id, (None, None))
-
-        # Haal namen op met veilige defaults
-        tname: Optional[str] = team_name_map.get(tid) if tid is not None else None
-        cname: Optional[str] = course_name_map.get(cid) if cid is not None else None
-
-        # Bouw StudentOut veilig op
+        course_id, course_name = user_to_course.get(u.id, (None, None))
+        
         out.append(
             _to_out_row(
                 u=u,
                 class_name=cn,
-                team_id=tid,
-                team_name=tname,
-                course_id=cid,
-                course_name=cname,
+                course_id=course_id,
+                course_name=course_name,
             )
         )
 
@@ -247,80 +170,28 @@ def create_student(
     db.commit()
     db.refresh(u)
 
-    team_id = None
-    team_name = None
     course_id = None
     course_name = None
 
-    # koppelen via team_id
-    if payload.team_id and Team and TeamMember:
-        t = db.get(Team, payload.team_id)
-        if not t:
-            raise HTTPException(status_code=404, detail="Team not found")
-        db.add(
-            TeamMember(
-                user_id=u.id,
-                group_id=t.id,
-                school_id=current_user.school_id,
-                active=True,
-            )
-        )
-        db.commit()
-        team_id, team_name = t.id, t.name
-        if hasattr(t, "course_id") and Course:
-            c = db.get(Course, t.course_id)
-            if c:
-                course_id = c.id
-                course_name = c.name
-            else:
-                course_id = None
-                course_name = None
-
-    # koppelen via course_id + team_number
-    elif payload.course_id and payload.team_number is not None and Team and TeamMember:
+    # Enroll in course if course_id is provided
+    if payload.course_id:
         c = db.get(Course, payload.course_id)
         if not c:
             raise HTTPException(status_code=404, detail="Course not found")
-
-        wanted = team_name_for_number(payload.team_number)
-        grp = (
-            db.query(Team)
-            .filter(
-                and_(
-                    Team.school_id == current_user.school_id,
-                    Team.course_id == c.id,
-                    Team.name == wanted,
-                )
-            )
-            .first()
+        
+        # Create enrollment
+        enrollment = CourseEnrollment(
+            course_id=c.id,
+            student_id=u.id,
+            active=True
         )
-        if not grp:
-            grp = Team(school_id=current_user.school_id, course_id=c.id, name=wanted)
-            db.add(grp)
-            db.commit()
-            db.refresh(grp)
-
-        db.add(
-            TeamMember(
-                user_id=u.id,
-                group_id=grp.id,
-                school_id=current_user.school_id,
-                active=True,
-            )
-        )
+        db.add(enrollment)
         db.commit()
+        
+        course_id = c.id
+        course_name = c.name
 
-        team_id = grp.id
-        team_name = grp.name
-        # type-safe: geen tuple-fallback meer
-        if c:
-            course_id = c.id
-            course_name = c.name
-        else:
-            course_id = None
-            course_name = None
-
-    return _to_out_row(u, u.class_name, team_id, team_name, course_id, course_name)
+    return _to_out_row(u, u.class_name, course_id, course_name)
 
 
 # -------------------- update --------------------
@@ -362,106 +233,44 @@ def update_student(
     db.commit()
     db.refresh(u)
 
-    team_id = None
-    team_name = None
     course_id = None
     course_name = None
 
-    # wijziging via team_id
-    if payload.team_id and Team and TeamMember:
-        t = db.get(Team, payload.team_id)
-        if not t:
-            raise HTTPException(status_code=404, detail="Team not found")
-        tm = (
-            db.query(TeamMember)
-            .filter(
-                TeamMember.user_id == u.id,
-                TeamMember.school_id == current_user.school_id,
-            )
-            .first()
-        )
-        if tm:
-            tm.group_id = t.id
-            tm.active = True
-            db.add(tm)
-        else:
-            db.add(
-                TeamMember(
-                    user_id=u.id,
-                    group_id=t.id,
-                    school_id=current_user.school_id,
-                    active=True,
-                )
-            )
-        db.commit()
-        team_id, team_name = t.id, t.name
-        if hasattr(t, "course_id") and Course:
-            c = db.get(Course, t.course_id)
-            if c:
-                course_id = c.id
-                course_name = c.name
-            else:
-                course_id = None
-                course_name = None
-
-    # wijziging via course_id + team_number
-    elif payload.course_id and payload.team_number is not None and Team and TeamMember:
+    # Update course enrollment if course_id is provided
+    if payload.course_id:
         c = db.get(Course, payload.course_id)
         if not c:
             raise HTTPException(status_code=404, detail="Course not found")
-
-        wanted = team_name_for_number(payload.team_number)
-        grp = (
-            db.query(Team)
+        
+        # Find existing enrollment
+        enrollment = (
+            db.query(CourseEnrollment)
             .filter(
-                and_(
-                    Team.school_id == current_user.school_id,
-                    Team.course_id == c.id,
-                    Team.name == wanted,
-                )
+                CourseEnrollment.student_id == u.id,
+                CourseEnrollment.course_id == c.id
             )
             .first()
         )
-        if not grp:
-            grp = Team(school_id=current_user.school_id, course_id=c.id, name=wanted)
-            db.add(grp)
+        
+        if enrollment:
+            # Reactivate if inactive
+            if not enrollment.active:
+                enrollment.active = True
+                db.commit()
+        else:
+            # Create new enrollment
+            enrollment = CourseEnrollment(
+                course_id=c.id,
+                student_id=u.id,
+                active=True
+            )
+            db.add(enrollment)
             db.commit()
-            db.refresh(grp)
+        
+        course_id = c.id
+        course_name = c.name
 
-        tm = (
-            db.query(TeamMember)
-            .filter(
-                TeamMember.user_id == u.id,
-                TeamMember.school_id == current_user.school_id,
-            )
-            .first()
-        )
-        if tm:
-            tm.group_id = grp.id
-            tm.active = True
-            db.add(tm)
-        else:
-            db.add(
-                TeamMember(
-                    user_id=u.id,
-                    group_id=grp.id,
-                    school_id=current_user.school_id,
-                    active=True,
-                )
-            )
-        db.commit()
-
-        team_id = grp.id
-        team_name = grp.name
-        # type-safe
-        if c:
-            course_id = c.id
-            course_name = c.name
-        else:
-            course_id = None
-            course_name = None
-
-    return _to_out_row(u, u.class_name, team_id, team_name, course_id, course_name)
+    return _to_out_row(u, u.class_name, course_id, course_name)
 
 
 # -------------------- export --------------------
@@ -474,11 +283,11 @@ def export_students_csv(
 ):
     items = list_students(db=db, current_user=current_user, limit=10_000)
     lines = [
-        "id,name,email,class,team_id,team_name,team_number,course_id,course_name,status"
+        "id,name,email,class,course_id,course_name,status"
     ]
     for s in items:
         lines.append(
-            f"{s.id},{s.name},{s.email},{s.class_name or ''},{s.team_id or ''},{s.team_name or ''},{s.team_number or ''},{s.course_id or ''},{s.course_name or ''},{s.status}"
+            f"{s.id},{s.name},{s.email},{s.class_name or ''},{s.course_id or ''},{s.course_name or ''},{s.status}"
         )
     return PlainTextResponse(
         content="\n".join(lines),
@@ -499,16 +308,3 @@ def list_courses(db: Session = Depends(get_db), current_user=Depends(get_current
         .all()
     )
     return [{"id": c.id, "name": c.name} for c in rows]
-
-
-@router.get("/teams")
-def list_teams(
-    course_id: Optional[int] = Query(None),
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    q = db.query(Team).filter(Team.school_id == current_user.school_id)
-    if course_id:
-        q = q.filter(Team.course_id == course_id)
-    rows = q.order_by(Team.name.asc()).all()
-    return [{"id": t.id, "name": t.name, "course_id": t.course_id} for t in rows]

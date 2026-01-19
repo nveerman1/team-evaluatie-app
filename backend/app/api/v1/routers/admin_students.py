@@ -132,32 +132,38 @@ def _apply_sort(q, sort: Optional[SortKey], direction: Optional[Dir], csub_alias
 
 def _course_name_subquery(db: Session, school_id: int):
     """
-    Bepaalt per user de (eerste/belangrijkste) course_name via group_members -> groups -> courses.
-    Resultaat: (user_id, course_name)
+    Determines course_name per user via course_enrollments -> courses.
+    Result: (user_id, course_name)
     """
-    from app.infra.db.models import Group as Team, GroupMember as TM, Course
-
     csub = (
         db.query(
-            TM.user_id.label("user_id"),
+            CourseEnrollment.student_id.label("user_id"),
             func.min(Course.name).label("course_name"),
         )
-        .join(Team, Team.id == TM.group_id)
-        .join(Course, Course.id == Team.course_id)
+        .join(Course, Course.id == CourseEnrollment.course_id)
         .filter(
-            TM.school_id == school_id,
             Course.school_id == school_id,
-            TM.active.is_(True),
+            CourseEnrollment.active.is_(True),
         )
-        .group_by(TM.user_id)
+        .group_by(CourseEnrollment.student_id)
         .subquery()
     )
     return csub
 
 
-def _get_or_create_course_and_group(db: Session, school_id: int, course_name: str):
-    from app.infra.db.models import Course, Group as Team
+def _set_user_course_enrollment(
+    db: Session, school_id: int, user_id: int, course_name: Optional[str]
+):
+    """
+    Ensures student is enrolled in the specified course via CourseEnrollment.
+    - If course_name is empty/None: do nothing.
+    - If already enrolled in the course: ensure enrollment is active.
+    - Otherwise: deactivate other enrollments and activate/create enrollment for this course.
+    """
+    if not course_name:
+        return
 
+    # Find or create the course
     course = (
         db.query(Course)
         .filter(Course.school_id == school_id, Course.name == course_name)
@@ -166,71 +172,30 @@ def _get_or_create_course_and_group(db: Session, school_id: int, course_name: st
     if not course:
         course = Course(school_id=school_id, name=course_name)
         db.add(course)
-        db.flush()  # krijgt id
+        db.flush()  # Get ID
 
-    team = (
-        db.query(Team)
-        .filter(Team.course_id == course.id, Team.school_id == school_id)
-        .first()
-    )
-    if not team:
-        team = Team(school_id=school_id, course_id=course.id, name=course.name)
-        db.add(team)
-        db.flush()
-    return course, team
-
-
-def _set_user_course_membership(
-    db: Session, school_id: int, user_id: int, course_name: Optional[str]
-):
-    """
-    Zorgt dat user actief gekoppeld is aan group van course_name.
-    - Als course_name leeg/None is: doe niets aan membership.
-    - Als al gekoppeld aan juiste group: niets doen.
-    - Anders: bestaande actieve memberships deactiveren en nieuwe toevoegen (of bestaande reactiveren).
-    """
-    if not course_name:
-        return
-
-    from app.infra.db.models import GroupMember as TM
-
-    # doel-group
-    _, team = _get_or_create_course_and_group(db, school_id, course_name)
-
-    # huidige actieve memberships
-    actives = (
-        db.query(TM)
-        .filter(TM.school_id == school_id, TM.user_id == user_id, TM.active.is_(True))
-        .all()
-    )
-
-    # al goed?
-    for m in actives:
-        if m.group_id == team.id:
-            return  # al op de juiste plek
-
-    # deactivate oud
-    for m in actives:
-        m.active = False
-        db.add(m)
-
-    # check of er al een (inactieve) membership bestaat voor deze group
-    existing = (
-        db.query(TM)
+    # Check if student already has an active enrollment for this course
+    existing_enrollment = (
+        db.query(CourseEnrollment)
         .filter(
-            TM.school_id == school_id, TM.user_id == user_id, TM.group_id == team.id
+            CourseEnrollment.course_id == course.id,
+            CourseEnrollment.student_id == user_id
         )
         .first()
     )
 
-    if existing:
-        # reactivate bestaande membership
-        existing.active = True
-        db.add(existing)
+    if existing_enrollment:
+        # Ensure it's active
+        if not existing_enrollment.active:
+            existing_enrollment.active = True
     else:
-        # add nieuwe membership
-        new_m = TM(school_id=school_id, group_id=team.id, user_id=user_id, active=True)
-        db.add(new_m)
+        # Create new enrollment
+        new_enrollment = CourseEnrollment(
+            course_id=course.id,
+            student_id=user_id,
+            active=True
+        )
+        db.add(new_enrollment)
 
 
 # ---------- routes ----------
@@ -409,10 +374,10 @@ def create_admin_student(
     db.add(u)
     db.flush()  # krijgt id
 
-    # optioneel: course_name -> membership zetten
+    # Optional: set course enrollment
     course_name = (payload.get("course_name") or "").strip() or None
     if course_name:
-        _set_user_course_membership(db, current_user.school_id, u.id, course_name)
+        _set_user_course_enrollment(db, current_user.school_id, u.id, course_name)
 
     db.commit()
     db.refresh(u)
@@ -481,7 +446,7 @@ def update_admin_student(
     # optioneel: course_name wijzigen via update
     course_name = payload.get("course_name")
     if course_name:
-        _set_user_course_membership(
+        _set_user_course_enrollment(
             db, current_user.school_id, u.id, course_name.strip()
         )
 
@@ -689,9 +654,9 @@ def import_students_csv(
                 db.flush()  # krijg id
                 created += 1
 
-            # membership
+            # Set course enrollment for student
             if course_name:
-                _set_user_course_membership(
+                _set_user_course_enrollment(
                     db, current_user.school_id, u.id, course_name
                 )
 
