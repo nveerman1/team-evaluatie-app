@@ -25,6 +25,7 @@ from app.infra.db.models import (
     Rubric,
     RubricCriterion,
     TeacherCourse,
+    ClientProjectLink,
 )
 
 
@@ -44,6 +45,7 @@ def test_db():
         Course.__table__,
         TeacherCourse.__table__,  # Needed for RBAC checks
         Project.__table__,
+        ClientProjectLink.__table__,  # Needed for project-client relationships
         Rubric.__table__,
         RubricCriterion.__table__,  # Needed for rubric validation
         ProjectTeam.__table__,
