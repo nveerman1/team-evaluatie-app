@@ -20,8 +20,7 @@ from app.infra.db.models import (
     Evaluation,
     CompetencyWindow,
     CompetencySelfScore,
-    Group,
-    GroupMember,
+    CourseEnrollment,
     Rubric,
     RubricCriterion,
     Grade,
@@ -348,25 +347,27 @@ def get_overview_all_items(
     
     # ==================== PROJECT ASSESSMENTS ====================
     if not type_filter or type_filter == "project":
-        # Query project assessments with student data via group members
+        # Query project assessments with student data via project teams
         project_query = db.query(
             ProjectAssessment,
             User,
             Course,
-            Group,
+            ProjectTeam,
         ).join(
-            Group, ProjectAssessment.group_id == Group.id
+            ProjectTeam, ProjectAssessment.project_team_id == ProjectTeam.id
         ).join(
             User, User.id == ProjectAssessment.teacher_id  # Teacher as creator
+        ).join(
+            Project, ProjectTeam.project_id == Project.id
         ).outerjoin(
-            Course, Group.course_id == Course.id
+            Course, Project.course_id == Course.id
         ).filter(
             ProjectAssessment.school_id == school_id
         )
         
         # Apply filters
         if course_id:
-            project_query = project_query.filter(Group.course_id == course_id)
+            project_query = project_query.filter(Project.course_id == course_id)
         if teacher_id:
             project_query = project_query.filter(ProjectAssessment.teacher_id == teacher_id)
         if status:
@@ -376,23 +377,23 @@ def get_overview_all_items(
         if date_to_dt:
             project_query = project_query.filter(ProjectAssessment.published_at <= date_to_dt)
         if team_number:
-            project_query = project_query.filter(Group.team_number == team_number)
+            project_query = project_query.filter(ProjectTeam.team_number == team_number)
         if search:
             search_pattern = f"%{search}%"
             project_query = project_query.filter(
                 or_(
                     ProjectAssessment.title.ilike(search_pattern),
-                    Group.name.ilike(search_pattern)
+                    ProjectTeam.display_name_at_time.ilike(search_pattern)
                 )
             )
         
-        # Get results and create items for each group member
-        for assessment, teacher, course, group in project_query.all():
-            # Get all group members
+        # Get results and create items for each team member
+        for assessment, teacher, course, project_team in project_query.all():
+            # Get all project team members
             members = db.query(User).join(
-                Group.members
+                ProjectTeamMember, ProjectTeamMember.user_id == User.id
             ).filter(
-                Group.id == group.id
+                ProjectTeamMember.project_team_id == project_team.id
             ).all()
             
             # Filter by student_id if specified
