@@ -69,7 +69,6 @@ def test_school(test_db):
     school = School(
         id=1,
         name="Test School",
-        domain="test.school",
     )
     test_db.add(school)
     test_db.commit()
