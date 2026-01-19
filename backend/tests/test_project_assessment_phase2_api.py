@@ -7,7 +7,7 @@ Tests the API endpoints to ensure they work with project_team_id exclusively.
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import sessionmaker
 from datetime import datetime, timezone
 
 from app.main import app
@@ -25,10 +25,14 @@ from app.infra.db.models import (
 )
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def test_db():
     """Create an in-memory SQLite database for testing"""
-    engine = create_engine("sqlite:///:memory:")
+    # Use check_same_thread=False to allow SQLite usage across threads (needed for TestClient)
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+    )
     
     # Only create the tables we need for these tests (avoid Client table with ARRAY type)
     tables_to_create = [
@@ -43,9 +47,15 @@ def test_db():
     ]
     
     Base.metadata.create_all(engine, tables=tables_to_create)
-    db = Session(engine)
+    
+    # Use sessionmaker for proper session management
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    db = TestingSessionLocal()
+    
     yield db
+    
     db.close()
+    engine.dispose()
 
 
 @pytest.fixture
