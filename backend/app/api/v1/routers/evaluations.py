@@ -19,8 +19,7 @@ from app.infra.db.models import (
     Reflection,
     RubricCriterion,
     Course,
-    Group,
-    GroupMember,
+    CourseEnrollment,
     FeedbackSummary,
     Grade,
     PublishedGrade,
@@ -124,8 +123,10 @@ def create_evaluation(
 
     has_active_member = (
         db.query(User.id)
-        .join(Group, Group.course_id == course.id)
+        .join(CourseEnrollment, CourseEnrollment.user_id == User.id)
         .filter(
+            CourseEnrollment.course_id == course.id,
+            CourseEnrollment.active.is_(True),
             User.school_id == user.school_id,
             User.role == "student",
             User.archived.is_(False),
@@ -260,14 +261,13 @@ def list_evaluations(
 
     # If user is a student, only show evaluations for courses they're enrolled in
     if user.role == "student":
-        # Get course IDs where student is an active member
+        # Get course IDs where student is enrolled
         student_course_ids = (
-            db.query(Group.course_id)
-            .join(GroupMember, GroupMember.group_id == Group.id)
+            db.query(CourseEnrollment.course_id)
             .filter(
-                GroupMember.user_id == user.id,
-                GroupMember.active.is_(True),
-                Group.school_id == user.school_id,
+                CourseEnrollment.user_id == user.id,
+                CourseEnrollment.active.is_(True),
+                CourseEnrollment.school_id == user.school_id,
             )
             .distinct()
             .all()

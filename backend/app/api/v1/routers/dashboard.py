@@ -17,8 +17,7 @@ from app.infra.db.models import (
     Score,
     User,
     Reflection,
-    GroupMember,
-    Group,
+    CourseEnrollment,
 )
 from app.api.v1.schemas.dashboard import (
     DashboardResponse,
@@ -106,17 +105,16 @@ def dashboard_evaluation(
     # === 2) Get valid student IDs from the evaluation's course ===
     valid_student_ids = set()
     if ev.course_id:
-        # Get all active students in groups for this course
+        # Get all active enrolled students in this course
         course_students = (
             db.query(User.id)
-            .join(GroupMember, GroupMember.user_id == User.id)
-            .join(Group, Group.id == GroupMember.group_id)
+            .join(CourseEnrollment, CourseEnrollment.user_id == User.id)
             .filter(
                 User.school_id == user.school_id,
                 User.role == "student",
                 User.archived.is_(False),
-                Group.course_id == ev.course_id,
-                GroupMember.active.is_(True),
+                CourseEnrollment.course_id == ev.course_id,
+                CourseEnrollment.active.is_(True),
             )
             .distinct()
             .all()
@@ -457,24 +455,23 @@ def get_student_progress(
     # Get ALL students from the course (not just those with allocations)
     student_ids = set()
     if ev.course_id:
-        # Get all active students in groups for this course
+        # Get all active enrolled students in this course
         course_students = (
             db.query(User.id)
-            .join(GroupMember, GroupMember.user_id == User.id)
-            .join(Group, Group.id == GroupMember.group_id)
+            .join(CourseEnrollment, CourseEnrollment.user_id == User.id)
             .filter(
                 User.school_id == user.school_id,
                 User.role == "student",
                 User.archived.is_(False),
-                Group.course_id == ev.course_id,
-                GroupMember.active.is_(True),
+                CourseEnrollment.course_id == ev.course_id,
+                CourseEnrollment.active.is_(True),
             )
             .distinct()
             .all()
         )
         student_ids = {s[0] for s in course_students}
 
-    # Also include any students who have allocations (in case they're not in groups)
+    # Also include any students who have allocations (in case they're not enrolled)
     for alloc in allocations:
         student_ids.add(alloc.reviewee_id)
         student_ids.add(alloc.reviewer_id)
@@ -734,24 +731,23 @@ def get_dashboard_kpis(
     # Get ALL student IDs from the course (same logic as progress endpoint)
     student_ids = set()
     if ev.course_id:
-        # Get all active students in groups for this course
+        # Get all active enrolled students in this course
         course_students = (
             db.query(User.id)
-            .join(GroupMember, GroupMember.user_id == User.id)
-            .join(Group, Group.id == GroupMember.group_id)
+            .join(CourseEnrollment, CourseEnrollment.user_id == User.id)
             .filter(
                 User.school_id == user.school_id,
                 User.role == "student",
                 User.archived.is_(False),
-                Group.course_id == ev.course_id,
-                GroupMember.active.is_(True),
+                CourseEnrollment.course_id == ev.course_id,
+                CourseEnrollment.active.is_(True),
             )
             .distinct()
             .all()
         )
         student_ids = {s[0] for s in course_students}
 
-    # Also include any students who have allocations (in case they're not in groups)
+    # Also include any students who have allocations (in case they're not enrolled)
     for alloc in allocations:
         student_ids.add(alloc.reviewee_id)
         student_ids.add(alloc.reviewer_id)
