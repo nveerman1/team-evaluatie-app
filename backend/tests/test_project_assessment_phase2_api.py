@@ -49,15 +49,20 @@ def test_db():
 
 
 @pytest.fixture
-def client(test_db):
-    """Create a test client with database override"""
+def client(test_db, test_teacher):
+    """Create a test client with database and auth overrides"""
     def override_get_db():
         try:
             yield test_db
         finally:
             pass
     
+    def override_get_current_user():
+        return test_teacher
+    
+    from app.api.v1.deps import get_current_user
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
@@ -159,20 +164,16 @@ def test_create_assessment_with_project_team_id(
     client, test_db, test_school, test_teacher, test_project, test_rubric, test_project_team
 ):
     """Test creating a project assessment with project_team_id"""
-    # Mock authentication
-    from unittest.mock import patch
-    
-    with patch("app.api.v1.deps.get_current_user", return_value=test_teacher):
-        response = client.post(
-            "/api/v1/project-assessments",
-            json={
-                "project_team_id": test_project_team.id,
-                "rubric_id": test_rubric.id,
-                "project_id": test_project.id,
-                "title": "Test Assessment",
-                "version": "eind",
-            }
-        )
+    response = client.post(
+        "/api/v1/project-assessments",
+        json={
+            "project_team_id": test_project_team.id,
+            "rubric_id": test_rubric.id,
+            "project_id": test_project.id,
+            "title": "Test Assessment",
+            "version": "eind",
+        }
+    )
     
     assert response.status_code == 201
     data = response.json()
@@ -213,13 +214,10 @@ def test_list_assessments_by_project_team_id(
     test_db.add_all([assessment1, assessment2])
     test_db.commit()
     
-    from unittest.mock import patch
-    
     # Test filtering by project_team_id
-    with patch("app.api.v1.deps.get_current_user", return_value=test_teacher):
-        response = client.get(
-            f"/api/v1/project-assessments?project_team_id={test_project_team.id}"
-        )
+    response = client.get(
+        f"/api/v1/project-assessments?project_team_id={test_project_team.id}"
+    )
     
     assert response.status_code == 200
     data = response.json()
@@ -244,10 +242,7 @@ def test_assessment_response_includes_project_team_id(
     test_db.add(assessment)
     test_db.commit()
     
-    from unittest.mock import patch
-    
-    with patch("app.api.v1.deps.get_current_user", return_value=test_teacher):
-        response = client.get("/api/v1/project-assessments")
+    response = client.get("/api/v1/project-assessments")
     
     assert response.status_code == 200
     data = response.json()
