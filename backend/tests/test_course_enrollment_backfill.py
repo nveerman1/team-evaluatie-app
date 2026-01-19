@@ -123,9 +123,38 @@ else:
         }
 
 
-def test_course_enrollment_creation():
+# Helper function that can be called directly (not a fixture)
+def _get_sample_data():
+    """Get sample data for tests - can be called directly without fixture"""
+    student1 = Mock(spec=User)
+    student1.id = 1
+    student1.email = "student1@test.com"
+    student1.name = "Student One"
+    student1.role = "student"
+    
+    student2 = Mock(spec=User)
+    student2.id = 2
+    student2.email = "student2@test.com"
+    student2.name = "Student Two"
+    student2.role = "student"
+    
+    course = Mock(spec=Course)
+    course.id = 1
+    course.name = "Test Course"
+    
+    return {
+        'course': course,
+        'students': [student1, student2],
+    }
+
+def test_course_enrollment_creation(sample_data=None):
     """Test direct CourseEnrollment creation"""
-    data = sample_data()
+    # Support both pytest (fixture parameter) and standalone (function call)
+    if sample_data is None:
+        data = _get_sample_data()
+    else:
+        data = sample_data
+    
     # Simulate creating enrollments directly
     enrollments_to_create = []
     for student in data['students']:
