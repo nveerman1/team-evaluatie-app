@@ -17,6 +17,7 @@ from app.infra.db.models import (
     School,
     Course,
     ProjectAssessment,
+    ProjectAssessmentScore,
     ProjectTeam,
     ProjectTeamMember,
     User,
@@ -46,6 +47,7 @@ def test_db():
         ProjectTeam.__table__,
         ProjectTeamMember.__table__,
         ProjectAssessment.__table__,
+        ProjectAssessmentScore.__table__,  # Needed for assessment counts
     ]
     
     Base.metadata.create_all(engine, tables=tables_to_create)
@@ -75,7 +77,8 @@ def client(test_db, test_teacher):
     from app.api.v1.deps import get_current_user
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = override_get_current_user
-    with TestClient(app) as c:
+    # Set base_url to avoid CSRF validation in tests
+    with TestClient(app, base_url="http://testserver") as c:
         yield c
     app.dependency_overrides.clear()
 
@@ -196,7 +199,8 @@ def test_create_assessment_with_project_team_id(
             "project_id": test_project.id,
             "title": "Test Assessment",
             "version": "eind",
-        }
+        },
+        headers={"Origin": "http://testserver"}  # Add Origin header to pass CSRF validation
     )
     
     assert response.status_code == 201
