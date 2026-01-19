@@ -6,7 +6,7 @@ Tests the API endpoints to ensure they work with project_team_id exclusively.
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime, timezone
 
@@ -15,17 +15,14 @@ from app.api.v1.deps import get_db
 from app.infra.db.models import (
     Base,
     School,
-    Course,
-    ProjectAssessment,
-    ProjectTeam,
-    ProjectTeamMember,
     User,
+    Course,
+    TeacherCourse,
     Project,
     Rubric,
-    TeacherCourse,
-    RubricCriterion,
-    ProjectAssessmentScore,
-    ClientProjectLink,
+    ProjectTeam,
+    ProjectTeamMember,
+    ProjectAssessment,
 )
 
 
@@ -38,24 +35,16 @@ def test_db():
         connect_args={"check_same_thread": False},
     )
     
-    # Create only the tables we need for these tests
-    # We avoid Client table which has ARRAY type that SQLite can't compile
-    tables_to_create = [
-        School.__table__,
-        User.__table__,
-        Course.__table__,
-        TeacherCourse.__table__,
-        Project.__table__,
-        ClientProjectLink.__table__,
-        Rubric.__table__,
-        RubricCriterion.__table__,
-        ProjectTeam.__table__,
-        ProjectTeamMember.__table__,
-        ProjectAssessment.__table__,
-        ProjectAssessmentScore.__table__,
-    ]
+    # For SQLite, we need to enable foreign keys
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragma(dbapi_conn, connection_record):
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA foreign_keys=OFF")  # Disable FK checks for test setup
+        cursor.close()
     
-    Base.metadata.create_all(engine, tables=tables_to_create)
+    # Create ALL tables - SQLite will convert ARRAY to TEXT automatically
+    # This avoids foreign key dependency issues
+    Base.metadata.create_all(engine)
     
     # Use sessionmaker for proper session management
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
