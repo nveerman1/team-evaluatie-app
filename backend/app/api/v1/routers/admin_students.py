@@ -135,8 +135,6 @@ def _course_name_subquery(db: Session, school_id: int):
     Determines course_name per user via course_enrollments -> courses.
     Result: (user_id, course_name)
     """
-    from app.infra.db.models import Course
-
     csub = (
         db.query(
             CourseEnrollment.student_id.label("user_id"),
