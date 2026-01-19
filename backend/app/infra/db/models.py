@@ -823,7 +823,9 @@ class PublishedGrade(Base):
 
 class ProjectAssessment(Base):
     """
-    Project assessment per team/group, uses rubrics with scope='project'
+    Project assessment per team, uses rubrics with scope='project'
+    
+    Phase 2 Complete: Uses project_team_id (immutable team roster)
     """
 
     __tablename__ = "project_assessments"
@@ -837,14 +839,11 @@ class ProjectAssessment(Base):
         nullable=True,
         index=True,
     )
-    group_id: Mapped[int] = mapped_column(
-        ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-
-    # Link to frozen project team roster
-    project_team_id: Mapped[Optional[int]] = mapped_column(
+    
+    # Team reference (immutable project team)
+    project_team_id: Mapped[int] = mapped_column(
         ForeignKey("project_teams.id", ondelete="RESTRICT"),
-        nullable=True,
+        nullable=False,
         index=True,
     )
 
@@ -887,7 +886,6 @@ class ProjectAssessment(Base):
     external_evaluator: Mapped["ExternalEvaluator"] = relationship()
 
     __table_args__ = (
-        Index("ix_project_assessment_group", "group_id"),
         Index("ix_project_assessment_project_team", "project_team_id"),
         Index("ix_project_assessment_teacher", "teacher_id"),
         Index("ix_project_assessment_external", "external_evaluator_id"),

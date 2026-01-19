@@ -1,7 +1,8 @@
 # Legacy Tables Migration Plan: Phasing Out Group and GroupMember
 
-**Status:** 🟡 In Progress  
+**Status:** 🟡 In Progress (Phases 1-2 Complete, 3-5 Remaining)  
 **Created:** 2026-01-18  
+**Updated:** 2026-01-19  
 **Priority:** High (Technical Debt Reduction)
 
 ## Executive Summary
@@ -10,13 +11,21 @@ The codebase currently operates with **two parallel team management systems**:
 1. **Legacy System**: `Group` and `GroupMember` tables (mutable, course-scoped)
 2. **Modern System**: `ProjectTeam` and `ProjectTeamMember` tables (immutable, project-scoped)
 
-According to `docs/architecture.md`, the legacy system should be phased out. However, investigation reveals that the legacy tables are **deeply embedded** and serve as the primary system for:
-- Project assessments (via `ProjectAssessment.group_id`)
-- Student course access control (RBAC via `GroupMember`)
-- External assessment team configuration
-- Multiple API endpoints and frontend features
+According to `docs/architecture.md`, the legacy system should be phased out. 
 
-**This document provides a comprehensive, phased plan to complete the migration to ProjectTeam architecture.**
+### Progress Update (2026-01-19)
+
+✅ **Phase 1 Complete:** CourseEnrollment is now the sole source of truth for student-course relationships  
+✅ **Phase 2 Complete:** ProjectAssessment uses only project_team_id (group_id completely removed)
+
+**Since we're in local dev with no production data**, Phase 2 was simplified to completely remove `group_id` instead of gradual migration. This jumped ahead and eliminated the need for dual-write patterns and backward compatibility.
+
+**Remaining work** focuses on:
+- RBAC authorization functions (Phase 3)
+- Other API endpoints still using Group/GroupMember (Phase 4)  
+- Final table removal (Phase 5)
+
+**See:** `docs/REMAINING_MIGRATION_WORK.md` for updated detailed plan.
 
 ---
 
@@ -117,17 +126,21 @@ def can_access_course(db: Session, user: User, course_id: int) -> bool:
 
 ### Phase Overview
 
-| Phase | Description | Duration | Risk |
-|-------|-------------|----------|------|
-| **0** | Investigation & Planning | ✅ Complete | Low |
-| **1** | Establish CourseEnrollment as Source of Truth | 2 weeks | Medium |
-| **2** | Migrate ProjectAssessment to project_team_id | 3 weeks | High |
-| **3** | Update RBAC to Use CourseEnrollment | 2 weeks | High |
-| **4** | Refactor API Endpoints | 4 weeks | Medium |
-| **5** | Deprecate Frontend Group APIs | 2 weeks | Low |
-| **6** | Remove Legacy Tables & Code | 1 week | Low |
+| Phase | Description | Status | Duration | Risk |
+|-------|-------------|--------|----------|------|
+| **0** | Investigation & Planning | ✅ Complete | - | Low |
+| **1** | Establish CourseEnrollment as Source of Truth | ✅ Complete | 2 weeks | Medium |
+| **2** | Migrate ProjectAssessment to project_team_id | ✅ Complete (Simplified) | 2 weeks | High |
+| **3** | Update RBAC to Use CourseEnrollment | 🔴 To Do | 1-2 weeks | High |
+| **4** | Refactor API Endpoints | 🔴 To Do | 3-4 weeks | Medium |
+| **5** | Remove Legacy Tables & Code | 🔴 To Do | 1 week | Low |
 
-**Total Estimated Duration:** 14 weeks
+**Progress:** Phases 1-2 complete (simplified approach)  
+**Remaining Estimated Duration:** 5-7 weeks
+
+**Note:** Phase 2 was simplified for local dev environment - completely removed `group_id` instead of gradual migration. This eliminated the need for Phases that were originally planned as 2-6 in the dual-write approach, reducing overall complexity significantly.
+
+**For detailed remaining work:** See `docs/REMAINING_MIGRATION_WORK.md`
 
 ---
 
