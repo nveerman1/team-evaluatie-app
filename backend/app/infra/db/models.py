@@ -823,7 +823,9 @@ class PublishedGrade(Base):
 
 class ProjectAssessment(Base):
     """
-    Project assessment per team/group, uses rubrics with scope='project'
+    Project assessment per team, uses rubrics with scope='project'
+    
+    Phase 2 Migration: Uses project_team_id as primary FK, group_id is legacy/optional
     """
 
     __tablename__ = "project_assessments"
@@ -837,15 +839,17 @@ class ProjectAssessment(Base):
         nullable=True,
         index=True,
     )
-    group_id: Mapped[int] = mapped_column(
-        ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-
-    # Link to frozen project team roster
-    project_team_id: Mapped[Optional[int]] = mapped_column(
+    
+    # Primary team reference (immutable project team)
+    project_team_id: Mapped[int] = mapped_column(
         ForeignKey("project_teams.id", ondelete="RESTRICT"),
-        nullable=True,
+        nullable=False,
         index=True,
+    )
+    
+    # Legacy reference (mutable group) - deprecated, will be removed in Phase 6
+    group_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("groups.id", ondelete="RESTRICT"), nullable=True, index=True
     )
 
     rubric_id: Mapped[int] = mapped_column(
