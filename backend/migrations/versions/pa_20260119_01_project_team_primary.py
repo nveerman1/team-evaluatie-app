@@ -30,22 +30,20 @@ depends_on = None
 def upgrade():
     """
     Remove group_id from project_assessments, use project_team_id exclusively.
-    
+
     WARNING: This will drop the group_id column and all data in it.
     Only run in local dev where data loss is acceptable.
-    
+
     For existing databases with data:
     - Deletes any ProjectAssessment records where project_team_id is NULL
     - Then makes project_team_id NOT NULL
     - Then drops group_id column
     """
-    
+
     # 0. Delete any existing records where project_team_id is NULL
     # (Since we're in local dev and can lose data, this is acceptable)
-    op.execute(
-        "DELETE FROM project_assessments WHERE project_team_id IS NULL"
-    )
-    
+    op.execute("DELETE FROM project_assessments WHERE project_team_id IS NULL")
+
     # 1. Make project_team_id NOT NULL (if not already)
     op.alter_column(
         "project_assessments",
@@ -53,17 +51,17 @@ def upgrade():
         existing_type=sa.Integer(),
         nullable=False,
     )
-    
+
     # 2. Drop existing FK constraint and index for group_id
     op.drop_constraint(
         "project_assessments_group_id_fkey",
         "project_assessments",
         type_="foreignkey",
     )
-    
+
     # Drop the group_id column entirely
     op.drop_column("project_assessments", "group_id")
-    
+
     # 3. Add composite index for efficient queries
     op.create_index(
         "ix_project_assessments_team_project",
@@ -75,19 +73,19 @@ def upgrade():
 def downgrade():
     """
     Restore group_id column.
-    
+
     NOTE: This will recreate the column but data will be lost.
     """
-    
+
     # Drop index
     op.drop_index("ix_project_assessments_team_project", "project_assessments")
-    
+
     # Add group_id column back
     op.add_column(
         "project_assessments",
         sa.Column("group_id", sa.Integer(), nullable=True),
     )
-    
+
     # Recreate FK constraint
     op.create_foreign_key(
         "project_assessments_group_id_fkey",
@@ -97,7 +95,7 @@ def downgrade():
         ["id"],
         ondelete="CASCADE",
     )
-    
+
     # Make project_team_id NULLABLE again
     op.alter_column(
         "project_assessments",
