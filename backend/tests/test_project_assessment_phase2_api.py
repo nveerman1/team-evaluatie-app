@@ -149,7 +149,6 @@ def test_project_team(test_db, test_school, test_project):
         team_number=1,
         display_name_at_time="Test Team 1",
         version=1,
-        is_locked=False,
     )
     test_db.add(team)
     test_db.commit()
