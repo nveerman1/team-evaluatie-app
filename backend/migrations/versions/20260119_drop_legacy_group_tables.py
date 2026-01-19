@@ -19,6 +19,18 @@ depends_on = None
 
 def upgrade():
     """Drop legacy group_members and groups tables"""
+    # First, drop foreign key constraints from other tables that reference groups
+    
+    # Drop FK from project_teams.team_id -> groups.id
+    op.drop_constraint('project_teams_team_id_fkey', 'project_teams', type_='foreignkey')
+    
+    # Drop FK from project_notes.team_id -> groups.id
+    op.drop_constraint('project_notes_team_id_fkey', 'project_notes', type_='foreignkey')
+    
+    # Drop FK from project_team_externals.group_id -> groups.id
+    op.drop_constraint('project_team_externals_group_id_fkey', 'project_team_externals', type_='foreignkey')
+    
+    # Now drop the tables themselves
     # Drop group_members table first (has FK to groups)
     op.drop_table('group_members')
     
@@ -59,4 +71,18 @@ def downgrade():
         sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('group_id', 'user_id', name='uq_group_member')
+    )
+    
+    # Recreate foreign key constraints
+    op.create_foreign_key(
+        'project_teams_team_id_fkey', 'project_teams', 'groups',
+        ['team_id'], ['id'], ondelete='SET NULL'
+    )
+    op.create_foreign_key(
+        'project_notes_team_id_fkey', 'project_notes', 'groups',
+        ['team_id'], ['id'], ondelete='CASCADE'
+    )
+    op.create_foreign_key(
+        'project_team_externals_group_id_fkey', 'project_team_externals', 'groups',
+        ['group_id'], ['id'], ondelete='CASCADE'
     )
