@@ -3,61 +3,135 @@ Tests for CourseEnrollment-only implementation
 
 Tests the CourseEnrollment logic for Phase 1 of the legacy tables migration.
 Note: These tests are for the CourseEnrollment-only approach (no GroupMember).
+
+To run these tests:
+  - With pytest: `pytest tests/test_course_enrollment_backfill.py -v`
+  - Standalone: `python tests/test_course_enrollment_backfill.py`
 """
 
-import pytest
+import sys
+from pathlib import Path
+
+# Add backend directory to Python path BEFORE any app imports
+backend_dir = Path(__file__).parent.parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+
 from unittest.mock import Mock
-from app.infra.db.models import (
-    User, Course, CourseEnrollment
-)
 
-
-@pytest.fixture
-def test_db():
-    """Create a mock database session for testing"""
-    db = Mock()
-    db.add = Mock()
-    db.commit = Mock()
-    db.rollback = Mock()
-    db.close = Mock()
-    return db
-
-
-@pytest.fixture
-def sample_data():
-    """Create sample mock data for testing"""
-    # Mock students
-    student1 = Mock(spec=User)
-    student1.id = 1
-    student1.email = "student1@test.com"
-    student1.name = "Student One"
-    student1.role = "student"
+# Try to import pytest, but make it optional for standalone runs
+try:
+    import pytest
+    PYTEST_AVAILABLE = True
+except ImportError:
+    PYTEST_AVAILABLE = False
+    # Create a simple fixture decorator that does nothing when pytest isn't available
+    def pytest_fixture(func):
+        return func
     
-    student2 = Mock(spec=User)
-    student2.id = 2
-    student2.email = "student2@test.com"
-    student2.name = "Student Two"
-    student2.role = "student"
+    class pytest:
+        fixture = staticmethod(pytest_fixture)
+
+# Try to import models, but use mocks if dependencies aren't available
+try:
+    from app.infra.db.models import User, Course, CourseEnrollment
+    MODELS_AVAILABLE = True
+except (ImportError, ModuleNotFoundError):
+    # Create mock classes for standalone testing without dependencies
+    MODELS_AVAILABLE = False
     
-    # Mock course
-    course = Mock(spec=Course)
-    course.id = 1
-    course.name = "Test Course"
+    class User:
+        """Mock User model for testing"""
+        pass
     
-    return {
-        'course': course,
-        'students': [student1, student2],
-    }
+    class Course:
+        """Mock Course model for testing"""
+        pass
+    
+    class CourseEnrollment:
+        """Mock CourseEnrollment model for testing"""
+        pass
 
 
-def test_course_enrollment_creation(sample_data):
+if PYTEST_AVAILABLE:
+    @pytest.fixture
+    def test_db():
+        """Create a mock database session for testing"""
+        db = Mock()
+        db.add = Mock()
+        db.commit = Mock()
+        db.rollback = Mock()
+        db.close = Mock()
+        return db
+
+
+    @pytest.fixture
+    def sample_data():
+        """Create sample mock data for testing"""
+        # Mock students
+        student1 = Mock(spec=User)
+        student1.id = 1
+        student1.email = "student1@test.com"
+        student1.name = "Student One"
+        student1.role = "student"
+        
+        student2 = Mock(spec=User)
+        student2.id = 2
+        student2.email = "student2@test.com"
+        student2.name = "Student Two"
+        student2.role = "student"
+        
+        # Mock course
+        course = Mock(spec=Course)
+        course.id = 1
+        course.name = "Test Course"
+        
+        return {
+            'course': course,
+            'students': [student1, student2],
+        }
+else:
+    # For standalone runs, create simple functions that return the same data
+    def test_db():
+        db = Mock()
+        db.add = Mock()
+        db.commit = Mock()
+        db.rollback = Mock()
+        db.close = Mock()
+        return db
+
+    def sample_data():
+        student1 = Mock(spec=User)
+        student1.id = 1
+        student1.email = "student1@test.com"
+        student1.name = "Student One"
+        student1.role = "student"
+        
+        student2 = Mock(spec=User)
+        student2.id = 2
+        student2.email = "student2@test.com"
+        student2.name = "Student Two"
+        student2.role = "student"
+        
+        course = Mock(spec=Course)
+        course.id = 1
+        course.name = "Test Course"
+        
+        return {
+            'course': course,
+            'students': [student1, student2],
+        }
+
+
+def test_course_enrollment_creation():
     """Test direct CourseEnrollment creation"""
+    data = sample_data()
     # Simulate creating enrollments directly
     enrollments_to_create = []
-    for student in sample_data['students']:
+    for student in data['students']:
         enrollments_to_create.append({
             'student_id': student.id,
-            'course_id': sample_data['course'].id,
+            'course_id': data['course'].id,
             'active': True
         })
     
@@ -198,7 +272,7 @@ def test_enrollment_query_logic():
     
     # Filter for specific course
     course_1_enrollments = [e for e in active_enrollments if e['course_id'] == 1]
-    assert len(course_1_enrollments) == 2
+    assert len(course_1_enrollments) == 3  # Students 1, 2, and 3 all have course_id=1 and active=True
 
 
 def test_course_creation_with_enrollment():
@@ -218,4 +292,49 @@ def test_course_creation_with_enrollment():
     assert 'Physics 201' in existing_courses
     assert existing_courses['Physics 201']['id'] == 2
     assert len(existing_courses) == 2
+
+
+# Main block for standalone execution
+if __name__ == "__main__":
+    print("Running CourseEnrollment tests...\n")
+    
+    tests = [
+        ("Course Enrollment Creation", test_course_enrollment_creation),
+        ("Unique Student-Course Pairs", test_unique_student_course_pairs),
+        ("Active Enrollment Status", test_active_enrollment_status),
+        ("Enrollment Reactivation", test_enrollment_reactivation),
+        ("Idempotent Enrollment", test_idempotent_enrollment),
+        ("Enrollment Coverage Calculation", test_enrollment_coverage_calculation),
+        ("Multiple Course Enrollments", test_multiple_course_enrollments),
+        ("Enrollment Query Logic", test_enrollment_query_logic),
+        ("Course Creation with Enrollment", test_course_creation_with_enrollment),
+    ]
+    
+    passed = 0
+    failed = 0
+    
+    for test_name, test_func in tests:
+        try:
+            test_func()
+            print(f"✓ {test_name}")
+            passed += 1
+        except AssertionError as e:
+            print(f"✗ {test_name}")
+            print(f"  AssertionError: {e}")
+            failed += 1
+        except Exception as e:
+            print(f"✗ {test_name}")
+            print(f"  Error: {e}")
+            failed += 1
+    
+    print(f"\n{'='*50}")
+    print(f"Results: {passed} passed, {failed} failed")
+    print(f"{'='*50}")
+    
+    if failed > 0:
+        sys.exit(1)
+    else:
+        print("\n✓ All tests passed!")
+        sys.exit(0)
+
 
