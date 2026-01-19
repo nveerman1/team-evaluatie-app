@@ -17,15 +17,12 @@ from app.infra.db.models import (
     School,
     Course,
     ProjectAssessment,
-    ProjectAssessmentScore,
     ProjectTeam,
     ProjectTeamMember,
     User,
     Project,
     Rubric,
-    RubricCriterion,
     TeacherCourse,
-    ClientProjectLink,
 )
 
 
@@ -38,23 +35,9 @@ def test_db():
         connect_args={"check_same_thread": False},
     )
     
-    # Only create the tables we need for these tests (avoid Client table with ARRAY type)
-    tables_to_create = [
-        School.__table__,
-        User.__table__,
-        Course.__table__,
-        TeacherCourse.__table__,  # Needed for RBAC checks
-        Project.__table__,
-        ClientProjectLink.__table__,  # Needed for project-client relationships
-        Rubric.__table__,
-        RubricCriterion.__table__,  # Needed for rubric validation
-        ProjectTeam.__table__,
-        ProjectTeamMember.__table__,
-        ProjectAssessment.__table__,
-        ProjectAssessmentScore.__table__,  # Needed for assessment counts
-    ]
-    
-    Base.metadata.create_all(engine, tables=tables_to_create)
+    # Create ALL tables - SQLite will handle PostgreSQL types like ARRAY by using TEXT/JSON
+    # This is simpler than selectively creating tables and dealing with foreign key dependencies
+    Base.metadata.create_all(engine)
     
     # Use sessionmaker for proper session management
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
