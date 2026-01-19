@@ -686,16 +686,14 @@ def get_overview_matrix(
     date_from_dt = datetime.fromisoformat(date_from) if date_from else None
     date_to_dt = datetime.fromisoformat(date_to) if date_to else None
     
-    # If course_id is specified, get all student IDs who are members of groups in that course
+    # If course_id is specified, get all student IDs enrolled in that course
     allowed_student_ids = None
     if course_id:
         student_ids_query = db.query(User.id).join(
-            GroupMember, GroupMember.user_id == User.id
-        ).join(
-            Group, GroupMember.group_id == Group.id
+            CourseEnrollment, CourseEnrollment.user_id == User.id
         ).filter(
-            Group.course_id == course_id,
-            GroupMember.active.is_(True),
+            CourseEnrollment.course_id == course_id,
+            CourseEnrollment.active.is_(True),
             ~User.archived,
             User.role == "student"
         ).distinct()
@@ -711,11 +709,13 @@ def get_overview_matrix(
     project_query = db.query(
         ProjectAssessment,
         Course,
-        Group,
+        ProjectTeam,
     ).join(
-        Group, ProjectAssessment.group_id == Group.id
+        ProjectTeam, ProjectAssessment.project_team_id == ProjectTeam.id
+    ).join(
+        Project, ProjectTeam.project_id == Project.id
     ).outerjoin(
-        Course, Group.course_id == Course.id
+        Course, Project.course_id == Course.id
     ).filter(
         ProjectAssessment.school_id == school_id,
         ProjectAssessment.status == "published",  # Only published projects
@@ -723,13 +723,13 @@ def get_overview_matrix(
     )
     
     if course_id:
-        project_query = project_query.filter(Group.course_id == course_id)
+        project_query = project_query.filter(Project.course_id == course_id)
     if date_from_dt:
         project_query = project_query.filter(ProjectAssessment.published_at >= date_from_dt)
     if date_to_dt:
         project_query = project_query.filter(ProjectAssessment.published_at <= date_to_dt)
     
-    for assessment, course, group in project_query.all():
+    for assessment, course, team in project_query.all():
         eval_key = f"project_{assessment.id}"
         evaluations.append({
             "key": eval_key,
@@ -743,11 +743,12 @@ def get_overview_matrix(
         teacher = db.query(User).filter(User.id == assessment.teacher_id).first()
         teacher_name = teacher.name if teacher else None
         
-        # Get all group members and their scores (only active students)
+        # Get all team members and their scores (only active students)
         members = db.query(User).join(
-            Group.members
+            ProjectTeamMember, ProjectTeamMember.user_id == User.id
         ).filter(
-            Group.id == group.id,
+            ProjectTeamMember.team_id == team.id,
+            ProjectTeamMember.active.is_(True),
             ~User.archived,
             User.role == "student"
         ).all()
@@ -1091,16 +1092,16 @@ def get_project_overview(
     # Query project assessments with optional project and client info
     query = db.query(
         ProjectAssessment,
-        Group,
+        ProjectTeam,
         Course,
         Project,
         Client,
     ).join(
-        Group, ProjectAssessment.group_id == Group.id
+        ProjectTeam, ProjectAssessment.project_team_id == ProjectTeam.id
+    ).join(
+        Project, ProjectTeam.project_id == Project.id
     ).outerjoin(
-        Course, Group.course_id == Course.id
-    ).outerjoin(
-        Project, ProjectAssessment.project_id == Project.id
+        Course, Project.course_id == Course.id
     ).outerjoin(
         ClientProjectLink, ClientProjectLink.project_id == Project.id
     ).outerjoin(
@@ -1113,7 +1114,7 @@ def get_project_overview(
     
     # Apply filters
     if course_id:
-        query = query.filter(Group.course_id == course_id)
+        query = query.filter(Project.course_id == course_id)
     
     if school_year:
         # Parse school year like "2024-2025"
@@ -1139,7 +1140,7 @@ def get_project_overview(
         query = query.filter(
             or_(
                 ProjectAssessment.title.ilike(search_pattern),
-                Group.name.ilike(search_pattern)
+                ProjectTeam.name.ilike(search_pattern)
             )
         )
     
@@ -1148,7 +1149,7 @@ def get_project_overview(
     
     # Build project overview items
     projects = []
-    for assessment, group, course, project, client in results:
+    for assessment, team, course, project, client in results:
         # Get client name from the joined Client object
         client_name = client.organization if client else None
         
@@ -1310,9 +1311,11 @@ def get_project_trends(
     # Query project assessments with scores
     query = db.query(
         ProjectAssessment,
-        Group,
+        ProjectTeam,
     ).join(
-        Group, ProjectAssessment.group_id == Group.id
+        ProjectTeam, ProjectAssessment.project_team_id == ProjectTeam.id
+    ).join(
+        Project, ProjectTeam.project_id == Project.id
     ).filter(
         ProjectAssessment.school_id == school_id,
         ProjectAssessment.status.in_(["published", "closed"]),  # Include published and closed assessments
@@ -1321,7 +1324,7 @@ def get_project_trends(
     
     # Apply filters
     if course_id:
-        query = query.filter(Group.course_id == course_id)
+        query = query.filter(Project.course_id == course_id)
     
     if school_year:
         try:
@@ -1339,7 +1342,7 @@ def get_project_trends(
     
     # Build trend data
     trend_data = []
-    for assessment, group in results:
+    for assessment, team in results:
         if not assessment.published_at:
             continue
         
