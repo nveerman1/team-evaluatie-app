@@ -84,7 +84,7 @@ def test_teacher(test_db, test_school):
         name="Test Teacher",
         email="teacher@test.com",
         role="teacher",
-        hashed_password="dummy",
+        password_hash="dummy",
     )
     test_db.add(teacher)
     test_db.commit()
