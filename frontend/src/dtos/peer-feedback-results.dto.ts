@@ -38,6 +38,7 @@ export type EvaluationResult = {
   selfScore?: Record<OmzaKey, number>;
   trend?: Partial<Record<OmzaKey, number[]>>; // laatste n gemiddelden (sparkline)
   gcfScore?: number; // 0.90-1.10 – Team-bijdrage (GCF) direct from grades table
+  sprScore?: number; // Self-Peer Ratio from grades table
   reflection?: ReflectionData; // eigen reflectie
   // New fields for the redesigned page
   teacherComments?: string; // Opmerkingen van de docent (from OMZA table)

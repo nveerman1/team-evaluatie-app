@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Loading, ErrorMessage, TeamBadge, TeamMembersList } from "@/components";
+import { Loading, ErrorMessage } from "@/components";
 import { FeedbackSummary, EvaluationReflectionSection } from "@/components/student";
 import { AISummarySection } from "@/components/student/AISummarySection";
 import { peerFeedbackResultsService, studentService, evaluationService, courseService } from "@/services";
@@ -336,92 +336,144 @@ export default function ResultaatPage() {
                 )}
               </div>
 
-              {/* Right column: Team-bijdrage */}
+              {/* Right column: Teambeoordeling */}
               <div className="space-y-3">
-                {/* Team-bijdrage / correctiefactor (GCF) */}
-                {teamContributionFactor != null && (
-                  <div className="rounded-xl border border-slate-100 bg-indigo-50/60 p-3">
-                    <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                      <span>Team-bijdrage</span>
-                      <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] uppercase tracking-wide text-indigo-600">
-                        Correctiefactor
+                {/* Teambeoordeling - Teacher OMZA scores in table format */}
+                {evaluationData.teacherOmza && Object.keys(evaluationData.teacherOmza).length > 0 && (
+                  <div className="rounded-xl border border-slate-200 bg-white p-3">
+                    <div className="mb-3">
+                      <h4 className="text-xs font-semibold text-slate-700">Teambeoordeling</h4>
+                    </div>
+                    
+                    {/* OMZA scores table - matching heatmap style with OMZA as columns */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-slate-200">
+                            {['O', 'M', 'Z', 'A'].map((key) => (
+                              <th key={key} className="px-2 py-1.5 text-center text-xs font-semibold text-slate-600">
+                                {key}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="hover:bg-slate-50">
+                            {['O', 'M', 'Z', 'A'].map((key) => {
+                              const value = evaluationData.teacherOmza[key as keyof typeof evaluationData.teacherOmza];
+                              const peerAvg = evaluationData.omzaAverages?.find(avg => avg.key === key);
+                              const delta = peerAvg?.delta ?? 0;
+                              
+                              // Color based on teacher score (1-4 scale) matching heatmap
+                              const getScoreColor = (score: number) => {
+                                if (score >= 3.5) return "bg-green-100 text-green-700";
+                                if (score >= 2.5) return "bg-blue-100 text-blue-700";
+                                return "bg-orange-100 text-orange-700";
+                              };
+                              
+                              return (
+                                <td key={key} className="px-2 py-2 text-center">
+                                  {value != null ? (
+                                    <div className="inline-flex flex-col items-center gap-0.5">
+                                      <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(value)}`}>
+                                        {value.toFixed(1)}
+                                      </span>
+                                      {delta !== 0 && (
+                                        <span className={`text-[10px] font-medium tabular-nums ${
+                                          delta > 0 ? "text-green-600" : "text-red-600"
+                                        }`}>
+                                          {delta > 0 ? "+" : ""}{delta.toFixed(1)}
+                                        </span>
+                                      )}
+                                      {delta === 0 && <span className="text-slate-300 text-xs">–</span>}
+                                    </div>
+                                  ) : (
+                                    <span className="text-slate-300">–</span>
+                                  )}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    {/* GCF and SPR labels with colors */}
+                    <div className="mt-3 pt-3 border-t border-slate-200 space-y-2">
+                      {/* GCF label */}
+                      {teamContributionFactor != null && (
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-600">Correctiefactor (GCF):</span>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md font-semibold ${
+                            teamContributionFactor >= 1.05
+                              ? "bg-green-100 text-green-700"
+                              : teamContributionFactor >= 0.95
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-orange-100 text-orange-700"
+                          }`}>
+                            {teamContributionLabel || (
+                              teamContributionFactor >= 1.05
+                                ? "Boven verwachting"
+                                : teamContributionFactor >= 0.95
+                                ? "Naar verwachting"
+                                : "Onder verwachting"
+                            )}
+                          </span>
+                        </div>
+                      )}
+                      {/* SPR label */}
+                      {evaluationData.sprScore != null && (
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-600">Zelfbeeld (SPR):</span>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md font-semibold ${
+                            evaluationData.sprScore >= 1.2
+                              ? "bg-orange-100 text-orange-700"
+                              : evaluationData.sprScore >= 0.8
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-orange-100 text-orange-700"
+                          }`}>
+                            {evaluationData.sprScore >= 1.2
+                              ? "Te hoog"
+                              : evaluationData.sprScore >= 0.8
+                              ? "Realistisch"
+                              : "Te laag"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Fallback: Show GCF even if no teacher OMZA */}
+                {!evaluationData.teacherOmza && teamContributionFactor != null && (
+                  <div className="rounded-xl border border-slate-200 bg-white p-3">
+                    <div className="mb-2">
+                      <h4 className="text-xs font-semibold text-slate-700">Team-bijdrage</h4>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-600">Correctiefactor (GCF):</span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md font-semibold ${
+                        teamContributionFactor >= 1.05
+                          ? "bg-green-100 text-green-700"
+                          : teamContributionFactor >= 0.95
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-orange-100 text-orange-700"
+                      }`}>
+                        {teamContributionLabel || (
+                          teamContributionFactor >= 1.05
+                            ? "Boven verwachting"
+                            : teamContributionFactor >= 0.95
+                            ? "Naar verwachting"
+                            : "Onder verwachting"
+                        )}
                       </span>
                     </div>
-                    <div className="mt-2 flex items-baseline justify-between">
-                      <div>
-                        <p className="text-2xl font-semibold text-slate-900">
-                          {teamContributionFactor.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-slate-500">Range 0,90 – 1,10</p>
-                      </div>
-                      <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-700">
-                        {teamContributionLabel}
-                      </span>
-                    </div>
-                    <div className="mt-2 h-1.5 w-full rounded-full bg-indigo-100">
-                      <div
-                        className="h-1.5 rounded-full bg-indigo-500"
-                        style={{
-                          width: `${Math.min(100, Math.max(0, (teamContributionFactor - 0.9) * 500))}%`,
-                        }}
-                      />
-                    </div>
-                    <p className="mt-1 text-[11px] text-slate-500">
-                      Factor waarmee de docent het groepscijfer corrigeert op basis van peer-feedback.
-                    </p>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* OMZA-balken (peer-feedback) */}
-            {omzaAverages && omzaAverages.length > 0 ? (
-              <div className="mt-4 grid gap-3 md:grid-cols-4">
-              {omzaAverages.map((item) => (
-                <div key={item.key} className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-                  <div className="flex items-center justify-between text-xs text-slate-500">
-                    <span>{item.label}</span>
-                    <div className="text-right">
-                      <span className="block font-medium text-slate-700">
-                        Gem.: {item.value.toFixed(1)}
-                      </span>
-                      <span
-                        className={`flex items-center gap-0.5 text-[11px] font-medium ${
-                          item.delta > 0
-                            ? "text-emerald-600"
-                            : item.delta < 0
-                            ? "text-red-600"
-                            : "text-slate-500"
-                        }`}
-                      >
-                        {item.delta > 0 ? "↑" : item.delta < 0 ? "↓" : "→"}
-                        {formatDelta(item.delta)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mt-2 h-1.5 w-full rounded-full bg-slate-200">
-                    <div
-                      className="h-1.5 rounded-full bg-indigo-500"
-                      style={{ width: `${Math.max(0, Math.min(100, ((item.value - 1) / 4) * 100))}%` }}
-                    />
-                  </div>
-                  <div className="mt-1 flex items-center justify-between text-[10px] text-slate-400">
-                    <span>1</span>
-                    <span>2</span>
-                    <span>3</span>
-                    <span>4</span>
-                    <span>5</span>
-                  </div>
-                </div>
-              ))}
-              </div>
-            ) : (
-              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-6 text-center">
-                <p className="text-sm text-slate-600">
-                  Nog geen peer-feedback ontvangen. OMZA scores worden hier getoond zodra je teamgenoten hun beoordeling hebben ingevuld.
-                </p>
-              </div>
-            )}
+
           </div>
 
           {/* DOCENT CARDS SECTION - Teacher comments and evaluation */}
@@ -494,22 +546,6 @@ export default function ResultaatPage() {
             </div>
           )}
         </article>
-
-        {/* Team Section */}
-        {teamContext && myTeam && (
-          <article className="mt-6 rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <TeamBadge teamNumber={myTeam.team_number} displayName={myTeam.display_name} size="lg" />
-              <h2 className="text-lg font-semibold text-slate-900">
-                Jouw Teamleden
-              </h2>
-            </div>
-            <TeamMembersList members={myTeam.members} />
-            <p className="mt-4 text-xs text-slate-500">
-              Je hebt {myTeam.members.length} teamleden voor deze evaluatie.
-            </p>
-          </article>
-        )}
 
         {/* Reflection Section */}
         <div className="mt-6">
