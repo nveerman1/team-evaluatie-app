@@ -138,13 +138,14 @@ def backfill_project_assessment_teams(db: Session, dry_run: bool = True):
                     db.query(GroupMember)
                     .filter(
                         GroupMember.group_id == group.id,
-                        GroupMember.active == True,
+                        GroupMember.active.is_(True),
                     )
                     .all()
                 )
                 
                 if not dry_run:
                     # Create ProjectTeam
+                    created_at = getattr(assessment, 'created_at', datetime.now(timezone.utc))
                     new_team = ProjectTeam(
                         school_id=assessment.school_id,
                         project_id=assessment.project_id,
@@ -153,7 +154,7 @@ def backfill_project_assessment_teams(db: Session, dry_run: bool = True):
                         version=1,
                         display_name_at_time=group.name or f"Team {team_number}",
                         is_locked=True,  # Lock since it's from migration
-                        created_at=assessment.created_at if hasattr(assessment, 'created_at') else datetime.now(timezone.utc),
+                        created_at=created_at,
                     )
                     db.add(new_team)
                     db.flush()  # Get the ID

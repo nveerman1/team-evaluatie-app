@@ -320,17 +320,20 @@ def list_project_assessments(
     # Also get course info from project teams
     project_team_ids = [r.project_team_id for r in rows]
     if project_team_ids:
-        for pt in db.query(ProjectTeam).filter(
+        # Batch query for project teams with their projects
+        project_teams_with_projects = db.query(ProjectTeam, Project).outerjoin(
+            Project, ProjectTeam.project_id == Project.id
+        ).filter(
             ProjectTeam.id.in_(project_team_ids),
             ProjectTeam.school_id == user.school_id,
-        ).all():
+        ).all()
+        
+        for pt, project in project_teams_with_projects:
             # Add to group_map if not already there (from group_id)
             # This ensures we have team names even if group_id is null
-            if pt.project_id:
-                project = db.query(Project).filter(Project.id == pt.project_id).first()
-                if project and project.course_id and pt.id not in group_map:
-                    # Use project_team display name
-                    group_map[pt.id] = (pt.display_name_at_time, project.course_id)
+            if project and project.course_id and pt.id not in group_map:
+                # Use project_team display name
+                group_map[pt.id] = (pt.display_name_at_time, project.course_id)
     
     # Get courses
     course_ids = [c_id for _, c_id in group_map.values() if c_id]
