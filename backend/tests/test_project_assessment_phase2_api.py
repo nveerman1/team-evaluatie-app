@@ -22,6 +22,7 @@ from app.infra.db.models import (
     User,
     Project,
     Rubric,
+    TeacherCourse,
 )
 
 
@@ -39,6 +40,7 @@ def test_db():
         School.__table__,
         User.__table__,
         Course.__table__,
+        TeacherCourse.__table__,  # Needed for RBAC checks
         Project.__table__,
         Rubric.__table__,
         ProjectTeam.__table__,
@@ -107,8 +109,8 @@ def test_teacher(test_db, test_school):
 
 
 @pytest.fixture
-def test_course(test_db, test_school):
-    """Create a test course"""
+def test_course(test_db, test_school, test_teacher):
+    """Create a test course and link teacher to it"""
     course = Course(
         id=1,
         school_id=test_school.id,
@@ -118,6 +120,18 @@ def test_course(test_db, test_school):
     )
     test_db.add(course)
     test_db.commit()
+    
+    # Link teacher to course for RBAC
+    teacher_course = TeacherCourse(
+        school_id=test_school.id,
+        teacher_id=test_teacher.id,
+        course_id=course.id,
+        role="teacher",
+        is_active=True,
+    )
+    test_db.add(teacher_course)
+    test_db.commit()
+    
     return course
 
 
