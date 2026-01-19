@@ -99,7 +99,7 @@ def test_course(test_db, test_school):
         school_id=test_school.id,
         name="Test Course",
         code="TEST101",
-        active=True,
+        is_active=True,
     )
     test_db.add(course)
     test_db.commit()
