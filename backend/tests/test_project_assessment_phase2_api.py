@@ -29,7 +29,20 @@ from app.infra.db.models import (
 def test_db():
     """Create an in-memory SQLite database for testing"""
     engine = create_engine("sqlite:///:memory:")
-    Base.metadata.create_all(engine)
+    
+    # Only create the tables we need for these tests (avoid Client table with ARRAY type)
+    tables_to_create = [
+        School.__table__,
+        User.__table__,
+        Course.__table__,
+        Project.__table__,
+        Rubric.__table__,
+        ProjectTeam.__table__,
+        ProjectTeamMember.__table__,
+        ProjectAssessment.__table__,
+    ]
+    
+    Base.metadata.create_all(engine, tables=tables_to_create)
     db = Session(engine)
     yield db
     db.close()
