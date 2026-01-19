@@ -23,6 +23,7 @@ from app.infra.db.models import (
     User,
     Project,
     Rubric,
+    RubricCriterion,
     TeacherCourse,
 )
 
@@ -44,6 +45,7 @@ def test_db():
         TeacherCourse.__table__,  # Needed for RBAC checks
         Project.__table__,
         Rubric.__table__,
+        RubricCriterion.__table__,  # Needed for rubric validation
         ProjectTeam.__table__,
         ProjectTeamMember.__table__,
         ProjectAssessment.__table__,
