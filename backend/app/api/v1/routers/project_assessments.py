@@ -16,8 +16,6 @@ from app.infra.db.models import (
     ProjectAssessmentSelfAssessmentScore,
     Rubric,
     RubricCriterion,
-    Group,
-    GroupMember,
     User,
     Course,
     ProjectTeam,
@@ -102,11 +100,14 @@ def _get_assessment_with_access_check(
     
     # Check access for teachers
     if user.role == "teacher":
-        group = db.query(Group).filter(Group.id == pa.group_id).first()
-        if group and group.course_id:
-            teacher_course_ids = _get_teacher_course_ids(db, user)
-            if teacher_course_ids and group.course_id not in teacher_course_ids:
-                raise HTTPException(status_code=404, detail="Assessment not found")
+        # Get project team and check course access
+        project_team = db.query(ProjectTeam).filter(ProjectTeam.id == pa.project_team_id).first()
+        if project_team and project_team.project_id:
+            project = db.query(Project).filter(Project.id == project_team.project_id).first()
+            if project and project.course_id:
+                teacher_course_ids = _get_teacher_course_ids(db, user)
+                if teacher_course_ids and project.course_id not in teacher_course_ids:
+                    raise HTTPException(status_code=404, detail="Assessment not found")
     
     return pa
 
@@ -135,7 +136,6 @@ def _to_out_assessment(pa: ProjectAssessment) -> ProjectAssessmentOut:
             "id": pa.id,
             "school_id": pa.school_id,
             "project_id": pa.project_id,
-            "group_id": pa.group_id,
             "project_team_id": pa.project_team_id,
             "rubric_id": pa.rubric_id,
             "teacher_id": pa.teacher_id,
@@ -444,8 +444,8 @@ def get_project_assessment(
         if pa.status != "published":
             raise HTTPException(status_code=403, detail="Assessment not published yet")
         # Check if student is in the group or in a project team
-        is_member = db.query(GroupMember).filter(
-            GroupMember.group_id == pa.group_id,
+        is_member = db.query(ProjectTeamMember).filter(
+            ProjectTeamMember.project_team_id == pa.project_team_id,
             GroupMember.user_id == user.id,
             GroupMember.school_id == user.school_id,
             GroupMember.active.is_(True),
@@ -488,7 +488,7 @@ def get_project_assessment(
                 team_number = student_info.team_number
     elif user.role == "teacher":
         # Teachers can view assessments for courses they're assigned to
-        group = db.query(Group).filter(Group.id == pa.group_id).first()
+        group = db.query(ProjectTeam).filter(ProjectTeam.id == pa.project_team_id).first()
         if group and group.course_id:
             teacher_course_ids = _get_teacher_course_ids(db, user)
             if teacher_course_ids and group.course_id not in teacher_course_ids:
@@ -716,7 +716,7 @@ def get_assessment_teams_overview(
     ).scalar() or 0
     
     # Get group (course/cluster) info
-    group = db.query(Group).filter(Group.id == pa.group_id).first()
+    group = db.query(ProjectTeam).filter(ProjectTeam.id == pa.project_team_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
     
@@ -865,7 +865,7 @@ def get_assessment_reflections(
     pa = _get_assessment_with_access_check(db, assessment_id, user)
     
     # Get group name
-    group = db.query(Group).filter(Group.id == pa.group_id).first()
+    group = db.query(ProjectTeam).filter(ProjectTeam.id == pa.project_team_id).first()
     group_name = group.name if group else "Onbekend"
     
     # Get all reflections
@@ -979,8 +979,8 @@ def create_or_update_reflection(
         raise HTTPException(status_code=404, detail="Published assessment not found")
     
     # Check if student is in the group or in a project team
-    is_member = db.query(GroupMember).filter(
-        GroupMember.group_id == pa.group_id,
+    is_member = db.query(ProjectTeamMember).filter(
+        ProjectTeamMember.project_team_id == pa.project_team_id,
         GroupMember.user_id == user.id,
         GroupMember.school_id == user.school_id,
         GroupMember.active.is_(True),
@@ -1060,7 +1060,7 @@ def get_assessment_scores_overview(
     ]
     
     # Get group info
-    group = db.query(Group).filter(Group.id == pa.group_id).first()
+    group = db.query(ProjectTeam).filter(ProjectTeam.id == pa.project_team_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
     
@@ -1284,7 +1284,7 @@ def get_assessment_students_overview(
     ]
     
     # Get group info
-    group = db.query(Group).filter(Group.id == pa.group_id).first()
+    group = db.query(ProjectTeam).filter(ProjectTeam.id == pa.project_team_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
     
@@ -1535,8 +1535,8 @@ def get_self_assessment(
         raise HTTPException(status_code=404, detail="Assessment not found or not yet available")
     
     # Check if student is in the group or in a project team
-    is_member = db.query(GroupMember).filter(
-        GroupMember.group_id == pa.group_id,
+    is_member = db.query(ProjectTeamMember).filter(
+        ProjectTeamMember.project_team_id == pa.project_team_id,
         GroupMember.user_id == user.id,
         GroupMember.school_id == user.school_id,
         GroupMember.active.is_(True),
@@ -1642,8 +1642,8 @@ def create_or_update_self_assessment(
         )
     
     # Check if student is in the group or in a project team
-    is_member = db.query(GroupMember).filter(
-        GroupMember.group_id == pa.group_id,
+    is_member = db.query(ProjectTeamMember).filter(
+        ProjectTeamMember.project_team_id == pa.project_team_id,
         GroupMember.user_id == user.id,
         GroupMember.school_id == user.school_id,
         GroupMember.active.is_(True),
@@ -1798,7 +1798,7 @@ def get_self_assessment_overview(
     ]
     
     # Get group info
-    group = db.query(Group).filter(Group.id == pa.group_id).first()
+    group = db.query(ProjectTeam).filter(ProjectTeam.id == pa.project_team_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
     
