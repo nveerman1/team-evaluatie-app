@@ -18,8 +18,6 @@ from app.infra.db.models import (
     ClientProjectLink,
     Client,
     Rubric,
-    Group,
-    GroupMember,
     ProjectAssessment,
     ProjectTeam,
     CompetencyWindow,
@@ -362,24 +360,27 @@ def get_running_projects_overview(
                 client_organization = client.organization
                 client_email = client.email
 
-        # Get team/group info from course
+        # Get team info from project teams
         team_number = None
         student_names = []
-        if project.course_id:
-            # Get groups for this course
-            groups = (
-                db.query(Group).filter(Group.course_id == project.course_id).first()
+        if project.id:
+            # Get project teams for this project
+            from app.infra.db.models import ProjectTeamMember
+            
+            project_teams = (
+                db.query(ProjectTeam)
+                .filter(ProjectTeam.project_id == project.id)
+                .all()
             )
-            if groups:
-                team_number = groups.team_number
-                # Get group members
-                from app.infra.db.models import GroupMember
-
+            if project_teams:
+                # Get first team's info (or aggregate if multiple)
+                first_team = project_teams[0]
+                team_number = first_team.team_number
+                
+                # Get team members
                 members = (
-                    db.query(GroupMember)
-                    .filter(
-                        GroupMember.group_id == groups.id, GroupMember.active.is_(True)
-                    )
+                    db.query(ProjectTeamMember)
+                    .filter(ProjectTeamMember.project_team_id == first_team.id)
                     .all()
                 )
                 student_names = [m.user.name for m in members if m.user]
@@ -1344,32 +1345,34 @@ def _enrich_subproject(
             client_name = client.organization
             client_email = client.email
 
-    # Get team info from project's course
+    # Get team info from project teams
     team_name = None
     team_members = []
     if subproject.team_number is not None:
         team_name = f"Team {subproject.team_number}"
-        # Get project to find course_id
+        # Get project to find team members
         project = db.query(Project).filter(Project.id == subproject.project_id).first()
-        if project and project.course_id:
-            # Get students from course with this team_number
-            # Note: team_number is stored on the User model, not on Group
-            # Students are enrolled in course groups, but team assignment is on User
-            students = (
-                db.query(User)
-                .join(GroupMember, GroupMember.user_id == User.id)
-                .join(Group, Group.id == GroupMember.group_id)
+        if project:
+            # Get project team with this team number
+            from app.infra.db.models import ProjectTeamMember
+            
+            project_team = (
+                db.query(ProjectTeam)
                 .filter(
-                    Group.course_id == project.course_id,
-                    User.team_number == subproject.team_number,
-                    User.school_id == user.school_id,
-                    User.role == "student",
-                    User.archived.is_(False),
-                    GroupMember.active.is_(True),
+                    ProjectTeam.project_id == project.id,
+                    ProjectTeam.team_number == subproject.team_number,
+                    ProjectTeam.school_id == user.school_id,
                 )
-                .all()
+                .first()
             )
-            team_members = [s.name for s in students]
+            if project_team:
+                # Get team members
+                members = (
+                    db.query(ProjectTeamMember)
+                    .filter(ProjectTeamMember.project_team_id == project_team.id)
+                    .all()
+                )
+                team_members = [m.user.name for m in members if m.user]
 
     return SubprojectOut(
         id=subproject.id,

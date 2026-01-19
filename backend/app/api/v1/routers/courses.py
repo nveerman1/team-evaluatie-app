@@ -12,8 +12,7 @@ from app.infra.db.models import (
     Course,
     User,
     TeacherCourse,
-    Group,
-    GroupMember,
+    CourseEnrollment,
     AcademicYear,
 )
 from app.api.v1.schemas.courses import (
@@ -88,13 +87,11 @@ def list_courses(
         )
     elif user.role == "student":
         # Only show courses the student is enrolled in
-        from app.infra.db.models import Group, GroupMember
-
-        query = query.join(Group, Group.course_id == Course.id).join(
-            GroupMember,
-            (GroupMember.group_id == Group.id)
-            & (GroupMember.user_id == user.id)
-            & (GroupMember.active.is_(True)),
+        query = query.join(
+            CourseEnrollment,
+            (CourseEnrollment.course_id == Course.id)
+            & (CourseEnrollment.student_id == user.id)
+            & (CourseEnrollment.active.is_(True)),
         )
 
     # Get total count

@@ -58,40 +58,9 @@ def student_overview(
     course_id: Optional[int] = None
     course_name: Optional[str] = None
 
-    try:
-        from app.infra.db.models import Group as Team
-        from app.infra.db.models import GroupMember as TeamMember
-        from app.infra.db.models import Course
-    except Exception:
-        Team = None  # type: ignore
-        TeamMember = None  # type: ignore
-        Course = None  # type: ignore
-
-    if Team is not None and TeamMember is not None:
-        tm = (
-            db.query(TeamMember)
-            .filter(
-                TeamMember.user_id == u.id,
-                TeamMember.school_id == current_user.school_id,
-            )
-            .first()
-        )
-        if tm:
-            t = db.get(Team, getattr(tm, "group_id", None))
-            if t:
-                team_id = getattr(t, "id", None)
-                team_name = getattr(t, "name", None) or (
-                    f"Team {getattr(t, 'id', '')}".strip()
-                )
-                if hasattr(t, "course_id"):
-                    course_id = getattr(t, "course_id")
-                    if Course and course_id is not None:
-                        c = db.get(Course, course_id)
-                        if c:
-                            course_name = (
-                                getattr(c, "name", None)
-                                or f"Course {getattr(c, 'id', '')}".strip()
-                            )
+    # Note: Teams only exist in project context now (using ProjectTeam)
+    # Legacy Group/GroupMember removed as part of migration
+    # If course context is needed, it should be retrieved from evaluation.course_id
 
     g: Optional[Grade] = (
         db.query(Grade)

@@ -13,7 +13,7 @@ from typing import List
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.infra.db.models import User, Course, Evaluation, TeacherCourse
+from app.infra.db.models import User, Course, Evaluation, TeacherCourse, CourseEnrollment
 
 
 class RBACError(HTTPException):
@@ -68,7 +68,7 @@ def can_access_course(db: Session, user: User, course_id: int) -> bool:
     Rules:
     - Admin: can access any course in their school
     - Teacher: can access courses they're assigned to
-    - Student: can access courses they have groups in
+    - Student: can access courses they're enrolled in
 
     Args:
         db: Database session
@@ -108,21 +108,18 @@ def can_access_course(db: Session, user: User, course_id: int) -> bool:
         )
         return teacher_course is not None
 
-    # Student: check if they're in any group for this course
+    # Student: check if they're enrolled in the course
     if user.role == "student":
-        from app.infra.db.models import Group, GroupMember
-
-        member = (
-            db.query(GroupMember)
-            .join(Group, Group.id == GroupMember.group_id)
+        enrollment = (
+            db.query(CourseEnrollment)
             .filter(
-                GroupMember.user_id == user.id,
-                Group.course_id == course_id,
-                GroupMember.active.is_(True),
+                CourseEnrollment.student_id == user.id,
+                CourseEnrollment.course_id == course_id,
+                CourseEnrollment.active.is_(True),
             )
             .first()
         )
-        return member is not None
+        return enrollment is not None
 
     return False
 
@@ -249,18 +246,18 @@ def get_accessible_course_ids(db: Session, user: User) -> List[int]:
         )
         return [tc.course_id for tc in teacher_courses]
 
-    # Student: get courses from their groups
+    # Student: get courses from their enrollments
     if user.role == "student":
-        from app.infra.db.models import Group, GroupMember
-
-        courses = (
-            db.query(Group.course_id)
-            .join(GroupMember, GroupMember.group_id == Group.id)
-            .filter(GroupMember.user_id == user.id, GroupMember.active.is_(True))
+        enrollments = (
+            db.query(CourseEnrollment.course_id)
+            .filter(
+                CourseEnrollment.student_id == user.id,
+                CourseEnrollment.active.is_(True),
+            )
             .distinct()
             .all()
         )
-        return [c.course_id for c in courses]
+        return [e.course_id for e in enrollments]
 
     return []
 
