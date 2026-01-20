@@ -1,7 +1,7 @@
 """Drop legacy groups and group_members tables
 
 Revision ID: 20260119_drop_legacy
-Revises: (previous revision)
+Revises: pa_20260119_01
 Create Date: 2026-01-19
 
 Phase 5: Drop legacy tables after completing migration to CourseEnrollment and ProjectTeam
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '20260119_drop_legacy'
-down_revision = None  # Set this to the latest migration ID
+down_revision = "pa_20260119_01"  # Set this to the latest migration ID
 branch_labels = None
 depends_on = None
 
