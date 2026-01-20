@@ -108,7 +108,7 @@ def dashboard_evaluation(
         # Get all active enrolled students in this course
         course_students = (
             db.query(User.id)
-            .join(CourseEnrollment, CourseEnrollment.user_id == User.id)
+            .join(CourseEnrollment, CourseEnrollment.student_id == User.id)
             .filter(
                 User.school_id == user.school_id,
                 User.role == "student",
@@ -458,7 +458,7 @@ def get_student_progress(
         # Get all active enrolled students in this course
         course_students = (
             db.query(User.id)
-            .join(CourseEnrollment, CourseEnrollment.user_id == User.id)
+            .join(CourseEnrollment, CourseEnrollment.student_id == User.id)
             .filter(
                 User.school_id == user.school_id,
                 User.role == "student",
@@ -734,7 +734,7 @@ def get_dashboard_kpis(
         # Get all active enrolled students in this course
         course_students = (
             db.query(User.id)
-            .join(CourseEnrollment, CourseEnrollment.user_id == User.id)
+            .join(CourseEnrollment, CourseEnrollment.student_id == User.id)
             .filter(
                 User.school_id == user.school_id,
                 User.role == "student",

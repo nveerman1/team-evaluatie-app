@@ -40,15 +40,28 @@ except Exception:
 def resolve_course_id(
     db: Session, evaluation_id: int, explicit_course_id: Optional[int]
 ) -> Optional[int]:
+    """
+    Determine course_id for an evaluation
+    
+    Args:
+        db: Database session
+        evaluation_id: Evaluation ID
+        explicit_course_id: Explicitly provided course_id (takes priority)
+        
+    Returns:
+        course_id if found, None otherwise
+    """
     if explicit_course_id is not None:
         return explicit_course_id
-    if HAS_GROUP_MODELS:
-        try:
-            ev = db.get(Evaluation, evaluation_id)
-            if ev is not None and hasattr(ev, "course_id"):
-                return getattr(ev, "course_id")
-        except Exception:
-            pass
+    
+    # Try to get course_id from evaluation
+    try:
+        ev = db.get(Evaluation, evaluation_id)
+        if ev is not None and hasattr(ev, "course_id"):
+            return getattr(ev, "course_id")
+    except Exception:
+        pass
+    
     return None
 
 
