@@ -12,7 +12,7 @@ from app.infra.db.models import (
     ClientProjectLink,
     Project,
     ProjectAssessment,
-    Group,
+    ProjectTeam,
 )
 
 
@@ -63,9 +63,8 @@ class ReminderService:
             # In reality, a Project can have multiple assessments
             assessment = (
                 db.query(ProjectAssessment)
-                .join(Group)
                 .filter(
-                    Group.course_id == project.course_id,
+                    ProjectAssessment.project_id == project.id,
                     ProjectAssessment.status == "published",
                 )
                 .first()
@@ -75,9 +74,15 @@ class ReminderService:
             if not assessment:
                 continue
 
-            # Get the group/class name
-            group = db.query(Group).filter(Group.id == assessment.group_id).first()
-            class_name = group.name if group else "Unknown"
+            # Get the team name from ProjectTeam
+            project_team = None
+            if assessment.project_team_id:
+                project_team = (
+                    db.query(ProjectTeam)
+                    .filter(ProjectTeam.id == assessment.project_team_id)
+                    .first()
+                )
+            class_name = project_team.display_name_at_time if project_team else "Unknown"
 
             # Generate reminders based on project version/phase
             version = assessment.version or ""
