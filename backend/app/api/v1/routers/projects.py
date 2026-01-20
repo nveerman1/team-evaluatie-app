@@ -1037,22 +1037,21 @@ def wizard_create_project(
                 type="project_assessment",
                 data={
                     "id": assessment.id,
-                        "title": assessment.title,
-                        "project_id": assessment.project_id,
-                        "group_id": assessment.group_id,
-                        "group_name": first_group.name,
-                        "project_team_id": assessment.project_team_id,
-                        "rubric_id": assessment.rubric_id,
-                        "version": assessment.version,
-                        "status": assessment.status,
-                        "deadline": (
-                            pa_config.deadline.isoformat()
-                            if pa_config.deadline
-                            else None
-                        ),
-                    },
-                    )
-                )
+                    "title": assessment.title,
+                    "project_id": assessment.project_id,
+                    "project_team_id": assessment.project_team_id,
+                    "team_name": first_project_team.display_name_at_time,
+                    "rubric_id": assessment.rubric_id,
+                    "version": assessment.version,
+                    "status": assessment.status,
+                    "deadline": (
+                        pa_config.deadline.isoformat()
+                        if pa_config.deadline
+                        else None
+                    ),
+                },
+            )
+        )
 
     # Process project_assessment_tussen
     if (
