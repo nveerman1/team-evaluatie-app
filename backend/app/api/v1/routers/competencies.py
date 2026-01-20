@@ -1000,7 +1000,7 @@ def list_windows(
         student_course_ids = (
             db.query(CourseEnrollment.course_id)
             .filter(
-                CourseEnrollment.user_id == current_user.id,
+                CourseEnrollment.student_id == current_user.id,
                 CourseEnrollment.active.is_(True),
                 CourseEnrollment.school_id == current_user.school_id,
             )
@@ -1488,7 +1488,7 @@ def get_my_window_overview(
         is_enrolled = (
             db.query(CourseEnrollment.id)
             .filter(
-                CourseEnrollment.user_id == current_user.id,
+                CourseEnrollment.student_id == current_user.id,
                 CourseEnrollment.active.is_(True),
                 CourseEnrollment.course_id == window.course_id,
                 CourseEnrollment.school_id == current_user.school_id,
@@ -1838,7 +1838,7 @@ def get_class_heatmap(
         # Get students who are in groups for this course
         students_query = (
             select(User)
-            .join(CourseEnrollment, CourseEnrollment.user_id == User.id)
+            .join(CourseEnrollment, CourseEnrollment.student_id == User.id)
             .where(
                 User.school_id == current_user.school_id,
                 User.role == "student",

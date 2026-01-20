@@ -690,7 +690,7 @@ def get_overview_matrix(
     allowed_student_ids = None
     if course_id:
         student_ids_query = db.query(User.id).join(
-            CourseEnrollment, CourseEnrollment.user_id == User.id
+            CourseEnrollment, CourseEnrollment.student_id == User.id
         ).filter(
             CourseEnrollment.course_id == course_id,
             CourseEnrollment.active.is_(True),

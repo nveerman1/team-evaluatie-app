@@ -123,7 +123,7 @@ def create_evaluation(
 
     has_active_member = (
         db.query(User.id)
-        .join(CourseEnrollment, CourseEnrollment.user_id == User.id)
+        .join(CourseEnrollment, CourseEnrollment.student_id == User.id)
         .filter(
             CourseEnrollment.course_id == course.id,
             CourseEnrollment.active.is_(True),
@@ -265,7 +265,7 @@ def list_evaluations(
         student_course_ids = (
             db.query(CourseEnrollment.course_id)
             .filter(
-                CourseEnrollment.user_id == user.id,
+                CourseEnrollment.student_id == user.id,
                 CourseEnrollment.active.is_(True),
                 CourseEnrollment.school_id == user.school_id,
             )

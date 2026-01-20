@@ -350,7 +350,7 @@ async def get_context(
         # Get all students enrolled in this course
         all_students = (
             db.query(User)
-            .join(CourseEnrollment, CourseEnrollment.user_id == User.id)
+            .join(CourseEnrollment, CourseEnrollment.student_id == User.id)
             .filter(
                 CourseEnrollment.course_id == context.course_id,
                 CourseEnrollment.school_id == current_user.school_id,

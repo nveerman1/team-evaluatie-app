@@ -59,7 +59,7 @@ def _has_access_to_evaluation(db: Session, evaluation_id: int, user_id: int) -> 
         db.query(CourseEnrollment.id)
         .filter(
             CourseEnrollment.course_id == ev.course_id,
-            CourseEnrollment.user_id == user_id,
+            CourseEnrollment.student_id == user_id,
             CourseEnrollment.active.is_(True),
         )
         .limit(1)

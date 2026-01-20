@@ -506,7 +506,7 @@ def get_learning_objectives_overview(
     if course_id:
         # Filter students to only those enrolled in this course
         students_query = students_query.join(
-            CourseEnrollment, CourseEnrollment.user_id == User.id
+            CourseEnrollment, CourseEnrollment.student_id == User.id
         ).where(
             CourseEnrollment.course_id == course_id,
             CourseEnrollment.active.is_(True),
