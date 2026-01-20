@@ -353,8 +353,8 @@ async def get_context(
             .join(CourseEnrollment, CourseEnrollment.student_id == User.id)
             .filter(
                 CourseEnrollment.course_id == context.course_id,
-                CourseEnrollment.school_id == current_user.school_id,
                 CourseEnrollment.active.is_(True),
+                User.school_id == current_user.school_id,
                 User.role == "student",
             )
             .distinct()
