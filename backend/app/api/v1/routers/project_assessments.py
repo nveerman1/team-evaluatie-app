@@ -804,8 +804,8 @@ def get_assessment_teams_overview(
             team_status = "completed"
         
         team = TeamAssessmentStatus(
-            group_id=group.id,
-            group_name=f"Team {team_num}",
+            group_id=project_team.id,
+            group_name=project_team.display_name_at_time or f"Team {team_num}",
             team_number=team_num,
             members=members,
             scores_count=scores_count,
