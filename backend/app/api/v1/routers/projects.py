@@ -982,7 +982,6 @@ def wizard_create_project(
             return
 
         # Check if there are any project teams for this project
-        # Project teams should be created separately before creating assessments
         project_teams = (
             db.query(ProjectTeam)
             .filter(
@@ -992,14 +991,19 @@ def wizard_create_project(
             .all()
         )
 
+        # If no project teams exist, create a default one for the assessment
         if not project_teams:
-            # No project teams yet - skip creating assessment in wizard
-            warnings.append(
-                f"Project assessment ({version_suffix}) requires project teams. "
-                "Please create project teams for this project before creating assessments, "
-                "or create assessments manually after wizard completion."
+            default_team = ProjectTeam(
+                school_id=user.school_id,
+                project_id=project.id,
+                team_id=None,  # No link to legacy groups
+                display_name_at_time=f"Project {project.title}",
+                team_number=1,
+                version=1,
             )
-            return
+            db.add(default_team)
+            db.flush()
+            project_teams = [default_team]
 
         # Create ONE ProjectAssessment for the entire project
         # Link to the first project team
