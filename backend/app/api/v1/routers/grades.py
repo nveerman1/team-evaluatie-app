@@ -95,7 +95,7 @@ def preview_grades(
         try:
             # Get all enrollments for this course
             enrollment_rows = (
-                db.query(CourseEnrollment.user_id, CourseEnrollment.active)
+                db.query(CourseEnrollment.student_id, CourseEnrollment.active)
                 .filter(CourseEnrollment.course_id == course)
                 .all()
             )
