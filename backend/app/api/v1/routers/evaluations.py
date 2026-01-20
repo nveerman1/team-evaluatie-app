@@ -267,7 +267,6 @@ def list_evaluations(
             .filter(
                 CourseEnrollment.student_id == user.id,
                 CourseEnrollment.active.is_(True),
-                CourseEnrollment.school_id == user.school_id,
             )
             .distinct()
             .all()
