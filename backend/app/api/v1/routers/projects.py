@@ -981,93 +981,58 @@ def wizard_create_project(
             )
             return
 
-        # Get all groups for this course
-        groups = (
-            db.query(Group)
+        # Check if there are any project teams for this project
+        # Project teams should be created separately before creating assessments
+        project_teams = (
+            db.query(ProjectTeam)
             .filter(
-                Group.school_id == user.school_id, Group.course_id == project.course_id
+                ProjectTeam.project_id == project.id,
+                ProjectTeam.school_id == user.school_id,
             )
             .all()
         )
 
-        if not groups:
-            # Edge case: course has no groups
+        if not project_teams:
+            # No project teams yet - skip creating assessment in wizard
             warnings.append(
-                f"Course {project.course_id} has no groups. "
-                "Please create groups before creating project assessments, "
-                "or create them manually after wizard completion."
+                f"Project assessment ({version_suffix}) requires project teams. "
+                "Please create project teams for this project before creating assessments, "
+                "or create assessments manually after wizard completion."
             )
-        else:
-            # Create ProjectTeams for ALL groups to freeze team rosters
-            # This preserves the team composition at the time of project creation
-            for group in groups:
-                # Check if project team already exists for this group
-                existing_project_team = (
-                    db.query(ProjectTeam)
-                    .filter(
-                        ProjectTeam.project_id == project.id,
-                        ProjectTeam.team_id == group.id,
-                    )
-                    .first()
-                )
+            return
 
-                if not existing_project_team:
-                    # Create ProjectTeam for this group to preserve team roster
-                    project_team = ProjectTeamService.create_project_team(
-                        db=db,
-                        project_id=project.id,
-                        school_id=user.school_id,
-                        team_id=group.id,
-                        team_name=group.name,
-                    )
+        # Create ONE ProjectAssessment for the entire project
+        # Link to the first project team
+        first_project_team = project_teams[0]
+        title_with_version = project.title
+        if version_suffix:
+            title_with_version += f" ({version_suffix})"
 
-                    # Copy group.team_number to project_team.team_number
-                    if group.team_number is not None:
-                        project_team.team_number = group.team_number
+        assessment = ProjectAssessment(
+            school_id=user.school_id,
+            project_id=project.id,
+            project_team_id=first_project_team.id,  # Link to first team (can assess all teams)
+            teacher_id=user.id,
+            rubric_id=pa_config.rubric_id,
+            title=title_with_version,
+            version=pa_config.version or version_suffix,
+            status="draft",
+            metadata_json={
+                "deadline": (
+                    pa_config.deadline.isoformat()
+                    if pa_config.deadline
+                    else None
+                ),
+            },
+        )
+        db.add(assessment)
+        db.flush()
 
-                    # Copy members from group to project team
-                    ProjectTeamService.copy_members_from_group(
-                        db=db,
-                        project_team_id=project_team.id,
-                        group_id=group.id,
-                        school_id=user.school_id,
-                    )
-                    db.flush()  # Flush to get project_team.id
-
-            # Create ONE ProjectAssessment for the entire project/course
-            # Link to the first group (required by schema), but it can score all teams
-            # NOTE: groups[0] is safe here because we're in the else block of "if not groups"
-            first_group = groups[0]
-            title_with_version = project.title
-            if version_suffix:
-                title_with_version += f" ({version_suffix})"
-
-            assessment = ProjectAssessment(
-                school_id=user.school_id,
-                project_id=project.id,  # Key: project_id enables scoring all teams
-                group_id=first_group.id,  # Required by schema, links to first group
-                project_team_id=None,  # None = assessment scores all teams in project
-                teacher_id=user.id,
-                rubric_id=pa_config.rubric_id,
-                title=title_with_version,
-                version=pa_config.version or version_suffix,
-                status="draft",
-                metadata_json={
-                    "deadline": (
-                        pa_config.deadline.isoformat()
-                        if pa_config.deadline
-                        else None
-                    ),
-                },
-            )
-            db.add(assessment)
-            db.flush()
-
-            created_entities.append(
-                WizardEntityOut(
-                    type="project_assessment",
-                    data={
-                        "id": assessment.id,
+        created_entities.append(
+            WizardEntityOut(
+                type="project_assessment",
+                data={
+                    "id": assessment.id,
                         "title": assessment.title,
                         "project_id": assessment.project_id,
                         "group_id": assessment.group_id,
