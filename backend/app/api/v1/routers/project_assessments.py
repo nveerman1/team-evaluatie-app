@@ -709,7 +709,6 @@ def get_assessment_teams_overview(
         .filter(
             ProjectTeamMember.project_team_id == project_team.id,
             ProjectTeamMember.school_id == user.school_id,
-            ProjectTeamMember.active.is_(True),
         )
         .all()
     )
