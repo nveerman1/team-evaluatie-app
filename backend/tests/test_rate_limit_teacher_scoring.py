@@ -263,45 +263,45 @@ def test_scoring_endpoint_pattern_matching():
     # Should match - valid scoring endpoints
     assert middleware._is_authenticated_teacher_scoring(
         mock_request("/api/v1/project-assessments/123/scores/batch")
-    ) == True
+    )
     
     assert middleware._is_authenticated_teacher_scoring(
         mock_request("/api/v1/project-assessments/456/scores")
-    ) == True
+    )
     
     assert middleware._is_authenticated_teacher_scoring(
         mock_request("/api/v1/evaluations/789/grades")
-    ) == True
+    )
     
     assert middleware._is_authenticated_teacher_scoring(
         mock_request("/api/v1/evaluations/101/grades/summary")
-    ) == True
+    )
     
     # Should NOT match - not scoring endpoints
-    assert middleware._is_authenticated_teacher_scoring(
+    assert not middleware._is_authenticated_teacher_scoring(
         mock_request("/api/v1/project-assessments/123")
-    ) == False
+    )
     
-    assert middleware._is_authenticated_teacher_scoring(
+    assert not middleware._is_authenticated_teacher_scoring(
         mock_request("/api/v1/evaluations/456")
-    ) == False
+    )
     
-    assert middleware._is_authenticated_teacher_scoring(
+    assert not middleware._is_authenticated_teacher_scoring(
         mock_request("/api/v1/users")
-    ) == False
+    )
     
     # Should NOT match - malformed paths
-    assert middleware._is_authenticated_teacher_scoring(
+    assert not middleware._is_authenticated_teacher_scoring(
         mock_request("/api/v1/project-assessments/abc/scores")  # non-numeric ID
-    ) == False
+    )
     
-    assert middleware._is_authenticated_teacher_scoring(
+    assert not middleware._is_authenticated_teacher_scoring(
         mock_request("/api/v1/project-assessments//scores")  # missing ID
-    ) == False
+    )
     
-    assert middleware._is_authenticated_teacher_scoring(
+    assert not middleware._is_authenticated_teacher_scoring(
         mock_request("/project-assessments/123/scores")  # missing /api/v1
-    ) == False
+    )
 
 
 def test_no_user_in_request_state():

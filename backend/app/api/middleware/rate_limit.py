@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Callable
 from fastapi import Request, Response, HTTPException, status
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -124,8 +125,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         Returns:
             True if authenticated teacher/admin accessing scoring endpoints
         """
-        import re
-        
         path = request.url.path
         
         # Check if it's a scoring endpoint that teachers use interactively
