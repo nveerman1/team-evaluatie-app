@@ -724,7 +724,6 @@ def close_project_assessment(
     return ProjectAssessmentOut(
         id=assessment.id,
         school_id=assessment.school_id,
-        group_id=assessment.group_id,
         project_id=assessment.project_id,
         rubric_id=assessment.rubric_id,
         teacher_id=assessment.teacher_id,
