@@ -1,13 +1,17 @@
 export type ProjectAssessmentOut = {
   id: number;
-  project_id?: number | null;
-  group_id: number;
+  school_id: number;
+  project_id: number;  // Required after refactor
   rubric_id: number;
   teacher_id?: number | null;
+  external_evaluator_id?: number | null;
   title: string;
   version?: string | null;
-  status: string; // "draft" | "published"
+  status: string; // "draft" | "open" | "closed" | "published"
+  closed_at?: string | null;
   published_at?: string | null;
+  role: string;
+  is_advisory: boolean;
   metadata_json: Record<string, any>;
 };
 
@@ -19,6 +23,9 @@ export type ProjectAssessmentListItem = ProjectAssessmentOut & {
   scores_count: number;
   total_criteria: number;
   updated_at?: string | null;
+  team_number?: number | null;
+  project_end_date?: string | null;
+  client_name?: string | null;
 };
 
 export type ProjectAssessmentListResponse = {
@@ -29,11 +36,10 @@ export type ProjectAssessmentListResponse = {
 };
 
 export type ProjectAssessmentCreate = {
-  group_id: number;
+  project_id: number;  // Required - primary FK to project
   rubric_id: number;
   title: string;
   version?: string | null;
-  project_id?: number | null;
   metadata_json?: Record<string, any>;
 };
 
