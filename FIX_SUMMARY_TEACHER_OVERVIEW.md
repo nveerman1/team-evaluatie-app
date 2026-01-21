@@ -20,11 +20,10 @@ query = db.query(ProjectAssessment, ProjectTeam, Course, Project, Client)
     .join(ProjectAssessmentTeam, ...)
     .join(ProjectTeam, ...)
 
-# AFTER: Direct joins with distinct()
+# AFTER: Direct joins (no distinct needed)
 query = db.query(ProjectAssessment, Course, Project, Client)
     .outerjoin(Project, ...)
     .outerjoin(Course, ...)
-    .distinct()
 ```
 
 **Impact**: Each project now appears exactly once in the overview.
@@ -75,7 +74,32 @@ display_name_at_time="Team 1"
 
 ---
 
-### 4. Duplicate Detection Guard (Prevention)
+### 4. PostgreSQL JSON Equality Error (POST-FIX)
+**Symptom**: 500 Internal Server Error with message "could not identify an equality operator for type json"
+
+**Root Cause**:
+- Initial fix added `.distinct()` to the query to ensure uniqueness
+- PostgreSQL cannot apply `DISTINCT` to queries with JSON columns (`metadata_json`)
+- JSON types don't have an equality operator for DISTINCT operations
+
+**Fix** (`backend/app/api/v1/routers/overview.py`):
+```python
+# BEFORE: Added distinct() but it caused error with JSON columns
+query = db.query(ProjectAssessment, Course, Project, Client)
+    .outerjoin(...)
+    .distinct()  # ❌ Fails with JSON columns
+
+# AFTER: Removed distinct() - not needed with direct joins
+query = db.query(ProjectAssessment, Course, Project, Client)
+    .outerjoin(...)
+    # No distinct() needed - each assessment appears once naturally
+```
+
+**Impact**: Query executes successfully. Direct outer joins naturally return one row per ProjectAssessment without needing DISTINCT.
+
+---
+
+### 5. Duplicate Detection Guard (Prevention)
 **Addition**: Added validation to detect if duplicates ever occur again
 
 **Implementation** (`backend/app/api/v1/routers/overview.py`):
@@ -104,6 +128,7 @@ This warning originates from Next.js/Turbopack's file watching system during dev
 
 1. `backend/app/api/v1/routers/overview.py`
    - Fixed query to eliminate duplicate projects
+   - Removed `.distinct()` to avoid JSON equality error
    - Added validation guard with logging
    
 2. `backend/app/api/v1/routers/projects.py`
@@ -121,6 +146,7 @@ This warning originates from Next.js/Turbopack's file watching system during dev
 3. **Expand a project**: Check team names are correct (not showing project name)
 4. **Console**: No "duplicate key" warnings
 5. **Create new project**: Verify Team 1 gets proper team name
+6. **No errors**: Page loads without 500 errors
 
 ---
 
@@ -130,3 +156,4 @@ This warning originates from Next.js/Turbopack's file watching system during dev
 - Validation guard logs warnings if duplicates detected
 - React key pattern ensures uniqueness across projects
 - Future team creation follows established "Team N" naming pattern
+- Direct outer joins eliminate need for DISTINCT (avoiding JSON column issues)
