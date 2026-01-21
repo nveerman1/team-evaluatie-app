@@ -47,7 +47,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             HTTP response
         """
         # Skip rate limiting for certain paths
-        if self._should_skip_rate_limit(request.url.path):
+        if self._should_skip_rate_limit(request):
             return await call_next(request)
 
         # Get user identifier (use IP if no user)
@@ -85,15 +85,66 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         return response
 
-    def _should_skip_rate_limit(self, path: str) -> bool:
-        """Check if path should skip rate limiting."""
+    def _should_skip_rate_limit(self, request: Request) -> bool:
+        """
+        Check if request should skip rate limiting.
+        
+        Args:
+            request: HTTP request
+            
+        Returns:
+            True if rate limiting should be skipped
+        """
+        path = request.url.path
+        
+        # Always skip docs and health endpoints
         skip_paths = [
             "/docs",
             "/redoc",
             "/openapi.json",
             "/health",
         ]
-        return any(path.startswith(skip_path) for skip_path in skip_paths)
+        if any(path.startswith(skip_path) for skip_path in skip_paths):
+            return True
+        
+        # Exempt authenticated teacher scoring endpoints from rate limiting
+        # Teachers need to make many rapid updates when filling in scores
+        if self._is_authenticated_teacher_scoring(request):
+            return True
+        
+        return False
+    
+    def _is_authenticated_teacher_scoring(self, request: Request) -> bool:
+        """
+        Check if request is from authenticated teacher accessing scoring endpoints.
+        
+        Args:
+            request: HTTP request
+            
+        Returns:
+            True if authenticated teacher/admin accessing scoring endpoints
+        """
+        path = request.url.path
+        
+        # Check if it's a scoring endpoint that teachers use interactively
+        # These endpoints need exemption to support rapid autosave/updates
+        is_scoring_endpoint = (
+            "/project-assessments/" in path and "/scores" in path
+        ) or (
+            "/evaluations/" in path and "/grades" in path
+        )
+        
+        if not is_scoring_endpoint:
+            return False
+        
+        # Check if user is authenticated as teacher or admin
+        if hasattr(request.state, "user") and request.state.user:
+            user = request.state.user
+            role = getattr(user, "role", None)
+            if role in ("teacher", "admin"):
+                return True
+        
+        return False
 
     def _get_user_identifier(self, request: Request) -> str:
         """Get user identifier for rate limiting."""
