@@ -1517,10 +1517,19 @@ def get_project_teams(
         
         # FIX (2026-01): Clean up display_name_at_time if it was incorrectly set to project name
         # Legacy data may have "Project {name}" instead of proper team names
+        # This cleanup can be removed once all legacy data has been migrated
         team_display_name = pt.display_name_at_time
-        if team_display_name and team_display_name.startswith("Project ") and pt.team_number:
-            # If it looks like a project name, use the proper team name instead
-            team_display_name = f"Team {pt.team_number}"
+        if team_display_name and pt.team_number:
+            # Only fix if it starts with "Project " and the team_number is 1
+            # (the bug only affected default team creation which uses team_number=1)
+            # This avoids incorrectly changing legitimate custom names like "Project Phoenix"
+            if team_display_name.startswith("Project ") and pt.team_number == 1:
+                # Log for monitoring - helps track when this cleanup can be removed
+                logging.info(
+                    f"Cleaning up legacy team name: '{team_display_name}' -> 'Team {pt.team_number}' "
+                    f"(project_team_id={pt.id}, project_id={pt.project_id})"
+                )
+                team_display_name = f"Team {pt.team_number}"
         
         team_info_map[pt.team_number] = {
             "name": team_display_name,
