@@ -38,6 +38,12 @@ class TestOverviewMatrix:
         with pytest.raises(HTTPException) as exc_info:
             get_overview_matrix(
                 course_id=999,
+                class_name=None,
+                student_name=None,
+                date_from=None,
+                date_to=None,
+                sort_by=None,
+                sort_order="asc",
                 db=db,
                 current_user=current_user
             )
@@ -63,6 +69,12 @@ class TestOverviewMatrix:
         
         result = get_overview_matrix(
             course_id=None,
+            class_name=None,
+            student_name=None,
+            date_from=None,
+            date_to=None,
+            sort_by=None,
+            sort_order="asc",
             db=db,
             current_user=current_user
         )
@@ -116,7 +128,7 @@ class TestOverviewMatrix:
         # Setup complex query chain
         query_counter = {"count": 0}
         
-        def query_side_effect(model_or_column):
+        def query_side_effect(*args, **kwargs):
             mock_query = Mock()
             mock_query.filter.return_value = mock_query
             mock_query.join.return_value = mock_query
@@ -153,6 +165,12 @@ class TestOverviewMatrix:
         try:
             result = get_overview_matrix(
                 course_id=1,
+                class_name=None,
+                student_name=None,
+                date_from=None,
+                date_to=None,
+                sort_by=None,
+                sort_order="asc",
                 db=db,
                 current_user=current_user
             )
@@ -176,7 +194,7 @@ class TestOverviewMatrix:
         # Setup query chain to return valid data structure
         query_counter = {"count": 0}
         
-        def query_side_effect(model_or_column):
+        def query_side_effect(*args, **kwargs):
             mock_query = Mock()
             mock_query.filter.return_value = mock_query
             mock_query.join.return_value = mock_query
@@ -199,6 +217,12 @@ class TestOverviewMatrix:
         
         result = get_overview_matrix(
             course_id=1,
+            class_name=None,
+            student_name=None,
+            date_from=None,
+            date_to=None,
+            sort_by=None,
+            sort_order="asc",
             db=db,
             current_user=current_user
         )
