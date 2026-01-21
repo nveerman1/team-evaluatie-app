@@ -417,15 +417,15 @@ def update_project_student_teams(
                 
                 if assessments:
                     # Get existing links for this team (to avoid duplicates)
-                    existing_links = set(
+                    existing_links_query = (
                         db.query(ProjectAssessmentTeam.project_assessment_id)
                         .filter(
                             ProjectAssessmentTeam.project_team_id == project_team.id,
                             ProjectAssessmentTeam.school_id == user.school_id,
                         )
-                        .scalars()
                         .all()
                     )
+                    existing_links = set(row[0] for row in existing_links_query)
                     
                     # Create missing links
                     new_links = []
