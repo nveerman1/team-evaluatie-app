@@ -17,6 +17,7 @@ from app.infra.db.models import (
     Course,
     ProjectAssessment,
     ProjectAssessmentScore,
+    ProjectAssessmentTeam,
     Evaluation,
     CompetencyWindow,
     CompetencySelfScore,
@@ -348,13 +349,16 @@ def get_overview_all_items(
     # ==================== PROJECT ASSESSMENTS ====================
     if not type_filter or type_filter == "project":
         # Query project assessments with student data via project teams
+        # Join through ProjectAssessmentTeam junction table to match new data model
         project_query = db.query(
             ProjectAssessment,
             User,
             Course,
             ProjectTeam,
         ).join(
-            ProjectTeam, ProjectAssessment.project_team_id == ProjectTeam.id
+            ProjectAssessmentTeam, ProjectAssessmentTeam.project_assessment_id == ProjectAssessment.id
+        ).join(
+            ProjectTeam, ProjectTeam.id == ProjectAssessmentTeam.project_team_id
         ).join(
             User, User.id == ProjectAssessment.teacher_id  # Teacher as creator
         ).join(
@@ -706,12 +710,15 @@ def get_overview_matrix(
     student_data = {}
     
     # ==================== COLLECT PROJECT ASSESSMENTS ====================
+    # Join through ProjectAssessmentTeam junction table to match new data model
     project_query = db.query(
         ProjectAssessment,
         Course,
         ProjectTeam,
     ).join(
-        ProjectTeam, ProjectAssessment.project_team_id == ProjectTeam.id
+        ProjectAssessmentTeam, ProjectAssessmentTeam.project_assessment_id == ProjectAssessment.id
+    ).join(
+        ProjectTeam, ProjectTeam.id == ProjectAssessmentTeam.project_team_id
     ).join(
         Project, ProjectTeam.project_id == Project.id
     ).outerjoin(
@@ -1090,6 +1097,7 @@ def get_project_overview(
     school_id = current_user.school_id
     
     # Query project assessments with optional project and client info
+    # Join through ProjectAssessmentTeam junction table to match new data model
     query = db.query(
         ProjectAssessment,
         ProjectTeam,
@@ -1097,7 +1105,9 @@ def get_project_overview(
         Project,
         Client,
     ).join(
-        ProjectTeam, ProjectAssessment.project_team_id == ProjectTeam.id
+        ProjectAssessmentTeam, ProjectAssessmentTeam.project_assessment_id == ProjectAssessment.id
+    ).join(
+        ProjectTeam, ProjectTeam.id == ProjectAssessmentTeam.project_team_id
     ).join(
         Project, ProjectTeam.project_id == Project.id
     ).outerjoin(
@@ -1309,11 +1319,14 @@ def get_project_trends(
     school_id = current_user.school_id
     
     # Query project assessments with scores
+    # Join through ProjectAssessmentTeam junction table to match new data model
     query = db.query(
         ProjectAssessment,
         ProjectTeam,
     ).join(
-        ProjectTeam, ProjectAssessment.project_team_id == ProjectTeam.id
+        ProjectAssessmentTeam, ProjectAssessmentTeam.project_assessment_id == ProjectAssessment.id
+    ).join(
+        ProjectTeam, ProjectTeam.id == ProjectAssessmentTeam.project_team_id
     ).join(
         Project, ProjectTeam.project_id == Project.id
     ).filter(

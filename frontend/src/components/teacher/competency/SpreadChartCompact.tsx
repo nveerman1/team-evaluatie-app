@@ -17,7 +17,8 @@ export function SpreadChartCompact({
   height = 180,
 }: SpreadChartCompactProps) {
   const chartData = useMemo(() => {
-    if (scans.length === 0) return null;
+    // Return null if no scans or only a single scan (causes division by zero)
+    if (scans.length < 2) return null;
 
     const padding = { top: 20, right: 20, bottom: 30, left: 40 };
     const chartWidth = width - padding.left - padding.right;
@@ -46,10 +47,12 @@ export function SpreadChartCompact({
     };
   }, [scans, width, height]);
 
-  if (!chartData || scans.length === 0) {
+  if (!chartData || scans.length < 2) {
     return (
       <div className="flex items-center justify-center h-full text-sm text-slate-400">
-        Geen data beschikbaar
+        {scans.length === 1 
+          ? "Minimaal 2 scans vereist voor vergelijking" 
+          : "Geen data beschikbaar"}
       </div>
     );
   }
@@ -121,6 +124,8 @@ export function SpreadChartCompact({
         />
         {scans.map((scan, i) => {
           const x = xScale(i);
+          // Safety check: skip rendering if x is not finite
+          if (!Number.isFinite(x)) return null;
           return (
             <g key={scan.scanId}>
               <line
@@ -147,6 +152,9 @@ export function SpreadChartCompact({
         {mode === "spread" && scans.map((scan, i) => {
           const x = xScale(i);
           const xLeft = x - bandWidth / 2;
+          
+          // Safety check: skip rendering if x is not finite
+          if (!Number.isFinite(x)) return null;
           
           // P10-P90 band (lighter)
           const yP90 = yScale(scan.p90);
