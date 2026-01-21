@@ -4,6 +4,79 @@ This directory contains utility and seeding scripts for the Team Evaluatie App b
 
 ## Seeding Scripts
 
+### seed.py ⭐ **RECOMMENDED**
+
+**Purpose:** Comprehensive database seeding script with two modes: base (minimal) and demo (full dataset).
+
+**What it creates:**
+
+**Base Mode (minimal, idempotent):**
+- 1 school: "Demo School"
+- 1 subject: "Onderzoek & Ontwerpen (O&O)"
+- 1 academic year: Current year (e.g., 2025-2026)
+- 6 competency categories: Samenwerken, Plannen, Creatief Denken, Technisch Werken, Communiceren, Reflecteren
+- 1 admin user: `admin@school.nl` / `demo123`
+- 1 teacher user: `docent@school.nl` / `demo123`
+
+**Demo Mode (comprehensive dataset):**
+- Everything from base mode (if --reset is used)
+- 2 classes: G2a, G2b
+- 24 students: 12 per class with realistic Dutch names
+- 1 course: O&O with teacher assignment
+- 6 teams (Groups): 4 students each
+- 3 projects: Various statuses (concept, active, completed)
+- ProjectTeams: Frozen team rosters for projects
+- 2 rubrics: 1 peer evaluation + 1 project assessment with criteria
+- 1-2 peer evaluations: With allocations, scores, and reflections
+- 1-2 project assessments: With team scores and reflections
+- 2 competency windows: Self-scores, goals, and teacher observations
+- 5-10 learning objectives: Template objectives for O&O
+- 2-3 clients: With contact logs and project links
+- RFID cards: For 8 students with 5-10 attendance events each
+
+**Usage:**
+
+```bash
+# Base mode - minimal idempotent seed (safe to run multiple times)
+python -m backend.scripts.seed --mode base
+
+# Demo mode - comprehensive dataset
+python -m backend.scripts.seed --mode demo
+
+# Demo mode with database reset (WARNING: deletes all data)
+python -m backend.scripts.seed --mode demo --reset
+
+# Demo mode with custom random seed for different data
+python -m backend.scripts.seed --mode demo --seed 1234
+```
+
+**Options:**
+- `--mode {base|demo}` (required): Seeding mode
+- `--reset`: Reset database before seeding (demo mode only, truncates all tables)
+- `--seed NUMBER`: Random seed for deterministic data generation (default: 42)
+
+**Features:**
+- ✅ Uses seed_utils for realistic, deterministic data
+- ✅ Respects foreign key constraints
+- ✅ Base mode is idempotent (safe to run multiple times)
+- ✅ Timestamps spread over last 8 weeks
+- ✅ Realistic Dutch names and scenarios
+- ✅ Edge cases included (draft/published states, missing optional fields)
+- ✅ Progress indicators and error handling with rollback
+- ✅ No hardcoded primary keys
+
+**Prerequisites:**
+1. Database connection configured
+2. Database migrations applied: `alembic upgrade head`
+3. Python dependencies installed
+
+**Login credentials (after seeding):**
+- Admin: `admin@school.nl` / `demo123`
+- Teacher: `docent@school.nl` / `demo123`
+- Students: `<name>@school.nl` / `demo123` (auto-generated)
+
+---
+
 ### seed_peer_evaluations.py
 
 **Purpose:** Seeds peer evaluations with scores, feedback, and reflections for specified students.
