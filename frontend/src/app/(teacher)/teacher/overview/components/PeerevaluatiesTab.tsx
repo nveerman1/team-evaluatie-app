@@ -34,6 +34,7 @@ import { projectService } from "@/services/project.service";
 import { PeerfeedbackTable } from "@/components/teacher/PeerfeedbackTable";
 import OverviewFilters, { OverviewFilterValues } from "./OverviewFilters";
 import EmptyState from "./EmptyState";
+import { formatSigned1dp } from "@/lib/format";
 
 // Register Chart.js components
 ChartJS.register(
@@ -531,9 +532,7 @@ function DashboardTab({ filters }: { filters: PeerOverviewFilters }) {
                                 ? "text-amber-600"
                                 : "text-slate-600"
                             }`}>
-                              {student.self_vs_peer_diff !== undefined
-                                ? ((student.self_vs_peer_diff || 0) > 0 ? "+" : "") + student.self_vs_peer_diff.toFixed(1)
-                                : "–"}
+                              {formatSigned1dp(student.self_vs_peer_diff)}
                             </span>
                           </td>
                         </tr>

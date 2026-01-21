@@ -49,7 +49,7 @@ export type StudentHeatmapRow = {
   scores: {
     [key: string]: OmzaCategoryScore;
   };
-  self_vs_peer_diff?: number;
+  self_vs_peer_diff?: number | null;  // Can be null when incomplete data
   teacher_comment?: string;  // General teacher feedback
   evaluations?: PeerEvaluationDetail[];  // List of individual evaluations for row expansion
 };
