@@ -51,7 +51,7 @@ query = db.query(ProjectAssessment, Course, Project, Client)
 
 ---
 
-### 3. Team 1 Shows Project Name
+### 3. Team 1 Shows Project Name (New Teams)
 **Symptom**: In "Teamscores" table, Team 1 displayed as "Project MMR" instead of "Team 1"
 
 **Root Cause**:
@@ -70,7 +70,28 @@ display_name_at_time=f"Project {project.title}"
 display_name_at_time="Team 1"
 ```
 
-**Impact**: Team 1 now correctly shows "Team 1" or its custom name, never the project name.
+**Impact**: New teams now correctly get "Team 1" as their name, never the project name.
+
+---
+
+### 3b. Team 1 Shows Project Name (Legacy Data)
+**Symptom**: Existing teams in database still showed "Project MMR" even after fix for new teams
+
+**Root Cause**:
+- The fix for new teams only prevented future bad data
+- Existing teams in the database still had "Project {name}" as their `display_name_at_time`
+- The query was correctly reading from the database, but the stored data was wrong
+
+**Fix** (`backend/app/api/v1/routers/overview.py` in `get_project_teams`):
+```python
+# Added cleanup logic when retrieving team info
+team_display_name = pt.display_name_at_time
+if team_display_name and team_display_name.startswith("Project ") and pt.team_number:
+    # If it looks like a project name, use the proper team name instead
+    team_display_name = f"Team {pt.team_number}"
+```
+
+**Impact**: Legacy team data is now cleaned up dynamically when displayed. Teams that have "Project " in their display name are automatically shown as "Team {number}" instead.
 
 ---
 
@@ -132,6 +153,7 @@ This warning originates from Next.js/Turbopack's file watching system during dev
    - Fixed query to eliminate duplicate projects
    - Removed `.distinct()` to avoid JSON equality error
    - Added validation guard with logging
+   - Added cleanup logic for legacy team names (detect and fix "Project " prefix)
    
 2. `backend/app/api/v1/routers/projects.py`
    - Fixed default team name from project title to "Team 1"
@@ -147,6 +169,7 @@ This warning originates from Next.js/Turbopack's file watching system during dev
 2. **Verify**: Each project appears exactly once
 3. **Expand a project**: Check team names are correct (not showing project name)
 4. **Console**: No "duplicate key" warnings
+5. **Legacy data**: Teams with old "Project " names should now show as "Team {number}"
 5. **Create new project**: Verify Team 1 gets proper team name
 6. **No errors**: Page loads without 500 errors
 
