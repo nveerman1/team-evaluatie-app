@@ -250,6 +250,7 @@ def list_project_assessments(
         # Students see all assessments for teams they are part of
         student_teams = db.query(ProjectTeamMember.project_team_id).filter(
             ProjectTeamMember.user_id == user.id,
+            ProjectTeamMember.school_id == user.school_id,
         ).all()
         team_ids = [t[0] for t in student_teams]
         
@@ -448,7 +449,6 @@ def get_project_assessment(
             ProjectTeamMember.project_team_id == pa.project_team_id,
             ProjectTeamMember.user_id == user.id,
             ProjectTeamMember.school_id == user.school_id,
-            ProjectTeamMember.active.is_(True),
         ).first()
         
         if not is_member:
@@ -970,6 +970,7 @@ def create_or_update_reflection(
             ProjectTeam.project_id == pa.project_id,
             ProjectTeam.school_id == user.school_id,
             ProjectTeamMember.user_id == user.id,
+            ProjectTeamMember.school_id == user.school_id,
         ).first()
         is_member = is_project_member is not None  # Allow access if in project team
     
@@ -1526,6 +1527,7 @@ def get_self_assessment(
             ProjectTeam.project_id == pa.project_id,
             ProjectTeam.school_id == user.school_id,
             ProjectTeamMember.user_id == user.id,
+            ProjectTeamMember.school_id == user.school_id,
         ).first()
         is_member = is_project_member is not None  # Allow access if in project team
     
@@ -1633,6 +1635,7 @@ def create_or_update_self_assessment(
             ProjectTeam.project_id == pa.project_id,
             ProjectTeam.school_id == user.school_id,
             ProjectTeamMember.user_id == user.id,
+            ProjectTeamMember.school_id == user.school_id,
         ).first()
         is_member = is_project_member is not None  # Allow access if in project team
     
