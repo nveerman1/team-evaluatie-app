@@ -610,7 +610,7 @@ def get_learning_objectives_overview(
             scores_from_project = []
 
             # Find project teams the student is in
-            from app.infra.db.models import ProjectTeam, ProjectTeamMember, Project
+            from app.infra.db.models import ProjectTeam, ProjectTeamMember, Project, ProjectAssessmentTeam
 
             team_members_query = select(ProjectTeamMember).where(
                 ProjectTeamMember.school_id == user.school_id,
@@ -620,17 +620,20 @@ def get_learning_objectives_overview(
             team_members = db.execute(team_members_query).scalars().all()
 
             for tm in team_members:
-                # Find project assessments for this team
-                assessments_query = select(ProjectAssessment).where(
+                # Find project assessments for this team via junction table
+                assessments_query = select(ProjectAssessment).join(
+                    ProjectAssessmentTeam, 
+                    ProjectAssessmentTeam.project_assessment_id == ProjectAssessment.id
+                ).where(
                     ProjectAssessment.school_id == user.school_id,
-                    ProjectAssessment.project_team_id == tm.team_id,
+                    ProjectAssessmentTeam.project_team_id == tm.team_id,
                     ProjectAssessment.status == "published",
                 )
 
                 if course_id:
                     # Join with ProjectTeam and Project to filter by course
                     assessments_query = assessments_query.join(
-                        ProjectTeam, ProjectTeam.id == ProjectAssessment.project_team_id
+                        ProjectTeam, ProjectTeam.id == ProjectAssessmentTeam.project_team_id
                     ).join(
                         Project, Project.id == ProjectTeam.project_id
                     ).where(Project.course_id == course_id)
