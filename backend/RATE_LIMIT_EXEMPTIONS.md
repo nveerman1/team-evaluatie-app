@@ -22,14 +22,18 @@ The rate limiting middleware now exempts specific endpoints when accessed by aut
 ### Exempted Endpoints
 
 1. **Project Assessment Scoring**
-   - Pattern: `/project-assessments/*/scores*`
+   - Pattern: `/api/v1/project-assessments/{numeric_id}/scores[/*]`
+   - Examples: `/api/v1/project-assessments/123/scores`, `/api/v1/project-assessments/456/scores/batch`
    - Methods: All (POST, PATCH, PUT, GET)
    - Users: Teacher, Admin only
 
 2. **Evaluation Grades**
-   - Pattern: `/evaluations/*/grades*`
+   - Pattern: `/api/v1/evaluations/{numeric_id}/grades[/*]`
+   - Examples: `/api/v1/evaluations/789/grades`, `/api/v1/evaluations/101/grades/summary`
    - Methods: All (POST, PATCH, PUT, GET)
    - Users: Teacher, Admin only
+
+**Note:** The `{numeric_id}` must be a numeric value. Non-numeric IDs or malformed paths (e.g., `/project-assessments/abc/scores` or `/api/v1/project-assessments//scores`) are NOT exempted and will be rate limited.
 
 ### Security Preserved
 
@@ -63,7 +67,7 @@ The following endpoints **remain rate limited** to maintain security:
 ### How It Works
 
 1. For each incoming request, the middleware checks if it matches exemption criteria:
-   - Is the path pattern a scoring endpoint? (`/project-assessments/*/scores` or `/evaluations/*/grades`)
+   - Is the path pattern a scoring endpoint? (Matches regex: `/api/v1/project-assessments/{numeric_id}/scores[/*]` or `/api/v1/evaluations/{numeric_id}/grades[/*]`)
    - Is the user authenticated? (Has `request.state.user`)
    - Is the user a teacher or admin? (`user.role in ["teacher", "admin"]`)
 
