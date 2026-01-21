@@ -8,7 +8,7 @@ import csv
 from datetime import datetime
 from typing import Optional
 import logging
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 from app.api.v1.deps import get_db, get_current_user
 from app.core.grading import score_to_grade as _score_to_grade
@@ -1097,19 +1097,19 @@ def get_project_overview(
     school_id = current_user.school_id
     
     # Query project assessments with optional project and client info
-    # Join through ProjectAssessmentTeam junction table to match new data model
+    # FIX (2026-01): Query assessments directly to avoid duplicate rows per team
+    # Previously joined through ProjectAssessmentTeam which created one row per team,
+    # causing each project to appear multiple times in the UI (duplicate key warnings).
+    # Now uses direct outer joins (no distinct needed - each assessment appears once naturally).
+    # Note: distinct() was initially tried but removed because PostgreSQL cannot use DISTINCT
+    # on queries with JSON columns (metadata_json), causing "no equality operator" errors.
     query = db.query(
         ProjectAssessment,
-        ProjectTeam,
         Course,
         Project,
         Client,
-    ).join(
-        ProjectAssessmentTeam, ProjectAssessmentTeam.project_assessment_id == ProjectAssessment.id
-    ).join(
-        ProjectTeam, ProjectTeam.id == ProjectAssessmentTeam.project_team_id
-    ).join(
-        Project, ProjectTeam.project_id == Project.id
+    ).outerjoin(
+        Project, ProjectAssessment.project_id == Project.id
     ).outerjoin(
         Course, Project.course_id == Course.id
     ).outerjoin(
@@ -1148,10 +1148,7 @@ def get_project_overview(
     if search_query:
         search_pattern = f"%{search_query}%"
         query = query.filter(
-            or_(
-                ProjectAssessment.title.ilike(search_pattern),
-                ProjectTeam.name.ilike(search_pattern)
-            )
+            ProjectAssessment.title.ilike(search_pattern)
         )
     
     # Get results
@@ -1159,7 +1156,7 @@ def get_project_overview(
     
     # Build project overview items
     projects = []
-    for assessment, team, course, project, client in results:
+    for assessment, course, project, client in results:
         # Get client name from the joined Client object
         client_name = client.organization if client else None
         
@@ -1299,6 +1296,18 @@ def get_project_overview(
             overall_statistics=overall_statistics,
             category_statistics=category_statistics
         ))
+    
+    # Guard: Ensure project_ids are unique (prevent duplicate projects in response)
+    project_ids = [p.project_id for p in projects]
+    unique_project_ids = set(project_ids)
+    if len(project_ids) != len(unique_project_ids):
+        # Log warning if duplicates detected
+        duplicates = [pid for pid, count in Counter(project_ids).items() if count > 1]
+        logging.warning(
+            f"Duplicate project IDs detected in overview response: {duplicates}. "
+            f"This should not happen with the current query. "
+            f"Total projects: {len(project_ids)}, Unique: {len(unique_project_ids)}"
+        )
     
     return ProjectOverviewListResponse(
         projects=projects,
@@ -1506,8 +1515,24 @@ def get_project_teams(
             ProjectTeamMember.project_team_id == pt.id
         ).all()
         
+        # FIX (2026-01): Clean up display_name_at_time if it was incorrectly set to project name
+        # Legacy data may have "Project {name}" instead of proper team names
+        # This cleanup can be removed once all legacy data has been migrated
+        team_display_name = pt.display_name_at_time
+        if team_display_name and pt.team_number:
+            # Only fix if it starts with "Project " and the team_number is 1
+            # (the bug only affected default team creation which uses team_number=1)
+            # This avoids incorrectly changing legitimate custom names like "Project Phoenix"
+            if team_display_name.startswith("Project ") and pt.team_number == 1:
+                # Log for monitoring - helps track when this cleanup can be removed
+                logging.info(
+                    f"Cleaning up legacy team name: '{team_display_name}' -> 'Team {pt.team_number}' "
+                    f"(project_team_id={pt.id}, project_id={pt.project_id})"
+                )
+                team_display_name = f"Team {pt.team_number}"
+        
         team_info_map[pt.team_number] = {
-            "name": pt.display_name_at_time,
+            "name": team_display_name,
             "members": [m.user.name for m in members]
         }
     
