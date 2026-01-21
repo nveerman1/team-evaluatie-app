@@ -257,6 +257,8 @@ def list_project_assessments(
         if team_ids:
             # Filter by project_team_id directly
             stmt = stmt.where(ProjectAssessment.project_team_id.in_(team_ids))
+            # Students only see 'open' or 'published' assessments
+            stmt = stmt.where(ProjectAssessment.status.in_(["open", "published"]))
         else:
             # No teams, return empty
             return ProjectAssessmentListResponse(items=[], page=page, limit=limit, total=0)
@@ -265,7 +267,8 @@ def list_project_assessments(
     if project_team_id:
         stmt = stmt.where(ProjectAssessment.project_team_id == project_team_id)
     
-    if status:
+    # Apply status filter if provided (but already applied for students above)
+    if status and user.role != "student":
         stmt = stmt.where(ProjectAssessment.status == status)
     
     # Filter by course (using project teams)
