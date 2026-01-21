@@ -423,7 +423,7 @@ def submit_team_assessment(
         
         assessment = ProjectAssessment(
             school_id=project.school_id,
-            project_id=project.id,  # Use project_id, not project_team_id
+            project_id=project.id,  # Assessments now belong to projects, not individual teams. Teams are linked via ProjectAssessmentTeam junction table.
             rubric_id=rubric.id,
             external_evaluator_id=team_link.external_evaluator_id,
             title=f"External Assessment - {evaluator.name if evaluator else 'External'}",
