@@ -135,8 +135,9 @@ def upgrade():
     op.drop_index("ix_project_assessment_project_team_status", table_name="project_assessments")
     
     # Step 6: Drop project_team_id column
+    # Use the correct constraint name from the original migration
     op.drop_constraint(
-        "project_assessments_project_team_id_fkey",
+        "fk_project_assessments_project_team_id_project_teams",
         "project_assessments",
         type_="foreignkey",
     )
@@ -165,9 +166,9 @@ def downgrade():
         sa.Column("project_team_id", sa.Integer(), nullable=True),
     )
     
-    # Recreate foreign key constraint
+    # Recreate foreign key constraint (use original name for consistency)
     op.create_foreign_key(
-        "project_assessments_project_team_id_fkey",
+        "fk_project_assessments_project_team_id_project_teams",
         "project_assessments",
         "project_teams",
         ["project_team_id"],
