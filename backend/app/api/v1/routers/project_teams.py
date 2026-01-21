@@ -82,27 +82,35 @@ def create_project_team(
         .all()
     )
     
-    for assessment in existing_assessments:
-        # Check if link already exists
-        existing_link = (
-            db.query(ProjectAssessmentTeam)
+    if existing_assessments:
+        # Fetch all existing links for this team in one query
+        assessment_ids = [a.id for a in existing_assessments]
+        existing_links = set(
+            db.query(ProjectAssessmentTeam.project_assessment_id)
             .filter(
-                ProjectAssessmentTeam.project_assessment_id == assessment.id,
+                ProjectAssessmentTeam.project_assessment_id.in_(assessment_ids),
                 ProjectAssessmentTeam.project_team_id == project_team.id,
             )
-            .first()
+            .all()
         )
+        existing_assessment_ids = {link[0] for link in existing_links}
         
-        if not existing_link:
-            # Create the missing link
-            assessment_team = ProjectAssessmentTeam(
-                school_id=user.school_id,
-                project_assessment_id=assessment.id,
-                project_team_id=project_team.id,
-                status="not_started",
-                scores_count=0,
-            )
-            db.add(assessment_team)
+        # Create missing links
+        new_links = []
+        for assessment in existing_assessments:
+            if assessment.id not in existing_assessment_ids:
+                new_links.append(
+                    ProjectAssessmentTeam(
+                        school_id=user.school_id,
+                        project_assessment_id=assessment.id,
+                        project_team_id=project_team.id,
+                        status="not_started",
+                        scores_count=0,
+                    )
+                )
+        
+        if new_links:
+            db.add_all(new_links)
 
     db.commit()
 
