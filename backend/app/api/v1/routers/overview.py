@@ -8,7 +8,7 @@ import csv
 from datetime import datetime
 from typing import Optional
 import logging
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 from app.api.v1.deps import get_db, get_current_user
 from app.core.grading import score_to_grade as _score_to_grade
@@ -1300,7 +1300,6 @@ def get_project_overview(
     unique_project_ids = set(project_ids)
     if len(project_ids) != len(unique_project_ids):
         # Log warning if duplicates detected
-        from collections import Counter
         duplicates = [pid for pid, count in Counter(project_ids).items() if count > 1]
         logging.warning(
             f"Duplicate project IDs detected in overview response: {duplicates}. "
