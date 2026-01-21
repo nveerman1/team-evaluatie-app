@@ -64,7 +64,7 @@ Safely truncates all tables before seeding. Respects foreign key constraints by 
 ⚠️ **Warning**: This will delete ALL data from the database!
 
 ```bash
-python -m scripts.seed --mode demo --reset
+python -m backend.scripts.seed --mode demo --reset
 ```
 
 ### `--seed NUMBER` (Optional)
@@ -75,13 +75,13 @@ Default: 42
 
 ```bash
 # Generate with seed 1234
-python -m scripts.seed --mode demo --seed 1234
+python -m backend.scripts.seed --mode demo --seed 1234
 
 # Run again with same seed - data will be identical
-python -m scripts.seed --mode demo --reset --seed 1234
+python -m backend.scripts.seed --mode demo --reset --seed 1234
 
 # Different seed = different names, dates, etc.
-python -m scripts.seed --mode demo --reset --seed 9999
+python -m backend.scripts.seed --mode demo --reset --seed 9999
 ```
 
 ## Usage Examples
@@ -258,7 +258,7 @@ If you see import errors, ensure the backend directory is in your Python path:
 
 ```bash
 cd backend
-PYTHONPATH=/home/runner/work/team-evaluatie-app/team-evaluatie-app/backend python -m scripts.seed --mode demo
+PYTHONPATH=/home/runner/work/team-evaluatie-app/team-evaluatie-app/backend python -m backend.scripts.seed --mode demo
 ```
 
 ### Database Connection Errors
@@ -274,7 +274,7 @@ DATABASE_URL=postgresql://user:password@localhost/dbname
 If you see foreign key violations, use `--reset` to clean the database first:
 
 ```bash
-python -m scripts.seed --mode demo --reset
+python -m backend.scripts.seed --mode demo --reset
 ```
 
 ## Integration with CI/CD

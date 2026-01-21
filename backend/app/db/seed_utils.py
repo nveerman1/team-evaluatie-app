@@ -106,7 +106,8 @@ class TimestampGenerator:
         for i, ts in enumerate(timestamps):
             # Max jitter is 10% of the gap to the next timestamp
             if i < len(timestamps) - 1:
-                max_jitter_seconds = (timestamps[i] - timestamps[i + 1]).total_seconds() * 0.1
+                gap_seconds = abs((timestamps[i + 1] - timestamps[i]).total_seconds())
+                max_jitter_seconds = gap_seconds * 0.1
             else:
                 max_jitter_seconds = 3600  # 1 hour for last timestamp
             
