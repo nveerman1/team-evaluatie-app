@@ -19,6 +19,7 @@ from app.infra.db.models import (
     Client,
     Rubric,
     ProjectAssessment,
+    ProjectAssessmentTeam,
     ProjectTeam,
     CompetencyWindow,
     Competency,
@@ -1006,8 +1007,7 @@ def wizard_create_project(
             project_teams = [default_team]
 
         # Create ONE ProjectAssessment for the entire project
-        # Link to the first project team
-        first_project_team = project_teams[0]
+        # No longer linked to a single team - uses project_assessment_teams join table
         title_with_version = project.title
         if version_suffix:
             title_with_version += f" ({version_suffix})"
@@ -1015,7 +1015,6 @@ def wizard_create_project(
         assessment = ProjectAssessment(
             school_id=user.school_id,
             project_id=project.id,
-            project_team_id=first_project_team.id,  # Link to first team (can assess all teams)
             teacher_id=user.id,
             rubric_id=pa_config.rubric_id,
             title=title_with_version,
@@ -1031,6 +1030,17 @@ def wizard_create_project(
         )
         db.add(assessment)
         db.flush()
+        
+        # Create child rows for ALL teams in the project
+        for pt in project_teams:
+            pat = ProjectAssessmentTeam(
+                school_id=user.school_id,
+                project_assessment_id=assessment.id,
+                project_team_id=pt.id,
+                status="not_started",
+                scores_count=0,
+            )
+            db.add(pat)
 
         created_entities.append(
             WizardEntityOut(
@@ -1039,8 +1049,6 @@ def wizard_create_project(
                     "id": assessment.id,
                     "title": assessment.title,
                     "project_id": assessment.project_id,
-                    "project_team_id": assessment.project_team_id,
-                    "team_name": first_project_team.display_name_at_time,
                     "rubric_id": assessment.rubric_id,
                     "version": assessment.version,
                     "status": assessment.status,

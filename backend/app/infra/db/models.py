@@ -823,9 +823,9 @@ class PublishedGrade(Base):
 
 class ProjectAssessment(Base):
     """
-    Project assessment per team, uses rubrics with scope='project'
+    Project assessment per project, uses rubrics with scope='project'
     
-    Phase 2 Complete: Uses project_team_id (immutable team roster)
+    Refactored: Owned by project_id, with multiple teams linked via project_assessment_teams
     """
 
     __tablename__ = "project_assessments"
@@ -833,16 +833,9 @@ class ProjectAssessment(Base):
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
 
-    # Relationships
-    project_id: Mapped[Optional[int]] = mapped_column(
+    # Project relationship - primary owner
+    project_id: Mapped[int] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"),
-        nullable=True,
-        index=True,
-    )
-    
-    # Team reference (immutable project team)
-    project_team_id: Mapped[int] = mapped_column(
-        ForeignKey("project_teams.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,
     )
@@ -882,16 +875,67 @@ class ProjectAssessment(Base):
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
 
     # Relationships
-    project_team: Mapped[Optional["ProjectTeam"]] = relationship()
+    project: Mapped["Project"] = relationship()
     external_evaluator: Mapped["ExternalEvaluator"] = relationship()
+    assessment_teams: Mapped[list["ProjectAssessmentTeam"]] = relationship(
+        back_populates="project_assessment", cascade="all,delete-orphan"
+    )
 
     __table_args__ = (
-        Index("ix_project_assessment_project_team", "project_team_id"),
+        Index("ix_project_assessment_project_id", "project_id"),
         Index("ix_project_assessment_teacher", "teacher_id"),
         Index("ix_project_assessment_external", "external_evaluator_id"),
         Index("ix_project_assessment_role", "role"),
         Index("ix_project_assessment_status", "status"),
-        Index("ix_project_assessment_project_team_status", "project_team_id", "status"),
+        Index("ix_project_assessment_project_status", "project_id", "status"),
+    )
+
+
+class ProjectAssessmentTeam(Base):
+    """
+    Links a project assessment to multiple teams within that project.
+    One assessment per project, with per-team scoring and status tracking.
+    """
+
+    __tablename__ = "project_assessment_teams"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = tenant_fk()
+
+    # Foreign keys
+    project_assessment_id: Mapped[int] = mapped_column(
+        ForeignKey("project_assessments.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    project_team_id: Mapped[int] = mapped_column(
+        ForeignKey("project_teams.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # Status tracking per team
+    status: Mapped[str] = mapped_column(
+        String(30), default="not_started", nullable=False
+    )  # not_started|in_progress|completed
+    
+    # Progress tracking
+    scores_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_updated_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
+
+    # Relationships
+    project_assessment: Mapped["ProjectAssessment"] = relationship(back_populates="assessment_teams")
+    project_team: Mapped["ProjectTeam"] = relationship()
+
+    __table_args__ = (
+        UniqueConstraint(
+            "project_assessment_id",
+            "project_team_id",
+            name="uq_project_assessment_team_once",
+        ),
+        Index("ix_pat_assessment", "project_assessment_id"),
+        Index("ix_pat_team", "project_team_id"),
+        Index("ix_pat_assessment_status", "project_assessment_id", "status"),
     )
 
 

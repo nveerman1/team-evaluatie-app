@@ -100,10 +100,9 @@ def _get_assessment_with_access_check(
     
     # Check access for teachers
     if user.role == "teacher":
-        # Get project team and check course access
-        project_team = db.query(ProjectTeam).filter(ProjectTeam.id == pa.project_team_id).first()
-        if project_team and project_team.project_id:
-            project = db.query(Project).filter(Project.id == project_team.project_id).first()
+        # Check course access via project_id
+        if pa.project_id:
+            project = db.query(Project).filter(Project.id == pa.project_id).first()
             if project and project.course_id:
                 teacher_course_ids = _get_teacher_course_ids(db, user)
                 if teacher_course_ids and project.course_id not in teacher_course_ids:
@@ -136,7 +135,6 @@ def _to_out_assessment(pa: ProjectAssessment) -> ProjectAssessmentOut:
             "id": pa.id,
             "school_id": pa.school_id,
             "project_id": pa.project_id,
-            "project_team_id": pa.project_team_id,
             "rubric_id": pa.rubric_id,
             "teacher_id": pa.teacher_id,
             "external_evaluator_id": pa.external_evaluator_id,
@@ -161,9 +159,9 @@ def create_project_assessment(
     user=Depends(get_current_user),
 ):
     """
-    Create a new project assessment for a team (teacher/admin only)
+    Create a new project assessment for a project (teacher/admin only)
     
-    Phase 2 Complete: Uses project_team_id exclusively
+    Refactored: Creates ONE assessment per project with child rows for all teams
     """
     if user.role not in ("teacher", "admin"):
         raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen beoordelingen aanmaken")
@@ -178,18 +176,18 @@ def create_project_assessment(
     if rubric.scope != "project":
         raise HTTPException(status_code=400, detail="Rubric must have scope='project'")
     
-    # Verify project team exists
-    project_team = db.query(ProjectTeam).filter(
-        ProjectTeam.id == payload.project_team_id,
-        ProjectTeam.school_id == user.school_id,
+    # Verify project exists
+    project = db.query(Project).filter(
+        Project.id == payload.project_id,
+        Project.school_id == user.school_id,
     ).first()
-    if not project_team:
-        raise HTTPException(status_code=404, detail="Project team not found")
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
     
+    # Create the assessment
     pa = ProjectAssessment(
         school_id=user.school_id,
         project_id=payload.project_id,
-        project_team_id=payload.project_team_id,
         rubric_id=payload.rubric_id,
         teacher_id=user.id,
         title=payload.title,
@@ -198,6 +196,25 @@ def create_project_assessment(
         metadata_json=payload.metadata_json,
     )
     db.add(pa)
+    db.flush()  # Get the ID without committing
+    
+    # Create child rows for ALL teams in this project
+    from app.infra.db.models import ProjectAssessmentTeam
+    project_teams = db.query(ProjectTeam).filter(
+        ProjectTeam.project_id == payload.project_id,
+        ProjectTeam.school_id == user.school_id,
+    ).all()
+    
+    for pt in project_teams:
+        pat = ProjectAssessmentTeam(
+            school_id=user.school_id,
+            project_assessment_id=pa.id,
+            project_team_id=pt.id,
+            status="not_started",
+            scores_count=0,
+        )
+        db.add(pat)
+    
     db.commit()
     db.refresh(pa)
     return _to_out_assessment(pa)
@@ -207,7 +224,7 @@ def create_project_assessment(
 def list_project_assessments(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
-    project_team_id: Optional[int] = Query(None, description="Filter by project team"),
+    project_id: Optional[int] = Query(None, description="Filter by project"),
     course_id: Optional[int] = Query(None, description="Filter by course"),
     status: Optional[str] = Query(None, description="Filter by status"),
     page: int = Query(1, ge=1),
@@ -216,13 +233,14 @@ def list_project_assessments(
     """
     List project assessments.
     
-    Phase 2 Complete: Uses project_team_id exclusively
+    Refactored: Uses project_id and project_assessment_teams
     
     Access control:
     - Admins: see all assessments in their school
-    - Teachers: see all assessments for courses they're assigned to (not just ones they created)
-    - Students: see assessments for teams they belong to
+    - Teachers: see all assessments for courses they're assigned to
+    - Students: see assessments for projects where they belong to ANY team
     """
+    from app.infra.db.models import ProjectAssessmentTeam
     from fastapi.responses import JSONResponse
     stmt = select(ProjectAssessment).where(ProjectAssessment.school_id == user.school_id)
     
@@ -236,22 +254,20 @@ def list_project_assessments(
         # Teachers see assessments for courses they're assigned to
         teacher_course_ids = _get_teacher_course_ids(db, user)
         if teacher_course_ids:
-            # Use project teams to filter - get project teams from assigned courses
-            project_teams_subquery = select(ProjectTeam.id).where(
-                ProjectTeam.school_id == user.school_id,
-                ProjectTeam.project_id.in_(
+            # Filter by projects in assigned courses
+            stmt = stmt.where(
+                ProjectAssessment.project_id.in_(
                     select(Project.id).where(
                         Project.school_id == user.school_id,
                         Project.course_id.in_(teacher_course_ids)
                     )
                 )
-            ).scalar_subquery()
-            stmt = stmt.where(ProjectAssessment.project_team_id.in_(project_teams_subquery))
+            )
         else:
             # Teacher has no assigned courses, return empty
             return ProjectAssessmentListResponse(items=[], page=page, limit=limit, total=0)
     else:
-        # Students see all assessments for teams they are part of
+        # Students see assessments for projects where they belong to ANY team
         import logging
         logger = logging.getLogger(__name__)
         logger.info(f"[STUDENT PROJECT ASSESSMENTS] User ID: {user.id}, School ID: {user.school_id}, Role: {user.role}")
@@ -260,6 +276,7 @@ def list_project_assessments(
         debug_info["school_id"] = user.school_id
         debug_info["role"] = user.role
         
+        # Get all project_team_ids the student is part of
         student_teams = db.query(ProjectTeamMember.project_team_id).filter(
             ProjectTeamMember.user_id == user.id,
             ProjectTeamMember.school_id == user.school_id,
@@ -271,62 +288,42 @@ def list_project_assessments(
         debug_info["team_ids"] = team_ids
         
         if team_ids:
-            # Filter by project_team_id directly
-            stmt = stmt.where(ProjectAssessment.project_team_id.in_(team_ids))
+            # Get project IDs from the student's teams
+            project_ids_subquery = select(ProjectTeam.project_id).where(
+                ProjectTeam.id.in_(team_ids),
+                ProjectTeam.school_id == user.school_id,
+            ).distinct()
+            
+            # Filter assessments by projects where student has a team
+            stmt = stmt.where(ProjectAssessment.project_id.in_(project_ids_subquery))
             # Students only see 'open' or 'published' assessments
             stmt = stmt.where(ProjectAssessment.status.in_(["open", "published"]))
             
-            # Debug: Count assessments before filtering
-            all_assessments_for_teams = db.execute(
-                select(func.count()).select_from(ProjectAssessment).where(
-                    ProjectAssessment.school_id == user.school_id,
-                    ProjectAssessment.project_team_id.in_(team_ids)
-                )
-            ).scalar_one()
-            logger.info(f"[STUDENT PROJECT ASSESSMENTS] Total assessments for these teams: {all_assessments_for_teams}")
-            debug_info["total_assessments_for_teams"] = all_assessments_for_teams
-            
-            # Debug: Count by status
-            status_counts = {}
-            for check_status in ["draft", "open", "closed", "published"]:
-                count = db.execute(
-                    select(func.count()).select_from(ProjectAssessment).where(
-                        ProjectAssessment.school_id == user.school_id,
-                        ProjectAssessment.project_team_id.in_(team_ids),
-                        ProjectAssessment.status == check_status
-                    )
-                ).scalar_one()
-                logger.info(f"[STUDENT PROJECT ASSESSMENTS] Assessments with status '{check_status}': {count}")
-                status_counts[check_status] = count
-            debug_info["status_counts"] = status_counts
+            logger.info(f"[STUDENT PROJECT ASSESSMENTS] Filtering by project membership")
         else:
             # No teams, return empty
             logger.info(f"[STUDENT PROJECT ASSESSMENTS] Student has no teams, returning empty list")
             debug_info["message"] = "No teams found for student"
             return ProjectAssessmentListResponse(items=[], page=page, limit=limit, total=0)
     
-    # Filter by project_team_id
-    if project_team_id:
-        stmt = stmt.where(ProjectAssessment.project_team_id == project_team_id)
+    # Filter by project_id
+    if project_id:
+        stmt = stmt.where(ProjectAssessment.project_id == project_id)
     
     # Apply status filter if provided (but already applied for students above)
     if status and user.role != "student":
         stmt = stmt.where(ProjectAssessment.status == status)
     
-    # Filter by course (using project teams)
+    # Filter by course
     if course_id:
-        # Get project teams for projects in this course
-        course_teams = db.query(ProjectTeam.id).join(
-            Project, ProjectTeam.project_id == Project.id
-        ).filter(
-            ProjectTeam.school_id == user.school_id,
-            Project.course_id == course_id,
-        ).all()
-        course_team_ids = [t[0] for t in course_teams]
-        if course_team_ids:
-            stmt = stmt.where(ProjectAssessment.project_team_id.in_(course_team_ids))
-        else:
-            return ProjectAssessmentListResponse(items=[], page=page, limit=limit, total=0)
+        stmt = stmt.where(
+            ProjectAssessment.project_id.in_(
+                select(Project.id).where(
+                    Project.school_id == user.school_id,
+                    Project.course_id == course_id,
+                )
+            )
+        )
     
     total = db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
     
@@ -345,28 +342,24 @@ def list_project_assessments(
         logger.info(f"[STUDENT PROJECT ASSESSMENTS] Returning {len(rows)} assessments to student")
         debug_info["returned_count"] = len(rows)
     
-    # Fetch group, teacher, and course names (group_id is optional now)
-    # Fetch team and course information
-    team_map = {}  # Maps project_team_id -> (team_name, course_id)
+    # Fetch project and course information
+    project_map = {}  # Maps project_id -> (project_title, course_id)
     course_map = {}
     
-    project_team_ids = [r.project_team_id for r in rows]
-    if project_team_ids:
-        # Batch query for project teams with their projects
-        project_teams_with_projects = db.query(ProjectTeam, Project).outerjoin(
-            Project, ProjectTeam.project_id == Project.id
-        ).filter(
-            ProjectTeam.id.in_(project_team_ids),
-            ProjectTeam.school_id == user.school_id,
+    project_ids = [r.project_id for r in rows]
+    if project_ids:
+        # Batch query for projects with their courses
+        projects = db.query(Project).filter(
+            Project.id.in_(project_ids),
+            Project.school_id == user.school_id,
         ).all()
         
-        for pt, project in project_teams_with_projects:
-            # Store team display name and course_id
-            course_id = project.course_id if project else None
-            team_map[pt.id] = (pt.display_name_at_time, course_id)
+        for project in projects:
+            # Store project title and course_id
+            project_map[project.id] = (project.title, project.course_id)
     
     # Get courses
-    course_ids = [c_id for _, c_id in team_map.values() if c_id]
+    course_ids = [c_id for _, c_id in project_map.values() if c_id]
     if course_ids:
         for c in db.query(Course).filter(
             Course.school_id == user.school_id,
@@ -456,13 +449,13 @@ def list_project_assessments(
     
     items = []
     for r in rows:
-        # Get team info from project_team_id
-        team_name, course_id_val = team_map.get(r.project_team_id, (None, None))
+        # Get project info from project_id
+        project_title, course_id_val = project_map.get(r.project_id, (None, None))
         course_name = course_map.get(course_id_val) if course_id_val else None
         
         item_dict = {
             **_to_out_assessment(r).model_dump(),
-            "group_name": team_name,  # Using 'group_name' field for team name for backward compat
+            "group_name": project_title,  # Using 'group_name' field for project title for now
             "teacher_name": teacher_map.get(r.teacher_id),
             "course_name": course_name,
             "course_id": course_id_val,
@@ -484,13 +477,10 @@ def list_project_assessments(
     # For students, add debug info in custom HTTP headers (visible in browser Network tab)
     if user.role == "student":
         import json
-        response = JSONResponse(content=response_data.model_dump())
+        response = JSONResponse(content=response_data.model_dump(mode='json'))
         response.headers["X-Debug-Info"] = json.dumps(debug_info)
         response.headers["X-Debug-Team-Count"] = str(debug_info.get("team_count", 0))
-        response.headers["X-Debug-Total-Assessments"] = str(debug_info.get("total_assessments_for_teams", 0))
         response.headers["X-Debug-Returned-Count"] = str(debug_info.get("returned_count", 0))
-        if "status_counts" in debug_info:
-            response.headers["X-Debug-Status-Counts"] = json.dumps(debug_info["status_counts"])
         return response
     
     return response_data
@@ -513,23 +503,31 @@ def get_project_assessment(
     
     # Check permissions
     if user.role == "student":
-        # Students can only view published assessments for their groups
+        # Students can only view published assessments for their projects
         if pa.status != "published":
             raise HTTPException(status_code=403, detail="Assessment not published yet")
-        # Check if student is in the project team
-        is_member = db.query(ProjectTeamMember).filter(
-            ProjectTeamMember.project_team_id == pa.project_team_id,
+        
+        # Check if student is in ANY team for this project
+        is_member = db.query(ProjectTeamMember).join(
+            ProjectTeam, ProjectTeam.id == ProjectTeamMember.project_team_id
+        ).filter(
+            ProjectTeam.project_id == pa.project_id,
             ProjectTeamMember.user_id == user.id,
             ProjectTeamMember.school_id == user.school_id,
         ).first()
         
         if not is_member:
             raise HTTPException(status_code=403, detail="Not authorized to view this assessment")
+        
         # Students should only see their own team's scores
-        # Get team number from project teams
-        project_team = db.query(ProjectTeam).filter(
-            ProjectTeam.id == pa.project_team_id
+        # Get team number from the student's team in this project
+        project_team = db.query(ProjectTeam).join(
+            ProjectTeamMember, ProjectTeamMember.project_team_id == ProjectTeam.id
+        ).filter(
+            ProjectTeam.project_id == pa.project_id,
+            ProjectTeamMember.user_id == user.id,
         ).first()
+        
         if project_team:
             team_number = project_team.team_number
         else:
@@ -539,10 +537,10 @@ def get_project_assessment(
                 team_number = student_info.team_number
     elif user.role == "teacher":
         # Teachers can view assessments for courses they're assigned to
-        group = db.query(ProjectTeam).filter(ProjectTeam.id == pa.project_team_id).first()
-        if group and group.course_id:
+        project = db.query(Project).filter(Project.id == pa.project_id).first()
+        if project and project.course_id:
             teacher_course_ids = _get_teacher_course_ids(db, user)
-            if teacher_course_ids and group.course_id not in teacher_course_ids:
+            if teacher_course_ids and project.course_id not in teacher_course_ids:
                 raise HTTPException(status_code=403, detail="Not authorized to view this assessment")
     
     # Get rubric and criteria
@@ -726,8 +724,7 @@ def close_project_assessment(
     return ProjectAssessmentOut(
         id=assessment.id,
         school_id=assessment.school_id,
-        group_id=assessment.group_id,
-        project_team_id=assessment.project_team_id,
+        project_id=assessment.project_id,
         rubric_id=assessment.rubric_id,
         teacher_id=assessment.teacher_id,
         external_evaluator_id=assessment.external_evaluator_id,
@@ -742,6 +739,87 @@ def close_project_assessment(
     )
 
 
+@router.post("/repair-team-links")
+def repair_project_assessment_team_links(
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """
+    Repair/backfill missing project_assessment_teams rows for existing assessments.
+    
+    This endpoint:
+    - Finds all project assessments that are missing team links
+    - Creates project_assessment_teams rows for ALL teams in each project
+    - Is idempotent (safe to run multiple times - uses ON CONFLICT DO NOTHING)
+    - Admin only
+    
+    Returns the number of rows created.
+    """
+    from app.core.rbac import require_role
+    from app.infra.db.models import ProjectAssessmentTeam
+    
+    # Require admin role
+    require_role(user, ["admin"])
+    
+    # Get all assessments with their project teams
+    assessments = db.query(ProjectAssessment).filter(
+        ProjectAssessment.school_id == user.school_id,
+        ProjectAssessment.project_id.isnot(None),
+    ).all()
+    
+    rows_created = 0
+    assessments_fixed = []
+    
+    for assessment in assessments:
+        # Get all teams for this project
+        project_teams = db.query(ProjectTeam).filter(
+            ProjectTeam.project_id == assessment.project_id,
+            ProjectTeam.school_id == user.school_id,
+        ).order_by(ProjectTeam.team_number).all()
+        
+        # Get existing assessment_team links
+        existing_team_ids = set(
+            row.project_team_id for row in 
+            db.query(ProjectAssessmentTeam.project_team_id).filter(
+                ProjectAssessmentTeam.project_assessment_id == assessment.id,
+                ProjectAssessmentTeam.school_id == user.school_id,
+            ).all()
+        )
+        
+        # Create missing links
+        teams_added = 0
+        for pt in project_teams:
+            if pt.id not in existing_team_ids:
+                pat = ProjectAssessmentTeam(
+                    school_id=user.school_id,
+                    project_assessment_id=assessment.id,
+                    project_team_id=pt.id,
+                    status="not_started",
+                    scores_count=0,
+                )
+                db.add(pat)
+                teams_added += 1
+                rows_created += 1
+        
+        if teams_added > 0:
+            assessments_fixed.append({
+                "assessment_id": assessment.id,
+                "title": assessment.title,
+                "project_id": assessment.project_id,
+                "teams_added": teams_added,
+                "total_teams": len(project_teams),
+            })
+    
+    db.commit()
+    
+    return {
+        "success": True,
+        "rows_created": rows_created,
+        "assessments_fixed": len(assessments_fixed),
+        "details": assessments_fixed,
+    }
+
+
 # ---------- Team Overview ----------
 
 @router.get("/{assessment_id}/teams", response_model=ProjectAssessmentTeamOverview)
@@ -751,6 +829,8 @@ def get_assessment_teams_overview(
     user=Depends(get_current_user),
 ):
     """Get team overview for a project assessment (teacher/admin only)"""
+    from app.infra.db.models import ProjectAssessmentTeam
+    
     if user.role not in ("teacher", "admin"):
         raise HTTPException(status_code=403, detail="Alleen docenten en admins kunnen team overzicht bekijken")
     
@@ -766,127 +846,71 @@ def get_assessment_teams_overview(
         RubricCriterion.school_id == user.school_id,
     ).scalar() or 0
     
-    # Get project team info
-    project_team = db.query(ProjectTeam).filter(ProjectTeam.id == pa.project_team_id).first()
-    if not project_team:
-        raise HTTPException(status_code=404, detail="Project team not found")
+    # Get all project teams for this assessment via project_assessment_teams
+    assessment_teams = db.query(ProjectAssessmentTeam).filter(
+        ProjectAssessmentTeam.project_assessment_id == assessment_id,
+        ProjectAssessmentTeam.school_id == user.school_id,
+    ).all()
     
-    # Get all students from project team
-    members_set: set[User] = set()
-    
-    # Get students from project team membership
-    team_members = (
-        db.query(User)
-        .join(ProjectTeamMember, ProjectTeamMember.user_id == User.id)
-        .filter(
-            ProjectTeamMember.project_team_id == project_team.id,
-            ProjectTeamMember.school_id == user.school_id,
-        )
-        .all()
-    )
-    members_set.update(team_members)
-    
-    # If assessment has a project (for backward compatibility checks)
-    if pa.project_id:
-        project_team_members = (
+    teams_list = []
+    for assessment_team in assessment_teams:
+        # Get project team info
+        project_team = db.query(ProjectTeam).filter(
+            ProjectTeam.id == assessment_team.project_team_id
+        ).first()
+        
+        if not project_team:
+            continue
+        
+        # Get team members
+        team_members = (
             db.query(User)
             .join(ProjectTeamMember, ProjectTeamMember.user_id == User.id)
-            .join(ProjectTeam, ProjectTeam.id == ProjectTeamMember.project_team_id)
             .filter(
-                ProjectTeam.project_id == pa.project_id,
-                ProjectTeam.school_id == user.school_id,
-            )
-            .all()
-        )
-        members_set.update(project_team_members)
-    
-    members_in_group = list(members_set)
-    
-    # Build user_id -> project team_number mapping if assessment has a project
-    user_team_map: dict[int, int] = {}
-    if pa.project_id:
-        project_teams = (
-            db.query(ProjectTeam)
-            .filter(
-                ProjectTeam.project_id == pa.project_id,
-                ProjectTeam.school_id == user.school_id,
+                ProjectTeamMember.project_team_id == project_team.id,
+                ProjectTeamMember.school_id == user.school_id,
             )
             .all()
         )
         
-        for team in project_teams:
-            members = (
-                db.query(ProjectTeamMember)
-                .filter(ProjectTeamMember.project_team_id == team.id)
-                .all()
+        # Build member info list
+        members_info = [
+            TeamMemberInfo(
+                id=m.id,
+                name=m.name,
+                email=m.email,
             )
-            for member in members:
-                user_team_map[member.user_id] = team.team_number
-    
-    # Group users by team_number
-    # If assessment has project_id, only use project teams (don't fallback to user.team_number)
-    # If no project_id, use user.team_number
-    teams_dict: dict[int, List[User]] = {}
-    for u in members_in_group:
-        if pa.project_id:
-            team_num = user_team_map.get(u.id, None)
-        else:
-            team_num = u.team_number
-        if team_num is not None:
-            if team_num not in teams_dict:
-                teams_dict[team_num] = []
-            teams_dict[team_num].append(u)
-    
-    # Get teacher name for updated_by
-    teacher = db.query(User).filter(User.id == pa.teacher_id).first()
-    teacher_name = teacher.name if teacher else None
-    
-    # Build team status for each team
-    teams = []
-    for team_num in sorted(teams_dict.keys()):
-        team_members = teams_dict[team_num]
-        
-        members = [
-            TeamMemberInfo(id=u.id, name=u.name, email=u.email)
-            for u in team_members
+            for m in team_members
         ]
         
-        # Get scores count for this team (only count team-level scores, not individual overrides)
+        # Get score count for this team
         scores_count = db.query(func.count(ProjectAssessmentScore.id)).filter(
-            ProjectAssessmentScore.assessment_id == pa.id,
-            ProjectAssessmentScore.team_number == team_num,
+            ProjectAssessmentScore.assessment_id == assessment_id,
+            ProjectAssessmentScore.team_number == project_team.team_number,
             ProjectAssessmentScore.school_id == user.school_id,
-            ProjectAssessmentScore.student_id.is_(None),  # Only count team scores, not individual overrides
         ).scalar() or 0
-        
-        # Get the most recent update timestamp for this team's scores (only team-level scores)
-        latest_update = db.query(func.max(ProjectAssessmentScore.updated_at)).filter(
-            ProjectAssessmentScore.assessment_id == pa.id,
-            ProjectAssessmentScore.team_number == team_num,
-            ProjectAssessmentScore.school_id == user.school_id,
-            ProjectAssessmentScore.student_id.is_(None),  # Only team-level scores
-        ).scalar()
         
         # Determine status
         if scores_count == 0:
-            team_status = "not_started"
+            status = "not_started"
         elif scores_count < total_criteria:
-            team_status = "in_progress"
+            status = "in_progress"
         else:
-            team_status = "completed"
+            status = "completed"
         
-        team = TeamAssessmentStatus(
-            group_id=project_team.id,
-            group_name=project_team.display_name_at_time or f"Team {team_num}",
-            team_number=team_num,
-            members=members,
-            scores_count=scores_count,
-            total_criteria=total_criteria,
-            status=team_status,
-            updated_at=latest_update if scores_count > 0 else None,
-            updated_by=teacher_name if scores_count > 0 else None,
+        teams_list.append(
+            TeamAssessmentStatus(
+                group_id=project_team.id,
+                group_name=project_team.display_name_at_time,
+                team_number=project_team.team_number,
+                members=members_info,
+                scores_count=scores_count,
+                total_criteria=total_criteria,
+                status=status,
+                updated_at=assessment_team.last_updated_at,
+                updated_by=None,  # Can be enhanced later
+            )
         )
-        teams.append(team)
     
     return ProjectAssessmentTeamOverview(
         assessment=_to_out_assessment(pa),
@@ -894,7 +918,7 @@ def get_assessment_teams_overview(
         rubric_scale_min=rubric.scale_min,
         rubric_scale_max=rubric.scale_max,
         total_criteria=total_criteria,
-        teams=teams,
+        teams=teams_list,
     )
 
 
@@ -912,9 +936,9 @@ def get_assessment_reflections(
     
     pa = _get_assessment_with_access_check(db, assessment_id, user)
     
-    # Get group name
-    group = db.query(ProjectTeam).filter(ProjectTeam.id == pa.project_team_id).first()
-    group_name = group.name if group else "Onbekend"
+    # Get project name
+    project = db.query(Project).filter(Project.id == pa.project_id).first()
+    group_name = project.title if project else "Onbekend"
     
     # Get all reflections
     reflections_data = db.query(ProjectAssessmentReflection, User).join(
@@ -1026,25 +1050,15 @@ def create_or_update_reflection(
     if not pa:
         raise HTTPException(status_code=404, detail="Published assessment not found")
     
-    # Check if student is in the group or in a project team
-    is_member = db.query(ProjectTeamMember).filter(
-        ProjectTeamMember.project_team_id == pa.project_team_id,
-        GroupMember.user_id == user.id,
-        GroupMember.school_id == user.school_id,
-        GroupMember.active.is_(True),
+    # Check if student is in any team for this project
+    is_member = db.query(ProjectTeamMember).join(
+        ProjectTeam, ProjectTeam.id == ProjectTeamMember.project_team_id
+    ).filter(
+        ProjectTeam.project_id == pa.project_id,
+        ProjectTeam.school_id == user.school_id,
+        ProjectTeamMember.user_id == user.id,
+        ProjectTeamMember.school_id == user.school_id,
     ).first()
-    
-    # If not in group, check if in project team (for assessments with projects)
-    if not is_member and pa.project_id:
-        is_project_member = db.query(ProjectTeamMember).join(
-            ProjectTeam, ProjectTeam.id == ProjectTeamMember.project_team_id
-        ).filter(
-            ProjectTeam.project_id == pa.project_id,
-            ProjectTeam.school_id == user.school_id,
-            ProjectTeamMember.user_id == user.id,
-            ProjectTeamMember.school_id == user.school_id,
-        ).first()
-        is_member = is_project_member is not None  # Allow access if in project team
     
     if not is_member:
         raise HTTPException(status_code=403, detail="Not authorized to reflect on this assessment")
@@ -1108,31 +1122,10 @@ def get_assessment_scores_overview(
         for c in criteria
     ]
     
-    # Get group info
-    group = db.query(ProjectTeam).filter(ProjectTeam.id == pa.project_team_id).first()
-    if not group:
-        raise HTTPException(status_code=404, detail="Group not found")
-    
-    # Get all users - if assessment has a project, include students from ProjectTeamMember
-    # This matches the behavior of the submissions page and self-assessment overview
+    # Get all users from project teams (no more group_id support)
     members_set: set[User] = set()
     
-    # First, get members from group membership
-    group_members = (
-        db.query(User)
-        .join(GroupMember, GroupMember.user_id == User.id)
-        .filter(
-            GroupMember.group_id == group.id,
-            GroupMember.school_id == user.school_id,
-            GroupMember.active.is_(True),
-            User.archived.is_(False),
-        )
-        .all()
-    )
-    members_set.update(group_members)
-    
-    # If assessment has a project, also get members from project teams
-    # This ensures members assigned to project teams are included even if not active in group
+    # Get members from project teams
     if pa.project_id:
         project_team_members = (
             db.query(User)
@@ -1332,32 +1325,10 @@ def get_assessment_students_overview(
         for c in criteria
     ]
     
-    # Get group info
-    group = db.query(ProjectTeam).filter(ProjectTeam.id == pa.project_team_id).first()
-    if not group:
-        raise HTTPException(status_code=404, detail="Group not found")
-    
-    # Get all students - if assessment has a project, include students from ProjectTeamMember
-    # This matches the behavior of the submissions page and self-assessment overview
+    # Get all students from project teams (no more group_id support)
     students_set: set[User] = set()
     
-    # First, get students from group membership
-    group_students = (
-        db.query(User)
-        .join(GroupMember, GroupMember.user_id == User.id)
-        .filter(
-            GroupMember.group_id == group.id,
-            GroupMember.school_id == user.school_id,
-            GroupMember.active.is_(True),
-            User.role == "student",
-            User.archived.is_(False),
-        )
-        .all()
-    )
-    students_set.update(group_students)
-    
-    # If assessment has a project, also get students from project teams
-    # This ensures students assigned to project teams are included even if not active in group
+    # Get students from project teams
     if pa.project_id:
         project_team_students = (
             db.query(User)
@@ -1583,25 +1554,17 @@ def get_self_assessment(
     if not pa:
         raise HTTPException(status_code=404, detail="Assessment not found or not yet available")
     
-    # Check if student is in the group or in a project team
-    is_member = db.query(ProjectTeamMember).filter(
-        ProjectTeamMember.project_team_id == pa.project_team_id,
-        GroupMember.user_id == user.id,
-        GroupMember.school_id == user.school_id,
-        GroupMember.active.is_(True),
-    ).first()
-    
-    # If not in group, check if in project team (for assessments with projects)
-    if not is_member and pa.project_id:
-        is_project_member = db.query(ProjectTeamMember).join(
+    # Check if student is in project team (assessments are now project-based only)
+    is_member = False
+    if pa.project_id:
+        is_member = db.query(ProjectTeamMember).join(
             ProjectTeam, ProjectTeam.id == ProjectTeamMember.project_team_id
         ).filter(
             ProjectTeam.project_id == pa.project_id,
             ProjectTeam.school_id == user.school_id,
             ProjectTeamMember.user_id == user.id,
             ProjectTeamMember.school_id == user.school_id,
-        ).first()
-        is_member = is_project_member is not None  # Allow access if in project team
+        ).first() is not None
     
     if not is_member:
         raise HTTPException(status_code=403, detail="Not authorized to access this assessment")
@@ -1691,25 +1654,17 @@ def create_or_update_self_assessment(
             detail="Assessment not found or not available for self-assessment",
         )
     
-    # Check if student is in the group or in a project team
-    is_member = db.query(ProjectTeamMember).filter(
-        ProjectTeamMember.project_team_id == pa.project_team_id,
-        GroupMember.user_id == user.id,
-        GroupMember.school_id == user.school_id,
-        GroupMember.active.is_(True),
-    ).first()
-    
-    # If not in group, check if in project team (for assessments with projects)
-    if not is_member and pa.project_id:
-        is_project_member = db.query(ProjectTeamMember).join(
+    # Check if student is in project team (assessments are now project-based only)
+    is_member = False
+    if pa.project_id:
+        is_member = db.query(ProjectTeamMember).join(
             ProjectTeam, ProjectTeam.id == ProjectTeamMember.project_team_id
         ).filter(
             ProjectTeam.project_id == pa.project_id,
             ProjectTeam.school_id == user.school_id,
             ProjectTeamMember.user_id == user.id,
             ProjectTeamMember.school_id == user.school_id,
-        ).first()
-        is_member = is_project_member is not None  # Allow access if in project team
+        ).first() is not None
     
     if not is_member:
         raise HTTPException(status_code=403, detail="Not authorized to assess this project")
@@ -1848,32 +1803,11 @@ def get_self_assessment_overview(
         for c in criteria
     ]
     
-    # Get group info
-    group = db.query(ProjectTeam).filter(ProjectTeam.id == pa.project_team_id).first()
-    if not group:
-        raise HTTPException(status_code=404, detail="Group not found")
-    
     # Get all students - if assessment has a project, include students from ProjectTeamMember
     # This matches the behavior of the submissions page
     students_set = set()
     
-    # First, get students from group membership
-    group_students = (
-        db.query(User)
-        .join(GroupMember, GroupMember.user_id == User.id)
-        .filter(
-            GroupMember.group_id == group.id,
-            GroupMember.school_id == user.school_id,
-            GroupMember.active.is_(True),
-            User.archived.is_(False),
-            User.role == "student",
-        )
-        .all()
-    )
-    students_set.update(group_students)
-    
-    # If assessment has a project, also get students from project teams
-    # This ensures students assigned to project teams are included even if not active in group
+    # Get students from project teams (no more group_id support)
     if pa.project_id:
         project_team_students = (
             db.query(User)

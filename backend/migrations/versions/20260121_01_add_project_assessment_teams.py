@@ -1,0 +1,213 @@
+"""Add project_assessment_teams table and refactor data model
+
+Revision ID: 20260121_01_pat
+Revises: 20260119_drop_legacy
+Create Date: 2026-01-21
+
+Refactors project assessments to be owned by project_id instead of a single project_team_id.
+Introduces project_assessment_teams as a child table to link assessments to multiple teams.
+Removes project_team_id from project_assessments entirely (no backward compatibility needed).
+"""
+
+from alembic import op
+import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
+
+# revision identifiers, used by Alembic.
+revision = "20260121_01_pat"
+down_revision = "20260119_drop_legacy"
+branch_labels = None
+depends_on = None
+
+
+def upgrade():
+    """
+    1. Backfill project_id for existing assessments
+    2. Make project_id NOT NULL
+    3. Create project_assessment_teams table
+    4. Backfill child rows for existing assessments and all teams
+    5. Drop project_team_id column from project_assessments
+    6. Drop old indexes
+    """
+    
+    # Step 1: Backfill project_id for existing assessments
+    # Join project_teams to get project_id for each assessment
+    op.execute("""
+        UPDATE project_assessments pa
+        SET project_id = pt.project_id
+        FROM project_teams pt
+        WHERE pa.project_team_id = pt.id
+        AND pa.project_id IS NULL
+    """)
+    
+    # Step 2: Make project_id NOT NULL
+    op.alter_column(
+        "project_assessments",
+        "project_id",
+        existing_type=sa.Integer(),
+        nullable=False,
+    )
+    
+    # Step 3: Create project_assessment_teams table
+    op.create_table(
+        "project_assessment_teams",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("school_id", sa.Integer(), nullable=False),
+        sa.Column("project_assessment_id", sa.Integer(), nullable=False),
+        sa.Column("project_team_id", sa.Integer(), nullable=False),
+        sa.Column("status", sa.String(length=30), nullable=False, server_default="not_started"),
+        sa.Column("scores_count", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("last_updated_at", sa.DateTime(), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.ForeignKeyConstraint(
+            ["project_assessment_id"],
+            ["project_assessments.id"],
+            name="fk_pat_assessment_id",
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["project_team_id"],
+            ["project_teams.id"],
+            name="fk_pat_project_team_id",
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "project_assessment_id",
+            "project_team_id",
+            name="uq_project_assessment_team_once",
+        ),
+    )
+    
+    # Create indexes
+    op.create_index("ix_pat_assessment", "project_assessment_teams", ["project_assessment_id"])
+    op.create_index("ix_pat_team", "project_assessment_teams", ["project_team_id"])
+    op.create_index(
+        "ix_pat_assessment_status",
+        "project_assessment_teams",
+        ["project_assessment_id", "status"],
+    )
+    
+    # Step 4: Backfill child rows for existing assessments
+    # Create one child row for each assessment's original project_team_id
+    op.execute("""
+        INSERT INTO project_assessment_teams 
+            (school_id, project_assessment_id, project_team_id, status, scores_count, last_updated_at)
+        SELECT 
+            pa.school_id,
+            pa.id,
+            pa.project_team_id,
+            CASE 
+                WHEN pa.status = 'draft' THEN 'not_started'
+                WHEN pa.status IN ('open', 'closed') THEN 'in_progress'
+                WHEN pa.status = 'published' THEN 'completed'
+                ELSE 'not_started'
+            END,
+            COALESCE(
+                (SELECT COUNT(*) FROM project_assessment_scores pas 
+                 WHERE pas.assessment_id = pa.id),
+                0
+            ),
+            NOW()
+        FROM project_assessments pa
+        WHERE pa.project_team_id IS NOT NULL
+        ON CONFLICT (project_assessment_id, project_team_id) DO NOTHING
+    """)
+    
+    # Create child rows for ALL teams in each project
+    # This allows teachers to score all teams within a project
+    op.execute("""
+        INSERT INTO project_assessment_teams 
+            (school_id, project_assessment_id, project_team_id, status, scores_count)
+        SELECT DISTINCT
+            pa.school_id,
+            pa.id,
+            pt.id,
+            'not_started',
+            0
+        FROM project_assessments pa
+        JOIN project_teams pt ON pt.project_id = pa.project_id
+        WHERE pa.project_id IS NOT NULL
+        ON CONFLICT (project_assessment_id, project_team_id) DO NOTHING
+    """)
+    
+    # Step 5: Drop old indexes related to project_team_id
+    op.drop_index("ix_project_assessment_project_team", table_name="project_assessments")
+    op.drop_index("ix_project_assessment_project_team_status", table_name="project_assessments")
+    
+    # Step 6: Drop project_team_id column
+    # Use the correct constraint name from the original migration
+    op.drop_constraint(
+        "fk_project_assessments_project_team_id_project_teams",
+        "project_assessments",
+        type_="foreignkey",
+    )
+    op.drop_column("project_assessments", "project_team_id")
+    
+    # Create new index for project_id + status
+    op.create_index(
+        "ix_project_assessment_project_status",
+        "project_assessments",
+        ["project_id", "status"],
+    )
+
+
+def downgrade():
+    """
+    Reverse the changes - WARNING: significant data loss will occur
+    This is a destructive migration and downgrade is not recommended
+    """
+    
+    # Drop new index
+    op.drop_index("ix_project_assessment_project_status", table_name="project_assessments")
+    
+    # Recreate project_team_id column (will be NULL for all rows)
+    op.add_column(
+        "project_assessments",
+        sa.Column("project_team_id", sa.Integer(), nullable=True),
+    )
+    
+    # Recreate foreign key constraint (use original name for consistency)
+    op.create_foreign_key(
+        "fk_project_assessments_project_team_id_project_teams",
+        "project_assessments",
+        "project_teams",
+        ["project_team_id"],
+        ["id"],
+        ondelete="RESTRICT",
+    )
+    
+    # Recreate old indexes
+    op.create_index("ix_project_assessment_project_team", "project_assessments", ["project_team_id"])
+    op.create_index(
+        "ix_project_assessment_project_team_status",
+        "project_assessments",
+        ["project_team_id", "status"],
+    )
+    
+    # Drop indexes from project_assessment_teams
+    op.drop_index("ix_pat_assessment_status", table_name="project_assessment_teams")
+    op.drop_index("ix_pat_team", table_name="project_assessment_teams")
+    op.drop_index("ix_pat_assessment", table_name="project_assessment_teams")
+    
+    # Drop the table
+    op.drop_table("project_assessment_teams")
+    
+    # Make project_id nullable again
+    op.alter_column(
+        "project_assessments",
+        "project_id",
+        existing_type=sa.Integer(),
+        nullable=True,
+    )
