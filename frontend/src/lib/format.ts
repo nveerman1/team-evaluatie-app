@@ -12,8 +12,8 @@
  * @example
  * formatSigned1dp(1.25)     // "+1.3"
  * formatSigned1dp(-1.21)    // "-1.2"
- * formatSigned1dp(0)        // "0.0"
- * formatSigned1dp(0.04)     // "+0.0"
+ * formatSigned1dp(0)        // "0.0" (zero has no sign)
+ * formatSigned1dp(0.04)     // "+0.0" (rounds to 0.0 but was positive, gets +)
  * formatSigned1dp(null)     // "–"
  * formatSigned1dp(undefined)// "–"
  * formatSigned1dp(NaN)      // "–"
