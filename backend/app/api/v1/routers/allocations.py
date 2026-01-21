@@ -112,7 +112,6 @@ def _select_members_for_course(
             User.archived.is_(False),
             CourseEnrollment.active.is_(True),
             CourseEnrollment.course_id == course_id,
-            CourseEnrollment.school_id == school_id,
         )
     )
     if team_number is not None:

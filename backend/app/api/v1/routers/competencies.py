@@ -1002,7 +1002,6 @@ def list_windows(
             .filter(
                 CourseEnrollment.student_id == current_user.id,
                 CourseEnrollment.active.is_(True),
-                CourseEnrollment.school_id == current_user.school_id,
             )
             .distinct()
             .all()
@@ -1491,7 +1490,6 @@ def get_my_window_overview(
                 CourseEnrollment.student_id == current_user.id,
                 CourseEnrollment.active.is_(True),
                 CourseEnrollment.course_id == window.course_id,
-                CourseEnrollment.school_id == current_user.school_id,
             )
             .first()
         )
