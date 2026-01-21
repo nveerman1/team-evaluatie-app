@@ -115,10 +115,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         
         # Exempt authenticated teacher scoring endpoints from rate limiting
         # Teachers need to make many rapid updates when filling in scores
-        if self._is_authenticated_teacher_scoring(request):
-            return True
-        
-        return False
+        should_exempt = self._is_authenticated_teacher_scoring(request)
+        if should_exempt:
+            logger.info(f"Rate limiting EXEMPTED for path: {path}")
+        return should_exempt
     
     def _is_authenticated_teacher_scoring(self, request: Request) -> bool:
         """
@@ -148,14 +148,18 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if not is_scoring_endpoint:
             return False
         
+        # Log that we found a scoring endpoint
+        logger.info(f"Scoring endpoint detected: {path}")
+        
         # Get user role from authentication token
         user_role = self._get_user_role_from_token(request)
-        logger.debug(f"Rate limit check for {path}: user_role={user_role}")
+        logger.info(f"User role extracted from token: {user_role}")
         
         if user_role in ("teacher", "admin"):
             logger.info(f"Rate limiting exempted for {user_role} on {path}")
             return True
         
+        logger.warning(f"Rate limiting NOT exempted for role={user_role} on {path}")
         return False
     
     def _get_user_role_from_token(self, request: Request) -> Optional[str]:
@@ -173,45 +177,59 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         """
         # Try to get token from cookie (preferred method)
         token = request.cookies.get("access_token")
+        if token:
+            logger.info(f"Token found in cookie: {token[:20]}...")
         
         # Fallback to Authorization header
         if not token:
             auth_header = request.headers.get("authorization", "")
             if auth_header.startswith("Bearer "):
                 token = auth_header[7:]  # Remove "Bearer " prefix
+                logger.info(f"Token found in Authorization header: {token[:20]}...")
         
         # Development mode: Check X-User-Email header if enabled
         if not token and settings.ENABLE_DEV_LOGIN:
             x_user_email = request.headers.get("x-user-email")
             if x_user_email:
+                logger.info(f"Using X-User-Email header: {x_user_email}")
                 try:
                     db = SessionLocal()
                     try:
                         user = db.query(User).filter(User.email == x_user_email).first()
                         if user and not user.archived:
+                            logger.info(f"User found via X-User-Email: role={user.role}")
                             return user.role
+                        else:
+                            logger.warning(f"User not found or archived for email: {x_user_email}")
                     finally:
                         db.close()
                 except Exception as e:
-                    logger.debug(f"Error getting user from X-User-Email: {e}")
+                    logger.error(f"Error getting user from X-User-Email: {e}")
                     return None
         
         if not token:
+            logger.warning("No authentication token found in request")
             return None
         
         # Decode JWT token and extract role claim
         try:
             payload = decode_access_token(token)
             if not payload:
+                logger.warning("Failed to decode JWT token")
                 return None
+            
+            logger.info(f"JWT token decoded successfully. Payload keys: {list(payload.keys())}")
             
             # Get role directly from token payload (no database query needed)
             role = payload.get("role")
             if role:
+                logger.info(f"Role found in JWT token: {role}")
                 return role
+            else:
+                logger.warning(f"No 'role' claim in JWT token. Available claims: {list(payload.keys())}")
                 
         except Exception as e:
-            logger.debug(f"Error decoding token for rate limit check: {e}")
+            logger.error(f"Error decoding token for rate limit check: {e}", exc_info=True)
             return None
         
         return None
