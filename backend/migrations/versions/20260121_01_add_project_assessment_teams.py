@@ -58,6 +58,18 @@ def upgrade():
         sa.Column("status", sa.String(length=30), nullable=False, server_default="not_started"),
         sa.Column("scores_count", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("last_updated_at", sa.DateTime(), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(
             ["project_assessment_id"],
             ["project_assessments.id"],
