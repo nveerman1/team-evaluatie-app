@@ -248,19 +248,46 @@ def list_project_assessments(
             return ProjectAssessmentListResponse(items=[], page=page, limit=limit, total=0)
     else:
         # Students see all assessments for teams they are part of
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"[STUDENT PROJECT ASSESSMENTS] User ID: {user.id}, School ID: {user.school_id}, Role: {user.role}")
+        
         student_teams = db.query(ProjectTeamMember.project_team_id).filter(
             ProjectTeamMember.user_id == user.id,
             ProjectTeamMember.school_id == user.school_id,
         ).all()
         team_ids = [t[0] for t in student_teams]
         
+        logger.info(f"[STUDENT PROJECT ASSESSMENTS] Found {len(team_ids)} teams for student: {team_ids}")
+        
         if team_ids:
             # Filter by project_team_id directly
             stmt = stmt.where(ProjectAssessment.project_team_id.in_(team_ids))
             # Students only see 'open' or 'published' assessments
             stmt = stmt.where(ProjectAssessment.status.in_(["open", "published"]))
+            
+            # Debug: Count assessments before filtering
+            all_assessments_for_teams = db.execute(
+                select(func.count()).select_from(ProjectAssessment).where(
+                    ProjectAssessment.school_id == user.school_id,
+                    ProjectAssessment.project_team_id.in_(team_ids)
+                )
+            ).scalar_one()
+            logger.info(f"[STUDENT PROJECT ASSESSMENTS] Total assessments for these teams: {all_assessments_for_teams}")
+            
+            # Debug: Count by status
+            for check_status in ["draft", "open", "closed", "published"]:
+                count = db.execute(
+                    select(func.count()).select_from(ProjectAssessment).where(
+                        ProjectAssessment.school_id == user.school_id,
+                        ProjectAssessment.project_team_id.in_(team_ids),
+                        ProjectAssessment.status == check_status
+                    )
+                ).scalar_one()
+                logger.info(f"[STUDENT PROJECT ASSESSMENTS] Assessments with status '{check_status}': {count}")
         else:
             # No teams, return empty
+            logger.info(f"[STUDENT PROJECT ASSESSMENTS] Student has no teams, returning empty list")
             return ProjectAssessmentListResponse(items=[], page=page, limit=limit, total=0)
     
     # Filter by project_team_id
@@ -287,8 +314,19 @@ def list_project_assessments(
             return ProjectAssessmentListResponse(items=[], page=page, limit=limit, total=0)
     
     total = db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
+    
+    # Debug logging for students
+    if user.role == "student":
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"[STUDENT PROJECT ASSESSMENTS] Total matching assessments after all filters: {total}")
+    
     stmt = stmt.order_by(ProjectAssessment.id.desc()).limit(limit).offset((page - 1) * limit)
     rows: List[ProjectAssessment] = db.execute(stmt).scalars().all()
+    
+    # Debug logging for students
+    if user.role == "student":
+        logger.info(f"[STUDENT PROJECT ASSESSMENTS] Returning {len(rows)} assessments to student")
     
     # Fetch group, teacher, and course names (group_id is optional now)
     # Fetch team and course information
