@@ -175,20 +175,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         Returns:
             User role string or None if not authenticated
         """
-        # Try to get token from cookie (preferred method)
-        token = request.cookies.get("access_token")
-        if token:
-            logger.info(f"Token found in cookie: {token[:20]}...")
-        
-        # Fallback to Authorization header
-        if not token:
-            auth_header = request.headers.get("authorization", "")
-            if auth_header.startswith("Bearer "):
-                token = auth_header[7:]  # Remove "Bearer " prefix
-                logger.info(f"Token found in Authorization header: {token[:20]}...")
-        
-        # Development mode: Check X-User-Email header if enabled
-        if not token and settings.ENABLE_DEV_LOGIN:
+        # Development mode: Check X-User-Email header first if enabled
+        # This is the primary auth method in development
+        if settings.ENABLE_DEV_LOGIN:
             x_user_email = request.headers.get("x-user-email")
             if x_user_email:
                 logger.info(f"Using X-User-Email header: {x_user_email}")
@@ -205,7 +194,18 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                         db.close()
                 except Exception as e:
                     logger.error(f"Error getting user from X-User-Email: {e}")
-                    return None
+        
+        # Try to get token from cookie (preferred method in production)
+        token = request.cookies.get("access_token")
+        if token:
+            logger.info(f"Token found in cookie: {token[:20]}...")
+        
+        # Fallback to Authorization header
+        if not token:
+            auth_header = request.headers.get("authorization", "")
+            if auth_header.startswith("Bearer "):
+                token = auth_header[7:]  # Remove "Bearer " prefix
+                logger.info(f"Token found in Authorization header: {token[:20]}...")
         
         if not token:
             logger.warning("No authentication token found in request")
