@@ -203,7 +203,7 @@ def create_project_assessment(
     return _to_out_assessment(pa)
 
 
-@router.get("", response_model=ProjectAssessmentListResponse)
+@router.get("")
 def list_project_assessments(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
@@ -223,7 +223,11 @@ def list_project_assessments(
     - Teachers: see all assessments for courses they're assigned to (not just ones they created)
     - Students: see assessments for teams they belong to
     """
+    from fastapi.responses import JSONResponse
     stmt = select(ProjectAssessment).where(ProjectAssessment.school_id == user.school_id)
+    
+    # Debug info for students (visible in browser Network tab)
+    debug_info = {}
     
     if user.role == "admin":
         # Admins see all assessments in their school
@@ -252,6 +256,10 @@ def list_project_assessments(
         logger = logging.getLogger(__name__)
         logger.info(f"[STUDENT PROJECT ASSESSMENTS] User ID: {user.id}, School ID: {user.school_id}, Role: {user.role}")
         
+        debug_info["user_id"] = user.id
+        debug_info["school_id"] = user.school_id
+        debug_info["role"] = user.role
+        
         student_teams = db.query(ProjectTeamMember.project_team_id).filter(
             ProjectTeamMember.user_id == user.id,
             ProjectTeamMember.school_id == user.school_id,
@@ -259,6 +267,8 @@ def list_project_assessments(
         team_ids = [t[0] for t in student_teams]
         
         logger.info(f"[STUDENT PROJECT ASSESSMENTS] Found {len(team_ids)} teams for student: {team_ids}")
+        debug_info["team_count"] = len(team_ids)
+        debug_info["team_ids"] = team_ids
         
         if team_ids:
             # Filter by project_team_id directly
@@ -274,8 +284,10 @@ def list_project_assessments(
                 )
             ).scalar_one()
             logger.info(f"[STUDENT PROJECT ASSESSMENTS] Total assessments for these teams: {all_assessments_for_teams}")
+            debug_info["total_assessments_for_teams"] = all_assessments_for_teams
             
             # Debug: Count by status
+            status_counts = {}
             for check_status in ["draft", "open", "closed", "published"]:
                 count = db.execute(
                     select(func.count()).select_from(ProjectAssessment).where(
@@ -285,9 +297,12 @@ def list_project_assessments(
                     )
                 ).scalar_one()
                 logger.info(f"[STUDENT PROJECT ASSESSMENTS] Assessments with status '{check_status}': {count}")
+                status_counts[check_status] = count
+            debug_info["status_counts"] = status_counts
         else:
             # No teams, return empty
             logger.info(f"[STUDENT PROJECT ASSESSMENTS] Student has no teams, returning empty list")
+            debug_info["message"] = "No teams found for student"
             return ProjectAssessmentListResponse(items=[], page=page, limit=limit, total=0)
     
     # Filter by project_team_id
@@ -320,6 +335,7 @@ def list_project_assessments(
         import logging
         logger = logging.getLogger(__name__)
         logger.info(f"[STUDENT PROJECT ASSESSMENTS] Total matching assessments after all filters: {total}")
+        debug_info["total_after_filters"] = total
     
     stmt = stmt.order_by(ProjectAssessment.id.desc()).limit(limit).offset((page - 1) * limit)
     rows: List[ProjectAssessment] = db.execute(stmt).scalars().all()
@@ -327,6 +343,7 @@ def list_project_assessments(
     # Debug logging for students
     if user.role == "student":
         logger.info(f"[STUDENT PROJECT ASSESSMENTS] Returning {len(rows)} assessments to student")
+        debug_info["returned_count"] = len(rows)
     
     # Fetch group, teacher, and course names (group_id is optional now)
     # Fetch team and course information
@@ -462,7 +479,21 @@ def list_project_assessments(
         
         items.append(ProjectAssessmentListItem(**item_dict))
     
-    return ProjectAssessmentListResponse(items=items, page=page, limit=limit, total=total)
+    response_data = ProjectAssessmentListResponse(items=items, page=page, limit=limit, total=total)
+    
+    # For students, add debug info in custom HTTP headers (visible in browser Network tab)
+    if user.role == "student":
+        import json
+        response = JSONResponse(content=response_data.model_dump())
+        response.headers["X-Debug-Info"] = json.dumps(debug_info)
+        response.headers["X-Debug-Team-Count"] = str(debug_info.get("team_count", 0))
+        response.headers["X-Debug-Total-Assessments"] = str(debug_info.get("total_assessments_for_teams", 0))
+        response.headers["X-Debug-Returned-Count"] = str(debug_info.get("returned_count", 0))
+        if "status_counts" in debug_info:
+            response.headers["X-Debug-Status-Counts"] = json.dumps(debug_info["status_counts"])
+        return response
+    
+    return response_data
 
 
 @router.get("/{assessment_id}", response_model=ProjectAssessmentDetailOut)
