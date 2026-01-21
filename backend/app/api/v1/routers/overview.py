@@ -1515,8 +1515,15 @@ def get_project_teams(
             ProjectTeamMember.project_team_id == pt.id
         ).all()
         
+        # FIX (2026-01): Clean up display_name_at_time if it was incorrectly set to project name
+        # Legacy data may have "Project {name}" instead of proper team names
+        team_display_name = pt.display_name_at_time
+        if team_display_name and team_display_name.startswith("Project ") and pt.team_number:
+            # If it looks like a project name, use the proper team name instead
+            team_display_name = f"Team {pt.team_number}"
+        
         team_info_map[pt.team_number] = {
-            "name": pt.display_name_at_time,
+            "name": team_display_name,
             "members": [m.user.name for m in members]
         }
     
