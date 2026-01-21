@@ -1097,8 +1097,10 @@ def get_project_overview(
     school_id = current_user.school_id
     
     # Query project assessments with optional project and client info
-    # FIXED: Query assessments directly to avoid duplicate rows per team
-    # Use distinct() to ensure each assessment appears only once
+    # FIX (2026-01): Query assessments directly to avoid duplicate rows per team
+    # Previously joined through ProjectAssessmentTeam which created one row per team,
+    # causing each project to appear multiple times in the UI (duplicate key warnings).
+    # Now uses distinct() and direct joins to ensure each assessment appears only once.
     query = db.query(
         ProjectAssessment,
         Course,

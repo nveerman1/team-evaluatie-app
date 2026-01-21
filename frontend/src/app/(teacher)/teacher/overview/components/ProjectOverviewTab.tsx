@@ -537,6 +537,9 @@ function ProjectTable({
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-slate-100">
+                                    {/* FIX (2026-01): Use composite key (projectId + team_number) to ensure uniqueness
+                                        across all projects. Previously used just team.team_number which could cause
+                                        duplicate key warnings if multiple projects had teams with the same number. */}
                                     {projectTeams
                                       .sort((a, b) => (b.overall_score || 0) - (a.overall_score || 0))
                                       .map((team) => (
