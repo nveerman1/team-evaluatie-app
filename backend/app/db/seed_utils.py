@@ -86,18 +86,35 @@ class TimestampGenerator:
         if days_ago_max is None:
             days_ago_max = self.weeks * 7
         
+        if count == 0:
+            return []
+        if count == 1:
+            return [self.random_timestamp(days_ago_min, days_ago_max)]
+        
         timestamps = []
         for i in range(count):
-            # Spread timestamps evenly with some randomness
-            progress = i / max(count - 1, 1)
+            # Spread timestamps evenly across the range
+            progress = i / (count - 1)
             days_ago = days_ago_max - (progress * (days_ago_max - days_ago_min))
-            jitter = self.rand.uniform(-0.5, 0.5)  # Add random jitter
-            days_ago = max(days_ago_min, min(days_ago_max, days_ago + jitter))
             
             ts = self.now - timedelta(days=days_ago)
             timestamps.append(ts)
         
-        return sorted(timestamps)
+        # Add small random jitter after ensuring base ordering
+        # Jitter is small enough to not break the overall sequence
+        jittered = []
+        for i, ts in enumerate(timestamps):
+            # Max jitter is 10% of the gap to the next timestamp
+            if i < len(timestamps) - 1:
+                max_jitter_seconds = (timestamps[i] - timestamps[i + 1]).total_seconds() * 0.1
+            else:
+                max_jitter_seconds = 3600  # 1 hour for last timestamp
+            
+            jitter_seconds = self.rand.uniform(-max_jitter_seconds, max_jitter_seconds)
+            jittered_ts = ts + timedelta(seconds=jitter_seconds)
+            jittered.append(jittered_ts)
+        
+        return sorted(jittered)
     
     def recent_timestamp(self, days_ago_max: int = 7) -> datetime:
         """Generate recent timestamp within last N days"""

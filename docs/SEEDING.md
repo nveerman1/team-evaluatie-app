@@ -17,7 +17,7 @@ Create minimal required records. Safe to run multiple times.
 
 ```bash
 cd backend
-python -m scripts.seed --mode base
+python -m backend.scripts.seed --mode base
 ```
 
 This creates:
@@ -33,7 +33,7 @@ Create comprehensive test dataset.
 
 ```bash
 cd backend
-python -m scripts.seed --mode demo --reset --seed 42
+python -m backend.scripts.seed --mode demo --reset --seed 42
 ```
 
 This creates:
@@ -90,34 +90,34 @@ python -m scripts.seed --mode demo --reset --seed 9999
 
 ```bash
 # First time setup - create base records
-python -m scripts.seed --mode base
+python -m backend.scripts.seed --mode base
 
 # Add demo data for testing
-python -m scripts.seed --mode demo
+python -m backend.scripts.seed --mode demo
 ```
 
 ### Reset and Reseed
 
 ```bash
 # Completely reset and recreate demo data
-python -m scripts.seed --mode demo --reset
+python -m backend.scripts.seed --mode demo --reset
 ```
 
 ### Reproducible Testing
 
 ```bash
 # Create test data with specific seed
-python -m scripts.seed --mode demo --reset --seed 42
+python -m backend.scripts.seed --mode demo --reset --seed 42
 
 # Later, recreate exact same data
-python -m scripts.seed --mode demo --reset --seed 42
+python -m backend.scripts.seed --mode demo --reset --seed 42
 ```
 
 ### Update Base Records Only
 
 ```bash
 # Update/create required system records without affecting user data
-python -m scripts.seed --mode base
+python -m backend.scripts.seed --mode base
 ```
 
 ## What Gets Created
@@ -179,7 +179,7 @@ In addition to base seed:
 After seeding, verify data integrity:
 
 ```bash
-python -m scripts.seed_smoke_test
+python -m backend.scripts.seed_smoke_test
 ```
 
 The smoke test checks:
@@ -249,7 +249,7 @@ Ensure you're running from the `backend` directory:
 
 ```bash
 cd backend
-python -m scripts.seed --mode demo
+python -m backend.scripts.seed --mode demo
 ```
 
 ### Import Errors
@@ -283,16 +283,16 @@ python -m scripts.seed --mode demo --reset
 
 ```bash
 # Setup script for new developer
-python -m scripts.seed --mode base
-python -m scripts.seed --mode demo
-python -m scripts.seed_smoke_test
+python -m backend.scripts.seed --mode base
+python -m backend.scripts.seed --mode demo
+python -m backend.scripts.seed_smoke_test
 ```
 
 ### Testing Pipeline
 
 ```bash
 # Automated testing with consistent data
-python -m scripts.seed --mode demo --reset --seed 42
+python -m backend.scripts.seed --mode demo --reset --seed 42
 pytest
 ```
 
@@ -300,7 +300,7 @@ pytest
 
 ```bash
 # Only run base seed in production
-python -m scripts.seed --mode base
+python -m backend.scripts.seed --mode base
 ```
 
 ## Files
