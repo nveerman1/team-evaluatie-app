@@ -4,10 +4,15 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Callable
+from typing import Callable, Optional
 from fastapi import Request, Response, HTTPException, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.infra.services.rate_limiter import RateLimiter
+from app.core.security import decode_access_token
+from app.core.config import settings
+from sqlalchemy.orm import Session
+from app.infra.db.session import SessionLocal
+from app.infra.db.models import User
 
 logger = logging.getLogger(__name__)
 
@@ -143,14 +148,73 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if not is_scoring_endpoint:
             return False
         
-        # Check if user is authenticated as teacher or admin
-        if hasattr(request.state, "user") and request.state.user:
-            user = request.state.user
-            role = getattr(user, "role", None)
-            if role in ("teacher", "admin"):
-                return True
+        # Get user role from authentication token
+        user_role = self._get_user_role_from_token(request)
+        logger.debug(f"Rate limit check for {path}: user_role={user_role}")
+        
+        if user_role in ("teacher", "admin"):
+            logger.info(f"Rate limiting exempted for {user_role} on {path}")
+            return True
         
         return False
+    
+    def _get_user_role_from_token(self, request: Request) -> Optional[str]:
+        """
+        Extract user role from authentication token in request.
+        
+        This method decodes the JWT token from cookies or Authorization header
+        and extracts the role claim directly from the token payload.
+        
+        Args:
+            request: HTTP request
+            
+        Returns:
+            User role string or None if not authenticated
+        """
+        # Try to get token from cookie (preferred method)
+        token = request.cookies.get("access_token")
+        
+        # Fallback to Authorization header
+        if not token:
+            auth_header = request.headers.get("authorization", "")
+            if auth_header.startswith("Bearer "):
+                token = auth_header[7:]  # Remove "Bearer " prefix
+        
+        # Development mode: Check X-User-Email header if enabled
+        if not token and settings.ENABLE_DEV_LOGIN:
+            x_user_email = request.headers.get("x-user-email")
+            if x_user_email:
+                try:
+                    db = SessionLocal()
+                    try:
+                        user = db.query(User).filter(User.email == x_user_email).first()
+                        if user and not user.archived:
+                            return user.role
+                    finally:
+                        db.close()
+                except Exception as e:
+                    logger.debug(f"Error getting user from X-User-Email: {e}")
+                    return None
+        
+        if not token:
+            return None
+        
+        # Decode JWT token and extract role claim
+        try:
+            payload = decode_access_token(token)
+            if not payload:
+                return None
+            
+            # Get role directly from token payload (no database query needed)
+            role = payload.get("role")
+            if role:
+                return role
+                
+        except Exception as e:
+            logger.debug(f"Error decoding token for rate limit check: {e}")
+            return None
+        
+        return None
 
     def _get_user_identifier(self, request: Request) -> str:
         """Get user identifier for rate limiting."""
