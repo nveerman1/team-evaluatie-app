@@ -124,14 +124,21 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         Returns:
             True if authenticated teacher/admin accessing scoring endpoints
         """
+        import re
+        
         path = request.url.path
         
         # Check if it's a scoring endpoint that teachers use interactively
-        # These endpoints need exemption to support rapid autosave/updates
-        is_scoring_endpoint = (
-            "/project-assessments/" in path and "/scores" in path
-        ) or (
-            "/evaluations/" in path and "/grades" in path
+        # Use precise regex patterns to match only intended scoring endpoints
+        # Pattern 1: /api/v1/project-assessments/{id}/scores[/*]
+        # Pattern 2: /api/v1/evaluations/{id}/grades[/*]
+        scoring_patterns = [
+            r'^/api/v1/project-assessments/\d+/scores(?:/.*)?$',
+            r'^/api/v1/evaluations/\d+/grades(?:/.*)?$',
+        ]
+        
+        is_scoring_endpoint = any(
+            re.match(pattern, path) for pattern in scoring_patterns
         )
         
         if not is_scoring_endpoint:

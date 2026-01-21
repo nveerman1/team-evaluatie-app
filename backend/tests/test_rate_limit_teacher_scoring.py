@@ -260,7 +260,7 @@ def test_scoring_endpoint_pattern_matching():
         request.state.user = teacher_user
         return request
     
-    # Should match
+    # Should match - valid scoring endpoints
     assert middleware._is_authenticated_teacher_scoring(
         mock_request("/api/v1/project-assessments/123/scores/batch")
     ) == True
@@ -273,7 +273,11 @@ def test_scoring_endpoint_pattern_matching():
         mock_request("/api/v1/evaluations/789/grades")
     ) == True
     
-    # Should NOT match
+    assert middleware._is_authenticated_teacher_scoring(
+        mock_request("/api/v1/evaluations/101/grades/summary")
+    ) == True
+    
+    # Should NOT match - not scoring endpoints
     assert middleware._is_authenticated_teacher_scoring(
         mock_request("/api/v1/project-assessments/123")
     ) == False
@@ -284,6 +288,19 @@ def test_scoring_endpoint_pattern_matching():
     
     assert middleware._is_authenticated_teacher_scoring(
         mock_request("/api/v1/users")
+    ) == False
+    
+    # Should NOT match - malformed paths
+    assert middleware._is_authenticated_teacher_scoring(
+        mock_request("/api/v1/project-assessments/abc/scores")  # non-numeric ID
+    ) == False
+    
+    assert middleware._is_authenticated_teacher_scoring(
+        mock_request("/api/v1/project-assessments//scores")  # missing ID
+    ) == False
+    
+    assert middleware._is_authenticated_teacher_scoring(
+        mock_request("/project-assessments/123/scores")  # missing /api/v1
     ) == False
 
 
