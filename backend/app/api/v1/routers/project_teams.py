@@ -16,7 +16,7 @@ from app.api.v1.schemas.project_teams import (
     BulkAddMembersRequest,
     CloneProjectTeamsResponse,
 )
-from app.infra.db.models import User, Project, ProjectTeam, ProjectTeamMember
+from app.infra.db.models import User, Project, ProjectTeam, ProjectTeamMember, ProjectAssessment, ProjectAssessmentTeam
 from app.infra.services.project_team_service import ProjectTeamService
 from app.core.rbac import require_role
 from app.core.audit import log_create
@@ -70,6 +70,39 @@ def create_project_team(
             group_id=data.team_id,
             school_id=user.school_id,
         )
+
+    # Auto-create project_assessment_teams rows for existing assessments
+    # This handles the case where assessments were created before all teams existed
+    existing_assessments = (
+        db.query(ProjectAssessment)
+        .filter(
+            ProjectAssessment.project_id == project_id,
+            ProjectAssessment.school_id == user.school_id,
+        )
+        .all()
+    )
+    
+    for assessment in existing_assessments:
+        # Check if link already exists
+        existing_link = (
+            db.query(ProjectAssessmentTeam)
+            .filter(
+                ProjectAssessmentTeam.project_assessment_id == assessment.id,
+                ProjectAssessmentTeam.project_team_id == project_team.id,
+            )
+            .first()
+        )
+        
+        if not existing_link:
+            # Create the missing link
+            assessment_team = ProjectAssessmentTeam(
+                school_id=user.school_id,
+                project_assessment_id=assessment.id,
+                project_team_id=project_team.id,
+                status="not_started",
+                scores_count=0,
+            )
+            db.add(assessment_team)
 
     db.commit()
 
