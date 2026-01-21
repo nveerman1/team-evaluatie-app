@@ -753,15 +753,22 @@ def get_overview_matrix(
         if date_to_dt:
             project_query = project_query.filter(ProjectAssessment.published_at <= date_to_dt)
         
+        # Track which assessments we've already added to avoid duplicate column keys
+        seen_assessments = set()
+        
         for assessment, course, team in project_query.all():
             eval_key = f"project_{assessment.id}"
-            evaluations.append({
-                "key": eval_key,
-                "type": "project",
-                "title": assessment.title,
-                "date": assessment.published_at,
-                "evaluation_id": assessment.id,
-            })
+            
+            # Only add each assessment once to the evaluations list (for columns)
+            if assessment.id not in seen_assessments:
+                evaluations.append({
+                    "key": eval_key,
+                    "type": "project",
+                    "title": assessment.title,
+                    "date": assessment.published_at,
+                    "evaluation_id": assessment.id,
+                })
+                seen_assessments.add(assessment.id)
             
             # Get teacher for this assessment
             teacher = db.query(User).filter(User.id == assessment.teacher_id).first()
