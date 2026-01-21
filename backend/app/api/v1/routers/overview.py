@@ -1042,13 +1042,13 @@ def get_overview_matrix(
         logger.error(f"AttributeError in get_overview_matrix: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"Internal server error: Invalid attribute access - {str(e)}"
+            detail="Internal server error while processing matrix data"
         )
     except Exception as e:
         logger.error(f"Unexpected error in get_overview_matrix: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"Internal server error: {str(e)}"
+            detail="Internal server error occurred"
         )
 
 
