@@ -803,9 +803,8 @@ def get_overview_matrix(
                         "cells": {}
                     }
                 
-                # Calculate score for this student's team
-                team_num = member.team_number if hasattr(member, 'team_number') else None
-                score = _calculate_project_score(db, assessment.id, assessment.rubric_id, team_num) if team_num else None
+                # Calculate score for this team (use ProjectTeam.team_number, not User.team_number)
+                score = _calculate_project_score(db, assessment.id, assessment.rubric_id, team.team_number) if team.team_number else None
                 
                 student_data[member.id]["cells"][eval_key] = {
                     "evaluation_id": assessment.id,
