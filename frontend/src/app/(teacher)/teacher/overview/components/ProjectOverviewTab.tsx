@@ -540,7 +540,7 @@ function ProjectTable({
                                     {projectTeams
                                       .sort((a, b) => (b.overall_score || 0) - (a.overall_score || 0))
                                       .map((team) => (
-                                        <tr key={team.team_number} className="hover:bg-slate-50">
+                                        <tr key={`${project.projectId}-team-${team.team_number}`} className="hover:bg-slate-50">
                                           <td className="px-3 py-2 text-sm font-medium text-slate-900">
                                             {team.team_name || `Team ${team.team_number}`}
                                           </td>

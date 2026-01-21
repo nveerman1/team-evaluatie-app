@@ -1097,19 +1097,15 @@ def get_project_overview(
     school_id = current_user.school_id
     
     # Query project assessments with optional project and client info
-    # Join through ProjectAssessmentTeam junction table to match new data model
+    # FIXED: Query assessments directly to avoid duplicate rows per team
+    # Use distinct() to ensure each assessment appears only once
     query = db.query(
         ProjectAssessment,
-        ProjectTeam,
         Course,
         Project,
         Client,
-    ).join(
-        ProjectAssessmentTeam, ProjectAssessmentTeam.project_assessment_id == ProjectAssessment.id
-    ).join(
-        ProjectTeam, ProjectTeam.id == ProjectAssessmentTeam.project_team_id
-    ).join(
-        Project, ProjectTeam.project_id == Project.id
+    ).outerjoin(
+        Project, ProjectAssessment.project_id == Project.id
     ).outerjoin(
         Course, Project.course_id == Course.id
     ).outerjoin(
@@ -1120,7 +1116,7 @@ def get_project_overview(
         ProjectAssessment.school_id == school_id,
         ProjectAssessment.is_advisory.is_(False),  # Exclude external assessments
         ProjectAssessment.status.in_(["published", "closed"])  # Only show published or closed assessments
-    )
+    ).distinct()
     
     # Apply filters
     if course_id:
@@ -1148,10 +1144,7 @@ def get_project_overview(
     if search_query:
         search_pattern = f"%{search_query}%"
         query = query.filter(
-            or_(
-                ProjectAssessment.title.ilike(search_pattern),
-                ProjectTeam.name.ilike(search_pattern)
-            )
+            ProjectAssessment.title.ilike(search_pattern)
         )
     
     # Get results
@@ -1159,7 +1152,7 @@ def get_project_overview(
     
     # Build project overview items
     projects = []
-    for assessment, team, course, project, client in results:
+    for assessment, course, project, client in results:
         # Get client name from the joined Client object
         client_name = client.organization if client else None
         

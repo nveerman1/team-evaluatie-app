@@ -998,7 +998,8 @@ def wizard_create_project(
                 school_id=user.school_id,
                 project_id=project.id,
                 team_id=None,  # No link to legacy groups
-                display_name_at_time=f"Project {project.title}",
+                # FIX: Use proper team name instead of project title
+                display_name_at_time="Team 1",
                 team_number=1,
                 version=1,
             )
