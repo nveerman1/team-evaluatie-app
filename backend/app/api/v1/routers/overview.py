@@ -1100,7 +1100,7 @@ def get_project_overview(
     # FIX (2026-01): Query assessments directly to avoid duplicate rows per team
     # Previously joined through ProjectAssessmentTeam which created one row per team,
     # causing each project to appear multiple times in the UI (duplicate key warnings).
-    # Now uses distinct() and direct joins to ensure each assessment appears only once.
+    # Now uses direct outer joins (no distinct needed - each assessment appears once naturally).
     query = db.query(
         ProjectAssessment,
         Course,
@@ -1118,7 +1118,7 @@ def get_project_overview(
         ProjectAssessment.school_id == school_id,
         ProjectAssessment.is_advisory.is_(False),  # Exclude external assessments
         ProjectAssessment.status.in_(["published", "closed"])  # Only show published or closed assessments
-    ).distinct()
+    )
     
     # Apply filters
     if course_id:
