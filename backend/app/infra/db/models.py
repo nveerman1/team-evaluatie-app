@@ -825,7 +825,7 @@ class ProjectAssessment(Base):
     """
     Project assessment per project, uses rubrics with scope='project'
     
-    After refactor: Owned by project_id, with multiple teams linked via project_assessment_teams
+    Refactored: Owned by project_id, with multiple teams linked via project_assessment_teams
     """
 
     __tablename__ = "project_assessments"
@@ -833,18 +833,10 @@ class ProjectAssessment(Base):
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
 
-    # Relationships
-    project_id: Mapped[Optional[int]] = mapped_column(
+    # Project relationship - primary owner
+    project_id: Mapped[int] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"),
-        nullable=True,  # Will become NOT NULL after migration
-        index=True,
-    )
-    
-    # DEPRECATED: Team reference (kept temporarily for migration)
-    # Will be replaced by project_assessment_teams relationship
-    project_team_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("project_teams.id", ondelete="RESTRICT"),
-        nullable=True,  # Made nullable for migration
+        nullable=False,
         index=True,
     )
 
@@ -883,17 +875,19 @@ class ProjectAssessment(Base):
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
 
     # Relationships
-    project_team: Mapped[Optional["ProjectTeam"]] = relationship()
+    project: Mapped["Project"] = relationship()
     external_evaluator: Mapped["ExternalEvaluator"] = relationship()
+    assessment_teams: Mapped[list["ProjectAssessmentTeam"]] = relationship(
+        back_populates="project_assessment", cascade="all,delete-orphan"
+    )
 
     __table_args__ = (
-        Index("ix_project_assessment_project_team", "project_team_id"),
+        Index("ix_project_assessment_project_id", "project_id"),
         Index("ix_project_assessment_teacher", "teacher_id"),
         Index("ix_project_assessment_external", "external_evaluator_id"),
         Index("ix_project_assessment_role", "role"),
         Index("ix_project_assessment_status", "status"),
-        Index("ix_project_assessment_project_team_status", "project_team_id", "status"),
-        Index("ix_project_assessment_project_id", "project_id"),
+        Index("ix_project_assessment_project_status", "project_id", "status"),
     )
 
 
@@ -930,7 +924,7 @@ class ProjectAssessmentTeam(Base):
     last_updated_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
 
     # Relationships
-    project_assessment: Mapped["ProjectAssessment"] = relationship()
+    project_assessment: Mapped["ProjectAssessment"] = relationship(back_populates="assessment_teams")
     project_team: Mapped["ProjectTeam"] = relationship()
 
     __table_args__ = (

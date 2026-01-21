@@ -8,11 +8,10 @@ from pydantic import BaseModel, Field
 
 
 class ProjectAssessmentCreate(BaseModel):
-    project_team_id: int  # Required - primary FK
+    project_id: int  # Required - primary FK to project
     rubric_id: int
     title: str
     version: Optional[str] = None
-    project_id: Optional[int] = None
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -21,15 +20,13 @@ class ProjectAssessmentUpdate(BaseModel):
     rubric_id: Optional[int] = None
     version: Optional[str] = None
     status: Optional[str] = None  # draft|published
-    project_id: Optional[int] = None
     metadata_json: Optional[Dict[str, Any]] = None
 
 
 class ProjectAssessmentOut(BaseModel):
     id: int
     school_id: int
-    project_id: Optional[int] = None
-    project_team_id: int  # Primary FK
+    project_id: int  # Required after refactor
     rubric_id: int
     teacher_id: Optional[int] = None
     external_evaluator_id: Optional[int] = None

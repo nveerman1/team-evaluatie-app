@@ -6,6 +6,7 @@ Create Date: 2026-01-21
 
 Refactors project assessments to be owned by project_id instead of a single project_team_id.
 Introduces project_assessment_teams as a child table to link assessments to multiple teams.
+Removes project_team_id from project_assessments entirely (no backward compatibility needed).
 """
 
 from alembic import op
@@ -22,10 +23,11 @@ depends_on = None
 def upgrade():
     """
     1. Backfill project_id for existing assessments
-    2. Create project_assessment_teams table
-    3. Backfill child rows for existing assessments
-    4. Create child rows for all teams in each project
-    5. Make project_team_id nullable
+    2. Make project_id NOT NULL
+    3. Create project_assessment_teams table
+    4. Backfill child rows for existing assessments and all teams
+    5. Drop project_team_id column from project_assessments
+    6. Drop old indexes
     """
     
     # Step 1: Backfill project_id for existing assessments
@@ -38,7 +40,15 @@ def upgrade():
         AND pa.project_id IS NULL
     """)
     
-    # Step 2: Create project_assessment_teams table
+    # Step 2: Make project_id NOT NULL
+    op.alter_column(
+        "project_assessments",
+        "project_id",
+        existing_type=sa.Integer(),
+        nullable=False,
+    )
+    
+    # Step 3: Create project_assessment_teams table
     op.create_table(
         "project_assessment_teams",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -77,7 +87,7 @@ def upgrade():
         ["project_assessment_id", "status"],
     )
     
-    # Step 3: Backfill child rows for existing assessments
+    # Step 4: Backfill child rows for existing assessments
     # Create one child row for each assessment's original project_team_id
     op.execute("""
         INSERT INTO project_assessment_teams 
@@ -103,7 +113,7 @@ def upgrade():
         ON CONFLICT (project_assessment_id, project_team_id) DO NOTHING
     """)
     
-    # Step 4: Create child rows for ALL teams in each project
+    # Create child rows for ALL teams in each project
     # This allows teachers to score all teams within a project
     op.execute("""
         INSERT INTO project_assessment_teams 
@@ -120,29 +130,60 @@ def upgrade():
         ON CONFLICT (project_assessment_id, project_team_id) DO NOTHING
     """)
     
-    # Step 5: Make project_team_id nullable (it's now deprecated)
-    op.alter_column(
+    # Step 5: Drop old indexes related to project_team_id
+    op.drop_index("ix_project_assessment_project_team", table_name="project_assessments")
+    op.drop_index("ix_project_assessment_project_team_status", table_name="project_assessments")
+    
+    # Step 6: Drop project_team_id column
+    op.drop_constraint(
+        "project_assessments_project_team_id_fkey",
         "project_assessments",
-        "project_team_id",
-        existing_type=sa.Integer(),
-        nullable=True,
+        type_="foreignkey",
+    )
+    op.drop_column("project_assessments", "project_team_id")
+    
+    # Create new index for project_id + status
+    op.create_index(
+        "ix_project_assessment_project_status",
+        "project_assessments",
+        ["project_id", "status"],
     )
 
 
 def downgrade():
     """
-    Reverse the changes - WARNING: data loss will occur
+    Reverse the changes - WARNING: significant data loss will occur
+    This is a destructive migration and downgrade is not recommended
     """
     
-    # Make project_team_id not nullable again (may fail if nulls exist)
-    op.alter_column(
+    # Drop new index
+    op.drop_index("ix_project_assessment_project_status", table_name="project_assessments")
+    
+    # Recreate project_team_id column (will be NULL for all rows)
+    op.add_column(
         "project_assessments",
-        "project_team_id",
-        existing_type=sa.Integer(),
-        nullable=False,
+        sa.Column("project_team_id", sa.Integer(), nullable=True),
     )
     
-    # Drop indexes
+    # Recreate foreign key constraint
+    op.create_foreign_key(
+        "project_assessments_project_team_id_fkey",
+        "project_assessments",
+        "project_teams",
+        ["project_team_id"],
+        ["id"],
+        ondelete="RESTRICT",
+    )
+    
+    # Recreate old indexes
+    op.create_index("ix_project_assessment_project_team", "project_assessments", ["project_team_id"])
+    op.create_index(
+        "ix_project_assessment_project_team_status",
+        "project_assessments",
+        ["project_team_id", "status"],
+    )
+    
+    # Drop indexes from project_assessment_teams
     op.drop_index("ix_pat_assessment_status", table_name="project_assessment_teams")
     op.drop_index("ix_pat_team", table_name="project_assessment_teams")
     op.drop_index("ix_pat_assessment", table_name="project_assessment_teams")
@@ -150,4 +191,10 @@ def downgrade():
     # Drop the table
     op.drop_table("project_assessment_teams")
     
-    # Note: project_id backfill is kept as it doesn't hurt to have it
+    # Make project_id nullable again
+    op.alter_column(
+        "project_assessments",
+        "project_id",
+        existing_type=sa.Integer(),
+        nullable=True,
+    )
