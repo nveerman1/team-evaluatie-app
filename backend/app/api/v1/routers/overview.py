@@ -1293,6 +1293,19 @@ def get_project_overview(
             category_statistics=category_statistics
         ))
     
+    # Guard: Ensure project_ids are unique (prevent duplicate projects in response)
+    project_ids = [p.project_id for p in projects]
+    unique_project_ids = set(project_ids)
+    if len(project_ids) != len(unique_project_ids):
+        # Log warning if duplicates detected
+        from collections import Counter
+        duplicates = [pid for pid, count in Counter(project_ids).items() if count > 1]
+        logging.warning(
+            f"Duplicate project IDs detected in overview response: {duplicates}. "
+            f"This should not happen with the current query. "
+            f"Total projects: {len(project_ids)}, Unique: {len(unique_project_ids)}"
+        )
+    
     return ProjectOverviewListResponse(
         projects=projects,
         total=len(projects)
