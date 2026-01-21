@@ -174,8 +174,12 @@ class TestOverviewMatrix:
                 db=db,
                 current_user=current_user
             )
-            # If we get here, the fix worked
-            assert True
+            # Verify result structure is valid
+            assert hasattr(result, 'columns')
+            assert hasattr(result, 'rows')
+            assert hasattr(result, 'total_students')
+            assert result.total_students == 1
+            assert len(result.rows) == 1
         except AttributeError as e:
             # If we get AttributeError, the fix didn't work
             pytest.fail(f"AttributeError still raised: {str(e)}")
