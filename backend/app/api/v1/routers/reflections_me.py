@@ -76,8 +76,11 @@ def get_my_reflection(
 ):
     # Check if user has access to this evaluation
     if not _has_access_to_evaluation(db, evaluation_id, user.id):
-        # Check if evaluation exists
-        ev = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
+        # Check if evaluation exists and belongs to user's school
+        ev = db.query(Evaluation).filter(
+            Evaluation.id == evaluation_id,
+            Evaluation.school_id == user.school_id
+        ).first()
         if not ev:
             raise HTTPException(status_code=404, detail="Evaluation not found")
         # User is authenticated but doesn't have access to this evaluation
@@ -126,7 +129,10 @@ def upsert_my_reflection(
     user=Depends(get_current_user),
 ):
     if not _has_access_to_evaluation(db, evaluation_id, user.id):
-        ev = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
+        ev = db.query(Evaluation).filter(
+            Evaluation.id == evaluation_id,
+            Evaluation.school_id == user.school_id
+        ).first()
         if not ev:
             raise HTTPException(status_code=404, detail="Evaluation not found")
         raise HTTPException(status_code=403, detail="No access to this evaluation")

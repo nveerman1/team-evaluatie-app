@@ -321,7 +321,7 @@ def get_team_assessment_detail(
     team_name = f"Team {team_number}"
     
     # Get member names (filtered by team_number)
-    members = _get_member_names(db, group.id, team_number)
+    members = _get_member_names(db, project.id, team_number)
     
     return ExternalAssessmentDetail(
         team_id=team_id,
@@ -465,7 +465,7 @@ def submit_team_assessment(
             existing_score.comment = score_data.comment
         else:
             new_score = ProjectAssessmentScore(
-                school_id=group.school_id,
+                school_id=project.school_id,
                 assessment_id=assessment.id,
                 criterion_id=score_data.criterion_id,
                 score=score_data.score,
