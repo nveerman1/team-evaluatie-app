@@ -477,7 +477,7 @@ def list_project_assessments(
     # For students, add debug info in custom HTTP headers (visible in browser Network tab)
     if user.role == "student":
         import json
-        response = JSONResponse(content=response_data.model_dump())
+        response = JSONResponse(content=response_data.model_dump(mode='json'))
         response.headers["X-Debug-Info"] = json.dumps(debug_info)
         response.headers["X-Debug-Team-Count"] = str(debug_info.get("team_count", 0))
         response.headers["X-Debug-Returned-Count"] = str(debug_info.get("returned_count", 0))
@@ -1041,27 +1041,10 @@ def get_assessment_scores_overview(
         for c in criteria
     ]
     
-    # Get all users - if assessment has a project, include students from ProjectTeamMember
-    # This matches the behavior of the submissions page and self-assessment overview
+    # Get all users from project teams (no more group_id support)
     members_set: set[User] = set()
     
-    # First, get members from group membership if group_id is set
-    if pa.group_id:
-        group_members = (
-            db.query(User)
-            .join(GroupMember, GroupMember.user_id == User.id)
-            .filter(
-                GroupMember.group_id == pa.group_id,
-                GroupMember.school_id == user.school_id,
-                GroupMember.active.is_(True),
-                User.archived.is_(False),
-            )
-            .all()
-        )
-        members_set.update(group_members)
-    
-    # If assessment has a project, also get members from project teams
-    # This ensures members assigned to project teams are included even if not active in group
+    # Get members from project teams
     if pa.project_id:
         project_team_members = (
             db.query(User)
@@ -1261,28 +1244,10 @@ def get_assessment_students_overview(
         for c in criteria
     ]
     
-    # Get all students - if assessment has a project, include students from ProjectTeamMember
-    # This matches the behavior of the submissions page and self-assessment overview
+    # Get all students from project teams (no more group_id support)
     students_set: set[User] = set()
     
-    # First, get students from group membership if group_id is set
-    if pa.group_id:
-        group_students = (
-            db.query(User)
-            .join(GroupMember, GroupMember.user_id == User.id)
-            .filter(
-                GroupMember.group_id == pa.group_id,
-                GroupMember.school_id == user.school_id,
-                GroupMember.active.is_(True),
-                User.role == "student",
-                User.archived.is_(False),
-            )
-            .all()
-        )
-        students_set.update(group_students)
-    
-    # If assessment has a project, also get students from project teams
-    # This ensures students assigned to project teams are included even if not active in group
+    # Get students from project teams
     if pa.project_id:
         project_team_students = (
             db.query(User)
@@ -1508,27 +1473,17 @@ def get_self_assessment(
     if not pa:
         raise HTTPException(status_code=404, detail="Assessment not found or not yet available")
     
-    # Check if student is in the group
+    # Check if student is in project team (assessments are now project-based only)
     is_member = False
-    if pa.group_id:
-        is_member = db.query(GroupMember).filter(
-            GroupMember.group_id == pa.group_id,
-            GroupMember.user_id == user.id,
-            GroupMember.school_id == user.school_id,
-            GroupMember.active.is_(True),
-        ).first() is not None
-    
-    # If not in group, check if in project team (for assessments with projects)
-    if not is_member and pa.project_id:
-        is_project_member = db.query(ProjectTeamMember).join(
+    if pa.project_id:
+        is_member = db.query(ProjectTeamMember).join(
             ProjectTeam, ProjectTeam.id == ProjectTeamMember.project_team_id
         ).filter(
             ProjectTeam.project_id == pa.project_id,
             ProjectTeam.school_id == user.school_id,
             ProjectTeamMember.user_id == user.id,
             ProjectTeamMember.school_id == user.school_id,
-        ).first()
-        is_member = is_project_member is not None  # Allow access if in project team
+        ).first() is not None
     
     if not is_member:
         raise HTTPException(status_code=403, detail="Not authorized to access this assessment")
@@ -1618,27 +1573,17 @@ def create_or_update_self_assessment(
             detail="Assessment not found or not available for self-assessment",
         )
     
-    # Check if student is in the group
+    # Check if student is in project team (assessments are now project-based only)
     is_member = False
-    if pa.group_id:
-        is_member = db.query(GroupMember).filter(
-            GroupMember.group_id == pa.group_id,
-            GroupMember.user_id == user.id,
-            GroupMember.school_id == user.school_id,
-            GroupMember.active.is_(True),
-        ).first() is not None
-    
-    # If not in group, check if in project team (for assessments with projects)
-    if not is_member and pa.project_id:
-        is_project_member = db.query(ProjectTeamMember).join(
+    if pa.project_id:
+        is_member = db.query(ProjectTeamMember).join(
             ProjectTeam, ProjectTeam.id == ProjectTeamMember.project_team_id
         ).filter(
             ProjectTeam.project_id == pa.project_id,
             ProjectTeam.school_id == user.school_id,
             ProjectTeamMember.user_id == user.id,
             ProjectTeamMember.school_id == user.school_id,
-        ).first()
-        is_member = is_project_member is not None  # Allow access if in project team
+        ).first() is not None
     
     if not is_member:
         raise HTTPException(status_code=403, detail="Not authorized to assess this project")
@@ -1781,24 +1726,7 @@ def get_self_assessment_overview(
     # This matches the behavior of the submissions page
     students_set = set()
     
-    # First, get students from group membership if group_id is set
-    if pa.group_id:
-        group_students = (
-            db.query(User)
-            .join(GroupMember, GroupMember.user_id == User.id)
-            .filter(
-                GroupMember.group_id == pa.group_id,
-                GroupMember.school_id == user.school_id,
-                GroupMember.active.is_(True),
-                User.archived.is_(False),
-                User.role == "student",
-            )
-            .all()
-        )
-        students_set.update(group_students)
-    
-    # If assessment has a project, also get students from project teams
-    # This ensures students assigned to project teams are included even if not active in group
+    # Get students from project teams (no more group_id support)
     if pa.project_id:
         project_team_students = (
             db.query(User)
