@@ -1101,6 +1101,8 @@ def get_project_overview(
     # Previously joined through ProjectAssessmentTeam which created one row per team,
     # causing each project to appear multiple times in the UI (duplicate key warnings).
     # Now uses direct outer joins (no distinct needed - each assessment appears once naturally).
+    # Note: distinct() was initially tried but removed because PostgreSQL cannot use DISTINCT
+    # on queries with JSON columns (metadata_json), causing "no equality operator" errors.
     query = db.query(
         ProjectAssessment,
         Course,

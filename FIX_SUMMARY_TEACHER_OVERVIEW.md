@@ -84,15 +84,17 @@ display_name_at_time="Team 1"
 
 **Fix** (`backend/app/api/v1/routers/overview.py`):
 ```python
-# BEFORE: Added distinct() but it caused error with JSON columns
-query = db.query(ProjectAssessment, Course, Project, Client)
-    .outerjoin(...)
-    .distinct()  # ❌ Fails with JSON columns
+# Initial attempt: Added distinct() but it caused error with JSON columns
+query = db.query(ProjectAssessment, Course, Project, Client) \
+    .outerjoin(Project, ...) \
+    .outerjoin(Course, ...) \
+    .distinct()  # ❌ Fails: "could not identify an equality operator for type json"
 
-# AFTER: Removed distinct() - not needed with direct joins
-query = db.query(ProjectAssessment, Course, Project, Client)
-    .outerjoin(...)
-    # No distinct() needed - each assessment appears once naturally
+# Final fix: Removed distinct() - not needed with direct outer joins
+query = db.query(ProjectAssessment, Course, Project, Client) \
+    .outerjoin(Project, ...) \
+    .outerjoin(Course, ...)
+    # No distinct() needed - each ProjectAssessment appears once naturally
 ```
 
 **Impact**: Query executes successfully. Direct outer joins naturally return one row per ProjectAssessment without needing DISTINCT.
