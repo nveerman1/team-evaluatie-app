@@ -63,17 +63,28 @@ The following endpoints **remain rate limited** to maintain security:
 - Methods:
   - `_should_skip_rate_limit()`: Checks if rate limiting should be skipped
   - `_is_authenticated_teacher_scoring()`: Validates user role and endpoint pattern
+  - `_get_user_role_from_token()`: Extracts user role from JWT token
 
 ### How It Works
 
 1. For each incoming request, the middleware checks if it matches exemption criteria:
    - Is the path pattern a scoring endpoint? (Matches regex: `/api/v1/project-assessments/{numeric_id}/scores[/*]` or `/api/v1/evaluations/{numeric_id}/grades[/*]`)
-   - Is the user authenticated? (Has `request.state.user`)
-   - Is the user a teacher or admin? (`user.role in ["teacher", "admin"]`)
+   - Extract authentication token from cookies (`access_token`) or Authorization header (`Bearer <token>`)
+   - Decode JWT token and extract `role` claim from payload
+   - Check if role is "teacher" or "admin"
 
 2. If all conditions are met, rate limiting is skipped entirely for that request.
 
 3. Otherwise, normal rate limiting rules apply based on endpoint type.
+
+### Authentication Support
+
+The middleware extracts the user role from:
+1. **HttpOnly cookie** (preferred): `access_token` cookie
+2. **Authorization header** (fallback): `Bearer <token>`
+3. **X-User-Email header** (dev mode only): When `ENABLE_DEV_LOGIN=True`
+
+The `role` claim is read directly from the decoded JWT token payload - no database query is needed, making this check very fast.
 
 ### Testing
 
