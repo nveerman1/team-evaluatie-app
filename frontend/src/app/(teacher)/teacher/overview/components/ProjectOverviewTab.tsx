@@ -463,9 +463,11 @@ function ProjectTable({
                 const isExpanded = expandedRows.has(project.projectId);
                 const projectTeams = teamScores[project.projectId] || [];
                 const isLoadingTeams = loadingTeams.has(project.projectId);
+                // Create unique key combining projectId, year, and period to handle duplicate project IDs
+                const uniqueKey = `${project.projectId}-${project.year}-${project.periodLabel}`;
 
                 return (
-                  <React.Fragment key={project.projectId}>
+                  <React.Fragment key={uniqueKey}>
                     <tr
                       className="bg-white hover:bg-slate-50 cursor-pointer"
                       onClick={() => toggleRow(project.projectId)}
