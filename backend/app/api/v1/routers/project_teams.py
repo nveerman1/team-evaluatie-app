@@ -403,6 +403,48 @@ def update_project_student_teams(
                 )
                 db.add(project_team)
                 db.flush()  # Get the ID
+                
+                # AUTO-LINK: Create project_assessment_teams links for this new team
+                # Find all assessments for this project
+                assessments = (
+                    db.query(ProjectAssessment)
+                    .filter(
+                        ProjectAssessment.project_id == project_id,
+                        ProjectAssessment.school_id == user.school_id,
+                    )
+                    .all()
+                )
+                
+                if assessments:
+                    # Get existing links for this team (to avoid duplicates)
+                    existing_links = set(
+                        db.query(ProjectAssessmentTeam.project_assessment_id)
+                        .filter(
+                            ProjectAssessmentTeam.project_team_id == project_team.id,
+                            ProjectAssessmentTeam.school_id == user.school_id,
+                        )
+                        .scalars()
+                        .all()
+                    )
+                    
+                    # Create missing links
+                    new_links = []
+                    for assessment in assessments:
+                        if assessment.id not in existing_links:
+                            new_links.append(
+                                ProjectAssessmentTeam(
+                                    school_id=user.school_id,
+                                    project_assessment_id=assessment.id,
+                                    project_team_id=project_team.id,
+                                    status="not_started",
+                                    scores_count=0,
+                                    last_updated_at=None,
+                                )
+                            )
+                    
+                    if new_links:
+                        db.add_all(new_links)
+                        db.flush()
             
             if existing_member:
                 # Move to different team
