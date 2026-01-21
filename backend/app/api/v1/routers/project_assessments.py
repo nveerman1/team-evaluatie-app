@@ -100,10 +100,9 @@ def _get_assessment_with_access_check(
     
     # Check access for teachers
     if user.role == "teacher":
-        # Get project team and check course access
-        project_team = db.query(ProjectTeam).filter(ProjectTeam.id == pa.project_team_id).first()
-        if project_team and project_team.project_id:
-            project = db.query(Project).filter(Project.id == project_team.project_id).first()
+        # Check course access via project_id
+        if pa.project_id:
+            project = db.query(Project).filter(Project.id == pa.project_id).first()
             if project and project.course_id:
                 teacher_course_ids = _get_teacher_course_ids(db, user)
                 if teacher_course_ids and project.course_id not in teacher_course_ids:
@@ -726,7 +725,7 @@ def close_project_assessment(
         id=assessment.id,
         school_id=assessment.school_id,
         group_id=assessment.group_id,
-        project_team_id=assessment.project_team_id,
+        project_id=assessment.project_id,
         rubric_id=assessment.rubric_id,
         teacher_id=assessment.teacher_id,
         external_evaluator_id=assessment.external_evaluator_id,
@@ -1043,28 +1042,24 @@ def get_assessment_scores_overview(
         for c in criteria
     ]
     
-    # Get group info
-    group = db.query(ProjectTeam).filter(ProjectTeam.id == pa.project_team_id).first()
-    if not group:
-        raise HTTPException(status_code=404, detail="Group not found")
-    
     # Get all users - if assessment has a project, include students from ProjectTeamMember
     # This matches the behavior of the submissions page and self-assessment overview
     members_set: set[User] = set()
     
-    # First, get members from group membership
-    group_members = (
-        db.query(User)
-        .join(GroupMember, GroupMember.user_id == User.id)
-        .filter(
-            GroupMember.group_id == group.id,
-            GroupMember.school_id == user.school_id,
-            GroupMember.active.is_(True),
-            User.archived.is_(False),
+    # First, get members from group membership if group_id is set
+    if pa.group_id:
+        group_members = (
+            db.query(User)
+            .join(GroupMember, GroupMember.user_id == User.id)
+            .filter(
+                GroupMember.group_id == pa.group_id,
+                GroupMember.school_id == user.school_id,
+                GroupMember.active.is_(True),
+                User.archived.is_(False),
+            )
+            .all()
         )
-        .all()
-    )
-    members_set.update(group_members)
+        members_set.update(group_members)
     
     # If assessment has a project, also get members from project teams
     # This ensures members assigned to project teams are included even if not active in group
@@ -1267,29 +1262,25 @@ def get_assessment_students_overview(
         for c in criteria
     ]
     
-    # Get group info
-    group = db.query(ProjectTeam).filter(ProjectTeam.id == pa.project_team_id).first()
-    if not group:
-        raise HTTPException(status_code=404, detail="Group not found")
-    
     # Get all students - if assessment has a project, include students from ProjectTeamMember
     # This matches the behavior of the submissions page and self-assessment overview
     students_set: set[User] = set()
     
-    # First, get students from group membership
-    group_students = (
-        db.query(User)
-        .join(GroupMember, GroupMember.user_id == User.id)
-        .filter(
-            GroupMember.group_id == group.id,
-            GroupMember.school_id == user.school_id,
-            GroupMember.active.is_(True),
-            User.role == "student",
-            User.archived.is_(False),
+    # First, get students from group membership if group_id is set
+    if pa.group_id:
+        group_students = (
+            db.query(User)
+            .join(GroupMember, GroupMember.user_id == User.id)
+            .filter(
+                GroupMember.group_id == pa.group_id,
+                GroupMember.school_id == user.school_id,
+                GroupMember.active.is_(True),
+                User.role == "student",
+                User.archived.is_(False),
+            )
+            .all()
         )
-        .all()
-    )
-    students_set.update(group_students)
+        students_set.update(group_students)
     
     # If assessment has a project, also get students from project teams
     # This ensures students assigned to project teams are included even if not active in group
@@ -1518,13 +1509,15 @@ def get_self_assessment(
     if not pa:
         raise HTTPException(status_code=404, detail="Assessment not found or not yet available")
     
-    # Check if student is in the group or in a project team
-    is_member = db.query(ProjectTeamMember).filter(
-        ProjectTeamMember.project_team_id == pa.project_team_id,
-        GroupMember.user_id == user.id,
-        GroupMember.school_id == user.school_id,
-        GroupMember.active.is_(True),
-    ).first()
+    # Check if student is in the group
+    is_member = False
+    if pa.group_id:
+        is_member = db.query(GroupMember).filter(
+            GroupMember.group_id == pa.group_id,
+            GroupMember.user_id == user.id,
+            GroupMember.school_id == user.school_id,
+            GroupMember.active.is_(True),
+        ).first() is not None
     
     # If not in group, check if in project team (for assessments with projects)
     if not is_member and pa.project_id:
@@ -1626,13 +1619,15 @@ def create_or_update_self_assessment(
             detail="Assessment not found or not available for self-assessment",
         )
     
-    # Check if student is in the group or in a project team
-    is_member = db.query(ProjectTeamMember).filter(
-        ProjectTeamMember.project_team_id == pa.project_team_id,
-        GroupMember.user_id == user.id,
-        GroupMember.school_id == user.school_id,
-        GroupMember.active.is_(True),
-    ).first()
+    # Check if student is in the group
+    is_member = False
+    if pa.group_id:
+        is_member = db.query(GroupMember).filter(
+            GroupMember.group_id == pa.group_id,
+            GroupMember.user_id == user.id,
+            GroupMember.school_id == user.school_id,
+            GroupMember.active.is_(True),
+        ).first() is not None
     
     # If not in group, check if in project team (for assessments with projects)
     if not is_member and pa.project_id:
@@ -1783,29 +1778,25 @@ def get_self_assessment_overview(
         for c in criteria
     ]
     
-    # Get group info
-    group = db.query(ProjectTeam).filter(ProjectTeam.id == pa.project_team_id).first()
-    if not group:
-        raise HTTPException(status_code=404, detail="Group not found")
-    
     # Get all students - if assessment has a project, include students from ProjectTeamMember
     # This matches the behavior of the submissions page
     students_set = set()
     
-    # First, get students from group membership
-    group_students = (
-        db.query(User)
-        .join(GroupMember, GroupMember.user_id == User.id)
-        .filter(
-            GroupMember.group_id == group.id,
-            GroupMember.school_id == user.school_id,
-            GroupMember.active.is_(True),
-            User.archived.is_(False),
-            User.role == "student",
+    # First, get students from group membership if group_id is set
+    if pa.group_id:
+        group_students = (
+            db.query(User)
+            .join(GroupMember, GroupMember.user_id == User.id)
+            .filter(
+                GroupMember.group_id == pa.group_id,
+                GroupMember.school_id == user.school_id,
+                GroupMember.active.is_(True),
+                User.archived.is_(False),
+                User.role == "student",
+            )
+            .all()
         )
-        .all()
-    )
-    students_set.update(group_students)
+        students_set.update(group_students)
     
     # If assessment has a project, also get students from project teams
     # This ensures students assigned to project teams are included even if not active in group
