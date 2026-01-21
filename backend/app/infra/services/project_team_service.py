@@ -13,6 +13,7 @@ from app.infra.db.models import (
     User,
     Evaluation,
     ProjectAssessment,
+    ProjectAssessmentTeam,
     ProjectNotesContext,
 )
 
@@ -182,10 +183,10 @@ class ProjectTeamService:
             is not None
         )
 
-        # Check for assessments
+        # Check for assessments via junction table
         has_assessments = (
-            db.query(ProjectAssessment)
-            .filter(ProjectAssessment.project_team_id == project_team_id)
+            db.query(ProjectAssessmentTeam)
+            .filter(ProjectAssessmentTeam.project_team_id == project_team_id)
             .first()
             is not None
         )

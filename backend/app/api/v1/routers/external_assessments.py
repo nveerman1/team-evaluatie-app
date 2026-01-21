@@ -16,6 +16,7 @@ from app.infra.db.models import (
     ProjectTeamExternal,
     ProjectAssessment,
     ProjectAssessmentScore,
+    ProjectAssessmentTeam,
     ProjectTeam,
     ProjectTeamMember,
     User,
@@ -236,9 +237,12 @@ def get_team_assessment_detail(
     if not project_team:
         raise HTTPException(status_code=404, detail="Team not found in project")
     
-    # Find existing external assessment for this evaluator + team
-    existing_assessment = db.query(ProjectAssessment).filter(
-        ProjectAssessment.project_team_id == project_team.id,
+    # Find existing external assessment for this evaluator + team via junction table
+    existing_assessment = db.query(ProjectAssessment).join(
+        ProjectAssessmentTeam,
+        ProjectAssessmentTeam.project_assessment_id == ProjectAssessment.id
+    ).filter(
+        ProjectAssessmentTeam.project_team_id == project_team.id,
         ProjectAssessment.external_evaluator_id == team_link.external_evaluator_id,
         ProjectAssessment.role == "EXTERNAL",
     ).first()
@@ -390,9 +394,12 @@ def submit_team_assessment(
     if not project_team:
         raise HTTPException(status_code=404, detail="Team not found in project")
     
-    # Get or create ProjectAssessment
-    assessment = db.query(ProjectAssessment).filter(
-        ProjectAssessment.project_team_id == project_team.id,
+    # Get or create ProjectAssessment via junction table
+    assessment = db.query(ProjectAssessment).join(
+        ProjectAssessmentTeam,
+        ProjectAssessmentTeam.project_assessment_id == ProjectAssessment.id
+    ).filter(
+        ProjectAssessmentTeam.project_team_id == project_team.id,
         ProjectAssessment.external_evaluator_id == team_link.external_evaluator_id,
         ProjectAssessment.role == "EXTERNAL",
     ).first()
@@ -416,7 +423,7 @@ def submit_team_assessment(
         
         assessment = ProjectAssessment(
             school_id=project.school_id,
-            project_team_id=project_team.id,
+            project_id=project.id,  # Assessments now belong to projects, not individual teams. Teams are linked via ProjectAssessmentTeam junction table.
             rubric_id=rubric.id,
             external_evaluator_id=team_link.external_evaluator_id,
             title=f"External Assessment - {evaluator.name if evaluator else 'External'}",
@@ -426,6 +433,17 @@ def submit_team_assessment(
             metadata_json={},
         )
         db.add(assessment)
+        db.flush()
+        
+        # Create junction table entry linking assessment to team
+        assessment_team = ProjectAssessmentTeam(
+            school_id=project.school_id,
+            project_assessment_id=assessment.id,
+            project_team_id=project_team.id,
+            status="in_progress",
+            scores_count=0,
+        )
+        db.add(assessment_team)
         db.flush()
     
     # Update metadata with general comment
