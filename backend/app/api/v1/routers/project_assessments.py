@@ -739,6 +739,87 @@ def close_project_assessment(
     )
 
 
+@router.post("/repair-team-links")
+def repair_project_assessment_team_links(
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """
+    Repair/backfill missing project_assessment_teams rows for existing assessments.
+    
+    This endpoint:
+    - Finds all project assessments that are missing team links
+    - Creates project_assessment_teams rows for ALL teams in each project
+    - Is idempotent (safe to run multiple times - uses ON CONFLICT DO NOTHING)
+    - Admin only
+    
+    Returns the number of rows created.
+    """
+    from app.core.rbac import require_role
+    from app.infra.db.models import ProjectAssessmentTeam
+    
+    # Require admin role
+    require_role(user, ["admin"])
+    
+    # Get all assessments with their project teams
+    assessments = db.query(ProjectAssessment).filter(
+        ProjectAssessment.school_id == user.school_id,
+        ProjectAssessment.project_id.isnot(None),
+    ).all()
+    
+    rows_created = 0
+    assessments_fixed = []
+    
+    for assessment in assessments:
+        # Get all teams for this project
+        project_teams = db.query(ProjectTeam).filter(
+            ProjectTeam.project_id == assessment.project_id,
+            ProjectTeam.school_id == user.school_id,
+        ).order_by(ProjectTeam.team_number).all()
+        
+        # Get existing assessment_team links
+        existing_team_ids = set(
+            row.project_team_id for row in 
+            db.query(ProjectAssessmentTeam.project_team_id).filter(
+                ProjectAssessmentTeam.project_assessment_id == assessment.id,
+                ProjectAssessmentTeam.school_id == user.school_id,
+            ).all()
+        )
+        
+        # Create missing links
+        teams_added = 0
+        for pt in project_teams:
+            if pt.id not in existing_team_ids:
+                pat = ProjectAssessmentTeam(
+                    school_id=user.school_id,
+                    project_assessment_id=assessment.id,
+                    project_team_id=pt.id,
+                    status="not_started",
+                    scores_count=0,
+                )
+                db.add(pat)
+                teams_added += 1
+                rows_created += 1
+        
+        if teams_added > 0:
+            assessments_fixed.append({
+                "assessment_id": assessment.id,
+                "title": assessment.title,
+                "project_id": assessment.project_id,
+                "teams_added": teams_added,
+                "total_teams": len(project_teams),
+            })
+    
+    db.commit()
+    
+    return {
+        "success": True,
+        "rows_created": rows_created,
+        "assessments_fixed": len(assessments_fixed),
+        "details": assessments_fixed,
+    }
+
+
 # ---------- Team Overview ----------
 
 @router.get("/{assessment_id}/teams", response_model=ProjectAssessmentTeamOverview)
