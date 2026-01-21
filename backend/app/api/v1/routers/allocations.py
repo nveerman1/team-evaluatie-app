@@ -15,8 +15,7 @@ from app.infra.db.models import (
     User,
     RubricCriterion,
     Score,
-    GroupMember,
-    Group,
+    CourseEnrollment,
     ProjectTeam,
     ProjectTeamMember,
 )
@@ -101,33 +100,29 @@ def _select_members_for_course(
     group_ids: Optional[List[int]] = None,
 ) -> List[int]:
     """
-    Selecteert alle ACTIEVE studenten die in deze course zitten via groups→group_members.
-    Optioneel filter op team_number (User.team_number) of expliciete group_ids.
+    Select all ACTIVE students enrolled in this course via CourseEnrollment.
+    Optionally filter by team_number (User.team_number) or explicit group_ids (legacy - ignored).
     """
     q = (
         db.query(User.id)
-        .join(GroupMember, GroupMember.user_id == User.id)
-        .join(Group, Group.id == GroupMember.group_id)
+        .join(CourseEnrollment, CourseEnrollment.student_id == User.id)
         .filter(
             User.school_id == school_id,
             User.role == "student",
             User.archived.is_(False),
-            GroupMember.active.is_(True),  # Only active group memberships
-            Group.school_id == school_id,
-            Group.course_id == course_id,
+            CourseEnrollment.active.is_(True),
+            CourseEnrollment.course_id == course_id,
         )
     )
     if team_number is not None:
         q = q.filter(User.team_number == team_number)
-    if group_ids:
-        q = q.filter(Group.id.in_(group_ids))
+    # Note: group_ids parameter is legacy and ignored in new architecture
 
-    # distinct voor het geval iemand per ongeluk in meerdere groups van dezelfde course zit
     return [uid for (uid,) in q.distinct().all()]
 
 
 def _has_access_to_evaluation(db: Session, evaluation_id: int, user_id: int) -> bool:
-    """Student heeft toegang als hij in de course van deze evaluatie zit (via membership) of al een allocation heeft."""
+    """Student has access if they're enrolled in the course or already have an allocation."""
     has_alloc = (
         db.query(Allocation.id)
         .filter(
@@ -144,15 +139,18 @@ def _has_access_to_evaluation(db: Session, evaluation_id: int, user_id: int) -> 
     if not ev or not ev.course_id:
         return False
 
-    is_member = (
-        db.query(GroupMember.id)
-        .join(Group, Group.id == GroupMember.group_id)
-        .filter(Group.course_id == ev.course_id, GroupMember.user_id == user_id)
+    is_enrolled = (
+        db.query(CourseEnrollment.id)
+        .filter(
+            CourseEnrollment.course_id == ev.course_id,
+            CourseEnrollment.student_id == user_id,
+            CourseEnrollment.active.is_(True),
+        )
         .limit(1)
         .scalar()
         is not None
     )
-    return is_member
+    return is_enrolled
 
 
 def _fetch_allocation_rows(db: Session, evaluation_id: int, reviewer_id: int):
@@ -197,14 +195,15 @@ def auto_allocate(
     if school_id is None:
         raise HTTPException(500, "school_id ontbreekt op evaluatie/gebruiker")
 
-    # doelgroep bepalen
+    # Determine target scope
     target_group_ids: List[int] = []
     if payload.group_ids:
-        target_group_ids = [gid for gid in payload.group_ids if gid is not None]
+        # Legacy group_ids parameter - now ignored, log warning
+        logger.warning(f"group_ids parameter is deprecated and ignored: {payload.group_ids}")
     elif payload.group_id:
-        target_group_ids = [payload.group_id]
+        logger.warning(f"group_id parameter is deprecated and ignored: {payload.group_id}")
 
-    # Helper functie om allocaties binnen een groep te maken
+    # Helper function to create allocations within a set of user IDs
     def allocate_within(ids: List[int]):
         # self
         if payload.include_self:
@@ -214,10 +213,10 @@ def auto_allocate(
         n = len(ids)
         k = payload.peers_per_student
         if k is None:
-            # Default: iedereen beoordeelt alle peers
+            # Default: everyone evaluates all peers
             k = n - (0 if payload.include_self else 1)
         if k == 0:
-            pass  # geen peer-allocaties
+            pass  # no peer allocations
         elif n >= 2:
             if k >= (n - 1):
                 for r in ids:
@@ -228,26 +227,21 @@ def auto_allocate(
                 for r, e in _round_robin_k_peers(ids, int(k)):
                     _ensure_allocation(db, school_id, ev.id, r, e, False)
 
-    # Als geen expliciete scope is gegeven, alloceer per groep
-    if payload.team_number is None and not target_group_ids:
-        # geen expliciete scope → per group alloceren
-        group_ids_in_course = [
-            gid
-            for (gid,) in db.query(Group.id)
-            .filter(Group.school_id == school_id, Group.course_id == ev.course_id)
-            .all()
-        ]
-        if not group_ids_in_course:
-            raise HTTPException(400, "Geen groepen gevonden voor deze evaluatie")
+    # If no team_number is specified, allocate course-wide
+    if payload.team_number is None:
+        # Get all enrolled students in the course
+        members = _select_members_for_course(
+            db, school_id=school_id, course_id=ev.course_id
+        )
+        
+        if len(members) == 0:
+            raise HTTPException(400, "No students found in this course")
+        if len(members) < 2 and (
+            payload.peers_per_student is None or payload.peers_per_student > 0
+        ):
+            raise HTTPException(400, "Too few students (minimum 2 for peer evaluation)")
 
-        all_members = []
-        for gid in group_ids_in_course:
-            ids = _select_members_for_course(
-                db, school_id=school_id, course_id=ev.course_id, group_ids=[gid]
-            )
-            if ids:
-                allocate_within(ids)
-                all_members.extend(ids)
+        allocate_within(members)
 
         db.commit()
         return {
@@ -255,31 +249,28 @@ def auto_allocate(
             "evaluation_id": ev.id,
             "course_id": ev.course_id,
             "team_number": None,
-            "group_ids": group_ids_in_course,
-            "members": all_members,
+            "members": members,
         }
     else:
-        # bestaand gedrag voor expliciete team_number/group_ids
+        # Allocate within specific team_number
         members = _select_members_for_course(
             db,
             school_id=school_id,
             course_id=ev.course_id,
             team_number=payload.team_number,
-            group_ids=target_group_ids or None,
         )
 
-        print(
+        logger.info(
             f"[AUTO_ALLOC] eval={ev.id} course={ev.course_id} team={payload.team_number} "
-            f"group_ids={target_group_ids or None} members={members}"
+            f"members={members}"
         )
 
         if len(members) == 0:
-            raise HTTPException(400, "Geen teamleden gevonden voor deze selectie")
+            raise HTTPException(400, "No team members found for this selection")
         if len(members) < 2 and (
             payload.peers_per_student is None or payload.peers_per_student > 0
         ):
-            # bij peers heb je minimaal 2 nodig
-            raise HTTPException(400, "Te weinig teamleden (minimaal 2)")
+            raise HTTPException(400, "Too few team members (minimum 2 for peer evaluation)")
 
         allocate_within(members)
 

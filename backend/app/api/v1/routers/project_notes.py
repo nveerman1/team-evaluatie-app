@@ -21,8 +21,7 @@ from app.infra.db.models import (
     ProjectNotesContext,
     ProjectNote,
     Course,
-    Group,
-    GroupMember,
+    CourseEnrollment,
     LearningObjective,
     ProjectTeam,
     ProjectTeamMember,
@@ -124,13 +123,9 @@ def serialize_note(note: ProjectNote, db: Session) -> dict:
                 # No project_team found - use team_id directly
                 note_dict["team_name"] = f"Team {note.team_id}"
         else:
-            # No project_id in context - try to extract team_number from Group's team_number field
-            team = db.query(Group).filter(Group.id == note.team_id).first()
-            if team and team.team_number:
-                note_dict["team_name"] = f"Team {team.team_number}"
-            else:
-                # Fallback to team_id directly
-                note_dict["team_name"] = f"Team {note.team_id}"
+            # NOTE: Legacy code path - team_id may reference old Group table
+            # For now, just use the team_id as the team name
+            note_dict["team_name"] = f"Team {note.team_id}"
     else:
         note_dict["team_name"] = None
 
@@ -352,15 +347,14 @@ async def get_context(
     students = []
 
     if context.course_id:
-        # Get all students in this course via GroupMember
+        # Get all students enrolled in this course
         all_students = (
             db.query(User)
-            .join(GroupMember, GroupMember.user_id == User.id)
-            .join(Group, Group.id == GroupMember.group_id)
+            .join(CourseEnrollment, CourseEnrollment.student_id == User.id)
             .filter(
-                Group.course_id == context.course_id,
-                Group.school_id == current_user.school_id,
-                GroupMember.active,
+                CourseEnrollment.course_id == context.course_id,
+                CourseEnrollment.active.is_(True),
+                User.school_id == current_user.school_id,
                 User.role == "student",
             )
             .distinct()

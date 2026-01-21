@@ -49,7 +49,6 @@ School
 - **Subproject**: Optional sub-tasks/sections within a main project (deelprojecten)
 - **ProjectTeam**: Immutable team roster snapshot for a project
 - **ProjectTeamMember**: Individual student membership in a project team
-- **Group/Team**: Legacy mutable student groups (being phased out)
 
 ### Subjects (Secties)
 
@@ -646,20 +645,19 @@ Teachers are explicitly assigned to courses via the **TeacherCourse** junction t
   - `user_id`
 - **Purpose**: Stores student membership in project teams
 
-### Group (Legacy - Mutable)
-- `id`: Primary key
-- `school_id`: Foreign key to School
-- `course_id`: Foreign key to Course
-- `name`: Group name
-- `team_number`: Team number
-- **Note**: This table represents legacy mutable groups - new code should use ProjectTeam instead
+### ~~Group~~ (REMOVED - Migration Complete)
+**Status**: ⛔ **REMOVED** in migration 20260119_drop_legacy_group_tables  
+**Replaced by**: CourseEnrollment (for student-course relationships) and ProjectTeam (for project teams)  
+**Migration completed**: 2026-01-19
 
-### GroupMember (Legacy - Mutable)
-- `id`: Primary key
-- `group_id`: Foreign key to Group
-- `user_id`: Foreign key to User
-- `active`: Active status flag
-- **Note**: This table represents legacy mutable group membership - new code should use ProjectTeamMember instead
+The legacy `groups` table has been completely removed from the system. Student-course relationships are now managed via `CourseEnrollment`, and project-specific team rosters are managed via immutable `ProjectTeam` snapshots.
+
+### ~~GroupMember~~ (REMOVED - Migration Complete)
+**Status**: ⛔ **REMOVED** in migration 20260119_drop_legacy_group_tables  
+**Replaced by**: CourseEnrollment (for student-course membership) and ProjectTeamMember (for project team membership)  
+**Migration completed**: 2026-01-19
+
+The legacy `group_members` table has been completely removed from the system. All team membership is now tracked via `ProjectTeamMember` for project-specific rosters.
 
 ### Subproject
 - `id`: Primary key
@@ -1444,16 +1442,19 @@ The application uses a project-centric team management system that isolates team
 
 ### Key Concepts
 
-#### Project Teams vs Groups (Legacy)
+#### Project Teams (Modern Architecture)
 
-- **Groups** (`groups` table): Legacy mutable course-level teams that can change anytime
+**Status**: ✅ **FULLY IMPLEMENTED** (Migration completed 2026-01-19)
+
 - **Project Teams** (`project_teams` table): Immutable project-scoped snapshots of team composition
+- **CourseEnrollment** (`course_enrollments` table): Student-course relationships (replaces legacy Groups)
 
-New development should use Project Teams exclusively. Groups are maintained for backwards compatibility only.
+**Migration Complete**: The legacy `groups` and `group_members` tables have been completely removed. All team management now uses the modern immutable ProjectTeam architecture.
 
 #### Single Source of Truth
 
 - `project_teams` and `project_team_members` tables are the authoritative source for team data
+- `course_enrollments` table is the authoritative source for student-course relationships
 - `User.team_number` is **DEPRECATED** and being phased out
 - Team assignments are project-specific and isolated from other projects
 

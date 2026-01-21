@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_db, get_current_user
 from app.api.v1.schemas.students import StudentCreate, StudentUpdate, StudentOut
-from app.infra.db.models import User, CourseEnrollment, Course
+from app.infra.db.models import User, CourseEnrollment, Course, ProjectTeam, Project
 
 router = APIRouter(prefix="/students", tags=["students"])
 
@@ -308,3 +308,40 @@ def list_courses(db: Session = Depends(get_db), current_user=Depends(get_current
         .all()
     )
     return [{"id": c.id, "name": c.name} for c in rows]
+
+
+@router.get("/teams")
+def list_teams(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    """
+    List all project teams in Group-compatible format for backward compatibility.
+    Used by the project assessment creation UI.
+    """
+    from app.core.rbac import require_role
+    require_role(current_user, ["teacher", "admin"])
+    
+    teams = (
+        db.query(ProjectTeam)
+        .join(Project, ProjectTeam.project_id == Project.id)
+        .filter(
+            ProjectTeam.school_id == current_user.school_id,
+            Project.school_id == current_user.school_id
+        )
+        .order_by(ProjectTeam.team_number.asc())
+        .all()
+    )
+    
+    # Return teams in Group-compatible format
+    result = []
+    for team in teams:
+        project = db.query(Project).filter(Project.id == team.project_id).first()
+        result.append({
+            "id": team.id,
+            "school_id": team.school_id,
+            "course_id": project.course_id if project else None,
+            "name": team.display_name_at_time or f"Team {team.team_number}",
+            "team_number": team.team_number,
+            "created_at": team.created_at.isoformat() if team.created_at else None,
+            "updated_at": team.updated_at.isoformat() if team.updated_at else None,
+        })
+    
+    return result

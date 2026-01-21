@@ -23,8 +23,7 @@ from app.infra.db.models import (
     CompetencyGoal,
     CompetencyReflection,
     CompetencyExternalScore,
-    Group,
-    GroupMember,
+    CourseEnrollment,
     TeacherCourse,
 )
 from app.api.v1.schemas.competencies import (
@@ -997,14 +996,12 @@ def list_windows(
 
     # If user is a student, only show windows for courses they're enrolled in
     if current_user.role == "student":
-        # Get course IDs where student is an active member
+        # Get course IDs where student is enrolled
         student_course_ids = (
-            db.query(Group.course_id)
-            .join(GroupMember, GroupMember.group_id == Group.id)
+            db.query(CourseEnrollment.course_id)
             .filter(
-                GroupMember.user_id == current_user.id,
-                GroupMember.active.is_(True),
-                Group.school_id == current_user.school_id,
+                CourseEnrollment.student_id == current_user.id,
+                CourseEnrollment.active.is_(True),
             )
             .distinct()
             .all()
@@ -1486,15 +1483,13 @@ def get_my_window_overview(
 
     # If user is a student and window has a course, verify they're enrolled
     if current_user.role == "student" and window.course_id:
-        # Check if student is in the window's course
+        # Check if student is enrolled in the window's course
         is_enrolled = (
-            db.query(GroupMember.id)
-            .join(Group, Group.id == GroupMember.group_id)
+            db.query(CourseEnrollment.id)
             .filter(
-                GroupMember.user_id == current_user.id,
-                GroupMember.active.is_(True),
-                Group.course_id == window.course_id,
-                Group.school_id == current_user.school_id,
+                CourseEnrollment.student_id == current_user.id,
+                CourseEnrollment.active.is_(True),
+                CourseEnrollment.course_id == window.course_id,
             )
             .first()
         )
@@ -1841,14 +1836,13 @@ def get_class_heatmap(
         # Get students who are in groups for this course
         students_query = (
             select(User)
-            .join(GroupMember, GroupMember.user_id == User.id)
-            .join(Group, Group.id == GroupMember.group_id)
+            .join(CourseEnrollment, CourseEnrollment.student_id == User.id)
             .where(
                 User.school_id == current_user.school_id,
                 User.role == "student",
                 User.archived.is_(False),
-                Group.course_id == window.course_id,
-                GroupMember.active.is_(True),
+                CourseEnrollment.course_id == window.course_id,
+                CourseEnrollment.active.is_(True),
             )
         )
         if class_name:

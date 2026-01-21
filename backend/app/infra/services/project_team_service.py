@@ -10,8 +10,6 @@ from app.infra.db.models import (
     ProjectTeam,
     ProjectTeamMember,
     Project,
-    Group,
-    GroupMember,
     User,
     Evaluation,
     ProjectAssessment,
@@ -38,8 +36,8 @@ class ProjectTeamService:
             db: Database session
             project_id: Project ID
             school_id: School ID for multi-tenancy
-            team_id: Optional link to existing group
-            team_name: Name for the team (required if team_id not provided)
+            team_id: DEPRECATED - No longer used (Groups removed)
+            team_name: Name for the team (required)
             version: Version number (default 1)
 
         Returns:
@@ -57,33 +55,20 @@ class ProjectTeamService:
                 detail=f"Project {project_id} not found",
             )
 
-        # Get display name
-        display_name = team_name
-        if team_id:
-            group = (
-                db.query(Group)
-                .filter(Group.id == team_id, Group.school_id == school_id)
-                .first()
-            )
-            if not group:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Group {team_id} not found",
-                )
-            display_name = group.name
-
-        if not display_name:
+        # team_id is deprecated (Groups no longer exist)
+        # Use team_name directly
+        if not team_name:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Either team_id or team_name must be provided",
+                detail="team_name is required (team_id is deprecated)",
             )
 
         # Create project team
         project_team = ProjectTeam(
             school_id=school_id,
             project_id=project_id,
-            team_id=team_id,
-            display_name_at_time=display_name,
+            team_id=None,  # No longer links to groups
+            display_name_at_time=team_name,
             version=version,
         )
         db.add(project_team)
@@ -368,29 +353,20 @@ class ProjectTeamService:
         school_id: int,
     ) -> List[ProjectTeamMember]:
         """
-        Copy all active members from a group to a project team
+        DEPRECATED: Groups no longer exist after migration
+        
+        This function is kept for backward compatibility but does nothing.
+        Use add_members() directly to add members to project teams.
 
         Args:
             db: Database session
             project_team_id: Project team ID
-            group_id: Group ID to copy members from
+            group_id: DEPRECATED - No longer used
             school_id: School ID for multi-tenancy
 
         Returns:
-            List of created ProjectTeamMember instances
+            Empty list
         """
-        # Get group members
-        group_members = (
-            db.query(GroupMember)
-            .filter(
-                GroupMember.group_id == group_id,
-                GroupMember.school_id == school_id,
-                GroupMember.active.is_(True),
-            )
-            .all()
-        )
-
-        member_data = [(gm.user_id, gm.role_in_team) for gm in group_members]
-        return ProjectTeamService.add_members(
-            db, project_team_id, school_id, member_data
-        )
+        # Groups no longer exist - return empty list
+        # Callers should use add_members() directly instead
+        return []

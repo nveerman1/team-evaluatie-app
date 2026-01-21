@@ -12,8 +12,7 @@ from app.infra.db.models import (
     Course,
     User,
     TeacherCourse,
-    Group,
-    GroupMember,
+    CourseEnrollment,
     AcademicYear,
 )
 from app.api.v1.schemas.courses import (
@@ -88,13 +87,11 @@ def list_courses(
         )
     elif user.role == "student":
         # Only show courses the student is enrolled in
-        from app.infra.db.models import Group, GroupMember
-
-        query = query.join(Group, Group.course_id == Course.id).join(
-            GroupMember,
-            (GroupMember.group_id == Group.id)
-            & (GroupMember.user_id == user.id)
-            & (GroupMember.active.is_(True)),
+        query = query.join(
+            CourseEnrollment,
+            (CourseEnrollment.course_id == Course.id)
+            & (CourseEnrollment.student_id == user.id)
+            & (CourseEnrollment.active.is_(True)),
         )
 
     # Get total count
@@ -593,16 +590,15 @@ def list_course_students(
             status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
         )
 
-    # Get students through groups
+    # Get students through course enrollments
     students = (
         db.query(User)
-        .join(GroupMember, GroupMember.user_id == User.id)
-        .join(Group, Group.id == GroupMember.group_id)
+        .join(CourseEnrollment, CourseEnrollment.student_id == User.id)
         .filter(
-            Group.course_id == course_id,
+            CourseEnrollment.course_id == course_id,
             User.school_id == user.school_id,
             User.role == "student",
-            GroupMember.active.is_(True),
+            CourseEnrollment.active.is_(True),
         )
         .distinct()
         .order_by(User.class_name, User.name)
@@ -628,7 +624,7 @@ def add_student_to_course(
     Add/enroll a student to a course
 
     Creates a new user if email doesn't exist, or updates existing user.
-    Enrolls the student in a default group for the course.
+    Enrolls the student in the course via CourseEnrollment.
     """
     require_role(user, ["admin", "teacher"])
     require_course_access(db, user, course_id)
@@ -674,45 +670,28 @@ def add_student_to_course(
         db.add(student)
         db.flush()  # Get the student ID
 
-    # Enroll student in a course group (find or create default group)
-    # Find or create a default group for this course
-    default_group = (
-        db.query(Group)
+    # Enroll student in course via CourseEnrollment
+    existing_enrollment = (
+        db.query(CourseEnrollment)
         .filter(
-            Group.course_id == course_id,
-            Group.name == "Alle studenten",
+            CourseEnrollment.course_id == course_id,
+            CourseEnrollment.student_id == student.id,
         )
         .first()
     )
 
-    if not default_group:
-        default_group = Group(
-            school_id=user.school_id,
+    if existing_enrollment:
+        # Reactivate if inactive
+        if not existing_enrollment.active:
+            existing_enrollment.active = True
+    else:
+        # Create new enrollment
+        enrollment = CourseEnrollment(
             course_id=course_id,
-            name="Alle studenten",
-        )
-        db.add(default_group)
-        db.flush()
-
-    # Check if student is already a member
-    existing_membership = (
-        db.query(GroupMember)
-        .filter(
-            GroupMember.group_id == default_group.id,
-            GroupMember.user_id == student.id,
-        )
-        .first()
-    )
-
-    if not existing_membership:
-        # Add student to the group
-        membership = GroupMember(
-            school_id=user.school_id,
-            group_id=default_group.id,
-            user_id=student.id,
+            student_id=student.id,
             active=True,
         )
-        db.add(membership)
+        db.add(enrollment)
 
     db.commit()
     db.refresh(student)

@@ -10,8 +10,7 @@ from app.infra.db.models import (
     Evaluation,
     Reflection,
     Allocation,
-    Group,
-    GroupMember,
+    CourseEnrollment,
 )
 
 router = APIRouter(prefix="/evaluations", tags=["reflections"])
@@ -51,24 +50,24 @@ def _has_access_to_evaluation(db: Session, evaluation_id: int, user_id: int) -> 
     if has_alloc:
         return True
 
-    # Check if user is in a group for the evaluation's course
+    # Check if user is enrolled in the evaluation's course
     ev = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
     if not ev or not ev.course_id:
         return False
 
-    is_member = (
-        db.query(GroupMember.id)
-        .join(Group, Group.id == GroupMember.group_id)
+    is_enrolled = (
+        db.query(CourseEnrollment.id)
         .filter(
-            Group.course_id == ev.course_id,
-            GroupMember.user_id == user_id,
+            CourseEnrollment.course_id == ev.course_id,
+            CourseEnrollment.student_id == user_id,
+            CourseEnrollment.active.is_(True),
         )
         .limit(1)
         .scalar()
         is not None
     )
 
-    return is_member
+    return is_enrolled
 
 
 @router.get("/{evaluation_id}/reflections/me", response_model=ReflectionOut)

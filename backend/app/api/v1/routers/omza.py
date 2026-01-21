@@ -22,6 +22,7 @@ from app.infra.db.models import (
     Rubric,
     ProjectTeam,
     ProjectTeamMember,
+    CourseEnrollment,
 )
 from app.api.v1.schemas.omza import (
     OmzaDataResponse,
@@ -113,24 +114,21 @@ async def get_omza_data(
                 categories[cat_key] = []
             categories[cat_key].append(criterion.id)
 
-    # Get all active students from the course
-    from app.infra.db.models import Group, GroupMember
-
+    # Get all active students enrolled in the course
     if not evaluation.course_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Evaluation must be linked to a course",
         )
 
-    # Get all students in the course via group membership
+    # Get all students in the course via course enrollment
     students = (
         db.query(User)
-        .join(GroupMember, GroupMember.user_id == User.id)
-        .join(Group, Group.id == GroupMember.group_id)
+        .join(CourseEnrollment, CourseEnrollment.student_id == User.id)
         .filter(
-            Group.course_id == evaluation.course_id,
-            Group.school_id == current_user.school_id,
-            GroupMember.active.is_(True),
+            CourseEnrollment.course_id == evaluation.course_id,
+            CourseEnrollment.active.is_(True),
+            User.school_id == current_user.school_id,
             User.role == "student",
             User.archived.is_(False),
         )

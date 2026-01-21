@@ -19,20 +19,19 @@ def clamp(x: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, x))
 
 
-# Probeer group/evaluation te importeren; val veilig terug als de modellen anders heten/ontbreken
+# Import models, with fallback for compatibility
 try:
     from app.infra.db.models import (
-        GroupMember,
-        Group,
+        CourseEnrollment,
         Evaluation,
         ProjectTeam,
         ProjectTeamMember,
     )
 
-    HAS_GROUP_MODELS = True
+    HAS_MODELS = True
 except Exception:
-    GroupMember = Group = Evaluation = ProjectTeam = ProjectTeamMember = None  # type: ignore
-    HAS_GROUP_MODELS = False
+    CourseEnrollment = Evaluation = ProjectTeam = ProjectTeamMember = None  # type: ignore
+    HAS_MODELS = False
 
 
 # ------------------------------------------------------------
@@ -41,15 +40,28 @@ except Exception:
 def resolve_course_id(
     db: Session, evaluation_id: int, explicit_course_id: Optional[int]
 ) -> Optional[int]:
+    """
+    Determine course_id for an evaluation
+    
+    Args:
+        db: Database session
+        evaluation_id: Evaluation ID
+        explicit_course_id: Explicitly provided course_id (takes priority)
+        
+    Returns:
+        course_id if found, None otherwise
+    """
     if explicit_course_id is not None:
         return explicit_course_id
-    if HAS_GROUP_MODELS:
-        try:
-            ev = db.get(Evaluation, evaluation_id)
-            if ev is not None and hasattr(ev, "course_id"):
-                return getattr(ev, "course_id")
-        except Exception:
-            pass
+    
+    # Try to get course_id from evaluation
+    try:
+        ev = db.get(Evaluation, evaluation_id)
+        if ev is not None and hasattr(ev, "course_id"):
+            return getattr(ev, "course_id")
+    except Exception:
+        pass
+    
     return None
 
 
@@ -72,39 +84,22 @@ def preview_grades(
     """
     course = resolve_course_id(db, evaluation_id, course_id)
 
-    # 1) Bouw team-index 1..N binnen de course
+    # 1) Build team index 1..N within the course (legacy - not used with CourseEnrollment)
     team_index_by_gid: Dict[int, int] = {}
-    if HAS_GROUP_MODELS and course is not None:
-        try:
-            groups_for_course = (
-                db.query(Group.id, Group.name)
-                .filter(Group.course_id == course)
-                .order_by(
-                    Group.name.asc(), Group.id.asc()
-                )  # pas volgorde aan naar wens
-                .all()
-            )
-            for idx, (gid, _name) in enumerate(groups_for_course, start=1):
-                team_index_by_gid[gid] = idx
-        except Exception as e:
-            print(f"[grades.preview] groups for course failed: {e!r}")
-            team_index_by_gid = {}
+    # NOTE: Team indexing is now handled via ProjectTeam.team_number directly
 
-    # 2) Haal ALLE studenten in deze cluster met actieve membership (en niet-archived)
+    # 2) Get ALL students in this course with active enrollment (and not archived)
     students: List[User] = []
     team_gid_by_uid: Dict[int, Optional[int]] = {}
-    if HAS_GROUP_MODELS and course is not None:
+    if HAS_MODELS and course is not None:
         try:
-            gm_rows = (
-                db.query(GroupMember.user_id, GroupMember.group_id, GroupMember.active)
-                .join(Group, GroupMember.group_id == Group.id)
-                .filter(Group.course_id == course)
+            # Get all enrollments for this course
+            enrollment_rows = (
+                db.query(CourseEnrollment.student_id, CourseEnrollment.active)
+                .filter(CourseEnrollment.course_id == course)
                 .all()
             )
-            active_uid_set = {uid for uid, _gid, gm_active in gm_rows if gm_active}
-            for uid, gid, gm_active in gm_rows:
-                if gm_active:
-                    team_gid_by_uid[uid] = gid
+            active_uid_set = {uid for uid, ce_active in enrollment_rows if ce_active}
 
             if active_uid_set:
                 students = (

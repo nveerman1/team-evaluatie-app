@@ -20,8 +20,7 @@ from app.api.v1.schemas.learning_objectives import (
 )
 from app.infra.db.models import (
     Allocation,
-    Group,
-    GroupMember,
+    CourseEnrollment,
     LearningObjective,
     ProjectAssessment,
     ProjectAssessmentScore,
@@ -505,14 +504,12 @@ def get_learning_objectives_overview(
         students_query = students_query.where(User.class_name == class_name)
 
     if course_id:
-        # Filter students to only those in groups for this course
+        # Filter students to only those enrolled in this course
         students_query = students_query.join(
-            GroupMember, GroupMember.user_id == User.id
-        ).join(
-            Group, Group.id == GroupMember.group_id
+            CourseEnrollment, CourseEnrollment.student_id == User.id
         ).where(
-            Group.course_id == course_id,
-            GroupMember.active.is_(True),
+            CourseEnrollment.course_id == course_id,
+            CourseEnrollment.active.is_(True),
         ).distinct()
 
     students = db.execute(students_query).scalars().all()
@@ -612,27 +609,31 @@ def get_learning_objectives_overview(
             # Get scores from project assessments
             scores_from_project = []
 
-            # Find groups the student is in
-            group_members_query = select(GroupMember).where(
-                GroupMember.school_id == user.school_id,
-                GroupMember.user_id == student.id,
-                GroupMember.active,
-            )
-            group_members = db.execute(group_members_query).scalars().all()
+            # Find project teams the student is in
+            from app.infra.db.models import ProjectTeam, ProjectTeamMember, Project
 
-            for gm in group_members:
-                # Find project assessments for this group
+            team_members_query = select(ProjectTeamMember).where(
+                ProjectTeamMember.school_id == user.school_id,
+                ProjectTeamMember.user_id == student.id,
+                ProjectTeamMember.active.is_(True),
+            )
+            team_members = db.execute(team_members_query).scalars().all()
+
+            for tm in team_members:
+                # Find project assessments for this team
                 assessments_query = select(ProjectAssessment).where(
                     ProjectAssessment.school_id == user.school_id,
-                    ProjectAssessment.group_id == gm.group_id,
+                    ProjectAssessment.project_team_id == tm.team_id,
                     ProjectAssessment.status == "published",
                 )
 
                 if course_id:
-                    # Join with Group to filter by course
+                    # Join with ProjectTeam and Project to filter by course
                     assessments_query = assessments_query.join(
-                        Group, Group.id == ProjectAssessment.group_id
-                    ).where(Group.course_id == course_id)
+                        ProjectTeam, ProjectTeam.id == ProjectAssessment.project_team_id
+                    ).join(
+                        Project, Project.id == ProjectTeam.project_id
+                    ).where(Project.course_id == course_id)
 
                 assessments = db.execute(assessments_query).scalars().all()
 
