@@ -1512,9 +1512,9 @@ def get_project_trends(
 
     # Query project assessments with scores
     # Join through ProjectAssessmentTeam junction table to match new data model
-    # Use distinct() to avoid duplicate assessments when multiple teams exist
-    query = (
-        db.query(ProjectAssessment)
+    # Use subquery to get distinct assessment IDs (avoids DISTINCT on JSON columns)
+    subquery = (
+        db.query(ProjectAssessment.id)
         .join(
             ProjectAssessmentTeam,
             ProjectAssessmentTeam.project_assessment_id == ProjectAssessment.id,
@@ -1528,18 +1528,16 @@ def get_project_trends(
             ),  # Include published and closed assessments
             ProjectAssessment.is_advisory.is_(False),  # Exclude external assessments
         )
-        .distinct()
-        .order_by(ProjectAssessment.published_at.asc())
     )
 
     # Apply filters
     if course_id:
-        query = query.filter(Project.course_id == course_id)
+        subquery = subquery.filter(Project.course_id == course_id)
 
     if school_year:
         try:
             start_year = int(school_year.split("-")[0])
-            query = query.filter(
+            subquery = subquery.filter(
                 or_(
                     func.extract("year", ProjectAssessment.published_at) == start_year,
                     func.extract("year", ProjectAssessment.published_at)
@@ -1549,7 +1547,16 @@ def get_project_trends(
         except (ValueError, IndexError):
             pass
 
-    results = query.all()
+    # Get distinct assessment IDs
+    subquery = subquery.distinct().subquery()
+
+    # Query full assessment objects using the distinct IDs
+    results = (
+        db.query(ProjectAssessment)
+        .filter(ProjectAssessment.id.in_(subquery))
+        .order_by(ProjectAssessment.published_at.asc())
+        .all()
+    )
 
     # Build trend data
     trend_data = []
