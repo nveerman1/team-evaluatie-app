@@ -54,6 +54,8 @@ from app.infra.db.models import (
     ProjectAssessmentTeam,
     ProjectAssessmentScore,
     ProjectAssessmentReflection,
+    ProjectAssessmentSelfAssessment,
+    ProjectAssessmentSelfAssessmentScore,
     CompetencyCategory,
     Competency,
     CompetencyWindow,
@@ -64,6 +66,8 @@ from app.infra.db.models import (
     Client,
     ClientLog,
     ClientProjectLink,
+    ProjectNotesContext,
+    ProjectNote,
     RFIDCard,
     AttendanceEvent,
 )
@@ -884,6 +888,132 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             db.add(pa_reflection)
             db.commit()
             print_info("Created project assessment reflection")
+
+    # Add self-assessments for some students
+    if project_pts:
+        # Get members from all teams for this assessment
+        assessment_team_members = []
+        for pt in project_pts:
+            members = db.query(ProjectTeamMember).filter(
+                ProjectTeamMember.project_team_id == pt.id
+            ).all()
+            for member in members:
+                assessment_team_members.append((member, pt))
+        
+        # Create self-assessments for 3-5 random students
+        num_self_assessments = rand.randint(3, min(5, len(assessment_team_members)))
+        self_assessment_students = rand.sample(assessment_team_members, num_self_assessments)
+        
+        for member, pt in self_assessment_students:
+            # Create self-assessment
+            self_assessment = create_instance(
+                ProjectAssessmentSelfAssessment,
+                school_id=school.id,
+                assessment_id=assessment.id,
+                student_id=member.user_id,
+                team_number=pt.team_number,
+                locked=False,
+            )
+            db.add(self_assessment)
+            db.commit()
+            db.refresh(self_assessment)
+            
+            # Add scores for each criterion
+            for criterion in project_criteria:
+                sa_score = create_instance(
+                    ProjectAssessmentSelfAssessmentScore,
+                    school_id=school.id,
+                    self_assessment_id=self_assessment.id,
+                    criterion_id=criterion.id,
+                    score=rand.randint(1, 5),
+                    comment=factory.feedback_comment(positive=rand.random() > 0.5) if rand.random() > 0.5 else None,
+                )
+                db.add(sa_score)
+        
+        db.commit()
+        print_info(f"Created {num_self_assessments} self-assessments with scores")
+
+    # 10b. Create Project Notes Context and Notes
+    print("\n--- Creating Project Notes ---")
+    
+    # Create a notes context for the second project
+    project = projects[1]
+    project_pts = [pt for pt in project_teams if pt.project_id == project.id]
+    
+    notes_context = create_instance(
+        ProjectNotesContext,
+        school_id=school.id,
+        title=f"Aantekeningen - {project.title}",
+        description="Project observaties en voortgangsbewaking",
+        project_id=project.id,
+        course_id=course.id,
+        class_name=rand.choice([cls.name for cls in classes]),
+        project_team_id=project_pts[0].id if project_pts else None,
+        created_by=teacher.id,
+        status="open",
+    )
+    db.add(notes_context)
+    db.commit()
+    db.refresh(notes_context)
+    print_success(f"Project Notes Context: {notes_context.title}")
+    
+    # Add various types of notes
+    note_count = 0
+    
+    # Project-level notes (2-3)
+    for i in range(rand.randint(2, 3)):
+        note = create_instance(
+            ProjectNote,
+            context_id=notes_context.id,
+            note_type="project",
+            text=rand.choice([
+                "Project loopt goed, teams werken goed samen",
+                "Planning moet beter bijgehouden worden",
+                "Goede voortgang met prototypes",
+                "Extra aandacht nodig voor documentatie",
+            ]),
+            tags=rand.sample(["voortgang", "samenwerking", "planning", "kwaliteit"], rand.randint(1, 2)),
+            created_by=teacher.id,
+        )
+        db.add(note)
+        note_count += 1
+    
+    # Team-specific notes (1-2 per team) - Note: team_id would need Group model, skip for now
+    # Instead create student-specific notes
+    
+    # Student-specific notes (2-3 students)
+    if project_pts:
+        all_members = []
+        for pt in project_pts:
+            members = db.query(ProjectTeamMember).filter(
+                ProjectTeamMember.project_team_id == pt.id
+            ).all()
+            all_members.extend(members)
+        
+        note_students = rand.sample(all_members, min(3, len(all_members)))
+        for member in note_students:
+            note = create_instance(
+                ProjectNote,
+                context_id=notes_context.id,
+                note_type="student",
+                student_id=member.user_id,
+                text=rand.choice([
+                    "Toont goed initiatief in het team",
+                    "Kan beter communiceren met teamleden",
+                    "Sterke technische vaardigheden",
+                    "Heeft begeleiding nodig bij planning",
+                    "Goede presentatievaardigheden getoond",
+                ]),
+                tags=rand.sample(["competentie", "samenwerking", "technisch", "communicatie"], rand.randint(1, 2)),
+                omza_category=rand.choice(["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"]) if rand.random() > 0.5 else None,
+                is_competency_evidence=rand.random() > 0.7,
+                created_by=teacher.id,
+            )
+            db.add(note)
+            note_count += 1
+    
+    db.commit()
+    print_info(f"Created {note_count} project notes")
 
     # 11. Create CompetencyWindows
     print("\n--- Creating Competency Windows ---")
