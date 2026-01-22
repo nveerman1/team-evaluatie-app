@@ -200,7 +200,7 @@ class CriterionScore(BaseModel):
     criterion_id: int
     criterion_name: str
     category: Optional[str] = None
-    score: Optional[int] = None
+    score: Optional[float] = None
     comment: Optional[str] = None
     is_override: bool = False  # True if this is an individual student override
 
