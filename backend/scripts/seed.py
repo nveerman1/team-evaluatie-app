@@ -182,7 +182,9 @@ def safe_truncate_tables(db: Session):
             db.execute(text("SET session_replication_role = 'replica';"))
         except Exception as e:
             db.rollback()
-            print_info(f"Info: cannot set session_replication_role (continuing without): {e}")
+            print_info(
+                f"Info: cannot set session_replication_role (continuing without): {e}"
+            )
 
         for table in tables:
             try:
