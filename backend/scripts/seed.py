@@ -20,6 +20,7 @@ Options:
 
 import argparse
 import sys
+import subprocess
 from pathlib import Path
 from datetime import datetime, date
 
@@ -122,6 +123,58 @@ def print_info(message: str):
 def print_warning(message: str):
     """Print warning message"""
     print(f"⚠ {message}")
+
+
+def seed_templates_for_school(school_id: int, subject_id: int):
+    """
+    Call the seed_templates.py script to seed all template data.
+    
+    This ensures competencies, learning objectives, rubrics, etc. are created.
+    
+    Args:
+        school_id: School ID to seed templates for
+        subject_id: Subject ID to use
+    """
+    print_section("SEEDING TEMPLATES")
+    print_info(f"Calling seed_templates.py for school {school_id}, subject {subject_id}...")
+    
+    # Get the path to seed_templates.py
+    seed_templates_path = Path(__file__).parent / "seed_templates.py"
+    
+    try:
+        # Call seed_templates.py as a subprocess
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(seed_templates_path),
+                "--school-id", str(school_id),
+                "--subject-id", str(subject_id),
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        
+        # Print output for visibility
+        if result.stdout:
+            for line in result.stdout.split('\n'):
+                if line.strip():
+                    print_info(line)
+        
+        print_success("Templates seeded successfully")
+        
+    except subprocess.CalledProcessError as e:
+        print_warning(f"Template seeding failed: {e}")
+        if e.stdout:
+            print_info("STDOUT:")
+            print(e.stdout)
+        if e.stderr:
+            print_info("STDERR:")
+            print(e.stderr)
+        print_info("Continuing with seed - some data may be missing")
+    except Exception as e:
+        print_warning(f"Error calling seed_templates.py: {e}")
+        print_info("Continuing with seed - some data may be missing")
 
 
 def safe_truncate_tables(db: Session):
@@ -313,6 +366,10 @@ def seed_base(db: Session):
     )
     db.commit()
     print_success(f"Teacher: {teacher.email}")
+
+    # 7. Seed templates (competencies, learning objectives, rubrics, etc.)
+    # This is crucial for the demo seed to work properly
+    seed_templates_for_school(school.id, subject.id)
 
     print_section("BASE SEED COMPLETE")
     print("\nCredentials:")
@@ -1034,7 +1091,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                 user_id=student.id,
                 check_in=ts,
                 location="3de Blok",
-                source="seed",
+                source="manual",  # Valid values: rfid, manual, import, api
                 created_by=None,
                 approved_by=None if rand.random() > 0.8 else teacher.id,
             )
