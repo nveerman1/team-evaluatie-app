@@ -91,7 +91,7 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
       }
 
       try {
-        // Fetch the scan overview to get category names
+        // Fetch the scan overview to get ALL category names (not just those with scores)
         const overview = await competencyMonitorService.getOverview({ courseId });
         
         // Build a map of category ID to name
@@ -102,12 +102,26 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
           });
         }
 
-        // Convert category scores to array format with actual names
-        const categories = Object.entries(selectedScan.categoryScores).map(([catId, score]) => ({
-          category_id: Number(catId),
-          category_name: categoryNameMap.get(Number(catId)) || `Categorie ${catId}`,
-          avg_score: score,
-        }));
+        // Create array with ALL categories from the overview, including those without scores
+        const categories: CategoryScore[] = [];
+        if (overview.categorySummaries) {
+          overview.categorySummaries.forEach(cat => {
+            categories.push({
+              category_id: cat.id,
+              category_name: cat.name,
+              avg_score: selectedScan.categoryScores[cat.id] ?? null,
+            });
+          });
+        } else {
+          // Fallback: only show categories that have scores
+          Object.entries(selectedScan.categoryScores).forEach(([catId, score]) => {
+            categories.push({
+              category_id: Number(catId),
+              category_name: categoryNameMap.get(Number(catId)) || `Categorie ${catId}`,
+              avg_score: score,
+            });
+          });
+        }
 
         setCategoryScores(categories);
       } catch (error) {
@@ -124,15 +138,14 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
     fetchCategoryNames();
   }, [selectedScanId, scans, courseId]);
 
-  // Chart data - filter out categories with no scores
-  const validCategoryScores = categoryScores.filter(c => c.avg_score !== null && c.avg_score !== undefined);
-  
+  // Chart data - include all categories, but use null for missing scores
+  // Radar charts handle null values by not drawing a line to that point
   const chartData = {
-    labels: validCategoryScores.map((c) => c.category_name),
+    labels: categoryScores.map((c) => c.category_name),
     datasets: [
       {
         label: "Score",
-        data: validCategoryScores.map((c) => c.avg_score!),
+        data: categoryScores.map((c) => c.avg_score),
         backgroundColor: "rgba(59, 130, 246, 0.2)",
         borderColor: "rgba(59, 130, 246, 1)",
         borderWidth: 2,
@@ -221,7 +234,7 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
 
       {scans.length === 0 ? (
         <p className="text-gray-500 text-center py-4">Geen competentiescans gevonden</p>
-      ) : validCategoryScores.length === 0 ? (
+      ) : categoryScores.length === 0 ? (
         <p className="text-gray-500 text-center py-4">Geen data beschikbaar voor deze scan</p>
       ) : (
         <div className="h-72">
