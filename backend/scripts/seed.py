@@ -873,111 +873,116 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     total_scores = 0
     total_self_assessments = 0
 
-    for project in projects:
-        project_pts = [pt for pt in project_teams if pt.project_id == project.id]
+    # Ensure we have criteria before proceeding
+    if not project_criteria:
+        print_warning("No project criteria found - skipping project assessments")
+    else:
+        for project in projects:
+            project_pts = [pt for pt in project_teams if pt.project_id == project.id]
 
-        assessment = create_instance(
-            ProjectAssessment,
-            school_id=school.id,
-            project_id=project.id,
-            rubric_id=project_rubric.id,
-            teacher_id=teacher.id,
-            title=f"Project Beoordeling - {project.title}",
-            status="published",
-        )
-        db.add(assessment)
-        db.commit()
-        db.refresh(assessment)
-        assessments.append(assessment)
-
-        # Link teams to assessment
-        for pt in project_pts:
-            pat = create_instance(
-                ProjectAssessmentTeam,
+            assessment = create_instance(
+                ProjectAssessment,
                 school_id=school.id,
-                project_assessment_id=assessment.id,
-                project_team_id=pt.id,
-                status="draft",
-                scores_count=len(project_criteria),
+                project_id=project.id,
+                rubric_id=project_rubric.id,
+                teacher_id=teacher.id,
+                title=f"Project Beoordeling - {project.title}",
+                status="published",
             )
-            db.add(pat)
-        db.commit()
+            db.add(assessment)
+            db.commit()
+            db.refresh(assessment)
+            assessments.append(assessment)
 
-        # Add scores for each team
-        for pt in project_pts:
-            for criterion in project_criteria:
-                score = create_instance(
-                    ProjectAssessmentScore,
+            # Link teams to assessment
+            for pt in project_pts:
+                pat = create_instance(
+                    ProjectAssessmentTeam,
                     school_id=school.id,
-                    assessment_id=assessment.id,
-                    criterion_id=criterion.id,
-                    team_number=pt.team_number,
-                    score=int(rand.uniform(1.0, 5.0)),
-                    comment=factory.feedback_comment(positive=rand.random() > 0.4),
+                    project_assessment_id=assessment.id,
+                    project_team_id=pt.id,
+                    status="draft",
+                    scores_count=len(project_criteria),
                 )
-                db.add(score)
-                total_scores += 1
-
-        db.commit()
-
-        # Add reflection for one team member from first team
-        if project_pts:
-            first_team_members = db.query(ProjectTeamMember).filter(
-                ProjectTeamMember.project_team_id == project_pts[0].id
-            ).first()
-            
-            if first_team_members:
-                reflection_text = factory.reflection_text()
-                pa_reflection = create_instance(
-                    ProjectAssessmentReflection,
-                    school_id=school.id,
-                    assessment_id=assessment.id,
-                    user_id=first_team_members.user_id,
-                    text=reflection_text,
-                    word_count=len(reflection_text.split()),
-                    submitted_at=ts_gen.recent_timestamp(days_ago_max=5),
-                )
-                db.add(pa_reflection)
+                db.add(pat)
                 db.commit()
 
-        # Create self-assessments for ALL students in ALL teams
-        for pt in project_pts:
-            members = db.query(ProjectTeamMember).filter(
-                ProjectTeamMember.project_team_id == pt.id
-            ).all()
-            
-            for member in members:
-                # Create self-assessment for this student
-                self_assessment = create_instance(
-                    ProjectAssessmentSelfAssessment,
-                    school_id=school.id,
-                    assessment_id=assessment.id,
-                    student_id=member.user_id,
-                    team_number=pt.team_number,
-                    locked=False,
-                )
-                db.add(self_assessment)
-                db.commit()
-                db.refresh(self_assessment)
-                total_self_assessments += 1
-                
-                # Add scores for ALL criteria
+            # Add scores for each team
+            for pt in project_pts:
                 for criterion in project_criteria:
-                    sa_score = create_instance(
-                        ProjectAssessmentSelfAssessmentScore,
+                    score = create_instance(
+                        ProjectAssessmentScore,
                         school_id=school.id,
-                        self_assessment_id=self_assessment.id,
+                        assessment_id=assessment.id,
                         criterion_id=criterion.id,
-                        score=rand.randint(1, 5),
-                        comment=factory.feedback_comment(positive=rand.random() > 0.5) if rand.random() > 0.5 else None,
+                        team_number=pt.team_number,
+                        score=int(rand.uniform(1.0, 5.0)),
+                        comment=factory.feedback_comment(positive=rand.random() > 0.4),
                     )
-                    db.add(sa_score)
-            
+                    db.add(score)
+                    total_scores += 1
+
             db.commit()
 
-    print_success(f"Created {len(assessments)} project assessments for all projects")
-    print_info(f"Created {total_scores} teacher scores")
-    print_info(f"Created {total_self_assessments} self-assessments with scores for all students")
+            # Add reflection for one team member from first team
+            if project_pts:
+                first_team_members = db.query(ProjectTeamMember).filter(
+                    ProjectTeamMember.project_team_id == project_pts[0].id
+                ).first()
+                
+                if first_team_members:
+                    reflection_text = factory.reflection_text()
+                    pa_reflection = create_instance(
+                        ProjectAssessmentReflection,
+                        school_id=school.id,
+                        assessment_id=assessment.id,
+                        user_id=first_team_members.user_id,
+                        text=reflection_text,
+                        word_count=len(reflection_text.split()),
+                        submitted_at=ts_gen.recent_timestamp(days_ago_max=5),
+                    )
+                    db.add(pa_reflection)
+                    db.commit()
+
+            # Create self-assessments for ALL students in ALL teams
+            for pt in project_pts:
+                members = db.query(ProjectTeamMember).filter(
+                    ProjectTeamMember.project_team_id == pt.id
+                ).all()
+                
+                for member in members:
+                    # Create self-assessment for this student
+                    self_assessment = create_instance(
+                        ProjectAssessmentSelfAssessment,
+                        school_id=school.id,
+                        assessment_id=assessment.id,
+                        student_id=member.user_id,
+                        team_number=pt.team_number,
+                        locked=False,
+                    )
+                    db.add(self_assessment)
+                    db.commit()
+                    db.refresh(self_assessment)
+                    total_self_assessments += 1
+                    
+                    # Add scores for ALL criteria
+                    for criterion in project_criteria:
+                        has_comment = rand.random() > 0.5
+                        sa_score = create_instance(
+                            ProjectAssessmentSelfAssessmentScore,
+                            school_id=school.id,
+                            self_assessment_id=self_assessment.id,
+                            criterion_id=criterion.id,
+                            score=rand.randint(1, 5),
+                            comment=factory.feedback_comment(positive=rand.random() > 0.5) if has_comment else None,
+                        )
+                        db.add(sa_score)
+                
+                db.commit()
+
+        print_success(f"Created {len(assessments)} project assessments for all projects")
+        print_info(f"Created {total_scores} teacher scores")
+        print_info(f"Created {total_self_assessments} self-assessments with scores for all students")
 
     # 10b. Create Project Notes Context and Notes
     print("\n--- Creating Project Notes ---")
@@ -1113,8 +1118,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
         for window in windows:
             for student in student_objs:  # ALL 24 students
-                # Self-scores - each student scores 3-4 random competencies
-                num_competencies_to_score = rand.randint(3, min(4, len(competencies)))
+                # Self-scores - each student scores 3-4 random competencies (or fewer if not enough available)
+                num_competencies_to_score = rand.randint(min(3, len(competencies)), min(4, len(competencies)))
                 for competency in rand.sample(competencies, num_competencies_to_score):
                     self_score = create_instance(
                         CompetencySelfScore,
