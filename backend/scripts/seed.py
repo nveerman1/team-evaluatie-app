@@ -21,6 +21,7 @@ Options:
 import argparse
 import sys
 import subprocess
+import secrets
 from pathlib import Path
 from datetime import datetime, date, timedelta
 
@@ -1120,7 +1121,6 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                     continue
                 
                 # Generate a unique token for external access
-                import secrets
                 token = secrets.token_urlsafe(32)
                 
                 # Create ProjectTeamExternal to link evaluator to team
