@@ -1115,14 +1115,32 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             
             # Create external team link for invitation tracking
             for pt in project_pts:
+                # Skip if team doesn't have a group (legacy) reference
+                if not pt.team_id:
+                    continue
+                
                 # Generate a unique token for external access
                 import secrets
                 token = secrets.token_urlsafe(32)
                 
-                # Note: ProjectTeamExternal uses group_id, but we'll link via assessment_id
-                # This might need adjustment based on actual schema requirements
-                # For now, skip creating ProjectTeamExternal if group_id is required
-                # as groups have been replaced by project teams
+                # Create ProjectTeamExternal to link evaluator to team
+                pte = create_instance(
+                    ProjectTeamExternal,
+                    school_id=school.id,
+                    group_id=pt.team_id,  # Reference to the group (legacy field)
+                    external_evaluator_id=evaluator.id,
+                    project_id=project.id,
+                    assessment_id=external_assessment.id,
+                    team_number=pt.team_number,
+                    invitation_token=token,
+                    token_expires_at=datetime.utcnow() + timedelta(days=90),
+                    status="SUBMITTED",  # Mark as submitted since scores are already added
+                    invited_at=datetime.utcnow(),
+                    submitted_at=datetime.utcnow(),
+                )
+                db.add(pte)
+            
+            db.commit()
         
         print_success(f"Created {external_assessments_count} external assessments")
         print_info(f"Created {external_scores_count} external scores")
