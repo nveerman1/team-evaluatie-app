@@ -41,6 +41,7 @@ export function OMZATrendSection({ studentId, courseId }: OMZATrendSectionProps)
         setLoading(true);
         const response = await peerEvaluationOverviewService.getDashboard({
           courseId,
+          studentId,
         });
         
         setTrendData(response.trendData);

@@ -124,13 +124,15 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
     fetchCategoryNames();
   }, [selectedScanId, scans, courseId]);
 
-  // Chart data
+  // Chart data - filter out categories with no scores
+  const validCategoryScores = categoryScores.filter(c => c.avg_score !== null && c.avg_score !== undefined);
+  
   const chartData = {
-    labels: categoryScores.map((c) => c.category_name),
+    labels: validCategoryScores.map((c) => c.category_name),
     datasets: [
       {
         label: "Score",
-        data: categoryScores.map((c) => c.avg_score || 0),
+        data: validCategoryScores.map((c) => c.avg_score as number),
         backgroundColor: "rgba(59, 130, 246, 0.2)",
         borderColor: "rgba(59, 130, 246, 1)",
         borderWidth: 2,
@@ -219,7 +221,7 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
 
       {scans.length === 0 ? (
         <p className="text-gray-500 text-center py-4">Geen competentiescans gevonden</p>
-      ) : categoryScores.length === 0 ? (
+      ) : validCategoryScores.length === 0 ? (
         <p className="text-gray-500 text-center py-4">Geen data beschikbaar voor deze scan</p>
       ) : (
         <div className="h-72">

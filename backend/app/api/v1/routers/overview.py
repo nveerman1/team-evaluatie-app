@@ -1673,6 +1673,7 @@ def get_peer_evaluation_dashboard(
     project_id: Optional[int] = Query(None),
     period: str = Query("6months"),  # "3months" | "6months" | "year"
     student_name: Optional[str] = Query(None),
+    student_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -1687,6 +1688,7 @@ def get_peer_evaluation_dashboard(
     - project_id: Filter by specific project
     - period: Time period for trends (3months, 6months, year)
     - student_name: Filter by student name
+    - student_id: Filter by specific student ID (for trend data)
     """
     from datetime import datetime, timedelta
     from collections import defaultdict
@@ -1987,9 +1989,13 @@ def get_peer_evaluation_dashboard(
                     # Use cached scores from batch calculation
                     eval_all_scores = evaluation_scores_cache.get(evaluation.id, {})
                     
-                    # Aggregate all students' scores for this evaluation/month
-                    for student_id in eval_all_scores:
-                        student_omza = eval_all_scores[student_id]
+                    # Aggregate students' scores for this evaluation/month
+                    # If student_id is provided, only include that student's scores
+                    for stud_id in eval_all_scores:
+                        if student_id is not None and stud_id != student_id:
+                            continue  # Skip if filtering by student_id and this isn't the target student
+                        
+                        student_omza = eval_all_scores[stud_id]
                         # Add peer scores to monthly aggregation (use actual category names from rubric)
                         for cat_name in student_omza.keys():
                             peer_score = student_omza.get(cat_name, {}).get("peer")
