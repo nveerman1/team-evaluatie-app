@@ -71,6 +71,7 @@ from app.db.seed_utils import (
     TimestampGenerator,
     UpsertHelper,
     DataFactory,
+    create_instance,
 )
 
 
@@ -581,10 +582,12 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     # Add peer criteria
     peer_categories = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"]
     for i, category in enumerate(peer_categories):
-        criterion = RubricCriterion(
+        criterion = create_instance(
+            RubricCriterion,
+            school_id=school.id,
             rubric_id=peer_rubric.id,
             name=factory.criterion_name(category),
-            order_index=i,
+            order=i,
             weight=1.0,
         )
         db.add(criterion)
@@ -606,11 +609,12 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     # Add project criteria
     project_categories = ["projectproces", "eindresultaat", "communicatie"]
     for i, category in enumerate(project_categories):
-        criterion = RubricCriterion(
+        criterion = create_instance(
+            RubricCriterion,
+            school_id=school.id,
             rubric_id=project_rubric.id,
             name=factory.criterion_name(category),
-            description=f"Beoordeling van {category}",
-            order_index=i,
+            order=i,
             weight=1.0,
         )
         db.add(criterion)
@@ -658,13 +662,15 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
     for reviewer_member in team_members:
         for reviewee_member in team_members:
-            if reviewer_member.student_id == reviewee_member.student_id:
+            if reviewer_member.user_id == reviewee_member.user_id:
                 continue  # Skip self-review
 
-            allocation = Allocation(
+            allocation = create_instance(
+                Allocation,
+                school_id=school.id,
                 evaluation_id=evaluation.id,
-                reviewer_id=reviewer_member.student_id,
-                reviewee_id=reviewee_member.student_id,
+                reviewer_id=reviewer_member.user_id,
+                reviewee_id=reviewee_member.user_id,
             )
             db.add(allocation)
             db.commit()
@@ -672,11 +678,14 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
             # Add scores for each criterion
             for criterion in peer_criteria:
-                score = Score(
+                score = create_instance(
+                    Score,
+                    school_id=school.id,
                     allocation_id=allocation.id,
                     criterion_id=criterion.id,
                     score=rand.randint(1, 5),
                     comment=factory.feedback_comment(positive=rand.random() > 0.3),
+                    status="submitted",
                 )
                 db.add(score)
 
@@ -690,10 +699,14 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     reflection_students = rand.sample(team_members, min(3, len(team_members)))
 
     for member in reflection_students:
-        reflection = Reflection(
+        reflection_text = factory.reflection_text()
+        reflection = create_instance(
+            Reflection,
+            school_id=school.id,
             evaluation_id=evaluation.id,
-            student_id=member.student_id,
-            content=factory.reflection_text(),
+            user_id=member.user_id,
+            text=reflection_text,
+            word_count=len(reflection_text.split()),
             submitted_at=ts_gen.recent_timestamp(days_ago_max=7),
         )
         db.add(reflection)
@@ -730,9 +743,13 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
     # Link teams to assessment
     for pt in project_pts:
-        pat = ProjectAssessmentTeam(
+        pat = create_instance(
+            ProjectAssessmentTeam,
+            school_id=school.id,
             project_assessment_id=assessment.id,
             project_team_id=pt.id,
+            status="draft",
+            scores_count=0,
         )
         db.add(pat)
     db.commit()
@@ -740,11 +757,13 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     # Add scores for each team
     for pt in project_pts:
         for criterion in project_criteria:
-            score = ProjectAssessmentScore(
-                project_assessment_id=assessment.id,
-                project_team_id=pt.id,
+            score = create_instance(
+                ProjectAssessmentScore,
+                school_id=school.id,
+                assessment_id=assessment.id,
                 criterion_id=criterion.id,
-                score=rand.uniform(1.0, 5.0),
+                team_number=pt.team_number,
+                score=int(rand.uniform(1.0, 5.0)),
                 comment=factory.feedback_comment(positive=rand.random() > 0.4),
             )
             db.add(score)
@@ -754,15 +773,25 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
     # Add reflection for one team
     if project_pts:
-        pa_reflection = ProjectAssessmentReflection(
-            project_assessment_id=assessment.id,
-            project_team_id=project_pts[0].id,
-            content=factory.reflection_text(),
-            submitted_at=ts_gen.recent_timestamp(days_ago_max=5),
-        )
-        db.add(pa_reflection)
-        db.commit()
-        print_info("Created project assessment reflection")
+        # Get a member from the first team to use as the reflection author
+        first_team_members = db.query(ProjectTeamMember).filter(
+            ProjectTeamMember.project_team_id == project_pts[0].id
+        ).first()
+        
+        if first_team_members:
+            reflection_text = factory.reflection_text()
+            pa_reflection = create_instance(
+                ProjectAssessmentReflection,
+                school_id=school.id,
+                assessment_id=assessment.id,
+                user_id=first_team_members.user_id,
+                text=reflection_text,
+                word_count=len(reflection_text.split()),
+                submitted_at=ts_gen.recent_timestamp(days_ago_max=5),
+            )
+            db.add(pa_reflection)
+            db.commit()
+            print_info("Created project assessment reflection")
 
     # 11. Create CompetencyWindows
     print("\n--- Creating Competency Windows ---")
@@ -803,33 +832,41 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         for student in sample_students:
             # Self-scores
             for category in rand.sample(comp_categories, 3):
-                self_score = CompetencySelfScore(
-                    competency_window_id=window.id,
-                    student_id=student.id,
-                    competency_category_id=category.id,
+                self_score = create_instance(
+                    CompetencySelfScore,
+                    school_id=school.id,
+                    window_id=window.id,
+                    user_id=student.id,
+                    competency_id=category.id,
                     score=rand.randint(1, 5),
                 )
                 db.add(self_score)
 
             # Goals
             if rand.random() > 0.5:
-                goal = CompetencyGoal(
-                    competency_window_id=window.id,
-                    student_id=student.id,
-                    category_id=rand.choice(comp_categories).id,
+                goal = create_instance(
+                    CompetencyGoal,
+                    school_id=school.id,
+                    window_id=window.id,
+                    user_id=student.id,
+                    competency_id=rand.choice(comp_categories).id,
                     goal_text=factory.competency_goal(),
-                    created_at=ts_gen.recent_timestamp(days_ago_max=10),
+                    status="active",
+                    submitted_at=ts_gen.recent_timestamp(days_ago_max=10),
                 )
                 db.add(goal)
 
             # Teacher observations
             if rand.random() > 0.7:
-                observation = CompetencyTeacherObservation(
-                    competency_window_id=window.id,
-                    student_id=student.id,
+                observation = create_instance(
+                    CompetencyTeacherObservation,
+                    school_id=school.id,
+                    window_id=window.id,
+                    user_id=student.id,
                     teacher_id=teacher.id,
-                    category_id=rand.choice(comp_categories).id,
-                    observation=factory.feedback_comment(positive=True),
+                    competency_id=rand.choice(comp_categories).id,
+                    score=rand.randint(1, 5),
+                    comment=factory.feedback_comment(positive=True),
                     created_at=ts_gen.recent_timestamp(days_ago_max=15),
                 )
                 db.add(observation)
@@ -852,13 +889,14 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     ]
 
     for i, objective_text in enumerate(objective_texts):
-        obj = LearningObjective(
+        obj = create_instance(
+            LearningObjective,
             school_id=school.id,
             subject_id=subject.id,
-            code=f"LO-{i+1:03d}",
-            description=text,
             is_template=True,
-            order_index=i,
+            title=f"LO-{i+1:03d}",
+            description=objective_text,
+            order=i,
         )
         db.add(obj)
 
@@ -897,10 +935,12 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         )
 
         for ts in timestamps:
-            log = ClientLog(
+            log = create_instance(
+                ClientLog,
                 client_id=client.id,
+                author_id=teacher.id,
                 log_type=rand.choice(["call", "email", "meeting", "other"]),
-                description=rand.choice(
+                text=rand.choice(
                     [
                         "Eerste kennismakingsgesprek",
                         "Projectbriefing ontvangen",
@@ -908,8 +948,6 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                         "Presentatie voor opdrachtgever",
                     ]
                 ),
-                logged_by=teacher.id,
-                logged_at=ts,
             )
             db.add(log)
 
@@ -918,11 +956,11 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
     # Link clients to projects
     for i, project in enumerate(projects[:2]):
-        link = ClientProjectLink(
+        link = create_instance(
+            ClientProjectLink,
             client_id=clients[i].id,
             project_id=project.id,
             role=rand.choice(["primary", "secondary"]),
-            linked_at=ts_gen.random_timestamp(days_ago_min=25, days_ago_max=45),
         )
         db.add(link)
 
@@ -957,11 +995,12 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         )
 
         for ts in event_timestamps:
-            event = AttendanceEvent(
+            event = create_instance(
+                AttendanceEvent,
                 user_id=student.id,
-                event_type=rand.choice(["check_in", "check_out"]),
-                timestamp=ts,
+                check_in=ts,
                 location="3de Blok",
+                source="seed",
                 created_by=None,
                 approved_by=None if rand.random() > 0.8 else teacher.id,
             )
