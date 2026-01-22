@@ -1998,7 +1998,7 @@ def get_peer_evaluation_dashboard(
                             continue  # Skip if filtering by student_id and this isn't the target student
                         
                         student_omza = eval_all_scores[stud_id]
-                        # Add peer scores to evaluation aggregation (use actual category names from rubric)
+                        # Add peer scores to this evaluation's aggregation (use actual category names from rubric)
                         for cat_name in student_omza.keys():
                             peer_score = student_omza.get(cat_name, {}).get("peer")
                             if peer_score is not None:

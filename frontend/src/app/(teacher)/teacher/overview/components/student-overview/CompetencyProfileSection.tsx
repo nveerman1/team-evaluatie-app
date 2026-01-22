@@ -113,7 +113,7 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
             });
           });
         } else {
-          // Fallback: only show categories that have scores
+          // Fallback: if overview.categorySummaries is unavailable, only show categories that have scores
           Object.entries(selectedScan.categoryScores).forEach(([catId, score]) => {
             categories.push({
               category_id: Number(catId),
