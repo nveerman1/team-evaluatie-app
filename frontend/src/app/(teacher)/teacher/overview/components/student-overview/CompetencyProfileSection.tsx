@@ -132,7 +132,7 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
     datasets: [
       {
         label: "Score",
-        data: validCategoryScores.map((c) => c.avg_score as number),
+        data: validCategoryScores.map((c) => c.avg_score!),
         backgroundColor: "rgba(59, 130, 246, 0.2)",
         borderColor: "rgba(59, 130, 246, 1)",
         borderWidth: 2,
