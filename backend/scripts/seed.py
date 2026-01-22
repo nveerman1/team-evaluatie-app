@@ -20,8 +20,9 @@ Options:
 
 import argparse
 import sys
+import subprocess
 from pathlib import Path
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -53,7 +54,12 @@ from app.infra.db.models import (
     ProjectAssessmentTeam,
     ProjectAssessmentScore,
     ProjectAssessmentReflection,
+    ProjectAssessmentSelfAssessment,
+    ProjectAssessmentSelfAssessmentScore,
+    ExternalEvaluator,
+    ProjectTeamExternal,
     CompetencyCategory,
+    Competency,
     CompetencyWindow,
     CompetencySelfScore,
     CompetencyGoal,
@@ -62,6 +68,8 @@ from app.infra.db.models import (
     Client,
     ClientLog,
     ClientProjectLink,
+    ProjectNotesContext,
+    ProjectNote,
     RFIDCard,
     AttendanceEvent,
 )
@@ -71,6 +79,7 @@ from app.db.seed_utils import (
     TimestampGenerator,
     UpsertHelper,
     DataFactory,
+    create_instance,
 )
 
 
@@ -115,6 +124,63 @@ def print_success(message: str):
 def print_info(message: str):
     """Print info message"""
     print(f"  {message}")
+
+
+def print_warning(message: str):
+    """Print warning message"""
+    print(f"⚠ {message}")
+
+
+def seed_templates_for_school(school_id: int, subject_id: int):
+    """
+    Call the seed_templates.py script to seed all template data.
+    
+    This ensures competencies, learning objectives, rubrics, etc. are created.
+    
+    Args:
+        school_id: School ID to seed templates for
+        subject_id: Subject ID to use
+    """
+    print_section("SEEDING TEMPLATES")
+    print_info(f"Calling seed_templates.py for school {school_id}, subject {subject_id}...")
+    
+    # Get the path to seed_templates.py
+    seed_templates_path = Path(__file__).parent / "seed_templates.py"
+    
+    try:
+        # Call seed_templates.py as a subprocess
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(seed_templates_path),
+                "--school-id", str(school_id),
+                "--subject-id", str(subject_id),
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        
+        # Print output for visibility
+        if result.stdout:
+            for line in result.stdout.split('\n'):
+                if line.strip():
+                    print_info(line)
+        
+        print_success("Templates seeded successfully")
+        
+    except subprocess.CalledProcessError as e:
+        print_warning(f"Template seeding failed: {e}")
+        if e.stdout:
+            print_info("STDOUT:")
+            print(e.stdout)
+        if e.stderr:
+            print_info("STDERR:")
+            print(e.stderr)
+        print_info("Continuing with seed - some data may be missing")
+    except Exception as e:
+        print_warning(f"Error calling seed_templates.py: {e}")
+        print_info("Continuing with seed - some data may be missing")
 
 
 def safe_truncate_tables(db: Session):
@@ -307,6 +373,10 @@ def seed_base(db: Session):
     db.commit()
     print_success(f"Teacher: {teacher.email}")
 
+    # 7. Seed templates (competencies, learning objectives, rubrics, etc.)
+    # This is crucial for the demo seed to work properly
+    seed_templates_for_school(school.id, subject.id)
+
     print_section("BASE SEED COMPLETE")
     print("\nCredentials:")
     print(f"  Admin:   {BASE_CREDENTIALS['admin'][0]} / {BASE_CREDENTIALS['admin'][1]}")
@@ -384,7 +454,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     print("\n--- Creating Classes ---")
     classes = []
     for class_name in DEMO_CLASSES:
-        cls = Class(
+        cls = create_instance(
+            Class,
             school_id=school.id,
             academic_year_id=academic_year.id,
             name=class_name,
@@ -408,7 +479,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             name = factory.student_name()
             email = factory.email(name)
 
-            student = User(
+            student = create_instance(
+                User,
                 school_id=school.id,
                 email=email,
                 name=name,
@@ -426,7 +498,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     # Refresh students and create class memberships
     for student, cls in students:
         db.refresh(student)
-        membership = StudentClassMembership(
+        membership = create_instance(
+            StudentClassMembership,
             student_id=student.id,
             class_id=cls.id,
             academic_year_id=academic_year.id,
@@ -441,7 +514,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
     # 3. Create Course
     print("\n--- Creating Course ---")
-    course = Course(
+    course = create_instance(
+        Course,
         school_id=school.id,
         subject_id=subject.id,
         academic_year_id=academic_year.id,
@@ -456,21 +530,39 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     print_success(f"Course: {course.name} (ID: {course.id})")
 
     # Assign teacher to course
-    teacher_course = TeacherCourse(
-        school_id=school.id,  # <-- fix
+    teacher_course = create_instance(
+        TeacherCourse,
+        school_id=school.id,
         teacher_id=teacher.id,
         course_id=course.id,
         role="teacher",
         is_active=True,
     )
-
     db.add(teacher_course)
+    
+    # Also assign admin as a second teacher to the course (for smoke test)
+    admin = db.query(User).filter(
+        User.school_id == school.id, 
+        User.role == "admin"
+    ).first()
+    if admin:
+        admin_teacher_course = create_instance(
+            TeacherCourse,
+            school_id=school.id,
+            teacher_id=admin.id,
+            course_id=course.id,
+            role="admin",
+            is_active=True,
+        )
+        db.add(admin_teacher_course)
+
     db.commit()
     print_info(f"Assigned {teacher.name} to course")
 
     # Enroll students in course
     for student in student_objs:
-        enrollment = CourseEnrollment(
+        enrollment = create_instance(
+            CourseEnrollment,
             student_id=student.id,
             course_id=course.id,
         )
@@ -487,7 +579,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         title = factory.project_title()
         status = project_statuses[i]
 
-        project = Project(
+        project = create_instance(
+            Project,
             school_id=school.id,
             course_id=course.id,
             title=title,
@@ -511,24 +604,22 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
     print_success(f"Created {len(projects)} projects")
 
-    # 5. Create Project Teams (frozen rosters)
+    # 5. Create Project Teams - EVERY student in EVERY project (max 4 students per team)
     print("\n--- Creating Project Teams ---")
 
-    num_teams_per_project = 2
-    students_per_team = 4
-
-    # Shuffle students once for random distribution
-    shuffled_students = student_objs.copy()
-    rand.shuffle(shuffled_students)
-    student_cursor = 0
+    students_per_team = 4  # Max 4 students per team
+    num_teams_per_project = (len(student_objs) + students_per_team - 1) // students_per_team  # Ceiling division
 
     project_teams = []
 
     for project in projects:
+        # For each project, split all students into teams of max 4
+        # With 24 students: Team 1-6 each get 4 students
         for team_number in range(1, num_teams_per_project + 1):
             team_name = factory.team_name(team_number)
 
-            pt = ProjectTeam(
+            pt = create_instance(
+                ProjectTeam,
                 school_id=school.id,
                 project_id=project.id,
                 team_number=team_number,
@@ -541,17 +632,17 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
         # Refresh project teams for this project
         project_team_slice = project_teams[-num_teams_per_project:]
-        for pt in project_team_slice:
+        for idx, pt in enumerate(project_team_slice):
             db.refresh(pt)
 
-            # Assign students to this project team
-            members = shuffled_students[
-                student_cursor : student_cursor + students_per_team
-            ]
-            student_cursor += students_per_team
+            # Assign students to this project team (max 4 per team)
+            start_idx = idx * students_per_team
+            end_idx = min(start_idx + students_per_team, len(student_objs))
+            members = student_objs[start_idx:end_idx]
 
             for student in members:
-                ptm = ProjectTeamMember(
+                ptm = create_instance(
+                    ProjectTeamMember,
                     school_id=school.id,
                     project_team_id=pt.id,
                     user_id=student.id,
@@ -562,64 +653,145 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
     print_success(
         f"Created {len(project_teams)} project teams "
-        f"({num_teams_per_project} per project, {students_per_team} students each)"
+        f"({num_teams_per_project} per project, max {students_per_team} students each)"
     )
+    print_info(f"All {len(student_objs)} students are assigned to teams in each of the {len(projects)} projects")
 
-    # 7. Create Rubrics
+    # 7. Create Rubrics with Criteria from Templates
     print("\n--- Creating Rubrics ---")
 
-    # Peer rubric
-    peer_rubric = Rubric(
+    # Create peer rubric with criteria from peer_evaluation_criterion_templates
+    peer_rubric = create_instance(
+        Rubric,
         school_id=school.id,
-        title=factory.rubric_title("peer"),
+        title="Peer Evaluatie - OMZA Competenties",
         scope="peer",
+        description="Beoordeling van teamgedrag op basis van OMZA-model",
     )
     db.add(peer_rubric)
     db.commit()
     db.refresh(peer_rubric)
 
-    # Add peer criteria
-    peer_categories = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"]
-    for i, category in enumerate(peer_categories):
-        criterion = RubricCriterion(
-            rubric_id=peer_rubric.id,
-            name=factory.criterion_name(category),
-            order_index=i,
-            weight=1.0,
-        )
-        db.add(criterion)
-    db.commit()
-    print_success(
-        f"Peer Rubric: {peer_rubric.title} with {len(peer_categories)} criteria"
+    # Query peer criterion templates
+    peer_template_query = db.execute(
+        text("""
+            SELECT omza_category, title, description 
+            FROM peer_evaluation_criterion_templates
+            WHERE school_id = :school_id AND subject_id = :subject_id
+            ORDER BY omza_category, id
+        """),
+        {"school_id": school.id, "subject_id": subject.id}
     )
+    peer_templates = peer_template_query.fetchall()
+    
+    if peer_templates:
+        # Create criteria from templates (each row is a criterion, not a category)
+        for i, (category, title, description) in enumerate(peer_templates):
+            criterion = create_instance(
+                RubricCriterion,
+                school_id=school.id,
+                rubric_id=peer_rubric.id,
+                name=title,  # e.g., "Realistische planning maken"
+                category=category,  # e.g., "Organiseren"
+                description=description,
+                order=i,
+                weight=1.0,
+            )
+            db.add(criterion)
+        db.commit()
+        print_success(
+            f"Peer Rubric: {peer_rubric.title} with {len(peer_templates)} criteria from templates"
+        )
+    else:
+        # Fallback: create minimal criteria if templates don't exist
+        print_warning("No peer templates found, creating basic criteria")
+        peer_categories = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"]
+        for i, category in enumerate(peer_categories):
+            criterion = create_instance(
+                RubricCriterion,
+                school_id=school.id,
+                rubric_id=peer_rubric.id,
+                name=f"{category} - algemeen",
+                category=category,
+                description=f"Algemene beoordeling van {category.lower()}",
+                order=i,
+                weight=1.0,
+            )
+            db.add(criterion)
+        db.commit()
+        print_success(
+            f"Peer Rubric: {peer_rubric.title} with {len(peer_categories)} basic criteria"
+        )
 
-    # Project rubric
-    project_rubric = Rubric(
+    # Create project rubric with criteria from project_assessment_criterion_templates
+    project_rubric = create_instance(
+        Rubric,
         school_id=school.id,
-        title=factory.rubric_title("project"),
+        title="Project Beoordeling - Proces en Resultaat",
         scope="project",
+        description="Beoordeling van projectwerk op proces, resultaat en communicatie",
     )
     db.add(project_rubric)
     db.commit()
     db.refresh(project_rubric)
 
-    # Add project criteria
-    project_categories = ["projectproces", "eindresultaat", "communicatie"]
-    for i, category in enumerate(project_categories):
-        criterion = RubricCriterion(
-            rubric_id=project_rubric.id,
-            name=factory.criterion_name(category),
-            description=f"Beoordeling van {category}",
-            order_index=i,
-            weight=1.0,
-        )
-        db.add(criterion)
-    db.commit()
-    print_success(
-        f"Project Rubric: {project_rubric.title} with {len(project_categories)} criteria"
+    # Query project criterion templates
+    project_template_query = db.execute(
+        text("""
+            SELECT category, title, description 
+            FROM project_assessment_criterion_templates
+            WHERE school_id = :school_id AND subject_id = :subject_id
+            ORDER BY category, id
+        """),
+        {"school_id": school.id, "subject_id": subject.id}
     )
+    project_templates = project_template_query.fetchall()
+    
+    if project_templates:
+        # Create criteria from templates (each row is a criterion, not a category)
+        for i, (category, title, description) in enumerate(project_templates):
+            criterion = create_instance(
+                RubricCriterion,
+                school_id=school.id,
+                rubric_id=project_rubric.id,
+                name=title,  # e.g., "Oriënteren & analyseren"
+                category=category,  # e.g., "projectproces"
+                description=description,
+                order=i,
+                weight=1.0,
+            )
+            db.add(criterion)
+        db.commit()
+        print_success(
+            f"Project Rubric: {project_rubric.title} with {len(project_templates)} criteria from templates"
+        )
+    else:
+        # Fallback: create minimal criteria if templates don't exist
+        print_warning("No project templates found, creating basic criteria")
+        project_criteria_data = [
+            {"name": "Projectproces", "category": "projectproces", "description": "Planning, organisatie en aanpak van het project"},
+            {"name": "Eindresultaat", "category": "eindresultaat", "description": "Kwaliteit en volledigheid van het eindproduct"},
+            {"name": "Communicatie", "category": "communicatie", "description": "Presentatie en communicatie over het project"},
+            {"name": "Documentatie", "category": "communicatie", "description": "Kwaliteit van verslaglegging en documentatie"},
+        ]
+        for i, criterion_data in enumerate(project_criteria_data):
+            criterion = create_instance(
+                RubricCriterion,
+                school_id=school.id,
+                rubric_id=project_rubric.id,
+                name=criterion_data["name"],
+                category=criterion_data["category"],
+                description=criterion_data["description"],
+                order=i,
+                weight=1.0,
+            )
+            db.add(criterion)
+        db.commit()
+        print_success(
+            f"Project Rubric: {project_rubric.title} with {len(project_criteria_data)} basic criteria"
+        )
 
-    # 8. Create Evaluations
+    # 8. Create Evaluations for ALL Teams
     print("\n--- Creating Evaluations ---")
 
     # Get peer rubric criteria
@@ -629,79 +801,106 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         .all()
     )
 
-    # Create 1 peer evaluation for first project
-    project = projects[0]
-    pt = [pt for pt in project_teams if pt.project_id == project.id][0]
+    # Create peer evaluation for EVERY project team (6 teams total)
+    evaluations = []
+    total_allocations = 0
 
-    evaluation = Evaluation(
-        school_id=school.id,
-        course_id=course.id,
-        project_id=project.id,
-        project_team_id=pt.id,
-        rubric_id=peer_rubric.id,
-        title=f"Peer Evaluatie - {project.title}",
-        evaluation_type="peer",
-        status="closed",
-        closed_at=ts_gen.random_timestamp(days_ago_min=5, days_ago_max=15),
-    )
-    db.add(evaluation)
-    db.commit()
-    db.refresh(evaluation)
-    print_success(f"Evaluation: {evaluation.title}")
+    for pt in project_teams:
+        # Get the project for this team
+        project = next(p for p in projects if p.id == pt.project_id)
 
-    # Create allocations and scores
-    team_members = (
-        db.query(ProjectTeamMember)
-        .filter(ProjectTeamMember.project_team_id == pt.id)
-        .all()
-    )
+        evaluation = create_instance(
+            Evaluation,
+            school_id=school.id,
+            course_id=course.id,
+            project_id=project.id,
+            project_team_id=pt.id,
+            rubric_id=peer_rubric.id,
+            title=f"Peer Evaluatie - {project.title} - Team {pt.team_number}",
+            evaluation_type="peer",
+            status="closed",
+            closed_at=ts_gen.random_timestamp(days_ago_min=5, days_ago_max=15),
+        )
+        db.add(evaluation)
+        db.commit()
+        db.refresh(evaluation)
+        evaluations.append(evaluation)
 
-    for reviewer_member in team_members:
-        for reviewee_member in team_members:
-            if reviewer_member.student_id == reviewee_member.student_id:
-                continue  # Skip self-review
+        # Create allocations and scores for this team
+        team_members = (
+            db.query(ProjectTeamMember)
+            .filter(ProjectTeamMember.project_team_id == pt.id)
+            .all()
+        )
 
-            allocation = Allocation(
-                evaluation_id=evaluation.id,
-                reviewer_id=reviewer_member.student_id,
-                reviewee_id=reviewee_member.student_id,
-            )
-            db.add(allocation)
-            db.commit()
-            db.refresh(allocation)
+        for reviewer_member in team_members:
+            for reviewee_member in team_members:
+                if reviewer_member.user_id == reviewee_member.user_id:
+                    continue  # Skip self-review
 
-            # Add scores for each criterion
-            for criterion in peer_criteria:
-                score = Score(
-                    allocation_id=allocation.id,
-                    criterion_id=criterion.id,
-                    score=rand.randint(1, 5),
-                    comment=factory.feedback_comment(positive=rand.random() > 0.3),
+                allocation = create_instance(
+                    Allocation,
+                    school_id=school.id,
+                    evaluation_id=evaluation.id,
+                    reviewer_id=reviewer_member.user_id,
+                    reviewee_id=reviewee_member.user_id,
                 )
-                db.add(score)
+                db.add(allocation)
+                db.commit()
+                db.refresh(allocation)
+                total_allocations += 1
 
-    db.commit()
-    print_info(f"Created allocations and scores for {len(team_members)} students")
+                # Add scores for each criterion
+                for criterion in peer_criteria:
+                    score = create_instance(
+                        Score,
+                        school_id=school.id,
+                        allocation_id=allocation.id,
+                        criterion_id=criterion.id,
+                        score=rand.randint(1, 5),
+                        comment=factory.feedback_comment(positive=rand.random() > 0.3),
+                        status="submitted",
+                    )
+                    db.add(score)
 
-    # 9. Create Reflections
+        db.commit()
+
+    print_success(f"Created {len(evaluations)} peer evaluations for all teams")
+    print_info(f"Created {total_allocations} allocations with scores")
+
+    # 9. Create Reflections for ALL Students
     print("\n--- Creating Reflections ---")
 
-    # Create reflections for some students
-    reflection_students = rand.sample(team_members, min(3, len(team_members)))
+    # Create reflections for ALL students in their respective evaluations
+    total_reflections = 0
 
-    for member in reflection_students:
-        reflection = Reflection(
-            evaluation_id=evaluation.id,
-            student_id=member.student_id,
-            content=factory.reflection_text(),
-            submitted_at=ts_gen.recent_timestamp(days_ago_max=7),
+    for evaluation in evaluations:
+        # Get all team members for this evaluation's team
+        team_members = (
+            db.query(ProjectTeamMember)
+            .filter(ProjectTeamMember.project_team_id == evaluation.project_team_id)
+            .all()
         )
-        db.add(reflection)
+
+        # Create reflection for each team member
+        for member in team_members:
+            reflection_text = factory.reflection_text()
+            reflection = create_instance(
+                Reflection,
+                school_id=school.id,
+                evaluation_id=evaluation.id,
+                user_id=member.user_id,
+                text=reflection_text,
+                word_count=len(reflection_text.split()),
+                submitted_at=ts_gen.recent_timestamp(days_ago_max=7),
+            )
+            db.add(reflection)
+            total_reflections += 1
 
     db.commit()
-    print_success(f"Created {len(reflection_students)} reflections")
+    print_success(f"Created {total_reflections} reflections for all students")
 
-    # 10. Create ProjectAssessments
+    # 10. Create ProjectAssessments for ALL Projects
     print("\n--- Creating Project Assessments ---")
 
     # Get project rubric criteria
@@ -711,58 +910,304 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         .all()
     )
 
-    # Create project assessment for second project
+    # Create project assessment for EACH of the 3 projects
+    assessments = []
+    total_scores = 0
+    total_self_assessments = 0
+
+    # Ensure we have criteria before proceeding
+    if not project_criteria:
+        print_warning("No project criteria found - skipping project assessments")
+    else:
+        for project in projects:
+            project_pts = [pt for pt in project_teams if pt.project_id == project.id]
+
+            assessment = create_instance(
+                ProjectAssessment,
+                school_id=school.id,
+                project_id=project.id,
+                rubric_id=project_rubric.id,
+                teacher_id=teacher.id,
+                title=f"Project Beoordeling - {project.title}",
+                status="published",
+            )
+            db.add(assessment)
+            db.commit()
+            db.refresh(assessment)
+            assessments.append(assessment)
+
+            # Link teams to assessment
+            for pt in project_pts:
+                pat = create_instance(
+                    ProjectAssessmentTeam,
+                    school_id=school.id,
+                    project_assessment_id=assessment.id,
+                    project_team_id=pt.id,
+                    status="draft",
+                    scores_count=len(project_criteria),
+                )
+                db.add(pat)
+                db.commit()
+
+            # Add scores for each team
+            for pt in project_pts:
+                for criterion in project_criteria:
+                    score = create_instance(
+                        ProjectAssessmentScore,
+                        school_id=school.id,
+                        assessment_id=assessment.id,
+                        criterion_id=criterion.id,
+                        team_number=pt.team_number,
+                        score=int(rand.uniform(1.0, 5.0)),
+                        comment=factory.feedback_comment(positive=rand.random() > 0.4),
+                    )
+                    db.add(score)
+                    total_scores += 1
+
+            db.commit()
+
+            # Add reflection for one team member from first team
+            if project_pts:
+                first_team_members = db.query(ProjectTeamMember).filter(
+                    ProjectTeamMember.project_team_id == project_pts[0].id
+                ).first()
+                
+                if first_team_members:
+                    reflection_text = factory.reflection_text()
+                    pa_reflection = create_instance(
+                        ProjectAssessmentReflection,
+                        school_id=school.id,
+                        assessment_id=assessment.id,
+                        user_id=first_team_members.user_id,
+                        text=reflection_text,
+                        word_count=len(reflection_text.split()),
+                        submitted_at=ts_gen.recent_timestamp(days_ago_max=5),
+                    )
+                    db.add(pa_reflection)
+                    db.commit()
+
+            # Create self-assessments for ALL students in ALL teams
+            for pt in project_pts:
+                members = db.query(ProjectTeamMember).filter(
+                    ProjectTeamMember.project_team_id == pt.id
+                ).all()
+                
+                for member in members:
+                    # Create self-assessment for this student
+                    self_assessment = create_instance(
+                        ProjectAssessmentSelfAssessment,
+                        school_id=school.id,
+                        assessment_id=assessment.id,
+                        student_id=member.user_id,
+                        team_number=pt.team_number,
+                        locked=False,
+                    )
+                    db.add(self_assessment)
+                    db.commit()
+                    db.refresh(self_assessment)
+                    total_self_assessments += 1
+                    
+                    # Add scores for ALL criteria
+                    for criterion in project_criteria:
+                        has_comment = rand.random() > 0.5
+                        sa_score = create_instance(
+                            ProjectAssessmentSelfAssessmentScore,
+                            school_id=school.id,
+                            self_assessment_id=self_assessment.id,
+                            criterion_id=criterion.id,
+                            score=rand.randint(1, 5),
+                            comment=factory.feedback_comment(positive=rand.random() > 0.5) if has_comment else None,
+                        )
+                        db.add(sa_score)
+                
+                db.commit()
+
+        print_success(f"Created {len(assessments)} project assessments for all projects")
+        print_info(f"Created {total_scores} teacher scores")
+        print_info(f"Created {total_self_assessments} self-assessments with scores for all students")
+
+    # 10a. Create External Evaluators and External Assessments
+    print("\n--- Creating External Evaluators & Assessments ---")
+    
+    # Create 2-3 external evaluators (like clients, company representatives)
+    external_evaluators = []
+    evaluator_names = [
+        ("Dhr. van der Veen", "r.vanderveen@techbedrijf.nl", "Tech Solutions BV"),
+        ("Mevr. Bakker", "s.bakker@innovate.nl", "Innovate Design"),
+        ("Dhr. Jansen", "p.jansen@greentech.nl", "GreenTech Industries"),
+    ]
+    
+    for name, email, org in evaluator_names[:2]:  # Create 2 evaluators
+        evaluator = create_instance(
+            ExternalEvaluator,
+            school_id=school.id,
+            name=name,
+            email=email,
+            organisation=org,
+        )
+        db.add(evaluator)
+        external_evaluators.append(evaluator)
+    
+    db.commit()
+    for evaluator in external_evaluators:
+        db.refresh(evaluator)
+    
+    print_success(f"Created {len(external_evaluators)} external evaluators")
+    
+    # Create external assessments for each project (one external evaluator per project)
+    external_assessments_count = 0
+    external_scores_count = 0
+    
+    if project_criteria and external_evaluators:
+        for idx, project in enumerate(projects):
+            # Use modulo to cycle through external evaluators if we have fewer than projects
+            evaluator = external_evaluators[idx % len(external_evaluators)]
+            project_pts = [pt for pt in project_teams if pt.project_id == project.id]
+            
+            # Create external assessment
+            external_assessment = create_instance(
+                ProjectAssessment,
+                school_id=school.id,
+                project_id=project.id,
+                rubric_id=project_rubric.id,
+                external_evaluator_id=evaluator.id,
+                title=f"Externe Beoordeling - {project.title}",
+                role="EXTERNAL",
+                is_advisory=True,
+                status="published",
+            )
+            db.add(external_assessment)
+            db.commit()
+            db.refresh(external_assessment)
+            external_assessments_count += 1
+            
+            # Link teams to external assessment
+            for pt in project_pts:
+                pat = create_instance(
+                    ProjectAssessmentTeam,
+                    school_id=school.id,
+                    project_assessment_id=external_assessment.id,
+                    project_team_id=pt.id,
+                    status="draft",
+                    scores_count=len(project_criteria),
+                )
+                db.add(pat)
+            
+            db.commit()
+            
+            # Add external scores for each team
+            for pt in project_pts:
+                for criterion in project_criteria:
+                    # External evaluators might score slightly differently
+                    score = create_instance(
+                        ProjectAssessmentScore,
+                        school_id=school.id,
+                        assessment_id=external_assessment.id,
+                        criterion_id=criterion.id,
+                        team_number=pt.team_number,
+                        score=int(rand.uniform(2.0, 5.0)),  # Typically more positive
+                        comment=factory.feedback_comment(positive=rand.random() > 0.3),
+                    )
+                    db.add(score)
+                    external_scores_count += 1
+            
+            db.commit()
+            
+            # Create external team link for invitation tracking
+            for pt in project_pts:
+                # Generate a unique token for external access
+                import secrets
+                token = secrets.token_urlsafe(32)
+                
+                # Note: ProjectTeamExternal uses group_id, but we'll link via assessment_id
+                # This might need adjustment based on actual schema requirements
+                # For now, skip creating ProjectTeamExternal if group_id is required
+                # as groups have been replaced by project teams
+        
+        print_success(f"Created {external_assessments_count} external assessments")
+        print_info(f"Created {external_scores_count} external scores")
+
+    # 10b. Create Project Notes Context and Notes
+    print("\n--- Creating Project Notes ---")
+    
+    # Create a notes context for the second project
     project = projects[1]
     project_pts = [pt for pt in project_teams if pt.project_id == project.id]
-
-    assessment = ProjectAssessment(
+    
+    notes_context = create_instance(
+        ProjectNotesContext,
         school_id=school.id,
+        title=f"Aantekeningen - {project.title}",
+        description="Project observaties en voortgangsbewaking",
         project_id=project.id,
-        rubric_id=project_rubric.id,
-        teacher_id=teacher.id,
-        title=f"Project Beoordeling - {project.title}",
-        status="published",
+        course_id=course.id,
+        class_name=rand.choice([cls.name for cls in classes]),
+        project_team_id=project_pts[0].id if project_pts else None,
+        created_by=teacher.id,
+        status="open",
     )
-    db.add(assessment)
+    db.add(notes_context)
     db.commit()
-    db.refresh(assessment)
-    print_success(f"Project Assessment: {assessment.title}")
-
-    # Link teams to assessment
-    for pt in project_pts:
-        pat = ProjectAssessmentTeam(
-            project_assessment_id=assessment.id,
-            project_team_id=pt.id,
+    db.refresh(notes_context)
+    print_success(f"Project Notes Context: {notes_context.title}")
+    
+    # Add various types of notes
+    note_count = 0
+    
+    # Project-level notes (2-3)
+    for i in range(rand.randint(2, 3)):
+        note = create_instance(
+            ProjectNote,
+            context_id=notes_context.id,
+            note_type="project",
+            text=rand.choice([
+                "Project loopt goed, teams werken goed samen",
+                "Planning moet beter bijgehouden worden",
+                "Goede voortgang met prototypes",
+                "Extra aandacht nodig voor documentatie",
+            ]),
+            tags=rand.sample(["voortgang", "samenwerking", "planning", "kwaliteit"], rand.randint(1, 2)),
+            created_by=teacher.id,
         )
-        db.add(pat)
-    db.commit()
-
-    # Add scores for each team
-    for pt in project_pts:
-        for criterion in project_criteria:
-            score = ProjectAssessmentScore(
-                project_assessment_id=assessment.id,
-                project_team_id=pt.id,
-                criterion_id=criterion.id,
-                score=rand.uniform(1.0, 5.0),
-                comment=factory.feedback_comment(positive=rand.random() > 0.4),
-            )
-            db.add(score)
-
-    db.commit()
-    print_info(f"Created scores for {len(project_pts)} teams")
-
-    # Add reflection for one team
+        db.add(note)
+        note_count += 1
+    
+    # Team-specific notes (1-2 per team) - Note: team_id would need Group model, skip for now
+    # Instead create student-specific notes
+    
+    # Student-specific notes (2-3 students)
     if project_pts:
-        pa_reflection = ProjectAssessmentReflection(
-            project_assessment_id=assessment.id,
-            project_team_id=project_pts[0].id,
-            content=factory.reflection_text(),
-            submitted_at=ts_gen.recent_timestamp(days_ago_max=5),
-        )
-        db.add(pa_reflection)
-        db.commit()
-        print_info("Created project assessment reflection")
+        all_members = []
+        for pt in project_pts:
+            members = db.query(ProjectTeamMember).filter(
+                ProjectTeamMember.project_team_id == pt.id
+            ).all()
+            all_members.extend(members)
+        
+        note_students = rand.sample(all_members, min(3, len(all_members)))
+        for member in note_students:
+            note = create_instance(
+                ProjectNote,
+                context_id=notes_context.id,
+                note_type="student",
+                student_id=member.user_id,
+                text=rand.choice([
+                    "Toont goed initiatief in het team",
+                    "Kan beter communiceren met teamleden",
+                    "Sterke technische vaardigheden",
+                    "Heeft begeleiding nodig bij planning",
+                    "Goede presentatievaardigheden getoond",
+                ]),
+                tags=rand.sample(["competentie", "samenwerking", "technisch", "communicatie"], rand.randint(1, 2)),
+                omza_category=rand.choice(["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"]) if rand.random() > 0.5 else None,
+                is_competency_evidence=rand.random() > 0.7,
+                created_by=teacher.id,
+            )
+            db.add(note)
+            note_count += 1
+    
+    db.commit()
+    print_info(f"Created {note_count} project notes")
 
     # 11. Create CompetencyWindows
     print("\n--- Creating Competency Windows ---")
@@ -771,7 +1216,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     window_titles = ["Startscan Q1", "Midscan Q2"]
 
     for title in window_titles:
-        window = CompetencyWindow(
+        window = create_instance(
+            CompetencyWindow,
             school_id=school.id,
             title=title,
             description=f"Competentiemeting - {title}",
@@ -795,47 +1241,76 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         .filter(CompetencyCategory.school_id == school.id)
         .all()
     )
+    
+    # Get actual competencies (not just categories)
+    # Competencies are created by migrations from templates
+    competencies = (
+        db.query(Competency)
+        .filter(Competency.school_id == school.id, Competency.active == True)
+        .all()
+    )
+    
+    if not competencies:
+        print_warning("No competencies found - skipping competency self-scores, goals, and observations")
+        print_info("Run migrations to seed competencies from templates")
+    else:
+        # Add self-scores, goals, and observations for ALL students
+        total_self_scores = 0
+        total_goals = 0
+        total_observations = 0
 
-    # Add self-scores, goals, and observations
-    sample_students = rand.sample(student_objs, min(10, len(student_objs)))
+        for window in windows:
+            for student in student_objs:  # ALL 24 students
+                # Self-scores - each student scores 3-4 random competencies (or fewer if not enough available)
+                num_competencies_to_score = rand.randint(min(3, len(competencies)), min(4, len(competencies)))
+                for competency in rand.sample(competencies, num_competencies_to_score):
+                    self_score = create_instance(
+                        CompetencySelfScore,
+                        school_id=school.id,
+                        window_id=window.id,
+                        user_id=student.id,
+                        competency_id=competency.id,
+                        score=rand.randint(1, 5),
+                    )
+                    db.add(self_score)
+                    total_self_scores += 1
 
-    for window in windows:
-        for student in sample_students:
-            # Self-scores
-            for category in rand.sample(comp_categories, 3):
-                self_score = CompetencySelfScore(
-                    competency_window_id=window.id,
-                    student_id=student.id,
-                    competency_category_id=category.id,
-                    score=rand.randint(1, 5),
-                )
-                db.add(self_score)
+                # Goals - each student has 1-2 goals
+                num_goals = rand.randint(1, 2)
+                for _ in range(num_goals):
+                    goal = create_instance(
+                        CompetencyGoal,
+                        school_id=school.id,
+                        window_id=window.id,
+                        user_id=student.id,
+                        competency_id=rand.choice(competencies).id,
+                        goal_text=factory.competency_goal(),
+                        status="active",
+                        submitted_at=ts_gen.recent_timestamp(days_ago_max=10),
+                    )
+                    db.add(goal)
+                    total_goals += 1
 
-            # Goals
-            if rand.random() > 0.5:
-                goal = CompetencyGoal(
-                    competency_window_id=window.id,
-                    student_id=student.id,
-                    category_id=rand.choice(comp_categories).id,
-                    goal_text=factory.competency_goal(),
-                    created_at=ts_gen.recent_timestamp(days_ago_max=10),
-                )
-                db.add(goal)
+                # Teacher observations - each student has 0-2 observations
+                num_observations = rand.randint(0, 2)
+                for _ in range(num_observations):
+                    observation = create_instance(
+                        CompetencyTeacherObservation,
+                        school_id=school.id,
+                        window_id=window.id,
+                        user_id=student.id,
+                        teacher_id=teacher.id,
+                        competency_id=rand.choice(competencies).id,
+                        score=rand.randint(1, 5),
+                        comment=factory.feedback_comment(positive=True),
+                        created_at=ts_gen.recent_timestamp(days_ago_max=15),
+                    )
+                    db.add(observation)
+                    total_observations += 1
 
-            # Teacher observations
-            if rand.random() > 0.7:
-                observation = CompetencyTeacherObservation(
-                    competency_window_id=window.id,
-                    student_id=student.id,
-                    teacher_id=teacher.id,
-                    category_id=rand.choice(comp_categories).id,
-                    observation=factory.feedback_comment(positive=True),
-                    created_at=ts_gen.recent_timestamp(days_ago_max=15),
-                )
-                db.add(observation)
-
-    db.commit()
-    print_info("Created self-scores, goals, and teacher observations")
+        db.commit()
+        print_success(f"Created competency data for all {len(student_objs)} students")
+        print_info(f"Created {total_self_scores} self-scores, {total_goals} goals, {total_observations} teacher observations")
 
     # 12. Create LearningObjectives
     print("\n--- Creating Learning Objectives ---")
@@ -852,13 +1327,14 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     ]
 
     for i, objective_text in enumerate(objective_texts):
-        obj = LearningObjective(
+        obj = create_instance(
+            LearningObjective,
             school_id=school.id,
             subject_id=subject.id,
-            code=f"LO-{i+1:03d}",
-            description=text,
             is_template=True,
-            order_index=i,
+            title=f"LO-{i+1:03d}",
+            description=objective_text,
+            order=i,
         )
         db.add(obj)
 
@@ -870,7 +1346,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
     clients = []
     for i in range(3):
-        client = Client(
+        client = create_instance(
+            Client,
             school_id=school.id,
             organization=factory.client_organization(),
             contact_name=factory.teacher_name(),
@@ -897,10 +1374,12 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         )
 
         for ts in timestamps:
-            log = ClientLog(
+            log = create_instance(
+                ClientLog,
                 client_id=client.id,
+                author_id=teacher.id,
                 log_type=rand.choice(["call", "email", "meeting", "other"]),
-                description=rand.choice(
+                text=rand.choice(
                     [
                         "Eerste kennismakingsgesprek",
                         "Projectbriefing ontvangen",
@@ -908,23 +1387,22 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                         "Presentatie voor opdrachtgever",
                     ]
                 ),
-                logged_by=teacher.id,
-                logged_at=ts,
             )
             db.add(log)
 
     db.commit()
     print_info("Created client logs")
 
-    # Link clients to projects
-    for i, project in enumerate(projects[:2]):
-        link = ClientProjectLink(
-            client_id=clients[i].id,
-            project_id=project.id,
-            role=rand.choice(["primary", "secondary"]),
-            linked_at=ts_gen.random_timestamp(days_ago_min=25, days_ago_max=45),
-        )
-        db.add(link)
+    # Link clients to projects - link all 3 clients to first 3 projects
+    for i, project in enumerate(projects):
+        if i < len(clients):
+            link = create_instance(
+                ClientProjectLink,
+                client_id=clients[i].id,
+                project_id=project.id,
+                role=rand.choice(["primary", "secondary"]),
+            )
+            db.add(link)
 
     db.commit()
     print_info("Linked clients to projects")
@@ -936,7 +1414,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     rfid_students = rand.sample(student_objs, min(8, len(student_objs)))
 
     for i, student in enumerate(rfid_students):
-        card = RFIDCard(
+        card = create_instance(
+            RFIDCard,
             user_id=student.id,
             uid=f"CARD-{i+1:04d}-{rand.randint(1000, 9999)}",
             label=f"Kaart {student.name}",
@@ -947,7 +1426,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     db.commit()
     print_success(f"Created {len(rfid_students)} RFID cards")
 
-    # Create attendance events
+    # Create attendance events with check-in and check-out times
     num_events = 0
     for student in rfid_students:
         # 5-10 attendance events per student
@@ -957,11 +1436,24 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         )
 
         for ts in event_timestamps:
-            event = AttendanceEvent(
+            # Most events (80%) should have check-out times (closed events)
+            # Some events (20%) remain open (no check-out yet)
+            has_checkout = rand.random() < 0.8
+            
+            # Check-out time is 2-8 hours after check-in
+            if has_checkout:
+                hours_stayed = rand.uniform(2.0, 8.0)
+                check_out_time = ts + timedelta(hours=hours_stayed)
+            else:
+                check_out_time = None
+            
+            event = create_instance(
+                AttendanceEvent,
                 user_id=student.id,
-                event_type=rand.choice(["check_in", "check_out"]),
-                timestamp=ts,
+                check_in=ts,
+                check_out=check_out_time,
                 location="3de Blok",
+                source="manual",  # Valid values: rfid, manual, import, api
                 created_by=None,
                 approved_by=None if rand.random() > 0.8 else teacher.id,
             )
@@ -969,7 +1461,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             num_events += 1
 
     db.commit()
-    print_success(f"Created {num_events} attendance events")
+    print_success(f"Created {num_events} attendance events (80% with check-out times)")
 
     print_section("DEMO SEED COMPLETE")
     print("\nSummary:")

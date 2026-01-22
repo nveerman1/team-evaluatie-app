@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, Any, Dict, List, Type, TypeVar
 from sqlalchemy.orm import Session
 from sqlalchemy import select
+import sqlalchemy as sa
 
 T = TypeVar('T')
 
@@ -191,6 +192,49 @@ class UpsertHelper:
                 setattr(instance, key, value)
         
         return instance
+
+
+def create_instance(model_class: Type[T], **kwargs) -> T:
+    """
+    Create a model instance, filtering kwargs to only valid mapped attributes.
+    
+    This prevents "invalid keyword argument" errors when model schemas drift
+    from seed data. Invalid fields are silently dropped.
+    
+    Args:
+        model_class: SQLAlchemy model class
+        **kwargs: Keyword arguments to pass to model constructor
+    
+    Returns:
+        Model instance with only valid kwargs applied
+    
+    Example:
+        user = create_instance(User, name="John", invalid_field="value")
+        # Only 'name' is passed to User(), 'invalid_field' is filtered out
+    """
+    # Get all valid column and relationship keys from the model
+    mapper = sa.inspect(model_class)
+    valid_keys = set()
+    
+    # Add column keys
+    for column in mapper.columns:
+        valid_keys.add(column.key)
+    
+    # Add relationship keys
+    for rel in mapper.relationships:
+        valid_keys.add(rel.key)
+    
+    # Filter kwargs to only valid keys
+    filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_keys}
+    
+    # Log dropped fields for debugging (optional, could be removed in production)
+    dropped = set(kwargs.keys()) - valid_keys
+    if dropped:
+        # Silent drop - only uncomment for debugging
+        # print(f"[create_instance] Dropped invalid fields for {model_class.__name__}: {dropped}")
+        pass
+    
+    return model_class(**filtered_kwargs)
 
 
 class DataFactory:
