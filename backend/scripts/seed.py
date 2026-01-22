@@ -385,7 +385,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     print("\n--- Creating Classes ---")
     classes = []
     for class_name in DEMO_CLASSES:
-        cls = Class(
+        cls = create_instance(
+            Class,
             school_id=school.id,
             academic_year_id=academic_year.id,
             name=class_name,
@@ -409,7 +410,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             name = factory.student_name()
             email = factory.email(name)
 
-            student = User(
+            student = create_instance(
+                User,
                 school_id=school.id,
                 email=email,
                 name=name,
@@ -427,7 +429,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     # Refresh students and create class memberships
     for student, cls in students:
         db.refresh(student)
-        membership = StudentClassMembership(
+        membership = create_instance(
+            StudentClassMembership,
             student_id=student.id,
             class_id=cls.id,
             academic_year_id=academic_year.id,
@@ -442,7 +445,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
     # 3. Create Course
     print("\n--- Creating Course ---")
-    course = Course(
+    course = create_instance(
+        Course,
         school_id=school.id,
         subject_id=subject.id,
         academic_year_id=academic_year.id,
@@ -457,8 +461,9 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     print_success(f"Course: {course.name} (ID: {course.id})")
 
     # Assign teacher to course
-    teacher_course = TeacherCourse(
-        school_id=school.id,  # <-- fix
+    teacher_course = create_instance(
+        TeacherCourse,
+        school_id=school.id,
         teacher_id=teacher.id,
         course_id=course.id,
         role="teacher",
@@ -471,7 +476,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
     # Enroll students in course
     for student in student_objs:
-        enrollment = CourseEnrollment(
+        enrollment = create_instance(
+            CourseEnrollment,
             student_id=student.id,
             course_id=course.id,
         )
@@ -488,7 +494,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         title = factory.project_title()
         status = project_statuses[i]
 
-        project = Project(
+        project = create_instance(
+            Project,
             school_id=school.id,
             course_id=course.id,
             title=title,
@@ -529,7 +536,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         for team_number in range(1, num_teams_per_project + 1):
             team_name = factory.team_name(team_number)
 
-            pt = ProjectTeam(
+            pt = create_instance(
+                ProjectTeam,
                 school_id=school.id,
                 project_id=project.id,
                 team_number=team_number,
@@ -552,7 +560,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             student_cursor += students_per_team
 
             for student in members:
-                ptm = ProjectTeamMember(
+                ptm = create_instance(
+                    ProjectTeamMember,
                     school_id=school.id,
                     project_team_id=pt.id,
                     user_id=student.id,
@@ -570,7 +579,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     print("\n--- Creating Rubrics ---")
 
     # Peer rubric
-    peer_rubric = Rubric(
+    peer_rubric = create_instance(
+        Rubric,
         school_id=school.id,
         title=factory.rubric_title("peer"),
         scope="peer",
@@ -597,7 +607,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     )
 
     # Project rubric
-    project_rubric = Rubric(
+    project_rubric = create_instance(
+        Rubric,
         school_id=school.id,
         title=factory.rubric_title("project"),
         scope="project",
@@ -637,7 +648,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     project = projects[0]
     pt = [pt for pt in project_teams if pt.project_id == project.id][0]
 
-    evaluation = Evaluation(
+    evaluation = create_instance(
+        Evaluation,
         school_id=school.id,
         course_id=course.id,
         project_id=project.id,
@@ -728,7 +740,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     project = projects[1]
     project_pts = [pt for pt in project_teams if pt.project_id == project.id]
 
-    assessment = ProjectAssessment(
+    assessment = create_instance(
+        ProjectAssessment,
         school_id=school.id,
         project_id=project.id,
         rubric_id=project_rubric.id,
@@ -800,7 +813,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     window_titles = ["Startscan Q1", "Midscan Q2"]
 
     for title in window_titles:
-        window = CompetencyWindow(
+        window = create_instance(
+            CompetencyWindow,
             school_id=school.id,
             title=title,
             description=f"Competentiemeting - {title}",
@@ -908,7 +922,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
     clients = []
     for i in range(3):
-        client = Client(
+        client = create_instance(
+            Client,
             school_id=school.id,
             organization=factory.client_organization(),
             contact_name=factory.teacher_name(),
@@ -974,7 +989,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     rfid_students = rand.sample(student_objs, min(8, len(student_objs)))
 
     for i, student in enumerate(rfid_students):
-        card = RFIDCard(
+        card = create_instance(
+            RFIDCard,
             user_id=student.id,
             uid=f"CARD-{i+1:04d}-{rand.randint(1000, 9999)}",
             label=f"Kaart {student.name}",
