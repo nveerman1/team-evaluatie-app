@@ -54,6 +54,7 @@ from app.infra.db.models import (
     ProjectAssessmentScore,
     ProjectAssessmentReflection,
     CompetencyCategory,
+    Competency,
     CompetencyWindow,
     CompetencySelfScore,
     CompetencyGoal,
@@ -116,6 +117,11 @@ def print_success(message: str):
 def print_info(message: str):
     """Print info message"""
     print(f"  {message}")
+
+
+def print_warning(message: str):
+    """Print warning message"""
+    print(f"⚠ {message}")
 
 
 def safe_truncate_tables(db: Session):
@@ -838,55 +844,67 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         .filter(CompetencyCategory.school_id == school.id)
         .all()
     )
+    
+    # Get actual competencies (not just categories)
+    # Competencies are created by migrations from templates
+    competencies = (
+        db.query(Competency)
+        .filter(Competency.school_id == school.id, Competency.active == True)
+        .all()
+    )
+    
+    if not competencies:
+        print_warning("No competencies found - skipping competency self-scores, goals, and observations")
+        print_info("Run migrations to seed competencies from templates")
+    else:
+        # Add self-scores, goals, and observations
+        sample_students = rand.sample(student_objs, min(10, len(student_objs)))
 
-    # Add self-scores, goals, and observations
-    sample_students = rand.sample(student_objs, min(10, len(student_objs)))
+        for window in windows:
+            for student in sample_students:
+                # Self-scores
+                for competency in rand.sample(competencies, min(3, len(competencies))):
+                    self_score = create_instance(
+                        CompetencySelfScore,
+                        school_id=school.id,
+                        window_id=window.id,
+                        user_id=student.id,
+                        competency_id=competency.id,
+                        score=rand.randint(1, 5),
+                    )
+                    db.add(self_score)
 
-    for window in windows:
-        for student in sample_students:
-            # Self-scores
-            for category in rand.sample(comp_categories, 3):
-                self_score = create_instance(
-                    CompetencySelfScore,
-                    school_id=school.id,
-                    window_id=window.id,
-                    user_id=student.id,
-                    competency_id=category.id,
-                    score=rand.randint(1, 5),
-                )
-                db.add(self_score)
+                # Goals
+                if rand.random() > 0.5:
+                    goal = create_instance(
+                        CompetencyGoal,
+                        school_id=school.id,
+                        window_id=window.id,
+                        user_id=student.id,
+                        competency_id=rand.choice(competencies).id,
+                        goal_text=factory.competency_goal(),
+                        status="active",
+                        submitted_at=ts_gen.recent_timestamp(days_ago_max=10),
+                    )
+                    db.add(goal)
 
-            # Goals
-            if rand.random() > 0.5:
-                goal = create_instance(
-                    CompetencyGoal,
-                    school_id=school.id,
-                    window_id=window.id,
-                    user_id=student.id,
-                    competency_id=rand.choice(comp_categories).id,
-                    goal_text=factory.competency_goal(),
-                    status="active",
-                    submitted_at=ts_gen.recent_timestamp(days_ago_max=10),
-                )
-                db.add(goal)
+                # Teacher observations
+                if rand.random() > 0.7:
+                    observation = create_instance(
+                        CompetencyTeacherObservation,
+                        school_id=school.id,
+                        window_id=window.id,
+                        user_id=student.id,
+                        teacher_id=teacher.id,
+                        competency_id=rand.choice(competencies).id,
+                        score=rand.randint(1, 5),
+                        comment=factory.feedback_comment(positive=True),
+                        created_at=ts_gen.recent_timestamp(days_ago_max=15),
+                    )
+                    db.add(observation)
 
-            # Teacher observations
-            if rand.random() > 0.7:
-                observation = create_instance(
-                    CompetencyTeacherObservation,
-                    school_id=school.id,
-                    window_id=window.id,
-                    user_id=student.id,
-                    teacher_id=teacher.id,
-                    competency_id=rand.choice(comp_categories).id,
-                    score=rand.randint(1, 5),
-                    comment=factory.feedback_comment(positive=True),
-                    created_at=ts_gen.recent_timestamp(days_ago_max=15),
-                )
-                db.add(observation)
-
-    db.commit()
-    print_info("Created self-scores, goals, and teacher observations")
+        db.commit()
+        print_info("Created self-scores, goals, and teacher observations")
 
     # 12. Create LearningObjectives
     print("\n--- Creating Learning Objectives ---")
