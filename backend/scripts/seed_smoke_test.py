@@ -32,8 +32,6 @@ from app.infra.db.models import (
     Course,
     TeacherCourse,
     CourseEnrollment,
-    Group,
-    GroupMember,
     Project,
     ProjectTeam,
     ProjectTeamMember,
@@ -230,15 +228,8 @@ def check_unique_constraints(db: Session) -> bool:
         for school_id, email, count in duplicate_users:
             errors.append(f"User email '{email}' in school {school_id} appears {count} times (should be unique)")
     
-    # Check GroupMember (group_id, user_id) is unique
-    duplicate_members = db.execute(
-        select(GroupMember.group_id, GroupMember.user_id, func.count(GroupMember.id).label('count'))
-        .group_by(GroupMember.group_id, GroupMember.user_id)
-        .having(func.count(GroupMember.id) > 1)
-    ).all()
-    if duplicate_members:
-        for group_id, user_id, count in duplicate_members:
-            errors.append(f"GroupMember (group={group_id}, user={user_id}) appears {count} times (should be unique)")
+    # NOTE: GroupMember check removed as Group/GroupMember tables no longer exist
+    # They were replaced by ProjectTeam/ProjectTeamMember
     
     if errors:
         for error in errors:
@@ -276,12 +267,8 @@ def check_business_rules(db: Session) -> bool:
     if rubrics_without_criteria > 0:
         errors.append(f"{rubrics_without_criteria} rubrics have no criteria")
     
-    # Check that all groups have at least one member
-    groups_without_members = db.query(func.count(Group.id)).filter(
-        ~Group.id.in_(select(GroupMember.group_id))
-    ).scalar()
-    if groups_without_members > 0:
-        errors.append(f"{groups_without_members} groups have no members")
+    # NOTE: groups_without_members check removed as Group/GroupMember tables no longer exist
+    # They were replaced by ProjectTeam/ProjectTeamMember
     
     if errors:
         for error in errors:
@@ -315,8 +302,7 @@ def run_smoke_test():
             (Course, 1, "Courses"),
             (TeacherCourse, 2, "Teacher-Course Assignments"),
             (CourseEnrollment, 24, "Course Enrollments"),
-            (Group, 6, "Groups (Teams)"),
-            (GroupMember, 24, "Group Members"),
+            # NOTE: Group and GroupMember no longer exist (replaced by ProjectTeam/ProjectTeamMember)
             (Project, 3, "Projects"),
             (ProjectTeam, 6, "Project Teams"),
             (ProjectTeamMember, 24, "Project Team Members"),
