@@ -532,8 +532,24 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         role="teacher",
         is_active=True,
     )
-
     db.add(teacher_course)
+    
+    # Also assign admin as a second teacher to the course (for smoke test)
+    admin = db.query(User).filter(
+        User.school_id == school.id, 
+        User.role == "admin"
+    ).first()
+    if admin:
+        admin_teacher_course = create_instance(
+            TeacherCourse,
+            school_id=school.id,
+            teacher_id=admin.id,
+            course_id=course.id,
+            role="admin",
+            is_active=True,
+        )
+        db.add(admin_teacher_course)
+
     db.commit()
     print_info(f"Assigned {teacher.name} to course")
 
@@ -681,7 +697,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     db.refresh(project_rubric)
 
     # Add project criteria
-    project_categories = ["projectproces", "eindresultaat", "communicatie"]
+    project_categories = ["projectproces", "eindresultaat", "communicatie", "documentatie"]
     for i, category in enumerate(project_categories):
         criterion = create_instance(
             RubricCriterion,
@@ -1044,15 +1060,16 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     db.commit()
     print_info("Created client logs")
 
-    # Link clients to projects
-    for i, project in enumerate(projects[:2]):
-        link = create_instance(
-            ClientProjectLink,
-            client_id=clients[i].id,
-            project_id=project.id,
-            role=rand.choice(["primary", "secondary"]),
-        )
-        db.add(link)
+    # Link clients to projects - link all 3 clients to first 3 projects
+    for i, project in enumerate(projects):
+        if i < len(clients):
+            link = create_instance(
+                ClientProjectLink,
+                client_id=clients[i].id,
+                project_id=project.id,
+                role=rand.choice(["primary", "secondary"]),
+            )
+            db.add(link)
 
     db.commit()
     print_info("Linked clients to projects")
