@@ -56,6 +56,8 @@ from app.infra.db.models import (
     ProjectAssessmentReflection,
     ProjectAssessmentSelfAssessment,
     ProjectAssessmentSelfAssessmentScore,
+    ExternalEvaluator,
+    ProjectTeamExternal,
     CompetencyCategory,
     Competency,
     CompetencyWindow,
@@ -602,20 +604,18 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
     print_success(f"Created {len(projects)} projects")
 
-    # 5. Create Project Teams (frozen rosters)
+    # 5. Create Project Teams - EVERY student in EVERY project
     print("\n--- Creating Project Teams ---")
 
     num_teams_per_project = 2
-    students_per_team = 4
-
-    # Shuffle students once for random distribution
-    shuffled_students = student_objs.copy()
-    rand.shuffle(shuffled_students)
-    student_cursor = 0
+    students_per_team = 12  # Half of 24 students per team
 
     project_teams = []
 
     for project in projects:
+        # For each project, split all students into 2 teams
+        # Team 1: first half of students (indices 0-11)
+        # Team 2: second half of students (indices 12-23)
         for team_number in range(1, num_teams_per_project + 1):
             team_name = factory.team_name(team_number)
 
@@ -633,14 +633,15 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
         # Refresh project teams for this project
         project_team_slice = project_teams[-num_teams_per_project:]
-        for pt in project_team_slice:
+        for idx, pt in enumerate(project_team_slice):
             db.refresh(pt)
 
             # Assign students to this project team
-            members = shuffled_students[
-                student_cursor : student_cursor + students_per_team
-            ]
-            student_cursor += students_per_team
+            # Team 1 gets first half, Team 2 gets second half
+            if idx == 0:
+                members = student_objs[0:students_per_team]
+            else:
+                members = student_objs[students_per_team:]
 
             for student in members:
                 ptm = create_instance(
@@ -657,94 +658,83 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         f"Created {len(project_teams)} project teams "
         f"({num_teams_per_project} per project, {students_per_team} students each)"
     )
+    print_info(f"All {len(student_objs)} students are assigned to teams in each of the {len(projects)} projects")
 
-    # 7. Use Template Rubrics
-    print("\n--- Using Template Rubrics ---")
+    # 7. Create Rubrics with Criteria
+    print("\n--- Creating Rubrics ---")
 
-    # Query for peer rubric (seed_templates.py creates rubrics via separate template tables,
-    # then instantiates them into the rubrics table. We just need any peer rubric.)
-    peer_rubric = (
-        db.query(Rubric)
-        .filter(
-            Rubric.school_id == school.id,
-            Rubric.scope == "peer",
+    # Always create rubrics fresh (template seeding only populates template tables, not main rubrics table)
+    # Peer rubric
+    peer_rubric = create_instance(
+        Rubric,
+        school_id=school.id,
+        title="Peer Evaluatie - OMZA Competenties",
+        scope="peer",
+        description="Beoordeling van teamgedrag op basis van OMZA-model",
+    )
+    db.add(peer_rubric)
+    db.commit()
+    db.refresh(peer_rubric)
+
+    # Add peer criteria based on OMZA model
+    peer_criteria_data = [
+        {"name": "Organiseren", "description": "Plant, structureert en beheert het werk effectief"},
+        {"name": "Meedoen", "description": "Werkt actief mee en draagt bij aan het teamproces"},
+        {"name": "Zelfvertrouwen", "description": "Toont zelfvertrouwen en durft standpunten in te nemen"},
+        {"name": "Autonomie", "description": "Neemt initiatief en werkt zelfstandig"},
+    ]
+    
+    for i, criterion_data in enumerate(peer_criteria_data):
+        criterion = create_instance(
+            RubricCriterion,
+            school_id=school.id,
+            rubric_id=peer_rubric.id,
+            name=criterion_data["name"],
+            category=criterion_data["name"].lower(),
+            order=i,
+            weight=1.0,
         )
-        .first()
+        db.add(criterion)
+    db.commit()
+    print_success(
+        f"Peer Rubric: {peer_rubric.title} with {len(peer_criteria_data)} criteria"
     )
 
-    # Fallback: Create peer rubric if none exists
-    if not peer_rubric:
-        print_warning("No peer rubric found, creating fallback rubric")
-        peer_rubric = create_instance(
-            Rubric,
-            school_id=school.id,
-            title=factory.rubric_title("peer"),
-            scope="peer",
-        )
-        db.add(peer_rubric)
-        db.commit()
-        db.refresh(peer_rubric)
-
-        # Add peer criteria
-        peer_categories = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"]
-        for i, category in enumerate(peer_categories):
-            criterion = create_instance(
-                RubricCriterion,
-                school_id=school.id,
-                rubric_id=peer_rubric.id,
-                name=factory.criterion_name(category),
-                order=i,
-                weight=1.0,
-            )
-            db.add(criterion)
-        db.commit()
-        print_success(
-            f"Created fallback Peer Rubric: {peer_rubric.title} with {len(peer_categories)} criteria"
-        )
-    else:
-        print_success(f"Using Peer Rubric: {peer_rubric.title}")
-
-    # Query for project rubric
-    project_rubric = (
-        db.query(Rubric)
-        .filter(
-            Rubric.school_id == school.id,
-            Rubric.scope == "project",
-        )
-        .first()
+    # Project rubric
+    project_rubric = create_instance(
+        Rubric,
+        school_id=school.id,
+        title="Project Beoordeling - Proces en Resultaat",
+        scope="project",
+        description="Beoordeling van projectwerk op proces, resultaat en communicatie",
     )
+    db.add(project_rubric)
+    db.commit()
+    db.refresh(project_rubric)
 
-    # Fallback: Create project rubric if none exists
-    if not project_rubric:
-        print_warning("No project rubric found, creating fallback rubric")
-        project_rubric = create_instance(
-            Rubric,
+    # Add project criteria
+    project_criteria_data = [
+        {"name": "Projectproces", "description": "Planning, organisatie en aanpak van het project"},
+        {"name": "Eindresultaat", "description": "Kwaliteit en volledigheid van het eindproduct"},
+        {"name": "Communicatie", "description": "Presentatie en communicatie over het project"},
+        {"name": "Documentatie", "description": "Kwaliteit van verslaglegging en documentatie"},
+    ]
+    
+    for i, criterion_data in enumerate(project_criteria_data):
+        criterion = create_instance(
+            RubricCriterion,
             school_id=school.id,
-            title=factory.rubric_title("project"),
-            scope="project",
+            rubric_id=project_rubric.id,
+            name=criterion_data["name"],
+            category=criterion_data["name"].lower(),
+            order=i,
+            weight=1.0,
         )
-        db.add(project_rubric)
-        db.commit()
-        db.refresh(project_rubric)
-
-        # Add project criteria
-        project_categories = ["projectproces", "eindresultaat", "communicatie", "documentatie"]
-        for i, category in enumerate(project_categories):
-            criterion = create_instance(
-                RubricCriterion,
-                school_id=school.id,
-                rubric_id=project_rubric.id,
-                name=factory.criterion_name(category),
-                order=i,
-                weight=1.0,
-            )
-            db.add(criterion)
-        db.commit()
-        print_success(
-            f"Created fallback Project Rubric: {project_rubric.title} with {len(project_categories)} criteria"
-        )
-    else:
-        print_success(f"Using Project Rubric: {project_rubric.title}")
+        db.add(criterion)
+    db.commit()
+    print_success(
+        f"Project Rubric: {project_rubric.title} with {len(project_criteria_data)} criteria"
+    )
 
     # 8. Create Evaluations for ALL Teams
     print("\n--- Creating Evaluations ---")
@@ -980,6 +970,107 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         print_success(f"Created {len(assessments)} project assessments for all projects")
         print_info(f"Created {total_scores} teacher scores")
         print_info(f"Created {total_self_assessments} self-assessments with scores for all students")
+
+    # 10a. Create External Evaluators and External Assessments
+    print("\n--- Creating External Evaluators & Assessments ---")
+    
+    # Create 2-3 external evaluators (like clients, company representatives)
+    external_evaluators = []
+    evaluator_names = [
+        ("Dhr. van der Veen", "r.vanderveen@techbedrijf.nl", "Tech Solutions BV"),
+        ("Mevr. Bakker", "s.bakker@innovate.nl", "Innovate Design"),
+        ("Dhr. Jansen", "p.jansen@greentech.nl", "GreenTech Industries"),
+    ]
+    
+    for name, email, org in evaluator_names[:2]:  # Create 2 evaluators
+        evaluator = create_instance(
+            ExternalEvaluator,
+            school_id=school.id,
+            name=name,
+            email=email,
+            organisation=org,
+        )
+        db.add(evaluator)
+        external_evaluators.append(evaluator)
+    
+    db.commit()
+    for evaluator in external_evaluators:
+        db.refresh(evaluator)
+    
+    print_success(f"Created {len(external_evaluators)} external evaluators")
+    
+    # Create external assessments for each project (one external evaluator per project)
+    external_assessments_count = 0
+    external_scores_count = 0
+    
+    if project_criteria and external_evaluators:
+        for idx, project in enumerate(projects):
+            # Use modulo to cycle through external evaluators if we have fewer than projects
+            evaluator = external_evaluators[idx % len(external_evaluators)]
+            project_pts = [pt for pt in project_teams if pt.project_id == project.id]
+            
+            # Create external assessment
+            external_assessment = create_instance(
+                ProjectAssessment,
+                school_id=school.id,
+                project_id=project.id,
+                rubric_id=project_rubric.id,
+                external_evaluator_id=evaluator.id,
+                title=f"Externe Beoordeling - {project.title}",
+                role="EXTERNAL",
+                is_advisory=True,
+                status="published",
+            )
+            db.add(external_assessment)
+            db.commit()
+            db.refresh(external_assessment)
+            external_assessments_count += 1
+            
+            # Link teams to external assessment
+            for pt in project_pts:
+                pat = create_instance(
+                    ProjectAssessmentTeam,
+                    school_id=school.id,
+                    project_assessment_id=external_assessment.id,
+                    project_team_id=pt.id,
+                    status="draft",
+                    scores_count=len(project_criteria),
+                )
+                db.add(pat)
+            
+            db.commit()
+            
+            # Add external scores for each team
+            for pt in project_pts:
+                for criterion in project_criteria:
+                    # External evaluators might score slightly differently
+                    score = create_instance(
+                        ProjectAssessmentScore,
+                        school_id=school.id,
+                        assessment_id=external_assessment.id,
+                        criterion_id=criterion.id,
+                        team_number=pt.team_number,
+                        score=int(rand.uniform(2.0, 5.0)),  # Typically more positive
+                        comment=factory.feedback_comment(positive=rand.random() > 0.3),
+                    )
+                    db.add(score)
+                    external_scores_count += 1
+            
+            db.commit()
+            
+            # Create external team link for invitation tracking
+            for pt in project_pts:
+                # Generate a unique token for external access
+                import secrets
+                token = secrets.token_urlsafe(32)
+                
+                # Note: ProjectTeamExternal uses group_id, but we'll link via assessment_id
+                # This might need adjustment based on actual schema requirements
+                # For now, skip creating ProjectTeamExternal if group_id is required
+                # as groups have been replaced by project teams
+        
+        print_success(f"Created {external_assessments_count} external assessments")
+        print_info(f"Created {external_scores_count} external scores")
 
     # 10b. Create Project Notes Context and Notes
     print("\n--- Creating Project Notes ---")
