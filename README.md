@@ -92,6 +92,26 @@ Automatisch gegenereerde samenvattingen van peer-feedback met:
 
 📚 Zie [docs/REDIS_WORKER_STABILITY.md](docs/REDIS_WORKER_STABILITY.md) voor worker troubleshooting en monitoring.
 
+### Database Seeding
+Comprehensive seeding system for development and testing:
+- **Base Seed**: Minimal, idempotent seed for required system records (school, users, subject, academic year)
+- **Demo Seed**: Complete realistic dataset with 24 students, 6 teams, 3 projects, evaluations, competency scans, etc.
+- **Deterministic**: Use `--seed` flag for reproducible test data
+- **Safe Reset**: `--reset` flag truncates tables in correct order respecting foreign keys
+
+```bash
+# Minimal seed (safe for production)
+python -m backend.scripts.seed --mode base
+
+# Full demo data (development/testing)
+python -m backend.scripts.seed --mode demo --reset --seed 42
+
+# Verify data integrity
+python -m backend.scripts.seed_smoke_test
+```
+
+📚 Zie [docs/SEEDING.md](docs/SEEDING.md) voor complete seeding documentatie.
+
 Voorbereiding voor integratie met Somtoday:
 - OAuth2 authenticatie
 - Import van klassen en studenten
