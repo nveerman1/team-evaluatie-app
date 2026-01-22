@@ -22,7 +22,7 @@ import argparse
 import sys
 import subprocess
 from pathlib import Path
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -604,18 +604,17 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
     print_success(f"Created {len(projects)} projects")
 
-    # 5. Create Project Teams - EVERY student in EVERY project
+    # 5. Create Project Teams - EVERY student in EVERY project (max 4 students per team)
     print("\n--- Creating Project Teams ---")
 
-    num_teams_per_project = 2
-    students_per_team = 12  # Half of 24 students per team
+    students_per_team = 4  # Max 4 students per team
+    num_teams_per_project = (len(student_objs) + students_per_team - 1) // students_per_team  # Ceiling division
 
     project_teams = []
 
     for project in projects:
-        # For each project, split all students into 2 teams
-        # Team 1: first half of students (indices 0-11)
-        # Team 2: second half of students (indices 12-23)
+        # For each project, split all students into teams of max 4
+        # With 24 students: Team 1-6 each get 4 students
         for team_number in range(1, num_teams_per_project + 1):
             team_name = factory.team_name(team_number)
 
@@ -636,12 +635,10 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         for idx, pt in enumerate(project_team_slice):
             db.refresh(pt)
 
-            # Assign students to this project team
-            # Team 1 gets first half, Team 2 gets second half
-            if idx == 0:
-                members = student_objs[0:students_per_team]
-            else:
-                members = student_objs[students_per_team:]
+            # Assign students to this project team (max 4 per team)
+            start_idx = idx * students_per_team
+            end_idx = min(start_idx + students_per_team, len(student_objs))
+            members = student_objs[start_idx:end_idx]
 
             for student in members:
                 ptm = create_instance(
@@ -656,15 +653,14 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
     print_success(
         f"Created {len(project_teams)} project teams "
-        f"({num_teams_per_project} per project, {students_per_team} students each)"
+        f"({num_teams_per_project} per project, max {students_per_team} students each)"
     )
     print_info(f"All {len(student_objs)} students are assigned to teams in each of the {len(projects)} projects")
 
-    # 7. Create Rubrics with Criteria
+    # 7. Create Rubrics with Criteria from Templates
     print("\n--- Creating Rubrics ---")
 
-    # Always create rubrics fresh (template seeding only populates template tables, not main rubrics table)
-    # Peer rubric
+    # Create peer rubric with criteria from peer_evaluation_criterion_templates
     peer_rubric = create_instance(
         Rubric,
         school_id=school.id,
@@ -676,31 +672,58 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     db.commit()
     db.refresh(peer_rubric)
 
-    # Add peer criteria based on OMZA model
-    peer_criteria_data = [
-        {"name": "Organiseren", "description": "Plant, structureert en beheert het werk effectief"},
-        {"name": "Meedoen", "description": "Werkt actief mee en draagt bij aan het teamproces"},
-        {"name": "Zelfvertrouwen", "description": "Toont zelfvertrouwen en durft standpunten in te nemen"},
-        {"name": "Autonomie", "description": "Neemt initiatief en werkt zelfstandig"},
-    ]
-    
-    for i, criterion_data in enumerate(peer_criteria_data):
-        criterion = create_instance(
-            RubricCriterion,
-            school_id=school.id,
-            rubric_id=peer_rubric.id,
-            name=criterion_data["name"],
-            category=criterion_data["name"].lower(),
-            order=i,
-            weight=1.0,
-        )
-        db.add(criterion)
-    db.commit()
-    print_success(
-        f"Peer Rubric: {peer_rubric.title} with {len(peer_criteria_data)} criteria"
+    # Query peer criterion templates
+    peer_template_query = db.execute(
+        text("""
+            SELECT omza_category, title, description 
+            FROM peer_evaluation_criterion_templates
+            WHERE school_id = :school_id AND subject_id = :subject_id
+            ORDER BY omza_category, id
+        """),
+        {"school_id": school.id, "subject_id": subject.id}
     )
+    peer_templates = peer_template_query.fetchall()
+    
+    if peer_templates:
+        # Create criteria from templates (each row is a criterion, not a category)
+        for i, (category, title, description) in enumerate(peer_templates):
+            criterion = create_instance(
+                RubricCriterion,
+                school_id=school.id,
+                rubric_id=peer_rubric.id,
+                name=title,  # e.g., "Realistische planning maken"
+                category=category,  # e.g., "Organiseren"
+                description=description,
+                order=i,
+                weight=1.0,
+            )
+            db.add(criterion)
+        db.commit()
+        print_success(
+            f"Peer Rubric: {peer_rubric.title} with {len(peer_templates)} criteria from templates"
+        )
+    else:
+        # Fallback: create minimal criteria if templates don't exist
+        print_warning("No peer templates found, creating basic criteria")
+        peer_categories = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"]
+        for i, category in enumerate(peer_categories):
+            criterion = create_instance(
+                RubricCriterion,
+                school_id=school.id,
+                rubric_id=peer_rubric.id,
+                name=f"{category} - algemeen",
+                category=category,
+                description=f"Algemene beoordeling van {category.lower()}",
+                order=i,
+                weight=1.0,
+            )
+            db.add(criterion)
+        db.commit()
+        print_success(
+            f"Peer Rubric: {peer_rubric.title} with {len(peer_categories)} basic criteria"
+        )
 
-    # Project rubric
+    # Create project rubric with criteria from project_assessment_criterion_templates
     project_rubric = create_instance(
         Rubric,
         school_id=school.id,
@@ -712,29 +735,61 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     db.commit()
     db.refresh(project_rubric)
 
-    # Add project criteria
-    project_criteria_data = [
-        {"name": "Projectproces", "description": "Planning, organisatie en aanpak van het project"},
-        {"name": "Eindresultaat", "description": "Kwaliteit en volledigheid van het eindproduct"},
-        {"name": "Communicatie", "description": "Presentatie en communicatie over het project"},
-        {"name": "Documentatie", "description": "Kwaliteit van verslaglegging en documentatie"},
-    ]
-    
-    for i, criterion_data in enumerate(project_criteria_data):
-        criterion = create_instance(
-            RubricCriterion,
-            school_id=school.id,
-            rubric_id=project_rubric.id,
-            name=criterion_data["name"],
-            category=criterion_data["name"].lower(),
-            order=i,
-            weight=1.0,
-        )
-        db.add(criterion)
-    db.commit()
-    print_success(
-        f"Project Rubric: {project_rubric.title} with {len(project_criteria_data)} criteria"
+    # Query project criterion templates
+    project_template_query = db.execute(
+        text("""
+            SELECT category, title, description 
+            FROM project_assessment_criterion_templates
+            WHERE school_id = :school_id AND subject_id = :subject_id
+            ORDER BY category, id
+        """),
+        {"school_id": school.id, "subject_id": subject.id}
     )
+    project_templates = project_template_query.fetchall()
+    
+    if project_templates:
+        # Create criteria from templates (each row is a criterion, not a category)
+        for i, (category, title, description) in enumerate(project_templates):
+            criterion = create_instance(
+                RubricCriterion,
+                school_id=school.id,
+                rubric_id=project_rubric.id,
+                name=title,  # e.g., "Oriënteren & analyseren"
+                category=category,  # e.g., "projectproces"
+                description=description,
+                order=i,
+                weight=1.0,
+            )
+            db.add(criterion)
+        db.commit()
+        print_success(
+            f"Project Rubric: {project_rubric.title} with {len(project_templates)} criteria from templates"
+        )
+    else:
+        # Fallback: create minimal criteria if templates don't exist
+        print_warning("No project templates found, creating basic criteria")
+        project_criteria_data = [
+            {"name": "Projectproces", "category": "projectproces", "description": "Planning, organisatie en aanpak van het project"},
+            {"name": "Eindresultaat", "category": "eindresultaat", "description": "Kwaliteit en volledigheid van het eindproduct"},
+            {"name": "Communicatie", "category": "communicatie", "description": "Presentatie en communicatie over het project"},
+            {"name": "Documentatie", "category": "communicatie", "description": "Kwaliteit van verslaglegging en documentatie"},
+        ]
+        for i, criterion_data in enumerate(project_criteria_data):
+            criterion = create_instance(
+                RubricCriterion,
+                school_id=school.id,
+                rubric_id=project_rubric.id,
+                name=criterion_data["name"],
+                category=criterion_data["category"],
+                description=criterion_data["description"],
+                order=i,
+                weight=1.0,
+            )
+            db.add(criterion)
+        db.commit()
+        print_success(
+            f"Project Rubric: {project_rubric.title} with {len(project_criteria_data)} basic criteria"
+        )
 
     # 8. Create Evaluations for ALL Teams
     print("\n--- Creating Evaluations ---")
@@ -1371,7 +1426,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     db.commit()
     print_success(f"Created {len(rfid_students)} RFID cards")
 
-    # Create attendance events
+    # Create attendance events with check-in and check-out times
     num_events = 0
     for student in rfid_students:
         # 5-10 attendance events per student
@@ -1381,10 +1436,22 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         )
 
         for ts in event_timestamps:
+            # Most events (80%) should have check-out times (closed events)
+            # Some events (20%) remain open (no check-out yet)
+            has_checkout = rand.random() < 0.8
+            
+            # Check-out time is 2-8 hours after check-in
+            if has_checkout:
+                hours_stayed = rand.uniform(2.0, 8.0)
+                check_out_time = ts + timedelta(hours=hours_stayed)
+            else:
+                check_out_time = None
+            
             event = create_instance(
                 AttendanceEvent,
                 user_id=student.id,
                 check_in=ts,
+                check_out=check_out_time,
                 location="3de Blok",
                 source="manual",  # Valid values: rfid, manual, import, api
                 created_by=None,
@@ -1394,7 +1461,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             num_events += 1
 
     db.commit()
-    print_success(f"Created {num_events} attendance events")
+    print_success(f"Created {num_events} attendance events (80% with check-out times)")
 
     print_section("DEMO SEED COMPLETE")
     print("\nSummary:")
