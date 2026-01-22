@@ -236,17 +236,17 @@ def list_project_assessments(
     Refactored: Uses project_id and project_assessment_teams
     
     Access control:
-    - Admins: see all assessments in their school (excluding EXTERNAL role assessments)
-    - Teachers: see all assessments for courses they're assigned to (excluding EXTERNAL role assessments)
-    - Students: see assessments for projects where they belong to ANY team (excluding EXTERNAL role assessments)
+    - Admins: see all assessments in their school (excluding advisory/external assessments)
+    - Teachers: see all assessments for courses they're assigned to (excluding advisory/external assessments)
+    - Students: see assessments for projects where they belong to ANY team (excluding advisory/external assessments)
     
-    Note: EXTERNAL role assessments are shown separately in the external tab
+    Note: Advisory/external assessments (is_advisory=True) are shown separately in the external tab
     """
     from app.infra.db.models import ProjectAssessmentTeam
     from fastapi.responses import JSONResponse
     stmt = select(ProjectAssessment).where(
         ProjectAssessment.school_id == user.school_id,
-        ProjectAssessment.role != "EXTERNAL"  # Exclude external assessments from main list
+        ProjectAssessment.is_advisory.is_(False)  # Exclude external assessments (consistent with overview.py)
     )
     
     # Debug info for students (visible in browser Network tab)
