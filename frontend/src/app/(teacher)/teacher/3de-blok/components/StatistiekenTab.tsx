@@ -466,9 +466,9 @@ export default function StatistiekenTab() {
           </div>
           <div className="space-y-2">
             {signals?.extern_low_school && signals.extern_low_school.length > 0 ? (
-              signals.extern_low_school.map((s) => (
+              signals.extern_low_school.map((s, index) => (
                 <div
-                  key={s.student_id}
+                  key={`extern-low-school-${s.student_id}-${index}`}
                   className="rounded-lg bg-slate-50 p-2 text-xs ring-1 ring-slate-200"
                 >
                   <div className="font-medium text-slate-900">{s.student_name}</div>
@@ -497,9 +497,9 @@ export default function StatistiekenTab() {
           </div>
           <div className="space-y-2">
             {signals?.many_pending && signals.many_pending.length > 0 ? (
-              signals.many_pending.map((s) => (
+              signals.many_pending.map((s, index) => (
                 <div
-                  key={s.student_id}
+                  key={`many-pending-${s.student_id}-${index}`}
                   className="rounded-lg bg-slate-50 p-2 text-xs ring-1 ring-slate-200"
                 >
                   <div className="font-medium text-slate-900">{s.student_name}</div>
@@ -528,9 +528,9 @@ export default function StatistiekenTab() {
           </div>
           <div className="space-y-2">
             {signals?.long_open && signals.long_open.length > 0 ? (
-              signals.long_open.map((s) => (
+              signals.long_open.map((s, index) => (
                 <div
-                  key={s.student_id}
+                  key={`long-open-${s.student_id}-${index}`}
                   className="rounded-lg bg-slate-50 p-2 text-xs ring-1 ring-slate-200"
                 >
                   <div className="font-medium text-slate-900">{s.student_name}</div>
