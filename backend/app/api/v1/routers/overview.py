@@ -686,337 +686,376 @@ def get_overview_matrix(
     
     school_id = current_user.school_id
     
+    # Log request for debugging
+    logger.info(
+        f"get_overview_matrix called: course_id={course_id}, class_name={class_name}, "
+        f"student_name={student_name}, date_from={date_from}, date_to={date_to}"
+    )
+    
+    # Validate course_id if provided
+    if course_id is not None:
+        course = db.query(Course).filter(
+            Course.id == course_id,
+            Course.school_id == school_id
+        ).first()
+        if not course:
+            logger.warning(f"Course {course_id} not found for school {school_id}")
+            raise HTTPException(status_code=404, detail=f"Course {course_id} not found")
+    
     # Parse date filters
     date_from_dt = datetime.fromisoformat(date_from) if date_from else None
     date_to_dt = datetime.fromisoformat(date_to) if date_to else None
     
-    # If course_id is specified, get all student IDs enrolled in that course
-    allowed_student_ids = None
-    if course_id:
-        student_ids_query = db.query(User.id).join(
-            CourseEnrollment, CourseEnrollment.student_id == User.id
+    try:
+        # If course_id is specified, get all student IDs enrolled in that course
+        allowed_student_ids = None
+        if course_id:
+            student_ids_query = db.query(User.id).join(
+                CourseEnrollment, CourseEnrollment.student_id == User.id
+            ).filter(
+                CourseEnrollment.course_id == course_id,
+                CourseEnrollment.active.is_(True),
+                ~User.archived,
+                User.role == "student"
+            ).distinct()
+            allowed_student_ids = set(sid for (sid,) in student_ids_query.all())
+    
+        # Dictionary to store all evaluations with metadata
+        evaluations = []  # List of (key, type, title, date, evaluation_id)
+        
+        # Dictionary to store student data: student_id -> {evaluation_key -> cell_data}
+        student_data = {}
+        
+        # ==================== COLLECT PROJECT ASSESSMENTS ====================
+        # Join through ProjectAssessmentTeam junction table to match new data model
+        project_query = db.query(
+            ProjectAssessment,
+            Course,
+            ProjectTeam,
+        ).join(
+            ProjectAssessmentTeam, ProjectAssessmentTeam.project_assessment_id == ProjectAssessment.id
+        ).join(
+            ProjectTeam, ProjectTeam.id == ProjectAssessmentTeam.project_team_id
+        ).join(
+            Project, ProjectTeam.project_id == Project.id
+        ).outerjoin(
+            Course, Project.course_id == Course.id
         ).filter(
-            CourseEnrollment.course_id == course_id,
-            CourseEnrollment.active.is_(True),
-            ~User.archived,
-            User.role == "student"
-        ).distinct()
-        allowed_student_ids = set(sid for (sid,) in student_ids_query.all())
-    
-    # Dictionary to store all evaluations with metadata
-    evaluations = []  # List of (key, type, title, date, evaluation_id)
-    
-    # Dictionary to store student data: student_id -> {evaluation_key -> cell_data}
-    student_data = {}
-    
-    # ==================== COLLECT PROJECT ASSESSMENTS ====================
-    # Join through ProjectAssessmentTeam junction table to match new data model
-    project_query = db.query(
-        ProjectAssessment,
-        Course,
-        ProjectTeam,
-    ).join(
-        ProjectAssessmentTeam, ProjectAssessmentTeam.project_assessment_id == ProjectAssessment.id
-    ).join(
-        ProjectTeam, ProjectTeam.id == ProjectAssessmentTeam.project_team_id
-    ).join(
-        Project, ProjectTeam.project_id == Project.id
-    ).outerjoin(
-        Course, Project.course_id == Course.id
-    ).filter(
-        ProjectAssessment.school_id == school_id,
-        ProjectAssessment.status == "published",  # Only published projects
-        ProjectAssessment.is_advisory.is_(False)  # Exclude external assessments
-    )
-    
-    if course_id:
-        project_query = project_query.filter(Project.course_id == course_id)
-    if date_from_dt:
-        project_query = project_query.filter(ProjectAssessment.published_at >= date_from_dt)
-    if date_to_dt:
-        project_query = project_query.filter(ProjectAssessment.published_at <= date_to_dt)
-    
-    for assessment, course, team in project_query.all():
-        eval_key = f"project_{assessment.id}"
-        evaluations.append({
-            "key": eval_key,
-            "type": "project",
-            "title": assessment.title,
-            "date": assessment.published_at,
-            "evaluation_id": assessment.id,
-        })
+            ProjectAssessment.school_id == school_id,
+            ProjectAssessment.status == "published",  # Only published projects
+            ProjectAssessment.is_advisory.is_(False)  # Exclude external assessments
+        )
         
-        # Get teacher for this assessment
-        teacher = db.query(User).filter(User.id == assessment.teacher_id).first()
-        teacher_name = teacher.name if teacher else None
+        if course_id:
+            project_query = project_query.filter(Project.course_id == course_id)
+        if date_from_dt:
+            project_query = project_query.filter(ProjectAssessment.published_at >= date_from_dt)
+        if date_to_dt:
+            project_query = project_query.filter(ProjectAssessment.published_at <= date_to_dt)
         
-        # Get all team members and their scores (only active students)
-        members = db.query(User).join(
-            ProjectTeamMember, ProjectTeamMember.user_id == User.id
-        ).filter(
-            ProjectTeamMember.team_id == team.id,
-            ProjectTeamMember.active.is_(True),
-            ~User.archived,
-            User.role == "student"
-        ).all()
+        # Track which assessments we've already added to avoid duplicate column keys
+        seen_assessments = set()
         
-        # Filter by class if specified
-        if class_name:
-            members = [m for m in members if m.class_name == class_name]
-        
-        # Filter by student name if specified
-        if student_name:
-            members = [m for m in members if student_name.lower() in m.name.lower()]
-        
-        # Filter by allowed students (if course filter is active)
-        if allowed_student_ids is not None:
-            members = [m for m in members if m.id in allowed_student_ids]
-        
-        for member in members:
-            if member.id not in student_data:
-                student_data[member.id] = {
-                    "name": member.name,
-                    "class": member.class_name,
-                    "cells": {}
+        for assessment, course, team in project_query.all():
+            eval_key = f"project_{assessment.id}"
+            
+            # Only add each assessment once to the evaluations list (for columns)
+            if assessment.id not in seen_assessments:
+                evaluations.append({
+                    "key": eval_key,
+                    "type": "project",
+                    "title": assessment.title,
+                    "date": assessment.published_at,
+                    "evaluation_id": assessment.id,
+                })
+                seen_assessments.add(assessment.id)
+            
+            # Get teacher for this assessment
+            teacher = db.query(User).filter(User.id == assessment.teacher_id).first()
+            teacher_name = teacher.name if teacher else None
+            
+            # Get all team members and their scores (only active students)
+            members = db.query(User).join(
+                ProjectTeamMember, ProjectTeamMember.user_id == User.id
+            ).filter(
+                ProjectTeamMember.project_team_id == team.id,
+                ~User.archived,
+                User.role == "student"
+            ).all()
+            
+            # Filter by class if specified
+            if class_name:
+                members = [m for m in members if m.class_name == class_name]
+            
+            # Filter by student name if specified
+            if student_name:
+                members = [m for m in members if student_name.lower() in m.name.lower()]
+            
+            # Filter by allowed students (if course filter is active)
+            if allowed_student_ids is not None:
+                members = [m for m in members if m.id in allowed_student_ids]
+            
+            for member in members:
+                if member.id not in student_data:
+                    student_data[member.id] = {
+                        "name": member.name,
+                        "class": member.class_name,
+                        "cells": {}
+                    }
+                
+                # Calculate score for this team (use ProjectTeam.team_number, not User.team_number)
+                score = _calculate_project_score(db, assessment.id, assessment.rubric_id, team.team_number) if team.team_number is not None else None
+                
+                student_data[member.id]["cells"][eval_key] = {
+                    "evaluation_id": assessment.id,
+                    "type": "project",
+                    "title": assessment.title,
+                    "score": score,
+                    "status": assessment.status,
+                    "date": assessment.published_at,
+                    "teacher_name": teacher_name,
+                    "detail_url": f"/teacher/project-assessments/{assessment.id}/overview",
                 }
-            
-            # Calculate score for this student's team
-            team_num = member.team_number if hasattr(member, 'team_number') else None
-            score = _calculate_project_score(db, assessment.id, assessment.rubric_id, team_num) if team_num else None
-            
-            student_data[member.id]["cells"][eval_key] = {
-                "evaluation_id": assessment.id,
-                "type": "project",
-                "title": assessment.title,
-                "score": score,
-                "status": assessment.status,
-                "date": assessment.published_at,
-                "teacher_name": teacher_name,
-                "detail_url": f"/teacher/project-assessments/{assessment.id}/overview",
-            }
-    
-    # ==================== COLLECT PEER EVALUATIONS ====================
-    eval_query = db.query(
-        Evaluation,
-        Course,
-    ).outerjoin(
-        Course, Evaluation.course_id == Course.id
-    ).filter(
-        Evaluation.school_id == school_id,
-        or_(Evaluation.status == "open", Evaluation.status == "closed")
-    )
-    
-    if course_id:
-        eval_query = eval_query.filter(Evaluation.course_id == course_id)
-    
-    for evaluation, course in eval_query.all():
-        eval_key = f"peer_{evaluation.id}"
         
-        # Use settings deadline or created_at as date
-        eval_date = None
-        if evaluation.settings and evaluation.settings.get("deadlines"):
-            deadline = evaluation.settings["deadlines"].get("review")
-            if deadline:
-                try:
-                    eval_date = datetime.fromisoformat(deadline)
-                except (ValueError, TypeError):
-                    pass
-        
-        evaluations.append({
-            "key": eval_key,
-            "type": "peer",
-            "title": evaluation.title,
-            "date": eval_date,
-            "evaluation_id": evaluation.id,
-        })
-        
-        # Get all students who have allocations in this evaluation (as reviewees, only active students)
-        students_in_eval = db.query(User).join(
-            Allocation, Allocation.reviewee_id == User.id
+        # ==================== COLLECT PEER EVALUATIONS ====================
+        eval_query = db.query(
+            Evaluation,
+            Course,
+        ).outerjoin(
+            Course, Evaluation.course_id == Course.id
         ).filter(
-            Allocation.evaluation_id == evaluation.id,
-            ~User.archived,
-            User.role == "student"
-        ).distinct().all()
+            Evaluation.school_id == school_id,
+            or_(Evaluation.status == "open", Evaluation.status == "closed")
+        )
         
-        # Filter by class if specified
-        if class_name:
-            students_in_eval = [s for s in students_in_eval if s.class_name == class_name]
+        if course_id:
+            eval_query = eval_query.filter(Evaluation.course_id == course_id)
         
-        # Filter by student name if specified
-        if student_name:
-            students_in_eval = [s for s in students_in_eval if student_name.lower() in s.name.lower()]
-        
-        # Filter by allowed students (if course filter is active)
-        if allowed_student_ids is not None:
-            students_in_eval = [s for s in students_in_eval if s.id in allowed_student_ids]
-        
-        for student in students_in_eval:
-            if student.id not in student_data:
-                student_data[student.id] = {
-                    "name": student.name,
-                    "class": student.class_name,
-                    "cells": {}
-                }
+        for evaluation, course in eval_query.all():
+            eval_key = f"peer_{evaluation.id}"
             
-            score = _calculate_peer_score(db, evaluation.id, student.id)
+            # Use settings deadline or created_at as date
+            eval_date = None
+            if evaluation.settings and evaluation.settings.get("deadlines"):
+                deadline = evaluation.settings["deadlines"].get("review")
+                if deadline:
+                    try:
+                        eval_date = datetime.fromisoformat(deadline)
+                    except (ValueError, TypeError):
+                        pass
             
-            student_data[student.id]["cells"][eval_key] = {
-                "evaluation_id": evaluation.id,
+            evaluations.append({
+                "key": eval_key,
                 "type": "peer",
                 "title": evaluation.title,
-                "score": score,
-                "status": evaluation.status,
                 "date": eval_date,
-                "teacher_name": None,
-                "detail_url": f"/teacher/evaluations/{evaluation.id}/dashboard",
-            }
-    
-    # ==================== COLLECT COMPETENCY WINDOWS ====================
-    window_query = db.query(
-        CompetencyWindow,
-        Course,
-    ).outerjoin(
-        Course, CompetencyWindow.course_id == Course.id
-    ).filter(
-        CompetencyWindow.school_id == school_id
-    )
-    
-    if course_id:
-        window_query = window_query.filter(CompetencyWindow.course_id == course_id)
-    if date_from_dt:
-        window_query = window_query.filter(CompetencyWindow.end_date >= date_from_dt)
-    if date_to_dt:
-        window_query = window_query.filter(CompetencyWindow.start_date <= date_to_dt)
-    
-    for window, course in window_query.all():
-        eval_key = f"competency_{window.id}"
-        evaluations.append({
-            "key": eval_key,
-            "type": "competency",
-            "title": window.title,
-            "date": window.end_date,
-            "evaluation_id": window.id,
-        })
-        
-        # Get students who have self-scores in this window (only active students)
-        students_with_scores = db.query(User).join(
-            CompetencySelfScore, CompetencySelfScore.user_id == User.id
-        ).filter(
-            CompetencySelfScore.window_id == window.id,
-            ~User.archived,
-            User.role == "student"
-        ).distinct().all()
-        
-        # Filter by class if specified
-        if class_name:
-            students_with_scores = [s for s in students_with_scores if s.class_name == class_name]
-        
-        # Filter by student name if specified
-        if student_name:
-            students_with_scores = [s for s in students_with_scores if student_name.lower() in s.name.lower()]
-        
-        # Filter by allowed students (if course filter is active)
-        if allowed_student_ids is not None:
-            students_with_scores = [s for s in students_with_scores if s.id in allowed_student_ids]
-        
-        for student in students_with_scores:
-            if student.id not in student_data:
-                student_data[student.id] = {
-                    "name": student.name,
-                    "class": student.class_name,
-                    "cells": {}
+                "evaluation_id": evaluation.id,
+            })
+            
+            # Get all students who have allocations in this evaluation (as reviewees, only active students)
+            students_in_eval = db.query(User).join(
+                Allocation, Allocation.reviewee_id == User.id
+            ).filter(
+                Allocation.evaluation_id == evaluation.id,
+                ~User.archived,
+                User.role == "student"
+            ).distinct().all()
+            
+            # Filter by class if specified
+            if class_name:
+                students_in_eval = [s for s in students_in_eval if s.class_name == class_name]
+            
+            # Filter by student name if specified
+            if student_name:
+                students_in_eval = [s for s in students_in_eval if student_name.lower() in s.name.lower()]
+            
+            # Filter by allowed students (if course filter is active)
+            if allowed_student_ids is not None:
+                students_in_eval = [s for s in students_in_eval if s.id in allowed_student_ids]
+            
+            for student in students_in_eval:
+                if student.id not in student_data:
+                    student_data[student.id] = {
+                        "name": student.name,
+                        "class": student.class_name,
+                        "cells": {}
+                    }
+                
+                score = _calculate_peer_score(db, evaluation.id, student.id)
+                
+                student_data[student.id]["cells"][eval_key] = {
+                    "evaluation_id": evaluation.id,
+                    "type": "peer",
+                    "title": evaluation.title,
+                    "score": score,
+                    "status": evaluation.status,
+                    "date": eval_date,
+                    "teacher_name": None,
+                    "detail_url": f"/teacher/evaluations/{evaluation.id}/dashboard",
                 }
-            
-            score = _calculate_competency_score(db, window.id, student.id)
-            
-            student_data[student.id]["cells"][eval_key] = {
-                "evaluation_id": window.id,
+        
+        # ==================== COLLECT COMPETENCY WINDOWS ====================
+        window_query = db.query(
+            CompetencyWindow,
+            Course,
+        ).outerjoin(
+            Course, CompetencyWindow.course_id == Course.id
+        ).filter(
+            CompetencyWindow.school_id == school_id
+        )
+        
+        if course_id:
+            window_query = window_query.filter(CompetencyWindow.course_id == course_id)
+        if date_from_dt:
+            window_query = window_query.filter(CompetencyWindow.end_date >= date_from_dt)
+        if date_to_dt:
+            window_query = window_query.filter(CompetencyWindow.start_date <= date_to_dt)
+        
+        for window, course in window_query.all():
+            eval_key = f"competency_{window.id}"
+            evaluations.append({
+                "key": eval_key,
                 "type": "competency",
                 "title": window.title,
-                "score": score,
-                "status": window.status,
                 "date": window.end_date,
-                "teacher_name": None,
-                "detail_url": f"/teacher/competencies/windows/{window.id}",
-            }
-    
-    # ==================== SORT EVALUATIONS CHRONOLOGICALLY ====================
-    # Sort by date (None dates go to the end)
-    evaluations.sort(key=lambda x: (x["date"] is None, x["date"] if x["date"] else datetime.max))
-    
-    # Create column headers with order
-    columns = []
-    for idx, eval_info in enumerate(evaluations):
-        columns.append(MatrixColumnOut(
-            key=eval_info["key"],
-            type=eval_info["type"],
-            title=eval_info["title"],
-            date=eval_info["date"],
-            order=idx
-        ))
-    
-    # ==================== BUILD STUDENT ROWS ====================
-    rows = []
-    for student_id, data in student_data.items():
-        # Build cells dict with all columns (None for missing data)
-        cells = {}
-        scores_for_avg = []
+                "evaluation_id": window.id,
+            })
+            
+            # Get students who have self-scores in this window (only active students)
+            students_with_scores = db.query(User).join(
+                CompetencySelfScore, CompetencySelfScore.user_id == User.id
+            ).filter(
+                CompetencySelfScore.window_id == window.id,
+                ~User.archived,
+                User.role == "student"
+            ).distinct().all()
+            
+            # Filter by class if specified
+            if class_name:
+                students_with_scores = [s for s in students_with_scores if s.class_name == class_name]
+            
+            # Filter by student name if specified
+            if student_name:
+                students_with_scores = [s for s in students_with_scores if student_name.lower() in s.name.lower()]
+            
+            # Filter by allowed students (if course filter is active)
+            if allowed_student_ids is not None:
+                students_with_scores = [s for s in students_with_scores if s.id in allowed_student_ids]
+            
+            for student in students_with_scores:
+                if student.id not in student_data:
+                    student_data[student.id] = {
+                        "name": student.name,
+                        "class": student.class_name,
+                        "cells": {}
+                    }
+                
+                score = _calculate_competency_score(db, window.id, student.id)
+                
+                student_data[student.id]["cells"][eval_key] = {
+                    "evaluation_id": window.id,
+                    "type": "competency",
+                    "title": window.title,
+                    "score": score,
+                    "status": window.status,
+                    "date": window.end_date,
+                    "teacher_name": None,
+                    "detail_url": f"/teacher/competencies/windows/{window.id}",
+                }
         
+        # ==================== SORT EVALUATIONS CHRONOLOGICALLY ====================
+        # Sort by date (None dates go to the end)
+        evaluations.sort(key=lambda x: (x["date"] is None, x["date"] if x["date"] else datetime.max))
+        
+        # Create column headers with order
+        columns = []
+        for idx, eval_info in enumerate(evaluations):
+            columns.append(MatrixColumnOut(
+                key=eval_info["key"],
+                type=eval_info["type"],
+                title=eval_info["title"],
+                date=eval_info["date"],
+                order=idx
+            ))
+        
+        # ==================== BUILD STUDENT ROWS ====================
+        rows = []
+        for student_id, data in student_data.items():
+            # Build cells dict with all columns (None for missing data)
+            cells = {}
+            scores_for_avg = []
+            
+            for col in columns:
+                if col.key in data["cells"]:
+                    cell_data = data["cells"][col.key]
+                    cells[col.key] = MatrixCellOut(**cell_data)
+                    if cell_data["score"] is not None:
+                        scores_for_avg.append(cell_data["score"])
+                else:
+                    cells[col.key] = None
+            
+            # Calculate average
+            average = round(sum(scores_for_avg) / len(scores_for_avg), 2) if scores_for_avg else None
+            
+            rows.append(StudentMatrixRowOut(
+                student_id=student_id,
+                student_name=data["name"],
+                student_class=data["class"],
+                cells=cells,
+                average=average
+            ))
+        
+        # ==================== SORT ROWS ====================
+        # Sort by specified column or default to student name
+        if sort_by and sort_by != "student":
+            # Sort by a specific evaluation column
+            def get_sort_key(row):
+                cell = row.cells.get(sort_by)
+                if cell and cell.score is not None:
+                    return cell.score
+                # Put rows without data at the end
+                return -999999 if sort_order == "desc" else 999999
+            
+            rows.sort(key=get_sort_key, reverse=(sort_order == "desc"))
+        else:
+            # Sort by student name (default)
+            rows.sort(key=lambda x: x.student_name, reverse=(sort_order == "desc"))
+        
+        # ==================== CALCULATE COLUMN AVERAGES ====================
+        column_averages = {}
         for col in columns:
-            if col.key in data["cells"]:
-                cell_data = data["cells"][col.key]
-                cells[col.key] = MatrixCellOut(**cell_data)
-                if cell_data["score"] is not None:
-                    scores_for_avg.append(cell_data["score"])
-            else:
-                cells[col.key] = None
+            scores = []
+            for row in rows:
+                cell = row.cells.get(col.key)
+                if cell and cell.score is not None:
+                    scores.append(cell.score)
+            
+            column_averages[col.key] = round(sum(scores) / len(scores), 2) if scores else None
         
-        # Calculate average
-        average = round(sum(scores_for_avg) / len(scores_for_avg), 2) if scores_for_avg else None
+        # ==================== RETURN MATRIX ====================
+        logger.info(
+            f"get_overview_matrix completed: {len(columns)} columns, {len(rows)} rows, "
+            f"{len(evaluations)} evaluations"
+        )
         
-        rows.append(StudentMatrixRowOut(
-            student_id=student_id,
-            student_name=data["name"],
-            student_class=data["class"],
-            cells=cells,
-            average=average
-        ))
-    
-    # ==================== SORT ROWS ====================
-    # Sort by specified column or default to student name
-    if sort_by and sort_by != "student":
-        # Sort by a specific evaluation column
-        def get_sort_key(row):
-            cell = row.cells.get(sort_by)
-            if cell and cell.score is not None:
-                return cell.score
-            # Put rows without data at the end
-            return -999999 if sort_order == "desc" else 999999
-        
-        rows.sort(key=get_sort_key, reverse=(sort_order == "desc"))
-    else:
-        # Sort by student name (default)
-        rows.sort(key=lambda x: x.student_name, reverse=(sort_order == "desc"))
-    
-    # ==================== CALCULATE COLUMN AVERAGES ====================
-    column_averages = {}
-    for col in columns:
-        scores = []
-        for row in rows:
-            cell = row.cells.get(col.key)
-            if cell and cell.score is not None:
-                scores.append(cell.score)
-        
-        column_averages[col.key] = round(sum(scores) / len(scores), 2) if scores else None
-    
-    # ==================== RETURN MATRIX ====================
-    return OverviewMatrixResponse(
-        columns=columns,
-        rows=rows,
-        column_averages=column_averages,
-        total_students=len(rows)
-    )
+        return OverviewMatrixResponse(
+            columns=columns,
+            rows=rows,
+            column_averages=column_averages,
+            total_students=len(rows)
+        )
+    except AttributeError as e:
+        logger.error(f"AttributeError in get_overview_matrix: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error while processing matrix data"
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error in get_overview_matrix: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error occurred"
+        )
 
 
 @router.get("/matrix/export.csv")
