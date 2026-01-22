@@ -1368,9 +1368,9 @@ def get_project_trends(
     
     # Query project assessments with scores
     # Join through ProjectAssessmentTeam junction table to match new data model
+    # Use distinct() to avoid duplicate assessments when multiple teams exist
     query = db.query(
-        ProjectAssessment,
-        ProjectTeam,
+        ProjectAssessment
     ).join(
         ProjectAssessmentTeam, ProjectAssessmentTeam.project_assessment_id == ProjectAssessment.id
     ).join(
@@ -1381,7 +1381,7 @@ def get_project_trends(
         ProjectAssessment.school_id == school_id,
         ProjectAssessment.status.in_(["published", "closed"]),  # Include published and closed assessments
         ProjectAssessment.is_advisory.is_(False)  # Exclude external assessments
-    ).order_by(ProjectAssessment.published_at.asc())
+    ).distinct().order_by(ProjectAssessment.published_at.asc())
     
     # Apply filters
     if course_id:
@@ -1403,7 +1403,7 @@ def get_project_trends(
     
     # Build trend data
     trend_data = []
-    for assessment, team in results:
+    for assessment in results:
         if not assessment.published_at:
             continue
         
