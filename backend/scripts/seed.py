@@ -186,26 +186,32 @@ def safe_truncate_tables(db: Session):
     ]
     
     try:
-        # Disable foreign key checks temporarily
-        db.execute(text("SET session_replication_role = 'replica';"))
-        
+        replication_role_enabled = False
+        try:
+            db.execute(text("SET session_replication_role = 'replica';"))
+            replication_role_enabled = True
+        except Exception as e:
+            db.rollback()  # <-- SUPER belangrijk
+            print_info(f"Info: cannot set session_replication_role (continuing without): {e}")
+
         for table in tables:
             try:
                 db.execute(text(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE;"))
+                db.commit()  # <-- CRUCIAAL: commit per tabel, zodat later rollback niets terugdraait
                 print_info(f"Truncated {table}")
             except Exception as e:
+                db.rollback()
                 print_info(f"Warning: Could not truncate {table}: {e}")
-        
-        # Re-enable foreign key checks
-        db.execute(text("SET session_replication_role = 'origin';"))
-        
-        db.commit()
+
+        # No big commit needed here anymore (we already commit per table)
         print_success("Database reset complete")
-        
+
+        print_success("Database reset complete")
     except Exception as e:
         db.rollback()
         print(f"✗ Error during truncate: {e}")
         raise
+
 
 
 def seed_base(db: Session):
@@ -441,9 +447,9 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         academic_year_id=academic_year.id,
         name=f"O&O {academic_year.label}",
         description="Onderzoek & Ontwerpen - Projectvak voor bovenbouw",
-        class_names=[cls.name for cls in classes],
         is_active=True,
     )
+
     db.add(course)
     db.commit()
     db.refresh(course)
@@ -451,9 +457,13 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     
     # Assign teacher to course
     teacher_course = TeacherCourse(
+        school_id=school.id,          # <-- fix
         teacher_id=teacher.id,
         course_id=course.id,
+        role="teacher",
+        is_active=True,
     )
+
     db.add(teacher_course)
     db.commit()
     print_info(f"Assigned {teacher.name} to course")
@@ -463,64 +473,20 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         enrollment = CourseEnrollment(
             student_id=student.id,
             course_id=course.id,
-            enrolled_at=ts_gen.random_timestamp(days_ago_min=30, days_ago_max=50),
         )
         db.add(enrollment)
     db.commit()
     print_info(f"Enrolled {len(student_objs)} students in course")
-    
-    # 4. Create Teams (Groups)
-    print("\n--- Creating Teams ---")
-    teams = []
-    num_teams = 6
-    students_per_team = 4
-    
-    # Shuffle students for random team assignment
-    shuffled_students = student_objs.copy()
-    rand.shuffle(shuffled_students)
-    
-    for i in range(num_teams):
-        team_name = factory.team_name(i + 1)
-        team = Group(
-            school_id=school.id,
-            course_id=course.id,
-            name=team_name,
-            group_number=i + 1,
-        )
-        db.add(team)
-        teams.append(team)
-    
-    db.commit()
-    
-    # Assign students to teams
-    for team in teams:
-        db.refresh(team)
-    
-    for i, student in enumerate(shuffled_students[:num_teams * students_per_team]):
-        team_idx = i // students_per_team
-        team = teams[team_idx]
-        
-        member = GroupMember(
-            group_id=team.id,
-            student_id=student.id,
-        )
-        db.add(member)
-        
-        # Update student team_number
-        student.team_number = team.group_number
-    
-    db.commit()
-    print_success(f"Created {len(teams)} teams with {students_per_team} students each")
-    
-    # 5. Create Projects
+
+     # 4. Create Teams (ProjectTeams per project, no Groups anymore)
     print("\n--- Creating Projects ---")
     projects = []
     project_statuses = ["concept", "active", "completed"]
-    
+
     for i in range(3):
         title = factory.project_title()
         status = project_statuses[i]
-        
+
         project = Project(
             school_id=school.id,
             course_id=course.id,
@@ -529,56 +495,75 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             class_name=rand.choice([cls.name for cls in classes]),
             status=status,
             start_date=ts_gen.random_timestamp(days_ago_min=20, days_ago_max=40),
-            end_date=ts_gen.random_timestamp(days_ago_min=0, days_ago_max=15) if status == "completed" else None,
+            end_date=ts_gen.random_timestamp(days_ago_min=0, days_ago_max=15)
+            if status == "completed"
+            else None,
             created_by_id=teacher.id,
         )
         db.add(project)
         projects.append(project)
-    
+
     db.commit()
     for project in projects:
         db.refresh(project)
+
     print_success(f"Created {len(projects)} projects")
-    
-    # 6. Create ProjectTeams (frozen rosters)
+
+    # 5. Create Project Teams (frozen rosters)
     print("\n--- Creating Project Teams ---")
+
+    num_teams_per_project = 2
+    students_per_team = 4
+
+    # Shuffle students once for random distribution
+    shuffled_students = student_objs.copy()
+    rand.shuffle(shuffled_students)
+    student_cursor = 0
+
     project_teams = []
-    
+
     for project in projects:
-        # Assign 2 teams per project
-        project_team_list = rand.sample(teams, 2)
-        
-        for team in project_team_list:
-            # Create frozen project team
+        for team_number in range(1, num_teams_per_project + 1):
+            team_name = factory.team_name(team_number)
+
             pt = ProjectTeam(
                 school_id=school.id,
                 project_id=project.id,
-                group_id=team.id,
-                name=f"{team.name} - {project.title}",
-                frozen_at=ts_gen.random_timestamp(days_ago_min=15, days_ago_max=35),
+                team_number=team_number,
+                display_name_at_time=team_name,
             )
             db.add(pt)
             project_teams.append(pt)
-    
-    db.commit()
-    
-    # Add team members to project teams
-    for pt in project_teams:
-        db.refresh(pt)
-        
-        # Get team members
-        members = db.query(GroupMember).filter(GroupMember.group_id == pt.group_id).all()
-        
-        for member in members:
-            ptm = ProjectTeamMember(
-                project_team_id=pt.id,
-                student_id=member.student_id,
-            )
-            db.add(ptm)
-    
-    db.commit()
-    print_success(f"Created {len(project_teams)} project teams with frozen rosters")
-    
+
+        db.commit()
+
+        # Refresh project teams for this project
+        project_team_slice = project_teams[-num_teams_per_project:]
+        for pt in project_team_slice:
+            db.refresh(pt)
+
+            # Assign students to this project team
+            members = shuffled_students[
+                student_cursor : student_cursor + students_per_team
+            ]
+            student_cursor += students_per_team
+
+            for student in members:
+                ptm = ProjectTeamMember(
+                    school_id=school.id,
+                    project_team_id=pt.id,
+                    user_id=student.id,
+                )
+                db.add(ptm)
+
+        db.commit()
+
+    print_success(
+        f"Created {len(project_teams)} project teams "
+        f"({num_teams_per_project} per project, {students_per_team} students each)"
+    )
+   
+ 
     # 7. Create Rubrics
     print("\n--- Creating Rubrics ---")
     
@@ -587,7 +572,6 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         school_id=school.id,
         title=factory.rubric_title("peer"),
         scope="peer",
-        is_template=False,
     )
     db.add(peer_rubric)
     db.commit()
@@ -599,7 +583,6 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         criterion = RubricCriterion(
             rubric_id=peer_rubric.id,
             name=factory.criterion_name(category),
-            description=f"Beoordeling van {category.lower()}",
             order_index=i,
             weight=1.0,
         )
@@ -612,7 +595,6 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         school_id=school.id,
         title=factory.rubric_title("project"),
         scope="project",
-        is_template=False,
     )
     db.add(project_rubric)
     db.commit()
