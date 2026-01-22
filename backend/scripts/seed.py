@@ -661,26 +661,25 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     # 7. Use Template Rubrics
     print("\n--- Using Template Rubrics ---")
 
-    # Query for peer rubric template
+    # Query for peer rubric (seed_templates.py creates rubrics via separate template tables,
+    # then instantiates them into the rubrics table. We just need any peer rubric.)
     peer_rubric = (
         db.query(Rubric)
         .filter(
             Rubric.school_id == school.id,
             Rubric.scope == "peer",
-            Rubric.is_template == True,
         )
         .first()
     )
 
-    # Fallback: Create peer rubric if template doesn't exist
+    # Fallback: Create peer rubric if none exists
     if not peer_rubric:
-        print_warning("No peer rubric template found, creating fallback rubric")
+        print_warning("No peer rubric found, creating fallback rubric")
         peer_rubric = create_instance(
             Rubric,
             school_id=school.id,
             title=factory.rubric_title("peer"),
             scope="peer",
-            is_template=False,
         )
         db.add(peer_rubric)
         db.commit()
@@ -703,28 +702,26 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             f"Created fallback Peer Rubric: {peer_rubric.title} with {len(peer_categories)} criteria"
         )
     else:
-        print_success(f"Using template Peer Rubric: {peer_rubric.title}")
+        print_success(f"Using Peer Rubric: {peer_rubric.title}")
 
-    # Query for project rubric template
+    # Query for project rubric
     project_rubric = (
         db.query(Rubric)
         .filter(
             Rubric.school_id == school.id,
             Rubric.scope == "project",
-            Rubric.is_template == True,
         )
         .first()
     )
 
-    # Fallback: Create project rubric if template doesn't exist
+    # Fallback: Create project rubric if none exists
     if not project_rubric:
-        print_warning("No project rubric template found, creating fallback rubric")
+        print_warning("No project rubric found, creating fallback rubric")
         project_rubric = create_instance(
             Rubric,
             school_id=school.id,
             title=factory.rubric_title("project"),
             scope="project",
-            is_template=False,
         )
         db.add(project_rubric)
         db.commit()
@@ -747,7 +744,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             f"Created fallback Project Rubric: {project_rubric.title} with {len(project_categories)} criteria"
         )
     else:
-        print_success(f"Using template Project Rubric: {project_rubric.title}")
+        print_success(f"Using Project Rubric: {project_rubric.title}")
 
     # 8. Create Evaluations for ALL Teams
     print("\n--- Creating Evaluations ---")
