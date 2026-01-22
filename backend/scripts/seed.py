@@ -21,8 +21,7 @@ Options:
 import argparse
 import sys
 from pathlib import Path
-from datetime import datetime, timedelta, timezone, date
-from typing import List, Optional, Tuple
+from datetime import datetime, date
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -41,8 +40,6 @@ from app.infra.db.models import (
     Course,
     TeacherCourse,
     CourseEnrollment,
-    Group,
-    GroupMember,
     Project,
     ProjectTeam,
     ProjectTeamMember,
@@ -56,18 +53,12 @@ from app.infra.db.models import (
     ProjectAssessmentTeam,
     ProjectAssessmentScore,
     ProjectAssessmentReflection,
-    ProjectAssessmentSelfAssessment,
-    ProjectAssessmentSelfAssessmentScore,
     CompetencyCategory,
-    Competency,
-    CompetencyRubricLevel,
     CompetencyWindow,
     CompetencySelfScore,
     CompetencyGoal,
-    CompetencyReflection,
     CompetencyTeacherObservation,
     LearningObjective,
-    RubricCriterionLearningObjective,
     Client,
     ClientLog,
     ClientProjectLink,
@@ -108,11 +99,12 @@ DEMO_CLASSES = ["G2a", "G2b"]
 # Helper Functions
 # ============================================================================
 
+
 def print_section(title: str):
     """Print a section header"""
     print(f"\n{'=' * 60}")
     print(f"{title}")
-    print('=' * 60)
+    print("=" * 60)
 
 
 def print_success(message: str):
@@ -131,7 +123,7 @@ def safe_truncate_tables(db: Session):
     Respects foreign key constraints.
     """
     print_section("RESETTING DATABASE")
-    
+
     # Tables in reverse dependency order (children first, then parents)
     tables = [
         # Deepest dependencies first
@@ -184,14 +176,12 @@ def safe_truncate_tables(db: Session):
         "users",
         "schools",
     ]
-    
+
     try:
-        replication_role_enabled = False
         try:
             db.execute(text("SET session_replication_role = 'replica';"))
-            replication_role_enabled = True
         except Exception as e:
-            db.rollback()  # <-- SUPER belangrijk
+            db.rollback()
             print_info(f"Info: cannot set session_replication_role (continuing without): {e}")
 
         for table in tables:
@@ -213,11 +203,10 @@ def safe_truncate_tables(db: Session):
         raise
 
 
-
 def seed_base(db: Session):
     """
     Seed minimal base data (idempotent).
-    
+
     Creates:
     - 1 school
     - 1 subject (O&O)
@@ -227,9 +216,9 @@ def seed_base(db: Session):
     - 1 teacher user
     """
     print_section("SEEDING BASE DATA")
-    
+
     upsert = UpsertHelper(db)
-    
+
     # 1. School
     school = upsert.upsert(
         School,
@@ -238,7 +227,7 @@ def seed_base(db: Session):
     db.commit()
     db.refresh(school)
     print_success(f"School: {school.name} (ID: {school.id})")
-    
+
     # 2. Subject
     subject = upsert.upsert(
         Subject,
@@ -252,12 +241,12 @@ def seed_base(db: Session):
     db.commit()
     db.refresh(subject)
     print_success(f"Subject: {subject.name} (ID: {subject.id})")
-    
+
     # 3. Academic Year (2025-2026)
     current_year = datetime.now().year
     next_year = current_year + 1
     year_label = f"{current_year}-{next_year}"
-    
+
     academic_year = upsert.upsert(
         AcademicYear,
         lookup_fields={"school_id": school.id, "label": year_label},
@@ -270,10 +259,10 @@ def seed_base(db: Session):
     db.commit()
     db.refresh(academic_year)
     print_success(f"Academic Year: {academic_year.label} (ID: {academic_year.id})")
-    
+
     # 4. Competency Categories
     for name, desc, color, icon, order in COMPETENCY_CATEGORIES:
-        cat = upsert.upsert(
+        upsert.upsert(
             CompetencyCategory,
             lookup_fields={"school_id": school.id, "name": name},
             update_fields={
@@ -285,7 +274,7 @@ def seed_base(db: Session):
         )
     db.commit()
     print_success(f"Competency Categories: {len(COMPETENCY_CATEGORIES)} categories")
-    
+
     # 5. Admin User
     admin = upsert.upsert(
         User,
@@ -300,7 +289,7 @@ def seed_base(db: Session):
     )
     db.commit()
     print_success(f"Admin: {admin.email}")
-    
+
     # 6. Teacher User
     teacher = upsert.upsert(
         User,
@@ -315,17 +304,19 @@ def seed_base(db: Session):
     )
     db.commit()
     print_success(f"Teacher: {teacher.email}")
-    
+
     print_section("BASE SEED COMPLETE")
-    print(f"\nCredentials:")
+    print("\nCredentials:")
     print(f"  Admin:   {BASE_CREDENTIALS['admin'][0]} / {BASE_CREDENTIALS['admin'][1]}")
-    print(f"  Teacher: {BASE_CREDENTIALS['teacher'][0]} / {BASE_CREDENTIALS['teacher'][1]}")
+    print(
+        f"  Teacher: {BASE_CREDENTIALS['teacher'][0]} / {BASE_CREDENTIALS['teacher'][1]}"
+    )
 
 
 def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     """
     Seed comprehensive demo data.
-    
+
     Creates:
     - 2 classes (G2a, G2b)
     - 24 students (12 per class)
@@ -343,45 +334,50 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     - RFIDCards and AttendanceEvents for some students
     """
     print_section("SEEDING DEMO DATA")
-    
+
     if reset:
         safe_truncate_tables(db)
         # Re-seed base after reset
         seed_base(db)
-    
+
     # Get base entities
     school = db.query(School).filter(School.name == "Demo School").first()
     if not school:
         print("✗ Error: Demo School not found. Run base seed first.")
         return
-    
-    subject = db.query(Subject).filter(
-        Subject.school_id == school.id,
-        Subject.code == "O&O"
-    ).first()
-    
-    academic_year = db.query(AcademicYear).filter(
-        AcademicYear.school_id == school.id
-    ).order_by(AcademicYear.start_date.desc()).first()
-    
-    teacher = db.query(User).filter(
-        User.school_id == school.id,
-        User.role == "teacher"
-    ).first()
-    
+
+    subject = (
+        db.query(Subject)
+        .filter(Subject.school_id == school.id, Subject.code == "O&O")
+        .first()
+    )
+
+    academic_year = (
+        db.query(AcademicYear)
+        .filter(AcademicYear.school_id == school.id)
+        .order_by(AcademicYear.start_date.desc())
+        .first()
+    )
+
+    teacher = (
+        db.query(User)
+        .filter(User.school_id == school.id, User.role == "teacher")
+        .first()
+    )
+
     if not all([subject, academic_year, teacher]):
         print("✗ Error: Base entities not found. Run base seed first.")
         return
-    
+
     print_info(f"Using School: {school.name} (ID: {school.id})")
     print_info(f"Using Subject: {subject.name} (ID: {subject.id})")
     print_info(f"Using Academic Year: {academic_year.label}")
     print_info(f"Using Teacher: {teacher.name}")
-    
+
     # Initialize helpers
     ts_gen = TimestampGenerator(weeks=8, rand=rand)
     factory = DataFactory(rand=rand)
-    
+
     # 1. Create Classes
     print("\n--- Creating Classes ---")
     classes = []
@@ -396,18 +392,20 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     db.commit()
     for cls in classes:
         db.refresh(cls)
-    print_success(f"Created {len(classes)} classes: {', '.join(c.name for c in classes)}")
-    
+    print_success(
+        f"Created {len(classes)} classes: {', '.join(c.name for c in classes)}"
+    )
+
     # 2. Create Students
     print("\n--- Creating Students ---")
     students = []
     students_per_class = 12
-    
+
     for cls in classes:
         for i in range(students_per_class):
             name = factory.student_name()
             email = factory.email(name)
-            
+
             student = User(
                 school_id=school.id,
                 email=email,
@@ -420,9 +418,9 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             )
             db.add(student)
             students.append((student, cls))
-    
+
     db.commit()
-    
+
     # Refresh students and create class memberships
     for student, cls in students:
         db.refresh(student)
@@ -432,13 +430,13 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             academic_year_id=academic_year.id,
         )
         db.add(membership)
-    
+
     db.commit()
     print_success(f"Created {len(students)} students across {len(classes)} classes")
-    
+
     # Extract just the student objects
     student_objs = [s[0] for s in students]
-    
+
     # 3. Create Course
     print("\n--- Creating Course ---")
     course = Course(
@@ -454,10 +452,10 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     db.commit()
     db.refresh(course)
     print_success(f"Course: {course.name} (ID: {course.id})")
-    
+
     # Assign teacher to course
     teacher_course = TeacherCourse(
-        school_id=school.id,          # <-- fix
+        school_id=school.id,  # <-- fix
         teacher_id=teacher.id,
         course_id=course.id,
         role="teacher",
@@ -467,7 +465,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     db.add(teacher_course)
     db.commit()
     print_info(f"Assigned {teacher.name} to course")
-    
+
     # Enroll students in course
     for student in student_objs:
         enrollment = CourseEnrollment(
@@ -478,7 +476,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     db.commit()
     print_info(f"Enrolled {len(student_objs)} students in course")
 
-     # 4. Create Teams (ProjectTeams per project, no Groups anymore)
+    # 4. Create Teams (ProjectTeams per project, no Groups anymore)
     print("\n--- Creating Projects ---")
     projects = []
     project_statuses = ["concept", "active", "completed"]
@@ -495,9 +493,11 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             class_name=rand.choice([cls.name for cls in classes]),
             status=status,
             start_date=ts_gen.random_timestamp(days_ago_min=20, days_ago_max=40),
-            end_date=ts_gen.random_timestamp(days_ago_min=0, days_ago_max=15)
-            if status == "completed"
-            else None,
+            end_date=(
+                ts_gen.random_timestamp(days_ago_min=0, days_ago_max=15)
+                if status == "completed"
+                else None
+            ),
             created_by_id=teacher.id,
         )
         db.add(project)
@@ -562,11 +562,10 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         f"Created {len(project_teams)} project teams "
         f"({num_teams_per_project} per project, {students_per_team} students each)"
     )
-   
- 
+
     # 7. Create Rubrics
     print("\n--- Creating Rubrics ---")
-    
+
     # Peer rubric
     peer_rubric = Rubric(
         school_id=school.id,
@@ -576,7 +575,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     db.add(peer_rubric)
     db.commit()
     db.refresh(peer_rubric)
-    
+
     # Add peer criteria
     peer_categories = ["Organiseren", "Meedoen", "Zelfvertrouwen", "Autonomie"]
     for i, category in enumerate(peer_categories):
@@ -588,8 +587,10 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         )
         db.add(criterion)
     db.commit()
-    print_success(f"Peer Rubric: {peer_rubric.title} with {len(peer_categories)} criteria")
-    
+    print_success(
+        f"Peer Rubric: {peer_rubric.title} with {len(peer_categories)} criteria"
+    )
+
     # Project rubric
     project_rubric = Rubric(
         school_id=school.id,
@@ -599,7 +600,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     db.add(project_rubric)
     db.commit()
     db.refresh(project_rubric)
-    
+
     # Add project criteria
     project_categories = ["projectproces", "eindresultaat", "communicatie"]
     for i, category in enumerate(project_categories):
@@ -612,20 +613,24 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         )
         db.add(criterion)
     db.commit()
-    print_success(f"Project Rubric: {project_rubric.title} with {len(project_categories)} criteria")
-    
+    print_success(
+        f"Project Rubric: {project_rubric.title} with {len(project_categories)} criteria"
+    )
+
     # 8. Create Evaluations
     print("\n--- Creating Evaluations ---")
-    
+
     # Get peer rubric criteria
-    peer_criteria = db.query(RubricCriterion).filter(
-        RubricCriterion.rubric_id == peer_rubric.id
-    ).all()
-    
+    peer_criteria = (
+        db.query(RubricCriterion)
+        .filter(RubricCriterion.rubric_id == peer_rubric.id)
+        .all()
+    )
+
     # Create 1 peer evaluation for first project
     project = projects[0]
     pt = [pt for pt in project_teams if pt.project_id == project.id][0]
-    
+
     evaluation = Evaluation(
         school_id=school.id,
         course_id=course.id,
@@ -641,17 +646,19 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     db.commit()
     db.refresh(evaluation)
     print_success(f"Evaluation: {evaluation.title}")
-    
+
     # Create allocations and scores
-    team_members = db.query(ProjectTeamMember).filter(
-        ProjectTeamMember.project_team_id == pt.id
-    ).all()
-    
+    team_members = (
+        db.query(ProjectTeamMember)
+        .filter(ProjectTeamMember.project_team_id == pt.id)
+        .all()
+    )
+
     for reviewer_member in team_members:
         for reviewee_member in team_members:
             if reviewer_member.student_id == reviewee_member.student_id:
                 continue  # Skip self-review
-            
+
             allocation = Allocation(
                 evaluation_id=evaluation.id,
                 reviewer_id=reviewer_member.student_id,
@@ -660,7 +667,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             db.add(allocation)
             db.commit()
             db.refresh(allocation)
-            
+
             # Add scores for each criterion
             for criterion in peer_criteria:
                 score = Score(
@@ -670,16 +677,16 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                     comment=factory.feedback_comment(positive=rand.random() > 0.3),
                 )
                 db.add(score)
-    
+
     db.commit()
     print_info(f"Created allocations and scores for {len(team_members)} students")
-    
+
     # 9. Create Reflections
     print("\n--- Creating Reflections ---")
-    
+
     # Create reflections for some students
     reflection_students = rand.sample(team_members, min(3, len(team_members)))
-    
+
     for member in reflection_students:
         reflection = Reflection(
             evaluation_id=evaluation.id,
@@ -688,22 +695,24 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             submitted_at=ts_gen.recent_timestamp(days_ago_max=7),
         )
         db.add(reflection)
-    
+
     db.commit()
     print_success(f"Created {len(reflection_students)} reflections")
-    
+
     # 10. Create ProjectAssessments
     print("\n--- Creating Project Assessments ---")
-    
+
     # Get project rubric criteria
-    project_criteria = db.query(RubricCriterion).filter(
-        RubricCriterion.rubric_id == project_rubric.id
-    ).all()
-    
+    project_criteria = (
+        db.query(RubricCriterion)
+        .filter(RubricCriterion.rubric_id == project_rubric.id)
+        .all()
+    )
+
     # Create project assessment for second project
     project = projects[1]
     project_pts = [pt for pt in project_teams if pt.project_id == project.id]
-    
+
     assessment = ProjectAssessment(
         school_id=school.id,
         project_id=project.id,
@@ -716,7 +725,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     db.commit()
     db.refresh(assessment)
     print_success(f"Project Assessment: {assessment.title}")
-    
+
     # Link teams to assessment
     for pt in project_pts:
         pat = ProjectAssessmentTeam(
@@ -725,7 +734,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         )
         db.add(pat)
     db.commit()
-    
+
     # Add scores for each team
     for pt in project_pts:
         for criterion in project_criteria:
@@ -737,10 +746,10 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                 comment=factory.feedback_comment(positive=rand.random() > 0.4),
             )
             db.add(score)
-    
+
     db.commit()
     print_info(f"Created scores for {len(project_pts)} teams")
-    
+
     # Add reflection for one team
     if project_pts:
         pa_reflection = ProjectAssessmentReflection(
@@ -752,13 +761,13 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         db.add(pa_reflection)
         db.commit()
         print_info("Created project assessment reflection")
-    
+
     # 11. Create CompetencyWindows
     print("\n--- Creating Competency Windows ---")
-    
+
     windows = []
     window_titles = ["Startscan Q1", "Midscan Q2"]
-    
+
     for title in window_titles:
         window = CompetencyWindow(
             school_id=school.id,
@@ -772,20 +781,22 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         )
         db.add(window)
         windows.append(window)
-    
+
     db.commit()
     for window in windows:
         db.refresh(window)
     print_success(f"Created {len(windows)} competency windows")
-    
+
     # Get competency categories
-    comp_categories = db.query(CompetencyCategory).filter(
-        CompetencyCategory.school_id == school.id
-    ).all()
-    
+    comp_categories = (
+        db.query(CompetencyCategory)
+        .filter(CompetencyCategory.school_id == school.id)
+        .all()
+    )
+
     # Add self-scores, goals, and observations
     sample_students = rand.sample(student_objs, min(10, len(student_objs)))
-    
+
     for window in windows:
         for student in sample_students:
             # Self-scores
@@ -797,7 +808,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                     score=rand.randint(1, 5),
                 )
                 db.add(self_score)
-            
+
             # Goals
             if rand.random() > 0.5:
                 goal = CompetencyGoal(
@@ -808,7 +819,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                     created_at=ts_gen.recent_timestamp(days_ago_max=10),
                 )
                 db.add(goal)
-            
+
             # Teacher observations
             if rand.random() > 0.7:
                 observation = CompetencyTeacherObservation(
@@ -820,13 +831,13 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                     created_at=ts_gen.recent_timestamp(days_ago_max=15),
                 )
                 db.add(observation)
-    
+
     db.commit()
     print_info("Created self-scores, goals, and teacher observations")
-    
+
     # 12. Create LearningObjectives
     print("\n--- Creating Learning Objectives ---")
-    
+
     objective_texts = [
         "Student kan een gebruikersonderzoek uitvoeren en analyseren",
         "Student kan iteratief ontwerpen en prototypes maken",
@@ -837,8 +848,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         "Student kan presenteren voor een publiek",
         "Student kan reflecteren op eigen leerproces",
     ]
-    
-    for i, text in enumerate(objective_texts):
+
+    for i, objective_text in enumerate(objective_texts):
         obj = LearningObjective(
             school_id=school.id,
             subject_id=subject.id,
@@ -848,13 +859,13 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             order_index=i,
         )
         db.add(obj)
-    
+
     db.commit()
     print_success(f"Created {len(objective_texts)} learning objectives")
-    
+
     # 13. Create Clients
     print("\n--- Creating Clients ---")
-    
+
     clients = []
     for i in range(3):
         client = Client(
@@ -870,35 +881,39 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         )
         db.add(client)
         clients.append(client)
-    
+
     db.commit()
     for client in clients:
         db.refresh(client)
     print_success(f"Created {len(clients)} clients")
-    
+
     # Add client logs
     for client in clients:
         num_logs = rand.randint(2, 4)
-        timestamps = ts_gen.timestamp_sequence(num_logs, days_ago_min=5, days_ago_max=40)
-        
+        timestamps = ts_gen.timestamp_sequence(
+            num_logs, days_ago_min=5, days_ago_max=40
+        )
+
         for ts in timestamps:
             log = ClientLog(
                 client_id=client.id,
                 log_type=rand.choice(["call", "email", "meeting", "other"]),
-                description=rand.choice([
-                    "Eerste kennismakingsgesprek",
-                    "Projectbriefing ontvangen",
-                    "Tussentijdse check-in",
-                    "Presentatie voor opdrachtgever",
-                ]),
+                description=rand.choice(
+                    [
+                        "Eerste kennismakingsgesprek",
+                        "Projectbriefing ontvangen",
+                        "Tussentijdse check-in",
+                        "Presentatie voor opdrachtgever",
+                    ]
+                ),
                 logged_by=teacher.id,
                 logged_at=ts,
             )
             db.add(log)
-    
+
     db.commit()
     print_info("Created client logs")
-    
+
     # Link clients to projects
     for i, project in enumerate(projects[:2]):
         link = ClientProjectLink(
@@ -908,16 +923,16 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             linked_at=ts_gen.random_timestamp(days_ago_min=25, days_ago_max=45),
         )
         db.add(link)
-    
+
     db.commit()
     print_info("Linked clients to projects")
-    
+
     # 14. Create RFIDCards and AttendanceEvents
     print("\n--- Creating RFID Cards & Attendance ---")
-    
+
     # Give RFID cards to 8 random students
     rfid_students = rand.sample(student_objs, min(8, len(student_objs)))
-    
+
     for i, student in enumerate(rfid_students):
         card = RFIDCard(
             user_id=student.id,
@@ -926,10 +941,10 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             is_active=True,
         )
         db.add(card)
-    
+
     db.commit()
     print_success(f"Created {len(rfid_students)} RFID cards")
-    
+
     # Create attendance events
     num_events = 0
     for student in rfid_students:
@@ -938,7 +953,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         event_timestamps = ts_gen.timestamp_sequence(
             event_count, days_ago_min=0, days_ago_max=30
         )
-        
+
         for ts in event_timestamps:
             event = AttendanceEvent(
                 user_id=student.id,
@@ -950,18 +965,18 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             )
             db.add(event)
             num_events += 1
-    
+
     db.commit()
     print_success(f"Created {num_events} attendance events")
-    
+
     print_section("DEMO SEED COMPLETE")
-    print(f"\nSummary:")
+    print("\nSummary:")
     print(f"  Classes: {len(classes)}")
     print(f"  Students: {len(student_objs)}")
-    print(f"  Teams: {len(teams)}")
+    print(f"  Project teams: {len(project_teams)}")
     print(f"  Projects: {len(projects)}")
-    print(f"  Evaluations: 1")
-    print(f"  Project Assessments: 1")
+    print("  Evaluations: 1")
+    print("  Project Assessments: 1")
     print(f"  Competency Windows: {len(windows)}")
     print(f"  Learning Objectives: {len(objective_texts)}")
     print(f"  Clients: {len(clients)}")
@@ -972,62 +987,64 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 # Main Entry Point
 # ============================================================================
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="Comprehensive database seeding script",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    
+
     parser.add_argument(
         "--mode",
         choices=["base", "demo"],
         required=True,
         help="Seeding mode: base (minimal) or demo (comprehensive)",
     )
-    
+
     parser.add_argument(
         "--reset",
         action="store_true",
         help="Reset database before seeding (demo mode only)",
     )
-    
+
     parser.add_argument(
         "--seed",
         type=int,
         default=42,
         help="Random seed for deterministic data generation (default: 42)",
     )
-    
+
     args = parser.parse_args()
-    
+
     # Validate arguments
     if args.reset and args.mode != "demo":
         parser.error("--reset can only be used with --mode demo")
-    
+
     # Initialize random generator
     rand = DeterministicRandom(seed=args.seed)
-    
+
     # Create database session
     db = SessionLocal()
-    
+
     try:
         if args.mode == "base":
             seed_base(db)
         elif args.mode == "demo":
             seed_demo(db, rand, reset=args.reset)
-        
+
         print("\n" + "=" * 60)
         print("SEEDING COMPLETED SUCCESSFULLY")
         print("=" * 60)
-        
+
     except Exception as e:
         print(f"\n✗ Error during seeding: {e}")
         db.rollback()
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
-    
+
     finally:
         db.close()
 
