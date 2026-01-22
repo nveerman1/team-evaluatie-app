@@ -7,7 +7,6 @@ import { ApiAuthError } from "@/lib/api";
 import { evaluationService } from "@/services";
 import { Evaluation, EvalStatus } from "@/dtos/evaluation.dto";
 import { Loading, ErrorMessage, StatusToggle } from "@/components";
-import FrozenRoster from "@/components/FrozenRoster";
 import { EvaluationLayoutProvider, useEvaluationLayout } from "./EvaluationLayoutContext";
 
 type LayoutProps = {
@@ -206,14 +205,6 @@ function EvaluationLayoutInner({ children }: LayoutProps) {
             })}
           </nav>
         </div>
-
-        {/* Frozen Roster - only show if explicitly using project_team_id */}
-        {data.project_team_id ? (
-          <FrozenRoster 
-            projectTeamId={data.project_team_id} 
-            closedAt={data.closed_at}
-          />
-        ) : null}
 
         {/* Page-specific content */}
         {children}
