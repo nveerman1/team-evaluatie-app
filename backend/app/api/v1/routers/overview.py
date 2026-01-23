@@ -2230,49 +2230,62 @@ def get_peer_evaluation_dashboard(
         # Store data per evaluation project (not per team evaluation record)
         # Group evaluations by project_id to aggregate across teams
         project_eval_map = defaultdict(list)  # project_id -> list of evaluation records
-        eval_data_points = []  # Initialize list to store evaluation data points
         
+        # First, group evaluations by project_id
         for evaluation in sorted_evals:
             eval_date = evaluation.closed_at or evaluation.created_at
             if eval_date:
                 if hasattr(eval_date, "tzinfo") and eval_date.tzinfo is not None:
                     eval_date = eval_date.replace(tzinfo=None)
-
-                if eval_date >= start_date:
-                    # Use the actual evaluation date (day precision) instead of month
-                    date_key = eval_date.strftime("%d %b %Y")  # e.g., "15 Dec 2024"
+                if eval_date >= start_date and evaluation.project_id:
+                    project_eval_map[evaluation.project_id].append(evaluation)
+        
+        # Now process each project (not each evaluation) to avoid duplicates
+        eval_data_points = []  # Initialize list to store evaluation data points
+        for project_id, evals_for_project in project_eval_map.items():
+            if not evals_for_project:
+                continue
+                
+            # Use the most recent evaluation's date for this project
+            most_recent_eval = max(evals_for_project, key=lambda e: e.closed_at or e.created_at)
+            eval_date = most_recent_eval.closed_at or most_recent_eval.created_at
+            if hasattr(eval_date, "tzinfo") and eval_date.tzinfo is not None:
+                eval_date = eval_date.replace(tzinfo=None)
+            
+            date_key = eval_date.strftime("%d %b %Y")  # e.g., "15 Dec 2024"
+            
+            # Get project name for label from cache
+            project = projects_cache.get(project_id)
+            eval_label = project.title if project else f"Project {project_id}"
+            
+            # Aggregate scores across ALL evaluations (teams) for this project
+            project_category_scores = defaultdict(list)
+            
+            for evaluation in evals_for_project:
+                # Use cached scores from batch calculation
+                eval_all_scores = evaluation_scores_cache.get(evaluation.id, {})
+                
+                # Aggregate students' scores for this evaluation
+                # If student_id is provided, only include that student's scores
+                for stud_id in eval_all_scores:
+                    if student_id is not None and stud_id != student_id:
+                        continue  # Skip if filtering by student_id and this isn't the target student
                     
-                    # Get project name for label from cache
-                    project = projects_cache.get(evaluation.project_id)
-                    eval_label = (
-                        project.title if project else f"Evaluatie {evaluation.id}"
-                    )
-                    
-                    # Use cached scores from batch calculation
-                    eval_all_scores = evaluation_scores_cache.get(evaluation.id, {})
-                    
-                    # Aggregate students' scores for this evaluation
-                    # If student_id is provided, only include that student's scores
-                    eval_category_scores = defaultdict(list)
-                    for stud_id in eval_all_scores:
-                        if student_id is not None and stud_id != student_id:
-                            continue  # Skip if filtering by student_id and this isn't the target student
-                        
-                        student_omza = eval_all_scores[stud_id]
-                        # Add scores to evaluation aggregation (use actual category names from rubric)
-                        # Use peer scores if available, otherwise fall back to self scores
-                        for cat_name in student_omza.keys():
-                            peer_score = student_omza.get(cat_name, {}).get("peer")
-                            self_score = student_omza.get(cat_name, {}).get("self")
-                            # Use peer score if available, otherwise use self score (matching heatmap logic)
-                            score = peer_score if peer_score is not None else self_score
-                            if score is not None:
-                                # Use the actual category name from the rubric
-                                eval_category_scores[cat_name].append(float(score))
-                    
-                    # Calculate average for this evaluation
-                    if eval_category_scores:
-                        eval_data_points.append((date_key, eval_label, eval_date, eval_category_scores))
+                    student_omza = eval_all_scores[stud_id]
+                    # Add scores to project aggregation (use actual category names from rubric)
+                    # Use peer scores if available, otherwise fall back to self scores
+                    for cat_name in student_omza.keys():
+                        peer_score = student_omza.get(cat_name, {}).get("peer")
+                        self_score = student_omza.get(cat_name, {}).get("self")
+                        # Use peer score if available, otherwise use self score (matching heatmap logic)
+                        score = peer_score if peer_score is not None else self_score
+                        if score is not None:
+                            # Use the actual category name from the rubric
+                            project_category_scores[cat_name].append(float(score))
+            
+            # Add data point for this project (aggregated across all teams)
+            if project_category_scores:
+                eval_data_points.append((date_key, eval_label, eval_date, project_category_scores))
         
         # Convert to trend data points
         # Note: OmzaTrendDataPoint expects specific lowercase fields, so we need to map
