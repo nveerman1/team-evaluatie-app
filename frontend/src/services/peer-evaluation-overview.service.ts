@@ -19,6 +19,7 @@ export type FeedbackFilters = {
 
 export type OmzaTrendDataPoint = {
   date: string;
+  label: string;  // Evaluation/project title
   organiseren: number;
   meedoen: number;
   zelfvertrouwen: number;

@@ -240,6 +240,7 @@ class OmzaTrendDataPoint(BaseModel):
     """
 
     date: str  # e.g., "Sep 2024"
+    label: str  # e.g., "Project X - 10 Jan 2024" or evaluation title
     organiseren: float
     meedoen: float
     zelfvertrouwen: float

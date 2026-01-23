@@ -1972,13 +1972,12 @@ def get_peer_evaluation_dashboard(
             key=lambda e: e.closed_at or e.created_at
         )
         
-        # Store data per evaluation (not grouped by month)
-        from datetime import datetime
-        eval_data_points = []
+        # Store data per evaluation project (not per team evaluation record)
+        # Group evaluations by project_id to aggregate across teams
+        project_eval_map = defaultdict(list)  # project_id -> list of evaluation records
         
         for evaluation in sorted_evals:
             eval_date = evaluation.closed_at or evaluation.created_at
-            # Make timezone-naive for comparison
             if eval_date:
                 if hasattr(eval_date, 'tzinfo') and eval_date.tzinfo is not None:
                     eval_date = eval_date.replace(tzinfo=None)
@@ -2025,7 +2024,7 @@ def get_peer_evaluation_dashboard(
         }
         
         # Sort by actual date for chronological order
-        for date_key, eval_date, eval_category_scores in sorted(eval_data_points, key=lambda x: x[1]):
+        for date_key, eval_label, eval_date, eval_category_scores in sorted(eval_data_points, key=lambda x: x[2]):
             # Create a flexible mapping - normalize category names to lowercase
             normalized_scores = {}
             for cat_name, cat_scores in eval_category_scores.items():
@@ -2039,6 +2038,7 @@ def get_peer_evaluation_dashboard(
             # Create trend point with available categories, defaulting to 0 for missing ones
             trend_point = OmzaTrendDataPoint(
                 date=date_key,
+                label=eval_label,
                 organiseren=normalized_scores.get('organiseren', 0),
                 meedoen=normalized_scores.get('meedoen', 0),
                 zelfvertrouwen=normalized_scores.get('zelfvertrouwen', 0),
