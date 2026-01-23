@@ -2247,7 +2247,12 @@ def get_peer_evaluation_dashboard(
                 continue
                 
             # Use the most recent evaluation's date for this project
-            most_recent_eval = max(evals_for_project, key=lambda e: e.closed_at or e.created_at)
+            # Filter to ensure we only consider evaluations with dates
+            evals_with_dates = [e for e in evals_for_project if (e.closed_at or e.created_at)]
+            if not evals_with_dates:
+                continue
+                
+            most_recent_eval = max(evals_with_dates, key=lambda e: e.closed_at or e.created_at)
             eval_date = most_recent_eval.closed_at or most_recent_eval.created_at
             if hasattr(eval_date, "tzinfo") and eval_date.tzinfo is not None:
                 eval_date = eval_date.replace(tzinfo=None)
@@ -2256,7 +2261,7 @@ def get_peer_evaluation_dashboard(
             
             # Get project name for label from cache
             project = projects_cache.get(project_id)
-            eval_label = project.title if project else f"Project {project_id}"
+            eval_label = project.title if project else f"Evaluatie (project {project_id})"
             
             # Aggregate scores across ALL evaluations (teams) for this project
             project_category_scores = defaultdict(list)
