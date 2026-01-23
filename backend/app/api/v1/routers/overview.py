@@ -1974,8 +1974,6 @@ def get_peer_evaluation_dashboard(
         
         # Store data per evaluation project (not per team evaluation record)
         # Group evaluations by project_id to aggregate across teams
-        from datetime import datetime
-        from collections import defaultdict
         project_eval_map = defaultdict(list)  # project_id -> list of evaluation records
         
         for evaluation in sorted_evals:
@@ -1993,19 +1991,20 @@ def get_peer_evaluation_dashboard(
         
         # Process each project's evaluations together
         for group_key, group_evals in project_eval_map.items():
-            # Use the first evaluation for metadata (all should have same project/date)
-            first_eval = group_evals[0]
-            eval_date = first_eval.closed_at or first_eval.created_at
+            # Use the latest evaluation date from the group for the trend point
+            # (all evaluations in a project should have the same date, but use max to be safe)
+            latest_eval = max(group_evals, key=lambda e: e.closed_at or e.created_at)
+            eval_date = latest_eval.closed_at or latest_eval.created_at
             if hasattr(eval_date, 'tzinfo') and eval_date.tzinfo is not None:
                 eval_date = eval_date.replace(tzinfo=None)
             
             # Use the actual evaluation date (day precision) instead of month
             date_key = eval_date.strftime("%d %b %Y")  # e.g., "15 Dec 2024"
             
-            # Get evaluation label (project name or evaluation title)
-            eval_label = first_eval.title
-            if first_eval.project_id:
-                project = db.query(Project).filter(Project.id == first_eval.project_id).first()
+            # Get evaluation label (project name or evaluation title) from latest eval
+            eval_label = latest_eval.title
+            if latest_eval.project_id:
+                project = db.query(Project).filter(Project.id == latest_eval.project_id).first()
                 if project:
                     eval_label = project.title
             
