@@ -1972,53 +1972,71 @@ def get_peer_evaluation_dashboard(
             key=lambda e: e.closed_at or e.created_at
         )
         
-        # Store data per evaluation (not grouped by month)
+        # Store data per evaluation project (not per team evaluation record)
+        # Group evaluations by project_id to aggregate across teams
         from datetime import datetime
-        eval_data_points = []
+        from collections import defaultdict
+        project_eval_map = defaultdict(list)  # project_id -> list of evaluation records
         
         for evaluation in sorted_evals:
             eval_date = evaluation.closed_at or evaluation.created_at
-            # Make timezone-naive for comparison
             if eval_date:
                 if hasattr(eval_date, 'tzinfo') and eval_date.tzinfo is not None:
                     eval_date = eval_date.replace(tzinfo=None)
                 
                 if eval_date >= start_date:
-                    # Use the actual evaluation date (day precision) instead of month
-                    date_key = eval_date.strftime("%d %b %Y")  # e.g., "15 Dec 2024"
+                    # Group by project_id (or use a unique key for non-project evaluations)
+                    group_key = evaluation.project_id if evaluation.project_id else f"eval_{evaluation.id}"
+                    project_eval_map[group_key].append(evaluation)
+        
+        eval_data_points = []
+        
+        # Process each project's evaluations together
+        for group_key, group_evals in project_eval_map.items():
+            # Use the first evaluation for metadata (all should have same project/date)
+            first_eval = group_evals[0]
+            eval_date = first_eval.closed_at or first_eval.created_at
+            if hasattr(eval_date, 'tzinfo') and eval_date.tzinfo is not None:
+                eval_date = eval_date.replace(tzinfo=None)
+            
+            # Use the actual evaluation date (day precision) instead of month
+            date_key = eval_date.strftime("%d %b %Y")  # e.g., "15 Dec 2024"
+            
+            # Get evaluation label (project name or evaluation title)
+            eval_label = first_eval.title
+            if first_eval.project_id:
+                project = db.query(Project).filter(Project.id == first_eval.project_id).first()
+                if project:
+                    eval_label = project.title
+            
+            # Aggregate scores from ALL evaluations in this group (across all teams)
+            eval_category_scores = defaultdict(list)
+            
+            for evaluation in group_evals:
+                # Use cached scores from batch calculation
+                eval_all_scores = evaluation_scores_cache.get(evaluation.id, {})
+                
+                # Aggregate students' scores for this evaluation
+                # If student_id is provided, only include that student's scores
+                for stud_id in eval_all_scores:
+                    if student_id is not None and stud_id != student_id:
+                        continue  # Skip if filtering by student_id and this isn't the target student
                     
-                    # Get evaluation label (project name or evaluation title)
-                    eval_label = evaluation.title
-                    if evaluation.project_id:
-                        project = db.query(Project).filter(Project.id == evaluation.project_id).first()
-                        if project:
-                            eval_label = project.title
-                    
-                    # Use cached scores from batch calculation
-                    eval_all_scores = evaluation_scores_cache.get(evaluation.id, {})
-                    
-                    # Aggregate students' scores for this evaluation
-                    # If student_id is provided, only include that student's scores
-                    eval_category_scores = defaultdict(list)
-                    for stud_id in eval_all_scores:
-                        if student_id is not None and stud_id != student_id:
-                            continue  # Skip if filtering by student_id and this isn't the target student
-                        
-                        student_omza = eval_all_scores[stud_id]
-                        # Add scores to this evaluation's aggregation (use actual category names from rubric)
-                        # Use peer scores if available, otherwise fall back to self scores
-                        for cat_name in student_omza.keys():
-                            peer_score = student_omza.get(cat_name, {}).get("peer")
-                            self_score = student_omza.get(cat_name, {}).get("self")
-                            # Use peer score if available, otherwise use self score (matching heatmap logic)
-                            score = peer_score if peer_score is not None else self_score
-                            if score is not None:
-                                # Use the actual category name from the rubric
-                                eval_category_scores[cat_name].append(float(score))
-                    
-                    # Calculate average for this evaluation
-                    if eval_category_scores:
-                        eval_data_points.append((date_key, eval_label, eval_date, eval_category_scores))
+                    student_omza = eval_all_scores[stud_id]
+                    # Add scores to this evaluation's aggregation (use actual category names from rubric)
+                    # Use peer scores if available, otherwise fall back to self scores
+                    for cat_name in student_omza.keys():
+                        peer_score = student_omza.get(cat_name, {}).get("peer")
+                        self_score = student_omza.get(cat_name, {}).get("self")
+                        # Use peer score if available, otherwise use self score (matching heatmap logic)
+                        score = peer_score if peer_score is not None else self_score
+                        if score is not None:
+                            # Use the actual category name from the rubric
+                            eval_category_scores[cat_name].append(float(score))
+            
+            # Calculate average for this project evaluation (aggregated across all teams)
+            if eval_category_scores:
+                eval_data_points.append((date_key, eval_label, eval_date, eval_category_scores))
         
         # Convert to trend data points
         # Note: OmzaTrendDataPoint expects specific lowercase fields, so we need to map
