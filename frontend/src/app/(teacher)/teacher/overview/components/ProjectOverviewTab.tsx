@@ -119,10 +119,19 @@ function useProjectOverviewData(filters: ProjectOverviewFilters) {
       });
 
       // Fetch trends from API
+      console.log('[TRENDS-FRONTEND] Fetching trends with filters:', {
+        schoolYear: filters.schoolYear,
+        courseId: filters.courseId,
+      });
       const trendsResponse = await overviewService.getProjectTrends({
         schoolYear: filters.schoolYear,
         courseId: filters.courseId,
       });
+      console.log('[TRENDS-FRONTEND] Received trend data:', trendsResponse);
+      console.log('[TRENDS-FRONTEND] Trend data points:', trendsResponse.trend_data?.length || 0);
+      if (trendsResponse.trend_data) {
+        console.log('[TRENDS-FRONTEND] First trend data point:', trendsResponse.trend_data[0]);
+      }
 
       // Map API response to component format
       const mappedProjects: ProjectOverviewItem[] = projectsResponse.projects.map((p) => ({
@@ -140,7 +149,9 @@ function useProjectOverviewData(filters: ProjectOverviewFilters) {
 
       setProjects(mappedProjects);
       setTrendData(trendsResponse.trend_data);
+      console.log('[TRENDS-FRONTEND] Set trend data, length:', trendsResponse.trend_data?.length || 0);
     } catch (e) {
+      console.error('[TRENDS-FRONTEND] Error fetching data:', e);
       setError(e instanceof Error ? e.message : "Fout bij het laden van projectgegevens");
     } finally {
       setLoading(false);
