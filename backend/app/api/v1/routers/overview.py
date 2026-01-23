@@ -1987,6 +1987,13 @@ def get_peer_evaluation_dashboard(
                     # Use the actual evaluation date (day precision) instead of month
                     date_key = eval_date.strftime("%d %b %Y")  # e.g., "15 Dec 2024"
                     
+                    # Get evaluation label (project name or evaluation title)
+                    eval_label = evaluation.title
+                    if evaluation.project_id:
+                        project = db.query(Project).filter(Project.id == evaluation.project_id).first()
+                        if project:
+                            eval_label = project.title
+                    
                     # Use cached scores from batch calculation
                     eval_all_scores = evaluation_scores_cache.get(evaluation.id, {})
                     
@@ -2011,7 +2018,7 @@ def get_peer_evaluation_dashboard(
                     
                     # Calculate average for this evaluation
                     if eval_category_scores:
-                        eval_data_points.append((date_key, eval_date, eval_category_scores))
+                        eval_data_points.append((date_key, eval_label, eval_date, eval_category_scores))
         
         # Convert to trend data points
         # Note: OmzaTrendDataPoint expects specific lowercase fields, so we need to map
@@ -2025,7 +2032,7 @@ def get_peer_evaluation_dashboard(
         }
         
         # Sort by actual date for chronological order
-        for date_key, eval_date, eval_category_scores in sorted(eval_data_points, key=lambda x: x[1]):
+        for date_key, eval_label, eval_date, eval_category_scores in sorted(eval_data_points, key=lambda x: x[2]):
             # Create a flexible mapping - normalize category names to lowercase
             normalized_scores = {}
             for cat_name, cat_scores in eval_category_scores.items():
@@ -2039,6 +2046,7 @@ def get_peer_evaluation_dashboard(
             # Create trend point with available categories, defaulting to 0 for missing ones
             trend_point = OmzaTrendDataPoint(
                 date=date_key,
+                label=eval_label,
                 organiseren=normalized_scores.get('organiseren', 0),
                 meedoen=normalized_scores.get('meedoen', 0),
                 zelfvertrouwen=normalized_scores.get('zelfvertrouwen', 0),

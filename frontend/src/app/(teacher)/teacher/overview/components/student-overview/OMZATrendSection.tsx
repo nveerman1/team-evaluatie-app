@@ -57,7 +57,7 @@ export function OMZATrendSection({ studentId, courseId }: OMZATrendSectionProps)
 
   // Chart configuration
   const chartData = {
-    labels: trendData.map((d) => d.date) || [],
+    labels: trendData.map((d) => d.label) || [],
     datasets: [
       {
         label: "Organiseren",
