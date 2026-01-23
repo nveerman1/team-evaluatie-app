@@ -1993,7 +1993,6 @@ def get_peer_evaluation_dashboard(
                     # Aggregate students' scores for this evaluation
                     # If student_id is provided, only include that student's scores
                     eval_category_scores = defaultdict(list)
-                    # Aggregate all students' scores for this evaluation
                     for stud_id in eval_all_scores:
                         if student_id is not None and stud_id != student_id:
                             continue  # Skip if filtering by student_id and this isn't the target student
