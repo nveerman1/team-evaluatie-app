@@ -1532,7 +1532,11 @@ def get_project_trends(
             ),  # Include published and closed assessments
             ProjectAssessment.is_advisory.is_(False),  # Exclude external assessments
         )
-        .order_by(ProjectAssessment.published_at.asc())
+        .order_by(
+            func.coalesce(
+                ProjectAssessment.published_at, ProjectAssessment.created_at
+            ).asc()
+        )
     )
 
     # Apply filters
