@@ -1512,9 +1512,8 @@ def get_project_trends(
 
     # Query project assessments with scores
     # Join through ProjectAssessmentTeam junction table to match new data model
-    # Use subquery to get distinct assessment IDs (avoids DISTINCT on JSON columns)
-    subquery = (
-        db.query(ProjectAssessment.id)
+    query = (
+        db.query(ProjectAssessment)
         .join(
             ProjectAssessmentTeam,
             ProjectAssessmentTeam.project_assessment_id == ProjectAssessment.id,
@@ -1528,16 +1527,17 @@ def get_project_trends(
             ),  # Include published and closed assessments
             ProjectAssessment.is_advisory.is_(False),  # Exclude external assessments
         )
+        .order_by(ProjectAssessment.published_at.asc())
     )
 
     # Apply filters
     if course_id:
-        subquery = subquery.filter(Project.course_id == course_id)
+        query = query.filter(Project.course_id == course_id)
 
     if school_year:
         try:
             start_year = int(school_year.split("-")[0])
-            subquery = subquery.filter(
+            query = query.filter(
                 or_(
                     func.extract("year", ProjectAssessment.published_at) == start_year,
                     func.extract("year", ProjectAssessment.published_at)
@@ -1547,21 +1547,16 @@ def get_project_trends(
         except (ValueError, IndexError):
             pass
 
-    # Get distinct assessment IDs
-    # Execute the subquery to get a list of IDs
-    assessment_ids = [row[0] for row in subquery.distinct().all()]
+    # Execute query - may return duplicate assessments if multiple teams exist
+    all_results = query.all()
 
-    # If no assessments found, return empty response
-    if not assessment_ids:
-        return ProjectTrendResponse(trend_data=[])
-
-    # Query full assessment objects using the distinct IDs
-    results = (
-        db.query(ProjectAssessment)
-        .filter(ProjectAssessment.id.in_(assessment_ids))
-        .order_by(ProjectAssessment.published_at.asc())
-        .all()
-    )
+    # Deduplicate assessments by ID (maintain order)
+    seen_ids = set()
+    results = []
+    for assessment in all_results:
+        if assessment.id not in seen_ids:
+            seen_ids.add(assessment.id)
+            results.append(assessment)
 
     # Build trend data
     trend_data = []
