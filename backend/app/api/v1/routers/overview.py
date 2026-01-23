@@ -2227,6 +2227,7 @@ def get_peer_evaluation_dashboard(
         # Store data per evaluation project (not per team evaluation record)
         # Group evaluations by project_id to aggregate across teams
         project_eval_map = defaultdict(list)  # project_id -> list of evaluation records
+        eval_data_points = []  # Initialize list to store evaluation data points
         
         for evaluation in sorted_evals:
             eval_date = evaluation.closed_at or evaluation.created_at
@@ -2237,6 +2238,16 @@ def get_peer_evaluation_dashboard(
                 if eval_date >= start_date:
                     # Use the actual evaluation date (day precision) instead of month
                     date_key = eval_date.strftime("%d %b %Y")  # e.g., "15 Dec 2024"
+                    
+                    # Get project name for label
+                    project = (
+                        db.query(Project)
+                        .filter(Project.id == evaluation.project_id)
+                        .first()
+                    )
+                    eval_label = (
+                        project.title if project else f"Evaluatie {evaluation.id}"
+                    )
                     
                     # Use cached scores from batch calculation
                     eval_all_scores = evaluation_scores_cache.get(evaluation.id, {})
@@ -2262,7 +2273,7 @@ def get_peer_evaluation_dashboard(
                     
                     # Calculate average for this evaluation
                     if eval_category_scores:
-                        eval_data_points.append((date_key, eval_date, eval_category_scores))
+                        eval_data_points.append((date_key, eval_label, eval_date, eval_category_scores))
         
         # Convert to trend data points
         # Note: OmzaTrendDataPoint expects specific lowercase fields, so we need to map
