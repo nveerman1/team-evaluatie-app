@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, Search, Award, TrendingUp } from "lucide-react";
+import { Search } from "lucide-react";
 import { fetchWithErrorHandling } from "@/lib/api";
 
 interface StudentOverview {
@@ -143,43 +143,6 @@ export default function OverzichtTab() {
           <p className="text-red-700">{error}</p>
         </div>
       )}
-
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
-          <div className="flex items-center gap-3">
-            <BarChart3 className="h-8 w-8 text-blue-600" />
-            <div>
-              <p className="text-sm text-gray-600">Totaal studenten</p>
-              <p className="text-2xl font-semibold">{students.length}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
-          <div className="flex items-center gap-3">
-            <TrendingUp className="h-8 w-8 text-green-600" />
-            <div>
-              <p className="text-sm text-gray-600">Gemiddeld lesblokken</p>
-              <p className="text-2xl font-semibold">
-                {students.length > 0
-                  ? (students.reduce((sum, s) => sum + s.lesson_blocks, 0) / students.length).toFixed(1)
-                  : "0"}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-6">
-          <div className="flex items-center gap-3">
-            <Award className="h-8 w-8 text-purple-600" />
-            <div>
-              <p className="text-sm text-gray-600">Meeste lesblokken</p>
-              <p className="text-2xl font-semibold">
-                {students.length > 0 ? students[0].lesson_blocks : "0"}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Filters */}
       <div className="bg-white rounded-xl border border-gray-200/80 shadow-sm p-4">

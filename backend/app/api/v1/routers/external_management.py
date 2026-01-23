@@ -673,10 +673,12 @@ def get_external_advisory_detail(
         raise HTTPException(status_code=404, detail="External evaluator not found")
 
     # Get external assessment
+    # Note: Since groups table was dropped, we query by project_id instead of group_id
+    # The external assessment is associated with the project, not a specific group
     assessment = (
         db.query(ProjectAssessment)
         .filter(
-            ProjectAssessment.group_id == group_id,
+            ProjectAssessment.project_id == link.project_id,
             ProjectAssessment.external_evaluator_id == link.external_evaluator_id,
             ProjectAssessment.role == "EXTERNAL",
         )
@@ -694,10 +696,13 @@ def get_external_advisory_detail(
         raise HTTPException(status_code=404, detail="Rubric not found")
 
     # Get scores with criterion info
-    # Note: Scores are associated with the assessment which is already scoped to the evaluator/team
+    # Filter by team_number to get scores for this specific team
     scores = (
         db.query(ProjectAssessmentScore)
-        .filter(ProjectAssessmentScore.assessment_id == assessment.id)
+        .filter(
+            ProjectAssessmentScore.assessment_id == assessment.id,
+            ProjectAssessmentScore.team_number == team_number,
+        )
         .all()
     )
 
@@ -719,8 +724,8 @@ def get_external_advisory_detail(
     if assessment.metadata_json:
         general_comment = assessment.metadata_json.get("general_comment")
 
-    # Construct team name - use "Team X" format when team_number is provided, otherwise use group name
-    team_display_name = f"Team {team_number}" if team_number is not None else group.name
+    # Construct team name - use "Team X" format when team_number is provided
+    team_display_name = f"Team {team_number}" if team_number is not None else f"Team {team_number}"
 
     return ExternalAdvisoryDetail(
         team_id=group_id,
