@@ -112,13 +112,13 @@ python -m backend.scripts.seed_smoke_test
 
 📚 Zie [docs/SEEDING.md](docs/SEEDING.md) voor complete seeding documentatie.
 
+### Somtoday Integration (Planned)
+
 Voorbereiding voor integratie met Somtoday:
 - OAuth2 authenticatie
 - Import van klassen en studenten
 - Export van cijfers
 - Zie [docs/architecture.md](docs/architecture.md) voor details
-
-📚 Zie [docs/FEEDBACK_SUMMARY.md](docs/FEEDBACK_SUMMARY.md) voor gedetailleerde setup instructies.
 
 ## Configuration
 
@@ -155,7 +155,7 @@ OLLAMA_MODEL=llama3.1                   # Default: llama3.1
 OLLAMA_TIMEOUT=10.0                     # Default: 10 seconds
 ```
 
-See [docs/FEEDBACK_SUMMARY.md](docs/FEEDBACK_SUMMARY.md) for detailed setup instructions.
+See [docs/ASYNC_SUMMARY_GENERATION.md](docs/ASYNC_SUMMARY_GENERATION.md) for detailed setup instructions.
 
 ## Getting Started
 
