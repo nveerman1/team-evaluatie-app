@@ -21,6 +21,7 @@ Options:
 import argparse
 import sys
 import subprocess
+import secrets
 from pathlib import Path
 from datetime import datetime, date, timedelta
 
@@ -1064,6 +1065,12 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             evaluator = external_evaluators[idx % len(external_evaluators)]
             project_pts = [pt for pt in project_teams if pt.project_id == project.id]
             
+            # Find the teacher assessment for this project
+            teacher_assessment = next((a for a in assessments if a.project_id == project.id), None)
+            if not teacher_assessment:
+                print_warning(f"No teacher assessment found for project {project.id}, skipping external assessment")
+                continue
+            
             # Create external assessment
             external_assessment = create_instance(
                 ProjectAssessment,
@@ -1116,13 +1123,29 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             # Create external team link for invitation tracking
             for pt in project_pts:
                 # Generate a unique token for external access
-                import secrets
                 token = secrets.token_urlsafe(32)
                 
-                # Note: ProjectTeamExternal uses group_id, but we'll link via assessment_id
-                # This might need adjustment based on actual schema requirements
-                # For now, skip creating ProjectTeamExternal if group_id is required
-                # as groups have been replaced by project teams
+                # Create ProjectTeamExternal to link evaluator to team
+                # NOTE: assessment_id should point to the TEACHER's assessment, not the external assessment
+                # This is because the external tab is accessed via /teacher/project-assessments/{teacher_assessment_id}/external
+                # NOTE: group_id uses pt.id since the groups table was dropped but the column still exists (FK constraint removed)
+                pte = create_instance(
+                    ProjectTeamExternal,
+                    school_id=school.id,
+                    group_id=pt.id,  # Use project_team.id as placeholder (groups table no longer exists)
+                    external_evaluator_id=evaluator.id,
+                    project_id=project.id,
+                    assessment_id=teacher_assessment.id,  # Link to TEACHER assessment, not external assessment
+                    team_number=pt.team_number,
+                    invitation_token=token,
+                    token_expires_at=datetime.utcnow() + timedelta(days=90),
+                    status="SUBMITTED",  # Mark as submitted since scores are already added
+                    invited_at=datetime.utcnow(),
+                    submitted_at=datetime.utcnow(),
+                )
+                db.add(pte)
+            
+            db.commit()
         
         print_success(f"Created {external_assessments_count} external assessments")
         print_info(f"Created {external_scores_count} external scores")
