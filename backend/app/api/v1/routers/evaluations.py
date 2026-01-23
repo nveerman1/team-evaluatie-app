@@ -5,7 +5,7 @@ import io
 import csv
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session, aliased
 from starlette.responses import StreamingResponse
 
@@ -296,24 +296,31 @@ def list_evaluations(
         stmt = stmt.where(Evaluation.course_id == course_id)
     if evaluation_type:
         stmt = stmt.where(Evaluation.evaluation_type == evaluation_type)
-    stmt = stmt.order_by(Evaluation.id.desc()).limit(limit).offset((page - 1) * limit)
-    rows = db.execute(stmt).scalars().all()
     
-    # Deduplicate evaluations by project_id - only show one evaluation per project
-    # When multiple evaluations exist for the same project, keep the most recent one (highest ID)
+    # Order by ID descending to get most recent evaluations first
+    stmt = stmt.order_by(Evaluation.id.desc())
+    
+    # Fetch more rows than requested to account for deduplication
+    # This ensures we have enough unique projects after deduplication
+    fetch_limit = limit * 3  # Fetch 3x the requested amount
+    rows = db.execute(stmt.limit(fetch_limit).offset((page - 1) * limit)).scalars().all()
+    
+    # Deduplicate by project_id - keep only the first (most recent) evaluation for each project
     seen_projects = set()
-    deduplicated_rows = []
+    deduplicated = []
     for ev in rows:
-        # If evaluation has no project_id, always include it
+        # Always include evaluations without a project_id
         if ev.project_id is None:
-            deduplicated_rows.append(ev)
-        # If we haven't seen this project_id yet, include this evaluation
+            deduplicated.append(ev)
+        # Include this evaluation if we haven't seen its project yet
         elif ev.project_id not in seen_projects:
             seen_projects.add(ev.project_id)
-            deduplicated_rows.append(ev)
-        # Otherwise skip this evaluation as we already have one for this project
+            deduplicated.append(ev)
+        # Stop once we have enough items
+        if len(deduplicated) >= limit:
+            break
     
-    return [_to_out(ev) for ev in deduplicated_rows]
+    return [_to_out(ev) for ev in deduplicated]
 
 
 @router.patch("/{evaluation_id}/status", response_model=EvaluationOut)
