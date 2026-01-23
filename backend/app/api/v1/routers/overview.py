@@ -1510,6 +1510,11 @@ def get_project_trends(
     """
     school_id = current_user.school_id
 
+    logging.info(
+        f"[TRENDS] Starting get_project_trends - school_id={school_id}, "
+        f"course_id={course_id}, school_year={school_year}"
+    )
+
     # Query project assessments with scores
     # Join through ProjectAssessmentTeam junction table to match new data model
     query = (
@@ -1544,11 +1549,18 @@ def get_project_trends(
                     == start_year + 1,
                 )
             )
+            logging.info(
+                f"[TRENDS] Filtering by school_year: {school_year} (start_year={start_year})"
+            )
         except (ValueError, IndexError):
+            logging.warning(f"[TRENDS] Invalid school_year format: {school_year}")
             pass
 
     # Execute query - may return duplicate assessments if multiple teams exist
     all_results = query.all()
+    logging.info(
+        f"[TRENDS] Query returned {len(all_results)} results (before deduplication)"
+    )
 
     # Deduplicate assessments by ID (maintain order)
     seen_ids = set()
@@ -1558,15 +1570,26 @@ def get_project_trends(
             seen_ids.add(assessment.id)
             results.append(assessment)
 
+    logging.info(f"[TRENDS] After deduplication: {len(results)} unique assessments")
+
     # Build trend data
     trend_data = []
+    skipped_no_published = 0
+    skipped_no_rubric = 0
+    skipped_no_scores = 0
+
     for assessment in results:
         if not assessment.published_at:
+            skipped_no_published += 1
             continue
 
         # Get rubric
         rubric = db.query(Rubric).filter(Rubric.id == assessment.rubric_id).first()
         if not rubric:
+            skipped_no_rubric += 1
+            logging.warning(
+                f"[TRENDS] Assessment {assessment.id} has no rubric (rubric_id={assessment.rubric_id})"
+            )
             continue
 
         # Get scores (only with team numbers)
@@ -1580,7 +1603,15 @@ def get_project_trends(
         )
 
         if not all_scores:
+            skipped_no_scores += 1
+            logging.warning(
+                f"[TRENDS] Assessment {assessment.id} ({assessment.title}) has no scores"
+            )
             continue
+
+        logging.info(
+            f"[TRENDS] Processing assessment {assessment.id} ({assessment.title}) with {len(all_scores)} scores"
+        )
 
         # Get criteria
         criteria = (
@@ -1650,6 +1681,17 @@ def get_project_trends(
                 statistics=statistics,
             )
         )
+
+        logging.info(
+            f"[TRENDS] Added trend data for assessment {assessment.id}: "
+            f"label='{project_label}', scores={scores}"
+        )
+
+    logging.info(
+        f"[TRENDS] Completed - returning {len(trend_data)} trend data points. "
+        f"Skipped: no_published={skipped_no_published}, no_rubric={skipped_no_rubric}, "
+        f"no_scores={skipped_no_scores}"
+    )
 
     return ProjectTrendResponse(trend_data=trend_data)
 
