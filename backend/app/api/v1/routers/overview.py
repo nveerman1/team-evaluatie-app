@@ -1998,11 +1998,7 @@ def get_peer_evaluation_dashboard(
                             continue  # Skip if filtering by student_id and this isn't the target student
                         
                         student_omza = eval_all_scores[stud_id]
-                        # Add peer scores to this evaluation's aggregation (use actual category names from rubric)
-                    # Aggregate all students' scores for this evaluation/month
-                    for student_id in eval_all_scores:
-                        student_omza = eval_all_scores[student_id]
-                        # Add scores to monthly aggregation (use actual category names from rubric)
+                        # Add scores to evaluation aggregation (use actual category names from rubric)
                         # Use peer scores if available, otherwise fall back to self scores
                         for cat_name in student_omza.keys():
                             peer_score = student_omza.get(cat_name, {}).get("peer")
@@ -2011,12 +2007,11 @@ def get_peer_evaluation_dashboard(
                             score = peer_score if peer_score is not None else self_score
                             if score is not None:
                                 # Use the actual category name from the rubric
-                                eval_category_scores[cat_name].append(float(peer_score))
+                                eval_category_scores[cat_name].append(float(score))
                     
                     # Calculate average for this evaluation
                     if eval_category_scores:
                         eval_data_points.append((date_key, eval_date, eval_category_scores))
-                                monthly_data[month_key][cat_name].append(float(score))
         
         # Convert to trend data points
         # Note: OmzaTrendDataPoint expects specific lowercase fields, so we need to map
