@@ -153,6 +153,7 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
         pointBorderColor: "#fff",
         pointHoverBackgroundColor: "#fff",
         pointHoverBorderColor: "rgba(59, 130, 246, 1)",
+        spanGaps: true, // Connect points across null values to show filled area
       },
     ],
   };
@@ -164,7 +165,7 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
       r: {
         beginAtZero: true,
         min: 0,
-        max: 4,
+        max: 5,
         ticks: {
           stepSize: 1,
         },
