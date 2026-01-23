@@ -2014,6 +2014,13 @@ def get_peer_evaluation_dashboard(
         )
         evaluation_scores_cache[evaluation.id] = batch_scores
 
+    # Batch load all projects to avoid N+1 queries
+    project_ids = list(set([e.project_id for e in evaluations if e.project_id]))
+    projects_cache = {}
+    if project_ids:
+        projects = db.query(Project).filter(Project.id.in_(project_ids)).all()
+        projects_cache = {p.id: p for p in projects}
+
     for student in students:
         student_scores = {}
         self_scores = {}
@@ -2107,12 +2114,8 @@ def get_peer_evaluation_dashboard(
         student_evaluations = []
         if evaluations:
             for evaluation in evaluations:
-                # Get project name
-                project = (
-                    db.query(Project)
-                    .filter(Project.id == evaluation.project_id)
-                    .first()
-                )
+                # Get project name from cache
+                project = projects_cache.get(evaluation.project_id)
                 project_name = (
                     project.title if project else f"Evaluatie {evaluation.id}"
                 )
@@ -2239,12 +2242,8 @@ def get_peer_evaluation_dashboard(
                     # Use the actual evaluation date (day precision) instead of month
                     date_key = eval_date.strftime("%d %b %Y")  # e.g., "15 Dec 2024"
                     
-                    # Get project name for label
-                    project = (
-                        db.query(Project)
-                        .filter(Project.id == evaluation.project_id)
-                        .first()
-                    )
+                    # Get project name for label from cache
+                    project = projects_cache.get(evaluation.project_id)
                     eval_label = (
                         project.title if project else f"Evaluatie {evaluation.id}"
                     )
