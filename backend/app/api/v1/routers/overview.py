@@ -1548,12 +1548,17 @@ def get_project_trends(
             pass
 
     # Get distinct assessment IDs
-    subquery = subquery.distinct().subquery()
+    # Execute the subquery to get a list of IDs
+    assessment_ids = [row[0] for row in subquery.distinct().all()]
+
+    # If no assessments found, return empty response
+    if not assessment_ids:
+        return ProjectTrendResponse(trend_data=[])
 
     # Query full assessment objects using the distinct IDs
     results = (
         db.query(ProjectAssessment)
-        .filter(ProjectAssessment.id.in_(subquery))
+        .filter(ProjectAssessment.id.in_(assessment_ids))
         .order_by(ProjectAssessment.published_at.asc())
         .all()
     )
