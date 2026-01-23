@@ -235,27 +235,57 @@ Use Azure AD (Office 365) authentication. See [AZURE_AD_SETUP.md](AZURE_AD_SETUP
 
 ## Documentation
 
-- [Azure AD Setup](AZURE_AD_SETUP.md) - Office 365 authentication configuration
-- [Architecture](docs/architecture.md) - Multi-tenant architecture, data model, RBAC
-- [Migration Notes](MIGRATION_NOTES.md) - Database migration guide
-- [Feedback Summary](docs/FEEDBACK_SUMMARY.md) - AI feedback configuration
-- [Redis Worker Stability](docs/REDIS_WORKER_STABILITY.md) - RQ worker connection troubleshooting and monitoring
-- [API Documentation](http://localhost:8000/docs) - Interactive API docs (when running)
+### 📚 Core Documentation
+
+- **[Architecture Overview](docs/architecture.md)** - Multi-tenant architecture, data model, and RBAC
+- **[Code Structure](docs/code_structure.md)** - Codebase organization and conventions
+- **[API Documentation](docs/api_docs.md)** - REST API reference with TypeScript/Python examples
+- **[Testing Guide](docs/testing.md)** - Testing strategies for backend and frontend
+- **[CI/CD Guide](docs/ci_cd.md)** - GitHub Actions workflows and automation
+
+### 🚀 Deployment & Operations
+
+- **[Deployment Guide](docs/deployment.md)** - All deployment methods (Docker, VPS, manual)
+- **[Production Deployment](docs/PRODUCTION_DEPLOYMENT.md)** - Complete VPS setup guide
+- **[Operations Guide](docs/OPERATIONS.md)** - Day-to-day operations and maintenance
+- **[Rollback Procedures](docs/ROLLBACK.md)** - Emergency rollback guide
+
+### 🔐 Security & Authentication
+
+- **[Security Guide](SECURITY.md)** - Security best practices and hardening
+- **[Security Checklist](SECURITY_CHECKLIST.md)** - Pre-deployment security checklist
+- **[Security Roadmap](SECURITY_ROADMAP.md)** - Security improvements roadmap
+- **[Azure AD Setup](docs/AZURE_AD_SETUP.md)** - Office 365 authentication configuration
+
+### 🛠️ Feature-Specific Documentation
+
+- **[Seeding Guide](docs/SEEDING.md)** - Database seeding for development and testing
+- **[Async Summaries](docs/ASYNC_SUMMARY_GENERATION.md)** - AI feedback summary configuration
+- **[Redis Worker](docs/REDIS_WORKER_STABILITY.md)** - RQ worker troubleshooting
+- **[Cookie Authentication](docs/COOKIE_AUTHENTICATION.md)** - Session management
+- **[CSRF Quick Start](CSRF_QUICK_START.md)** - CSRF protection implementation
+
+### 🔍 Additional Resources
+
+- **[Interactive API Docs](http://localhost:8000/docs)** - Swagger UI (when running locally)
+- **[Archive](docs/archive/)** - Historical documentation and implementation notes
 
 ## API Endpoints
 
-### Core Endpoints
+### Quick Reference
+
+- `/api/v1/auth/*` - Authentication (Azure AD, dev-login, JWT)
 - `/api/v1/courses` - Course management (CRUD, teacher assignment)
-- `/api/v1/evaluations` - Evaluation management
+- `/api/v1/projects` - Project and team management
+- `/api/v1/evaluations` - Evaluation lifecycle management
 - `/api/v1/scores` - Score submission and retrieval
 - `/api/v1/grades` - Grade calculation and publishing
-- `/api/v1/auth` - Authentication
 - `/api/v1/rubrics` - Rubric management
-
-### Integration Endpoints
+- `/api/v1/users` - User management
+- `/api/v1/feedback-summary` - AI-powered feedback summaries
 - `/api/v1/integrations/somtoday/*` - Somtoday integration (placeholder)
 
-See [docs/architecture.md](docs/architecture.md) for complete API documentation.
+For complete API documentation with request/response examples in TypeScript and Python, see **[API Documentation](docs/api_docs.md)**.
 
 ## Development
 
@@ -267,6 +297,9 @@ cd backend
 # Run all tests
 pytest
 
+# Run with coverage
+pytest --cov=app --cov-report=html
+
 # Run specific test file
 pytest tests/test_job_enhancements.py -v
 
@@ -274,7 +307,7 @@ pytest tests/test_job_enhancements.py -v
 pytest tests/test_job_enhancements.py::TestJobProgressTracking -v
 ```
 
-Note: The `tests/conftest.py` file automatically sets up the Python path for imports.
+For comprehensive testing documentation, see **[Testing Guide](docs/testing.md)**.
 
 ### Database Migrations
 
@@ -303,18 +336,20 @@ black .
 ruff check .
 
 # Type checking
-mypy .
+mypy app
 
 # Security audit
 bandit -r app/
 pip-audit
 ```
 
+These checks run automatically in CI. See **[CI/CD Guide](docs/ci_cd.md)** for details.
+
 ## Deployment
 
 ### Production Deployment
 
-Complete guide for deploying to a TransIP VPS with Docker Compose, Nginx, and SSL.
+Complete guide for deploying to a VPS with Docker Compose, Nginx, and SSL.
 
 **Quick Start:**
 
@@ -335,12 +370,13 @@ docker compose -f ops/docker/compose.prod.yml up -d
 docker compose -f ops/docker/compose.prod.yml run --rm certbot certonly ...
 ```
 
-**Documentation:**
+**📚 Deployment Documentation:**
 
-- 📘 [Production Deployment Guide](docs/PRODUCTION_DEPLOYMENT.md) - Complete deployment runbook
-- 🔧 [Operations Guide](docs/OPERATIONS.md) - Day-to-day operations and maintenance
-- 🔄 [Rollback Procedures](docs/ROLLBACK.md) - Emergency rollback guide
-- 🔒 [Security Hardening](docs/SECURITY_HARDENING.md) - Security best practices
+- **[Deployment Overview](docs/deployment.md)** - All deployment methods and architectures
+- **[Production Deployment](docs/PRODUCTION_DEPLOYMENT.md)** - Complete VPS setup guide
+- **[Operations Guide](docs/OPERATIONS.md)** - Day-to-day operations and maintenance
+- **[Rollback Procedures](docs/ROLLBACK.md)** - Emergency rollback guide
+- **[CI/CD Guide](docs/ci_cd.md)** - Automated deployment with GitHub Actions
 
 **Architecture:**
 
@@ -363,18 +399,14 @@ docker compose -f ops/docker/compose.prod.yml run --rm certbot certonly ...
 - ✅ GitHub Actions CI/CD pipeline
 - ✅ Comprehensive logging and monitoring
 
-See [docs/PRODUCTION_DEPLOYMENT.md](docs/PRODUCTION_DEPLOYMENT.md) for detailed instructions.
-
 ## Contributing
 
 1. Create a feature branch
 2. Make your changes
-3. Write tests
+3. Write tests (see [Testing Guide](docs/testing.md))
 4. Ensure all tests pass
 5. Submit a pull request
 
 ## License
 
 This project is licensed under the MIT License.
-
-See [docs/FEEDBACK_SUMMARY.md](docs/FEEDBACK_SUMMARY.md) for detailed setup instructions.
