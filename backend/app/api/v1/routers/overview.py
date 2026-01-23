@@ -1577,8 +1577,13 @@ def get_project_trends(
     skipped_no_scores = 0
 
     for assessment in results:
-        if not assessment.published_at:
+        # Use published_at if available, otherwise fall back to created_at
+        date_for_sorting = assessment.published_at or assessment.created_at
+        if not date_for_sorting:
             skipped_no_published += 1
+            print(
+                f"[TRENDS] Assessment {assessment.id} has no published_at or created_at"
+            )
             continue
 
         # Get rubric
@@ -1657,9 +1662,9 @@ def get_project_trends(
                 scores[cat] = round(sum(grades) / len(grades), 1)
                 statistics[cat] = _calculate_statistics(grades)
 
-        # Create label
-        month = assessment.published_at.month
-        year = assessment.published_at.year
+        # Create label using published_at if available, otherwise created_at
+        month = date_for_sorting.month
+        year = date_for_sorting.year
         if month <= 3:
             quarter = "Q1"
         elif month <= 6:
