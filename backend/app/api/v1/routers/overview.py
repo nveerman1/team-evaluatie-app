@@ -1673,6 +1673,7 @@ def get_peer_evaluation_dashboard(
     project_id: Optional[int] = Query(None),
     period: str = Query("6months"),  # "3months" | "6months" | "year"
     student_name: Optional[str] = Query(None),
+    student_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -1687,6 +1688,7 @@ def get_peer_evaluation_dashboard(
     - project_id: Filter by specific project
     - period: Time period for trends (3months, 6months, year)
     - student_name: Filter by student name
+    - student_id: Filter by specific student ID (for trend data)
     """
     from datetime import datetime, timedelta
     from collections import defaultdict
@@ -1961,7 +1963,7 @@ def get_peer_evaluation_dashboard(
         else:
             logger.warning(f"Student {student.name} (id={student.id}) has no scores, not adding to heatmap. all_categories={sorted(all_categories)}")
     
-    # Calculate trend data - group evaluations by month
+    # Calculate trend data - use individual evaluation dates instead of grouping by month
     trend_data = []
     if evaluations:
         # Sort evaluations by closed_at or created_at
@@ -1970,9 +1972,9 @@ def get_peer_evaluation_dashboard(
             key=lambda e: e.closed_at or e.created_at
         )
         
-        # Group by month
+        # Store data per evaluation (not grouped by month)
         from datetime import datetime
-        monthly_data = defaultdict(lambda: defaultdict(list))
+        eval_data_points = []
         
         for evaluation in sorted_evals:
             eval_date = evaluation.closed_at or evaluation.created_at
@@ -1982,11 +1984,21 @@ def get_peer_evaluation_dashboard(
                     eval_date = eval_date.replace(tzinfo=None)
                 
                 if eval_date >= start_date:
-                    month_key = eval_date.strftime("%b %Y")  # e.g., "Dec 2024"
+                    # Use the actual evaluation date (day precision) instead of month
+                    date_key = eval_date.strftime("%d %b %Y")  # e.g., "15 Dec 2024"
                     
                     # Use cached scores from batch calculation
                     eval_all_scores = evaluation_scores_cache.get(evaluation.id, {})
                     
+                    # Aggregate students' scores for this evaluation
+                    # If student_id is provided, only include that student's scores
+                    eval_category_scores = defaultdict(list)
+                    for stud_id in eval_all_scores:
+                        if student_id is not None and stud_id != student_id:
+                            continue  # Skip if filtering by student_id and this isn't the target student
+                        
+                        student_omza = eval_all_scores[stud_id]
+                        # Add peer scores to this evaluation's aggregation (use actual category names from rubric)
                     # Aggregate all students' scores for this evaluation/month
                     for student_id in eval_all_scores:
                         student_omza = eval_all_scores[student_id]
@@ -1999,6 +2011,11 @@ def get_peer_evaluation_dashboard(
                             score = peer_score if peer_score is not None else self_score
                             if score is not None:
                                 # Use the actual category name from the rubric
+                                eval_category_scores[cat_name].append(float(peer_score))
+                    
+                    # Calculate average for this evaluation
+                    if eval_category_scores:
+                        eval_data_points.append((date_key, eval_date, eval_category_scores))
                                 monthly_data[month_key][cat_name].append(float(score))
         
         # Convert to trend data points
@@ -2012,12 +2029,11 @@ def get_peer_evaluation_dashboard(
             "A": "autonomie",
         }
         
-        for month_key in sorted(monthly_data.keys(), key=lambda x: datetime.strptime(x, "%b %Y")):
-            scores = monthly_data[month_key]
-            
+        # Sort by actual date for chronological order
+        for date_key, eval_date, eval_category_scores in sorted(eval_data_points, key=lambda x: x[1]):
             # Create a flexible mapping - normalize category names to lowercase
             normalized_scores = {}
-            for cat_name, cat_scores in scores.items():
+            for cat_name, cat_scores in eval_category_scores.items():
                 # Check if it's a short code, otherwise use lowercase
                 normalized_key = short_code_to_full.get(cat_name, cat_name.lower())
                 if cat_scores:
@@ -2027,7 +2043,7 @@ def get_peer_evaluation_dashboard(
             
             # Create trend point with available categories, defaulting to 0 for missing ones
             trend_point = OmzaTrendDataPoint(
-                date=month_key,
+                date=date_key,
                 organiseren=normalized_scores.get('organiseren', 0),
                 meedoen=normalized_scores.get('meedoen', 0),
                 zelfvertrouwen=normalized_scores.get('zelfvertrouwen', 0),

@@ -5,6 +5,7 @@ export type PeerOverviewFilters = {
   projectId?: number;
   period?: "3months" | "6months" | "year";
   studentName?: string;
+  studentId?: number;
 };
 
 export type FeedbackFilters = {
@@ -171,6 +172,7 @@ export const peerEvaluationOverviewService = {
     if (filters?.projectId) params.set("project_id", String(filters.projectId));
     if (filters?.period) params.set("period", filters.period);
     if (filters?.studentName) params.set("student_name", filters.studentName);
+    if (filters?.studentId) params.set("student_id", String(filters.studentId));
     
     const { data } = await api.get<PeerOverviewDashboardResponse>(
       `/overview/peer-evaluations/dashboard?${params.toString()}`
