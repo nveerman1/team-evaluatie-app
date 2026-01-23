@@ -44,7 +44,7 @@ NEXT_PUBLIC_ENABLE_DEV_LOGIN=true  # Show dev-login UI in development
    - `docent@school.nl` → redirects to `/teacher`
    - `student1@school.nl` → redirects to `/student`
 
-See [AZURE_AD_SETUP.md](AZURE_AD_SETUP.md) for detailed authentication configuration.
+See [docs/AZURE_AD_SETUP.md](docs/AZURE_AD_SETUP.md) for detailed authentication configuration.
 
 ### Multi-Tenant & Multi-Course Architecture
 - **Multi-school support**: Volledig gescheiden data per school
@@ -90,7 +90,7 @@ Automatisch gegenereerde samenvattingen van peer-feedback met:
 
 📚 Zie [docs/ASYNC_SUMMARY_GENERATION.md](docs/ASYNC_SUMMARY_GENERATION.md) voor gedetailleerde setup instructies.
 
-📚 Zie [docs/REDIS_WORKER_STABILITY.md](docs/REDIS_WORKER_STABILITY.md) voor worker troubleshooting en monitoring.
+📚 Voor worker troubleshooting en monitoring, zie de [Operations Guide](docs/OPERATIONS.md).
 
 ### Database Seeding
 Comprehensive seeding system for development and testing:
@@ -231,7 +231,7 @@ After running the seed script:
 
 **Production Mode (NODE_ENV=production):**
 
-Use Azure AD (Office 365) authentication. See [AZURE_AD_SETUP.md](AZURE_AD_SETUP.md) for configuration.
+Use Azure AD (Office 365) authentication. See [docs/AZURE_AD_SETUP.md](docs/AZURE_AD_SETUP.md) for configuration.
 
 ## Documentation
 
