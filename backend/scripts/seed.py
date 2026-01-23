@@ -1065,6 +1065,12 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             evaluator = external_evaluators[idx % len(external_evaluators)]
             project_pts = [pt for pt in project_teams if pt.project_id == project.id]
             
+            # Find the teacher assessment for this project
+            teacher_assessment = next((a for a in assessments if a.project_id == project.id), None)
+            if not teacher_assessment:
+                print_warning(f"No teacher assessment found for project {project.id}, skipping external assessment")
+                continue
+            
             # Create external assessment
             external_assessment = create_instance(
                 ProjectAssessment,
@@ -1124,13 +1130,15 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                 token = secrets.token_urlsafe(32)
                 
                 # Create ProjectTeamExternal to link evaluator to team
+                # NOTE: assessment_id should point to the TEACHER's assessment, not the external assessment
+                # This is because the external tab is accessed via /teacher/project-assessments/{teacher_assessment_id}/external
                 pte = create_instance(
                     ProjectTeamExternal,
                     school_id=school.id,
                     group_id=pt.team_id,  # Reference to the group (legacy field)
                     external_evaluator_id=evaluator.id,
                     project_id=project.id,
-                    assessment_id=external_assessment.id,
+                    assessment_id=teacher_assessment.id,  # Link to TEACHER assessment, not external assessment
                     team_number=pt.team_number,
                     invitation_token=token,
                     token_expires_at=datetime.utcnow() + timedelta(days=90),
