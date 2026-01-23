@@ -42,6 +42,7 @@ from app.infra.db.models import (
     Course,
     TeacherCourse,
     CourseEnrollment,
+    Group,
     Project,
     ProjectTeam,
     ProjectTeamMember,
@@ -658,6 +659,33 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     )
     print_info(f"All {len(student_objs)} students are assigned to teams in each of the {len(projects)} projects")
 
+    # 6. Create Groups for Project Teams (required for ProjectTeamExternal)
+    # Groups are legacy but still needed for external assessments
+    print("\n--- Creating Groups for External Assessments ---")
+    groups = []
+    for pt in project_teams:
+        group = create_instance(
+            Group,
+            school_id=school.id,
+            course_id=course.id,
+            name=pt.display_name_at_time,
+            team_number=pt.team_number,
+        )
+        db.add(group)
+        groups.append(group)
+    
+    db.commit()
+    
+    # Refresh groups and link them to project teams
+    for idx, group in enumerate(groups):
+        db.refresh(group)
+        # Link the group to the corresponding project team
+        project_teams[idx].team_id = group.id
+    
+    db.commit()
+    
+    print_success(f"Created {len(groups)} groups and linked to project teams")
+
     # 7. Create Rubrics with Criteria from Templates
     print("\n--- Creating Rubrics ---")
 
@@ -1122,10 +1150,6 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             
             # Create external team link for invitation tracking
             for pt in project_pts:
-                # Skip if team doesn't have a group (legacy) reference
-                if not pt.team_id:
-                    continue
-                
                 # Generate a unique token for external access
                 token = secrets.token_urlsafe(32)
                 
@@ -1135,7 +1159,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                 pte = create_instance(
                     ProjectTeamExternal,
                     school_id=school.id,
-                    group_id=pt.team_id,  # Reference to the group (legacy field)
+                    group_id=pt.team_id,  # Reference to the group created for this project team
                     external_evaluator_id=evaluator.id,
                     project_id=project.id,
                     assessment_id=teacher_assessment.id,  # Link to TEACHER assessment, not external assessment
