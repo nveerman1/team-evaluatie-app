@@ -25,7 +25,7 @@ Usage:
 import time
 import sys
 import logging
-from typing import Optional, Dict
+from typing import Dict
 import requests
 from mfrc522 import SimpleMFRC522
 
@@ -101,7 +101,13 @@ class FeedbackController:
                 self.led_enabled = False
     
     def beep(self, duration: float = 0.1, count: int = 1):
-        """Sound the buzzer"""
+        """
+        Sound the buzzer
+        
+        Args:
+            duration: Duration of each beep in seconds (default: 0.1)
+            count: Number of beeps (default: 1)
+        """
         if not self.buzzer_enabled:
             return
         
@@ -192,7 +198,7 @@ class RFIDScanner:
         elapsed = time.time() - self.last_scan_time[uid]
         return elapsed < SCAN_COOLDOWN_SECONDS
     
-    def send_scan_to_api(self, uid: str) -> Optional[Dict]:
+    def send_scan_to_api(self, uid: str) -> Dict | None:
         """Send RFID scan to backend API with retry logic"""
         payload = {"uid": uid}
         

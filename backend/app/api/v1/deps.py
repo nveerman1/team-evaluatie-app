@@ -13,6 +13,9 @@ logger = logging.getLogger(__name__)
 # Optional bearer token scheme (for backwards compatibility)
 bearer_scheme = HTTPBearer(auto_error=False)
 
+# Constants
+KEY_PREVIEW_LENGTH = 8  # Number of characters to show in logs for API key preview
+
 
 def get_db():
     db = SessionLocal()
@@ -268,7 +271,7 @@ async def verify_rfid_api_key(
     # Validate API key
     if x_api_key not in valid_keys:
         # Safely truncate key for logging (handle short keys)
-        key_preview = x_api_key[:min(8, len(x_api_key))] if x_api_key else ""
+        key_preview = x_api_key[:min(KEY_PREVIEW_LENGTH, len(x_api_key))] if x_api_key else ""
         logger.warning(
             f"RFID scan attempt with invalid API key. "
             f"Key prefix: {key_preview}..."
