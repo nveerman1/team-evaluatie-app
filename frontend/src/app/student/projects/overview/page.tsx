@@ -83,45 +83,45 @@ export default function ProjectOverviewPage() {
     });
     const avgGrade = gradeCount > 0 ? totalGrade / gradeCount : 0;
     
-    // Calculate category averages from criterion scores
-    const categorySums: Record<string, number> = {};
-    const categoryCounts: Record<string, number> = {};
+    // Calculate category weighted averages from criterion scores
+    const categoryWeightedSums: Record<string, number> = {};
+    const categoryWeights: Record<string, number> = {};
     
     // Calculate per-assessment category scores
     const assessmentCategoryScores = new Map<number, Record<string, { avg: number; max: number }>>();
     
     projectDetails.forEach((detail, assessmentId) => {
-      const categoryData: Record<string, { sum: number; count: number; max: number }> = {};
+      const categoryData: Record<string, { weightedSum: number; weight: number; max: number }> = {};
       
-      // Group scores by category
+      // Group scores by category using weighted average
       detail.criteria.forEach((criterion) => {
         if (criterion.category) {
           const score = detail.scores.find(s => s.criterion_id === criterion.id);
           if (score) {
-            // Add to global category averages
-            if (!categorySums[criterion.category]) {
-              categorySums[criterion.category] = 0;
-              categoryCounts[criterion.category] = 0;
+            // Add to global category weighted averages
+            if (!categoryWeightedSums[criterion.category]) {
+              categoryWeightedSums[criterion.category] = 0;
+              categoryWeights[criterion.category] = 0;
             }
-            categorySums[criterion.category] += score.score;
-            categoryCounts[criterion.category]++;
+            categoryWeightedSums[criterion.category] += score.score * criterion.weight;
+            categoryWeights[criterion.category] += criterion.weight;
             
             // Add to per-assessment category scores
             if (!categoryData[criterion.category]) {
-              categoryData[criterion.category] = { sum: 0, count: 0, max: detail.rubric_scale_max };
+              categoryData[criterion.category] = { weightedSum: 0, weight: 0, max: detail.rubric_scale_max };
             }
-            categoryData[criterion.category].sum += score.score;
-            categoryData[criterion.category].count++;
+            categoryData[criterion.category].weightedSum += score.score * criterion.weight;
+            categoryData[criterion.category].weight += criterion.weight;
           }
         }
       });
       
-      // Calculate averages for this assessment
+      // Calculate weighted averages for this assessment
       const assessmentScores: Record<string, { avg: number; max: number }> = {};
       Object.keys(categoryData).forEach((category) => {
         const data = categoryData[category];
         assessmentScores[category] = {
-          avg: data.sum / data.count,
+          avg: data.weight > 0 ? data.weightedSum / data.weight : 0,
           max: data.max,
         };
       });
@@ -129,8 +129,10 @@ export default function ProjectOverviewPage() {
     });
     
     const categoryAverages: Record<string, number> = {};
-    Object.keys(categorySums).forEach((category) => {
-      categoryAverages[category] = categorySums[category] / categoryCounts[category];
+    Object.keys(categoryWeightedSums).forEach((category) => {
+      if (categoryWeights[category] > 0) {
+        categoryAverages[category] = categoryWeightedSums[category] / categoryWeights[category];
+      }
     });
 
     // Get top 2 categories for KPI tile

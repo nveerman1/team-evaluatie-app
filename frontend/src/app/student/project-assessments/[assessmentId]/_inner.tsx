@@ -166,39 +166,43 @@ export default function StudentProjectAssessmentInner() {
     scoreMap[s.criterion_id] = { score: s.score, comment: s.comment || undefined };
   });
 
-  // Calculate category averages and convert to 1-10 scale
+  // Calculate category weighted averages and convert to 1-10 scale
   const categoryGrades: Record<string, number> = {};
-  const categorySums: Record<string, number> = {};
-  const categoryCounts: Record<string, number> = {};
+  const categoryWeightedSums: Record<string, number> = {};
+  const categoryWeights: Record<string, number> = {};
   
   data.criteria.forEach((criterion) => {
     const category = criterion.category || "Overig";
     const score = scoreMap[criterion.id];
     if (score) {
-      if (!categorySums[category]) {
-        categorySums[category] = 0;
-        categoryCounts[category] = 0;
+      if (!categoryWeightedSums[category]) {
+        categoryWeightedSums[category] = 0;
+        categoryWeights[category] = 0;
       }
-      categorySums[category] += score.score;
-      categoryCounts[category]++;
+      // Use weighted sum: score * weight
+      categoryWeightedSums[category] += score.score * criterion.weight;
+      categoryWeights[category] += criterion.weight;
     }
   });
   
-  // Convert category averages to 1-10 scale using curved mapping
+  // Convert category weighted averages to 1-10 scale using curved mapping
   // Backend formula: grade = 1 + (normalized ** 0.85) * 9
   // With default exponent 0.85: 1/5 → 1.0, 3/5 → 6.0, 5/5 → 10.0
   const GRADE_CURVE_EXPONENT = 0.85;
   const scaleRange = data.rubric_scale_max - data.rubric_scale_min;
   if (scaleRange > 0) {
-    Object.keys(categorySums).forEach((category) => {
-      const avgScore = categorySums[category] / categoryCounts[category];
-      // Clamp score to valid range
-      const clampedScore = Math.max(data.rubric_scale_min, Math.min(data.rubric_scale_max, avgScore));
-      // Normalize to 0-1 range
-      const normalized = (clampedScore - data.rubric_scale_min) / scaleRange;
-      // Apply curved mapping
-      const curved = 1 + Math.pow(normalized, GRADE_CURVE_EXPONENT) * 9;
-      categoryGrades[category] = Math.round(curved * 10) / 10; // Round to 1 decimal
+    Object.keys(categoryWeightedSums).forEach((category) => {
+      if (categoryWeights[category] > 0) {
+        // Calculate weighted average
+        const avgScore = categoryWeightedSums[category] / categoryWeights[category];
+        // Clamp score to valid range
+        const clampedScore = Math.max(data.rubric_scale_min, Math.min(data.rubric_scale_max, avgScore));
+        // Normalize to 0-1 range
+        const normalized = (clampedScore - data.rubric_scale_min) / scaleRange;
+        // Apply curved mapping
+        const curved = 1 + Math.pow(normalized, GRADE_CURVE_EXPONENT) * 9;
+        categoryGrades[category] = Math.round(curved * 10) / 10; // Round to 1 decimal
+      }
     });
   }
 
