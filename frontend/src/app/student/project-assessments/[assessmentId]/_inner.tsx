@@ -252,29 +252,16 @@ export default function StudentProjectAssessmentInner() {
           </div>
       </div>
 
-        {/* Total Score and Grade */}
-        {data.total_score != null && (
+        {/* Final Grade */}
+        {data.grade != null && (
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
-          <h2 className="text-2xl font-bold mb-4">Eindresultaat</h2>
-          <div className="grid grid-cols-2 gap-8">
+            <h2 className="text-2xl font-bold mb-4">Eindresultaat</h2>
             <div>
-              <p className="text-sm text-gray-600 mb-1">Totaalscore</p>
-              <p className="text-5xl font-bold text-blue-600">
-                {data.total_score?.toFixed(1)}
+              <p className="text-sm text-gray-600 mb-1">Eindcijfer</p>
+              <p className="text-5xl font-bold text-indigo-600">
+                {data.grade?.toFixed(1)}
               </p>
-              <p className="text-sm text-gray-500 mt-1">
-                van {data.rubric_scale_min} - {data.rubric_scale_max}
-              </p>
-            </div>
-            {data.grade != null && (
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Eindcijfer</p>
-                <p className="text-5xl font-bold text-indigo-600">
-                  {data.grade?.toFixed(1)}
-                </p>
-                <p className="text-sm text-gray-500 mt-1">schaal 1-10</p>
-              </div>
-            )}
+              <p className="text-sm text-gray-500 mt-1">schaal 1-10</p>
             </div>
           </div>
         )}
