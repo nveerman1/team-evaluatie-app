@@ -147,7 +147,7 @@ class RadarCategoryScore(BaseModel):
 
     category_id: int
     category_name: str
-    average_score: float
+    average_score: Optional[float]  # Allow null for categories without scores
     count: int  # Number of competencies in this category
 
 
@@ -756,22 +756,48 @@ def get_scan_radar_data(
         .order_by(CompetencyCategory.name)
     ).all()
 
-    # Build category scores
+    # Get all categories for this school to include categories without scores
+    all_categories = db.execute(
+        select(CompetencyCategory.id, CompetencyCategory.name)
+        .where(CompetencyCategory.school_id == school_id)
+        .order_by(CompetencyCategory.name)
+    ).all()
+
+    # Build a map of category scores
+    score_map = {}
+    for category_id, category_name, avg_score, count in results:
+        if category_name and avg_score:
+            score_map[category_id] = {
+                "avg_score": round(float(avg_score), 2),
+                "count": count,
+            }
+
+    # Build category list including all categories (with null scores for missing ones)
     categories = []
     all_scores = []
 
-    for category_id, category_name, avg_score, count in results:
-        if category_name and avg_score:
-            score_value = round(float(avg_score), 2)
+    for category_id, category_name in all_categories:
+        if category_id in score_map:
+            score_value = score_map[category_id]["avg_score"]
             categories.append(
                 RadarCategoryScore(
                     category_id=category_id,
                     category_name=category_name,
                     average_score=score_value,
-                    count=count,
+                    count=score_map[category_id]["count"],
                 )
             )
             all_scores.append(score_value)
+        else:
+            # Include category with null score
+            categories.append(
+                RadarCategoryScore(
+                    category_id=category_id,
+                    category_name=category_name,
+                    average_score=None,
+                    count=0,
+                )
+            )
 
     # Calculate overall average
     overall_avg = None
