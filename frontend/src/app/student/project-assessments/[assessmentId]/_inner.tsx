@@ -184,14 +184,21 @@ export default function StudentProjectAssessmentInner() {
     }
   });
   
-  // Convert category averages to 1-10 scale
-  // Formula: grade = 1 + (avg_score - scale_min) * 9 / (scale_max - scale_min)
+  // Convert category averages to 1-10 scale using curved mapping
+  // Backend formula: grade = 1 + (normalized ** 0.85) * 9
+  // With default exponent 0.85: 1/5 → 1.0, 3/5 → 6.0, 5/5 → 10.0
+  const GRADE_CURVE_EXPONENT = 0.85;
   const scaleRange = data.rubric_scale_max - data.rubric_scale_min;
   if (scaleRange > 0) {
     Object.keys(categorySums).forEach((category) => {
       const avgScore = categorySums[category] / categoryCounts[category];
-      const grade = 1 + (avgScore - data.rubric_scale_min) * 9 / scaleRange;
-      categoryGrades[category] = grade;
+      // Clamp score to valid range
+      const clampedScore = Math.max(data.rubric_scale_min, Math.min(data.rubric_scale_max, avgScore));
+      // Normalize to 0-1 range
+      const normalized = (clampedScore - data.rubric_scale_min) / scaleRange;
+      // Apply curved mapping
+      const curved = 1 + Math.pow(normalized, GRADE_CURVE_EXPONENT) * 9;
+      categoryGrades[category] = Math.round(curved * 10) / 10; // Round to 1 decimal
     });
   }
 
