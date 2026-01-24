@@ -186,11 +186,14 @@ export default function StudentProjectAssessmentInner() {
   
   // Convert category averages to 1-10 scale
   // Formula: grade = 1 + (avg_score - scale_min) * 9 / (scale_max - scale_min)
-  Object.keys(categorySums).forEach((category) => {
-    const avgScore = categorySums[category] / categoryCounts[category];
-    const grade = 1 + (avgScore - data.rubric_scale_min) * 9 / (data.rubric_scale_max - data.rubric_scale_min);
-    categoryGrades[category] = grade;
-  });
+  const scaleRange = data.rubric_scale_max - data.rubric_scale_min;
+  if (scaleRange > 0) {
+    Object.keys(categorySums).forEach((category) => {
+      const avgScore = categorySums[category] / categoryCounts[category];
+      const grade = 1 + (avgScore - data.rubric_scale_min) * 9 / scaleRange;
+      categoryGrades[category] = grade;
+    });
+  }
 
   return (
     <div className={studentStyles.layout.pageContainer}>
@@ -284,7 +287,7 @@ export default function StudentProjectAssessmentInner() {
             {/* Category Grades */}
             <div className="bg-white border border-slate-200 rounded-xl p-6">
               <h2 className="text-xl font-bold mb-4">Cijfers per categorie</h2>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {Object.entries(categoryGrades).map(([category, grade]) => (
                   <div key={category} className="flex flex-col">
                     <p className="text-xs text-gray-600 mb-1">{category}</p>
