@@ -62,20 +62,16 @@ export function ScanDashboardCard({
                 <ChevronRight className="ml-1 h-4 w-4" />
               </Link>
             </Button>
-            {window.require_goal && (
-              <Button asChild variant="secondary" size="sm" className="rounded-xl">
-                <Link href={`/student/competency/goal/${window.id}`}>
-                  Leerdoel
-                </Link>
-              </Button>
-            )}
-            {window.require_reflection && (
-              <Button asChild variant="secondary" size="sm" className="rounded-xl">
-                <Link href={`/student/competency/reflection/${window.id}`}>
-                  Reflectie
-                </Link>
-              </Button>
-            )}
+            <Button asChild variant="secondary" size="sm" className="rounded-xl">
+              <Link href={`/student/competency/goal/${window.id}`}>
+                Leerdoel
+              </Link>
+            </Button>
+            <Button asChild variant="secondary" size="sm" className="rounded-xl">
+              <Link href={`/student/competency/reflection/${window.id}`}>
+                Reflectie
+              </Link>
+            </Button>
             {hasInvites && onInviteExternal && (
               <Button 
                 onClick={onInviteExternal} 
