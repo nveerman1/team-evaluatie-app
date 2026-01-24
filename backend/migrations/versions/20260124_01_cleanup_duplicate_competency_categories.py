@@ -19,8 +19,8 @@ Old names to remove:
 from alembic import op
 import sqlalchemy as sa
 
-revision = "20260124_01"
-down_revision = "20260121_01"
+revision = "20260124_01_cleanup_comp"
+down_revision = "20260121_01_pat"
 branch_labels = None
 depends_on = None
 
