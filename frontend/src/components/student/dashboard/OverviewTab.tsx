@@ -383,11 +383,12 @@ export function OverviewTab({
                       // Only show closed evaluations that have valid peer scores
                       if (evaluation.status !== "closed") return false;
                       
-                      // Check if evaluation has at least some peer scores
+                      // Check if evaluation has peer scores data
                       if (!evaluation.omzaAverages || evaluation.omzaAverages.length === 0) return false;
                       
-                      // Check if at least one OMZA score is non-zero
-                      const hasValidScores = evaluation.omzaAverages.some(avg => avg.value > 0);
+                      // Check if at least one OMZA score exists (not null/undefined)
+                      // Note: Zero is a valid score, so we check for null/undefined specifically
+                      const hasValidScores = evaluation.omzaAverages.some(avg => avg.value !== null && avg.value !== undefined);
                       return hasValidScores;
                     })
                     .map((evaluation) => {
