@@ -766,7 +766,7 @@ def get_scan_radar_data(
     # Build a map of category scores
     score_map = {}
     for category_id, category_name, avg_score, count in results:
-        if category_name and avg_score:
+        if category_name and avg_score is not None:
             score_map[category_id] = {
                 "avg_score": round(float(avg_score), 2),
                 "count": count,
