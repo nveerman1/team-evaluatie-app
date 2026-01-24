@@ -166,6 +166,32 @@ export default function StudentProjectAssessmentInner() {
     scoreMap[s.criterion_id] = { score: s.score, comment: s.comment || undefined };
   });
 
+  // Calculate category averages and convert to 1-10 scale
+  const categoryGrades: Record<string, number> = {};
+  const categorySums: Record<string, number> = {};
+  const categoryCounts: Record<string, number> = {};
+  
+  data.criteria.forEach((criterion) => {
+    const category = criterion.category || "Overig";
+    const score = scoreMap[criterion.id];
+    if (score) {
+      if (!categorySums[category]) {
+        categorySums[category] = 0;
+        categoryCounts[category] = 0;
+      }
+      categorySums[category] += score.score;
+      categoryCounts[category]++;
+    }
+  });
+  
+  // Convert category averages to 1-10 scale
+  // Formula: grade = 1 + (avg_score - scale_min) * 9 / (scale_max - scale_min)
+  Object.keys(categorySums).forEach((category) => {
+    const avgScore = categorySums[category] / categoryCounts[category];
+    const grade = 1 + (avgScore - data.rubric_scale_min) * 9 / (data.rubric_scale_max - data.rubric_scale_min);
+    categoryGrades[category] = grade;
+  });
+
   return (
     <div className={studentStyles.layout.pageContainer}>
       {/* Header */}
@@ -252,17 +278,40 @@ export default function StudentProjectAssessmentInner() {
           </div>
       </div>
 
-        {/* Final Grade */}
-        {data.grade != null && (
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
-            <h2 className="text-2xl font-bold mb-4">Eindresultaat</h2>
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Eindcijfer</p>
-              <p className="text-5xl font-bold text-indigo-600">
-                {data.grade?.toFixed(1)}
-              </p>
-              <p className="text-sm text-gray-500 mt-1">schaal 1-10</p>
+        {/* Category Grades and Final Grade */}
+        {Object.keys(categoryGrades).length > 0 && (
+          <div className="space-y-4">
+            {/* Category Grades */}
+            <div className="bg-white border border-slate-200 rounded-xl p-6">
+              <h2 className="text-xl font-bold mb-4">Cijfers per categorie</h2>
+              <div className="grid grid-cols-3 gap-4">
+                {Object.entries(categoryGrades).map(([category, grade]) => (
+                  <div key={category} className="flex flex-col">
+                    <p className="text-xs text-gray-600 mb-1">{category}</p>
+                    <p className="text-3xl font-bold text-blue-600">
+                      {grade.toFixed(1)}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">schaal 1-10</p>
+                  </div>
+                ))}
+              </div>
             </div>
+
+            {/* Final Grade - More Prominent */}
+            {data.grade != null && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-indigo-300 rounded-xl p-6">
+                <h2 className="text-2xl font-bold mb-4">Eindcijfer</h2>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-6xl font-bold text-indigo-600">
+                    {data.grade?.toFixed(1)}
+                  </p>
+                  <p className="text-lg text-gray-500">/ 10</p>
+                </div>
+                <p className="text-sm text-gray-600 mt-2">
+                  Dit is je uiteindelijke cijfer voor dit project
+                </p>
+              </div>
+            )}
           </div>
         )}
 
