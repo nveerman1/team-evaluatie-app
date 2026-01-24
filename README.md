@@ -92,6 +92,17 @@ Automatisch gegenereerde samenvattingen van peer-feedback met:
 
 📚 Voor worker troubleshooting en monitoring, zie de [Operations Guide](docs/OPERATIONS.md).
 
+### RFID Attendance System (3de Blok)
+Automatische aanwezigheidsregistratie met RFID-kaarten:
+- **API Key Authentication**: Beveiligde communicatie tussen Raspberry Pi scanners en backend
+- **Check-in/Check-out**: Automatische sessie tracking bij scannen
+- **Teacher Dashboard**: Overzicht van aanwezigheid per student, project en periode
+- **External Work Logging**: Studenten kunnen externe werkuren registreren
+- **Statistics & Reports**: Wekelijkse trends, dagelijkse patronen, en engagement metrics
+- **Raspberry Pi Support**: Kant-en-klare Python script voor MFRC522 RFID readers
+
+📚 Zie [docs/RFID_SCANNER_SETUP.md](docs/RFID_SCANNER_SETUP.md) voor complete RFID scanner setup en configuratie.
+
 ### Database Seeding
 Comprehensive seeding system for development and testing:
 - **Base Seed**: Minimal, idempotent seed for required system records (school, users, subject, academic year)
