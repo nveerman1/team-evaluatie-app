@@ -209,10 +209,12 @@ export function OverviewTab({
   const competencyProfileData = React.useMemo(() => {
     // If we have radar data for selected scan, use it
     if (radarData && radarData.categories && radarData.categories.length > 0) {
-      return radarData.categories.map(cat => ({
-        category: cat.category_name,
-        value: cat.average_score,
-      }));
+      return radarData.categories
+        .filter(cat => cat.average_score !== null && cat.average_score !== undefined)
+        .map(cat => ({
+          category: cat.category_name,
+          value: cat.average_score,
+        }));
     }
     
     // Fallback to aggregated competency profile
