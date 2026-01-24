@@ -299,15 +299,30 @@ export default function StudentProjectAssessmentInner() {
             <div className="bg-white border border-slate-200 rounded-xl p-6">
               <h2 className="text-xl font-bold mb-4">Cijfers per categorie</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Object.entries(categoryGrades).map(([category, grade]) => (
-                  <div key={category} className="flex flex-col">
-                    <p className="text-xs text-gray-600 mb-1">{category}</p>
-                    <p className="text-3xl font-bold text-blue-600">
-                      {grade.toFixed(1)}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-0.5">schaal 1-10</p>
-                  </div>
-                ))}
+                {/* Sort categories in desired order: Projectproces, Eindresultaat, Communicatie */}
+                {(() => {
+                  const sortedCategories = Object.entries(categoryGrades).sort(([a], [b]) => {
+                    const order = ['Projectproces', 'Eindresultaat', 'Communicatie'];
+                    const indexA = order.indexOf(a);
+                    const indexB = order.indexOf(b);
+                    // If both are in order array, sort by order
+                    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                    // If only one is in order array, it comes first
+                    if (indexA !== -1) return -1;
+                    if (indexB !== -1) return 1;
+                    // Otherwise sort alphabetically
+                    return a.localeCompare(b);
+                  });
+                  return sortedCategories.map(([category, grade]) => (
+                    <div key={category} className="flex flex-col">
+                      <p className="text-xs text-gray-600 mb-1">{category}</p>
+                      <p className="text-3xl font-bold text-blue-600">
+                        {grade.toFixed(1)}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">schaal 1-10</p>
+                    </div>
+                  ));
+                })()}
               </div>
             </div>
 

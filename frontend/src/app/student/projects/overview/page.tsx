@@ -91,7 +91,7 @@ export default function ProjectOverviewPage() {
     const assessmentCategoryScores = new Map<number, Record<string, { avg: number; max: number }>>();
     
     projectDetails.forEach((detail, assessmentId) => {
-      const categoryData: Record<string, { weightedSum: number; weight: number; max: number }> = {};
+      const categoryData: Record<string, { weightedSum: number; weight: number; min: number; max: number }> = {};
       
       // Group scores by category using weighted average
       detail.criteria.forEach((criterion) => {
@@ -108,7 +108,7 @@ export default function ProjectOverviewPage() {
             
             // Add to per-assessment category scores
             if (!categoryData[criterion.category]) {
-              categoryData[criterion.category] = { weightedSum: 0, weight: 0, max: detail.rubric_scale_max };
+              categoryData[criterion.category] = { weightedSum: 0, weight: 0, min: detail.rubric_scale_min, max: detail.rubric_scale_max };
             }
             categoryData[criterion.category].weightedSum += score.score * criterion.weight;
             categoryData[criterion.category].weight += criterion.weight;
@@ -117,11 +117,12 @@ export default function ProjectOverviewPage() {
       });
       
       // Calculate weighted averages for this assessment
-      const assessmentScores: Record<string, { avg: number; max: number }> = {};
+      const assessmentScores: Record<string, { avg: number; min: number; max: number }> = {};
       Object.keys(categoryData).forEach((category) => {
         const data = categoryData[category];
         assessmentScores[category] = {
           avg: data.weight > 0 ? data.weightedSum / data.weight : 0,
+          min: data.min,
           max: data.max,
         };
       });
@@ -433,7 +434,15 @@ export default function ProjectOverviewPage() {
                   const getCategoryDisplay = (category: string) => {
                     const data = categoryScores[category];
                     if (!data) return '—';
-                    return `${data.avg.toFixed(1)} / ${data.max}`;
+                    // Convert to 1-10 scale using curved mapping
+                    const GRADE_CURVE_EXPONENT = 0.85;
+                    const scaleRange = data.max - data.min;
+                    if (scaleRange > 0) {
+                      const normalized = (data.avg - data.min) / scaleRange;
+                      const curved = 1 + Math.pow(normalized, GRADE_CURVE_EXPONENT) * 9;
+                      return Math.round(curved * 10) / 10;
+                    }
+                    return data.avg.toFixed(1);
                   };
                   
                   // Get grade color based on value
