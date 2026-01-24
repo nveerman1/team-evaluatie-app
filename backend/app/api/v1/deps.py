@@ -227,6 +227,60 @@ async def get_current_user_prod(
     return user
 
 
+async def verify_rfid_api_key(
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+) -> None:
+    """
+    Verify RFID API key for Raspberry Pi scanner authentication.
+    
+    The API key is sent in the X-API-Key header.
+    Valid keys are configured via the RFID_API_KEYS environment variable.
+    
+    Security:
+    - Keys must be strong random values (min 32 characters recommended)
+    - Use secrets.token_urlsafe(32) to generate keys
+    - Keys are stored as comma-separated list in environment variable
+    - In production, use IP whitelisting in addition to API keys (nginx/firewall)
+    
+    Raises:
+        HTTPException 401: If API key is missing or invalid
+    """
+    if not x_api_key:
+        logger.warning("RFID scan attempt without API key")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="API key required. Include X-API-Key header.",
+        )
+    
+    # Get valid API keys from configuration
+    valid_keys = settings.RFID_API_KEYS
+    
+    if not valid_keys:
+        logger.error(
+            "SECURITY ERROR: RFID_API_KEYS not configured but /scan endpoint was called. "
+            "Configure RFID_API_KEYS environment variable."
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="RFID service not configured",
+        )
+    
+    # Validate API key
+    if x_api_key not in valid_keys:
+        # Safely truncate key for logging (handle short keys)
+        key_preview = x_api_key[:min(8, len(x_api_key))] if x_api_key else ""
+        logger.warning(
+            f"RFID scan attempt with invalid API key. "
+            f"Key prefix: {key_preview}..."
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API key",
+        )
+    
+    logger.debug("RFID API key validated successfully")
+
+
 # Export the correct dependency based on ENABLE_DEV_LOGIN
 # Production is the explicit default for security
 # Only use dev mode when explicitly enabled

@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_, case
 
-from app.api.v1.deps import get_db, get_current_user
+from app.api.v1.deps import get_db, get_current_user, verify_rfid_api_key
 from app.infra.db.models import (
     User,
     RFIDCard,
@@ -71,10 +71,13 @@ def apply_project_date_filter(query, project: Project):
 def rfid_scan(
     request: RFIDScanRequest,
     db: Session = Depends(get_db),
+    _: None = Depends(verify_rfid_api_key),
 ):
     """
     RFID scan endpoint for Raspberry Pi
-
+    
+    Authentication: Requires X-API-Key header
+    
     Handles check-in/check-out logic:
     - If no open session: create new check-in
     - If open session exists: close it (check-out)

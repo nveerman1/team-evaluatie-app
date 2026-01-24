@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     # In production, this MUST be False - only Azure AD authentication
     ENABLE_DEV_LOGIN: bool = Field(default=False)
 
+    # RFID API Keys
+    # Comma-separated list of API keys for RFID scanner authentication
+    # Example: "key1,key2,key3"
+    rfid_api_keys_str: str = Field(default="", validation_alias="RFID_API_KEYS")
+
     @field_validator("ENABLE_DEV_LOGIN", mode="after")
     @classmethod
     def validate_dev_login(cls, v, info):
@@ -198,6 +203,13 @@ class Settings(BaseSettings):
         return [
             d.strip() for d in self.azure_ad_allowed_domains_str.split(",") if d.strip()
         ]
+
+    @property
+    def RFID_API_KEYS(self) -> List[str]:
+        """Parse RFID_API_KEYS from comma-separated string to list"""
+        if not self.rfid_api_keys_str or self.rfid_api_keys_str.strip() == "":
+            return []
+        return [k.strip() for k in self.rfid_api_keys_str.split(",") if k.strip()]
 
     @field_validator("AZURE_AD_AUTHORITY", mode="before")
     @classmethod
