@@ -37,74 +37,62 @@ OLD_TO_NEW_NAMES = {
 def upgrade():
     """
     Remove duplicate competency categories with old abbreviated names.
-    Only removes if the new full name exists for the same school.
+    Removes old names regardless of whether new names exist, but only migrates
+    competencies if both exist.
     """
     conn = op.get_bind()
 
     for old_name, new_name in OLD_TO_NEW_NAMES.items():
-        # For each school that has both old and new categories
-        result = conn.execute(
+        # Find all schools that have the old category name (case-insensitive)
+        schools_with_old = conn.execute(
             sa.text(
                 """
-                SELECT DISTINCT cc_old.school_id
-                FROM competency_categories cc_old
-                INNER JOIN competency_categories cc_new 
-                    ON cc_old.school_id = cc_new.school_id
-                WHERE cc_old.name = :old_name 
-                AND cc_new.name = :new_name
+                SELECT DISTINCT school_id, id, name
+                FROM competency_categories
+                WHERE LOWER(name) = LOWER(:old_name)
             """
             ),
-            {"old_name": old_name, "new_name": new_name},
-        )
+            {"old_name": old_name},
+        ).fetchall()
 
-        school_ids = [row[0] for row in result.fetchall()]
-
-        for school_id in school_ids:
-            # Get the IDs of both categories
-            old_cat = conn.execute(
-                sa.text(
-                    """
-                    SELECT id FROM competency_categories 
-                    WHERE school_id = :school_id AND name = :old_name
-                """
-                ),
-                {"school_id": school_id, "old_name": old_name},
-            ).fetchone()
-
+        for school_id, old_cat_id, actual_old_name in schools_with_old:
+            # Check if the new category exists for this school
             new_cat = conn.execute(
                 sa.text(
                     """
                     SELECT id FROM competency_categories 
-                    WHERE school_id = :school_id AND name = :new_name
+                    WHERE school_id = :school_id 
+                    AND (name = :new_name OR LOWER(name) = LOWER(:new_name))
                 """
                 ),
                 {"school_id": school_id, "new_name": new_name},
             ).fetchone()
 
-            if not old_cat or not new_cat:
-                continue
-
-            old_cat_id = old_cat[0]
-            new_cat_id = new_cat[0]
-
-            # Migrate any competencies from old category to new category
-            conn.execute(
-                sa.text(
+            if new_cat:
+                new_cat_id = new_cat[0]
+                
+                # Migrate any competencies from old category to new category
+                migrated = conn.execute(
+                    sa.text(
+                        """
+                        UPDATE competencies 
+                        SET category_id = :new_cat_id 
+                        WHERE category_id = :old_cat_id 
+                        AND school_id = :school_id
                     """
-                    UPDATE competencies 
-                    SET category_id = :new_cat_id 
-                    WHERE category_id = :old_cat_id 
-                    AND school_id = :school_id
-                """
-                ),
-                {
-                    "new_cat_id": new_cat_id,
-                    "old_cat_id": old_cat_id,
-                    "school_id": school_id,
-                },
-            )
+                    ),
+                    {
+                        "new_cat_id": new_cat_id,
+                        "old_cat_id": old_cat_id,
+                        "school_id": school_id,
+                    },
+                )
+                
+                print(
+                    f"Migrated competencies from '{actual_old_name}' to '{new_name}' for school {school_id}"
+                )
 
-            # Delete the old category
+            # Delete the old category (whether or not new one exists)
             conn.execute(
                 sa.text(
                     """
@@ -116,7 +104,7 @@ def upgrade():
             )
 
             print(
-                f"Cleaned up duplicate category '{old_name}' -> '{new_name}' for school {school_id}"
+                f"Deleted duplicate category '{actual_old_name}' for school {school_id}"
             )
 
 
