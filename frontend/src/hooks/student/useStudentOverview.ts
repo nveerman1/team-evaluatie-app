@@ -133,11 +133,13 @@ export function useStudentOverview() {
               // The details.scores contain team_number, so we can identify which team the student belongs to
               const studentTeamNumber = details.scores.find(s => s.team_number !== null)?.team_number;
               
-              if (studentTeamNumber !== undefined && studentTeamNumber !== null) {
+              if (studentTeamNumber !== undefined) {
                 const studentTeam = teamsResponse.teams.find(t => t.team_number === studentTeamNumber);
                 
                 if (studentTeam && studentTeam.category_scores) {
                   // Use backend-calculated category scores (weighted + curved)
+                  // Note: Handle both "projectproces" and "proces" naming variations for backwards compatibility
+                  // as some older rubrics may use different category names
                   proces = studentTeam.category_scores.projectproces || studentTeam.category_scores.proces;
                   eindresultaat = studentTeam.category_scores.eindresultaat;
                   communicatie = studentTeam.category_scores.communicatie;
