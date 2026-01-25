@@ -94,9 +94,14 @@ export default function ProjectOverviewPage() {
       const categoryData: Record<string, { weightedSum: number; weight: number; min: number; max: number }> = {};
       
       // Group scores by category using weighted average
+      // Prioritize student-specific overrides over team scores
       detail.criteria.forEach((criterion) => {
         if (criterion.category) {
-          const score = detail.scores.find(s => s.criterion_id === criterion.id);
+          // First try to find student-specific score, then fall back to team score
+          let score = detail.scores.find(s => s.criterion_id === criterion.id && s.student_id != null);
+          if (!score) {
+            score = detail.scores.find(s => s.criterion_id === criterion.id && s.student_id == null);
+          }
           if (score) {
             // Add to global category weighted averages
             if (!categoryWeightedSums[criterion.category]) {

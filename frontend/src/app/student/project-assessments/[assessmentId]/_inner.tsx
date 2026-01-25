@@ -161,8 +161,14 @@ export default function StudentProjectAssessmentInner() {
   if (!data) return <ErrorMessage message="Geen data gevonden" />;
 
   // Get score for each criterion
+  // Prioritize student-specific overrides over team scores
   const scoreMap: Record<number, { score: number; comment?: string }> = {};
-  data.scores.forEach((s) => {
+  // First, add all team scores (student_id is null)
+  data.scores.filter(s => s.student_id == null).forEach((s) => {
+    scoreMap[s.criterion_id] = { score: s.score, comment: s.comment || undefined };
+  });
+  // Then, override with student-specific scores if any exist
+  data.scores.filter(s => s.student_id != null).forEach((s) => {
     scoreMap[s.criterion_id] = { score: s.score, comment: s.comment || undefined };
   });
 
