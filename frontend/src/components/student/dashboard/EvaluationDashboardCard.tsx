@@ -6,7 +6,6 @@ import { Progress } from "@/components/ui/progress";
 import { Clock, ChevronRight } from "lucide-react";
 import { ActionChip } from "./helpers";
 import { StudentEvaluation } from "@/dtos";
-import { canStudentSeeResult } from "@/lib/evaluation-helpers";
 import Link from "next/link";
 
 type EvaluationDashboardCardProps = {
@@ -48,6 +47,7 @@ export function EvaluationDashboardCard({ evaluation }: EvaluationDashboardCardP
                   Afgerond
                 </Badge>
               )}
+            </div>
             <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
               <span className="inline-flex items-center gap-2">
                 <Clock className="h-4 w-4" />
