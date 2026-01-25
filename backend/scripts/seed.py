@@ -92,8 +92,8 @@ from app.db.seed_utils import (
 COMPETENCY_CATEGORIES = [
     ("Samenwerken", "Effectief samenwerken met anderen in een team", "#3B82F6", "👥", 1),
     ("Plannen & Organiseren", "Effectief plannen en organiseren van werk en tijd", "#22C55E", "📋", 2),
-    ("Creatief Denken & Probleemoplossen", "Innovatief denken en oplossingen vinden voor problemen", "#A855F7", "💡", 3),
-    ("Technische Vaardigheden", "Beheersen van vakspecifieke kennis en vaardigheden", "#F97316", "🔧", 4),
+    ("Creatief denken & probleemoplossen", "Innovatief denken en oplossingen vinden voor problemen", "#A855F7", "💡", 3),
+    ("Technische vaardigheden", "Beheersen van vakspecifieke kennis en vaardigheden", "#F97316", "🔧", 4),
     ("Communicatie & Presenteren", "Effectief communiceren en presenteren van ideeën", "#EAB308", "💬", 5),
     ("Reflectie & Professionele houding", "Zelfreflectie en professioneel gedrag", "#EC4899", "🤔", 6),
 ]
