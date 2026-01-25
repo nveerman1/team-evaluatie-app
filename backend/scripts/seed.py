@@ -792,7 +792,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             f"Project Rubric: {project_rubric.title} with {len(project_criteria_data)} basic criteria"
         )
 
-    # 8. Create Evaluations for ALL Teams
+    # 8. Create Evaluations for ALL Projects (ONE per project, not per team)
     print("\n--- Creating Evaluations ---")
 
     # Get peer rubric criteria
@@ -802,22 +802,20 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         .all()
     )
 
-    # Create peer evaluation for EVERY project team (6 teams total)
-    evaluations = []
+    # Create ONE peer evaluation per project (not per team)
+    project_evaluations = []
     total_allocations = 0
 
-    for pt in project_teams:
-        # Get the project for this team
-        project = next(p for p in projects if p.id == pt.project_id)
-
+    for project in projects:
+        # Create single evaluation for entire project
         evaluation = create_instance(
             Evaluation,
             school_id=school.id,
             course_id=course.id,
             project_id=project.id,
-            project_team_id=pt.id,
+            project_team_id=None,  # NULL = project-level, not team-specific
             rubric_id=peer_rubric.id,
-            title=f"Peer Evaluatie - {project.title} - Team {pt.team_number}",
+            title=f"Peer Evaluatie - {project.title}",
             evaluation_type="peer",
             status="closed",
             closed_at=ts_gen.random_timestamp(days_ago_min=5, days_ago_max=15),
@@ -825,48 +823,53 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         db.add(evaluation)
         db.commit()
         db.refresh(evaluation)
-        evaluations.append(evaluation)
+        project_evaluations.append(evaluation)
 
-        # Create allocations and scores for this team
-        team_members = (
-            db.query(ProjectTeamMember)
-            .filter(ProjectTeamMember.project_team_id == pt.id)
-            .all()
-        )
+        # Get all teams for this project (avoid repeated filtering)
+        teams_in_project = [pt for pt in project_teams if pt.project_id == project.id]
 
-        for reviewer_member in team_members:
-            for reviewee_member in team_members:
-                if reviewer_member.user_id == reviewee_member.user_id:
-                    continue  # Skip self-review
+        # Create allocations and scores for ALL students in ALL teams of this project
+        for pt in teams_in_project:
+            team_members = (
+                db.query(ProjectTeamMember)
+                .filter(ProjectTeamMember.project_team_id == pt.id)
+                .all()
+            )
 
-                allocation = create_instance(
-                    Allocation,
-                    school_id=school.id,
-                    evaluation_id=evaluation.id,
-                    reviewer_id=reviewer_member.user_id,
-                    reviewee_id=reviewee_member.user_id,
-                )
-                db.add(allocation)
-                db.commit()
-                db.refresh(allocation)
-                total_allocations += 1
+            # Each student reviews all other students in their team (not cross-team)
+            for reviewer_member in team_members:
+                for reviewee_member in team_members:
+                    if reviewer_member.user_id == reviewee_member.user_id:
+                        continue  # Skip self-review
 
-                # Add scores for each criterion
-                for criterion in peer_criteria:
-                    score = create_instance(
-                        Score,
+                    allocation = create_instance(
+                        Allocation,
                         school_id=school.id,
-                        allocation_id=allocation.id,
-                        criterion_id=criterion.id,
-                        score=rand.randint(1, 5),
-                        comment=factory.feedback_comment(positive=rand.random() > 0.3),
-                        status="submitted",
+                        evaluation_id=evaluation.id,
+                        reviewer_id=reviewer_member.user_id,
+                        reviewee_id=reviewee_member.user_id,
                     )
-                    db.add(score)
+                    db.add(allocation)
+                    db.commit()
+                    db.refresh(allocation)
+                    total_allocations += 1
+
+                    # Add scores for each criterion
+                    for criterion in peer_criteria:
+                        score = create_instance(
+                            Score,
+                            school_id=school.id,
+                            allocation_id=allocation.id,
+                            criterion_id=criterion.id,
+                            score=rand.randint(1, 5),
+                            comment=factory.feedback_comment(positive=rand.random() > 0.3),
+                            status="submitted",
+                        )
+                        db.add(score)
 
         db.commit()
 
-    print_success(f"Created {len(evaluations)} peer evaluations for all teams")
+    print_success(f"Created {len(project_evaluations)} peer evaluations (one per project)")
     print_info(f"Created {total_allocations} allocations with scores")
 
     # 9. Create Reflections for ALL Students
@@ -875,28 +878,32 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     # Create reflections for ALL students in their respective evaluations
     total_reflections = 0
 
-    for evaluation in evaluations:
-        # Get all team members for this evaluation's team
-        team_members = (
-            db.query(ProjectTeamMember)
-            .filter(ProjectTeamMember.project_team_id == evaluation.project_team_id)
-            .all()
-        )
-
-        # Create reflection for each team member
-        for member in team_members:
-            reflection_text = factory.reflection_text()
-            reflection = create_instance(
-                Reflection,
-                school_id=school.id,
-                evaluation_id=evaluation.id,
-                user_id=member.user_id,
-                text=reflection_text,
-                word_count=len(reflection_text.split()),
-                submitted_at=ts_gen.recent_timestamp(days_ago_max=7),
+    for evaluation in project_evaluations:
+        # Reuse the teams list filtered by project (avoid repeated filtering)
+        teams_in_project = [pt for pt in project_teams if pt.project_id == evaluation.project_id]
+        
+        # Get all team members across all teams in this project
+        for pt in teams_in_project:
+            team_members = (
+                db.query(ProjectTeamMember)
+                .filter(ProjectTeamMember.project_team_id == pt.id)
+                .all()
             )
-            db.add(reflection)
-            total_reflections += 1
+
+            # Create reflection for each team member
+            for member in team_members:
+                reflection_text = factory.reflection_text()
+                reflection = create_instance(
+                    Reflection,
+                    school_id=school.id,
+                    evaluation_id=evaluation.id,
+                    user_id=member.user_id,
+                    text=reflection_text,
+                    word_count=len(reflection_text.split()),
+                    submitted_at=ts_gen.recent_timestamp(days_ago_max=7),
+                )
+                db.add(reflection)
+                total_reflections += 1
 
     db.commit()
     print_success(f"Created {total_reflections} reflections for all students")
