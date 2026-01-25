@@ -1938,9 +1938,9 @@ class ProjectNote(Base):
     )  # "project" | "team" | "student"
 
     team_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("groups.id", ondelete="CASCADE"),
         index=True,
-    )
+        nullable=True,
+    )  # Legacy field - no FK constraint (groups table removed)
     student_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
         index=True,
@@ -1981,7 +1981,6 @@ class ProjectNote(Base):
 
     # Relationships
     context: Mapped["ProjectNotesContext"] = relationship(back_populates="notes")
-    team: Mapped[Optional["Group"]] = relationship()
     student: Mapped[Optional["User"]] = relationship(foreign_keys=[student_id])
     learning_objective: Mapped[Optional["LearningObjective"]] = relationship()
     creator: Mapped["User"] = relationship(foreign_keys=[created_by])
