@@ -209,18 +209,12 @@ export function OverviewTab({
   const competencyProfileData = React.useMemo(() => {
     // If we have radar data for selected scan, use it
     if (radarData && radarData.categories && radarData.categories.length > 0) {
-      // Include all categories to show all axes, but only set values for categories with scores
-      // For categories without scores, we don't set the value property at all (not even null)
-      return radarData.categories.map(cat => {
-        const dataPoint: { category: string; value?: number } = {
-          category: cat.category_name,
-        };
-        // Only add value property if there's an actual score
-        if (cat.average_score !== null && cat.average_score !== undefined) {
-          dataPoint.value = cat.average_score;
-        }
-        return dataPoint;
-      });
+      // Include all categories to show all axes
+      // Use null for categories without scores so connectNulls can skip them
+      return radarData.categories.map(cat => ({
+        category: cat.category_name,
+        value: (cat.average_score !== null && cat.average_score !== undefined) ? cat.average_score : null,
+      }));
     }
     
     // Fallback to aggregated competency profile
@@ -726,8 +720,9 @@ export function OverviewTab({
                         name="Score"
                         dataKey="value"
                         stroke="#6366f1"
-                        fill="rgba(99, 102, 241, 0.25)"
+                        fill="none"
                         strokeWidth={2}
+                        dot={{ r: 4, fill: "#6366f1", strokeWidth: 2, stroke: "#fff" }}
                       />
                     </RadarChart>
                   </ResponsiveContainer>
