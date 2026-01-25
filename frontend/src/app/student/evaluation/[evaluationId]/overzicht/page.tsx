@@ -415,25 +415,32 @@ export default function ResultaatPage() {
                     
                     {/* GCF and SPR labels with colors */}
                     <div className="mt-3 pt-3 border-t border-slate-200 space-y-2">
-                      {/* GCF label */}
+                      {/* GCF score and label */}
                       {teamContributionFactor != null && (
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-600">Correctiefactor (GCF):</span>
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md font-semibold ${
-                            teamContributionFactor >= 1.05
-                              ? "bg-green-100 text-green-700"
-                              : teamContributionFactor >= 0.95
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-orange-100 text-orange-700"
-                          }`}>
-                            {teamContributionLabel || (
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-slate-600">GCF (Correctiefactor):</span>
+                            <span className="text-lg font-semibold text-slate-900 tabular-nums">
+                              {teamContributionFactor.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex justify-end">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold ${
                               teamContributionFactor >= 1.05
-                                ? "Boven verwachting"
+                                ? "bg-green-100 text-green-700"
                                 : teamContributionFactor >= 0.95
-                                ? "Naar verwachting"
-                                : "Onder verwachting"
-                            )}
-                          </span>
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-orange-100 text-orange-700"
+                            }`}>
+                              {teamContributionLabel || (
+                                teamContributionFactor >= 1.05
+                                  ? "Boven verwachting"
+                                  : teamContributionFactor >= 0.95
+                                  ? "Naar verwachting"
+                                  : "Onder verwachting"
+                              )}
+                            </span>
+                          </div>
                         </div>
                       )}
                       {/* SPR label */}
@@ -465,23 +472,30 @@ export default function ResultaatPage() {
                     <div className="mb-2">
                       <h4 className="text-xs font-semibold text-slate-700">Team-bijdrage</h4>
                     </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-600">Correctiefactor (GCF):</span>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md font-semibold ${
-                        teamContributionFactor >= 1.05
-                          ? "bg-green-100 text-green-700"
-                          : teamContributionFactor >= 0.95
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-orange-100 text-orange-700"
-                      }`}>
-                        {teamContributionLabel || (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-600">GCF (Correctiefactor):</span>
+                        <span className="text-lg font-semibold text-slate-900 tabular-nums">
+                          {teamContributionFactor.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-end">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold ${
                           teamContributionFactor >= 1.05
-                            ? "Boven verwachting"
+                            ? "bg-green-100 text-green-700"
                             : teamContributionFactor >= 0.95
-                            ? "Naar verwachting"
-                            : "Onder verwachting"
-                        )}
-                      </span>
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-orange-100 text-orange-700"
+                        }`}>
+                          {teamContributionLabel || (
+                            teamContributionFactor >= 1.05
+                              ? "Boven verwachting"
+                              : teamContributionFactor >= 0.95
+                              ? "Naar verwachting"
+                              : "Onder verwachting"
+                          )}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -514,52 +528,80 @@ export default function ResultaatPage() {
                 {/* Docentbeoordeling cijfers card */}
                 {(evaluationData.teacherGrade != null || evaluationData.teacherSuggestedGrade != null || evaluationData.teacherOmza) && (
                   <div className={`rounded-xl border border-slate-100 bg-slate-50/70 p-3 ${!evaluationData.teacherComments ? 'md:col-span-3' : ''}`}>
-                    <div className="flex items-center justify-between text-xs font-semibold text-slate-700 mb-2">
+                    <div className="flex items-center justify-between text-xs font-semibold text-slate-700 mb-3">
                       <span>Docentbeoordeling</span>
                     </div>
                     
                     {/* Display final grade (given or auto-generated) */}
                     {(evaluationData.teacherGrade != null || evaluationData.teacherSuggestedGrade != null) && (
-                      <div>
-                        <p className="text-[11px] uppercase tracking-wide text-slate-500">Eindcijfer</p>
-                        <div className="flex items-baseline gap-2">
-                          <p className="text-2xl font-semibold text-slate-900">
+                      <div className="mb-3 pb-3 border-b border-slate-200">
+                        <p className="text-[11px] uppercase tracking-wide text-slate-500 mb-1">Eindcijfer</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-3xl font-bold text-slate-900 tabular-nums">
                             {(evaluationData.teacherGrade ?? evaluationData.teacherSuggestedGrade)?.toFixed(1)}
                           </p>
                           {finalGradeInfo && finalGradeInfo.label && (
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${finalGradeInfo.colorClasses}`}>
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-semibold ${finalGradeInfo.colorClasses}`}>
                               {finalGradeInfo.label}
                             </span>
                           )}
                         </div>
                         {evaluationData.teacherGrade == null && evaluationData.teacherSuggestedGrade != null && (
-                          <p className="text-[10px] text-slate-400 mt-0.5">(automatisch berekend)</p>
+                          <p className="text-[10px] text-slate-400 mt-1">(automatisch berekend)</p>
                         )}
                       </div>
                     )}
 
                     {/* Group grade if available */}
                     {evaluationData.teacherGroupGrade != null && (
-                      <div className="mt-2 pt-2 border-t border-slate-200">
+                      <div className="mb-3 pb-3 border-b border-slate-200">
                         <p className="text-[11px] text-slate-500">
-                          Groepscijfer: <span className="font-semibold text-slate-700">{evaluationData.teacherGroupGrade.toFixed(1)}</span>
+                          Groepscijfer: <span className="font-semibold text-slate-700 text-base">{evaluationData.teacherGroupGrade.toFixed(1)}</span>
                         </p>
                       </div>
                     )}
 
+                    {/* OMZA scores table with emoticons */}
                     {evaluationData.teacherOmza && (
-                      <div className="mt-3 flex flex-wrap gap-1">
-                        {Object.entries(evaluationData.teacherOmza).map(([key, value]) => (
-                          <span
-                            key={key}
-                            className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] ring-1 ring-slate-200"
-                          >
-                            <span className="text-[10px] font-semibold text-slate-700 mr-1">{key}</span>
-                            <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full border text-[11px] shadow-sm ${getOmzaEmojiColorClasses(value)}`}>
-                              {getOmzaEmoji(value)}
-                            </span>
-                          </span>
-                        ))}
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wide text-slate-500 mb-2">OMZA scores</p>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-slate-200">
+                                {['O', 'M', 'Z', 'A'].map((key) => (
+                                  <th key={key} className="px-2 py-1.5 text-center text-xs font-semibold text-slate-600">
+                                    {key}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr className="hover:bg-slate-50">
+                                {['O', 'M', 'Z', 'A'].map((key) => {
+                                  const value = evaluationData.teacherOmza[key as keyof typeof evaluationData.teacherOmza];
+                                  
+                                  return (
+                                    <td key={key} className="px-2 py-2 text-center">
+                                      {value != null ? (
+                                        <div className="inline-flex flex-col items-center gap-1">
+                                          <span className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-sm shadow-sm ${getOmzaEmojiColorClasses(value)}`}>
+                                            {getOmzaEmoji(value)}
+                                          </span>
+                                          <span className="text-[10px] font-medium text-slate-600 tabular-nums">
+                                            {value.toFixed(1)}
+                                          </span>
+                                        </div>
+                                      ) : (
+                                        <span className="text-slate-300">–</span>
+                                      )}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
                   </div>
