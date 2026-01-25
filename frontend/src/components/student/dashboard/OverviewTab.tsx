@@ -484,27 +484,24 @@ export function OverviewTab({
                       };
 
                       const isExpanded = expandedEvaluations.has(evaluation.id);
-                      const hasExpandableContent = evaluation.aiSummary || evaluation.teacherComments;
+                      // Always allow expansion to show what content is available
+                      const hasExpandableContent = true;
 
                       const handleRowClick = () => {
-                        if (hasExpandableContent) {
-                          toggleEvaluation(evaluation.id);
-                        }
+                        toggleEvaluation(evaluation.id);
                       };
 
                       return (
                         <React.Fragment key={evaluation.id}>
                           <tr 
-                            className={`hover:bg-slate-50 ${hasExpandableContent ? 'cursor-pointer' : ''}`}
+                            className="hover:bg-slate-50 cursor-pointer"
                             onClick={handleRowClick}
                           >
                             <td className="px-4 py-3" onClick={handleRowClick}>
                               <div className="flex items-center gap-2">
-                                {hasExpandableContent && (
-                                  <ChevronDown 
-                                    className={`h-4 w-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                                  />
-                                )}
+                                <ChevronDown 
+                                  className={`h-4 w-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                />
                                 <div>
                                   <div className="font-semibold text-slate-900">{evaluation.title}</div>
                                   <div className="text-xs text-slate-600">{formatDate(evaluation.deadlineISO)}</div>
@@ -568,11 +565,11 @@ export function OverviewTab({
                             </td>
                           </tr>
                           {/* Expandable row for AI summary and teacher comments */}
-                          {isExpanded && hasExpandableContent && (
+                          {isExpanded && (
                             <tr className="bg-slate-50">
                               <td colSpan={11} className="px-4 py-4">
                                 <div className="space-y-3">
-                                  {evaluation.aiSummary && (
+                                  {evaluation.aiSummary ? (
                                     <div>
                                       <h4 className="text-sm font-semibold text-slate-900 mb-1 flex items-center gap-2">
                                         <MessageSquare className="h-4 w-4 text-indigo-600" />
@@ -582,8 +579,18 @@ export function OverviewTab({
                                         {evaluation.aiSummary}
                                       </p>
                                     </div>
+                                  ) : (
+                                    <div>
+                                      <h4 className="text-sm font-semibold text-slate-900 mb-1 flex items-center gap-2">
+                                        <MessageSquare className="h-4 w-4 text-slate-400" />
+                                        AI Samenvatting
+                                      </h4>
+                                      <p className="text-sm text-slate-500 italic">
+                                        Nog geen AI samenvatting beschikbaar voor deze evaluatie.
+                                      </p>
+                                    </div>
                                   )}
-                                  {evaluation.teacherComments && (
+                                  {evaluation.teacherComments ? (
                                     <div>
                                       <h4 className="text-sm font-semibold text-slate-900 mb-1 flex items-center gap-2">
                                         <FileText className="h-4 w-4 text-amber-600" />
@@ -591,6 +598,16 @@ export function OverviewTab({
                                       </h4>
                                       <p className="text-sm text-slate-700 leading-relaxed">
                                         {evaluation.teacherComments}
+                                      </p>
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      <h4 className="text-sm font-semibold text-slate-900 mb-1 flex items-center gap-2">
+                                        <FileText className="h-4 w-4 text-slate-400" />
+                                        Docentopmerkingen
+                                      </h4>
+                                      <p className="text-sm text-slate-500 italic">
+                                        Nog geen docentopmerkingen beschikbaar voor deze evaluatie.
                                       </p>
                                     </div>
                                   )}
