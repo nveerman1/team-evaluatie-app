@@ -904,4 +904,20 @@ export const competencyMonitorService = {
       return null;
     }
   },
+
+  /**
+   * Get all categories for the current school
+   */
+  async getCategories(): Promise<{ id: number; name: string }[]> {
+    try {
+      const response = await api.get("/competencies/categories");
+      return response.data.map((cat: { id: number; name: string }) => ({
+        id: cat.id,
+        name: cat.name,
+      }));
+    } catch (error) {
+      console.error("Failed to fetch categories:", error);
+      return [];
+    }
+  },
 };

@@ -91,37 +91,15 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
       }
 
       try {
-        // Fetch the scan overview to get ALL category names (not just those with scores)
-        const overview = await competencyMonitorService.getOverview({ courseId });
+        // Fetch ALL categories for the school to ensure we show all categories
+        const allCategories = await competencyMonitorService.getCategories();
         
-        // Build a map of category ID to name
-        const categoryNameMap = new Map<number, string>();
-        if (overview.categorySummaries) {
-          overview.categorySummaries.forEach(cat => {
-            categoryNameMap.set(cat.id, cat.name);
-          });
-        }
-
-        // Create array with ALL categories from the overview, including those without scores
-        const categories: CategoryScore[] = [];
-        if (overview.categorySummaries) {
-          overview.categorySummaries.forEach(cat => {
-            categories.push({
-              category_id: cat.id,
-              category_name: cat.name,
-              avg_score: selectedScan.categoryScores[cat.id] ?? null,
-            });
-          });
-        } else {
-          // Fallback: if overview.categorySummaries is unavailable, only show categories that have scores
-          Object.entries(selectedScan.categoryScores).forEach(([catId, score]) => {
-            categories.push({
-              category_id: Number(catId),
-              category_name: categoryNameMap.get(Number(catId)) || `Categorie ${catId}`,
-              avg_score: score,
-            });
-          });
-        }
+        // Create array with ALL categories, including those without scores
+        const categories: CategoryScore[] = allCategories.map(cat => ({
+          category_id: cat.id,
+          category_name: cat.name,
+          avg_score: selectedScan.categoryScores[cat.id] ?? null,
+        }));
 
         setCategoryScores(categories);
       } catch (error) {
