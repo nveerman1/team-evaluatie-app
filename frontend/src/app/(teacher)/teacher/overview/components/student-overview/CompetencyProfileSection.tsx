@@ -114,7 +114,7 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
       }
     }
     fetchCategoryNames();
-  }, [selectedScanId, scans, courseId]);
+  }, [selectedScanId, scans]);
 
   // Chart data - include all categories, but use null for missing scores
   // Radar charts handle null values by not drawing a line to that point
@@ -124,6 +124,7 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
       {
         label: "Score",
         data: categoryScores.map((c) => c.avg_score),
+        fill: true, // Explicitly enable fill
         backgroundColor: "rgba(59, 130, 246, 0.2)",
         borderColor: "rgba(59, 130, 246, 1)",
         borderWidth: 2,
