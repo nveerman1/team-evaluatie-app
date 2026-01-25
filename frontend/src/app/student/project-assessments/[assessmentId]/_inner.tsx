@@ -161,10 +161,56 @@ export default function StudentProjectAssessmentInner() {
   if (!data) return <ErrorMessage message="Geen data gevonden" />;
 
   // Get score for each criterion
+  // Prioritize student-specific overrides over team scores
   const scoreMap: Record<number, { score: number; comment?: string }> = {};
-  data.scores.forEach((s) => {
+  // First, add all team scores (student_id is null)
+  data.scores.filter(s => s.student_id == null).forEach((s) => {
     scoreMap[s.criterion_id] = { score: s.score, comment: s.comment || undefined };
   });
+  // Then, override with student-specific scores if any exist
+  data.scores.filter(s => s.student_id != null).forEach((s) => {
+    scoreMap[s.criterion_id] = { score: s.score, comment: s.comment || undefined };
+  });
+
+  // Calculate category weighted averages and convert to 1-10 scale
+  const categoryGrades: Record<string, number> = {};
+  const categoryWeightedSums: Record<string, number> = {};
+  const categoryWeights: Record<string, number> = {};
+  
+  data.criteria.forEach((criterion) => {
+    const category = criterion.category || "Overig";
+    const score = scoreMap[criterion.id];
+    if (score) {
+      if (!categoryWeightedSums[category]) {
+        categoryWeightedSums[category] = 0;
+        categoryWeights[category] = 0;
+      }
+      // Use weighted sum: score * weight
+      categoryWeightedSums[category] += score.score * criterion.weight;
+      categoryWeights[category] += criterion.weight;
+    }
+  });
+  
+  // Convert category weighted averages to 1-10 scale using curved mapping
+  // Backend formula: grade = 1 + (normalized ** 0.85) * 9
+  // With default exponent 0.85: 1/5 → 1.0, 3/5 → 6.0, 5/5 → 10.0
+  const GRADE_CURVE_EXPONENT = 0.85;
+  const scaleRange = data.rubric_scale_max - data.rubric_scale_min;
+  if (scaleRange > 0) {
+    Object.keys(categoryWeightedSums).forEach((category) => {
+      if (categoryWeights[category] > 0) {
+        // Calculate weighted average
+        const avgScore = categoryWeightedSums[category] / categoryWeights[category];
+        // Clamp score to valid range
+        const clampedScore = Math.max(data.rubric_scale_min, Math.min(data.rubric_scale_max, avgScore));
+        // Normalize to 0-1 range
+        const normalized = (clampedScore - data.rubric_scale_min) / scaleRange;
+        // Apply curved mapping
+        const curved = 1 + Math.pow(normalized, GRADE_CURVE_EXPONENT) * 9;
+        categoryGrades[category] = Math.round(curved * 10) / 10; // Round to 1 decimal
+      }
+    });
+  }
 
   return (
     <div className={studentStyles.layout.pageContainer}>
@@ -252,30 +298,56 @@ export default function StudentProjectAssessmentInner() {
           </div>
       </div>
 
-        {/* Total Score and Grade */}
-        {data.total_score != null && (
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
-          <h2 className="text-2xl font-bold mb-4">Eindresultaat</h2>
-          <div className="grid grid-cols-2 gap-8">
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Totaalscore</p>
-              <p className="text-5xl font-bold text-blue-600">
-                {data.total_score?.toFixed(1)}
-              </p>
-              <p className="text-sm text-gray-500 mt-1">
-                van {data.rubric_scale_min} - {data.rubric_scale_max}
-              </p>
+        {/* Category Grades and Final Grade */}
+        {Object.keys(categoryGrades).length > 0 && (
+          <div className="space-y-4">
+            {/* Category Grades */}
+            <div className="bg-white border border-slate-200 rounded-xl p-6">
+              <h2 className="text-xl font-bold mb-4">Cijfers per categorie</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Sort categories in desired order: Projectproces, Eindresultaat, Communicatie */}
+                {(() => {
+                  const sortedCategories = Object.entries(categoryGrades).sort(([a], [b]) => {
+                    // Use lowercase for comparison since backend stores categories in lowercase
+                    const order = ['projectproces', 'eindresultaat', 'communicatie'];
+                    const indexA = order.indexOf(a.toLowerCase());
+                    const indexB = order.indexOf(b.toLowerCase());
+                    // If both are in order array, sort by order
+                    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                    // If only one is in order array, it comes first
+                    if (indexA !== -1) return -1;
+                    if (indexB !== -1) return 1;
+                    // Otherwise sort alphabetically
+                    return a.localeCompare(b);
+                  });
+                  return sortedCategories.map(([category, grade]) => (
+                    <div key={category} className="flex flex-col">
+                      <p className="text-xs text-gray-600 mb-1">{category}</p>
+                      <p className="text-3xl font-bold text-blue-600">
+                        {grade.toFixed(1)}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">schaal 1-10</p>
+                    </div>
+                  ));
+                })()}
+              </div>
             </div>
+
+            {/* Final Grade - More Prominent */}
             {data.grade != null && (
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Eindcijfer</p>
-                <p className="text-5xl font-bold text-indigo-600">
-                  {data.grade?.toFixed(1)}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-indigo-300 rounded-xl p-6">
+                <h2 className="text-2xl font-bold mb-4">Eindcijfer</h2>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-6xl font-bold text-indigo-600">
+                    {data.grade?.toFixed(1)}
+                  </p>
+                  <p className="text-lg text-gray-500">/ 10</p>
+                </div>
+                <p className="text-sm text-gray-600 mt-2">
+                  Dit is je uiteindelijke cijfer voor dit project
                 </p>
-                <p className="text-sm text-gray-500 mt-1">schaal 1-10</p>
               </div>
             )}
-            </div>
           </div>
         )}
 
