@@ -6,7 +6,6 @@ import { Progress } from "@/components/ui/progress";
 import { Clock, ChevronRight } from "lucide-react";
 import { ActionChip } from "./helpers";
 import { StudentEvaluation } from "@/dtos";
-import { canStudentSeeResult } from "@/lib/evaluation-helpers";
 import Link from "next/link";
 
 type EvaluationDashboardCardProps = {
@@ -16,6 +15,7 @@ type EvaluationDashboardCardProps = {
 export function EvaluationDashboardCard({ evaluation }: EvaluationDashboardCardProps) {
   // Check actual status from the evaluation
   const isOpen = evaluation.status === "open";
+  const isClosed = evaluation.status === "closed";
   const isCompleted = evaluation.progress === 100;
   
   // Get deadlines from evaluation settings
@@ -74,6 +74,7 @@ export function EvaluationDashboardCard({ evaluation }: EvaluationDashboardCardP
           </div>
 
           <div className="flex shrink-0 flex-wrap items-start gap-2 sm:justify-end">
+            {/* Show "Verder" button only when evaluation is open and not completed */}
             {isOpen && !isCompleted && (
               <Button asChild className="rounded-xl bg-slate-900 hover:bg-slate-800" size="sm">
                 <Link href={`/student/${evaluation.id}?step=${evaluation.nextStep || 1}`}>
@@ -82,7 +83,8 @@ export function EvaluationDashboardCard({ evaluation }: EvaluationDashboardCardP
                 </Link>
               </Button>
             )}
-            {canStudentSeeResult(evaluation.status) && (
+            {/* Show "Resultaat" button only when evaluation is closed */}
+            {isClosed && (
               <Button asChild variant="secondary" size="sm" className="rounded-xl">
                 <Link href={`/student/evaluation/${evaluation.id}/overzicht`}>
                   Resultaat

@@ -119,10 +119,12 @@ export const studentService = {
     try {
       // Fetch all evaluations to check if student has any
       const allEvaluations = await this.getMyEvaluations();
-      const openEvaluations = allEvaluations.filter((e) => e.status === "open");
+      // Include both open and closed evaluations for display
+      const openEvaluations = allEvaluations.filter((e) => e.status === "open" || e.status === "closed");
       
+      // Count completed evaluations based on closed status
       const completedEvaluations = allEvaluations.filter(
-        (e) => e.progress === 100
+        (e) => e.status === "closed"
       ).length;
       
       const pendingReviews = openEvaluations.reduce(

@@ -50,7 +50,8 @@ function StudentDashboardContent() {
     router.push(`/student?tab=${value}`, { scroll: false });
   };
 
-  // Memoize open evaluations to avoid changing on every render
+  // Memoize open and closed evaluations to avoid changing on every render
+  // Include both open and closed evaluations for display
   const openEvaluations = useMemo(() => dashboard?.openEvaluations || [], [dashboard?.openEvaluations]);
 
   // Filter evaluations by search query
