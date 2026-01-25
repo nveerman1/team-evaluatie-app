@@ -64,6 +64,7 @@ from app.infra.db.models import (
     CompetencyWindow,
     CompetencySelfScore,
     CompetencyGoal,
+    CompetencyReflection,
     CompetencyTeacherObservation,
     LearningObjective,
     Client,
@@ -520,7 +521,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         school_id=school.id,
         subject_id=subject.id,
         academic_year_id=academic_year.id,
-        name=f"O&O {academic_year.label}",
+        name="2627_GA2",
         description="Onderzoek & Ontwerpen - Projectvak voor bovenbouw",
         is_active=True,
     )
@@ -1256,6 +1257,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             start_date=ts_gen.random_timestamp(days_ago_min=20, days_ago_max=40),
             end_date=ts_gen.random_timestamp(days_ago_min=10, days_ago_max=20),
             status="closed",
+            require_goal=True,
+            require_reflection=True,
         )
         db.add(window)
         windows.append(window)
@@ -1287,13 +1290,13 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         # Add self-scores, goals, and observations for ALL students
         total_self_scores = 0
         total_goals = 0
+        total_reflections = 0
         total_observations = 0
 
         for window in windows:
             for student in student_objs:  # ALL 24 students
-                # Self-scores - each student scores 3-4 random competencies (or fewer if not enough available)
-                num_competencies_to_score = rand.randint(min(3, len(competencies)), min(4, len(competencies)))
-                for competency in rand.sample(competencies, num_competencies_to_score):
+                # Self-scores - each student scores ALL competencies
+                for competency in competencies:
                     self_score = create_instance(
                         CompetencySelfScore,
                         school_id=school.id,
@@ -1307,6 +1310,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
                 # Goals - each student has 1-2 goals
                 num_goals = rand.randint(1, 2)
+                student_goals = []
                 for _ in range(num_goals):
                     goal = create_instance(
                         CompetencyGoal,
@@ -1319,7 +1323,25 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                         submitted_at=ts_gen.recent_timestamp(days_ago_max=10),
                     )
                     db.add(goal)
+                    db.flush()  # Flush to get goal.id
+                    student_goals.append(goal)
                     total_goals += 1
+
+                # Reflections - one reflection per goal
+                for goal in student_goals:
+                    reflection = create_instance(
+                        CompetencyReflection,
+                        school_id=school.id,
+                        window_id=window.id,
+                        user_id=student.id,
+                        goal_id=goal.id,
+                        text=factory.reflection_text(),
+                        goal_achieved=rand.choice([True, False]) if rand.random() > 0.2 else None,
+                        evidence=factory.feedback_comment(positive=True) if rand.random() > 0.3 else None,
+                        submitted_at=ts_gen.recent_timestamp(days_ago_max=5),
+                    )
+                    db.add(reflection)
+                    total_reflections += 1
 
                 # Teacher observations - each student has 0-2 observations
                 num_observations = rand.randint(0, 2)
@@ -1340,7 +1362,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
         db.commit()
         print_success(f"Created competency data for all {len(student_objs)} students")
-        print_info(f"Created {total_self_scores} self-scores, {total_goals} goals, {total_observations} teacher observations")
+        print_info(f"Created {total_self_scores} self-scores, {total_goals} goals, {total_reflections} reflections, {total_observations} teacher observations")
 
     # 12. Create LearningObjectives
     print("\n--- Creating Learning Objectives ---")
