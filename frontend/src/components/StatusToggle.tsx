@@ -4,7 +4,7 @@ type StatusToggleOption = {
 };
 
 type StatusToggleProps = {
-  options: StatusToggleOption[];
+  options: readonly StatusToggleOption[];
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
