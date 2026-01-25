@@ -737,13 +737,21 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     db.commit()
     db.refresh(project_rubric)
 
-    # Query project criterion templates
+    # Query project criterion templates with level descriptors
+    # Order by category in the correct sequence: projectproces, eindresultaat, communicatie
     project_template_query = db.execute(
         text("""
-            SELECT category, title, description 
+            SELECT category, title, description, level_descriptors
             FROM project_assessment_criterion_templates
             WHERE school_id = :school_id AND subject_id = :subject_id
-            ORDER BY category, id
+            ORDER BY 
+                CASE category
+                    WHEN 'projectproces' THEN 1
+                    WHEN 'eindresultaat' THEN 2
+                    WHEN 'communicatie' THEN 3
+                    ELSE 4
+                END,
+                id
         """),
         {"school_id": school.id, "subject_id": subject.id}
     )
@@ -751,7 +759,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     
     if project_templates:
         # Create criteria from templates (each row is a criterion, not a category)
-        for i, (category, title, description) in enumerate(project_templates):
+        for i, (category, title, description, level_descriptors) in enumerate(project_templates):
             criterion = create_instance(
                 RubricCriterion,
                 school_id=school.id,
@@ -759,6 +767,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                 name=title,  # e.g., "Oriënteren & analyseren"
                 category=category,  # e.g., "projectproces"
                 description=description,
+                descriptors=level_descriptors,  # Add level descriptors
                 order=i,
                 weight=1.0,
             )
@@ -771,10 +780,11 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         # Fallback: create minimal criteria if templates don't exist
         print_warning("No project templates found, creating basic criteria")
         project_criteria_data = [
-            {"name": "Projectproces", "category": "projectproces", "description": "Planning, organisatie en aanpak van het project"},
-            {"name": "Eindresultaat", "category": "eindresultaat", "description": "Kwaliteit en volledigheid van het eindproduct"},
-            {"name": "Communicatie", "category": "communicatie", "description": "Presentatie en communicatie over het project"},
-            {"name": "Documentatie", "category": "communicatie", "description": "Kwaliteit van verslaglegging en documentatie"},
+            {"name": "Oriënteren & analyseren", "category": "projectproces", "description": "Planning, organisatie en aanpak van het project"},
+            {"name": "Testen & evalueren", "category": "projectproces", "description": "Testen en verbeteren van het ontwerp"},
+            {"name": "Ontwerp", "category": "eindresultaat", "description": "Kwaliteit en volledigheid van het eindproduct"},
+            {"name": "Verslag", "category": "communicatie", "description": "Kwaliteit van verslaglegging en documentatie"},
+            {"name": "Presentatie", "category": "communicatie", "description": "Presentatie en communicatie over het project"},
         ]
         for i, criterion_data in enumerate(project_criteria_data):
             criterion = create_instance(
