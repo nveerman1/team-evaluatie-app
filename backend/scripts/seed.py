@@ -1319,7 +1319,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                         user_id=student.id,
                         competency_id=rand.choice(competencies).id,
                         goal_text=factory.competency_goal(),
-                        status="active",
+                        status="in_progress",
                         submitted_at=ts_gen.recent_timestamp(days_ago_max=10),
                     )
                     db.add(goal)
