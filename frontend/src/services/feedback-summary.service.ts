@@ -36,9 +36,10 @@ export const feedbackSummaryService = {
   /**
    * Check status of a queued job
    */
-  async getJobStatus(jobId: string): Promise<JobStatusResponse> {
+  async getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobStatusResponse> {
     const { data } = await api.get<JobStatusResponse>(
-      `/feedback-summaries/jobs/${jobId}/status`
+      `/feedback-summaries/jobs/${jobId}/status`,
+      { signal }
     );
     return data;
   },

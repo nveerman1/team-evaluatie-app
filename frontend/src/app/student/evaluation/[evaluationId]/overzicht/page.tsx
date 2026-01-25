@@ -8,6 +8,7 @@ import { AISummarySection } from "@/components/student/AISummarySection";
 import { peerFeedbackResultsService, studentService, evaluationService, courseService } from "@/services";
 import api from "@/lib/api";
 import { canStudentSeeResult } from "@/lib/evaluation-helpers";
+import { getGradeLabel, getGradeColorClasses } from "@/lib/grades";
 import type { EvaluationResult, OmzaKey, MyAllocation, DashboardResponse } from "@/dtos";
 import type { Evaluation, EvaluationTeamContext, EvaluationTeam } from "@/dtos/evaluation.dto";
 import type { Course } from "@/dtos/course.dto";
@@ -507,9 +508,23 @@ export default function ResultaatPage() {
                     {(evaluationData.teacherGrade != null || evaluationData.teacherSuggestedGrade != null) && (
                       <div>
                         <p className="text-[11px] uppercase tracking-wide text-slate-500">Eindcijfer</p>
-                        <p className="text-2xl font-semibold text-slate-900">
-                          {(evaluationData.teacherGrade ?? evaluationData.teacherSuggestedGrade)?.toFixed(1)}
-                        </p>
+                        <div className="flex items-baseline gap-2">
+                          <p className="text-2xl font-semibold text-slate-900">
+                            {(evaluationData.teacherGrade ?? evaluationData.teacherSuggestedGrade)?.toFixed(1)}
+                          </p>
+                          {(() => {
+                            const finalGrade = evaluationData.teacherGrade ?? evaluationData.teacherSuggestedGrade;
+                            const gradeLabel = getGradeLabel(finalGrade);
+                            if (gradeLabel) {
+                              return (
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${getGradeColorClasses(finalGrade)}`}>
+                                  {gradeLabel}
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
                         {evaluationData.teacherGrade == null && evaluationData.teacherSuggestedGrade != null && (
                           <p className="text-[10px] text-slate-400 mt-0.5">(automatisch berekend)</p>
                         )}
