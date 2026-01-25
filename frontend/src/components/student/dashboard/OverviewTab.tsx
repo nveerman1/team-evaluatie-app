@@ -497,7 +497,7 @@ export function OverviewTab({
                             className="hover:bg-slate-50 cursor-pointer"
                             onClick={handleRowClick}
                           >
-                            <td className="px-4 py-3" onClick={handleRowClick}>
+                            <td className="px-4 py-3">
                               <div className="flex items-center gap-2">
                                 <ChevronDown 
                                   className={`h-4 w-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
@@ -509,48 +509,48 @@ export function OverviewTab({
                               </div>
                             </td>
                             {/* Peer scores */}
-                            <td className="px-2 py-3 text-center" onClick={handleRowClick}>
+                            <td className="px-2 py-3 text-center">
                               <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${getOmzaColor(avgScores.O)}`}>
                                 {avgScores.O ? avgScores.O.toFixed(1) : "-"}
                               </span>
                             </td>
-                            <td className="px-2 py-3 text-center" onClick={handleRowClick}>
+                            <td className="px-2 py-3 text-center">
                               <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${getOmzaColor(avgScores.M)}`}>
                                 {avgScores.M ? avgScores.M.toFixed(1) : "-"}
                               </span>
                             </td>
-                            <td className="px-2 py-3 text-center" onClick={handleRowClick}>
+                            <td className="px-2 py-3 text-center">
                               <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${getOmzaColor(avgScores.Z)}`}>
                                 {avgScores.Z ? avgScores.Z.toFixed(1) : "-"}
                               </span>
                             </td>
-                            <td className="px-2 py-3 text-center" onClick={handleRowClick}>
+                            <td className="px-2 py-3 text-center">
                               <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${getOmzaColor(avgScores.A)}`}>
                                 {avgScores.A ? avgScores.A.toFixed(1) : "-"}
                               </span>
                             </td>
                             {/* Teacher OMZA scores */}
-                            <td className="px-2 py-3 text-center" onClick={handleRowClick}>
+                            <td className="px-2 py-3 text-center">
                               {renderTeacherOmza(evaluation.teacherOmza?.O)}
                             </td>
-                            <td className="px-2 py-3 text-center" onClick={handleRowClick}>
+                            <td className="px-2 py-3 text-center">
                               {renderTeacherOmza(evaluation.teacherOmza?.M)}
                             </td>
-                            <td className="px-2 py-3 text-center" onClick={handleRowClick}>
+                            <td className="px-2 py-3 text-center">
                               {renderTeacherOmza(evaluation.teacherOmza?.Z)}
                             </td>
-                            <td className="px-2 py-3 text-center" onClick={handleRowClick}>
+                            <td className="px-2 py-3 text-center">
                               {renderTeacherOmza(evaluation.teacherOmza?.A)}
                             </td>
                             {/* GCF and Grade */}
-                            <td className="px-2 py-3 text-center text-slate-700" onClick={handleRowClick}>
+                            <td className="px-2 py-3 text-center text-slate-700">
                               {evaluation.gcfScore !== null && evaluation.gcfScore !== undefined 
                                 ? evaluation.gcfScore.toFixed(2) 
                                 : evaluation.teamContributionFactor !== null && evaluation.teamContributionFactor !== undefined
                                 ? evaluation.teamContributionFactor.toFixed(2)
                                 : "—"}
                             </td>
-                            <td className="px-2 py-3 text-center" onClick={handleRowClick}>
+                            <td className="px-2 py-3 text-center">
                               {evaluation.teacherGrade !== null && evaluation.teacherGrade !== undefined ? (
                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
                                   {evaluation.teacherGrade.toFixed(1)}
