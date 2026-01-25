@@ -13,7 +13,7 @@ export interface ScanListItem {
 export interface RadarCategoryScore {
   category_id: number;
   category_name: string;
-  average_score: number;
+  average_score: number | null;
   count: number;
 }
 

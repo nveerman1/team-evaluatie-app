@@ -89,12 +89,12 @@ from app.db.seed_utils import (
 # ============================================================================
 
 COMPETENCY_CATEGORIES = [
-    ("Samenwerken", "Teamwork en samenwerking met anderen", "#3B82F6", "👥", 1),
-    ("Plannen", "Plannen en organiseren van werk", "#10B981", "📋", 2),
-    ("Creatief Denken", "Creatief denken en probleemoplossen", "#F59E0B", "💡", 3),
-    ("Technisch Werken", "Technische vaardigheden en vakmanschap", "#8B5CF6", "🔧", 4),
-    ("Communiceren", "Communicatie en presenteren", "#EC4899", "💬", 5),
-    ("Reflecteren", "Reflectie en professionele houding", "#06B6D4", "🤔", 6),
+    ("Samenwerken", "Effectief samenwerken met anderen in een team", "#3B82F6", "👥", 1),
+    ("Plannen & Organiseren", "Effectief plannen en organiseren van werk en tijd", "#22C55E", "📋", 2),
+    ("Creatief Denken & Probleemoplossen", "Innovatief denken en oplossingen vinden voor problemen", "#A855F7", "💡", 3),
+    ("Technische Vaardigheden", "Beheersen van vakspecifieke kennis en vaardigheden", "#F97316", "🔧", 4),
+    ("Communicatie & Presenteren", "Effectief communiceren en presenteren van ideeën", "#EAB308", "💬", 5),
+    ("Reflectie & Professionele houding", "Zelfreflectie en professioneel gedrag", "#EC4899", "🤔", 6),
 ]
 
 BASE_CREDENTIALS = {

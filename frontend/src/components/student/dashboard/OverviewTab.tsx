@@ -70,6 +70,7 @@ export function OverviewTab({
   projectResults = []
 }: OverviewTabProps) {
   const [expandedReflections, setExpandedReflections] = React.useState<Set<string | number>>(new Set());
+  const [expandedEvaluations, setExpandedEvaluations] = React.useState<Set<string>>(new Set());
   const [selectedScanId, setSelectedScanId] = React.useState<string | null>(null);
   const [enrichedEvaluations, setEnrichedEvaluations] = React.useState<EvaluationResult[]>(peerResults);
   
@@ -208,9 +209,11 @@ export function OverviewTab({
   const competencyProfileData = React.useMemo(() => {
     // If we have radar data for selected scan, use it
     if (radarData && radarData.categories && radarData.categories.length > 0) {
+      // Include all categories to show all axes
+      // For categories without scores, set to null which recharts should handle
       return radarData.categories.map(cat => ({
         category: cat.category_name,
-        value: cat.average_score,
+        value: (cat.average_score !== null && cat.average_score !== undefined) ? cat.average_score : null,
       }));
     }
     
@@ -221,9 +224,35 @@ export function OverviewTab({
     return competencyProfile;
   }, [radarData, competencyProfile]);
 
+  // Filtered data with only categories that have scores (for custom rendering)
+  const filteredCompetencyData = React.useMemo(() => {
+    if (radarData && radarData.categories && radarData.categories.length > 0) {
+      return radarData.categories
+        .filter(cat => cat.average_score !== null && cat.average_score !== undefined)
+        .map(cat => ({
+          category: cat.category_name,
+          value: cat.average_score,
+        }));
+    }
+    return [];
+  }, [radarData]);
+
   // Toggle reflection expansion
   const toggleReflection = (id: string | number) => {
     setExpandedReflections(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  // Toggle evaluation expansion
+  const toggleEvaluation = (id: string) => {
+    setExpandedEvaluations(prev => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
         newSet.delete(id);
@@ -365,7 +394,18 @@ export function OverviewTab({
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {enrichedEvaluations
-                    .filter((evaluation) => evaluation.status === "closed")
+                    .filter((evaluation) => {
+                      // Only show closed evaluations that have valid peer scores
+                      if (evaluation.status !== "closed") return false;
+                      
+                      // Check if evaluation has peer scores data
+                      if (!evaluation.omzaAverages || evaluation.omzaAverages.length === 0) return false;
+                      
+                      // Check if at least one OMZA score exists (not null/undefined)
+                      // Note: Zero is a valid score, so we check for null/undefined specifically
+                      const hasValidScores = evaluation.omzaAverages.some(avg => avg.value !== null && avg.value !== undefined);
+                      return hasValidScores;
+                    })
                     .map((evaluation) => {
                       // Calculate average peer scores
                       const avgScores = {
@@ -443,68 +483,139 @@ export function OverviewTab({
                         return date.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" });
                       };
 
+                      const isExpanded = expandedEvaluations.has(evaluation.id);
+                      // Always allow expansion to show what content is available
+                      const hasExpandableContent = true;
+
+                      const handleRowClick = () => {
+                        toggleEvaluation(evaluation.id);
+                      };
+
                       return (
-                        <tr key={evaluation.id} className="hover:bg-slate-50">
-                          <td className="px-4 py-3">
-                            <div className="font-semibold text-slate-900">{evaluation.title}</div>
-                            <div className="text-xs text-slate-600">{formatDate(evaluation.deadlineISO)}</div>
-                          </td>
-                          {/* Peer scores */}
-                          <td className="px-2 py-3 text-center">
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${getOmzaColor(avgScores.O)}`}>
-                              {avgScores.O ? avgScores.O.toFixed(1) : "-"}
-                            </span>
-                          </td>
-                          <td className="px-2 py-3 text-center">
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${getOmzaColor(avgScores.M)}`}>
-                              {avgScores.M ? avgScores.M.toFixed(1) : "-"}
-                            </span>
-                          </td>
-                          <td className="px-2 py-3 text-center">
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${getOmzaColor(avgScores.Z)}`}>
-                              {avgScores.Z ? avgScores.Z.toFixed(1) : "-"}
-                            </span>
-                          </td>
-                          <td className="px-2 py-3 text-center">
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${getOmzaColor(avgScores.A)}`}>
-                              {avgScores.A ? avgScores.A.toFixed(1) : "-"}
-                            </span>
-                          </td>
-                          {/* Teacher OMZA scores */}
-                          <td className="px-2 py-3 text-center">
-                            {renderTeacherOmza(evaluation.teacherOmza?.O)}
-                          </td>
-                          <td className="px-2 py-3 text-center">
-                            {renderTeacherOmza(evaluation.teacherOmza?.M)}
-                          </td>
-                          <td className="px-2 py-3 text-center">
-                            {renderTeacherOmza(evaluation.teacherOmza?.Z)}
-                          </td>
-                          <td className="px-2 py-3 text-center">
-                            {renderTeacherOmza(evaluation.teacherOmza?.A)}
-                          </td>
-                          {/* GCF and Grade */}
-                          <td className="px-2 py-3 text-center text-slate-700">
-                            {evaluation.gcfScore !== null && evaluation.gcfScore !== undefined 
-                              ? evaluation.gcfScore.toFixed(2) 
-                              : evaluation.teamContributionFactor !== null && evaluation.teamContributionFactor !== undefined
-                              ? evaluation.teamContributionFactor.toFixed(2)
-                              : "—"}
-                          </td>
-                          <td className="px-2 py-3 text-center">
-                            {evaluation.teacherGrade !== null && evaluation.teacherGrade !== undefined ? (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
-                                {evaluation.teacherGrade.toFixed(1)}
+                        <React.Fragment key={evaluation.id}>
+                          <tr 
+                            className="hover:bg-slate-50 cursor-pointer"
+                            onClick={handleRowClick}
+                          >
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <ChevronDown 
+                                  className={`h-4 w-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                />
+                                <div>
+                                  <div className="font-semibold text-slate-900">{evaluation.title}</div>
+                                  <div className="text-xs text-slate-600">{formatDate(evaluation.deadlineISO)}</div>
+                                </div>
+                              </div>
+                            </td>
+                            {/* Peer scores */}
+                            <td className="px-2 py-3 text-center">
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${getOmzaColor(avgScores.O)}`}>
+                                {avgScores.O ? avgScores.O.toFixed(1) : "-"}
                               </span>
-                            ) : evaluation.teacherSuggestedGrade !== null && evaluation.teacherSuggestedGrade !== undefined ? (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
-                                {evaluation.teacherSuggestedGrade.toFixed(1)}
+                            </td>
+                            <td className="px-2 py-3 text-center">
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${getOmzaColor(avgScores.M)}`}>
+                                {avgScores.M ? avgScores.M.toFixed(1) : "-"}
                               </span>
-                            ) : (
-                              <span className="text-slate-500">—</span>
-                            )}
-                          </td>
-                        </tr>
+                            </td>
+                            <td className="px-2 py-3 text-center">
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${getOmzaColor(avgScores.Z)}`}>
+                                {avgScores.Z ? avgScores.Z.toFixed(1) : "-"}
+                              </span>
+                            </td>
+                            <td className="px-2 py-3 text-center">
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${getOmzaColor(avgScores.A)}`}>
+                                {avgScores.A ? avgScores.A.toFixed(1) : "-"}
+                              </span>
+                            </td>
+                            {/* Teacher OMZA scores */}
+                            <td className="px-2 py-3 text-center">
+                              {renderTeacherOmza(evaluation.teacherOmza?.O)}
+                            </td>
+                            <td className="px-2 py-3 text-center">
+                              {renderTeacherOmza(evaluation.teacherOmza?.M)}
+                            </td>
+                            <td className="px-2 py-3 text-center">
+                              {renderTeacherOmza(evaluation.teacherOmza?.Z)}
+                            </td>
+                            <td className="px-2 py-3 text-center">
+                              {renderTeacherOmza(evaluation.teacherOmza?.A)}
+                            </td>
+                            {/* GCF and Grade */}
+                            <td className="px-2 py-3 text-center text-slate-700">
+                              {evaluation.gcfScore !== null && evaluation.gcfScore !== undefined 
+                                ? evaluation.gcfScore.toFixed(2) 
+                                : evaluation.teamContributionFactor !== null && evaluation.teamContributionFactor !== undefined
+                                ? evaluation.teamContributionFactor.toFixed(2)
+                                : "—"}
+                            </td>
+                            <td className="px-2 py-3 text-center">
+                              {evaluation.teacherGrade !== null && evaluation.teacherGrade !== undefined ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+                                  {evaluation.teacherGrade.toFixed(1)}
+                                </span>
+                              ) : evaluation.teacherSuggestedGrade !== null && evaluation.teacherSuggestedGrade !== undefined ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                                  {evaluation.teacherSuggestedGrade.toFixed(1)}
+                                </span>
+                              ) : (
+                                <span className="text-slate-500">—</span>
+                              )}
+                            </td>
+                          </tr>
+                          {/* Expandable row for AI summary and teacher comments */}
+                          {isExpanded && (
+                            <tr className="bg-slate-50">
+                              <td colSpan={11} className="px-4 py-4">
+                                <div className="space-y-3">
+                                  {evaluation.aiSummary ? (
+                                    <div>
+                                      <h4 className="text-sm font-semibold text-slate-900 mb-1 flex items-center gap-2">
+                                        <MessageSquare className="h-4 w-4 text-indigo-600" />
+                                        AI Samenvatting
+                                      </h4>
+                                      <p className="text-sm text-slate-700 leading-relaxed">
+                                        {evaluation.aiSummary}
+                                      </p>
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      <h4 className="text-sm font-semibold text-slate-900 mb-1 flex items-center gap-2">
+                                        <MessageSquare className="h-4 w-4 text-slate-400" />
+                                        AI Samenvatting
+                                      </h4>
+                                      <p className="text-sm text-slate-500 italic">
+                                        Nog geen AI samenvatting beschikbaar voor deze evaluatie.
+                                      </p>
+                                    </div>
+                                  )}
+                                  {evaluation.teacherComments ? (
+                                    <div>
+                                      <h4 className="text-sm font-semibold text-slate-900 mb-1 flex items-center gap-2">
+                                        <FileText className="h-4 w-4 text-amber-600" />
+                                        Docentopmerkingen
+                                      </h4>
+                                      <p className="text-sm text-slate-700 leading-relaxed">
+                                        {evaluation.teacherComments}
+                                      </p>
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      <h4 className="text-sm font-semibold text-slate-900 mb-1 flex items-center gap-2">
+                                        <FileText className="h-4 w-4 text-slate-400" />
+                                        Docentopmerkingen
+                                      </h4>
+                                      <p className="text-sm text-slate-500 italic">
+                                        Nog geen docentopmerkingen beschikbaar voor deze evaluatie.
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       );
                     })}
                 </tbody>
@@ -634,14 +745,19 @@ export function OverviewTab({
                     <RadarChart data={competencyProfileData} outerRadius="70%">
                       <PolarGrid />
                       <PolarAngleAxis dataKey="category" tick={{ fontSize: 11 }} />
-                      <PolarRadiusAxis angle={30} domain={[0, 5]} tickCount={6} />
-                      <Radar
-                        name="Score"
-                        dataKey="value"
-                        stroke="#6366f1"
-                        fill="rgba(99, 102, 241, 0.25)"
-                        strokeWidth={2}
-                      />
+                      <PolarRadiusAxis angle={30} domain={[0, 5]} tickCount={6} tick={{ fontSize: 10 }} />
+                      {/* Render actual data with only scored categories */}
+                      {filteredCompetencyData.length > 0 && (
+                        <Radar
+                          name="Score"
+                          data={filteredCompetencyData}
+                          dataKey="value"
+                          stroke="#6366f1"
+                          fill="rgba(99, 102, 241, 0.25)"
+                          strokeWidth={2}
+                          dot={{ r: 4, fill: "#6366f1", strokeWidth: 2, stroke: "#fff" }}
+                        />
+                      )}
                     </RadarChart>
                   </ResponsiveContainer>
                 </div>
