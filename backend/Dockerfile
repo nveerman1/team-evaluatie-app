@@ -51,6 +51,15 @@ WORKDIR /app
 # Copy virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
 
+# Runtime image cleanup: remove build/install tooling from system Python
+# We run from /opt/venv, so we don't need /usr/local pip/setuptools at runtime.
+RUN rm -rf \
+    /usr/local/lib/python3.11/site-packages/setuptools* \
+    /usr/local/lib/python3.11/site-packages/pkg_resources* \
+    /usr/local/lib/python3.11/site-packages/pip* \
+    /usr/local/bin/pip* || true
+
+
 # Copy application code
 COPY --chown=appuser:appuser . .
 
