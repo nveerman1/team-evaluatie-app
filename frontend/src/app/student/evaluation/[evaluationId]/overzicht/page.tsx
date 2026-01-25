@@ -125,6 +125,11 @@ export default function ResultaatPage() {
         
         if (evalResult) {
           console.log("Found evaluation data:", evalResult);
+          console.log("GCF/Grade check - teamContributionFactor:", evalResult.teamContributionFactor);
+          console.log("GCF/Grade check - gcfScore:", evalResult.gcfScore);
+          console.log("GCF/Grade check - teacherGrade:", evalResult.teacherGrade);
+          console.log("GCF/Grade check - teacherSuggestedGrade:", evalResult.teacherSuggestedGrade);
+          console.log("GCF/Grade check - teacherOmza:", evalResult.teacherOmza);
           setEvaluationData(evalResult);
         } else {
           // Fallback: If not found in peer-results, try to build it from other APIs
@@ -353,150 +358,127 @@ export default function ResultaatPage() {
 
               {/* Right column: Teambeoordeling */}
               <div className="space-y-3">
-                {/* Teambeoordeling - Teacher OMZA scores in table format */}
-                {evaluationData.teacherOmza && Object.keys(evaluationData.teacherOmza).length > 0 && (
+                {/* Always show Teambeoordeling card, but content depends on available data */}
+                {(evaluationData.teacherOmza || teamContributionFactor != null || evaluationData.sprScore != null) && (
                   <div className="rounded-xl border border-slate-200 bg-white p-3">
                     <div className="mb-3">
                       <h4 className="text-xs font-semibold text-slate-700">Teambeoordeling</h4>
                     </div>
                     
                     {/* OMZA scores table - matching heatmap style with OMZA as columns */}
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-slate-200">
-                            {['O', 'M', 'Z', 'A'].map((key) => (
-                              <th key={key} className="px-2 py-1.5 text-center text-xs font-semibold text-slate-600">
-                                {key}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr className="hover:bg-slate-50">
-                            {['O', 'M', 'Z', 'A'].map((key) => {
-                              const value = evaluationData.teacherOmza[key as keyof typeof evaluationData.teacherOmza];
-                              const peerAvg = evaluationData.omzaAverages?.find(avg => avg.key === key);
-                              const delta = peerAvg?.delta ?? 0;
-                              
-                              // Color based on teacher score (1-4 scale) matching heatmap
-                              const getScoreColor = (score: number) => {
-                                if (score >= 3.5) return "bg-green-100 text-green-700";
-                                if (score >= 2.5) return "bg-blue-100 text-blue-700";
-                                return "bg-orange-100 text-orange-700";
-                              };
-                              
-                              return (
-                                <td key={key} className="px-2 py-2 text-center">
-                                  {value != null ? (
-                                    <div className="inline-flex flex-col items-center gap-0.5">
-                                      <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(value)}`}>
-                                        {value.toFixed(1)}
-                                      </span>
-                                      {delta !== 0 && (
-                                        <span className={`text-[10px] font-medium tabular-nums ${
-                                          delta > 0 ? "text-green-600" : "text-red-600"
-                                        }`}>
-                                          {delta > 0 ? "+" : ""}{delta.toFixed(1)}
+                    {evaluationData.teacherOmza && Object.keys(evaluationData.teacherOmza).length > 0 && (
+                      <div className="overflow-x-auto mb-3">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-slate-200">
+                              {['O', 'M', 'Z', 'A'].map((key) => (
+                                <th key={key} className="px-2 py-1.5 text-center text-xs font-semibold text-slate-600">
+                                  {key}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr className="hover:bg-slate-50">
+                              {['O', 'M', 'Z', 'A'].map((key) => {
+                                const value = evaluationData.teacherOmza[key as keyof typeof evaluationData.teacherOmza];
+                                const peerAvg = evaluationData.omzaAverages?.find(avg => avg.key === key);
+                                const delta = peerAvg?.delta ?? 0;
+                                
+                                // Color based on teacher score (1-4 scale) matching heatmap
+                                const getScoreColor = (score: number) => {
+                                  if (score >= 3.5) return "bg-green-100 text-green-700";
+                                  if (score >= 2.5) return "bg-blue-100 text-blue-700";
+                                  return "bg-orange-100 text-orange-700";
+                                };
+                                
+                                return (
+                                  <td key={key} className="px-2 py-2 text-center">
+                                    {value != null ? (
+                                      <div className="inline-flex flex-col items-center gap-0.5">
+                                        <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(value)}`}>
+                                          {value.toFixed(1)}
                                         </span>
-                                      )}
-                                      {delta === 0 && <span className="text-slate-300 text-xs">–</span>}
-                                    </div>
-                                  ) : (
-                                    <span className="text-slate-300">–</span>
-                                  )}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
+                                        {delta !== 0 && (
+                                          <span className={`text-[10px] font-medium tabular-nums ${
+                                            delta > 0 ? "text-green-600" : "text-red-600"
+                                          }`}>
+                                            {delta > 0 ? "+" : ""}{delta.toFixed(1)}
+                                          </span>
+                                        )}
+                                        {delta === 0 && <span className="text-slate-300 text-xs">–</span>}
+                                      </div>
+                                    ) : (
+                                      <span className="text-slate-300">–</span>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                     
                     {/* GCF and SPR labels with colors */}
-                    <div className="mt-3 pt-3 border-t border-slate-200 space-y-2">
-                      {/* GCF score and label */}
-                      {teamContributionFactor != null && (
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-slate-600">GCF (Correctiefactor):</span>
-                            <span className="text-lg font-semibold text-slate-900 tabular-nums">
-                              {teamContributionFactor.toFixed(2)}
-                            </span>
+                    {(teamContributionFactor != null || evaluationData.sprScore != null) && (
+                      <div className={`space-y-2 ${evaluationData.teacherOmza && Object.keys(evaluationData.teacherOmza).length > 0 ? 'pt-3 border-t border-slate-200' : ''}`}>
+                        {/* GCF score and label */}
+                        {teamContributionFactor != null && (
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-slate-600">GCF (Correctiefactor):</span>
+                              <span className="text-lg font-semibold text-slate-900 tabular-nums">
+                                {teamContributionFactor.toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="flex justify-end">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold ${
+                                teamContributionFactor >= 1.05
+                                  ? "bg-green-100 text-green-700"
+                                  : teamContributionFactor >= 0.95
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-orange-100 text-orange-700"
+                              }`}>
+                                {teamContributionLabel || (
+                                  teamContributionFactor >= 1.05
+                                    ? "Boven verwachting"
+                                    : teamContributionFactor >= 0.95
+                                    ? "Naar verwachting"
+                                    : "Onder verwachting"
+                                )}
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex justify-end">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold ${
-                              teamContributionFactor >= 1.05
-                                ? "bg-green-100 text-green-700"
-                                : teamContributionFactor >= 0.95
+                        )}
+                        {/* SPR label */}
+                        {evaluationData.sprScore != null && (
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-slate-600">Zelfbeeld (SPR):</span>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md font-semibold ${
+                              evaluationData.sprScore >= 1.2
+                                ? "bg-orange-100 text-orange-700"
+                                : evaluationData.sprScore >= 0.8
                                 ? "bg-blue-100 text-blue-700"
                                 : "bg-orange-100 text-orange-700"
                             }`}>
-                              {teamContributionLabel || (
-                                teamContributionFactor >= 1.05
-                                  ? "Boven verwachting"
-                                  : teamContributionFactor >= 0.95
-                                  ? "Naar verwachting"
-                                  : "Onder verwachting"
-                              )}
+                              {evaluationData.sprScore >= 1.2
+                                ? "Te hoog"
+                                : evaluationData.sprScore >= 0.8
+                                ? "Realistisch"
+                                : "Te laag"}
                             </span>
                           </div>
-                        </div>
-                      )}
-                      {/* SPR label */}
-                      {evaluationData.sprScore != null && (
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-600">Zelfbeeld (SPR):</span>
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md font-semibold ${
-                            evaluationData.sprScore >= 1.2
-                              ? "bg-orange-100 text-orange-700"
-                              : evaluationData.sprScore >= 0.8
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-orange-100 text-orange-700"
-                          }`}>
-                            {evaluationData.sprScore >= 1.2
-                              ? "Te hoog"
-                              : evaluationData.sprScore >= 0.8
-                              ? "Realistisch"
-                              : "Te laag"}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-                
-                {/* Fallback: Show GCF even if no teacher OMZA */}
-                {!evaluationData.teacherOmza && teamContributionFactor != null && (
-                  <div className="rounded-xl border border-slate-200 bg-white p-3">
-                    <div className="mb-2">
-                      <h4 className="text-xs font-semibold text-slate-700">Team-bijdrage</h4>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-600">GCF (Correctiefactor):</span>
-                        <span className="text-lg font-semibold text-slate-900 tabular-nums">
-                          {teamContributionFactor.toFixed(2)}
-                        </span>
+                        )}
                       </div>
-                      <div className="flex justify-end">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold ${
-                          teamContributionFactor >= 1.05
-                            ? "bg-green-100 text-green-700"
-                            : teamContributionFactor >= 0.95
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-orange-100 text-orange-700"
-                        }`}>
-                          {teamContributionLabel || (
-                            teamContributionFactor >= 1.05
-                              ? "Boven verwachting"
-                              : teamContributionFactor >= 0.95
-                              ? "Naar verwachting"
-                              : "Onder verwachting"
-                          )}
-                        </span>
-                      </div>
-                    </div>
+                    )}
+                    
+                    {/* Show message if no data available */}
+                    {!evaluationData.teacherOmza && teamContributionFactor == null && evaluationData.sprScore == null && (
+                      <p className="text-sm text-slate-500 text-center py-2">
+                        Nog geen teambeoordeling beschikbaar
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -564,7 +546,6 @@ export default function ResultaatPage() {
                     {/* OMZA scores table with emoticons */}
                     {evaluationData.teacherOmza && (
                       <div>
-                        <p className="text-[11px] uppercase tracking-wide text-slate-500 mb-2">OMZA scores</p>
                         <div className="overflow-x-auto">
                           <table className="w-full text-sm">
                             <thead>
@@ -584,14 +565,9 @@ export default function ResultaatPage() {
                                   return (
                                     <td key={key} className="px-2 py-2 text-center">
                                       {value != null ? (
-                                        <div className="inline-flex flex-col items-center gap-1">
-                                          <span className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-sm shadow-sm ${getOmzaEmojiColorClasses(value)}`}>
-                                            {getOmzaEmoji(value)}
-                                          </span>
-                                          <span className="text-[10px] font-medium text-slate-600 tabular-nums">
-                                            {value.toFixed(1)}
-                                          </span>
-                                        </div>
+                                        <span className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-sm shadow-sm ${getOmzaEmojiColorClasses(value)}`}>
+                                          {getOmzaEmoji(value)}
+                                        </span>
                                       ) : (
                                         <span className="text-slate-300">–</span>
                                       )}
