@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { studentService, projectAssessmentService, projectService } from "@/services";
+import { studentService, projectAssessmentService, projectService, overviewService } from "@/services";
 import { ApiAuthError } from "@/lib/api";
 import type {
   StudentOverviewData,
@@ -119,46 +119,36 @@ export function useStudentOverview() {
             // Get client name directly from the assessment list response (now includes client_name)
             let clientName = (assessment as any).client_name || assessment.metadata_json?.client;
             
-            // Calculate category averages from scores and criteria
-            const categoryScores: Record<string, number[]> = {};
+            // Get category scores from backend using the same logic as teacher overview
+            // This ensures consistency across all views (student overview, student detail, teacher overview)
+            let proces: number | undefined;
+            let eindresultaat: number | undefined;
+            let communicatie: number | undefined;
             
-            details.scores.forEach((score) => {
-              const criterion = details.criteria.find((c) => c.id === score.criterion_id);
-              if (criterion && criterion.category) {
-                if (!categoryScores[criterion.category]) {
-                  categoryScores[criterion.category] = [];
+            try {
+              // Fetch team scores from backend - this uses the correct weighted average and curved mapping
+              const teamsResponse = await overviewService.getProjectTeams(assessment.id);
+              
+              // Find the student's team in the assessment
+              // The details.scores contain team_number, so we can identify which team the student belongs to
+              const studentTeamNumber = details.scores.find(s => s.team_number !== null)?.team_number;
+              
+              if (studentTeamNumber !== undefined) {
+                const studentTeam = teamsResponse.teams.find(t => t.team_number === studentTeamNumber);
+                
+                if (studentTeam && studentTeam.category_scores) {
+                  // Use backend-calculated category scores (weighted + curved)
+                  // Note: Handle both "projectproces" and "proces" naming variations for backwards compatibility
+                  // as some older rubrics may use different category names
+                  proces = studentTeam.category_scores.projectproces || studentTeam.category_scores.proces;
+                  eindresultaat = studentTeam.category_scores.eindresultaat;
+                  communicatie = studentTeam.category_scores.communicatie;
                 }
-                categoryScores[criterion.category].push(score.score);
               }
-            });
-
-            // Calculate averages for each category
-            const categoryAverages: Record<string, number> = {};
-            Object.entries(categoryScores).forEach(([category, scores]) => {
-              const avg = scores.reduce((sum, s) => sum + s, 0) / scores.length;
-              categoryAverages[category] = avg;
-            });
-
-            // Normalize category names to lowercase for consistent lookups
-            const normalizedAverages = Object.fromEntries(
-              Object.entries(categoryAverages).map(([key, value]) => [key.toLowerCase(), value])
-            );
-
-            // Extract specific categories (with normalized names)
-            // Try multiple variations for each category
-            const procesRaw = normalizedAverages["projectproces"] || normalizedAverages["proces"];
-            const eindresultaatRaw = normalizedAverages["eindresultaat"];
-            const communicatieRaw = normalizedAverages["communicatie"];
-
-            // Convert scores from 0-5 scale to 1-10 scale using formula: (score/5*9+1)
-            const convertScoreTo10 = (score: number | undefined): number | undefined => {
-              if (score === undefined || score === null) return undefined;
-              return (score / 5) * 9 + 1;
-            };
-
-            const proces = convertScoreTo10(procesRaw);
-            const eindresultaat = convertScoreTo10(eindresultaatRaw);
-            const communicatie = convertScoreTo10(communicatieRaw);
+            } catch (error) {
+              // If we can't fetch team scores, leave category scores as undefined
+              console.warn(`Could not fetch team scores for assessment ${assessment.id}:`, error);
+            }
 
             return {
               id: assessment.id.toString(),
