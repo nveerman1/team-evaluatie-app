@@ -64,6 +64,7 @@ from app.infra.db.models import (
     CompetencyWindow,
     CompetencySelfScore,
     CompetencyGoal,
+    CompetencyReflection,
     CompetencyTeacherObservation,
     LearningObjective,
     Client,
@@ -91,8 +92,8 @@ from app.db.seed_utils import (
 COMPETENCY_CATEGORIES = [
     ("Samenwerken", "Effectief samenwerken met anderen in een team", "#3B82F6", "👥", 1),
     ("Plannen & Organiseren", "Effectief plannen en organiseren van werk en tijd", "#22C55E", "📋", 2),
-    ("Creatief Denken & Probleemoplossen", "Innovatief denken en oplossingen vinden voor problemen", "#A855F7", "💡", 3),
-    ("Technische Vaardigheden", "Beheersen van vakspecifieke kennis en vaardigheden", "#F97316", "🔧", 4),
+    ("Creatief denken & probleemoplossen", "Innovatief denken en oplossingen vinden voor problemen", "#A855F7", "💡", 3),
+    ("Technische vaardigheden", "Beheersen van vakspecifieke kennis en vaardigheden", "#F97316", "🔧", 4),
     ("Communicatie & Presenteren", "Effectief communiceren en presenteren van ideeën", "#EAB308", "💬", 5),
     ("Reflectie & Professionele houding", "Zelfreflectie en professioneel gedrag", "#EC4899", "🤔", 6),
 ]
@@ -520,7 +521,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         school_id=school.id,
         subject_id=subject.id,
         academic_year_id=academic_year.id,
-        name=f"O&O {academic_year.label}",
+        name="2627_GA2",
         description="Onderzoek & Ontwerpen - Projectvak voor bovenbouw",
         is_active=True,
     )
@@ -736,13 +737,21 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     db.commit()
     db.refresh(project_rubric)
 
-    # Query project criterion templates
+    # Query project criterion templates with level descriptors
+    # Order by category in the correct sequence: projectproces, eindresultaat, communicatie
     project_template_query = db.execute(
         text("""
-            SELECT category, title, description 
+            SELECT category, title, description, level_descriptors
             FROM project_assessment_criterion_templates
             WHERE school_id = :school_id AND subject_id = :subject_id
-            ORDER BY category, id
+            ORDER BY 
+                CASE category
+                    WHEN 'projectproces' THEN 1
+                    WHEN 'eindresultaat' THEN 2
+                    WHEN 'communicatie' THEN 3
+                    ELSE 4
+                END,
+                id
         """),
         {"school_id": school.id, "subject_id": subject.id}
     )
@@ -750,7 +759,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     
     if project_templates:
         # Create criteria from templates (each row is a criterion, not a category)
-        for i, (category, title, description) in enumerate(project_templates):
+        for i, (category, title, description, level_descriptors) in enumerate(project_templates):
             criterion = create_instance(
                 RubricCriterion,
                 school_id=school.id,
@@ -758,6 +767,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                 name=title,  # e.g., "Oriënteren & analyseren"
                 category=category,  # e.g., "projectproces"
                 description=description,
+                descriptors=level_descriptors,  # Add level descriptors
                 order=i,
                 weight=1.0,
             )
@@ -770,10 +780,11 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         # Fallback: create minimal criteria if templates don't exist
         print_warning("No project templates found, creating basic criteria")
         project_criteria_data = [
-            {"name": "Projectproces", "category": "projectproces", "description": "Planning, organisatie en aanpak van het project"},
-            {"name": "Eindresultaat", "category": "eindresultaat", "description": "Kwaliteit en volledigheid van het eindproduct"},
-            {"name": "Communicatie", "category": "communicatie", "description": "Presentatie en communicatie over het project"},
-            {"name": "Documentatie", "category": "communicatie", "description": "Kwaliteit van verslaglegging en documentatie"},
+            {"name": "Oriënteren & analyseren", "category": "projectproces", "description": "Planning, organisatie en aanpak van het project"},
+            {"name": "Testen & evalueren", "category": "projectproces", "description": "Testen en verbeteren van het ontwerp"},
+            {"name": "Ontwerp", "category": "eindresultaat", "description": "Kwaliteit en volledigheid van het eindproduct"},
+            {"name": "Verslag", "category": "communicatie", "description": "Kwaliteit van verslaglegging en documentatie"},
+            {"name": "Presentatie", "category": "communicatie", "description": "Presentatie en communicatie over het project"},
         ]
         for i, criterion_data in enumerate(project_criteria_data):
             criterion = create_instance(
@@ -1256,6 +1267,8 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
             start_date=ts_gen.random_timestamp(days_ago_min=20, days_ago_max=40),
             end_date=ts_gen.random_timestamp(days_ago_min=10, days_ago_max=20),
             status="closed",
+            require_goal=True,
+            require_reflection=True,
         )
         db.add(window)
         windows.append(window)
@@ -1287,13 +1300,13 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         # Add self-scores, goals, and observations for ALL students
         total_self_scores = 0
         total_goals = 0
+        total_reflections = 0
         total_observations = 0
 
         for window in windows:
             for student in student_objs:  # ALL 24 students
-                # Self-scores - each student scores 3-4 random competencies (or fewer if not enough available)
-                num_competencies_to_score = rand.randint(min(3, len(competencies)), min(4, len(competencies)))
-                for competency in rand.sample(competencies, num_competencies_to_score):
+                # Self-scores - each student scores ALL competencies
+                for competency in competencies:
                     self_score = create_instance(
                         CompetencySelfScore,
                         school_id=school.id,
@@ -1307,6 +1320,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
                 # Goals - each student has 1-2 goals
                 num_goals = rand.randint(1, 2)
+                student_goals = []
                 for _ in range(num_goals):
                     goal = create_instance(
                         CompetencyGoal,
@@ -1315,11 +1329,29 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                         user_id=student.id,
                         competency_id=rand.choice(competencies).id,
                         goal_text=factory.competency_goal(),
-                        status="active",
+                        status="in_progress",
                         submitted_at=ts_gen.recent_timestamp(days_ago_max=10),
                     )
                     db.add(goal)
+                    db.flush()  # Flush to get goal.id
+                    student_goals.append(goal)
                     total_goals += 1
+
+                # Reflections - one reflection per goal
+                for goal in student_goals:
+                    reflection = create_instance(
+                        CompetencyReflection,
+                        school_id=school.id,
+                        window_id=window.id,
+                        user_id=student.id,
+                        goal_id=goal.id,
+                        text=factory.reflection_text(),
+                        goal_achieved=rand.choice([True, False]) if rand.random() > 0.2 else None,
+                        evidence=factory.feedback_comment(positive=True) if rand.random() > 0.3 else None,
+                        submitted_at=ts_gen.recent_timestamp(days_ago_max=5),
+                    )
+                    db.add(reflection)
+                    total_reflections += 1
 
                 # Teacher observations - each student has 0-2 observations
                 num_observations = rand.randint(0, 2)
@@ -1340,7 +1372,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
         db.commit()
         print_success(f"Created competency data for all {len(student_objs)} students")
-        print_info(f"Created {total_self_scores} self-scores, {total_goals} goals, {total_observations} teacher observations")
+        print_info(f"Created {total_self_scores} self-scores, {total_goals} goals, {total_reflections} reflections, {total_observations} teacher observations")
 
     # 12. Create LearningObjectives
     print("\n--- Creating Learning Objectives ---")
