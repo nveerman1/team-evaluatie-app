@@ -210,7 +210,7 @@ export function OverviewTab({
     // If we have radar data for selected scan, use it
     if (radarData && radarData.categories && radarData.categories.length > 0) {
       // Include all categories to show all axes
-      // Use null for categories without scores so connectNulls can skip them
+      // For categories without scores, set to null which recharts should handle
       return radarData.categories.map(cat => ({
         category: cat.category_name,
         value: (cat.average_score !== null && cat.average_score !== undefined) ? cat.average_score : null,
@@ -223,6 +223,19 @@ export function OverviewTab({
     }
     return competencyProfile;
   }, [radarData, competencyProfile]);
+
+  // Filtered data with only categories that have scores (for custom rendering)
+  const filteredCompetencyData = React.useMemo(() => {
+    if (radarData && radarData.categories && radarData.categories.length > 0) {
+      return radarData.categories
+        .filter(cat => cat.average_score !== null && cat.average_score !== undefined)
+        .map(cat => ({
+          category: cat.category_name,
+          value: cat.average_score,
+        }));
+    }
+    return [];
+  }, [radarData]);
 
   // Toggle reflection expansion
   const toggleReflection = (id: string | number) => {
@@ -715,15 +728,19 @@ export function OverviewTab({
                     <RadarChart data={competencyProfileData} outerRadius="70%">
                       <PolarGrid />
                       <PolarAngleAxis dataKey="category" tick={{ fontSize: 11 }} />
-                      <PolarRadiusAxis angle={30} domain={[0, 5]} tickCount={6} />
-                      <Radar
-                        name="Score"
-                        dataKey="value"
-                        stroke="#6366f1"
-                        fill="none"
-                        strokeWidth={2}
-                        dot={{ r: 4, fill: "#6366f1", strokeWidth: 2, stroke: "#fff" }}
-                      />
+                      <PolarRadiusAxis angle={30} domain={[0, 5]} tickCount={6} tick={{ fontSize: 10 }} />
+                      {/* Render actual data with only scored categories */}
+                      {filteredCompetencyData.length > 0 && (
+                        <Radar
+                          name="Score"
+                          data={filteredCompetencyData}
+                          dataKey="value"
+                          stroke="#6366f1"
+                          fill="rgba(99, 102, 241, 0.25)"
+                          strokeWidth={2}
+                          dot={{ r: 4, fill: "#6366f1", strokeWidth: 2, stroke: "#fff" }}
+                        />
+                      )}
                     </RadarChart>
                   </ResponsiveContainer>
                 </div>
