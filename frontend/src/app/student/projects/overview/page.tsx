@@ -492,13 +492,13 @@ export default function ProjectOverviewPage() {
                         </span>
                       </td>
                       <td className="px-3 py-2 align-top text-xs text-slate-600">
-                        {getCategoryDisplay('Projectproces')}
+                        {getCategoryDisplay('projectproces')}
                       </td>
                       <td className="px-3 py-2 align-top text-xs text-slate-600">
-                        {getCategoryDisplay('Eindresultaat')}
+                        {getCategoryDisplay('eindresultaat')}
                       </td>
                       <td className="px-3 py-2 align-top text-xs text-slate-600">
-                        {getCategoryDisplay('Communicatie')}
+                        {getCategoryDisplay('communicatie')}
                       </td>
                       <td className="px-3 py-2 align-top text-right">
                         <Link

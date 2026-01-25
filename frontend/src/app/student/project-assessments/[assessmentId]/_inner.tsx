@@ -302,9 +302,10 @@ export default function StudentProjectAssessmentInner() {
                 {/* Sort categories in desired order: Projectproces, Eindresultaat, Communicatie */}
                 {(() => {
                   const sortedCategories = Object.entries(categoryGrades).sort(([a], [b]) => {
-                    const order = ['Projectproces', 'Eindresultaat', 'Communicatie'];
-                    const indexA = order.indexOf(a);
-                    const indexB = order.indexOf(b);
+                    // Use lowercase for comparison since backend stores categories in lowercase
+                    const order = ['projectproces', 'eindresultaat', 'communicatie'];
+                    const indexA = order.indexOf(a.toLowerCase());
+                    const indexB = order.indexOf(b.toLowerCase());
                     // If both are in order array, sort by order
                     if (indexA !== -1 && indexB !== -1) return indexA - indexB;
                     // If only one is in order array, it comes first
