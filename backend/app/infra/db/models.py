@@ -323,58 +323,7 @@ class CourseEnrollment(Base):
     )
 
 
-class Group(Base):
-    __tablename__ = "groups"
-
-    id: Mapped[int] = id_pk()
-    school_id: Mapped[int] = tenant_fk()
-
-    # Elke groep hoort bij één course/vak
-    course_id: Mapped[int] = mapped_column(
-        ForeignKey("courses.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-
-    # Vrije groepsnaam (bijv. "Team 1", "GA2 - Team Alpha")
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
-
-    # ✅ Teamnummer — zelfde type & stijl als in User
-    team_number: Mapped[Optional[int]] = mapped_column(
-        nullable=True,
-        index=True,
-    )
-
-    # Relaties
-    course: Mapped["Course"] = relationship()
-    members: Mapped[list["GroupMember"]] = relationship(
-        back_populates="group",
-        cascade="all,delete-orphan",
-    )
-
-    __table_args__ = (
-        # Indexen
-        Index("ix_group_course", "course_id"),
-        Index("ix_groups_course_team", "course_id", "team_number"),
-    )
-
-
-class GroupMember(Base):
-    __tablename__ = "group_members"
-    id: Mapped[int] = id_pk()
-    school_id: Mapped[int] = tenant_fk()
-    group_id: Mapped[int] = mapped_column(ForeignKey("groups.id", ondelete="CASCADE"))
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    role_in_team: Mapped[Optional[str]] = mapped_column(String(50))
-    active: Mapped[bool] = mapped_column(Boolean, default=True)
-
-    group: Mapped["Group"] = relationship(back_populates="members")
-    user: Mapped["User"] = relationship()
-
-    __table_args__ = (
-        UniqueConstraint("group_id", "user_id", name="uq_member_once"),
-        Index("ix_member_user", "user_id"),
-    )
+# Legacy Group and GroupMember models removed - replaced by CourseEnrollment and ProjectTeam
 
 
 class Project(Base):
@@ -472,7 +421,6 @@ class Subproject(Base):
 class ProjectTeam(Base):
     """
     Project-specific team roster - freezes team composition at a point in time
-    Tracks which groups/teams were used in a specific project
     """
 
     __tablename__ = "project_teams"
@@ -480,12 +428,9 @@ class ProjectTeam(Base):
     id: Mapped[int] = id_pk()
     school_id: Mapped[int] = tenant_fk()
 
-    # Links to project and optionally to the source group
+    # Links to project
     project_id: Mapped[int] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    team_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("groups.id", ondelete="SET NULL"), nullable=True, index=True
     )
 
     # Snapshot of team name at time of creation
@@ -504,15 +449,15 @@ class ProjectTeam(Base):
 
     # Relationships
     project: Mapped["Project"] = relationship()
-    team: Mapped[Optional["Group"]] = relationship()
     members: Mapped[list["ProjectTeamMember"]] = relationship(
+        back_populates="project_team", cascade="all,delete-orphan"
+    )
+    externals: Mapped[list["ProjectTeamExternal"]] = relationship(
         back_populates="project_team", cascade="all,delete-orphan"
     )
 
     __table_args__ = (
         Index("ix_project_team_project", "project_id"),
-        Index("ix_project_team_team", "team_id"),
-        Index("ix_project_team_project_version", "project_id", "team_id", "version"),
         Index("ix_project_teams_project_team_number", "project_id", "team_number"),
     )
 
@@ -2730,7 +2675,7 @@ class ExternalEvaluator(Base):
 
 class ProjectTeamExternal(Base):
     """
-    Links project teams (groups) to external evaluators with invitation tokens
+    Links project teams to external evaluators with invitation tokens
     Supports both bovenbouw (different evaluators per team) and onderbouw (one evaluator for all teams)
     """
 
@@ -2740,8 +2685,8 @@ class ProjectTeamExternal(Base):
     school_id: Mapped[int] = tenant_fk()
 
     # Relationships
-    group_id: Mapped[int] = mapped_column(
-        ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True
+    project_team_id: Mapped[int] = mapped_column(
+        ForeignKey("project_teams.id", ondelete="CASCADE"), nullable=False, index=True
     )
     external_evaluator_id: Mapped[int] = mapped_column(
         ForeignKey("external_evaluators.id", ondelete="CASCADE"),
@@ -2757,7 +2702,7 @@ class ProjectTeamExternal(Base):
         index=True,
     )
 
-    # Team number within the group (identifies specific team, not just the course group)
+    # Team number within the project (identifies specific team)
     team_number: Mapped[Optional[int]] = mapped_column(nullable=True, index=True)
 
     # Token for external access
@@ -2782,7 +2727,7 @@ class ProjectTeamExternal(Base):
     submitted_at: Mapped[Optional[datetime]] = mapped_column()
 
     # Relationships
-    group: Mapped["Group"] = relationship()
+    project_team: Mapped["ProjectTeam"] = relationship(back_populates="externals")
     external_evaluator: Mapped["ExternalEvaluator"] = relationship(
         back_populates="team_links"
     )
@@ -2790,13 +2735,13 @@ class ProjectTeamExternal(Base):
     assessment: Mapped[Optional["ProjectAssessment"]] = relationship()
 
     __table_args__ = (
-        Index("ix_project_team_external_group", "group_id"),
+        Index("ix_project_team_external_project_team", "project_team_id"),
         Index("ix_project_team_external_evaluator", "external_evaluator_id"),
         Index("ix_project_team_external_project", "project_id"),
         Index("ix_project_team_external_assessment", "assessment_id"),
         Index("ix_project_team_external_status", "status"),
         Index("ix_project_team_external_token", "invitation_token"),
-        Index("ix_project_team_external_group_team", "group_id", "team_number"),
+        Index("ix_project_team_external_team", "project_team_id", "team_number"),
     )
 
 
