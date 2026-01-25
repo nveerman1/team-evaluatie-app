@@ -12,6 +12,7 @@ import {
   Legend,
 } from "chart.js";
 import { competencyMonitorService } from "@/services/competency-monitor.service";
+import { competencyService } from "@/services/competency.service";
 
 // Register Chart.js components
 ChartJS.register(
@@ -92,7 +93,7 @@ export function CompetencyProfileSection({ studentId, courseId }: CompetencyProf
 
       try {
         // Fetch ALL categories for the school to ensure we show all categories
-        const allCategories = await competencyMonitorService.getCategories();
+        const allCategories = await competencyService.getCategories();
         
         // Create array with ALL categories, including those without scores
         const categories: CategoryScore[] = allCategories.map(cat => ({
