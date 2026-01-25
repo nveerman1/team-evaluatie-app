@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Loading, ErrorMessage } from "@/components";
 import { FeedbackSummary, EvaluationReflectionSection } from "@/components/student";
 import { AISummarySection } from "@/components/student/AISummarySection";
-import { peerFeedbackResultsService, studentService, evaluationService, courseService } from "@/services";
+import { peerFeedbackResultsService, studentService, evaluationService, courseService, gradesService } from "@/services";
 import api from "@/lib/api";
 import { canStudentSeeResult } from "@/lib/evaluation-helpers";
 import { getGradeLabel, getGradeColorClasses } from "@/lib/grades";
@@ -130,7 +130,36 @@ export default function ResultaatPage() {
           console.log("GCF/Grade check - teacherGrade:", evalResult.teacherGrade);
           console.log("GCF/Grade check - teacherSuggestedGrade:", evalResult.teacherSuggestedGrade);
           console.log("GCF/Grade check - teacherOmza:", evalResult.teacherOmza);
-          setEvaluationData(evalResult);
+          
+          // Enrich with grade data if missing GCF or teacherGrade
+          if (evalResult.gcfScore == null || evalResult.teacherGrade == null) {
+            console.log("GCF or grade missing, fetching from grades preview...");
+            try {
+              const gradeData = await gradesService.previewGrades(evaluationId);
+              const userGrade = gradeData.items && gradeData.items.length > 0 ? gradeData.items[0] : null;
+              
+              if (userGrade) {
+                console.log("Enriching with grade data:", {
+                  gcf: userGrade.gcf,
+                  suggested_grade: userGrade.suggested_grade
+                });
+                
+                setEvaluationData({
+                  ...evalResult,
+                  gcfScore: userGrade.gcf ?? evalResult.gcfScore,
+                  teamContributionFactor: userGrade.gcf ?? evalResult.teamContributionFactor,
+                  teacherSuggestedGrade: userGrade.suggested_grade ?? evalResult.teacherSuggestedGrade,
+                });
+              } else {
+                setEvaluationData(evalResult);
+              }
+            } catch (gradeError) {
+              console.warn("Could not fetch grade data, using original evaluation data:", gradeError);
+              setEvaluationData(evalResult);
+            }
+          } else {
+            setEvaluationData(evalResult);
+          }
         } else {
           // Fallback: If not found in peer-results, try to build it from other APIs
           console.log("Evaluation not found in peer-results, trying fallback...");
