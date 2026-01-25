@@ -116,14 +116,13 @@ export function useAsyncSummary(
     try {
       console.log(`[useAsyncSummary] Polling job ${currentJobId}...`);
       
-      // Create new AbortController for this request if needed
-      if (!abortControllerRef.current) {
-        abortControllerRef.current = new AbortController();
-      }
+      // Create new AbortController for each request
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
       
       const jobStatus = await feedbackSummaryService.getJobStatus(
         currentJobId,
-        abortControllerRef.current.signal
+        controller.signal
       );
       console.log(`[useAsyncSummary] Poll response for ${currentJobId}:`, jobStatus);
       

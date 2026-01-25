@@ -226,6 +226,20 @@ export default function ResultaatPage() {
     );
   }, [teamContext, currentUserId]);
 
+  // Calculate final grade and its label for display
+  const finalGradeInfo = useMemo(() => {
+    if (!evaluationData) return null;
+    
+    const finalGrade = evaluationData.teacherGrade ?? evaluationData.teacherSuggestedGrade;
+    if (finalGrade == null) return null;
+    
+    return {
+      value: finalGrade,
+      label: getGradeLabel(finalGrade),
+      colorClasses: getGradeColorClasses(finalGrade),
+    };
+  }, [evaluationData]);
+
   // Early returns AFTER all hooks
   if (loading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
@@ -512,18 +526,11 @@ export default function ResultaatPage() {
                           <p className="text-2xl font-semibold text-slate-900">
                             {(evaluationData.teacherGrade ?? evaluationData.teacherSuggestedGrade)?.toFixed(1)}
                           </p>
-                          {(() => {
-                            const finalGrade = evaluationData.teacherGrade ?? evaluationData.teacherSuggestedGrade;
-                            const gradeLabel = getGradeLabel(finalGrade);
-                            if (gradeLabel) {
-                              return (
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${getGradeColorClasses(finalGrade)}`}>
-                                  {gradeLabel}
-                                </span>
-                              );
-                            }
-                            return null;
-                          })()}
+                          {finalGradeInfo && finalGradeInfo.label && (
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${finalGradeInfo.colorClasses}`}>
+                              {finalGradeInfo.label}
+                            </span>
+                          )}
                         </div>
                         {evaluationData.teacherGrade == null && evaluationData.teacherSuggestedGrade != null && (
                           <p className="text-[10px] text-slate-400 mt-0.5">(automatisch berekend)</p>
