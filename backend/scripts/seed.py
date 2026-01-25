@@ -803,7 +803,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     )
 
     # Create ONE peer evaluation per project (not per team)
-    evaluations = []
+    project_evaluations = []
     total_allocations = 0
 
     for project in projects:
@@ -823,13 +823,13 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
         db.add(evaluation)
         db.commit()
         db.refresh(evaluation)
-        evaluations.append(evaluation)
+        project_evaluations.append(evaluation)
 
-        # Get all teams for this project
-        project_teams_for_eval = [pt for pt in project_teams if pt.project_id == project.id]
+        # Get all teams for this project (avoid repeated filtering)
+        teams_in_project = [pt for pt in project_teams if pt.project_id == project.id]
 
         # Create allocations and scores for ALL students in ALL teams of this project
-        for pt in project_teams_for_eval:
+        for pt in teams_in_project:
             team_members = (
                 db.query(ProjectTeamMember)
                 .filter(ProjectTeamMember.project_team_id == pt.id)
@@ -869,7 +869,7 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
 
         db.commit()
 
-    print_success(f"Created {len(evaluations)} peer evaluations (one per project)")
+    print_success(f"Created {len(project_evaluations)} peer evaluations (one per project)")
     print_info(f"Created {total_allocations} allocations with scores")
 
     # 9. Create Reflections for ALL Students
@@ -878,12 +878,12 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
     # Create reflections for ALL students in their respective evaluations
     total_reflections = 0
 
-    for evaluation in evaluations:
-        # Get all teams for this project
-        project_teams_for_eval = [pt for pt in project_teams if pt.project_id == evaluation.project_id]
+    for evaluation in project_evaluations:
+        # Reuse the teams list filtered by project (avoid repeated filtering)
+        teams_in_project = [pt for pt in project_teams if pt.project_id == evaluation.project_id]
         
         # Get all team members across all teams in this project
-        for pt in project_teams_for_eval:
+        for pt in teams_in_project:
             team_members = (
                 db.query(ProjectTeamMember)
                 .filter(ProjectTeamMember.project_team_id == pt.id)
