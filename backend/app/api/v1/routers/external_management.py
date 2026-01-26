@@ -186,10 +186,6 @@ def create_bulk_invitations(
 
         created_links = []
         for config in payload.per_team_configs:
-            # NOTE: config.group_id is a legacy field - ProjectTeamExternal still stores group_id
-            # for backwards compatibility. This will be migrated in a future schema update.
-            # For now, we trust that the client is sending valid group_id values.
-
             # Get or create evaluator
             evaluator = (
                 db.query(ExternalEvaluator)
@@ -210,12 +206,12 @@ def create_bulk_invitations(
                 db.add(evaluator)
                 db.flush()
 
-            # Check if link already exists for this assessment + group + team_number
+            # Check if link already exists for this assessment + project_team_id + team_number
             existing_link = (
                 db.query(ProjectTeamExternal)
                 .filter(
                     ProjectTeamExternal.assessment_id == payload.assessment_id,
-                    ProjectTeamExternal.group_id == config.group_id,
+                    ProjectTeamExternal.project_team_id == config.project_team_id,
                     ProjectTeamExternal.team_number == config.team_number,
                     ProjectTeamExternal.external_evaluator_id == evaluator.id,
                 )
@@ -234,7 +230,7 @@ def create_bulk_invitations(
             token = generate_external_token()
             link = ProjectTeamExternal(
                 school_id=user.school_id,
-                group_id=config.group_id,
+                project_team_id=config.project_team_id,
                 team_number=config.team_number,
                 assessment_id=payload.assessment_id,  # Set assessment_id from payload
                 external_evaluator_id=evaluator.id,
@@ -289,15 +285,12 @@ def create_bulk_invitations(
         created_links = []
 
         for team_info in config.teams:
-            # NOTE: team_info.group_id is a legacy field - ProjectTeamExternal still stores group_id
-            # for backwards compatibility. This will be migrated in a future schema update.
-
-            # Check if link already exists for this assessment + group + team_number
+            # Check if link already exists for this assessment + project_team_id + team_number
             existing_link = (
                 db.query(ProjectTeamExternal)
                 .filter(
                     ProjectTeamExternal.assessment_id == payload.assessment_id,
-                    ProjectTeamExternal.group_id == team_info.group_id,
+                    ProjectTeamExternal.project_team_id == team_info.project_team_id,
                     ProjectTeamExternal.team_number == team_info.team_number,
                     ProjectTeamExternal.external_evaluator_id == evaluator.id,
                 )
@@ -317,7 +310,7 @@ def create_bulk_invitations(
             # Create new link with shared token
             link = ProjectTeamExternal(
                 school_id=user.school_id,
-                group_id=team_info.group_id,
+                project_team_id=team_info.project_team_id,
                 team_number=team_info.team_number,
                 assessment_id=payload.assessment_id,  # Set assessment_id from payload
                 external_evaluator_id=evaluator.id,
@@ -491,12 +484,11 @@ def get_project_external_status(
                         .first()
                     )
 
-                # Use group_id from link if it exists, otherwise use team_id (legacy) from project_team
-                # NOTE: ProjectTeamExternal.group_id is a legacy field that will be migrated later
-                response_group_id = (
-                    link.group_id
+                # Use project_team_id from link if it exists, otherwise use project_team.id
+                response_team_id = (
+                    link.project_team_id
                     if link
-                    else (project_team.team_id or 0)
+                    else project_team.id
                 )
 
                 # Include all teams that have team_number
@@ -504,7 +496,7 @@ def get_project_external_status(
                     evaluator = db.get(ExternalEvaluator, link.external_evaluator_id)
                     status_list.append(
                         ExternalAssessmentStatus(
-                            team_id=response_group_id,
+                            team_id=response_team_id,
                             team_number=project_team.team_number,
                             team_name=team_name,
                             members=member_names,
@@ -523,7 +515,7 @@ def get_project_external_status(
                     # Team exists but has no external invitation yet
                     status_list.append(
                         ExternalAssessmentStatus(
-                            team_id=response_group_id,
+                            team_id=response_team_id,
                             team_number=project_team.team_number,
                             team_name=team_name,
                             members=member_names,
@@ -600,7 +592,7 @@ def get_project_external_status(
             evaluator = db.get(ExternalEvaluator, link.external_evaluator_id)
             status_list.append(
                 ExternalAssessmentStatus(
-                    team_id=link.group_id,
+                    team_id=link.project_team_id,
                     team_number=team_num,
                     team_name=team_name,
                     members=member_names,
@@ -619,9 +611,9 @@ def get_project_external_status(
     return status_list
 
 
-@router.get("/groups/{group_id}/external-advisory")
+@router.get("/project-teams/{project_team_id}/external-advisory")
 def get_external_advisory_detail(
-    group_id: int,
+    project_team_id: int,
     team_number: Optional[int] = None,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
@@ -631,9 +623,9 @@ def get_external_advisory_detail(
     Returns the rubric scores and general comment from the external evaluator.
 
     Args:
-        group_id: The group/course ID
-        team_number: The team number within the group (recommended for proper team identification
-                     when multiple teams exist in the same group)
+        project_team_id: The project team ID
+        team_number: The team number within the project (recommended for proper team identification
+                     when multiple teams exist in the same project)
     """
     from app.infra.db.models import (
         ProjectAssessment,
@@ -647,12 +639,9 @@ def get_external_advisory_detail(
 
     require_role(user, ["teacher", "admin"])
 
-    # NOTE: group_id is a legacy parameter - ProjectTeamExternal still uses group_id for now
-    # This will be migrated to use project_id + team_number in a future API version
-
-    # Get external link - filter by group_id and optionally team_number
+    # Get external link - filter by project_team_id and optionally team_number
     link_query = db.query(ProjectTeamExternal).filter(
-        ProjectTeamExternal.group_id == group_id,
+        ProjectTeamExternal.project_team_id == project_team_id,
         ProjectTeamExternal.school_id == user.school_id,
     )
     if team_number is not None:
@@ -673,8 +662,7 @@ def get_external_advisory_detail(
         raise HTTPException(status_code=404, detail="External evaluator not found")
 
     # Get external assessment
-    # Note: Since groups table was dropped, we query by project_id instead of group_id
-    # The external assessment is associated with the project, not a specific group
+    # The external assessment is associated with the project
     assessment = (
         db.query(ProjectAssessment)
         .filter(
@@ -728,7 +716,7 @@ def get_external_advisory_detail(
     team_display_name = f"Team {team_number}" if team_number is not None else f"Team {team_number}"
 
     return ExternalAdvisoryDetail(
-        team_id=group_id,
+        team_id=project_team_id,
         team_name=team_display_name,
         external_evaluator=ExternalEvaluatorOut.model_validate(evaluator),
         rubric_title=rubric.title,

@@ -50,10 +50,10 @@ class ExternalEvaluatorOut(ExternalEvaluatorBase):
 class ProjectTeamExternalBase(BaseModel):
     """Base schema for project team external link"""
 
-    group_id: int
+    project_team_id: int
     external_evaluator_id: int
     project_id: Optional[int] = None
-    team_number: Optional[int] = None  # Team number within the group
+    team_number: Optional[int] = None  # Team number within the project
 
 
 class ProjectTeamExternalCreate(ProjectTeamExternalBase):
@@ -194,17 +194,17 @@ class ExternalAssessmentConfigBase(BaseModel):
 class ExternalAssessmentPerTeamConfig(BaseModel):
     """Configuration for per-team external assessment"""
 
-    group_id: int
-    team_number: int  # Team number within the group
+    project_team_id: int
+    team_number: int  # Team number within the project
     evaluator_name: str
     evaluator_email: EmailStr
     evaluator_organisation: Optional[str] = None
 
 
 class TeamIdentifier(BaseModel):
-    """Identifies a team by group_id and team_number"""
+    """Identifies a team by project_team_id and team_number"""
 
-    group_id: int
+    project_team_id: int
     team_number: int
 
 
@@ -214,7 +214,7 @@ class ExternalAssessmentAllTeamsConfig(BaseModel):
     evaluator_name: str
     evaluator_email: EmailStr
     evaluator_organisation: Optional[str] = None
-    teams: List[TeamIdentifier]  # List of group_id + team_number pairs
+    teams: List[TeamIdentifier]  # List of project_team_id + team_number pairs
     rubric_id: Optional[int] = None
 
 
@@ -230,8 +230,8 @@ class BulkInviteRequest(BaseModel):
 class ExternalAssessmentStatus(BaseModel):
     """Status of external assessment for a team"""
 
-    team_id: int  # This is the group_id for backward compatibility
-    team_number: int  # The actual team number within the group
+    team_id: int  # This is the project_team_id
+    team_number: int  # The actual team number within the project
     team_name: str
     members: Optional[str] = None  # Comma-separated member names
     external_evaluator: Optional[ExternalEvaluatorOut]

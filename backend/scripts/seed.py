@@ -1146,11 +1146,10 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                 # Create ProjectTeamExternal to link evaluator to team
                 # NOTE: assessment_id should point to the TEACHER's assessment, not the external assessment
                 # This is because the external tab is accessed via /teacher/project-assessments/{teacher_assessment_id}/external
-                # NOTE: group_id uses pt.id since the groups table was dropped but the column still exists (FK constraint removed)
                 pte = create_instance(
                     ProjectTeamExternal,
                     school_id=school.id,
-                    group_id=pt.id,  # Use project_team.id as placeholder (groups table no longer exists)
+                    project_team_id=pt.id,  # Link to project_teams table
                     external_evaluator_id=evaluator.id,
                     project_id=project.id,
                     assessment_id=teacher_assessment.id,  # Link to TEACHER assessment, not external assessment
