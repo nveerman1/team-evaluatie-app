@@ -66,7 +66,7 @@ export default function ProjectOverviewPage() {
         categoryAverages: {},
         gradesTrend: [],
         topCategories: [],
-        assessmentCategoryScores: new Map<number, Record<string, { avg: number; max: number }>>(),
+        assessmentCategoryScores: new Map<number, Record<string, { avg: number; min: number; max: number }>>(),
       };
     }
 
@@ -88,7 +88,7 @@ export default function ProjectOverviewPage() {
     const categoryWeights: Record<string, number> = {};
     
     // Calculate per-assessment category scores
-    const assessmentCategoryScores = new Map<number, Record<string, { avg: number; max: number }>>();
+    const assessmentCategoryScores = new Map<number, Record<string, { avg: number; min: number; max: number }>>();
     
     projectDetails.forEach((detail, assessmentId) => {
       const categoryData: Record<string, { weightedSum: number; weight: number; min: number; max: number }> = {};

@@ -596,7 +596,7 @@ export default function ResultaatPage() {
                             <tbody>
                               <tr className="hover:bg-slate-50">
                                 {['O', 'M', 'Z', 'A'].map((key) => {
-                                  const value = evaluationData.teacherOmza[key as keyof typeof evaluationData.teacherOmza];
+                                  const value = evaluationData.teacherOmza?.[key as keyof typeof evaluationData.teacherOmza];
                                   
                                   return (
                                     <td key={key} className="px-2 py-2 text-center">

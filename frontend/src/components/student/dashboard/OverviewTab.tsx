@@ -742,7 +742,7 @@ export function OverviewTab({
               <>
                 <div className="h-64 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart data={competencyProfileData} outerRadius="70%">
+                    <RadarChart data={filteredCompetencyData} outerRadius="70%">
                       <PolarGrid />
                       <PolarAngleAxis dataKey="category" tick={{ fontSize: 11 }} />
                       <PolarRadiusAxis angle={30} domain={[0, 5]} tickCount={6} tick={{ fontSize: 10 }} />
@@ -750,7 +750,6 @@ export function OverviewTab({
                       {filteredCompetencyData.length > 0 && (
                         <Radar
                           name="Score"
-                          data={filteredCompetencyData}
                           dataKey="value"
                           stroke="#6366f1"
                           fill="rgba(99, 102, 241, 0.25)"
