@@ -44,6 +44,7 @@ export function useAsyncSummary(
   const [isPolling, setIsPolling] = useState(false);
 
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const mountedRef = useRef(true);
   const hasStartedRef = useRef(false);
   const prevEvaluationIdRef = useRef(evaluationId);
@@ -56,6 +57,12 @@ export function useAsyncSummary(
     
     if (evaluationChanged || studentChanged) {
       console.log(`[useAsyncSummary] Props changed - evaluationId: ${prevEvaluationIdRef.current} -> ${evaluationId}, studentId: ${prevStudentIdRef.current} -> ${studentId}`);
+      
+      // Abort any ongoing requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
       
       // Stop any ongoing polling
       if (pollingIntervalRef.current) {
@@ -88,6 +95,13 @@ export function useAsyncSummary(
     mountedRef.current = true; // Ensure it's true on mount
     return () => {
       mountedRef.current = false;
+      
+      // Abort any ongoing requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
@@ -101,7 +115,15 @@ export function useAsyncSummary(
 
     try {
       console.log(`[useAsyncSummary] Polling job ${currentJobId}...`);
-      const jobStatus = await feedbackSummaryService.getJobStatus(currentJobId);
+      
+      // Create new AbortController for each request
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      
+      const jobStatus = await feedbackSummaryService.getJobStatus(
+        currentJobId,
+        controller.signal
+      );
       console.log(`[useAsyncSummary] Poll response for ${currentJobId}:`, jobStatus);
       
       if (!mountedRef.current) return;
@@ -118,6 +140,8 @@ export function useAsyncSummary(
           clearInterval(pollingIntervalRef.current);
           pollingIntervalRef.current = null;
         }
+        // Clear abort controller after successful completion
+        abortControllerRef.current = null;
       } else if (jobStatus.status === "failed") {
         console.log(`[useAsyncSummary] Job failed during polling:`, jobStatus.error_message);
         setStatus("failed");
@@ -127,6 +151,8 @@ export function useAsyncSummary(
           clearInterval(pollingIntervalRef.current);
           pollingIntervalRef.current = null;
         }
+        // Clear abort controller after failure
+        abortControllerRef.current = null;
       } else if (jobStatus.status === "queued" || jobStatus.status === "processing") {
         // Only update status if we're not already completed
         console.log(`[useAsyncSummary] Job still in progress, status: ${jobStatus.status}`);
@@ -136,6 +162,12 @@ export function useAsyncSummary(
       }
       // Keep polling for "queued" and "processing" states
     } catch (err: any) {
+      // Check if this was an abort/cancel - if so, don't log or handle it
+      if (err.name === 'AbortError' || err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
+        console.log(`[useAsyncSummary] Polling aborted for job ${currentJobId}`);
+        return;
+      }
+      
       if (!mountedRef.current) return;
       console.error("[useAsyncSummary] Error polling job status:", err);
       // Don't stop polling on error, might be transient
