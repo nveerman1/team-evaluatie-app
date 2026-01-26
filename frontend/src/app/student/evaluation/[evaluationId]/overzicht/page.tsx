@@ -387,15 +387,15 @@ export default function ResultaatPage() {
 
               {/* Right column: Teambeoordeling */}
               <div className="space-y-3">
-                {/* Always show Teambeoordeling card, but content depends on available data */}
-                {(evaluationData.teacherOmza || teamContributionFactor != null || evaluationData.sprScore != null) && (
+                {/* Always show Teambeoordeling card if there's any relevant data */}
+                {(evaluationData.teacherOmza || omzaAverages.length > 0 || teamContributionFactor != null || evaluationData.sprScore != null) && (
                   <div className="rounded-xl border border-slate-200 bg-white p-3">
                     <div className="mb-3">
                       <h4 className="text-xs font-semibold text-slate-700">Teambeoordeling</h4>
                     </div>
                     
-                    {/* OMZA scores table - matching heatmap style with OMZA as columns */}
-                    {evaluationData.teacherOmza && Object.keys(evaluationData.teacherOmza).length > 0 && (
+                    {/* OMZA scores table - show teacher scores if available, otherwise team averages */}
+                    {((evaluationData.teacherOmza && Object.keys(evaluationData.teacherOmza).length > 0) || omzaAverages.length > 0) && (
                       <div className="overflow-x-auto mb-3">
                         <table className="w-full text-sm">
                           <thead>
@@ -410,11 +410,17 @@ export default function ResultaatPage() {
                           <tbody>
                             <tr className="hover:bg-slate-50">
                               {['O', 'M', 'Z', 'A'].map((key) => {
-                                const value = evaluationData.teacherOmza[key as keyof typeof evaluationData.teacherOmza];
-                                const peerAvg = evaluationData.omzaAverages?.find(avg => avg.key === key);
+                                // Check if teacher has provided OMZA scores
+                                const teacherValue = evaluationData.teacherOmza?.[key as keyof typeof evaluationData.teacherOmza];
+                                const peerAvg = omzaAverages.find(avg => avg.key === key);
+                                const teamValue = peerAvg?.value;
                                 const delta = peerAvg?.delta ?? 0;
                                 
-                                // Color based on teacher score (1-4 scale) matching heatmap
+                                // Use teacher score if available, otherwise use team average
+                                const displayValue = teacherValue != null ? teacherValue : teamValue;
+                                const isTeacherScore = teacherValue != null;
+                                
+                                // Color based on score (1-4 scale) matching heatmap
                                 const getScoreColor = (score: number) => {
                                   if (score >= 3.5) return "bg-green-100 text-green-700";
                                   if (score >= 2.5) return "bg-blue-100 text-blue-700";
@@ -423,19 +429,20 @@ export default function ResultaatPage() {
                                 
                                 return (
                                   <td key={key} className="px-2 py-2 text-center">
-                                    {value != null ? (
+                                    {displayValue != null ? (
                                       <div className="inline-flex flex-col items-center gap-0.5">
-                                        <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(value)}`}>
-                                          {value.toFixed(1)}
+                                        <span className={`inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded text-xs font-semibold tabular-nums ${getScoreColor(displayValue)}`}>
+                                          {displayValue.toFixed(1)}
                                         </span>
-                                        {delta !== 0 && (
+                                        {/* Show delta only for teacher scores */}
+                                        {isTeacherScore && delta !== 0 && (
                                           <span className={`text-[10px] font-medium tabular-nums ${
                                             delta > 0 ? "text-green-600" : "text-red-600"
                                           }`}>
                                             {delta > 0 ? "+" : ""}{delta.toFixed(1)}
                                           </span>
                                         )}
-                                        {delta === 0 && <span className="text-slate-300 text-xs">–</span>}
+                                        {isTeacherScore && delta === 0 && <span className="text-slate-300 text-xs">–</span>}
                                       </div>
                                     ) : (
                                       <span className="text-slate-300">–</span>
@@ -451,7 +458,7 @@ export default function ResultaatPage() {
                     
                     {/* GCF and SPR labels with colors */}
                     {(teamContributionFactor != null || evaluationData.sprScore != null) && (
-                      <div className={`space-y-2 ${evaluationData.teacherOmza && Object.keys(evaluationData.teacherOmza).length > 0 ? 'pt-3 border-t border-slate-200' : ''}`}>
+                      <div className={`space-y-2 ${((evaluationData.teacherOmza && Object.keys(evaluationData.teacherOmza).length > 0) || omzaAverages.length > 0) ? 'pt-3 border-t border-slate-200' : ''}`}>
                         {/* GCF score and label */}
                         {teamContributionFactor != null && (
                           <div className="space-y-1">
@@ -503,7 +510,7 @@ export default function ResultaatPage() {
                     )}
                     
                     {/* Show message if no data available */}
-                    {!evaluationData.teacherOmza && teamContributionFactor == null && evaluationData.sprScore == null && (
+                    {!evaluationData.teacherOmza && omzaAverages.length === 0 && teamContributionFactor == null && evaluationData.sprScore == null && (
                       <p className="text-sm text-slate-500 text-center py-2">
                         Nog geen teambeoordeling beschikbaar
                       </p>
