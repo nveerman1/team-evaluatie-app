@@ -102,8 +102,7 @@ export default function CreateProjectAssessmentInner() {
       const payload: ProjectAssessmentCreate = {
         title,
         rubric_id: Number(rubricId),
-        group_id: Number(groupId),
-        project_id: projectId ? Number(projectId) : undefined,
+        project_id: Number(projectId),
         version: version || undefined,
         metadata_json: {},
       };
