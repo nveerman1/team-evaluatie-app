@@ -24,7 +24,8 @@ COPY requirements.txt .
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install --no-cache-dir --upgrade pip setuptools "wheel>=0.46.2" && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt && \
+    python -c "import wheel; print('venv wheel version:', wheel.__version__)"
 
 # -----------------------------------------------------------------------------
 # Stage 2: Runtime - Production image
@@ -52,8 +53,10 @@ WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
 
 # Runtime image cleanup: remove build/install tooling from system Python
-# We run from /opt/venv, so we don't need /usr/local pip/setuptools at runtime.
+# We run from /opt/venv, so we don't need /usr/local pip/setuptools/wheel at runtime.
+# This also prevents Trivy from detecting vulnerable versions (e.g., CVE-2026-24049 for wheel 0.45.1).
 RUN rm -rf \
+    /usr/local/lib/python3.11/site-packages/wheel* \
     /usr/local/lib/python3.11/site-packages/setuptools* \
     /usr/local/lib/python3.11/site-packages/pkg_resources* \
     /usr/local/lib/python3.11/site-packages/pip* \
