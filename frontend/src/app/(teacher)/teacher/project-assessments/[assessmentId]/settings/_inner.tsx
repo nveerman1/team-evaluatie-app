@@ -12,7 +12,7 @@ import { Loading, ErrorMessage } from "@/components";
 type ExternalMode = "none" | "all_teams" | "per_team";
 
 type PerTeamConfig = {
-  group_id: number;
+  project_team_id: number;
   team_number: number;
   team_name: string;
   members: string[];
@@ -99,7 +99,7 @@ export default function SettingsPageInner() {
 
       // Initialize per-team configs from team data
       const initialPerTeamConfigs: PerTeamConfig[] = teamOverview.teams.map((team) => ({
-        group_id: team.group_id,
+        project_team_id: team.group_id,  // group_id is actually project_team_id in this context
         team_number: team.team_number || 0,
         team_name: team.group_name || `Team ${team.team_number}`,
         members: team.members.map((m) => m.name),
@@ -114,7 +114,7 @@ export default function SettingsPageInner() {
       setAllTeamsConfig((prev) => ({
         ...prev,
         selected_teams: teamOverview.teams.map((t) => ({
-          group_id: t.group_id,
+          project_team_id: t.group_id,  // group_id is actually project_team_id in this context
           team_number: t.team_number || 0,
         })),
       }));
@@ -246,27 +246,27 @@ export default function SettingsPageInner() {
     setAllTeamsConfig((prev) => ({
       ...prev,
       selected_teams: checked
-        ? data.teams.map((t) => ({ group_id: t.group_id, team_number: t.team_number || 0 }))
+        ? data.teams.map((t) => ({ project_team_id: t.group_id, team_number: t.team_number || 0 }))  // group_id is actually project_team_id
         : [],
     }));
   };
 
   // Handle individual team checkbox in "All Teams" mode
-  const handleTeamToggle = (groupId: number, teamNumber: number, checked: boolean) => {
+  const handleTeamToggle = (projectTeamId: number, teamNumber: number, checked: boolean) => {
     setAllTeamsConfig((prev) => ({
       ...prev,
       selected_teams: checked
-        ? [...prev.selected_teams, { group_id: groupId, team_number: teamNumber }]
+        ? [...prev.selected_teams, { project_team_id: projectTeamId, team_number: teamNumber }]
         : prev.selected_teams.filter(
-            (t) => !(t.group_id === groupId && t.team_number === teamNumber)
+            (t) => !(t.project_team_id === projectTeamId && t.team_number === teamNumber)
           ),
     }));
   };
 
   // Check if a team is selected in All Teams mode
-  const isTeamSelected = (groupId: number, teamNumber: number) => {
+  const isTeamSelected = (projectTeamId: number, teamNumber: number) => {
     return allTeamsConfig.selected_teams.some(
-      (t) => t.group_id === groupId && t.team_number === teamNumber
+      (t) => t.project_team_id === projectTeamId && t.team_number === teamNumber
     );
   };
 
@@ -347,7 +347,7 @@ export default function SettingsPageInner() {
         assessment_id: assessmentId,  // Add assessment_id
         per_team_configs: [
           {
-            group_id: config.group_id,
+            project_team_id: config.project_team_id,
             team_number: config.team_number,
             evaluator_name: config.evaluator_name,
             evaluator_email: config.evaluator_email,
@@ -625,12 +625,12 @@ export default function SettingsPageInner() {
                           <input
                             type="checkbox"
                             checked={isTeamSelected(
-                              team.group_id,
+                              team.group_id,  // group_id is actually project_team_id
                               team.team_number || 0
                             )}
                             onChange={(e) =>
                               handleTeamToggle(
-                                team.group_id,
+                                team.group_id,  // group_id is actually project_team_id
                                 team.team_number || 0,
                                 e.target.checked
                               )
@@ -694,7 +694,7 @@ export default function SettingsPageInner() {
                         <tbody className="divide-y divide-gray-100">
                           {perTeamConfigs.map((config, index) => (
                             <tr
-                              key={`perteam-${config.group_id}-${config.team_number}-${index}`}
+                              key={`perteam-${config.project_team_id}-${config.team_number}-${index}`}
                               className="bg-white hover:bg-gray-50"
                             >
                               <td className="px-5 py-3">
