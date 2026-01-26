@@ -112,7 +112,7 @@ export interface ExternalAssessmentSubmitResponse {
 export interface ProjectTeamExternal {
   id: number;
   school_id: number;
-  group_id: number;
+  project_team_id: number;
   team_number?: number;
   external_evaluator_id: number;
   project_id?: number;
@@ -126,12 +126,12 @@ export interface ProjectTeamExternal {
 }
 
 export interface TeamIdentifier {
-  group_id: number;
+  project_team_id: number;
   team_number: number;
 }
 
 export interface ExternalAssessmentPerTeamConfig {
-  group_id: number;
+  project_team_id: number;
   team_number: number;
   evaluator_name: string;
   evaluator_email: string;
