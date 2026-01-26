@@ -1,0 +1,14 @@
+# Suppress false positives from Next.js bundled dependencies
+# These packages are bundled inside Next.js (node_modules/next/dist/compiled)
+# and cannot be upgraded independently. The actual node_modules versions are correct.
+# Waiting for Next.js upstream to update their bundled dependencies.
+
+# cross-spawn bundled in Next.js
+CVE-2024-21538
+
+# glob bundled in Next.js
+CVE-2025-64756
+
+# tar bundled in Next.js
+CVE-2026-23745
+CVE-2026-23950
