@@ -46,14 +46,14 @@ const nextConfig: NextConfig = {
           },
           // Content-Security-Policy for Next.js frontend
           // Development: Allow unsafe-eval and unsafe-inline for Next.js hot reload
-          // Production: Use stricter CSP without unsafe directives
+          // Production: Requires unsafe-inline for Next.js 16+ bootstrap and Tailwind CSS-in-JS
           {
             key: "Content-Security-Policy",
             value: isDevelopment
               ? [
                   "default-src 'self'",
                   "script-src 'self' 'unsafe-eval' 'unsafe-inline'", // Required for Next.js dev mode
-                  "style-src 'self' 'unsafe-inline'", // Required for styled-components
+                  "style-src 'self' 'unsafe-inline'", // Required for Tailwind CSS-in-JS
                   "img-src 'self' data: blob: https:",
                   "font-src 'self' data:",
                   "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000", // Allow dev API
@@ -67,7 +67,7 @@ const nextConfig: NextConfig = {
                   // This would require middleware to inject nonces into all inline scripts/styles
                   "img-src 'self' data: blob: https:",
                   "font-src 'self' data:",
-                  "connect-src 'self' https://app.technasiummbh.nl wss://app.technasiummbh.nl", // Production API + WebSockets
+                  "connect-src 'self' https://app.technasiummbh.nl", // Production API
                   "frame-ancestors 'none'",
                   "base-uri 'self'",
                   "form-action 'self'",
