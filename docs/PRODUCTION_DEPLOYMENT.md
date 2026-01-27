@@ -624,6 +624,7 @@ curl -I https://app.technasiummbh.nl
 
 # Expected headers should include:
 # Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline'; ...
+# Note: 'unsafe-inline' is required for Next.js 16+ to bootstrap properly
 ```
 
 ### 5. Verify Frontend Container is Running Production Build

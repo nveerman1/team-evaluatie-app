@@ -61,13 +61,13 @@ const nextConfig: NextConfig = {
                 ].join("; ")
               : [
                   "default-src 'self'",
-                  "script-src 'self' 'wasm-unsafe-eval'", // Allow WebAssembly, no eval/inline
+                  "script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline'", // Next.js 16+ requires unsafe-inline for bootstrap
                   "style-src 'self' 'unsafe-inline'", // Required for Next.js CSS-in-JS (Tailwind)
-                  // TODO: Consider nonce-based CSP for styles to remove unsafe-inline
-                  // This would require middleware to inject nonces into all style tags
+                  // TODO: Consider nonce-based CSP to remove unsafe-inline
+                  // This would require middleware to inject nonces into all inline scripts/styles
                   "img-src 'self' data: blob: https:",
                   "font-src 'self' data:",
-                  "connect-src 'self' https://app.technasiummbh.nl", // Production API only
+                  "connect-src 'self' https://app.technasiummbh.nl wss://app.technasiummbh.nl", // Production API + WebSockets
                   "frame-ancestors 'none'",
                   "base-uri 'self'",
                   "form-action 'self'",
