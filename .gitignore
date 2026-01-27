@@ -50,3 +50,10 @@ frontend/.pnpm-store/
 *.sql
 *.sql.gz
 *.tar.gz
+logs/
+# Secrets
+*.pem
+*.key
+# Docker volumes (safety)
+docker_postgres-data/
+docker_redis-data/
