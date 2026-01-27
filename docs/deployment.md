@@ -42,7 +42,7 @@ The Team Evaluatie App uses a containerized architecture with the following comp
 - **Frontend**: Next.js 15 (standalone build)
 - **Backend**: FastAPI with Gunicorn + Uvicorn workers
 - **Database**: PostgreSQL 16
-- **Cache/Queue**: Redis 7
+- **Cache/Queue**: Redis 8
 - **Background Jobs**: RQ (Redis Queue) worker
 - **Reverse Proxy**: Nginx with SSL/TLS
 - **Container Orchestration**: Docker Compose
@@ -221,7 +221,7 @@ Multi-stage builds optimize image sizes:
 - **Backend**: Python slim base (~200MB)
 - **Frontend**: Node alpine + Next.js standalone (~150MB)
 - **Database**: PostgreSQL 16 official image
-- **Redis**: Redis 7 alpine image
+- **Redis**: Redis 8 alpine image
 - **Nginx**: Nginx stable alpine image
 
 ---
