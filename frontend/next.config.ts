@@ -5,12 +5,6 @@ const nextConfig: NextConfig = {
   // Enable standalone output for Docker deployment
   output: 'standalone',
   
-  eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
-    ignoreDuringBuilds: true,
-  },
-  
   // Proxy API requests to FastAPI backend in development
   // In production, nginx handles this routing
   async rewrites() {
