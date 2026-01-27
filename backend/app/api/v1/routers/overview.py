@@ -458,8 +458,8 @@ def get_overview_all_items(
                         "score_label": f"{score:.1f}" if score else "—",
                         "status": assessment.status,
                         "detail_url": f"/teacher/project-assessments/{assessment.id}/overview",
-                        "team_number": group.team_number,
-                        "team_name": group.name,
+                        "team_number": project_team.team_number,
+                        "team_name": project_team.name,
                     }
                 )
 
