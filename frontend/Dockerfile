@@ -34,9 +34,11 @@ WORKDIR /app
 
 # Build arg coming from docker compose build.args
 ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_ENABLE_DEV_LOGIN
 
 # Make it available to Next.js at build time
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_ENABLE_DEV_LOGIN=$NEXT_PUBLIC_ENABLE_DEV_LOGIN
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules

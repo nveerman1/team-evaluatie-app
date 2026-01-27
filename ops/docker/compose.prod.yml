@@ -173,6 +173,8 @@ services:
       # Override/ensure critical settings
       NODE_ENV: production
       APP_ENV: production
+      # SECURITY: Disable dev-login in production (force explicit setting)
+      ENABLE_DEV_LOGIN: "false"
       # Database connection (use service name as host)
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-tea}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-tea_production}
       # Redis connection (use service name as host)
@@ -247,6 +249,8 @@ services:
     environment:
       NODE_ENV: production
       APP_ENV: production
+      # SECURITY: Disable dev-login in production (force explicit setting)
+      ENABLE_DEV_LOGIN: "false"
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-tea}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-tea_production}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
     
@@ -300,6 +304,7 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_ENABLE_DEV_LOGIN: "false"
     image: tea-frontend:${IMAGE_TAG:-latest}
     container_name: tea_frontend
     restart: unless-stopped
@@ -308,6 +313,8 @@ services:
       NODE_ENV: production
       # API URL (internal network) - nginx will handle external routing
       NEXT_PUBLIC_API_URL: ${FRONTEND_URL}/api/v1
+      # SECURITY: Disable dev-login in production (force explicit setting)
+      NEXT_PUBLIC_ENABLE_DEV_LOGIN: "false"
       PORT: "3000"
       HOSTNAME: "0.0.0.0"
     
