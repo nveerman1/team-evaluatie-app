@@ -96,14 +96,14 @@ jobs:
           exit-code: 1
           version: v0.68.2
 
-      - name: Pull nginx base image (for scan)
-        run: docker pull nginx:stable-alpine
+      - name: Build nginx custom image
+        run: docker build -t tea-nginx:ci -f ops/nginx/Dockerfile ops/nginx
 
-      - name: Trivy scan nginx (base image)
+      - name: Trivy scan nginx (custom image with updated libpng)
         uses: aquasecurity/trivy-action@0.33.1
         with:
           scan-type: image
-          image-ref: nginx:stable-alpine
+          image-ref: tea-nginx:ci
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           format: table
