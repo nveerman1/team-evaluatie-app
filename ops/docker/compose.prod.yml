@@ -363,7 +363,10 @@ services:
   # Nginx Reverse Proxy
   # ===========================================================================
   nginx:
-    image: nginx:stable-alpine
+    build:
+      context: ../../ops/nginx
+      dockerfile: Dockerfile
+    image: tea-nginx:${IMAGE_TAG:-latest}
     container_name: tea_nginx
     restart: unless-stopped
     
