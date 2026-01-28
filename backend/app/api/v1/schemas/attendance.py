@@ -2,9 +2,28 @@
 Pydantic schemas for 3de Blok RFID Attendance module
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel, Field, field_validator
+
+
+# ============ Timezone Helper Functions ============
+
+
+def ensure_aware_utc(dt: datetime) -> datetime:
+    """
+    Ensure datetime is timezone-aware in UTC.
+    
+    If datetime is naive, assume it's UTC and add timezone info.
+    If datetime is aware, convert to UTC.
+    
+    This prevents "can't compare offset-naive and offset-aware datetimes" errors.
+    """
+    if dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:
+        # Naive datetime - assume UTC
+        return dt.replace(tzinfo=timezone.utc)
+    # Already aware - ensure it's UTC
+    return dt.astimezone(timezone.utc)
 
 
 # ============ RFID Card Schemas ============
@@ -61,8 +80,12 @@ class AttendanceEventCreate(AttendanceEventBase):
     @field_validator("check_out")
     @classmethod
     def check_out_after_check_in(cls, v, info):
-        if v and info.data.get("check_in") and v <= info.data["check_in"]:
-            raise ValueError("check_out must be after check_in")
+        if v and info.data.get("check_in"):
+            # Ensure both datetimes are timezone-aware for comparison
+            check_in_aware = ensure_aware_utc(info.data["check_in"])
+            check_out_aware = ensure_aware_utc(v)
+            if check_out_aware <= check_in_aware:
+                raise ValueError("check_out must be after check_in")
         return v
 
 
@@ -76,8 +99,12 @@ class AttendanceEventUpdate(BaseModel):
     @field_validator("check_out")
     @classmethod
     def check_out_after_check_in(cls, v, info):
-        if v and info.data.get("check_in") and v <= info.data["check_in"]:
-            raise ValueError("check_out must be after check_in")
+        if v and info.data.get("check_in"):
+            # Ensure both datetimes are timezone-aware for comparison
+            check_in_aware = ensure_aware_utc(info.data["check_in"])
+            check_out_aware = ensure_aware_utc(v)
+            if check_out_aware <= check_in_aware:
+                raise ValueError("check_out must be after check_in")
         return v
 
 
@@ -125,7 +152,10 @@ class ExternalWorkCreate(BaseModel):
     @field_validator("check_out")
     @classmethod
     def check_out_after_check_in(cls, v, info):
-        if v <= info.data["check_in"]:
+        # Ensure both datetimes are timezone-aware for comparison
+        check_in_aware = ensure_aware_utc(info.data["check_in"])
+        check_out_aware = ensure_aware_utc(v)
+        if check_out_aware <= check_in_aware:
             raise ValueError("End time must be after start time")
         return v
 

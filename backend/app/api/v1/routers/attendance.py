@@ -41,6 +41,7 @@ from app.api.v1.schemas.attendance import (
     StudentSignal,
     TopBottomData,
     EngagementStudent,
+    ensure_aware_utc,
 )
 
 logger = logging.getLogger(__name__)
@@ -714,8 +715,10 @@ def get_current_presence(
 
     result = []
     for event, user in open_sessions:
+        # Ensure check_in is timezone-aware for duration calculation
+        check_in_aware = ensure_aware_utc(event.check_in)
         duration_seconds = int(
-            (datetime.now(timezone.utc) - event.check_in).total_seconds()
+            (datetime.now(timezone.utc) - check_in_aware).total_seconds()
         )
         result.append(
             OpenSession(
