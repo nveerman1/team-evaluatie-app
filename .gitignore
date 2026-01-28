@@ -57,3 +57,4 @@ logs/
 # Docker volumes (safety)
 docker_postgres-data/
 docker_redis-data/
+scripts/*.sh
