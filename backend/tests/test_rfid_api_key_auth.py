@@ -89,3 +89,61 @@ class TestRFIDAPIKeyAuth:
             assert response.status_code == 200
 
 
+class TestRFIDScanCSRFExemption:
+    """Tests to verify CSRF exemption for RFID scan endpoint"""
+
+    def test_scan_without_origin_or_referer_succeeds_with_valid_api_key(self, client):
+        """
+        Test that scan endpoint works without Origin/Referer headers (CSRF exempt).
+        This simulates the real-world scenario: Raspberry Pi RFID scanner using API key auth.
+        """
+        from app.core.config import settings
+        with patch.object(type(settings), "RFID_API_KEYS", property(lambda self: ["test-key"])):
+            # No Origin or Referer headers - should still work (CSRF exempt)
+            response = client.post(
+                "/api/v1/attendance/scan",
+                json={"uid": "unknown-uid"},
+                headers={"X-API-Key": "test-key"},
+            )
+            # Should succeed with 200 (returns not_found for unknown UID)
+            assert response.status_code == 200
+            assert response.json()["status"] == "not_found"
+
+    def test_scan_with_evil_origin_succeeds_with_valid_api_key(self, client):
+        """
+        Test that scan endpoint ignores Origin header for CSRF (CSRF exempt).
+        Even if an attacker somehow sends a request with an evil origin,
+        they cannot exploit it without a valid API key.
+        """
+        from app.core.config import settings
+        with patch.object(type(settings), "RFID_API_KEYS", property(lambda self: ["test-key"])):
+            # Evil origin header - should still work because CSRF is exempt
+            response = client.post(
+                "/api/v1/attendance/scan",
+                json={"uid": "unknown-uid"},
+                headers={
+                    "X-API-Key": "test-key",
+                    "Origin": "http://evil-attacker.com",
+                },
+            )
+            # Should succeed - API key is what matters, not origin
+            assert response.status_code == 200
+            assert response.json()["status"] == "not_found"
+
+    def test_scan_without_api_key_fails_regardless_of_origin(self, client):
+        """
+        Test that scan endpoint still requires API key even when CSRF exempt.
+        CSRF exemption does NOT bypass API key authentication.
+        """
+        from app.core.config import settings
+        with patch.object(type(settings), "RFID_API_KEYS", property(lambda self: ["test-key"])):
+            # Valid origin but no API key - should fail
+            response = client.post(
+                "/api/v1/attendance/scan",
+                json={"uid": "test-uid"},
+                headers={"Origin": "http://localhost:3000"},
+            )
+            assert response.status_code == 401
+            assert "API key required" in response.json()["detail"]
+
+

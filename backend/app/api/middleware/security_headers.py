@@ -25,7 +25,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     Security features:
     1. CSRF Protection via Origin/Referer validation (always enabled)
        - Validates state-changing requests (POST, PUT, PATCH, DELETE)
-       - Exempts OAuth callback routes
+       - Exempts OAuth callback routes (external redirects)
+       - Exempts device-to-server API endpoints that use API key auth instead of cookies
+         * /api/v1/attendance/scan - RFID scanner (Raspberry Pi) uses X-API-Key header
+         * These endpoints are NOT vulnerable to CSRF because:
+           - They don't use session cookies for authentication
+           - They use API keys which cannot be exploited via browser-based CSRF attacks
+           - Attacker cannot trigger cross-origin request with valid API key from browser
        - Returns HTTP 403 on validation failure
 
     2. Security Headers (when ENABLE_BACKEND_SECURITY_HEADERS=true):
@@ -43,6 +49,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     CSRF_EXEMPT_PATHS = [
         "/api/v1/auth/azure/callback",  # Azure AD OAuth callback
         "/api/v1/auth/azure",  # Azure AD OAuth initiation
+        "/api/v1/attendance/scan",  # RFID scanner endpoint (device-to-server, no cookies)
     ]
 
     # Regex pattern to match any future OAuth callback routes
