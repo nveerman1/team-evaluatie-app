@@ -24,17 +24,22 @@ export class ApiAuthError extends Error {
   }
 }
 
-// Base URL: gebruik env als die is gezet, anders fallback
-const raw = process.env.NEXT_PUBLIC_API_URL?.trim();
+// Base URL configuration:
+// - In production: defaults to "/api/v1" (relative path, nginx proxies to backend)
+// - In development: defaults to "/api/v1" (Next.js rewrites proxy to backend)
+// - Can be overridden with NEXT_PUBLIC_API_BASE_URL env var (e.g., for external API)
+const raw = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
 
-export const baseURL =
-  raw?.replace(/\/+$/, "") ??
-  (process.env.NODE_ENV !== "production"
-    ? "/api/v1"  // Use relative path for dev - Next.js rewrites proxy to backend
-    : undefined);
+export const baseURL = raw?.replace(/\/+$/, "") ?? "/api/v1";
 
-if (process.env.NODE_ENV === "production" && !baseURL) {
-  throw new Error("NEXT_PUBLIC_API_URL is not set (production build)");
+// Development sanity check - log baseURL to help debug API issues
+if (process.env.NODE_ENV === "development" && typeof window !== "undefined") {
+  // Only log once on initial load
+  if (!window.__API_BASE_URL_LOGGED__) {
+    console.log("[API Client] baseURL:", baseURL);
+    console.log("[API Client] Full API endpoint example:", `${window.location.origin}${baseURL}/auth/me`);
+    (window as any).__API_BASE_URL_LOGGED__ = true;
+  }
 }
 
 const instance = axios.create({

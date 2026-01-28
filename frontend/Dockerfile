@@ -33,11 +33,11 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Build arg coming from docker compose build.args
-ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_API_BASE_URL
 ARG NEXT_PUBLIC_ENABLE_DEV_LOGIN
 
 # Make it available to Next.js at build time
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_ENABLE_DEV_LOGIN=$NEXT_PUBLIC_ENABLE_DEV_LOGIN
 
 # Copy dependencies from deps stage
@@ -51,8 +51,10 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=production
 
-# (optional but very useful) fail fast if not set
-RUN test -n "$NEXT_PUBLIC_API_URL" || (echo "NEXT_PUBLIC_API_URL is missing" && exit 1)
+# (optional) validate critical environment variables
+# Note: NEXT_PUBLIC_API_BASE_URL is optional (defaults to /api/v1)
+# Only fail if NEXT_PUBLIC_ENABLE_DEV_LOGIN is not set
+RUN test -n "$NEXT_PUBLIC_ENABLE_DEV_LOGIN" || (echo "NEXT_PUBLIC_ENABLE_DEV_LOGIN is missing" && exit 1)
 
 # Build Next.js application
 RUN \

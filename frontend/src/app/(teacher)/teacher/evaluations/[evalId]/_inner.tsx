@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useNumericEvalId } from "@/lib/id";
-import api from "@/lib/api";
+import api, { baseURL } from "@/lib/api";
 import {
   DashboardResponse,
   FlagsResponse,
@@ -16,20 +16,19 @@ export default function TeacherDashboardInner() {
   const [preview, setPreview] = useState<GradePreviewResponse | undefined>();
   const [error, setError] = useState<string | null>(null);
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL;
   const csvUrl = useMemo(
     () =>
       evaluationId != null
-        ? `${apiBase}/dashboard/evaluation/${evaluationId}/export.csv`
+        ? `${baseURL}/dashboard/evaluation/${evaluationId}/export.csv`
         : undefined,
-    [evaluationId, apiBase],
+    [evaluationId],
   );
   const flagsCsv = useMemo(
     () =>
       evaluationId != null
-        ? `${apiBase}/flags/evaluation/${evaluationId}/export.csv`
+        ? `${baseURL}/flags/evaluation/${evaluationId}/export.csv`
         : undefined,
-    [evaluationId, apiBase],
+    [evaluationId],
   );
 
   useEffect(() => {
