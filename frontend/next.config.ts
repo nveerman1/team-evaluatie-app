@@ -67,7 +67,7 @@ const nextConfig: NextConfig = {
                   // This would require middleware to inject nonces into all inline scripts/styles
                   "img-src 'self' data: blob: https:",
                   "font-src 'self' data:",
-                  "connect-src 'self' https://app.technasiummbh.nl", // Production API
+                  "connect-src 'self' https://app.technasiummbh.nl wss://app.technasiummbh.nl", // Production API + WebSockets
                   "frame-ancestors 'none'",
                   "base-uri 'self'",
                   "form-action 'self'",
