@@ -256,6 +256,33 @@ class TestCSRFExemptions:
         # Should succeed even with invalid origin (matches /auth/*/callback pattern)
         assert response.status_code == 200
         assert response.json()["message"] == "github callback"
+    
+    def test_attendance_scan_exempt_from_csrf(self, app_with_csrf):
+        """Test that /attendance/scan is exempt from CSRF (device-to-server API key auth)"""
+        from fastapi import FastAPI
+        from app.api.middleware.security_headers import SecurityHeadersMiddleware
+        
+        # Create a new app specifically for this test to add the scan endpoint
+        app = FastAPI()
+        app.add_middleware(SecurityHeadersMiddleware)
+        
+        @app.post("/api/v1/attendance/scan")
+        def attendance_scan():
+            return {"message": "scan endpoint"}
+        
+        client = TestClient(app)
+        # Request without Origin or Referer headers should succeed (CSRF exempt)
+        response = client.post("/api/v1/attendance/scan")
+        assert response.status_code == 200
+        assert response.json()["message"] == "scan endpoint"
+        
+        # Request with invalid Origin should also succeed (CSRF exempt)
+        response = client.post(
+            "/api/v1/attendance/scan",
+            headers={"Origin": "http://evil.com"}
+        )
+        assert response.status_code == 200
+        assert response.json()["message"] == "scan endpoint"
 
 
 class TestCSRFOriginExtraction:
