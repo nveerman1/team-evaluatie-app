@@ -167,7 +167,7 @@ jobs:
     
     environment:
       name: production
-      url: https://yourdomain.com  # Replace with your domain
+      url: https://app.technasiummbh.nl
     
     steps:
       # Pin to specific commit SHAs for supply chain security
@@ -176,27 +176,72 @@ jobs:
       
       - name: Setup SSH
         run: |
+          set -euo pipefail
           mkdir -p ~/.ssh
           echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+          # Use StrictHostKeyChecking=accept-new for security
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
       
       - name: Test SSH connection
         run: |
-          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "echo 'SSH connection successful'"
+          set -euo pipefail
+          ssh -o StrictHostKeyChecking=accept-new ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "echo 'SSH connection successful'"
+      
+      - name: Preflight checks on VPS
+        run: |
+          set -euo pipefail
+          ssh -o StrictHostKeyChecking=accept-new ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'ENDSSH'
+            set -euo pipefail
+            
+            echo "==> Preflight checks"
+            cd /opt/team-evaluatie-app
+            
+            # Fetch latest code
+            echo "==> Fetching latest code from GitHub"
+            git fetch origin
+            
+            # Checkout specific commit or branch
+            echo "==> Checking out commit: ${{ github.sha }}"
+            git checkout ${{ github.sha }} || git checkout ${{ github.ref_name }}
+            
+            # Verify .env.prod exists
+            echo "==> Checking .env.prod file"
+            if [ ! -f .env.prod ]; then
+              echo "ERROR: .env.prod not found!"
+              exit 1
+            fi
+            
+            # Check required environment variables
+            echo "==> Validating required environment variables"
+            required_vars="FRONTEND_URL POSTGRES_PASSWORD REDIS_PASSWORD"
+            for var in $required_vars; do
+              if ! grep -q "^${var}=" .env.prod; then
+                echo "ERROR: Required variable $var not found in .env.prod"
+                exit 1
+              fi
+            done
+            echo "Environment variables: OK"
+            
+            # Validate docker compose configuration
+            echo "==> Validating Docker Compose configuration"
+            if ! docker compose --env-file .env.prod -f ops/docker/compose.prod.yml config > /dev/null; then
+              echo "ERROR: Docker Compose configuration is invalid!"
+              exit 1
+            fi
+            echo "Docker Compose config: OK"
+            
+            echo "==> Preflight checks complete"
+          ENDSSH
       
       - name: Deploy to VPS
         run: |
-          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'ENDSSH'
-            set -e
+          set -euo pipefail
+          ssh -o StrictHostKeyChecking=accept-new ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'ENDSSH'
+            set -euo pipefail
             
             echo "==> Navigating to application directory"
             cd /opt/team-evaluatie-app
-            
-            echo "==> Pulling latest code"
-            git fetch origin
-            git checkout main
-            git pull origin main
             
             echo "==> Building deployment options"
             DEPLOY_OPTS=""
@@ -217,24 +262,83 @@ jobs:
       
       - name: Verify deployment
         run: |
-          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'ENDSSH'
+          set -euo pipefail
+          ssh -o StrictHostKeyChecking=accept-new ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'ENDSSH'
+            set -euo pipefail
+            
             cd /opt/team-evaluatie-app
-            docker compose -f ops/docker/compose.prod.yml ps
-            docker compose -f ops/docker/compose.prod.yml logs --tail=50
+            
+            echo "==> Checking container status"
+            docker compose --env-file .env.prod -f ops/docker/compose.prod.yml ps
+            
+            echo ""
+            echo "==> Recent logs from services"
+            docker compose --env-file .env.prod -f ops/docker/compose.prod.yml logs --tail=200 nginx backend
+            
+            echo ""
+            echo "==> Checking ports 80 and 443"
+            ss -lntp | grep -E ':80|:443' || echo "Port check: some ports may not be bound yet"
           ENDSSH
       
       - name: Health check
         run: |
-          echo "Waiting for services to stabilize..."
-          sleep 30
-          
-          # Check if site is responding
-          if curl -f -s https://yourdomain.com/health > /dev/null; then
-            echo "✅ Site is up and healthy"
-          else
-            echo "❌ Site health check failed"
-            exit 1
-          fi
+          set -euo pipefail
+          ssh -o StrictHostKeyChecking=accept-new ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'ENDSSH'
+            set -euo pipefail
+            
+            echo "==> Waiting for services to stabilize..."
+            sleep 30
+            
+            # Frontend health check with retries and exponential backoff
+            echo ""
+            echo "==> Checking frontend health (https://app.technasiummbh.nl/)"
+            for attempt in {1..10}; do
+              sleep_time=$((attempt * 3))
+              if curl -fsS --max-time 10 https://app.technasiummbh.nl/ > /dev/null 2>&1; then
+                echo "✅ Frontend is up and responding (attempt $attempt)"
+                break
+              else
+                if [ $attempt -eq 10 ]; then
+                  echo "❌ Frontend health check failed after 10 attempts"
+                  echo "==> Dumping logs for troubleshooting"
+                  cd /opt/team-evaluatie-app
+                  docker compose --env-file .env.prod -f ops/docker/compose.prod.yml ps
+                  docker compose --env-file .env.prod -f ops/docker/compose.prod.yml logs --tail=100 frontend nginx
+                  exit 1
+                fi
+                echo "⏳ Attempt $attempt: Frontend not ready, waiting ${sleep_time}s..."
+                sleep $sleep_time
+              fi
+            done
+            
+            # API health check with retries and exponential backoff
+            echo ""
+            echo "==> Checking API health (https://app.technasiummbh.nl/api/v1/health)"
+            for attempt in {1..10}; do
+              sleep_time=$((attempt * 3))
+              response=$(curl -fsS --max-time 10 https://app.technasiummbh.nl/api/v1/health 2>/dev/null || echo "")
+              if echo "$response" | grep -q '"status".*:.*"ok"'; then
+                echo "✅ API is up and healthy (attempt $attempt)"
+                echo "Response: $response"
+                break
+              else
+                if [ $attempt -eq 10 ]; then
+                  echo "❌ API health check failed after 10 attempts"
+                  echo "Last response: $response"
+                  echo "==> Dumping logs for troubleshooting"
+                  cd /opt/team-evaluatie-app
+                  docker compose --env-file .env.prod -f ops/docker/compose.prod.yml ps
+                  docker compose --env-file .env.prod -f ops/docker/compose.prod.yml logs --tail=100 backend nginx
+                  exit 1
+                fi
+                echo "⏳ Attempt $attempt: API not healthy, waiting ${sleep_time}s..."
+                sleep $sleep_time
+              fi
+            done
+            
+            echo ""
+            echo "✅ All health checks passed!"
+          ENDSSH
       
       - name: Notify deployment status
         if: always()
@@ -256,27 +360,51 @@ jobs:
     if: success()
     
     steps:
-      - name: Check site availability
+      - name: Setup SSH
         run: |
-          for i in {1..5}; do
-            if curl -f -s https://yourdomain.com/health > /dev/null; then
-              echo "Attempt $i: Site is healthy"
-              exit 0
-            fi
-            echo "Attempt $i: Waiting..."
-            sleep 10
-          done
-          echo "Site is not responding after 5 attempts"
-          exit 1
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
       
-      - name: Check API health
+      - name: Final health verification
         run: |
-          if curl -f -s https://yourdomain.com/api/v1/health > /dev/null; then
-            echo "API is healthy"
-          else
-            echo "API health check failed"
-            exit 1
-          fi
+          set -euo pipefail
+          ssh -o StrictHostKeyChecking=accept-new ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'ENDSSH'
+            set -euo pipefail
+            
+            echo "==> Final health verification"
+            
+            # Check frontend
+            echo ""
+            echo "==> Checking frontend availability"
+            for attempt in {1..5}; do
+              if curl -fsS --max-time 10 https://app.technasiummbh.nl/ > /dev/null 2>&1; then
+                echo "✅ Attempt $attempt: Frontend is healthy"
+                break
+              fi
+              if [ $attempt -eq 5 ]; then
+                echo "❌ Frontend not responding after 5 attempts"
+                exit 1
+              fi
+              echo "⏳ Attempt $attempt: Waiting..."
+              sleep 10
+            done
+            
+            # Check API
+            echo ""
+            echo "==> Checking API health"
+            response=$(curl -fsS --max-time 10 https://app.technasiummbh.nl/api/v1/health 2>/dev/null || echo "")
+            if echo "$response" | grep -q '"status".*:.*"ok"'; then
+              echo "✅ API is healthy"
+              echo "Response: $response"
+            else
+              echo "❌ API health check failed"
+              echo "Response: $response"
+              exit 1
+            fi
+          ENDSSH
       
       - name: Deployment summary
         run: |
