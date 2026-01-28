@@ -26,7 +26,43 @@ def upgrade() -> None:
     3. Converts created_at and updated_at as well for consistency
     
     Strategy: For PostgreSQL, we use AT TIME ZONE to convert naive timestamps to UTC-aware.
-    If a timestamp is already timezone-aware, this is a no-op.
+    
+    IMPORTANT NOTES:
+    - "USING column_name AT TIME ZONE 'UTC'" interprets naive timestamps as UTC
+    - NULL values are handled automatically (remain NULL)
+    - If timestamps are already timezone-aware, they are converted to UTC
+    - This is a safe, non-destructive migration
+    
+    Pre-migration verification (recommended):
+    -- Check current column types:
+    SELECT column_name, data_type, datetime_precision, is_nullable
+    FROM information_schema.columns
+    WHERE table_name = 'attendance_events'
+      AND column_name IN ('check_in', 'check_out', 'approved_at', 'created_at', 'updated_at');
+    
+    -- Check for NULL values:
+    SELECT COUNT(*) as total_records,
+           COUNT(check_in) as check_in_count,
+           COUNT(check_out) as check_out_count,
+           COUNT(approved_at) as approved_at_count
+    FROM attendance_events;
+    
+    Post-migration verification (recommended):
+    -- Verify column types changed:
+    SELECT column_name, data_type
+    FROM information_schema.columns
+    WHERE table_name = 'attendance_events'
+      AND column_name IN ('check_in', 'check_out', 'approved_at', 'created_at', 'updated_at');
+    -- Expected: data_type = 'timestamp with time zone'
+    
+    -- Verify data integrity (no data loss):
+    SELECT COUNT(*) FROM attendance_events;
+    -- Should match pre-migration count
+    
+    -- Verify timezone information:
+    SELECT check_in, timezone('UTC', check_in) as check_in_utc
+    FROM attendance_events LIMIT 5;
+    -- Timestamps should have timezone info (+00 or UTC)
     """
     # Convert check_in to timestamptz
     # Using 'ALTER COLUMN ... TYPE ... USING ...' to safely convert data
@@ -37,7 +73,7 @@ def upgrade() -> None:
         USING check_in AT TIME ZONE 'UTC'
     """)
     
-    # Convert check_out to timestamptz (handles NULL values)
+    # Convert check_out to timestamptz (handles NULL values automatically)
     op.execute("""
         ALTER TABLE attendance_events 
         ALTER COLUMN check_out 
@@ -45,7 +81,7 @@ def upgrade() -> None:
         USING check_out AT TIME ZONE 'UTC'
     """)
     
-    # Convert approved_at to timestamptz (handles NULL values)
+    # Convert approved_at to timestamptz (handles NULL values automatically)
     op.execute("""
         ALTER TABLE attendance_events 
         ALTER COLUMN approved_at 
@@ -74,7 +110,27 @@ def downgrade() -> None:
     """
     Revert timezone-aware columns back to naive timestamps.
     
-    WARNING: This will lose timezone information!
+    ⚠️ WARNING: This will LOSE TIMEZONE INFORMATION!
+    
+    The downgrade converts timestamptz back to timestamp by:
+    1. Converting to UTC (if not already)
+    2. Stripping timezone information
+    
+    This means:
+    - Timestamps will be stored as naive UTC
+    - Original timezone information is lost
+    - Applications must assume UTC when reading
+    
+    Use this only if you need to rollback the application code changes as well.
+    Consider the implications carefully before downgrading.
+    
+    Post-downgrade verification:
+    -- Verify column types reverted:
+    SELECT column_name, data_type
+    FROM information_schema.columns
+    WHERE table_name = 'attendance_events'
+      AND column_name IN ('check_in', 'check_out', 'approved_at', 'created_at', 'updated_at');
+    -- Expected: data_type = 'timestamp without time zone'
     """
     # Revert check_in to timestamp without timezone
     op.execute("""
@@ -84,7 +140,7 @@ def downgrade() -> None:
         USING check_in AT TIME ZONE 'UTC'
     """)
     
-    # Revert check_out
+    # Revert check_out (NULL values handled automatically)
     op.execute("""
         ALTER TABLE attendance_events 
         ALTER COLUMN check_out 
@@ -92,7 +148,7 @@ def downgrade() -> None:
         USING check_out AT TIME ZONE 'UTC'
     """)
     
-    # Revert approved_at
+    # Revert approved_at (NULL values handled automatically)
     op.execute("""
         ALTER TABLE attendance_events 
         ALTER COLUMN approved_at 

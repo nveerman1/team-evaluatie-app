@@ -314,6 +314,32 @@ def update_attendance_event(
 
     # Apply updates
     update_data = update.model_dump(exclude_unset=True)
+    
+    # Additional validation for partial updates: validate against existing DB values
+    # If only check_out is being updated, validate against existing check_in
+    if "check_out" in update_data and "check_in" not in update_data:
+        new_check_out = update_data["check_out"]
+        if new_check_out and event.check_in:
+            check_in_aware = ensure_aware_utc(event.check_in)
+            check_out_aware = ensure_aware_utc(new_check_out)
+            if check_out_aware <= check_in_aware:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="check_out must be after check_in"
+                )
+    
+    # If only check_in is being updated, validate against existing check_out
+    if "check_in" in update_data and "check_out" not in update_data:
+        new_check_in = update_data["check_in"]
+        if event.check_out and new_check_in:
+            check_in_aware = ensure_aware_utc(new_check_in)
+            check_out_aware = ensure_aware_utc(event.check_out)
+            if check_out_aware <= check_in_aware:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="check_out must be after check_in"
+                )
+    
     for field, value in update_data.items():
         setattr(event, field, value)
 

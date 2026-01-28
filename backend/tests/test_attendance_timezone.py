@@ -5,6 +5,8 @@ These tests verify that:
 1. Schema validators handle mixed timezone-naive and timezone-aware datetimes
 2. The ensure_aware_utc helper function works correctly
 3. All validators properly compare datetimes regardless of timezone awareness
+4. Partial updates are validated correctly
+5. Edge cases (None, invalid types) are handled properly
 """
 
 from datetime import datetime, timezone, timedelta
@@ -54,6 +56,27 @@ class TestEnsureAwareUtc:
         assert result.tzinfo == timezone.utc
         assert result.hour == 10  # 12:30 UTC+2 = 10:30 UTC
         assert result.minute == 30
+    
+    def test_none_input_returns_none(self):
+        """None input should return None"""
+        result = ensure_aware_utc(None)
+        assert result is None
+    
+    def test_invalid_type_raises_type_error(self):
+        """Invalid input type should raise TypeError"""
+        with pytest.raises(TypeError) as exc_info:
+            ensure_aware_utc("2024-01-15 10:30:00")
+        
+        assert "Expected datetime or None" in str(exc_info.value)
+        assert "got str" in str(exc_info.value)
+    
+    def test_integer_raises_type_error(self):
+        """Integer input should raise TypeError"""
+        with pytest.raises(TypeError) as exc_info:
+            ensure_aware_utc(123456789)
+        
+        assert "Expected datetime or None" in str(exc_info.value)
+        assert "got int" in str(exc_info.value)
 
 
 class TestAttendanceEventCreateValidator:
@@ -329,3 +352,92 @@ class TestTimezoneEdgeCases:
         assert event.check_out == check_out
         # But we can verify they were validated (no ValidationError was raised)
         assert event.user_id == 1
+
+
+class TestPartialUpdates:
+    """Tests for partial update scenarios with AttendanceEventUpdate"""
+    
+    def test_update_only_check_out_with_both_fields_present(self):
+        """Update with both check_in and check_out validates correctly"""
+        check_in = datetime(2024, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
+        check_out = datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        
+        update = AttendanceEventUpdate(
+            check_in=check_in,
+            check_out=check_out
+        )
+        
+        assert update.check_in == check_in
+        assert update.check_out == check_out
+    
+    def test_update_only_check_out_field(self):
+        """
+        Update with only check_out does not validate against missing check_in.
+        Backend endpoint must validate against DB value.
+        """
+        check_out = datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        
+        # Should succeed because check_in is not present in payload
+        update = AttendanceEventUpdate(check_out=check_out)
+        
+        assert update.check_out == check_out
+        assert update.check_in is None
+    
+    def test_update_only_check_in_field(self):
+        """Update with only check_in should succeed (no check_out to validate)"""
+        check_in = datetime(2024, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
+        
+        update = AttendanceEventUpdate(check_in=check_in)
+        
+        assert update.check_in == check_in
+        assert update.check_out is None
+    
+    def test_update_with_invalid_times_when_both_present(self):
+        """Update with check_out before check_in should fail when both present"""
+        check_in = datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        check_out = datetime(2024, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
+        
+        with pytest.raises(ValidationError) as exc_info:
+            AttendanceEventUpdate(
+                check_in=check_in,
+                check_out=check_out
+            )
+        
+        assert "check_out must be after check_in" in str(exc_info.value)
+    
+    def test_update_with_only_location_no_time_validation(self):
+        """Update with only location should not trigger time validation"""
+        update = AttendanceEventUpdate(location="New Location")
+        
+        assert update.location == "New Location"
+        assert update.check_in is None
+        assert update.check_out is None
+
+
+class TestFieldOrderIndependence:
+    """Tests that validators work regardless of field order in payload"""
+    
+    def test_check_out_before_check_in_in_dict(self):
+        """Model validation should work regardless of dict key order"""
+        # In Python 3.7+, dict order is preserved, but validator should not depend on it
+        data = {
+            "user_id": 1,
+            "check_out": datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc),
+            "check_in": datetime(2024, 1, 15, 10, 0, 0, tzinfo=timezone.utc),
+            "source": "manual"
+        }
+        
+        event = AttendanceEventCreate(**data)
+        assert event.check_in < event.check_out
+    
+    def test_check_in_before_check_out_in_dict(self):
+        """Model validation should work with check_in first in dict"""
+        data = {
+            "user_id": 1,
+            "check_in": datetime(2024, 1, 15, 10, 0, 0, tzinfo=timezone.utc),
+            "check_out": datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc),
+            "source": "manual"
+        }
+        
+        event = AttendanceEventCreate(**data)
+        assert event.check_in < event.check_out
