@@ -303,7 +303,7 @@ services:
       context: ../../frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-}
         NEXT_PUBLIC_ENABLE_DEV_LOGIN: "false"
     image: tea-frontend:${IMAGE_TAG:-latest}
     container_name: tea_frontend
@@ -311,8 +311,9 @@ services:
     
     environment:
       NODE_ENV: production
-      # API URL (internal network) - nginx will handle external routing
-      NEXT_PUBLIC_API_URL: ${FRONTEND_URL}/api/v1
+      # API Base URL - Optional, defaults to /api/v1 in api.ts
+      # For same-origin deployment, omit or set to /api/v1
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-}
       # SECURITY: Disable dev-login in production (force explicit setting)
       NEXT_PUBLIC_ENABLE_DEV_LOGIN: "false"
       PORT: "3000"
