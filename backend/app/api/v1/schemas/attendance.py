@@ -2,9 +2,59 @@
 Pydantic schemas for 3de Blok RFID Attendance module
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+
+# ============ Timezone Policy Configuration ============
+
+# Naive datetime interpretation policy: All naive datetimes are assumed to be UTC.
+# Rationale: Server operates in UTC, existing data created with datetime.utcnow() is UTC,
+# and this provides the most consistent behavior for users.
+NAIVE_DATETIME_ASSUMED_TZ = "UTC"
+
+
+# ============ Timezone Helper Functions ============
+
+
+def ensure_aware_utc(dt: Optional[datetime]) -> Optional[datetime]:
+    """
+    Ensure datetime is timezone-aware in UTC.
+    
+    Policy: Naive datetimes are interpreted as UTC (see NAIVE_DATETIME_ASSUMED_TZ).
+    
+    Args:
+        dt: Datetime to normalize. Can be None.
+        
+    Returns:
+        Timezone-aware datetime in UTC, or None if input was None.
+        
+    Raises:
+        TypeError: If dt is not a datetime, None, or has invalid type.
+        
+    Behavior:
+        - If dt is None: returns None
+        - If dt is naive: assumes UTC and adds timezone info
+        - If dt is timezone-aware: converts to UTC
+        
+    This prevents "can't compare offset-naive and offset-aware datetimes" errors.
+    """
+    if dt is None:
+        return None
+    
+    if not isinstance(dt, datetime):
+        raise TypeError(
+            f"Expected datetime or None, got {type(dt).__name__}. "
+            f"Value: {dt!r}"
+        )
+    
+    if dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:
+        # Naive datetime - interpret as UTC per policy
+        return dt.replace(tzinfo=timezone.utc)
+    
+    # Already aware - ensure it's UTC
+    return dt.astimezone(timezone.utc)
 
 
 # ============ RFID Card Schemas ============
@@ -58,12 +108,16 @@ class AttendanceEventCreate(AttendanceEventBase):
     user_id: int = Field(..., description="User ID")
     source: str = Field("manual", description="Source: rfid|manual|import|api")
 
-    @field_validator("check_out")
-    @classmethod
-    def check_out_after_check_in(cls, v, info):
-        if v and info.data.get("check_in") and v <= info.data["check_in"]:
-            raise ValueError("check_out must be after check_in")
-        return v
+    @model_validator(mode="after")
+    def validate_check_out_after_check_in(self):
+        """Validate that check_out is after check_in (cross-field validation)."""
+        if self.check_out and self.check_in:
+            # Ensure both datetimes are timezone-aware for comparison
+            check_in_aware = ensure_aware_utc(self.check_in)
+            check_out_aware = ensure_aware_utc(self.check_out)
+            if check_out_aware <= check_in_aware:
+                raise ValueError("check_out must be after check_in")
+        return self
 
 
 class AttendanceEventUpdate(BaseModel):
@@ -73,12 +127,22 @@ class AttendanceEventUpdate(BaseModel):
     location: Optional[str] = Field(None, max_length=200)
     description: Optional[str] = None
 
-    @field_validator("check_out")
-    @classmethod
-    def check_out_after_check_in(cls, v, info):
-        if v and info.data.get("check_in") and v <= info.data["check_in"]:
-            raise ValueError("check_out must be after check_in")
-        return v
+    @model_validator(mode="after")
+    def validate_check_out_after_check_in(self):
+        """
+        Validate that check_out is after check_in (cross-field validation).
+        
+        Note: For partial updates, this only validates if both fields are present
+        in the update payload. The backend must handle validation against existing
+        DB values separately.
+        """
+        if self.check_out and self.check_in:
+            # Ensure both datetimes are timezone-aware for comparison
+            check_in_aware = ensure_aware_utc(self.check_in)
+            check_out_aware = ensure_aware_utc(self.check_out)
+            if check_out_aware <= check_in_aware:
+                raise ValueError("check_out must be after check_in")
+        return self
 
 
 class AttendanceEventOut(AttendanceEventBase):
@@ -122,12 +186,15 @@ class ExternalWorkCreate(BaseModel):
     description: str = Field(..., description="Description of work done")
     project_id: Optional[int] = Field(None, description="Optional project link")
 
-    @field_validator("check_out")
-    @classmethod
-    def check_out_after_check_in(cls, v, info):
-        if v <= info.data["check_in"]:
+    @model_validator(mode="after")
+    def validate_check_out_after_check_in(self):
+        """Validate that end time (check_out) is after start time (check_in)."""
+        # Ensure both datetimes are timezone-aware for comparison
+        check_in_aware = ensure_aware_utc(self.check_in)
+        check_out_aware = ensure_aware_utc(self.check_out)
+        if check_out_aware <= check_in_aware:
             raise ValueError("End time must be after start time")
-        return v
+        return self
 
 
 class ExternalWorkApprove(BaseModel):
