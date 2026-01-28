@@ -122,8 +122,11 @@ def rfid_scan(
             db.commit()
             db.refresh(open_session)
 
+            # Ensure both datetimes are timezone-aware for duration calculation
+            check_in_aware = ensure_aware_utc(open_session.check_in)
+            check_out_aware = ensure_aware_utc(open_session.check_out)
             duration_seconds = int(
-                (open_session.check_out - open_session.check_in).total_seconds()
+                (check_out_aware - check_in_aware).total_seconds()
             )
 
             return RFIDScanResponse(
@@ -256,8 +259,11 @@ def list_attendance_events(
     for event in events:
         event_dict = AttendanceEventOut.model_validate(event).model_dump()
         if event.check_out and event.check_in:
+            # Ensure both datetimes are timezone-aware for duration calculation
+            check_in_aware = ensure_aware_utc(event.check_in)
+            check_out_aware = ensure_aware_utc(event.check_out)
             event_dict["duration_seconds"] = int(
-                (event.check_out - event.check_in).total_seconds()
+                (check_out_aware - check_in_aware).total_seconds()
             )
 
         # Add user info (joined in query, accessible via event.user)
@@ -317,8 +323,11 @@ def update_attendance_event(
 
     event_out = AttendanceEventOut.model_validate(event)
     if event.check_out and event.check_in:
+        # Ensure both datetimes are timezone-aware for duration calculation
+        check_in_aware = ensure_aware_utc(event.check_in)
+        check_out_aware = ensure_aware_utc(event.check_out)
         event_out.duration_seconds = int(
-            (event.check_out - event.check_in).total_seconds()
+            (check_out_aware - check_in_aware).total_seconds()
         )
 
     return event_out
@@ -442,8 +451,11 @@ def create_external_work(
     db.refresh(new_event)
 
     event_out = AttendanceEventOut.model_validate(new_event)
+    # Ensure both datetimes are timezone-aware for duration calculation
+    check_in_aware = ensure_aware_utc(new_event.check_in)
+    check_out_aware = ensure_aware_utc(new_event.check_out)
     event_out.duration_seconds = int(
-        (new_event.check_out - new_event.check_in).total_seconds()
+        (check_out_aware - check_in_aware).total_seconds()
     )
 
     return event_out
@@ -804,7 +816,10 @@ def export_attendance(
     for event, user in events:
         duration_minutes = None
         if event.check_out and event.check_in:
-            duration_seconds = (event.check_out - event.check_in).total_seconds()
+            # Ensure both datetimes are timezone-aware for duration calculation
+            check_in_aware = ensure_aware_utc(event.check_in)
+            check_out_aware = ensure_aware_utc(event.check_out)
+            duration_seconds = (check_out_aware - check_in_aware).total_seconds()
             duration_minutes = int(duration_seconds / 60)
 
         event_type = "Extern werk" if event.is_external else "School"
