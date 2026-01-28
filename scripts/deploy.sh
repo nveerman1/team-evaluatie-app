@@ -17,7 +17,7 @@
 #
 # =============================================================================
 
-set -e  # Exit on error
+set -euo pipefail  # Exit on error, undefined variables, and pipe failures
 
 # Colors
 GREEN='\033[0;32m'
@@ -28,8 +28,12 @@ NC='\033[0m'
 
 # Configuration
 COMPOSE_FILE="${COMPOSE_FILE:-ops/docker/compose.prod.yml}"
+ENV_FILE="${ENV_FILE:-.env.prod}"
 PROJECT_NAME="${PROJECT_NAME:-tea}"
 GIT_BRANCH="${GIT_BRANCH:-main}"
+
+# Enforce env file usage for all docker compose commands
+COMPOSE_CMD="docker compose --env-file $ENV_FILE -f $COMPOSE_FILE"
 
 log_info() {
     echo -e "${GREEN}[INFO]${NC} $(date '+%H:%M:%S') - $1"
@@ -54,11 +58,21 @@ check_prerequisites() {
     log_step "Checking prerequisites..."
     
     # Check if .env.prod exists
-    if [ ! -f ".env.prod" ]; then
-        log_error ".env.prod file not found!"
-        log_error "Copy .env.prod.example to .env.prod and configure it"
+    if [ ! -f "$ENV_FILE" ]; then
+        log_error "$ENV_FILE file not found!"
+        log_error "Copy .env.prod.example to $ENV_FILE and configure it"
         exit 1
     fi
+    
+    # Check required environment variables in .env.prod
+    log_info "Validating required environment variables..."
+    required_vars="FRONTEND_URL POSTGRES_PASSWORD REDIS_PASSWORD"
+    for var in $required_vars; do
+        if ! grep -q "^${var}=" "$ENV_FILE"; then
+            log_error "Required variable $var not found in $ENV_FILE"
+            exit 1
+        fi
+    done
     
     # Check if Docker is running
     if ! docker info >/dev/null 2>&1; then
@@ -69,6 +83,13 @@ check_prerequisites() {
     # Check if compose file exists
     if [ ! -f "$COMPOSE_FILE" ]; then
         log_error "Compose file not found: $COMPOSE_FILE"
+        exit 1
+    fi
+    
+    # Validate docker compose configuration
+    log_info "Validating Docker Compose configuration..."
+    if ! $COMPOSE_CMD config > /dev/null; then
+        log_error "Docker Compose configuration is invalid!"
         exit 1
     fi
     
@@ -112,13 +133,13 @@ build_images() {
     # Tag with timestamp for rollback capability
     export IMAGE_TAG="$(date +%Y%m%d-%H%M%S)"
     
-    docker compose -f "$COMPOSE_FILE" build --no-cache
+    $COMPOSE_CMD build --no-cache
     
     log_info "Images built with tag: $IMAGE_TAG"
     
     # Also tag as 'latest'
-    docker tag "tea-backend:$IMAGE_TAG" "tea-backend:latest" || true
-    docker tag "tea-frontend:$IMAGE_TAG" "tea-frontend:latest" || true
+    docker tag "tea-backend:$IMAGE_TAG" "tea-backend:latest" 2>/dev/null || true
+    docker tag "tea-frontend:$IMAGE_TAG" "tea-frontend:latest" 2>/dev/null || true
 }
 
 # Run database migrations
@@ -132,7 +153,7 @@ run_migrations() {
         bash scripts/migrate.sh
     else
         log_warn "Migration script not found"
-        docker compose -f "$COMPOSE_FILE" exec backend alembic upgrade head
+        $COMPOSE_CMD exec -T backend alembic upgrade head
     fi
 }
 
@@ -141,13 +162,13 @@ deploy_services() {
     log_step "Deploying services..."
     
     # Start/update services
-    docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+    $COMPOSE_CMD up -d --remove-orphans
     
     log_info "Waiting for services to be healthy..."
     sleep 10
     
     # Check service health
-    docker compose -f "$COMPOSE_FILE" ps
+    $COMPOSE_CMD ps
 }
 
 # Verify deployment
@@ -155,17 +176,17 @@ verify_deployment() {
     log_step "Verifying deployment..."
     
     # Check if containers are running
-    local unhealthy=$(docker compose -f "$COMPOSE_FILE" ps --filter "health=unhealthy" --format json | wc -l)
+    local unhealthy=$($COMPOSE_CMD ps --filter "health=unhealthy" --format json 2>/dev/null | wc -l)
     
     if [ "$unhealthy" -gt 0 ]; then
         log_error "Some services are unhealthy!"
-        docker compose -f "$COMPOSE_FILE" ps
+        $COMPOSE_CMD ps
         return 1
     fi
     
     # Check backend health endpoint
     log_info "Checking backend health..."
-    if docker exec tea_backend curl -f http://localhost:8000/health >/dev/null 2>&1; then
+    if docker exec tea_backend curl -fsS --max-time 10 http://localhost:8000/health >/dev/null 2>&1; then
         log_info "Backend: Healthy"
     else
         log_error "Backend health check failed!"
@@ -174,7 +195,7 @@ verify_deployment() {
     
     # Check frontend health  
     log_info "Checking frontend health..."
-    if docker exec tea_frontend node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" 2>/dev/null; then
+    if docker exec tea_frontend wget -qO- --timeout=10 http://localhost:3000/ >/dev/null 2>&1; then
         log_info "Frontend: Healthy"
     else
         log_warn "Frontend health check failed (may need custom endpoint)"
@@ -187,7 +208,8 @@ verify_deployment() {
 cleanup() {
     log_step "Cleaning up old Docker resources..."
     
-    docker system prune -f
+    # Only prune dangling images, not all unused images
+    docker image prune -f
     
     log_info "Cleanup complete"
 }
@@ -197,15 +219,15 @@ show_summary() {
     log_step "Deployment Summary"
     
     echo "Services:"
-    docker compose -f "$COMPOSE_FILE" ps
+    $COMPOSE_CMD ps
     
     echo ""
     echo "Recent logs:"
-    docker compose -f "$COMPOSE_FILE" logs --tail=20
+    $COMPOSE_CMD logs --tail=20
     
     echo ""
     log_info "Deployment completed successfully!"
-    log_info "Monitor logs with: docker compose -f $COMPOSE_FILE logs -f"
+    log_info "Monitor logs with: docker compose --env-file $ENV_FILE -f $COMPOSE_FILE logs -f"
 }
 
 # Rollback deployment
@@ -223,12 +245,12 @@ rollback_deployment() {
     git checkout HEAD~1
     
     # Redeploy with previous version
-    docker compose -f "$COMPOSE_FILE" up -d --force-recreate
+    $COMPOSE_CMD up -d --force-recreate
     
     log_info "Rollback complete"
     
     # Show services
-    docker compose -f "$COMPOSE_FILE" ps
+    $COMPOSE_CMD ps
 }
 
 # Main deployment flow
