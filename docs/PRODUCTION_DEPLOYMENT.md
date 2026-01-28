@@ -583,6 +583,60 @@ After successful deployment:
 7. ✅ Configure Sentry or similar error tracking
 8. ✅ Setup performance monitoring (New Relic, DataDog, etc.)
 
+## Deployment Verification
+
+After deployment, verify the following to ensure production build is running correctly:
+
+### 1. Health Check Endpoints
+
+```bash
+# Backend health check
+curl https://app.technasiummbh.nl/api/v1/health
+# Expected: {"status":"ok"} or similar 200 response
+
+# Nginx health check
+curl https://app.technasiummbh.nl/health
+# Expected: OK
+```
+
+### 2. Verify No CSP Violations
+
+1. Open browser DevTools (F12)
+2. Navigate to https://app.technasiummbh.nl
+3. Check Console tab for CSP errors
+4. **Should NOT see**: "Executing inline script violates CSP directive"
+5. **Should see**: Application loading successfully without CSP blocks
+
+### 3. Verify Production Build (No Turbopack/HMR)
+
+1. Open browser DevTools (F12)
+2. Go to Network tab
+3. Navigate to https://app.technasiummbh.nl
+4. **Should NOT see**: Requests to `/_next/webpack-hmr` or similar HMR endpoints
+5. **Should NOT see**: "Connection closed" messages in console
+6. **Should see**: Only production bundle requests (e.g., `/_next/static/chunks/...`)
+
+### 4. Verify CSP Headers
+
+```bash
+# Check CSP header in response
+curl -I https://app.technasiummbh.nl
+
+# Expected headers should include:
+# Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline'; ...
+# Note: 'unsafe-inline' is required for Next.js 16+ to bootstrap properly
+```
+
+### 5. Verify Frontend Container is Running Production Build
+
+```bash
+# Check frontend logs for production indicators
+docker compose -f ops/docker/compose.prod.yml logs frontend | head -20
+
+# Should see: NODE_ENV=production
+# Should NOT see: Turbopack or HMR references
+```
+
 For more details, see:
 - [OPERATIONS.md](./OPERATIONS.md) - Day-to-day operations
 - [ROLLBACK.md](./ROLLBACK.md) - Rollback procedures
