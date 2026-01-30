@@ -39,7 +39,7 @@ def cleanup_stuck_jobs(dry_run: bool = False, older_than_minutes: int = 10):
 
     try:
         # Find stuck jobs
-        cutoff_time = datetime.utcnow() - timedelta(minutes=older_than_minutes)
+        cutoff_time = datetime.now(datetime.UTC) - timedelta(minutes=older_than_minutes)
 
         stuck_jobs = (
             db.query(SummaryGenerationJob)
@@ -61,7 +61,7 @@ def cleanup_stuck_jobs(dry_run: bool = False, older_than_minutes: int = 10):
 
         for job in stuck_jobs:
             age_minutes = (
-                datetime.utcnow() - job.created_at.replace(tzinfo=None)
+                datetime.now(datetime.UTC) - job.created_at.replace(tzinfo=None)
             ).total_seconds() / 60
             print(f"  Job: {job.job_id}")
             print(f"    Student: {job.student_id}, Evaluation: {job.evaluation_id}")
@@ -73,7 +73,7 @@ def cleanup_stuck_jobs(dry_run: bool = False, older_than_minutes: int = 10):
                 job.error_message = (
                     "Job stuck in queued state - cleaned up by maintenance script"
                 )
-                job.completed_at = datetime.utcnow()
+                job.completed_at = datetime.now(datetime.UTC)
                 print("    → Marked as FAILED")
             else:
                 print("    → Would mark as FAILED (dry-run)")
