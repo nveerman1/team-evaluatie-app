@@ -65,13 +65,17 @@ De volgende issues zijn al opgelost in dit PR:
 **Verandering:**
 ```python
 # Oud (deprecated):
+from datetime import datetime, timedelta
 datetime.utcnow()
 
 # Nieuw (timezone-aware):
-datetime.now(datetime.UTC)
+from datetime import datetime, timedelta, UTC
+datetime.now(UTC)
 ```
 
 Deze waarschuwingen zouden nu niet meer verschijnen.
+
+**Note:** De nieuwe syntax vereist Python 3.11+. De `UTC` constant is toegevoegd in Python 3.11. Het project gebruikt Python 3.12, zoals aangegeven in het error bericht van de gebruiker.
 
 ### 2. Database Schema Issue
 
@@ -91,3 +95,5 @@ Na het uitvoeren van de migraties zou het seed script zonder errors moeten draai
 cd backend
 python -m scripts.seed --mode demo --reset --seed 42
 ```
+
+De deprecation warnings voor `datetime.utcnow()` zouden nu ook niet meer verschijnen.
