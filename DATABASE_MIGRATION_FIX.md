@@ -75,7 +75,7 @@ datetime.now(UTC)
 
 Deze waarschuwingen zouden nu niet meer verschijnen.
 
-**Note:** De nieuwe syntax vereist Python 3.11+. De `UTC` constant is toegevoegd in Python 3.11. Het project gebruikt Python 3.12, zoals aangegeven in het error bericht van de gebruiker.
+**Note:** De nieuwe syntax vereist Python 3.11+. De `UTC` constant is toegevoegd in Python 3.11. Het project gebruikt Python 3.11 zoals gedefinieerd in de Dockerfile.
 
 ### 2. Database Schema Issue
 
