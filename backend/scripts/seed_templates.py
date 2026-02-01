@@ -51,6 +51,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+from dotenv import load_dotenv
 import sqlalchemy as sa
 from sqlalchemy import create_engine, text
 
@@ -1352,6 +1353,9 @@ def main():
     
     if args.school_id and args.all_schools:
         parser.error("Cannot specify both --school-id and --all-schools")
+    
+    # Load environment variables from .env file
+    load_dotenv()
     
     # Get database URL from environment
     database_url = os.getenv("DATABASE_URL")
