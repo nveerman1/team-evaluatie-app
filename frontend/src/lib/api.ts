@@ -35,7 +35,7 @@ export const baseURL = raw?.replace(/\/+$/, "") ?? "/api/v1";
 // Development sanity check - log baseURL to help debug API issues
 if (process.env.NODE_ENV === "development" && typeof window !== "undefined") {
   // Only log once on initial load
-  if (!window.__API_BASE_URL_LOGGED__) {
+  if (!(window as any).__API_BASE_URL_LOGGED__) {
     console.log("[API Client] baseURL:", baseURL);
     console.log("[API Client] Full API endpoint example:", `${window.location.origin}${baseURL}/auth/me`);
     (window as any).__API_BASE_URL_LOGGED__ = true;
