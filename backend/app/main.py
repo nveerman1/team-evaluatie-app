@@ -36,6 +36,7 @@ from app.api.v1.routers import project_notes as project_notes_router
 from app.api.v1.routers import clients as clients_router
 from app.api.v1.routers import projects as projects_router
 from app.api.v1.routers import project_teams as project_teams_router
+from app.api.v1.routers import projectplans as projectplans_router
 from app.api.v1.routers import omza as omza_router
 from app.api.v1.routers import templates as templates_router
 from app.api.v1.routers import (
@@ -122,6 +123,7 @@ api_v1.include_router(project_notes_router.router)
 api_v1.include_router(clients_router.router)
 api_v1.include_router(projects_router.router)
 api_v1.include_router(project_teams_router.router)
+api_v1.include_router(projectplans_router.router)
 api_v1.include_router(omza_router.router)
 api_v1.include_router(templates_router.router)
 api_v1.include_router(student_competency_growth_router.router)
