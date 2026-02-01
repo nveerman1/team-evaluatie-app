@@ -855,6 +855,8 @@ def wizard_create_project(
         slug=payload.project.slug,
         description=payload.project.description,
         class_name=payload.project.class_name,
+        period=payload.project.period,
+        level=payload.project.level,  # Add level field
         start_date=payload.project.start_date,
         end_date=payload.project.end_date,
         status=payload.project.status,
@@ -865,6 +867,55 @@ def wizard_create_project(
 
     # Track warnings for edge cases
     warnings: List[str] = []
+
+    # Track all created entities
+    created_entities: List[WizardEntityOut] = []
+
+    # 1.5 Create ProjectPlan if level is bovenbouw
+    if payload.project.level == "bovenbouw":
+        from app.infra.db.models import ProjectPlan, ProjectPlanSection
+        
+        # Create the project plan
+        project_plan = ProjectPlan(
+            school_id=user.school_id,
+            project_id=project.id,
+            title=None,  # Students will set this later
+            status="concept",
+            locked=False,
+        )
+        db.add(project_plan)
+        db.flush()  # Get project_plan.id
+        
+        # Define section metadata
+        section_keys = [
+            "client",
+            "problem",
+            "goal",
+            "method",
+            "planning",
+            "tasks",
+            "motivation",
+            "risks",
+        ]
+        
+        # Create empty sections
+        for key in section_keys:
+            section = ProjectPlanSection(
+                school_id=user.school_id,
+                project_plan_id=project_plan.id,
+                key=key,
+                status="empty",
+            )
+            db.add(section)
+        
+        created_entities.append(
+            WizardEntityOut(
+                type="project_plan",
+                id=project_plan.id,
+                title=f"Projectplan for {project.title}",
+                details={"sections_count": len(section_keys)},
+            )
+        )
 
     # Track all created entities
     created_entities: List[WizardEntityOut] = []
