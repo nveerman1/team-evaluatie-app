@@ -14,10 +14,10 @@ import {
 } from "@/components/competency/ExternalInviteComponents";
 
 type CompetencyScanDashboardTabProps = {
-  searchQuery?: string;
+  // No props needed
 };
 
-export function CompetencyScanDashboardTab({ searchQuery = "" }: CompetencyScanDashboardTabProps) {
+export function CompetencyScanDashboardTab({}: CompetencyScanDashboardTabProps = {}) {
   const [windows, setWindows] = useState<CompetencyWindow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,10 +84,8 @@ export function CompetencyScanDashboardTab({ searchQuery = "" }: CompetencyScanD
     );
   }
 
-  // Filter windows by search query
-  const filteredWindows = searchQuery.trim()
-    ? windows.filter((w) => w.title.toLowerCase().includes(searchQuery.toLowerCase()))
-    : windows;
+  // No filtering needed anymore
+  const filteredWindows = windows;
 
   const openScansCount = windows.filter((w) => w.status === "open").length;
 
@@ -166,7 +164,7 @@ export function CompetencyScanDashboardTab({ searchQuery = "" }: CompetencyScanD
         ) : (
           <div className="p-8 rounded-xl shadow-sm bg-slate-50 text-center">
             <p className="text-slate-500">
-              {searchQuery ? "Geen competentiescans gevonden met deze zoekopdracht." : "Geen open competentiescans op dit moment."}
+              Geen open competentiescans op dit moment.
             </p>
           </div>
         )}

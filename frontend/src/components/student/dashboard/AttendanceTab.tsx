@@ -35,7 +35,7 @@ import {
 type PeriodFilter = "week" | "maand" | "alles";
 
 interface AttendanceTabProps {
-  searchQuery: string;
+  // No props needed
 }
 
 function formatDuration(seconds: number): string {
@@ -123,7 +123,7 @@ function SmallHelp({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
+export function AttendanceTab({}: AttendanceTabProps = {}) {
   const searchParams = useSearchParams();
   const router = useRouter();
   
@@ -281,28 +281,9 @@ export function AttendanceTab({ searchQuery }: AttendanceTabProps) {
     return events.filter(e => e.is_external);
   }, [events]);
 
-  // Filter by search query
-  const filteredSessions = useMemo(() => {
-    if (!searchQuery.trim()) return schoolSessions;
-    const q = searchQuery.toLowerCase();
-    return schoolSessions.filter((s) => 
-      formatDateTime(s.check_in).toLowerCase().includes(q) ||
-      (s.check_out && formatDateTime(s.check_out).toLowerCase().includes(q)) ||
-      (s.duration_seconds && formatDuration(s.duration_seconds).toLowerCase().includes(q))
-    );
-  }, [schoolSessions, searchQuery]);
-
-  const filteredExternals = useMemo(() => {
-    if (!searchQuery.trim()) return externalWork;
-    const q = searchQuery.toLowerCase();
-    return externalWork.filter((e) =>
-      (e.location?.toLowerCase().includes(q)) ||
-      (e.description?.toLowerCase().includes(q)) ||
-      formatDateTime(e.check_in).toLowerCase().includes(q) ||
-      (e.check_out && formatDateTime(e.check_out).toLowerCase().includes(q)) ||
-      (e.approval_status?.toLowerCase().includes(q))
-    );
-  }, [externalWork, searchQuery]);
+  // No filtering needed anymore
+  const filteredSessions = schoolSessions;
+  const filteredExternals = externalWork;
 
   if (loading) {
     return (

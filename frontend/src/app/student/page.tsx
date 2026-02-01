@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, ClipboardCheck, Target, Trophy, BarChart3, Sparkles, Upload, Clock, FileText } from "lucide-react";
+import { ClipboardCheck, Target, Trophy, BarChart3, Sparkles, Upload, Clock, FileText } from "lucide-react";
 import { EvaluationDashboardCard } from "@/components/student/dashboard/EvaluationDashboardCard";
 import { ProjectAssessmentDashboardCard } from "@/components/student/dashboard/ProjectAssessmentDashboardCard";
 import { SubmissionDashboardCard } from "@/components/student/dashboard/SubmissionDashboardCard";
@@ -36,7 +36,6 @@ function StudentDashboardContent() {
   // Tab state - check URL query parameter
   const tabFromUrl = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState<string>(tabFromUrl || "evaluaties");
-  const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Update active tab when URL changes
   useEffect(() => {
@@ -55,32 +54,18 @@ function StudentDashboardContent() {
   // Include both open and closed evaluations for display
   const openEvaluations = useMemo(() => dashboard?.openEvaluations || [], [dashboard?.openEvaluations]);
 
-  // Filter evaluations by search query
-  const filteredEvaluations = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return openEvaluations;
-    return openEvaluations.filter((e) => e.title.toLowerCase().includes(q));
-  }, [openEvaluations, searchQuery]);
-
-  // Filter project assessments by search query and status (open, published, closed)
+  // Filter project assessments by status (open, published, closed)
   const filteredProjectAssessments = useMemo(() => {
     // Show assessments with status: open, published, or closed
-    const visibleAssessments = (projectAssessments || []).filter((p) => 
+    return (projectAssessments || []).filter((p) => 
       ["open", "published", "closed"].includes(p.status)
     );
-    
-    // Then filter by search query
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return visibleAssessments;
-    return visibleAssessments.filter((p) => p.title.toLowerCase().includes(q));
-  }, [projectAssessments, searchQuery]);
+  }, [projectAssessments]);
 
-  // Filter all project assessments by search query only (for Inleveren tab)
+  // All project assessments (for Inleveren tab)
   const filteredAllProjectAssessments = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return projectAssessments || [];
-    return (projectAssessments || []).filter((p) => p.title.toLowerCase().includes(q));
-  }, [projectAssessments, searchQuery]);
+    return projectAssessments || [];
+  }, [projectAssessments]);
 
   if (loading || userLoading) return <Loading />;
   if (error) return <ErrorMessage message={error} />;
@@ -139,67 +124,54 @@ function StudentDashboardContent() {
         {/* Tabs */}
         <div className="mt-6">
           <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <TabsList className="h-11 w-full justify-start gap-1 rounded-2xl bg-white p-1 shadow-sm sm:w-auto">
-                <TabsTrigger
-                  value="projectplannen"
-                  className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
-                >
-                  <FileText className="mr-2 h-4 w-4" /> Projectplannen
-                </TabsTrigger>
-                <TabsTrigger
-                  value="evaluaties"
-                  className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
-                >
-                  <ClipboardCheck className="mr-2 h-4 w-4" /> Evaluaties
-                </TabsTrigger>
-                <TabsTrigger
-                  value="scans"
-                  className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
-                >
-                  <Target className="mr-2 h-4 w-4" /> Competentiescan
-                </TabsTrigger>
-                <TabsTrigger
-                  value="inleveren"
-                  className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
-                >
-                  <Upload className="mr-2 h-4 w-4" /> Inleveren
-                </TabsTrigger>
-                <TabsTrigger
-                  value="projecten"
-                  className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
-                >
-                  <Trophy className="mr-2 h-4 w-4" /> Projectbeoordelingen
-                </TabsTrigger>
-                <TabsTrigger
-                  value="overzicht"
-                  className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
-                >
-                  <BarChart3 className="mr-2 h-4 w-4" /> Overzicht
-                </TabsTrigger>
-                <TabsTrigger
-                  value="attendance"
-                  className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
-                >
-                  <Clock className="mr-2 h-4 w-4" /> 3de Blok
-                </TabsTrigger>
-              </TabsList>
-
-              {/* Search bar - always visible */}
-              <div className="relative w-full sm:w-72">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Zoek…"
-                  className="h-11 rounded-2xl bg-white pl-9 shadow-sm ring-1 ring-slate-200 focus-visible:ring-2 focus-visible:ring-indigo-500"
-                />
-              </div>
-            </div>
+            <TabsList className="h-11 w-full justify-start gap-1 rounded-2xl bg-white p-1 shadow-sm">
+              <TabsTrigger
+                value="projectplannen"
+                className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
+              >
+                <FileText className="mr-2 h-4 w-4" /> Projectplannen
+              </TabsTrigger>
+              <TabsTrigger
+                value="evaluaties"
+                className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
+              >
+                <ClipboardCheck className="mr-2 h-4 w-4" /> Evaluaties
+              </TabsTrigger>
+              <TabsTrigger
+                value="scans"
+                className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
+              >
+                <Target className="mr-2 h-4 w-4" /> Competentiescan
+              </TabsTrigger>
+              <TabsTrigger
+                value="inleveren"
+                className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
+              >
+                <Upload className="mr-2 h-4 w-4" /> Inleveren
+              </TabsTrigger>
+              <TabsTrigger
+                value="projecten"
+                className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
+              >
+                <Trophy className="mr-2 h-4 w-4" /> Projectbeoordelingen
+              </TabsTrigger>
+              <TabsTrigger
+                value="overzicht"
+                className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
+              >
+                <BarChart3 className="mr-2 h-4 w-4" /> Overzicht
+              </TabsTrigger>
+              <TabsTrigger
+                value="attendance"
+                className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
+              >
+                <Clock className="mr-2 h-4 w-4" /> 3de Blok
+              </TabsTrigger>
+            </TabsList>
 
             {/* PROJECTPLANNEN */}
             <TabsContent value="projectplannen" className="mt-6">
-              <ProjectplannenTab searchQuery={searchQuery} />
+              <ProjectplannenTab />
             </TabsContent>
 
             {/* EVALUATIES */}
@@ -235,14 +207,14 @@ function StudentDashboardContent() {
               </Card>
 
               <div className="grid gap-4">
-                {filteredEvaluations.length === 0 ? (
+                {openEvaluations.length === 0 ? (
                   <div className="p-8 rounded-xl shadow-sm bg-slate-50 text-center">
                     <p className="text-slate-500">
-                      {searchQuery ? "Geen evaluaties gevonden met deze zoekopdracht." : "Geen open evaluaties op dit moment."}
+                      Geen open evaluaties op dit moment.
                     </p>
                   </div>
                 ) : (
-                  filteredEvaluations.map((evaluation) => (
+                  openEvaluations.map((evaluation) => (
                     <EvaluationDashboardCard key={evaluation.id} evaluation={evaluation} />
                   ))
                 )}
@@ -251,7 +223,7 @@ function StudentDashboardContent() {
 
             {/* COMPETENTIESCAN */}
             <TabsContent value="scans" className="mt-6 space-y-4">
-              <CompetencyScanDashboardTab searchQuery={searchQuery} />
+              <CompetencyScanDashboardTab />
             </TabsContent>
 
             {/* PROJECTBEOORDELINGEN */}
@@ -276,7 +248,7 @@ function StudentDashboardContent() {
                 ) : filteredProjectAssessments.length === 0 ? (
                   <div className="p-8 rounded-xl shadow-sm bg-slate-50 text-center">
                     <p className="text-slate-500">
-                      {searchQuery ? "Geen projectbeoordelingen gevonden met deze zoekopdracht." : "Nog geen projectbeoordelingen beschikbaar."}
+                      Nog geen projectbeoordelingen beschikbaar.
                     </p>
                   </div>
                 ) : (
@@ -309,7 +281,7 @@ function StudentDashboardContent() {
                 ) : filteredAllProjectAssessments.filter(a => a.project_id !== null && a.project_id !== undefined).length === 0 ? (
                   <div className="p-8 rounded-xl shadow-sm bg-slate-50 text-center">
                     <p className="text-slate-500">
-                      {searchQuery ? "Geen projecten gevonden met deze zoekopdracht." : "Nog geen projecten beschikbaar om in te leveren."}
+                      Nog geen projecten beschikbaar om in te leveren.
                     </p>
                   </div>
                 ) : (
@@ -340,7 +312,7 @@ function StudentDashboardContent() {
 
             {/* ATTENDANCE / 3DE BLOK */}
             <TabsContent value="attendance" className="mt-6 space-y-4">
-              <AttendanceTab searchQuery={searchQuery} />
+              <AttendanceTab />
             </TabsContent>
           </Tabs>
         </div>

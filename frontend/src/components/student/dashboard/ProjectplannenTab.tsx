@@ -38,10 +38,10 @@ function getStatusLabel(status: ProjectPlanStatus): string {
 }
 
 type ProjectplannenTabProps = {
-  searchQuery?: string;
+  // No props needed
 };
 
-export function ProjectplannenTab({ searchQuery = "" }: ProjectplannenTabProps) {
+export function ProjectplannenTab({}: ProjectplannenTabProps = {}) {
   const [plans, setPlans] = useState<ProjectPlanListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,16 +63,8 @@ export function ProjectplannenTab({ searchQuery = "" }: ProjectplannenTabProps) 
     }
   }
 
-  // Filter by search query
-  const filteredPlans = plans.filter((plan) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      plan.project_title.toLowerCase().includes(query) ||
-      plan.title?.toLowerCase().includes(query) ||
-      (plan.course_name && plan.course_name.toLowerCase().includes(query))
-    );
-  });
+  // No filtering needed anymore
+  const filteredPlans = plans;
 
   if (loading) {
     return (
@@ -96,9 +88,7 @@ export function ProjectplannenTab({ searchQuery = "" }: ProjectplannenTabProps) 
         <CardContent className="p-8 text-center">
           <FileText className="mx-auto h-12 w-12 text-slate-400 mb-3" />
           <p className="text-slate-600">
-            {searchQuery
-              ? "Geen projectplannen gevonden voor je zoekopdracht."
-              : "Je hebt nog geen projectplannen."}
+            Je hebt nog geen projectplannen.
           </p>
         </CardContent>
       </Card>
