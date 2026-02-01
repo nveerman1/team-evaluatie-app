@@ -2749,8 +2749,9 @@ class ProjectTeamExternal(Base):
 
 class ProjectPlan(Base):
     """
-    Projectplan (GO/NO-GO) - Planning document for bovenbouw projects
-    Contains sections that students fill in and teachers review
+    Projectplan (GO/NO-GO) - Planning document template for bovenbouw projects
+    One projectplan per project, applies to ALL teams in that project
+    Individual team progress tracked in project_plan_teams table
     """
 
     __tablename__ = "project_plans"
@@ -2767,34 +2768,78 @@ class ProjectPlan(Base):
     )
 
     # Basic info
-    title: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
-
-    # Status: "concept", "ingediend", "go", "no-go"
-    status: Mapped[str] = mapped_column(String(20), default="concept", nullable=False)
-
-    # Locked when GO is set
-    locked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-
-    # Global teacher feedback/note
-    global_teacher_note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    version: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
 
     # Relationships
     school: Mapped["School"] = relationship()
     project: Mapped["Project"] = relationship()
-    sections: Mapped[list["ProjectPlanSection"]] = relationship(
-        back_populates="project_plan", cascade="all,delete-orphan", lazy="selectin"
+    teams: Mapped[list["ProjectPlanTeam"]] = relationship(
+        back_populates="project_plan", cascade="all,delete-orphan"
     )
 
     __table_args__ = (
         Index("ix_project_plan_school", "school_id"),
         Index("ix_project_plan_project", "project_id"),
-        Index("ix_project_plan_status", "status"),
+    )
+
+
+class ProjectPlanTeam(Base):
+    """
+    Links a projectplan to individual teams and tracks their progress
+    Each team has their own status, lock state, and sections
+    """
+
+    __tablename__ = "project_plan_teams"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = mapped_column(
+        ForeignKey("schools.id", ondelete="CASCADE"), index=True
+    )
+    project_plan_id: Mapped[int] = mapped_column(
+        ForeignKey("project_plans.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    project_team_id: Mapped[int] = mapped_column(
+        ForeignKey("project_teams.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # Team-specific status: "concept", "ingediend", "go", "no-go"
+    status: Mapped[str] = mapped_column(String(20), default="concept", nullable=False)
+
+    # Locked when GO is set (team cannot edit anymore)
+    locked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # Global teacher feedback/note for this team
+    global_teacher_note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Progress tracking
+    last_updated_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
+
+    # Relationships
+    school: Mapped["School"] = relationship()
+    project_plan: Mapped["ProjectPlan"] = relationship(back_populates="teams")
+    project_team: Mapped["ProjectTeam"] = relationship()
+    sections: Mapped[list["ProjectPlanSection"]] = relationship(
+        back_populates="project_plan_team", cascade="all,delete-orphan", lazy="selectin"
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "project_plan_id", "project_team_id", name="uq_project_plan_team_once"
+        ),
+        Index("ix_project_plan_team_plan", "project_plan_id"),
+        Index("ix_project_plan_team_team", "project_team_id"),
+        Index("ix_project_plan_team_status", "status"),
     )
 
 
 class ProjectPlanSection(Base):
     """
-    Individual sections of a project plan
+    Individual sections of a project plan for a specific team
     Each section has a fixed key (client, problem, goal, etc.)
     """
 
@@ -2804,8 +2849,8 @@ class ProjectPlanSection(Base):
     school_id: Mapped[int] = mapped_column(
         ForeignKey("schools.id", ondelete="CASCADE"), index=True
     )
-    project_plan_id: Mapped[int] = mapped_column(
-        ForeignKey("project_plans.id", ondelete="CASCADE"),
+    project_plan_team_id: Mapped[int] = mapped_column(
+        ForeignKey("project_plan_teams.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
@@ -2831,13 +2876,13 @@ class ProjectPlanSection(Base):
 
     # Relationships
     school: Mapped["School"] = relationship()
-    project_plan: Mapped["ProjectPlan"] = relationship(back_populates="sections")
+    project_plan_team: Mapped["ProjectPlanTeam"] = relationship(back_populates="sections")
 
     __table_args__ = (
         UniqueConstraint(
-            "project_plan_id", "key", name="uq_project_plan_section_key"
+            "project_plan_team_id", "key", name="uq_project_plan_section_key"
         ),
-        Index("ix_project_plan_section_plan", "project_plan_id"),
+        Index("ix_project_plan_section_team", "project_plan_team_id"),
         Index("ix_project_plan_section_status", "status"),
     )
 
