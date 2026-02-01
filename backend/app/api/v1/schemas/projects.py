@@ -22,6 +22,9 @@ class ProjectBase(BaseModel):
     period: Optional[str] = Field(
         None, max_length=10, description="Period: P1, P2, P3, or P4"
     )
+    level: Optional[str] = Field(
+        None, max_length=20, description="Level: onderbouw or bovenbouw"
+    )
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     status: str = Field(default="concept", max_length=30)
@@ -42,6 +45,7 @@ class ProjectUpdate(BaseModel):
     description: Optional[str] = None
     class_name: Optional[str] = Field(None, max_length=50)
     period: Optional[str] = Field(None, max_length=10)
+    level: Optional[str] = Field(None, max_length=20)
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     status: Optional[str] = Field(None, max_length=30)
