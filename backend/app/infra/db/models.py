@@ -350,6 +350,9 @@ class Project(Base):
     # Period within academic year (P1, P2, P3, P4)
     period: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
 
+    # Level: "onderbouw" | "bovenbouw" - determines if ProjectPlan is created
+    level: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+
     # Dates
     start_date: Mapped[Optional[datetime]] = mapped_column(Date, nullable=True)
     end_date: Mapped[Optional[datetime]] = mapped_column(Date, nullable=True)
@@ -2741,6 +2744,101 @@ class ProjectTeamExternal(Base):
         Index("ix_project_team_external_status", "status"),
         Index("ix_project_team_external_token", "invitation_token"),
         Index("ix_project_team_external_team", "project_team_id", "team_number"),
+    )
+
+
+class ProjectPlan(Base):
+    """
+    Projectplan (GO/NO-GO) - Planning document for bovenbouw projects
+    Contains sections that students fill in and teachers review
+    """
+
+    __tablename__ = "project_plans"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = mapped_column(
+        ForeignKey("schools.id", ondelete="CASCADE"), index=True
+    )
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+
+    # Basic info
+    title: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+
+    # Status: "concept", "ingediend", "go", "no-go"
+    status: Mapped[str] = mapped_column(String(20), default="concept", nullable=False)
+
+    # Locked when GO is set
+    locked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # Global teacher feedback/note
+    global_teacher_note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Relationships
+    school: Mapped["School"] = relationship()
+    project: Mapped["Project"] = relationship()
+    sections: Mapped[list["ProjectPlanSection"]] = relationship(
+        back_populates="project_plan", cascade="all,delete-orphan", lazy="selectin"
+    )
+
+    __table_args__ = (
+        Index("ix_project_plan_school", "school_id"),
+        Index("ix_project_plan_project", "project_id"),
+        Index("ix_project_plan_status", "status"),
+    )
+
+
+class ProjectPlanSection(Base):
+    """
+    Individual sections of a project plan
+    Each section has a fixed key (client, problem, goal, etc.)
+    """
+
+    __tablename__ = "project_plan_sections"
+
+    id: Mapped[int] = id_pk()
+    school_id: Mapped[int] = mapped_column(
+        ForeignKey("schools.id", ondelete="CASCADE"), index=True
+    )
+    project_plan_id: Mapped[int] = mapped_column(
+        ForeignKey("project_plans.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # Section key: "client", "problem", "goal", "method", "planning", "tasks", "motivation", "risks"
+    key: Mapped[str] = mapped_column(String(50), nullable=False)
+
+    # Section status: "empty", "draft", "submitted", "approved", "revision"
+    status: Mapped[str] = mapped_column(String(20), default="empty", nullable=False)
+
+    # Content for non-client sections
+    text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Client section specific fields
+    client_organisation: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    client_contact: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    client_email: Mapped[Optional[str]] = mapped_column(String(320), nullable=True)
+    client_phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    client_description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Teacher feedback
+    teacher_note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Relationships
+    school: Mapped["School"] = relationship()
+    project_plan: Mapped["ProjectPlan"] = relationship(back_populates="sections")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "project_plan_id", "key", name="uq_project_plan_section_key"
+        ),
+        Index("ix_project_plan_section_plan", "project_plan_id"),
+        Index("ix_project_plan_section_status", "status"),
     )
 
 
