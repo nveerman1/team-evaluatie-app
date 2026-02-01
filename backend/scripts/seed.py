@@ -23,7 +23,7 @@ import sys
 import subprocess
 import secrets
 from pathlib import Path
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, UTC
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -1155,10 +1155,10 @@ def seed_demo(db: Session, rand: DeterministicRandom, reset: bool = False):
                     assessment_id=teacher_assessment.id,  # Link to TEACHER assessment, not external assessment
                     team_number=pt.team_number,
                     invitation_token=token,
-                    token_expires_at=datetime.utcnow() + timedelta(days=90),
+                    token_expires_at=datetime.now(UTC) + timedelta(days=90),
                     status="SUBMITTED",  # Mark as submitted since scores are already added
-                    invited_at=datetime.utcnow(),
-                    submitted_at=datetime.utcnow(),
+                    invited_at=datetime.now(UTC),
+                    submitted_at=datetime.now(UTC),
                 )
                 db.add(pte)
             
