@@ -171,6 +171,7 @@ def list_projectplans(
     per_page: int = Query(20, ge=1, le=100),
     search: Optional[str] = None,
     status_filter: Optional[str] = Query(None, alias="status"),
+    course_id: Optional[int] = None,
 ):
     """
     List all project plans with filtering and enriched data.
@@ -195,6 +196,10 @@ def list_projectplans(
         query = query.filter(
             (Project.course_id.in_(accessible_courses)) | (Project.course_id.is_(None))
         )
+    
+    # Filter by course
+    if course_id:
+        query = query.filter(Project.course_id == course_id)
     
     # Filter by status
     if status_filter:
@@ -247,6 +252,15 @@ def list_projectplans(
         )
         required_complete, required_total = _calculate_required_complete(sections)
         
+        # Get course info
+        from app.infra.db.models import Course
+        course_id = project.course_id if project else None
+        course_name = None
+        if course_id:
+            course = db.query(Course).filter(Course.id == course_id).first()
+            if course:
+                course_name = course.name
+        
         items.append(
             ProjectPlanListItem(
                 id=plan.id,
@@ -256,6 +270,8 @@ def list_projectplans(
                 locked=plan.locked,
                 updated_at=plan.updated_at,
                 project_title=project.title if project else "",
+                course_id=course_id,
+                course_name=course_name,
                 team_number=team_number,
                 team_members=team_members,
                 required_complete=required_complete,

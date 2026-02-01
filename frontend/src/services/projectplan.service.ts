@@ -21,6 +21,7 @@ export const projectPlanService = {
     per_page?: number;
     search?: string;
     status?: string;
+    course_id?: number;
   }): Promise<ProjectPlanListResponse> {
     const response = await api.get<ProjectPlanListResponse>(
       "/teacher/projectplans",

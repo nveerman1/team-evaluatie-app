@@ -113,6 +113,8 @@ class ProjectPlanListItem(BaseModel):
 
     # Enriched fields (populated in API)
     project_title: str = ""
+    course_id: Optional[int] = None
+    course_name: Optional[str] = None
     team_number: Optional[int] = None
     team_members: List[str] = Field(default_factory=list)
     required_complete: int = 0

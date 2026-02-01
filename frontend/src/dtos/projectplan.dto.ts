@@ -68,6 +68,8 @@ export type ProjectPlanListItem = {
   updated_at: string;
   // Enriched fields
   project_title: string;
+  course_id?: number;
+  course_name?: string;
   team_number?: number;
   team_members: string[];
   required_complete: number;
