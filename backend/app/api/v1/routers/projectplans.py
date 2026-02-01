@@ -515,8 +515,13 @@ def update_projectplan_section_student(
     if payload.client_description is not None:
         section.client_description = payload.client_description
     
-    # Set status to draft when editing
-    section.status = "draft"
+    # Update status: respect payload.status if provided, otherwise set to draft if content changed
+    if payload.status is not None:
+        section.status = payload.status
+    else:
+        # Auto-set to draft when editing from empty state
+        if section.status == "empty":
+            section.status = "draft"
     
     db.commit()
     db.refresh(section)

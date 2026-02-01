@@ -917,9 +917,6 @@ def wizard_create_project(
             )
         )
 
-    # Track all created entities
-    created_entities: List[WizardEntityOut] = []
-
     # 2. Create peer evaluations (still use Evaluation records)
     def get_default_rubric(scope: str) -> Optional[Rubric]:
         return (
