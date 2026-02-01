@@ -417,6 +417,115 @@ def update_projectplan_section_teacher(
 # ============ STUDENT ENDPOINTS ============
 
 
+@student_router.get("", response_model=List[ProjectPlanListItem])
+def list_student_projectplans(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """
+    List all project plans for the current student.
+    Returns plans for projects where the student is a team member.
+    """
+    # Get all projects where the user is a team member
+    student_teams = (
+        db.query(ProjectTeamMember)
+        .filter(ProjectTeamMember.user_id == user.id)
+        .all()
+    )
+    
+    if not student_teams:
+        return []
+    
+    # Get project IDs from teams
+    project_team_ids = [tm.project_team_id for tm in student_teams]
+    
+    # Get projects from those teams
+    project_teams = (
+        db.query(ProjectTeam)
+        .filter(ProjectTeam.id.in_(project_team_ids))
+        .all()
+    )
+    
+    project_ids = [pt.project_id for pt in project_teams]
+    
+    if not project_ids:
+        return []
+    
+    # Get project plans for those projects
+    plans = (
+        db.query(ProjectPlan)
+        .join(Project, ProjectPlan.project_id == Project.id)
+        .filter(
+            ProjectPlan.project_id.in_(project_ids),
+            ProjectPlan.school_id == user.school_id,
+        )
+        .order_by(ProjectPlan.updated_at.desc())
+        .all()
+    )
+    
+    # Build list items with enriched data
+    items = []
+    for plan in plans:
+        project = db.query(Project).filter(Project.id == plan.project_id).first()
+        
+        # Get team info for this project
+        team = (
+            db.query(ProjectTeam)
+            .filter(ProjectTeam.project_id == plan.project_id)
+            .first()
+        )
+        team_number = team.team_number if team else None
+        
+        # Get team member names
+        team_members = []
+        if team:
+            members = (
+                db.query(ProjectTeamMember)
+                .join(User)
+                .filter(ProjectTeamMember.project_team_id == team.id)
+                .all()
+            )
+            team_members = [m.user.name for m in members]
+        
+        # Calculate required completion
+        sections = (
+            db.query(ProjectPlanSection)
+            .filter(ProjectPlanSection.project_plan_id == plan.id)
+            .all()
+        )
+        required_complete, required_total = _calculate_required_complete(sections)
+        
+        # Get course info
+        from app.infra.db.models import Course
+        course_id = project.course_id if project else None
+        course_name = None
+        if course_id:
+            course = db.query(Course).filter(Course.id == course_id).first()
+            if course:
+                course_name = course.name
+        
+        items.append(
+            ProjectPlanListItem(
+                id=plan.id,
+                project_id=plan.project_id,
+                title=plan.title,
+                status=plan.status,
+                locked=plan.locked,
+                updated_at=plan.updated_at,
+                project_title=project.title if project else "",
+                course_id=course_id,
+                course_name=course_name,
+                team_number=team_number,
+                team_members=team_members,
+                required_complete=required_complete,
+                required_total=required_total,
+                total_sections=len(sections),
+            )
+        )
+    
+    return items
+
+
 @student_router.get("/{project_id}", response_model=ProjectPlanOut)
 def get_projectplan_by_project(
     project_id: int,

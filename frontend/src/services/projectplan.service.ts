@@ -95,6 +95,14 @@ export const projectPlanService = {
   // ============ Student Endpoints ============
 
   /**
+   * List all project plans for current student
+   */
+  async listMyProjectPlans(): Promise<ProjectPlanListItem[]> {
+    const response = await api.get<ProjectPlanListItem[]>(`/me/projectplans`);
+    return response.data;
+  },
+
+  /**
    * Get project plan by project ID (student view)
    */
   async getMyProjectPlan(projectId: number): Promise<ProjectPlan> {

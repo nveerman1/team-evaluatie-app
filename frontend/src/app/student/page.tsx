@@ -9,13 +9,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, ClipboardCheck, Target, Trophy, BarChart3, Sparkles, Upload, Clock } from "lucide-react";
+import { Search, ClipboardCheck, Target, Trophy, BarChart3, Sparkles, Upload, Clock, FileText } from "lucide-react";
 import { EvaluationDashboardCard } from "@/components/student/dashboard/EvaluationDashboardCard";
 import { ProjectAssessmentDashboardCard } from "@/components/student/dashboard/ProjectAssessmentDashboardCard";
 import { SubmissionDashboardCard } from "@/components/student/dashboard/SubmissionDashboardCard";
 import { OverviewTab } from "@/components/student/dashboard/OverviewTab";
 import { CompetencyScanDashboardTab } from "@/components/student/dashboard/CompetencyScanDashboardTab";
 import { AttendanceTab } from "@/components/student/dashboard/AttendanceTab";
+import { ProjectplannenTab } from "@/components/student/dashboard/ProjectplannenTab";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 
@@ -141,6 +142,12 @@ function StudentDashboardContent() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <TabsList className="h-11 w-full justify-start gap-1 rounded-2xl bg-white p-1 shadow-sm sm:w-auto">
                 <TabsTrigger
+                  value="projectplannen"
+                  className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
+                >
+                  <FileText className="mr-2 h-4 w-4" /> Projectplannen
+                </TabsTrigger>
+                <TabsTrigger
                   value="evaluaties"
                   className="relative rounded-xl px-4 data-[state=active]:bg-slate-800 data-[state=active]:text-white data-[state=active]:shadow-sm"
                 >
@@ -189,6 +196,11 @@ function StudentDashboardContent() {
                 />
               </div>
             </div>
+
+            {/* PROJECTPLANNEN */}
+            <TabsContent value="projectplannen" className="mt-6">
+              <ProjectplannenTab searchQuery={searchQuery} />
+            </TabsContent>
 
             {/* EVALUATIES */}
             <TabsContent value="evaluaties" className="mt-6 space-y-4">
