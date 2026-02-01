@@ -362,10 +362,10 @@ def create_projectplan(
     # Log the action
     log_action(
         db=db,
-        user_id=user.id,
+        user=user,
         action="create_projectplan",
-        resource_type="projectplan",
-        resource_id=project_plan.id,
+        entity_type="projectplan",
+        entity_id=project_plan.id,
         details={"project_id": payload.project_id, "title": payload.title},
     )
     
